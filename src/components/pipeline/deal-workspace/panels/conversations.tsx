@@ -1,0 +1,220 @@
+"use client";
+
+import { apiUrl } from "@/lib/api";
+import * as React from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { ArrowLeft, Loader2, MessageSquare, Send } from "lucide-react";
+
+import { ChannelBadge } from "@/components/inbox/channel-badge";
+import { ChatWindow } from "@/components/inbox/chat-window";
+import { Button } from "@/components/ui/button";
+import { TooltipHost } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+import type { ConversationRow } from "../shared";
+import { STATUS_LABEL } from "../shared";
+
+// ChatWindow permanece intocado (regra explicita §1: nao mexer no chat).
+// Aqui so refatoramos o WRAPPER visual (lista + header de conversa).
+
+type ConversationsPanelProps = {
+  conversations: ConversationRow[];
+  selected: ConversationRow | null;
+  onSelect: (c: ConversationRow | null) => void;
+  convStatus: string;
+  onStatusChange: (s: string) => void;
+  contactId?: string;
+  contactPhone?: string | null;
+  onConversationCreated?: () => void;
+};
+
+export function ConversationsPanel({
+  conversations,
+  selected,
+  onSelect,
+  convStatus,
+  contactId,
+  onConversationCreated,
+  onStatusChange,
+}: ConversationsPanelProps) {
+  const queryClient = useQueryClient();
+  const autoCreatedRef = React.useRef(false);
+
+  const autoCreateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(apiUrl("/api/conversations/create"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId, skipSend: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message ?? "Erro ao criar conversa");
+      return data.conversation as ConversationRow;
+    },
+    onSuccess: (conv) => {
+      if (contactId) queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+      onConversationCreated?.();
+      onSelect(conv);
+    },
+  });
+
+  React.useEffect(() => {
+    if (
+      conversations.length === 0 &&
+      contactId &&
+      !selected &&
+      !autoCreatedRef.current &&
+      !autoCreateMutation.isPending
+    ) {
+      autoCreatedRef.current = true;
+      autoCreateMutation.mutate();
+    }
+  }, [conversations.length, contactId, selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (selected) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col bg-white">
+        <div
+          className={cn(
+            "flex items-center gap-2 border-b border-slate-100",
+            "bg-white/80 px-4 py-3 backdrop-blur-md",
+          )}
+        >
+          {conversations.length > 1 ? (
+            <TooltipHost label="Voltar" side="bottom">
+              <button
+                type="button"
+                onClick={() => onSelect(null)}
+                aria-label="Voltar"
+                className={cn(
+                  "inline-flex size-8 items-center justify-center rounded-full",
+                  "border border-slate-200 bg-white text-slate-500",
+                  "transition-colors hover:bg-slate-50 hover:text-slate-800 active:scale-95",
+                )}
+              >
+                <ArrowLeft className="size-4" />
+              </button>
+            </TooltipHost>
+          ) : null}
+          <ChannelBadge channel={selected.channel} />
+          {selected.inboxName ? (
+            <span className="text-[12px] font-semibold tracking-tight text-slate-500">
+              {selected.inboxName}
+            </span>
+          ) : null}
+          <span
+            className={cn(
+              "ml-auto inline-flex items-center rounded-full border border-slate-200 bg-slate-50",
+              "px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-slate-500",
+            )}
+          >
+            {STATUS_LABEL[selected.status] ?? selected.status}
+          </span>
+        </div>
+        <ChatWindow
+          conversationId={selected.id}
+          conversationStatus={convStatus || selected.status}
+          onResolve={(s) => onStatusChange(s)}
+          onReopen={(s) => onStatusChange(s)}
+        />
+      </div>
+    );
+  }
+
+  if (autoCreateMutation.isPending) {
+    return (
+      <CenterMessage icon={<Loader2 className="size-8 animate-spin text-slate-400" />}>
+        Abrindo chat...
+      </CenterMessage>
+    );
+  }
+
+  if (autoCreateMutation.isError) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+        <MessageSquare className="mb-3 size-12 text-slate-300" />
+        <p className="text-sm text-rose-600">
+          {autoCreateMutation.error instanceof Error
+            ? autoCreateMutation.error.message
+            : "Erro ao abrir chat."}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3 rounded-full"
+          onClick={() => {
+            autoCreatedRef.current = false;
+            autoCreateMutation.mutate();
+          }}
+        >
+          Tentar novamente
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col bg-[#f4f7fa]">
+      {conversations.length === 0 ? (
+        <CenterMessage icon={<Send className="size-12 text-slate-300" />}>
+          Abrindo conversa...
+        </CenterMessage>
+      ) : (
+        <div className="scrollbar-thin flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="space-y-2">
+            {conversations.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => onSelect(c)}
+                className={cn(
+                  "group flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white",
+                  "px-4 py-3 text-left transition-all",
+                  "hover:border-[#507df1]/30 hover:shadow-blue-glow active:scale-[0.99]",
+                )}
+              >
+                <ChannelBadge channel={c.channel} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {c.inboxName ? (
+                      <span className="truncate text-[14px] font-bold tracking-tight text-slate-900">
+                        {c.inboxName}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 text-[12px] tracking-tight text-slate-400">
+                    {formatDistanceToNow(new Date(c.updatedAt), { addSuffix: true, locale: ptBR })}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest",
+                    c.status === "OPEN"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : c.status === "RESOLVED"
+                      ? "border-slate-200 bg-slate-50 text-slate-500"
+                      : "border-amber-200 bg-amber-50 text-amber-700",
+                  )}
+                >
+                  {STATUS_LABEL[c.status] ?? c.status}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CenterMessage({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+      <div className="mb-3">{icon}</div>
+      <p className="text-[14px] font-medium tracking-tight text-slate-500">{children}</p>
+    </div>
+  );
+}

@@ -1,0 +1,19 @@
+# Ambiente — nunca commitar segredos
+.env
+.env.*
+!.env.example
+
+node_modules
+.next
+dist
+build
+.turbo
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+out
+*.log
+.DS_Store

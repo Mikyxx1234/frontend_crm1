@@ -50,7 +50,7 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 export default function DashboardHomePage() {
   const { data: session, status: sessionStatus } = useSession();
   const searchParams = useSearchParams();
-  const firstName = session?.user?.name?.split(/\s+/)[0] ?? "usuÃ¡rio";
+  const firstName = session?.user?.name?.split(/\s+/)[0] ?? "usuário";
   const today = dateFormatter.format(new Date());
 
   const resetLayout = useDashboardStore((s) => s.resetLayout);
@@ -108,7 +108,7 @@ export default function DashboardHomePage() {
   // Sincroniza com o backend (GET ao montar + PUT no dirty com debounce).
   useDashboardLayoutSync(true);
 
-  // Suporta ?preset=monitor etc. â€” Ãºtil pra redirect do /monitor antigo e links diretos.
+  // Suporta ?preset=monitor etc. — útil pra redirect do /monitor antigo e links diretos.
   const appliedFromUrlRef = React.useRef(false);
   React.useEffect(() => {
     if (appliedFromUrlRef.current) return;
@@ -121,7 +121,7 @@ export default function DashboardHomePage() {
     if (p === "monitor") setTvWall(true);
   }, [searchParams, applyPreset]);
 
-  // TV Wall: auto-remove padding do main pra ganhar espaÃ§o Ãºtil.
+  // TV Wall: auto-remove padding do main pra ganhar espaço útil.
   React.useEffect(() => {
     if (!tvWall) return;
     document.documentElement.classList.add("dashboard-tvwall");
@@ -155,7 +155,7 @@ export default function DashboardHomePage() {
             dashboardPageTitleClass,
             tvWall && "text-slate-50",
           )}>
-            {tvWall ? "Monitor â€” War Room" : `OlÃ¡, ${firstName}`}
+            {tvWall ? "Monitor — War Room" : `Olá, ${firstName}`}
           </h1>
           <p className={cn(
             "text-sm capitalize",
@@ -171,7 +171,7 @@ export default function DashboardHomePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* BotÃ£o: Adicionar widget (sÃ³ no modo ediÃ§Ã£o) */}
+          {/* Botão: Adicionar widget (só no modo edição) */}
           {editing && (
             <button
               type="button"
@@ -188,14 +188,14 @@ export default function DashboardHomePage() {
             </button>
           )}
 
-          {/* Resetar layout (sÃ³ no modo ediÃ§Ã£o) */}
+          {/* Resetar layout (só no modo edição) */}
           {editing && (
             <button
               type="button"
               onClick={() => {
-                if (confirm("Restaurar o layout padrÃ£o?")) resetLayout();
+                if (confirm("Restaurar o layout padrão?")) resetLayout();
               }}
-              title="Restaurar layout padrÃ£o"
+              title="Restaurar layout padrão"
               className={cn(
                 "flex size-9 items-center justify-center rounded-xl border transition-all",
                 tvWall
@@ -222,7 +222,7 @@ export default function DashboardHomePage() {
             {tvWall ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
           </button>
 
-          {/* Toggle ediÃ§Ã£o */}
+          {/* Toggle edição */}
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
@@ -241,7 +241,7 @@ export default function DashboardHomePage() {
         </div>
       </div>
 
-      {/* Barra de presets + atalho p/ mÃ©tricas de inbox no contexto Atendimento */}
+      {/* Barra de presets + atalho p/ métricas de inbox no contexto Atendimento */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <PresetBar />
         {!tvWall && preset === "atendimento" && showInboxAnalyticsLink && (
@@ -252,13 +252,13 @@ export default function DashboardHomePage() {
             )}
           >
             <Headphones className="size-3.5 shrink-0 text-primary" aria-hidden />
-            RelatÃ³rio de inbox
+            Relatório de inbox
             <ChevronRight className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" aria-hidden />
           </Link>
         )}
       </div>
 
-      {/* Filtros sÃ³ fora do modo TV Wall â€” TV limpa ao mÃ¡ximo */}
+      {/* Filtros só fora do modo TV Wall — TV limpa ao máximo */}
       {!tvWall && <FiltersBar />}
 
       {/* Grid */}
@@ -267,7 +267,7 @@ export default function DashboardHomePage() {
       {/* Picker */}
       <WidgetPicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
 
-      {/* Selo "Monitor" â€” identificaÃ§Ã£o visual do antigo monitor */}
+      {/* Selo "Monitor" — identificação visual do antigo monitor */}
       {isMonitor && !tvWall && (
         <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-[11px]">
           <span className="relative flex size-2">
@@ -278,7 +278,7 @@ export default function DashboardHomePage() {
             Modo Monitor ativo
           </span>
           <span className="text-muted-foreground">
-            Â· use o Ã­cone <Maximize2 className="inline size-3" /> para TV Wall
+            · use o ícone <Maximize2 className="inline size-3" /> para TV Wall
           </span>
         </div>
       )}

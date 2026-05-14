@@ -156,7 +156,7 @@ export function ChannelCard({
   const { status, id } = channel;
   const lastAt = channel.lastConnectedAt
     ? formatDateTime(channel.lastConnectedAt)
-    : "â€”";
+    : "—";
 
   return (
     <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-md">
@@ -181,7 +181,7 @@ export function ChannelCard({
                   />
                   {TYPE_LABELS[channel.type]}
                 </span>
-                <span className="text-muted-foreground/60">Â·</span>
+                <span className="text-muted-foreground/60">·</span>
                 <span className={cn(
                   "text-xs font-medium",
                   channel.provider === "BAILEYS_MD"
@@ -217,11 +217,11 @@ export function ChannelCard({
         <div className="flex justify-between gap-2">
           <span>Telefone</span>
           <span className="truncate font-medium text-foreground">
-            {channel.phoneNumber ?? "â€”"}
+            {channel.phoneNumber ?? "—"}
           </span>
         </div>
         <div className="flex justify-between gap-2">
-          <span>Ãšltima conexÃ£o</span>
+          <span>Ãšltima conexão</span>
           <span className="shrink-0 font-medium text-foreground">{lastAt}</span>
         </div>
       </CardContent>
@@ -303,7 +303,7 @@ export function ChannelCard({
             </Button>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-4 shrink-0 animate-spin text-amber-600" />
-              <span>Conectandoâ€¦</span>
+              <span>Conectando…</span>
             </div>
           </>
         ) : null}
@@ -334,7 +334,7 @@ export function ChannelCard({
               Configurar
             </Button>
             <p className="w-full text-xs text-destructive">
-              Falha na conexÃ£o. Verifique credenciais ou tente novamente.
+              Falha na conexão. Verifique credenciais ou tente novamente.
             </p>
           </>
         ) : null}

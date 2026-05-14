@@ -62,19 +62,19 @@ interface NavItem {
   requiredPermission?: string;
   /**
    * Marca de grupo visual: o item recebe um divisor sutil acima, pra
-   * separar blocos (operacional vs. gestÃ£o). Afeta sÃ³ o render, nÃ£o
-   * a semÃ¢ntica.
+   * separar blocos (operacional vs. gestão). Afeta só o render, não
+   * a semântica.
    */
   groupStart?: boolean;
   /**
    * Sub-itens exibidos em flyout lateral no hover/focus. Quando
-   * presente, o item-pai vira um botÃ£o guarda-chuva: o `href` aponta
-   * para o filho default (primeiro da lista) e o Ã­cone fica `active`
+   * presente, o item-pai vira um botão guarda-chuva: o `href` aponta
+   * para o filho default (primeiro da lista) e o ícone fica `active`
    * sempre que QUALQUER filho estiver na rota atual.
    *
-   * LimitaÃ§Ã£o proposital: nÃ£o suportamos aninhamento N nÃ­veis (sÃ³ 1).
+   * Limitação proposital: não suportamos aninhamento N níveis (só 1).
    * Se algum dia precisar de mais, vale repensar a forma da sidebar
-   * â€” flyouts em 2+ nÃ­veis viram labirinto sem affordance clara.
+   * — flyouts em 2+ níveis viram labirinto sem affordance clara.
    */
   children?: NavItem[];
 }
@@ -82,17 +82,17 @@ interface NavItem {
 /** Gestao = ADMIN + MANAGER. MEMBER so ve o operacional. */
 const GESTAO: UserRole[] = [UserRole.ADMIN, UserRole.MANAGER];
 
-// Itens ocultos da sidebar mas ainda acessÃ­veis via URL direta:
-//  â€¢ /analytics (VisÃ£o Geral de Performance) â€” mÃ³dulo nÃ£o finalizado;
-//    ainda nÃ£o tem dados reais conectados.
-//  â€¢ /developers (API Docs) â€” uso pontual de dev; acessÃ­vel via
-//    /developers ou link no hub de ConfiguraÃ§Ãµes.
+// Itens ocultos da sidebar mas ainda acessíveis via URL direta:
+//  â€¢ /analytics (Visão Geral de Performance) — módulo não finalizado;
+//    ainda não tem dados reais conectados.
+//  â€¢ /developers (API Docs) — uso pontual de dev; acessível via
+//    /developers ou link no hub de Configurações.
 const navItems: NavItem[] = [
   // â”€â”€â”€ Operacional â”€â”€â”€
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
-  // "Pipeline" Ã© o rÃ³tulo guarda-chuva na sidebar; a pÃ¡gina tem 3 modos
-  // (kanban="Funil", list="Lista", saleshub="Pipeline Ãgil") que aparecem
-  // como tÃ­tulo dinÃ¢mico no header. A pÃ¡gina lembra a ÃšLTIMA visualizaÃ§Ã£o
+  // "Pipeline" é o rótulo guarda-chuva na sidebar; a página tem 3 modos
+  // (kanban="Funil", list="Lista", saleshub="Pipeline Ágil") que aparecem
+  // como título dinâmico no header. A página lembra a ÃšLTIMA visualização
   // escolhida (`pipeline-view-mode` no localStorage).
   { href: "/pipeline", label: "Pipeline", icon: Filter, requiredPermission: "pipeline:view" },
   { href: "/contacts", label: "Contatos", icon: Users, requiredPermission: "contact:view" },
@@ -100,15 +100,15 @@ const navItems: NavItem[] = [
   { href: "/inbox", label: "Inbox", icon: MessageSquare, requiredPermission: "conversation:view" },
   { href: "/tasks", label: "Tarefas", icon: CheckSquare, badgeKey: "overdueTasks", requiredPermission: "task:view" },
 
-  // â”€â”€â”€ GestÃ£o (ADMIN + MANAGER) â”€â”€â”€
-  // "AutomaÃ§Ã£o" agrupa Fluxos (/automations) + Agentes IA (/ai-agents)
-  // num flyout lateral â€” economiza um slot vertical na sidebar e
-  // reflete a relaÃ§Ã£o semÃ¢ntica (ambos automatizam atendimento).
+  // â”€â”€â”€ Gestão (ADMIN + MANAGER) â”€â”€â”€
+  // "Automação" agrupa Fluxos (/automations) + Agentes IA (/ai-agents)
+  // num flyout lateral — economiza um slot vertical na sidebar e
+  // reflete a relação semântica (ambos automatizam atendimento).
   // O href do pai aponta pro primeiro filho como rota default; o
-  // active state se propaga quando qualquer filho estÃ¡ ativo.
+  // active state se propaga quando qualquer filho está ativo.
   {
     href: "/automations",
-    label: "AutomaÃ§Ã£o",
+    label: "Automação",
     icon: Zap,
     allowedRoles: GESTAO,
     requiredPermission: "automation:view",
@@ -119,11 +119,11 @@ const navItems: NavItem[] = [
     ],
   },
   { href: "/campaigns", label: "Campanhas", icon: Megaphone, allowedRoles: GESTAO, requiredPermission: "campaign:view" },
-  { href: "/reports", label: "RelatÃ³rios", icon: FileBarChart, allowedRoles: GESTAO, requiredPermission: "report:view" },
+  { href: "/reports", label: "Relatórios", icon: FileBarChart, allowedRoles: GESTAO, requiredPermission: "report:view" },
 ];
 
 const bottomItems: NavItem[] = [
-  { href: "/settings", label: "ConfiguraÃ§Ãµes", icon: Settings, requiredPermission: "settings:team" },
+  { href: "/settings", label: "Configurações", icon: Settings, requiredPermission: "settings:team" },
 ];
 
 /** Hrefs considerados no allow list granular da sidebar (nav + bottom + extras). */
@@ -149,7 +149,7 @@ const STATUS_DOT_COLOR: Record<AgentOnlineStatus, string> = {
   OFFLINE: "#94a3b8",
 };
 
-/** Tooltip da rail lateral via Radix Portal â€” nÃ£o corta em overflow nem perde z-index. */
+/** Tooltip da rail lateral via Radix Portal — não corta em overflow nem perde z-index. */
 function SidebarRailTooltip({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Tooltip delayDuration={400}>
@@ -196,22 +196,22 @@ function SidebarIcon({
 /**
  * Item-pai que abre um flyout lateral com sub-itens no hover/focus.
  *
- * DecisÃ£o (CSS-only via group-hover/focus-within):
- *   NÃ£o usamos state React pra abrir/fechar â€” a abertura responde a
+ * Decisão (CSS-only via group-hover/focus-within):
+ *   Não usamos state React pra abrir/fechar — a abertura responde a
  *   `:hover` e `:focus-within` no container `group`. O label da rail
  *   lateral usa Radix Tooltip (Portal); o flyout permanece CSS-only.
  *   Vantagens:
  *     â€¢ Zero risco de "estado preso" se o componente desmontar mid-hover.
- *     â€¢ AcessÃ­vel via teclado (Tab entra no link-pai â†’ focus-within no
+ *     â€¢ Acessível via teclado (Tab entra no link-pai â†’ focus-within no
  *       container abre o flyout â†’ Shift+Tab sai e fecha).
  *     â€¢ Esc fecha automaticamente se o foco sair (o navegador move o
  *       focus pro body).
  *
- * Active propagado: o Ã­cone-pai herda o estado active de qualquer filho
- * que case com a rota atual â€” preserva a "memÃ³ria visual" do agrupamento.
+ * Active propagado: o ícone-pai herda o estado active de qualquer filho
+ * que case com a rota atual — preserva a "memória visual" do agrupamento.
  *
- * Click no Ã­cone-pai navega para o `href` default (primeiro filho ou
- * fallback) â€” mantÃ©m o comportamento dos outros itens da sidebar.
+ * Click no ícone-pai navega para o `href` default (primeiro filho ou
+ * fallback) — mantém o comportamento dos outros itens da sidebar.
  */
 function SidebarParentIcon({
   href,
@@ -245,9 +245,9 @@ function SidebarParentIcon({
         )}
       >
         <Icon className="relative size-[18px]" />
-        {/* Indicador visual sutil de que o item tem submenu â€” ponto
-            no canto inferior direito. SÃ³ aparece quando o item NÃƒO
-            estÃ¡ active (pra nÃ£o competir com o highlight branco). */}
+        {/* Indicador visual sutil de que o item tem submenu — ponto
+            no canto inferior direito. Só aparece quando o item NÃƒO
+            está active (pra não competir com o highlight branco). */}
         {!active && (
           <span
             aria-hidden="true"
@@ -256,20 +256,20 @@ function SidebarParentIcon({
         )}
       </Link>
 
-      {/* Flyout â€” anchor wrapper.
+      {/* Flyout — anchor wrapper.
           O wrapper externo permanece SEMPRE com pointer-events-auto e
-          Ã© descendente do `.group`. Isso resolve o "gap de morte" que
-          ocorre quando o cursor sai do Ã­cone e atravessa o pl-3 antes
+          é descendente do `.group`. Isso resolve o "gap de morte" que
+          ocorre quando o cursor sai do ícone e atravessa o pl-3 antes
           de chegar no menu: como o wrapper captura hit-testing, o
           `.group:hover` continua ativo durante a travessia.
-          Apenas a opacity/translate do menu interno Ã© animada. */}
+          Apenas a opacity/translate do menu interno é animada. */}
       <div
         aria-hidden={!active ? undefined : true}
         className="absolute left-full top-1/2 z-50 -translate-y-1/2 pl-3"
       >
         <div
           role="menu"
-          aria-label={`${label} â€” submenu`}
+          aria-label={`${label} — submenu`}
           className="pointer-events-none min-w-[200px] -translate-x-1 overflow-hidden rounded-xl border border-border bg-popover py-1 text-popover-foreground opacity-0 shadow-2xl transition-[opacity,transform] duration-150 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-x-0 group-focus-within:opacity-100"
         >
           <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -361,9 +361,9 @@ function StatusPopup({
                 <div className="flex-1">
                   <p className={cn("text-sm font-semibold", isActive ? "text-primary" : "text-foreground")}>{opt.label}</p>
                   <p className="text-xs text-muted-foreground">
-                    {opt.value === "ONLINE" && "DisponÃ­vel para receber leads"}
-                    {opt.value === "AWAY" && "Pausado â€” nÃ£o recebe novos leads"}
-                    {opt.value === "OFFLINE" && "IndisponÃ­vel â€” fora do expediente"}
+                    {opt.value === "ONLINE" && "Disponível para receber leads"}
+                    {opt.value === "AWAY" && "Pausado — não recebe novos leads"}
+                    {opt.value === "OFFLINE" && "Indisponível — fora do expediente"}
                   </p>
                 </div>
                 {isActive && <Circle className="size-4 fill-primary text-primary" />}
@@ -381,21 +381,21 @@ function StatusPopup({
    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    A sidebar lateral navy (`<aside>` 80px) fica `hidden md:flex` em
    mobile. No lugar entra:
-     â€¢ <MobileTopBar> â€” barra superior navy (56px + safe-top) com logo
-       + tÃ­tulo da pÃ¡gina + avatar (abre menu de conta).
-     â€¢ <MobileBottomNav> â€” barra inferior navy (60px + safe-bottom) com
-       5 Ã­cones touch-friendly (Dashboard, Sales Hub, Inbox, Tarefas,
-       Mais). PadrÃ£o app-like (Instagram/WhatsApp/iFood).
-     â€¢ <MobileMoreSheet> â€” bottom-sheet acionado pelo "Mais" com TODOS
-       os itens secundÃ¡rios + status + tema + sair. */
+     â€¢ <MobileTopBar> — barra superior navy (56px + safe-top) com logo
+       + título da página + avatar (abre menu de conta).
+     â€¢ <MobileBottomNav> — barra inferior navy (60px + safe-bottom) com
+       5 ícones touch-friendly (Dashboard, Sales Hub, Inbox, Tarefas,
+       Mais). Padrão app-like (Instagram/WhatsApp/iFood).
+     â€¢ <MobileMoreSheet> — bottom-sheet acionado pelo "Mais" com TODOS
+       os itens secundários + status + tema + sair. */
 
 // Os itens da barra inferior agora vem do useMobileLayout() em
 // runtime (configurados pelo admin em /settings/mobile-layout).
-// MOBILE_PRIMARY foi removido â€” defaults vivem em src/lib/mobile-layout.ts.
+// MOBILE_PRIMARY foi removido — defaults vivem em src/lib/mobile-layout.ts.
 
 /**
- * Tipo mÃ­nimo consumido pela UI da sidebar. O endpoint /api/organization
- * devolve mais campos, mas pra renderizar o logo sÃ³ precisamos disso.
+ * Tipo mínimo consumido pela UI da sidebar. O endpoint /api/organization
+ * devolve mais campos, mas pra renderizar o logo só precisamos disso.
  */
 type OrgBranding = {
   name: string;
@@ -404,14 +404,14 @@ type OrgBranding = {
 };
 
 /**
- * Renderiza a logo da organizaÃ§Ã£o no topo da sidebar.
+ * Renderiza a logo da organização no topo da sidebar.
  *
- * TrÃªs estados, em ordem de preferÃªncia:
+ * Três estados, em ordem de preferência:
  *   1. `logoUrl` salvo no onboarding â†’ renderiza a imagem.
- *   2. `name` disponÃ­vel â†’ renderiza iniciais (ex: "DW" pra DNA Work)
+ *   2. `name` disponível â†’ renderiza iniciais (ex: "DW" pra DNA Work)
  *      com gradiente EduIT no fallback.
- *   3. Sem dados ainda (carregando / nÃ£o autenticado) â†’ "E" (marca
- *      EduIT padrÃ£o) â€” mesmo comportamento antigo.
+ *   3. Sem dados ainda (carregando / não autenticado) â†’ "E" (marca
+ *      EduIT padrão) — mesmo comportamento antigo.
  *
  * Usa `size` pra reaproveitar no desktop (48px) e mobile (36px).
  */
@@ -437,7 +437,7 @@ function OrgLogo({
           dimClass,
         )}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element -- logo vem como data: URL (base64) ou URL externa; next/image nÃ£o cabe. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- logo vem como data: URL (base64) ou URL externa; next/image não cabe. */}
         <img
           src={org.logoUrl}
           alt={org.name}
@@ -477,8 +477,8 @@ function OrgLogo({
 function getPageTitle(pathname: string | null): string {
   if (!pathname || pathname === "/" || pathname === "/dashboard") return "Dashboard";
   // Match contra navItems (canonical) e bottomItems pra cobrir tudo.
-  // Children tÃªm prioridade sobre o pai â€” quando estamos em /ai-agents
-  // queremos o tÃ­tulo "Agentes IA", nÃ£o "AutomaÃ§Ã£o".
+  // Children têm prioridade sobre o pai — quando estamos em /ai-agents
+  // queremos o título "Agentes IA", não "Automação".
   const all: NavItem[] = [...navItems, ...bottomItems];
   const flat = all.flatMap((item) => (item.children ? [...item.children, item] : [item]));
   for (const item of flat) {
@@ -516,7 +516,7 @@ function MobileTopBar({
       <div className="flex items-center gap-3">
         <Link
           href="/dashboard"
-          aria-label={org?.name ?? "InÃ­cio"}
+          aria-label={org?.name ?? "Início"}
           className="flex shrink-0"
         >
           <OrgLogo org={org} size="sm" textSize="text-base" />
@@ -528,7 +528,7 @@ function MobileTopBar({
       <button
         type="button"
         onClick={onAvatarClick}
-        aria-label={`Conta: ${displayName} Â· ${STATUS_OPTIONS.find((o) => o.value === agentStatus)?.label}`}
+        aria-label={`Conta: ${displayName} · ${STATUS_OPTIONS.find((o) => o.value === agentStatus)?.label}`}
         className="relative shrink-0 rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
       >
         <ChatAvatar
@@ -567,7 +567,7 @@ function MobileBottomNav({
   return (
     <nav
       className="pb-safe sticky bottom-0 z-30 flex shrink-0 items-stretch border-t border-sidebar-border bg-sidebar px-2 pt-1.5 shadow-[0_-4px_16px_-4px_rgba(31,35,41,0.08)] md:hidden"
-      aria-label="NavegaÃ§Ã£o principal"
+      aria-label="Navegação principal"
     >
       {items.map((item) => {
         const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
@@ -608,7 +608,7 @@ function MobileBottomNav({
       <button
         type="button"
         onClick={onMoreClick}
-        aria-label="Mais opÃ§Ãµes"
+        aria-label="Mais opções"
         aria-expanded={moreOpen}
         className={cn(
           "relative flex flex-1 flex-col items-center gap-0.5 rounded-lg py-2 transition-colors",
@@ -627,7 +627,7 @@ function MobileBottomNav({
   );
 }
 
-/* Bottom-sheet com itens secundÃ¡rios, status, tema, conta. */
+/* Bottom-sheet com itens secundários, status, tema, conta. */
 function MobileMoreSheet({
   open,
   onClose,
@@ -686,7 +686,7 @@ function MobileMoreSheet({
   const dotColor = STATUS_DOT_COLOR[agentStatus];
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Mais opÃ§Ãµes">
+    <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Mais opções">
       <button
         type="button"
         aria-label="Fechar"
@@ -757,9 +757,9 @@ function MobileMoreSheet({
           </button>
         </div>
 
-        {/* Itens secundÃ¡rios */}
+        {/* Itens secundários */}
         <div className="px-3 py-4">
-          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mais seÃ§Ãµes</p>
+          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mais seções</p>
           <div className="grid grid-cols-2 gap-1.5">
             {secondaryModules.map((item) => {
               const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
@@ -791,7 +791,7 @@ function MobileMoreSheet({
             })}
             {secondaryModules.length === 0 && (
               <p className="col-span-2 rounded-xl bg-muted/40 px-3 py-4 text-center text-[12px] text-muted-foreground">
-                Todos os mÃ³dulos habilitados estÃ£o na barra inferior.
+                Todos os módulos habilitados estão na barra inferior.
               </p>
             )}
           </div>
@@ -879,7 +879,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const myUserId = (session?.user as { id?: string })?.id;
   const inboxHeightLocked = pathname === "/inbox" || pathname?.startsWith("/inbox/") || pathname === "/sales-hub";
 
-  // Heartbeat global: mantÃ©m lastActivityAt atualizado em qualquer rota autenticada.
+  // Heartbeat global: mantém lastActivityAt atualizado em qualquer rota autenticada.
   // O presence-reaper server-side rebaixa agentes inativos para AWAY/OFFLINE
   // automaticamente com base nesse timestamp.
   usePresenceHeartbeat({ enabled: status === "authenticated" });
@@ -896,10 +896,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     enabled: status === "authenticated",
   });
 
-  // Perfil completo (avatarUrl, phone, signatureâ€¦) â€” a sessÃ£o do NextAuth
-  // nÃ£o expÃµe o avatar, entÃ£o buscamos via /api/profile. Mesma cache chave
-  // usada pela pÃ¡gina `/settings/profile` para sincronizaÃ§Ã£o automÃ¡tica
-  // apÃ³s salvar (invalidateQueries em ["profile"]).
+  // Perfil completo (avatarUrl, phone, signature…) — a sessão do NextAuth
+  // não expõe o avatar, então buscamos via /api/profile. Mesma cache chave
+  // usada pela página `/settings/profile` para sincronização automática
+  // após salvar (invalidateQueries em ["profile"]).
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
@@ -911,9 +911,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     staleTime: 60_000,
   });
 
-  // Branding da org (logo + nome) â€” vem do /api/organization e Ã©
+  // Branding da org (logo + nome) — vem do /api/organization e é
   // consumido pelo <OrgLogo> no topo da sidebar (desktop + mobile).
-  // Invalidamos essa chave no hub de ConfiguraÃ§Ãµes > Branding quando
+  // Invalidamos essa chave no hub de Configurações > Branding quando
   // o admin trocar a logo (via mutation.onSuccess(invalidate(["organization"]))).
   const { data: organization } = useQuery<OrgBranding | null>({
     queryKey: ["organization"],
@@ -954,7 +954,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     sidebarAllowList,
   );
 
-  // Visibilidade por role â€” filtra navItems/bottomItems antes do render.
+  // Visibilidade por role — filtra navItems/bottomItems antes do render.
   // Super-admin EduIT sempre ve tudo (bypass em filterItemsByRole).
   const viewer: Viewer = {
     role: roleFromSession,
@@ -979,7 +979,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     enabled: !!myUserId,
     refetchInterval: 60_000,
   });
-  /** SÃ³ confiar em OFFLINE depois da API â€” evita modal full-screen â€œpresoâ€ no loading inicial. */
+  /** Só confiar em OFFLINE depois da API — evita modal full-screen “preso” no loading inicial. */
   const agentStatus: AgentOnlineStatus = myStatusData?.status ?? "OFFLINE";
   const voiceCallsEnabled = myStatusData?.availableForVoiceCalls ?? false;
 
@@ -1001,9 +1001,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // Fecha o popover de conta quando o clique sai da Ã¡rvore do menu.
-  // NÃ£o usa `pointer-events-none` em overlay (jÃ¡ que Ã© num canto da
-  // sidebar) â€” preferimos detectar via event listener global.
+  // Fecha o popover de conta quando o clique sai da árvore do menu.
+  // Não usa `pointer-events-none` em overlay (já que é num canto da
+  // sidebar) — preferimos detectar via event listener global.
   useEffect(() => {
     if (!accountMenuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -1054,7 +1054,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }
 
   const user = session?.user;
-  const displayName = user?.name ?? "UsuÃ¡rio";
+  const displayName = user?.name ?? "Usuário";
   const dotColor = STATUS_DOT_COLOR[agentStatus];
 
   return (
@@ -1081,14 +1081,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* Sidebar compactada: w-16 (era w-20), py-3 (era py-4), gap-1
           (era gap-1.5) e icones size-10 (era size-11). Reduz altura
-          total ~120px e largura ~16px â€” chega a caber 13 itens em
+          total ~120px e largura ~16px — chega a caber 13 itens em
           viewports de ~720-768px sem scroll, que era a queixa
           principal. */}
       <aside className="hidden w-16 shrink-0 flex-col items-center bg-sidebar border-r border-sidebar-border py-3 shadow-[var(--shadow-sm)] md:flex">
-        <SidebarRailTooltip label={orgBranding?.name ?? "InÃ­cio"}>
+        <SidebarRailTooltip label={orgBranding?.name ?? "Início"}>
           <Link
             href="/dashboard"
-            aria-label={orgBranding?.name ?? "InÃ­cio"}
+            aria-label={orgBranding?.name ?? "Início"}
             className="relative mb-4 flex lumen-transition hover:scale-105"
           >
             <OrgLogo org={orgBranding} size="lg" textSize="text-base" />
@@ -1097,18 +1097,18 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
         <nav
           className="scrollbar-none flex flex-1 flex-col items-center gap-1 overflow-y-auto py-0.5"
-          aria-label="NavegaÃ§Ã£o principal"
+          aria-label="Navegação principal"
         >
           {visibleNavItems.map((item) => {
-            // Filtra children por role aqui tambÃ©m â€” defesa em
+            // Filtra children por role aqui também — defesa em
             // profundidade: se um filho exigir role mais alto que o
-            // pai, nÃ£o vaza no flyout.
+            // pai, não vaza no flyout.
             const visibleChildren = item.children
               ? filterItemsByRole(item.children, viewer)
               : undefined;
             return (
               <div key={item.href} className="flex w-full flex-col items-center">
-                {/* Divisor visual sutil entre blocos (operacional â†” gestÃ£o). */}
+                {/* Divisor visual sutil entre blocos (operacional â†” gestão). */}
                 {item.groupStart && (
                   <span
                     aria-hidden="true"
@@ -1159,9 +1159,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             â”€â”€ POPOVER DE CONTA â”€â”€
             Substitui o tooltip hover antigo por um popover controlado:
             click no avatar â†’ abre card em estilo "Minha conta" (inspirado
-            na referÃªncia Umbler) com acesso a "Meu perfil" e "Sair".
-            O item "Perfil" foi removido do menu /settings/* para nÃ£o
-            duplicar o caminho â€” este Ã© o ponto Ãºnico de entrada.
+            na referência Umbler) com acesso a "Meu perfil" e "Sair".
+            O item "Perfil" foi removido do menu /settings/* para não
+            duplicar o caminho — este é o ponto único de entrada.
           */}
           <div className="relative mt-1" ref={accountMenuRef}>
             <SidebarRailTooltip label={displayName}>
@@ -1266,9 +1266,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       </aside>
 
       {/* Wrapper "Inward Curve": navy aside + main com rounded-tl-[32px]
-          deixa o canto superior esquerdo da Ã¡rea de conteÃºdo cortado em curva
-          contra a sidebar escura â€” assinatura visual EduIT Premium Core.
-          shadow-[var(--shadow-lg)] no main reforÃ§a a separaÃ§Ã£o navy/conteÃºdo. */}
+          deixa o canto superior esquerdo da área de conteúdo cortado em curva
+          contra a sidebar escura — assinatura visual EduIT Premium Core.
+          shadow-[var(--shadow-lg)] no main reforça a separação navy/conteúdo. */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <main
           className={cn(

@@ -44,7 +44,7 @@ const TYPES: {
   {
     type: "WHATSAPP",
     label: "WhatsApp",
-    description: "Mensagens e automaÃ§Ãµes",
+    description: "Mensagens e automações",
     icon: MessageCircle,
     cardClass:
       "border-[#25D366]/30 bg-[#25D366]/[0.06] hover:border-[#25D366]/50",
@@ -52,7 +52,7 @@ const TYPES: {
   {
     type: "INSTAGRAM",
     label: "Instagram",
-    description: "Direct e comentÃ¡rios",
+    description: "Direct e comentários",
     icon: AtSign,
     cardClass:
       "border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-violet-500/10 hover:border-pink-500/40",
@@ -60,7 +60,7 @@ const TYPES: {
   {
     type: "FACEBOOK",
     label: "Facebook",
-    description: "Messenger e pÃ¡ginas",
+    description: "Messenger e páginas",
     icon: Share2,
     cardClass: "border-blue-600/25 bg-blue-600/5 hover:border-blue-600/40",
   },
@@ -250,7 +250,7 @@ export function CreateChannelDialog({
             <DialogDescription>
               {step === 1 && "Escolha o tipo de canal."}
               {step === 2 && channelType === "WHATSAPP" && "Configure o provedor."}
-              {step === 3 && "Finalize a configuraÃ§Ã£o."}
+              {step === 3 && "Finalize a configuração."}
             </DialogDescription>
           </DialogHeader>
 
@@ -309,7 +309,7 @@ export function CreateChannelDialog({
                   <p className="font-semibold">Meta Cloud API (Oficial)</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     API oficial do WhatsApp Business. Requer token e IDs do Meta
-                    Business. Templates, selo de verificado, cobranÃ§a por conversa.
+                    Business. Templates, selo de verificado, cobrança por conversa.
                   </p>
                 </button>
                 <button
@@ -327,8 +327,8 @@ export function CreateChannelDialog({
                     <p className="font-semibold">WhatsApp QR Code</p>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Conecte qualquer nÃºmero via QR code. Sem templates, sem
-                    verificaÃ§Ã£o Meta. RÃ¡pido e direto.
+                    Conecte qualquer número via QR code. Sem templates, sem
+                    verificação Meta. Rápido e direto.
                   </p>
                 </button>
               </div>
@@ -356,8 +356,8 @@ export function CreateChannelDialog({
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             Obtenha credenciais automaticamente com login Meta.
-                            Token, Phone ID e WABA ID sÃ£o configurados de forma segura.
-                            O App Secret Ã© lido de ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes.
+                            Token, Phone ID e WABA ID são configurados de forma segura.
+                            O App Secret é lido de Configurações â†’ Integrações.
                           </p>
                           <Button
                             type="button"
@@ -413,7 +413,7 @@ export function CreateChannelDialog({
                                 id="ch-pnid"
                                 value={phoneNumberId}
                                 onChange={(e) => setPhoneNumberId(e.target.value)}
-                                placeholder="ID do nÃºmero no Meta"
+                                placeholder="ID do número no Meta"
                               />
                             </div>
                             <div className="space-y-2">
@@ -440,7 +440,7 @@ export function CreateChannelDialog({
                                 placeholder="Chave secreta do seu app Meta"
                               />
                               <p className="text-xs text-muted-foreground">
-                                ConfiguraÃ§Ãµes â†’ BÃ¡sico no painel do seu app Meta. NecessÃ¡rio para verificar webhooks vindos do seu app.
+                                Configurações â†’ Básico no painel do seu app Meta. Necessário para verificar webhooks vindos do seu app.
                               </p>
                             </div>
                           </div>
@@ -465,7 +465,7 @@ export function CreateChannelDialog({
                             id="ch-pnid"
                             value={phoneNumberId}
                             onChange={(e) => setPhoneNumberId(e.target.value)}
-                            placeholder="ID do nÃºmero no Meta"
+                            placeholder="ID do número no Meta"
                           />
                         </div>
                         <div className="space-y-2">
@@ -490,7 +490,7 @@ export function CreateChannelDialog({
                             placeholder="Chave secreta do seu app Meta"
                           />
                           <p className="text-xs text-muted-foreground">
-                            ConfiguraÃ§Ãµes â†’ BÃ¡sico no painel do seu app Meta. NecessÃ¡rio para verificar webhooks vindos do seu app.
+                            Configurações â†’ Básico no painel do seu app Meta. Necessário para verificar webhooks vindos do seu app.
                           </p>
                         </div>
                       </>
@@ -501,8 +501,8 @@ export function CreateChannelDialog({
                 {effectiveProvider === "BAILEYS_MD" ? (
                   <div className="rounded-lg border border-[#25D366]/20 bg-[#25D366]/5 p-3">
                     <p className="text-sm text-muted-foreground">
-                      ApÃ³s criar o canal, clique em <strong>Conectar</strong> e escaneie o QR code
-                      com seu WhatsApp. O nÃºmero serÃ¡ detectado automaticamente.
+                      Após criar o canal, clique em <strong>Conectar</strong> e escaneie o QR code
+                      com seu WhatsApp. O número será detectado automaticamente.
                     </p>
                   </div>
                 ) : null}

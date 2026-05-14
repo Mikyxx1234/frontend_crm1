@@ -42,3 +42,24 @@ export const ChannelStatus = {
   FAILED: "FAILED",
 } as const;
 export type ChannelStatus = (typeof ChannelStatus)[keyof typeof ChannelStatus];
+
+export const AIAgentArchetype = {
+  SDR: "SDR",
+  ATENDIMENTO: "ATENDIMENTO",
+  VENDEDOR: "VENDEDOR",
+  SUPORTE: "SUPORTE",
+} as const;
+export type AIAgentArchetype = (typeof AIAgentArchetype)[keyof typeof AIAgentArchetype];
+
+export const CustomFieldType = {
+  TEXT: "TEXT",
+  NUMBER: "NUMBER",
+  DATE: "DATE",
+  SELECT: "SELECT",
+  MULTI_SELECT: "MULTI_SELECT",
+  BOOLEAN: "BOOLEAN",
+  URL: "URL",
+  EMAIL: "EMAIL",
+  PHONE: "PHONE",
+} as const;
+export type CustomFieldType = (typeof CustomFieldType)[keyof typeof CustomFieldType];

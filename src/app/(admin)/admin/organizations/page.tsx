@@ -3,7 +3,7 @@ import { Building2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
-import { listOrganizations } from "@/services/organizations";
+import { apiServerGet } from "@/lib/api-server";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -13,8 +13,21 @@ const STATUS_BADGE = {
   ARCHIVED: { label: "Arquivada", variant: "secondary" as const },
 };
 
+type OrganizationRow = {
+  id: string;
+  name: string;
+  slug: string;
+  industry: string | null;
+  status: keyof typeof STATUS_BADGE;
+  onboardingCompletedAt: string | null;
+  userCount: number;
+  contactCount: number;
+  createdAt: string;
+};
+
 export default async function AdminOrganizationsPage() {
-  const organizations = await listOrganizations({});
+  const organizations =
+    (await apiServerGet<OrganizationRow[]>("/api/admin/organizations")) ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,7 +103,7 @@ export default async function AdminOrganizationsPage() {
                       {org.contactCount}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {formatDistanceToNow(org.createdAt, {
+                      {formatDistanceToNow(new Date(org.createdAt), {
                         addSuffix: true,
                         locale: ptBR,
                       })}

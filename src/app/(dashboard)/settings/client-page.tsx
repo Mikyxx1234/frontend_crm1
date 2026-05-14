@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { useMemo } from "react";
 import { Settings2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/prisma-enum-types";
 
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
@@ -20,16 +20,16 @@ import {
 } from "@/lib/settings-nav";
 
 /**
- * Hub de Configurações.
+ * Hub de ConfiguraÃ§Ãµes.
  *
  * A estrutura de grupos/itens vem de `SETTINGS_NAV` (fonte unica).
- * Essa pagina eh so renderizacao — zero logica de negocio. Pra
+ * Essa pagina eh so renderizacao â€” zero logica de negocio. Pra
  * adicionar um novo item, edite `src/lib/settings-nav.ts`.
  *
  * Visibilidade:
  *  - `filterSettingsNav` oculta itens/grupos que o role atual nao
  *    pode ver. Super-admin bypass.
- *  - MEMBER so ve "Respostas rápidas" e "Notificações" + atalhos
+ *  - MEMBER so ve "Respostas rÃ¡pidas" e "NotificaÃ§Ãµes" + atalhos
  *    pessoais (perfil, suporte).
  */
 export default function SettingsClientPage() {
@@ -84,20 +84,20 @@ export default function SettingsClientPage() {
     <div className="w-full">
       <div className="mb-6">
         <PageHeader
-          title="Configurações"
-          description="Organize canais, equipe, pipeline e integrações do seu workspace."
+          title="ConfiguraÃ§Ãµes"
+          description="Organize canais, equipe, pipeline e integraÃ§Ãµes do seu workspace."
           icon={<Settings2 />}
         />
       </div>
 
-      {/* Atalhos pessoais — topo, 2 cards compactos */}
+      {/* Atalhos pessoais â€” topo, 2 cards compactos */}
       <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {SETTINGS_PERSONAL.map((item) => (
           <PersonalShortcut key={item.id} item={item} pathname={pathname} />
         ))}
       </section>
 
-      {/* Grupos — cada grupo renderiza um card com header + lista */}
+      {/* Grupos â€” cada grupo renderiza um card com header + lista */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
         {groups.map((group) => {
           const GroupIcon = group.icon;
@@ -141,8 +141,8 @@ export default function SettingsClientPage() {
       {groups.length === 0 ? (
         <div className="mt-8 rounded-xl border border-dashed border-border/60 bg-muted/20 p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Seu perfil não tem acesso a configurações do workspace. Peça para
-            um administrador ajustar suas permissões.
+            Seu perfil nÃ£o tem acesso a configuraÃ§Ãµes do workspace. PeÃ§a para
+            um administrador ajustar suas permissÃµes.
           </p>
         </div>
       ) : null}

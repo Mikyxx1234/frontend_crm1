@@ -2,7 +2,7 @@ import type {
   ChannelProvider,
   ChannelStatus,
   ChannelType,
-} from "@prisma/client";
+} from "@/lib/prisma-enum-types";
 
 /** Canal como retornado pela API (datas serializadas como string). */
 export type ApiChannel = {
@@ -18,7 +18,7 @@ export type ApiChannel = {
   sessionData: unknown;
   createdAt: string;
   updatedAt: string;
-  /// Slug da Organization dona deste canal — usado pra montar a URL
+  /// Slug da Organization dona deste canal â€” usado pra montar a URL
   /// do webhook Meta scoped (/api/webhooks/meta/{slug}). Vazio nao
   /// deve acontecer (todo canal tem org), mas tipado como string
   /// pra robustez.

@@ -1,20 +1,21 @@
 import { redirect } from "next/navigation";
 
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth-public";
 import { LandingClient } from "./landing-client";
 
 /**
- * Raiz publica. Decide server-side:
- *  - Nao logado: mostra landing com form de signup inline (passo 1 =
- *    empresa + admin + senha). Ao submeter, vira organization + user
- *    ADMIN numa transacao, faz signIn() e joga no wizard /onboarding
- *    pros passos 2..5 (detalhes, branding, pipeline, time, canal).
- *  - Logado sem onboarding: manda pro wizard.
- *  - Logado com onboarding completo: manda pro dashboard.
- *  - Super-admin sem org (EduIT): manda pro painel /admin.
+ * Raiz pública. No frontend separado decidimos só com a session (JWT):
+ *  - Não logado: mostra a landing com form de signup. Submit chama
+ *    `/api/signup` (rewrite pro backend), que cria organization + user
+ *    ADMIN, faz signIn, e o redirecionamento pro wizard fica no client.
+ *  - Logado com organizationId: vai pro dashboard. O wizard de onboarding
+ *    só é alcançado por link direto / signup flow — o checagem de
+ *    `onboardingCompletedAt` fica no backend via `/api/organization`.
+ *  - Logado sem organizationId mas super-admin: painel /admin.
  *
- * Essa pagina substitui o fluxo antigo de convite-por-admin. Agora
- * qualquer empresa se cadastra direto por esse form.
+ * Diferença do monólito: aqui NÃO consultamos `prismaBase` server-side
+ * porque o frontend não tem Prisma. O wizard de onboarding e o admin
+ * fazem fetch via `/api/*` quando precisam de dados frescos.
  */
 export default async function RootPage() {
   const session = await auth();
@@ -28,15 +29,6 @@ export default async function RootPage() {
       redirect("/admin/organizations");
     }
     if (u.organizationId) {
-      // Conferir se o onboarding ja foi concluido pra decidir rota.
-      const { prismaBase } = await import("@/lib/prisma-base");
-      const org = await prismaBase.organization.findUnique({
-        where: { id: u.organizationId },
-        select: { onboardingCompletedAt: true },
-      });
-      if (org && !org.onboardingCompletedAt) {
-        redirect("/onboarding");
-      }
       redirect("/dashboard");
     }
   }

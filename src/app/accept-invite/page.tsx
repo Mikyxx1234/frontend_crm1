@@ -1,10 +1,25 @@
 import AcceptInviteForm from "./accept-invite-form";
-import { validateOnboardingToken } from "@/services/onboarding";
+import { apiServerGet } from "@/lib/api-server";
 
 type Props = {
   searchParams: Promise<{ token?: string }>;
 };
 
+type InviteValidation = {
+  invite: { email: string; role: string };
+  organization: {
+    name: string;
+    primaryColor?: string | null;
+    logoUrl?: string | null;
+  };
+};
+
+/**
+ * No frontend separado a validação do token de convite vira fetch contra
+ * `/api/invites/validate?token=...` (rewrite pro backend). Mantemos a
+ * mesma UX: validamos no SSR pra evitar piscar o form quando o token é
+ * inválido.
+ */
 export default async function AcceptInvitePage({ searchParams }: Props) {
   const { token } = await searchParams;
   if (!token) {
@@ -17,18 +32,28 @@ export default async function AcceptInvitePage({ searchParams }: Props) {
   }
 
   try {
-    const data = await validateOnboardingToken(token);
+    const data = await apiServerGet<InviteValidation>(
+      `/api/invites/validate?token=${encodeURIComponent(token)}`,
+    );
+    if (!data) {
+      return (
+        <FullScreenError
+          title="Convite inválido"
+          message="Este convite não foi encontrado ou já expirou."
+        />
+      );
+    }
     return (
       <AcceptInviteForm
         token={token}
         invite={{
           email: data.invite.email,
-          role: data.invite.role,
+          role: data.invite.role as "ADMIN" | "MANAGER" | "MEMBER",
         }}
         organization={{
           name: data.organization.name,
-          primaryColor: data.organization.primaryColor,
-          logoUrl: data.organization.logoUrl,
+          primaryColor: data.organization.primaryColor ?? null,
+          logoUrl: data.organization.logoUrl ?? null,
         }}
       />
     );

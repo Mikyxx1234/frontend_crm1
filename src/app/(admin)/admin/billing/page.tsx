@@ -2,16 +2,46 @@ import { CreditCard, AlertTriangle, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
-import { prismaBase } from "@/lib/prisma-base";
-import { getCurrentPeriodUsage } from "@/lib/billing/aggregate";
-import {
-  getEffectiveLimit,
-  getPlan,
-  PLANS,
-} from "@/lib/billing/plans";
-import { listMeters, type MeterKey } from "@/lib/billing/meters";
+import { apiServerGet } from "@/lib/api-server";
 
 export const dynamic = "force-dynamic";
+
+type MeterDescriptor = { key: string; label?: string };
+type PlanDescriptor = {
+  key: string;
+  name: string;
+  priceUsd: number;
+  limits: Record<string, number | null>;
+};
+type OrgRow = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  subscription: {
+    planKey: string;
+    status: string;
+    stripeSubscriptionId: string | null;
+    currentPeriodStart: string | null;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    limitsOverride: Record<string, number> | null;
+  } | null;
+  usage: Record<string, number>;
+  limits: Record<string, number | null>;
+  overLimit: Record<string, boolean>;
+};
+type BillingResponse = {
+  organizations: OrgRow[];
+  totals: {
+    mrrUsd: number;
+    orgsActive: number;
+    orgsPastDue: number;
+    orgsCanceled: number;
+  };
+  plans: Record<string, PlanDescriptor>;
+  meters: MeterDescriptor[];
+};
 
 const STATUS_BADGE: Record<
   string,
@@ -35,8 +65,8 @@ function formatNumber(n: number): string {
   return new Intl.NumberFormat("pt-BR").format(n);
 }
 
-function formatUsage(meter: MeterKey, value: number): string {
-  if (meter === "storage_bytes") return formatBytes(value);
+function formatUsage(meterKey: string, value: number): string {
+  if (meterKey === "storage_bytes") return formatBytes(value);
   return formatNumber(value);
 }
 
@@ -46,65 +76,35 @@ function pct(used: number, limit: number | null): number | null {
 }
 
 export default async function AdminBillingPage() {
-  const orgs = await prismaBase.organization.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      status: true,
-      subscription: {
-        select: {
-          planKey: true,
-          status: true,
-          currentPeriodEnd: true,
-          cancelAtPeriodEnd: true,
-          stripeSubscriptionId: true,
-          limitsOverride: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  /**
+   * No frontend separado todos os dados de billing vivem no backend.
+   * Aqui só agregamos a UI a partir do `/api/admin/billing` (rewrite
+   * pro backend). O endpoint já faz o cálculo de `totals` e devolve
+   * `plans` + `meters` pra evitar duplicação de tabela de planos.
+   */
+  const data = await apiServerGet<BillingResponse>("/api/admin/billing");
 
-  const meters = listMeters();
-
-  const rows = await Promise.all(
-    orgs.map(async (org) => {
-      const usage = await getCurrentPeriodUsage(org.id);
-      return { org, usage };
-    }),
-  );
-
-  // Totais
-  let mrrUsd = 0;
-  let orgsActive = 0;
-  let orgsPastDue = 0;
-  let orgsOverLimit = 0;
-  for (const { org, usage } of rows) {
-    const sub = org.subscription;
-    const plan = getPlan(sub?.planKey ?? "free");
-    if (sub?.status === "ACTIVE" || sub?.status === "TRIALING") {
-      orgsActive++;
-      mrrUsd += plan.priceUsd;
-    } else if (sub?.status === "PAST_DUE" || sub?.status === "UNPAID") {
-      orgsPastDue++;
-      mrrUsd += plan.priceUsd;
-    }
-    const overrides = (sub?.limitsOverride ?? null) as
-      | Record<MeterKey, number>
-      | null;
-    for (const m of meters) {
-      const limit = getEffectiveLimit(
-        sub?.planKey ?? "free",
-        m.key as MeterKey,
-        overrides,
-      );
-      if (limit !== null && Number(usage[m.key as MeterKey] ?? BigInt(0)) > limit) {
-        orgsOverLimit++;
-        break;
-      }
-    }
+  if (!data) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          icon={<CreditCard />}
+          eyebrow="Plataforma"
+          title="Billing"
+          description="Conecte um super-admin para visualizar."
+        />
+        <div className="rounded-xl border border-border bg-background p-10 text-center text-sm text-muted-foreground">
+          Sem permissão ou backend indisponível.
+        </div>
+      </div>
+    );
   }
+
+  const { organizations: rows, totals, plans, meters } = data;
+  const { mrrUsd, orgsActive, orgsPastDue } = totals;
+  const orgsOverLimit = rows.filter((o) =>
+    Object.values(o.overLimit).some((v) => v),
+  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -172,13 +172,10 @@ export default async function AdminBillingPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {rows.map(({ org, usage }) => {
+              {rows.map((org) => {
                 const sub = org.subscription;
                 const planKey = sub?.planKey ?? "free";
-                const plan = getPlan(planKey);
-                const overrides = (sub?.limitsOverride ?? null) as
-                  | Record<MeterKey, number>
-                  | null;
+                const plan = plans[planKey] ?? plans.free;
                 const badge = STATUS_BADGE[sub?.status ?? "CANCELED"] ?? {
                   label: "—",
                   variant: "secondary" as const,
@@ -197,9 +194,9 @@ export default async function AdminBillingPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-medium">{plan.name}</span>
+                        <span className="font-medium">{plan?.name ?? planKey}</span>
                         <span className="text-xs text-muted-foreground">
-                          ${plan.priceUsd}/mo
+                          ${plan?.priceUsd ?? 0}/mo
                         </span>
                       </div>
                     </td>
@@ -213,14 +210,10 @@ export default async function AdminBillingPage() {
                       )}
                     </td>
                     {meters.map((m) => {
-                      const used = Number(usage[m.key as MeterKey] ?? BigInt(0));
-                      const limit = getEffectiveLimit(
-                        planKey,
-                        m.key as MeterKey,
-                        overrides,
-                      );
+                      const used = Number(org.usage[m.key] ?? 0);
+                      const limit = org.limits[m.key] ?? null;
                       const percent = pct(used, limit);
-                      const over = limit !== null && used > limit;
+                      const over = Boolean(org.overLimit[m.key]);
                       return (
                         <td
                           key={m.key}
@@ -234,12 +227,12 @@ export default async function AdminBillingPage() {
                                   : "text-foreground"
                               }
                             >
-                              {formatUsage(m.key as MeterKey, used)}
+                              {formatUsage(m.key, used)}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {limit === null
                                 ? "ilim."
-                                : `de ${formatUsage(m.key as MeterKey, limit)}${
+                                : `de ${formatUsage(m.key, limit)}${
                                     percent !== null ? ` · ${percent}%` : ""
                                   }`}
                             </span>
@@ -272,7 +265,7 @@ export default async function AdminBillingPage() {
           Tabela de planos
         </summary>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {Object.values(PLANS).map((p) => (
+          {Object.values(plans).map((p) => (
             <div
               key={p.key}
               className="rounded-lg border border-border bg-muted/20 p-3"
@@ -289,7 +282,7 @@ export default async function AdminBillingPage() {
                     <span className="font-medium text-foreground">
                       {k.replace(/_/g, " ")}
                     </span>
-                    : {v === null ? "ilim." : formatUsage(k as MeterKey, v)}
+                    : {v === null ? "ilim." : formatUsage(k, v)}
                   </li>
                 ))}
               </ul>

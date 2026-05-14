@@ -26,7 +26,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { ComponentType } from "react";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/lib/prisma-enum-types";
 
 /**
  * Fonte unica de verdade do menu de Configuracoes.
@@ -35,7 +35,7 @@ import { UserRole } from "@prisma/client";
  * do usuario: itens similares agrupados por INTENCAO, nao por feature
  * tecnica. Inspiracao: Kommo / Intercom / Front.
  *
- * Cada item declara `allowedRoles` — roles que enxergam o item na
+ * Cada item declara `allowedRoles` â€” roles que enxergam o item na
  * sidebar. Ausente = todos os roles. Isso eh o "ponto de extensao":
  * quando adicionar uma tabela de permissoes granulares no banco (como
  * o painel de Direitos do Kommo), basta substituir esse array por um
@@ -44,7 +44,7 @@ import { UserRole } from "@prisma/client";
  *
  * Convencoes:
  *  - Um item com `href=null` eh placeholder (nao navegavel). Use so
- *    pra secoes em desenvolvimento — preferir OMITIR o item a colocar
+ *    pra secoes em desenvolvimento â€” preferir OMITIR o item a colocar
  *    um "em breve" que gera ruido visual.
  *  - `description` eh curta (<=40 chars), aparece embaixo do label em
  *    viewports largos.
@@ -65,7 +65,7 @@ export type SettingsNavItem = {
    * os roles autenticados. Super-admin sempre enxerga tudo.
    */
   allowedRoles?: UserRole[];
-  /** Permission key canônica (`resource:action`) para exibir o item. */
+  /** Permission key canÃ´nica (`resource:action`) para exibir o item. */
   requiredPermission?: string;
   /** Badge discreto no canto do item. Ex.: "Beta", "Novo". */
   eyebrow?: string;
@@ -74,7 +74,7 @@ export type SettingsNavItem = {
 export type SettingsNavGroup = {
   id: string;
   label: string;
-  /** Icone do grupo — pintado no header da secao. */
+  /** Icone do grupo â€” pintado no header da secao. */
   icon: SettingsNavIcon;
   /**
    * Breve descricao do agrupamento (opcional). Aparece embaixo do
@@ -93,7 +93,7 @@ const SO_ADMIN: UserRole[] = [UserRole.ADMIN];
 export const SETTINGS_NAV: SettingsNavGroup[] = [
   {
     id: "comunicacao",
-    label: "Comunicação",
+    label: "ComunicaÃ§Ã£o",
     icon: MessageSquare,
     description: "Canais, templates e avisos",
     items: [
@@ -116,7 +116,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       },
       {
         id: "quick-replies",
-        label: "Respostas rápidas",
+        label: "Respostas rÃ¡pidas",
         description: "Atalhos de texto do atendimento",
         icon: Zap,
         href: "/settings/quick-replies",
@@ -124,7 +124,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       },
       {
         id: "notifications",
-        label: "Notificações",
+        label: "NotificaÃ§Ãµes",
         description: "Push, e-mail e alertas por canal",
         icon: Bell,
         href: "/settings/notifications",
@@ -142,7 +142,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "custom-fields",
         label: "Campos personalizados",
-        description: "Contatos, empresas e negócios",
+        description: "Contatos, empresas e negÃ³cios",
         icon: LayoutList,
         href: "/settings/custom-fields",
         allowedRoles: GESTAO,
@@ -204,7 +204,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       },
       {
         id: "distribution",
-        label: "Distribuição",
+        label: "DistribuiÃ§Ã£o",
         description: "Round-robin, priorizacao e regras",
         icon: Shuffle,
         href: "/settings/distribution",
@@ -216,7 +216,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
 
   {
     id: "equipe-operacao",
-    label: "Equipe & Operação",
+    label: "Equipe & OperaÃ§Ã£o",
     icon: Headphones,
     description: "Pessoas e expediente",
     items: [
@@ -231,7 +231,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       },
       {
         id: "schedules",
-        label: "Horários e disponibilidade",
+        label: "HorÃ¡rios e disponibilidade",
         description: "Expediente e status dos agentes",
         icon: Clock,
         href: "/settings/schedules",
@@ -243,7 +243,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
 
   {
     id: "automacoes-ia",
-    label: "Automações & IA",
+    label: "AutomaÃ§Ãµes & IA",
     icon: Sparkles,
     description: "Agentes e assistentes inteligentes",
     items: [
@@ -261,7 +261,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
 
   {
     id: "integracoes",
-    label: "Integrações",
+    label: "IntegraÃ§Ãµes",
     icon: Plug,
     description: "APIs externas e tokens",
     items: [
@@ -285,7 +285,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     items: [
       {
         id: "permissions",
-        label: "Permissões",
+        label: "PermissÃµes",
         description: "Visibilidade de leads por funcao",
         icon: Shield,
         href: "/settings/permissions",
@@ -306,7 +306,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
 ];
 
 /**
- * Atalhos no topo do settings — acessos pessoais que todo usuario tem,
+ * Atalhos no topo do settings â€” acessos pessoais que todo usuario tem,
  * independente do role. Separados dos grupos principais pra nao poluir
  * a listagem de configuracoes do workspace.
  */

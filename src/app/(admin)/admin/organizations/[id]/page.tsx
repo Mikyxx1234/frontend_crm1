@@ -5,8 +5,46 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { PageHeader } from "@/components/ui/page-header";
-import { getOrganizationById } from "@/services/organizations";
+import { apiServerGet } from "@/lib/api-server";
 import OrganizationDetailClient from "./organization-detail-client";
+
+type OrgDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  status: "ACTIVE" | "SUSPENDED" | "ARCHIVED";
+  industry: string | null;
+  size: string | null;
+  phone: string | null;
+  createdAt: string;
+  onboardingCompletedAt: string | null;
+  counts: {
+    users: number;
+    contacts: number;
+    deals: number;
+    pipelines: number;
+    channels: number;
+    conversations: number;
+  };
+  users: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    isSuperAdmin: boolean;
+    type: string;
+    isErased: boolean;
+    createdAt: string;
+  }>;
+  invites: Array<{
+    id: string;
+    email: string;
+    role: string;
+    token: string;
+    expiresAt: string;
+    createdAt: string;
+  }>;
+};
 
 export default async function OrganizationDetailPage({
   params,
@@ -14,7 +52,9 @@ export default async function OrganizationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const org = await getOrganizationById(id);
+  const org = await apiServerGet<OrgDetail>(
+    `/api/admin/organizations/${encodeURIComponent(id)}`,
+  );
   if (!org) notFound();
 
   return (
@@ -31,49 +71,10 @@ export default async function OrganizationDetailPage({
         icon={<Building2 />}
         eyebrow={org.slug}
         title={org.name}
-        description={`Criada em ${format(org.createdAt, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`}
+        description={`Criada em ${format(new Date(org.createdAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`}
       />
 
-      <OrganizationDetailClient
-        organization={{
-          id: org.id,
-          name: org.name,
-          slug: org.slug,
-          status: org.status,
-          industry: org.industry,
-          size: org.size,
-          phone: org.phone,
-          onboardingCompletedAt: org.onboardingCompletedAt
-            ? org.onboardingCompletedAt.toISOString()
-            : null,
-          counts: {
-            users: org.users.length,
-            contacts: org._count.contacts,
-            deals: org._count.deals,
-            pipelines: org._count.pipelines,
-            channels: org._count.channels,
-            conversations: org._count.conversations,
-          },
-          users: org.users.map((u) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: u.role,
-            isSuperAdmin: u.isSuperAdmin,
-            type: u.type,
-            isErased: u.isErased,
-            createdAt: u.createdAt.toISOString(),
-          })),
-          invites: org.invites.map((i) => ({
-            id: i.id,
-            email: i.email,
-            role: i.role,
-            token: i.token,
-            expiresAt: i.expiresAt.toISOString(),
-            createdAt: i.createdAt.toISOString(),
-          })),
-        }}
-      />
+      <OrganizationDetailClient organization={org} />
     </div>
   );
 }

@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Building2, CreditCard, LayoutDashboard, ShieldCheck } from "lucide-react";
 
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth-public";
 
 /**
- * Layout do painel admin EduIT. Gated a super-admins — o middleware ja
+ * Layout do painel admin EduIT. Gated a super-admins â€” o middleware ja
  * redireciona mas mantemos o check aqui como segunda barreira (defense-in-depth).
  * NAO reusa o DashboardShell proposital: este painel e exclusivo da equipe
  * EduIT e nao deve parecer parte do CRM de cliente (evita confusao em
@@ -46,7 +46,7 @@ export default async function AdminLayout({
               className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
             >
               <Building2 className="size-4" />
-              Organizações
+              OrganizaÃ§Ãµes
             </Link>
             <Link
               href="/admin/billing"

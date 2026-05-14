@@ -4,15 +4,15 @@ import { Toaster } from "sonner";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/manrope";
 
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth-public";
 import "@/lib/auth-types";
 
 import { Providers } from "./providers";
 import "./globals.css";
 
 /* Outfit via next/font: bundling local + preload + zero FOUT.
-   Mais robusto que `@import` da CDN no globals.css — garante a fonte
-   carregada antes do primeiro paint. A variável é exposta como classe
+   Mais robusto que `@import` da CDN no globals.css â€” garante a fonte
+   carregada antes do primeiro paint. A variÃ¡vel Ã© exposta como classe
    no <html> para complementar o `font-family: var(--font-sans)`
    declarado em @layer base. */
 const outfit = Outfit({
@@ -24,9 +24,9 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: "EduIT CRM",
-  description: "CRM para gestão de relacionamento com clientes",
+  description: "CRM para gestÃ£o de relacionamento com clientes",
   applicationName: "EduIT",
-  // PWA / iOS standalone — quando instalado na home, abre fullscreen
+  // PWA / iOS standalone â€” quando instalado na home, abre fullscreen
   // com a barra de status preta translucida (Safari respeita "default"
   // mais "black-translucent": o conteudo passa por baixo da status bar
   // e aproveitamos o env(safe-area-inset-top) pra empurrar o conteudo).
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   // Manifest: gerado dinamicamente em /manifest.webmanifest pelo
   // arquivo app/manifest.ts. O Next 15 ja injeta o <link> automatico
-  // via metadata API quando o arquivo esta presente — declaramos
+  // via metadata API quando o arquivo esta presente â€” declaramos
   // aqui apenas para garantir override consistente.
   manifest: "/manifest.webmanifest",
   icons: {
@@ -55,10 +55,10 @@ export const metadata: Metadata = {
 };
 
 /* Viewport mobile-first:
-   - `width=device-width` + `initialScale=1` → escala correta no celular.
-   - `viewportFit: "cover"` → usa safe-area do iPhone (notch/home indicator)
+   - `width=device-width` + `initialScale=1` â†’ escala correta no celular.
+   - `viewportFit: "cover"` â†’ usa safe-area do iPhone (notch/home indicator)
      com env(safe-area-inset-*); combinado com utilities `.pb-safe` etc.
-   - `maximumScale=5` (não 1) → permite zoom acessibilidade.
+   - `maximumScale=5` (nÃ£o 1) â†’ permite zoom acessibilidade.
    - `themeColor` navy combina com a sidebar e address bar do Chrome Android. */
 export const viewport: Viewport = {
   width: "device-width",

@@ -25,8 +25,9 @@ import { Input } from "@/components/ui/input";
 import { SelectNative } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, formatCurrency, formatDateTime } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
+import { dt } from "@/lib/design-tokens";
+import { cn, formatCurrency, formatDateTime, tagPillStyle } from "@/lib/utils";
 
 const LIFECYCLE_OPTIONS = [
   { value: "SUBSCRIBER", label: "Assinante" },
@@ -327,8 +328,8 @@ export function ContactInfoPanel({
                   data.tags.map(({ tag }) => (
                     <span
                       key={tag.id}
-                      className={ds.tag.solid}
-                      style={{ backgroundColor: tag.color || "#6b7280" }}
+                      className={cn(dt.pill.sm, "gap-0.5")}
+                      style={tagPillStyle(tag.name, tag.color)}
                     >
                       {tag.name}
                       <button

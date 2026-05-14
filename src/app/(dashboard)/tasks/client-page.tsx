@@ -171,7 +171,7 @@ export default function TasksPage() {
       />
 
       <form
-        className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm sm:flex-row sm:items-end"
+        className="flex flex-col gap-3 rounded-xl border border-border/80 bg-white p-4 shadow-sm sm:flex-row sm:items-end"
         onSubmit={(e) => {
           e.preventDefault();
           if (!title.trim() || createMut.isPending) return;
@@ -179,7 +179,7 @@ export default function TasksPage() {
         }}
       >
         <div className="min-w-0 flex-1 space-y-1.5">
-          <label className="text-xs font-medium text-slate-600">Nova tarefa</label>
+          <label className="text-xs font-medium text-[var(--color-ink-soft)]">Nova tarefa</label>
           <Input
             placeholder="Título"
             value={title}
@@ -188,7 +188,7 @@ export default function TasksPage() {
           />
         </div>
         <div className="w-full space-y-1.5 sm:w-44">
-          <label className="text-xs font-medium text-slate-600">Data</label>
+          <label className="text-xs font-medium text-[var(--color-ink-soft)]">Data</label>
           <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-10" />
         </div>
         <Button type="submit" disabled={!title.trim() || createMut.isPending} className="h-10 shrink-0 gap-1.5">
@@ -221,7 +221,7 @@ export default function TasksPage() {
       ) : isError ? (
         <p className="text-sm text-red-600">Não foi possível carregar as tarefas.</p>
       ) : tasks.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-10 text-center text-sm text-slate-500">
+        <p className="rounded-xl border border-dashed border-border bg-[var(--color-bg-subtle)]/80 px-4 py-10 text-center text-sm text-slate-500">
           Nenhuma tarefa neste filtro.
         </p>
       ) : (
@@ -232,14 +232,14 @@ export default function TasksPage() {
                 <div className="mb-3 flex items-center gap-2">
                   {sec.tone === "red" && <AlertTriangle className="size-4 text-red-500" />}
                   {sec.tone === "amber" && <Clock className="size-4 text-amber-500" />}
-                  {sec.tone === "slate" && <Calendar className="size-4 text-slate-400" />}
+                  {sec.tone === "slate" && <Calendar className="size-4 text-[var(--color-ink-muted)]" />}
                   {sec.tone === "green" && <CheckCircle2 className="size-4 text-emerald-500" />}
                   <h2
                     className={cn(
                       "text-sm font-semibold",
                       sec.tone === "red" && "text-red-700",
                       sec.tone === "amber" && "text-amber-800",
-                      sec.tone === "slate" && "text-slate-700",
+                      sec.tone === "slate" && "text-foreground",
                       sec.tone === "green" && "text-emerald-700"
                     )}
                   >
@@ -257,14 +257,14 @@ export default function TasksPage() {
                         "group flex gap-3 rounded-xl border bg-white p-3 shadow-sm transition hover:border-slate-300",
                         sec.tone === "red" && "border-red-200/90 bg-red-50/40",
                         sec.tone === "amber" && "border-amber-200/80 bg-amber-50/30",
-                        sec.tone === "slate" && "border-slate-200/80",
+                        sec.tone === "slate" && "border-border/80",
                         sec.tone === "green" && "border-emerald-200/70 bg-emerald-50/20 opacity-90"
                       )}
                     >
                       <button
                         type="button"
                         aria-label={t.completed ? "Marcar pendente" : "Marcar concluída"}
-                        className="mt-0.5 shrink-0 text-slate-400 hover:text-slate-700 disabled:opacity-50"
+                        className="mt-0.5 shrink-0 text-[var(--color-ink-muted)] hover:text-foreground disabled:opacity-50"
                         disabled={toggleMut.isPending}
                         onClick={() => toggleMut.mutate(t.id)}
                       >
@@ -298,7 +298,7 @@ export default function TasksPage() {
                               {formatDate(t.scheduledAt)}
                             </span>
                           ) : (
-                            <span className="text-slate-400">Sem data</span>
+                            <span className="text-[var(--color-ink-muted)]">Sem data</span>
                           )}
                           {t.completed ? (
                             <Badge className="bg-emerald-600 text-[10px] hover:bg-emerald-600">Concluída</Badge>
@@ -313,7 +313,7 @@ export default function TasksPage() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="size-9 shrink-0 text-slate-400 opacity-60 hover:text-red-600 group-hover:opacity-100"
+                        className="size-9 shrink-0 text-[var(--color-ink-muted)] opacity-60 hover:text-red-600 group-hover:opacity-100"
                         disabled={deleteMut.isPending}
                         onClick={() => deleteMut.mutate(t.id)}
                       >

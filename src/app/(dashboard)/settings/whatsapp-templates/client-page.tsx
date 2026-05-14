@@ -3,6 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle, ArrowLeft, BookOpen, Check, ClipboardCopy, Eye, Loader2, MessageCircle, Pencil, Phone, Plus, RefreshCw, Trash2, UserCheck,
@@ -22,6 +23,8 @@ import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
+import { analyzeTemplateComponents } from "@/lib/meta-whatsapp/analyze-template-components";
+import { mergeOperatorVariables, type OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { cn } from "@/lib/utils";
 
 const DOCS_LIST =
@@ -38,6 +41,7 @@ type MetaTemplateRow = {
   category?: string;
   sub_category?: string;
   language?: string;
+  parameter_format?: string;
   components?: unknown[];
   quality_score?: { score?: string };
   rejected_reason?: string;
@@ -52,6 +56,12 @@ type TemplateConfig = {
   language: string;
   category: string | null;
   bodyPreview: string;
+  hasButtons: boolean;
+  buttonTypes: string[];
+  hasVariables: boolean;
+  flowAction: string | null;
+  flowId: string | null;
+  operatorVariables?: OperatorVariableMeta[] | null;
 };
 
 type ListResponse = {
@@ -143,15 +153,6 @@ function extractBodyText(components: unknown[] | undefined): string {
   return "";
 }
 
-function summarizeComponents(components: unknown[] | undefined): string {
-  if (!components?.length) return "—";
-  const types = components.map((c) => {
-    if (c && typeof c === "object" && "type" in c) return String((c as { type: string }).type);
-    return "?";
-  });
-  return types.join(" · ");
-}
-
 /** Extrai textos exibíveis dos componentes retornados pela Graph API. */
 function componentPreviewBlocks(components: unknown[] | undefined): { title: string; body: string }[] {
   if (!components?.length) return [];
@@ -235,6 +236,8 @@ export default function WhatsappMetaTemplatesPageWrapper() {
 function WhatsappMetaTemplatesPage() {
   const queryClient = useQueryClient();
   const confirmDialog = useConfirm();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [afterStack, setAfterStack] = React.useState<string[]>([]);
   const after = afterStack.length ? afterStack[afterStack.length - 1] : undefined;
 
@@ -290,6 +293,36 @@ function WhatsappMetaTemplatesPage() {
     '{\n  "name": "meu_template",\n  "language": "pt_BR",\n  "category": "MARKETING",\n  "parameter_format": "POSITIONAL",\n  "components": [\n    { "type": "BODY", "text": "Olá {{1}}" }\n  ]\n}',
   );
 
+  const { data: flowDefsList = [] } = useQuery({
+    queryKey: ["whatsapp-flow-definitions"],
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/api/whatsapp-flow-definitions"));
+      if (!r.ok) return [] as { id: string; name: string; status: string; metaFlowId: string | null }[];
+      return r.json() as Promise<{ id: string; name: string; status: string; metaFlowId: string | null }[]>;
+    },
+    enabled: createOpen && category !== "AUTHENTICATION",
+  });
+  const publishedFlows = React.useMemo(
+    () => flowDefsList.filter((f) => f.status === "PUBLISHED" && f.metaFlowId?.trim()),
+    [flowDefsList],
+  );
+
+  const [flowAssistEnabled, setFlowAssistEnabled] = React.useState(false);
+  const [flowPickId, setFlowPickId] = React.useState("");
+  const [flowButtonText, setFlowButtonText] = React.useState("Abrir formulário");
+  const [flowActionMeta, setFlowActionMeta] = React.useState<"NAVIGATE" | "DATA_EXCHANGE">("NAVIGATE");
+
+  React.useEffect(() => {
+    if (searchParams.get("create") !== "1") return;
+    queueMicrotask(() => {
+      setCreateOpen(true);
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.delete("create");
+      const qs = sp.toString();
+      router.replace(qs ? `/settings/message-models?${qs}` : "/settings/message-models?tab=whatsapp");
+    });
+  }, [router, searchParams]);
+
   const createMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown> | { raw: true; payload: Record<string, unknown> }) => {
       const res = await fetch(apiUrl("/api/meta/whatsapp/message-templates"), {
@@ -335,6 +368,10 @@ function WhatsappMetaTemplatesPage() {
     setQuickTexts([""]);
     setUrlRows([{ text: "", url: "" }]);
     setCreateMode("assisted");
+    setFlowAssistEnabled(false);
+    setFlowPickId("");
+    setFlowButtonText("Abrir formulário");
+    setFlowActionMeta("NAVIGATE");
   }
 
   function submitAssisted() {
@@ -347,6 +384,14 @@ function WhatsappMetaTemplatesPage() {
       if (u.text.trim() && u.url.trim()) {
         buttons.push({ type: "URL", text: u.text.trim(), url: u.url.trim() });
       }
+    }
+    if (flowAssistEnabled && flowPickId.trim()) {
+      buttons.push({
+        type: "FLOW",
+        text: (flowButtonText.trim() || "Abrir fluxo").slice(0, 25),
+        flow_id: flowPickId.trim(),
+        flow_action: flowActionMeta,
+      });
     }
     createMutation.mutate({
       name,
@@ -392,9 +437,9 @@ function WhatsappMetaTemplatesPage() {
           </h1>
           <p className={cn(pageHeaderDescriptionClass, "max-w-2xl")}>
             Lista, criação e exclusão na conta comercial (WABA). Tipos suportados no assistente:{" "}
-            <strong>UTILITY</strong>, <strong>MARKETING</strong> e <strong>AUTHENTICATION</strong>.
-            Fluxos, carrosseis e template de permissão de ligação exigem o modo <strong>JSON avançado</strong>{" "}
-            conforme a documentação oficial.
+            <strong>UTILITY</strong>, <strong>MARKETING</strong> e <strong>AUTHENTICATION</strong>. O assistente também
+            permite <strong>botão Flow</strong> com <code className="text-xs">flow_id</code> publicado no CRM (aba Flows
+            em Modelos de mensagem). Carrossel e permissão de ligação continuam no modo <strong>JSON avançado</strong>.
           </p>
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
             <a
@@ -502,6 +547,15 @@ function WhatsappMetaTemplatesPage() {
                 const isEditingLabel = editingLabelId === row.id;
 
                 function saveConfig(patch: Partial<{ label: string; agentEnabled: boolean }>) {
+                  const analysis = analyzeTemplateComponents(
+                    Array.isArray(row.components) ? row.components : undefined,
+                    { parameterFormat: row.parameter_format },
+                  );
+                  const bodyTxt = extractBodyText(row.components);
+                  const prevVars = Array.isArray(cfg?.operatorVariables)
+                    ? (cfg!.operatorVariables as OperatorVariableMeta[])
+                    : undefined;
+                  const operatorVariables = mergeOperatorVariables(bodyTxt, prevVars);
                   configMutation.mutate({
                     metaTemplateId: row.id,
                     metaTemplateName: row.name,
@@ -509,7 +563,13 @@ function WhatsappMetaTemplatesPage() {
                     agentEnabled: patch.agentEnabled ?? cfg?.agentEnabled ?? false,
                     language: row.language ?? "pt_BR",
                     category: row.category ?? null,
-                    bodyPreview: extractBodyText(row.components),
+                    bodyPreview: bodyTxt,
+                    hasButtons: analysis.hasButtons,
+                    buttonTypes: analysis.buttonTypes,
+                    hasVariables: analysis.hasVariables,
+                    flowAction: analysis.flowAction,
+                    flowId: analysis.flowId,
+                    operatorVariables,
                   });
                 }
 
@@ -911,6 +971,68 @@ function WhatsappMetaTemplatesPage() {
                     >
                       + URL
                     </Button>
+                  </div>
+                  <div className="rounded-lg border border-indigo-200/80 bg-indigo-50/50 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        checked={flowAssistEnabled}
+                        onChange={(e) => setFlowAssistEnabled(e.target.checked)}
+                      />
+                      Botão WhatsApp Flow (assistido)
+                    </label>
+                    {flowAssistEnabled ? (
+                      <div className="mt-3 space-y-2">
+                        <div>
+                          <Label>Flow publicado (CRM)</Label>
+                          <SelectNative
+                            value={flowPickId}
+                            onChange={(e) => setFlowPickId(e.target.value)}
+                            className="mt-1 w-full"
+                          >
+                            <option value="">— escolha —</option>
+                            {publishedFlows.map((f) => (
+                              <option key={f.id} value={f.metaFlowId!.trim()}>
+                                {f.name} ({f.metaFlowId})
+                              </option>
+                            ))}
+                          </SelectNative>
+                          {publishedFlows.length === 0 ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Publique um flow em{" "}
+                              <Link
+                                href="/settings/message-models?tab=flows"
+                                className="font-medium text-primary underline-offset-2 hover:underline"
+                              >
+                                Modelos → Flows
+                              </Link>
+                              .
+                            </p>
+                          ) : null}
+                        </div>
+                        <div>
+                          <Label>Texto do botão (máx. 25)</Label>
+                          <Input
+                            value={flowButtonText}
+                            onChange={(e) => setFlowButtonText(e.target.value.slice(0, 25))}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label>flow_action</Label>
+                          <SelectNative
+                            value={flowActionMeta}
+                            onChange={(e) =>
+                              setFlowActionMeta(e.target.value as "NAVIGATE" | "DATA_EXCHANGE")
+                            }
+                            className="mt-1 w-full"
+                          >
+                            <option value="NAVIGATE">NAVIGATE</option>
+                            <option value="DATA_EXCHANGE">DATA_EXCHANGE</option>
+                          </SelectNative>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </>
               )}

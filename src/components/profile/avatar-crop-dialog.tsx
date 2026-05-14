@@ -259,7 +259,7 @@ export function AvatarCropDialog({
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-outfit">Enquadrar foto</DialogTitle>
+          <DialogTitle className="font-display">Enquadrar foto</DialogTitle>
           <DialogDescription>
             Arraste para posicionar e use o zoom para enquadrar a área que
             ficará visível no seu avatar.
@@ -332,7 +332,7 @@ export function AvatarCropDialog({
                 onClick={() =>
                   setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - 0.1) * 10) / 10))
                 }
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900 active:scale-95"
                 aria-label="Diminuir zoom"
               >
                 <ZoomOut className="size-4" />
@@ -345,7 +345,7 @@ export function AvatarCropDialog({
               step={0.01}
               value={zoom}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
-              className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-[#507df1]"
+              className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-[var(--color-primary)]"
               aria-label="Zoom"
               aria-valuetext={`${Math.round(zoom * 100)}%`}
             />
@@ -355,7 +355,7 @@ export function AvatarCropDialog({
                 onClick={() =>
                   setZoom((z) => Math.min(MAX_ZOOM, Math.round((z + 0.1) * 10) / 10))
                 }
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900 active:scale-95"
                 aria-label="Aumentar zoom"
               >
                 <ZoomIn className="size-4" />
@@ -368,7 +368,7 @@ export function AvatarCropDialog({
                   setZoom(1);
                   setOffset({ x: 0, y: 0 });
                 }}
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-slate-500 transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900 active:scale-95"
                 aria-label="Resetar enquadramento"
               >
                 <RotateCcw className="size-4" />

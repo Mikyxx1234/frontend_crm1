@@ -1,6 +1,5 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -45,7 +44,7 @@ type ImportResult = {
 async function postCsv(url: string, file: File): Promise<ImportResult> {
   const fd = new FormData();
   fd.set("file", file);
-  const res = await fetch(apiUrl(url), { method: "POST", body: fd });
+  const res = await fetch(url, { method: "POST", body: fd });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(typeof data?.message === "string" ? data.message : "Falha na importação");

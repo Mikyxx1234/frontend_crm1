@@ -1,29 +1,33 @@
 "use client";
 
 /**
- * WorkspaceHeader — padroniza o topo do workspace do deal (kanban) com
- * o MESMO componente `ConversationHeader` usado pelo Inbox e pelo Sales
- * Hub. Remove a versão custom (título gigante "Negócio - X" + breadcrumb
- * em trios) em favor do padrão: avatar + nome do contato + chip de etapa
- * + telefone/email + slot `actions` com Ganho/Perdido/Editar/Excluir.
+ * WorkspaceHeader — topo do workspace do deal (kanban): barra mínima de
+ * ações (lista de conversas, Ganho/Perdido, busca, menu ⋯). Nome, telefone
+ * e avatar ficam apenas na sidebar.
  *
- * O título do deal migrou para a sidebar (pequeno card "Negócio" no
- * topo do painel de dados), alinhado ao padrão do SalesHub.
- *
- * Quando há uma conversa selecionada, o header também habilita os
- * controles de voz, transferir responsável e gerenciar tags — idêntico
- * ao comportamento do Inbox.
+ * Botão mobile "Dados do negócio" (`PanelRightOpen`) permanece num wrapper
+ * absoluto separado. Fechar: último botão da `DealChatActionBar` (X), alinhado
+ * à direita da lupa e do menu ⋯; `WorkspaceShell` só usa X flutuante em loading/erro.
  */
 
 import * as React from "react";
-import { Pencil, PanelRightOpen, RotateCcw, Trash2, Trophy, XCircle } from "lucide-react";
-
-import { ConversationHeader } from "@/components/inbox/conversation-header";
-import type { TransferControlUser } from "@/components/inbox/transfer-control";
+import { Menu, MoreHorizontal, PanelRightOpen, Search, X } from "lucide-react";
+import { RemindButton } from "@/components/inbox/remind-button";
+import { TagPopover } from "@/components/inbox/tag-popover";
+import {
+  TransferControl,
+  type TransferControlUser,
+} from "@/components/inbox/transfer-control";
+import { WhatsappCallChip } from "@/components/inbox/whatsapp-call-chip";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ds } from "@/lib/design-system";
 
 import type { ContactDetail, ConversationRow, DealDetailData } from "./shared";
 
@@ -44,7 +48,14 @@ type WorkspaceHeaderProps = {
 
   // Navegação
   onToggleSidebar?: () => void;
+  onOpenConversationList?: () => void;
+  /** Quantidade de conversas do contato — hamburger só com 2+. */
+  conversationsCount?: number;
+  /** Abre busca no texto das mensagens do `ChatWindow`. */
+  onSearch?: () => void;
+  /** Fecha o workspace (último à direita na barra, após lupa e ⋯). */
   onClose?: () => void;
+  closeLabel?: string;
 
   // Conversa ativa (opcional — habilita voz/transferir/tags)
   conversation?: ConversationRow | null;
@@ -65,6 +76,76 @@ type WorkspaceHeaderProps = {
   onOpenHistory?: () => void;
 };
 
+export function DealChatActionBar({
+  onOpenConversationList,
+  onSearch,
+  actions,
+  workspaceMenu,
+  conversationsCount = 0,
+  onClose,
+  closeLabel = "Fechar negocio",
+}: {
+  onOpenConversationList?: () => void;
+  onSearch?: () => void;
+  actions?: React.ReactNode;
+  workspaceMenu?: React.ReactNode;
+  conversationsCount?: number;
+  onClose?: () => void;
+  closeLabel?: string;
+}) {
+  return (
+    <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border bg-white px-2">
+      {onOpenConversationList && conversationsCount > 1 ? (
+        <button
+          type="button"
+          onClick={onOpenConversationList}
+          className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] hover:bg-slate-50"
+          aria-label="Conversas"
+        >
+          <Menu className="size-3.5" strokeWidth={2} />
+        </button>
+      ) : null}
+
+      <div className="flex-1" />
+
+      {actions ? (
+        <div className="flex shrink-0 items-center gap-1">{actions}</div>
+      ) : null}
+
+      <div className="flex shrink-0 items-center gap-1.5">
+        {onSearch ? (
+          <TooltipHost label="Buscar (Ctrl+F)" side="bottom">
+            <button
+              type="button"
+              onClick={onSearch}
+              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] hover:bg-slate-50"
+              aria-label="Buscar na conversa (Ctrl+F)"
+            >
+              <Search className="size-3.5" strokeWidth={2.2} />
+            </button>
+          </TooltipHost>
+        ) : null}
+
+        {workspaceMenu}
+
+        {onClose ? (
+          <TooltipHost label="Fechar (Esc)" side="bottom">
+            <button
+              data-deal-workspace-close
+              type="button"
+              onClick={onClose}
+              aria-label={closeLabel}
+              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 active:scale-95"
+            >
+              <X className="size-3.5" strokeWidth={2.2} />
+            </button>
+          </TooltipHost>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function WorkspaceHeader({
   deal,
   contact,
@@ -78,7 +159,11 @@ export function WorkspaceHeader({
   onLostCancel,
   statusBusy,
   onToggleSidebar,
+  onOpenConversationList,
+  conversationsCount = 0,
+  onSearch,
   onClose,
+  closeLabel,
   conversation,
   conversationTags,
   myUserId,
@@ -98,9 +183,7 @@ export function WorkspaceHeader({
 
   return (
     <>
-      {/* Botão "abrir sidebar" fica à esquerda do header no mobile.
-          Coloco num wrapper absoluto para não quebrar o layout do
-          ConversationHeader, que é flex-centralizado. */}
+      {/* Botão "abrir sidebar" — absoluto, não entra na barra de ações. */}
       {onToggleSidebar ? (
         <div className="relative">
           <div className="pointer-events-none absolute left-2 top-2 z-10 md:hidden">
@@ -111,8 +194,8 @@ export function WorkspaceHeader({
                 aria-label="Abrir dados do negócio"
                 className={cn(
                   "pointer-events-auto inline-flex size-8 items-center justify-center rounded-full",
-                  "border border-black/6 bg-white text-slate-600",
-                  "transition-colors hover:bg-slate-50 active:scale-95",
+                  "border border-black/6 bg-white text-[var(--color-ink-soft)]",
+                  "transition-colors hover:bg-[var(--color-bg-subtle)] active:scale-95",
                 )}
               >
                 <PanelRightOpen className="size-4" strokeWidth={2.2} />
@@ -122,38 +205,39 @@ export function WorkspaceHeader({
         </div>
       ) : null}
 
-      <ConversationHeader
-        contactId={contact?.id}
-        contactName={contact?.name ?? deal.title}
-        contactPhone={contact?.phone ?? null}
-        contactEmail={contact?.email ?? null}
-        contactAvatarUrl={contact?.avatarUrl ?? null}
-        contactChannel={conversation?.channel ?? null}
-        contactHref={contact?.id ? `/contacts/${contact.id}` : null}
-        tags={contactTags}
-        stageName={deal.stage.name}
-        stageColor={deal.stage.color ?? null}
-        conversationId={conversation?.id ?? null}
-        conversationChannel={conversation?.channel ?? null}
-        canManageAssignee={canManageAssignee}
-        myUserId={myUserId}
-        currentAssigneeId={currentAssigneeId ?? conversation?.assignedToId ?? null}
-        teamUsers={teamUsers}
-        assignLoading={assignLoading}
-        onAssign={onAssign}
-        onTagsUpdated={onTagsUpdated}
+      <DealChatActionBar
+        onOpenConversationList={onOpenConversationList}
+        conversationsCount={conversationsCount}
+        onSearch={onSearch}
+        onClose={onClose}
+        closeLabel={closeLabel}
+        workspaceMenu={
+          <DealWorkspaceToolbarMenu
+            conversationId={conversation?.id ?? null}
+            conversationChannel={conversation?.channel ?? null}
+            contactId={contact?.id ?? null}
+            contactName={contact?.name ?? deal.title}
+            canManageAssignee={canManageAssignee}
+            myUserId={myUserId}
+            currentAssigneeId={currentAssigneeId ?? conversation?.assignedToId ?? null}
+            teamUsers={teamUsers}
+            assignLoading={assignLoading}
+            onAssign={onAssign}
+            tags={contactTags}
+            onTagsUpdated={onTagsUpdated}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        }
         actions={
-          <DealHeaderActions
+          <DealHeaderWorkspaceOutcomes
             dealStatus={deal.status}
             statusBusy={statusBusy}
             onWon={onWon}
             onLostOpen={onLostOpen}
             onReopen={onReopen}
-            onEdit={onEdit}
-            onDelete={onDelete}
           />
         }
-        onClose={onClose}
       />
 
       <LossReasonDialog
@@ -167,122 +251,181 @@ export function WorkspaceHeader({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DealHeaderActions
-//
-// Slot `actions` do ConversationHeader: Ganho/Perdido (ou Reabrir)
-// + Editar + Excluir. Mesmo vocabulário visual dos chips soft do DS
-// usado no SalesHub (`DealOutcomeButtons`).
+// Workspace — header compacto: Ganho/Perdido inline; resto no menu ⋯
 // ─────────────────────────────────────────────────────────────────────────────
 
-function DealHeaderActions({
+export function DealHeaderWorkspaceOutcomes({
   dealStatus,
   statusBusy,
   onWon,
   onLostOpen,
   onReopen,
-  onEdit,
-  onDelete,
 }: {
   dealStatus: DealDetailData["status"];
   statusBusy: boolean;
   onWon: () => void;
   onLostOpen: () => void;
   onReopen: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
 }) {
-  return (
-    <div className="flex shrink-0 items-center gap-1.5">
-      {dealStatus === "OPEN" ? (
-        <>
-          <ToneButton
-            tone="emerald"
-            icon={<Trophy className="size-3.5" strokeWidth={2.2} />}
-            label="Ganho"
-            disabled={statusBusy}
-            onClick={onWon}
-          />
-          <ToneButton
-            tone="rose"
-            icon={<XCircle className="size-3.5" strokeWidth={2.2} />}
-            label="Perdido"
-            disabled={statusBusy}
-            onClick={onLostOpen}
-          />
-        </>
-      ) : (
-        <ToneButton
-          tone="slate"
-          icon={<RotateCcw className="size-3.5" strokeWidth={2.2} />}
-          label="Reabrir"
+  if (dealStatus === "OPEN") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={onWon}
           disabled={statusBusy}
-          onClick={onReopen}
-        />
-      )}
-
-      <span className="mx-1 hidden h-5 w-px bg-slate-200/70 sm:block" aria-hidden />
-
-      <TooltipHost label="Editar negócio" side="bottom">
+          className="h-7 shrink-0 rounded-md border border-[var(--color-success)]/35 bg-[var(--color-success-soft)] px-2.5 text-[11px] font-medium text-[var(--color-success)] transition-colors hover:brightness-[0.97] disabled:opacity-50"
+        >
+          Ganho
+        </button>
         <button
           type="button"
-          onClick={onEdit}
-          aria-label="Editar negócio"
-          className={ds.button.icon}
+          onClick={onLostOpen}
+          disabled={statusBusy}
+          className="h-7 shrink-0 rounded-md border border-[var(--color-destructive)]/35 bg-[var(--color-destructive-soft)] px-2.5 text-[11px] font-medium text-[var(--color-destructive)] transition-colors hover:brightness-[0.97] disabled:opacity-50"
         >
-          <Pencil className="size-3.5" strokeWidth={2.2} />
+          Perdido
         </button>
-      </TooltipHost>
-      <TooltipHost label="Excluir negócio" side="bottom">
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label="Excluir negócio"
-          className={cn(
-            "inline-flex size-7 items-center justify-center rounded-lg text-slate-400",
-            "transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95",
-          )}
-        >
-          <Trash2 className="size-3.5" strokeWidth={2.2} />
-        </button>
-      </TooltipHost>
-    </div>
-  );
-}
-
-function ToneButton({
-  tone,
-  icon,
-  label,
-  disabled,
-  onClick,
-}: {
-  tone: "emerald" | "rose" | "slate";
-  icon: React.ReactNode;
-  label: string;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  const toneClass =
-    tone === "emerald"
-      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-      : tone === "rose"
-      ? "bg-rose-50 text-rose-700 hover:bg-rose-100"
-      : "bg-slate-100 text-slate-700 hover:bg-slate-200";
-
+      </>
+    );
+  }
   return (
     <button
       type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-lg px-3",
-        "text-[12px] font-semibold tracking-tight transition-colors",
-        "active:scale-95 disabled:opacity-50",
-        toneClass,
-      )}
+      onClick={onReopen}
+      disabled={statusBusy}
+      className="h-7 shrink-0 rounded-md border border-border bg-[var(--color-bg-subtle)] px-2.5 text-[11px] font-medium text-foreground transition-colors hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
     >
-      {icon}
-      {label}
+      Reabrir
     </button>
   );
 }
+
+export type DealWorkspaceToolbarMenuItemsProps = {
+  conversationId: string | null;
+  conversationChannel: string | null;
+  contactId: string | null;
+  contactName: string;
+  canManageAssignee?: boolean;
+  myUserId?: string;
+  currentAssigneeId: string | null;
+  teamUsers?: TransferControlUser[];
+  assignLoading?: boolean;
+  onAssign?: (userId: string | null) => void;
+  tags: { name: string; color: string }[];
+  onTagsUpdated?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+};
+
+/** Conteúdo do menu ⋮ — reutilizado pelo `ConversationHeader` (sem trigger próprio). */
+export function DealWorkspaceToolbarMenuItems({
+  conversationId,
+  conversationChannel,
+  contactId,
+  contactName,
+  canManageAssignee,
+  myUserId,
+  currentAssigneeId,
+  teamUsers = [],
+  assignLoading,
+  onAssign,
+  tags,
+  onTagsUpdated,
+  onEdit,
+  onDelete,
+}: DealWorkspaceToolbarMenuItemsProps) {
+  const showCall = !!conversationId;
+  const showTransfer =
+    !!conversationId &&
+    !!onAssign &&
+    (canManageAssignee || (!!myUserId && !currentAssigneeId));
+  const showRemind = !!contactId;
+  const showTagPopover = !!conversationId;
+
+  return (
+    <>
+      {showCall ? (
+        <div className="border-b border-border px-2 py-2">
+          <WhatsappCallChip
+            conversationId={conversationId!}
+            channel={conversationChannel}
+          />
+        </div>
+      ) : null}
+      {showTransfer ? (
+        <div className="border-b border-border px-2 py-2">
+          <TransferControl
+            teamUsers={teamUsers}
+            currentAssigneeId={currentAssigneeId}
+            myUserId={myUserId}
+            canManageAssignee={!!canManageAssignee}
+            loading={assignLoading}
+            onAssign={(uid) => onAssign?.(uid)}
+          />
+        </div>
+      ) : null}
+      {showRemind ? (
+        <div className="border-b border-border px-2 py-2">
+          <RemindButton
+            contactId={contactId!}
+            contactName={contactName}
+            conversationId={conversationId ?? undefined}
+          />
+        </div>
+      ) : null}
+      {showTagPopover ? (
+        <div className="border-b border-border px-2 py-2">
+          <TagPopover
+            conversationId={conversationId!}
+            currentTags={tags}
+            onTagsUpdated={() => onTagsUpdated?.()}
+          >
+            <button
+              type="button"
+              className="w-full rounded-md px-2 py-1.5 text-left text-[12px] font-medium text-foreground hover:bg-slate-50"
+            >
+              Tags da conversa…
+            </button>
+          </TagPopover>
+        </div>
+      ) : null}
+      {onEdit ? (
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          onClick={onEdit}
+        >
+          Editar negócio
+        </DropdownMenuItem>
+      ) : null}
+      {onDelete ? (
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] text-[var(--color-destructive)] hover:bg-slate-50 focus:bg-slate-50 focus:text-[var(--color-destructive)]"
+          onClick={onDelete}
+        >
+          Excluir negócio
+        </DropdownMenuItem>
+      ) : null}
+    </>
+  );
+}
+
+export function DealWorkspaceToolbarMenu(props: DealWorkspaceToolbarMenuItemsProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="size-7 shrink-0 rounded-md p-0 text-[var(--color-ink-soft)] hover:bg-slate-50"
+        aria-label="Mais ações"
+      >
+        <MoreHorizontal className="size-3.5" strokeWidth={2} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="z-50 min-w-[200px] max-w-[min(280px,calc(100vw-2rem))] rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
+      >
+        <DealWorkspaceToolbarMenuItems {...props} />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+

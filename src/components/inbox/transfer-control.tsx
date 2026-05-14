@@ -64,7 +64,7 @@ export function TransferControl({
           type="button"
           disabled={loading}
           onClick={() => onAssign(myUserId)}
-          className="p-2 text-slate-400 transition-colors hover:text-accent disabled:opacity-50"
+          className="p-2 text-[var(--color-ink-muted)] transition-colors hover:text-accent disabled:opacity-50"
           aria-label="Atribuir a mim"
         >
           <ArrowLeftRight size={20} />
@@ -81,7 +81,7 @@ export function TransferControl({
           type="button"
           onClick={() => setOpen((v) => !v)}
           disabled={loading}
-          className="p-2 text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50"
+          className="p-2 text-[var(--color-ink-muted)] transition-colors hover:text-[var(--color-ink-soft)] disabled:opacity-50"
           aria-label="Transferir conversa"
           aria-expanded={open}
         >
@@ -96,7 +96,7 @@ export function TransferControl({
             aria-hidden
           />
           <div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-100 bg-white p-1.5 shadow-[0_20px_40px_-20px_rgba(15,23,42,0.25)]">
-            <p className="px-3 pb-2 pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+            <p className="px-3 pb-2 pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
               Transferir para
             </p>
             <button
@@ -105,9 +105,9 @@ export function TransferControl({
                 onAssign(null);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-slate-500 transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900"
             >
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[var(--color-ink-muted)]">
                 <UserMinus className="size-3.5" />
               </span>
               <span className="flex-1">Remover responsável</span>
@@ -137,16 +137,16 @@ export function TransferControl({
                     className={cn(
                       "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors",
                       isSelected
-                        ? "bg-brand-blue/10 text-brand-blue"
-                        : "text-slate-800 hover:bg-slate-50",
+                        ? "bg-primary/10 text-primary"
+                        : "text-slate-800 hover:bg-[var(--color-bg-subtle)]",
                     )}
                   >
                     <span
                       className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-black uppercase",
+                        "flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase",
                         isSelected
-                          ? "bg-brand-blue text-white"
-                          : "bg-slate-100 text-slate-600",
+                          ? "bg-primary text-white"
+                          : "bg-slate-100 text-[var(--color-ink-soft)]",
                       )}
                     >
                       {initials}
@@ -160,20 +160,20 @@ export function TransferControl({
                       >
                         {u.name}
                         {isMe && (
-                          <span className="ml-1 text-[11px] font-normal text-slate-400">
+                          <span className="ml-1 text-[11px] font-normal text-[var(--color-ink-muted)]">
                             (você)
                           </span>
                         )}
                       </span>
                       {u.email && (
-                        <span className="block truncate text-[11px] text-slate-400">
+                        <span className="block truncate text-[11px] text-[var(--color-ink-muted)]">
                           {u.email}
                         </span>
                       )}
                     </span>
                     {isSelected && (
                       <Check
-                        className="size-4 shrink-0 text-brand-blue"
+                        className="size-4 shrink-0 text-primary"
                         strokeWidth={2.5}
                       />
                     )}

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChannelProvider, ChannelStatus, ChannelType } from "./types";
+import type { ChannelProvider, ChannelStatus, ChannelType } from "@prisma/client";
 import {
   AtSign,
   Globe,

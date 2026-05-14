@@ -1,243 +1,389 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
+/* Classes usadas só em strings em `design-tokens.ts` — precisam entrar no scan (v4: @source). */
+@source "../lib/design-tokens.ts";
+/* Cópias de backup no root: não participam do scan (evita utilitários “fantasma” / cache inválido). */
+@source not "../../arquivos_modificados";
+
+/* ══════════════════════════════════════════════════════════════════
+   LUMEN DESIGN SYSTEM — EduIT CRM
+   Inspiração: Lark Suite · Light-first · Inter + Plus Jakarta Sans
+   CTA: Azul #2563eb · Marca/IA: Lavanda #7B61FF
+   ══════════════════════════════════════════════════════════════════ */
 
 @theme {
-  --font-sans: "Outfit", "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-heading: "Outfit", "Manrope Variable", "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-brand: "Outfit", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-outfit: "Outfit", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* ── Tipografia ─────────────────────────────────────────────── */
+  --font-sans:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
 
-  --color-brand-navy: #0d1b3e;
-  --color-brand-cyan: #06b6d4;
-  --color-brand-blue: #507df1;
-  --color-brand-bg: #f8fafc;
+  /* ── Surfaces ───────────────────────────────────────────────── */
+  --color-background:     #F8FAFC;
+  --color-bg-subtle:      #F7F8FA;
+  --color-bg-muted:       #F2F3F5;
+  --color-bg-hover:       #EEF0F3;
 
-  --color-background: #fafbfc;
-  --color-foreground: #0f1419;
-  --color-muted: #f5f7fa;
-  --color-muted-foreground: #5c6873;
-  --color-border: #e3e8ef;
-  --color-input: #e3e8ef;
-  --color-ring: #0ea5e9;
+  /* ── Foreground / Texto ─────────────────────────────────────── */
+  --color-foreground:     #1F2329;
+  --color-ink-soft:       #4E5969;
+  /* Um passo mais claro que #86909C — melhor separação visual do ink-soft em previews/labels */
+  --color-ink-muted:      #b0bac4;
+  --color-ink-subtle:     #C9CDD4;
 
-  --color-primary: #0c4a6e;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f0f9ff;
-  --color-secondary-foreground: #0c4a6e;
-  --color-accent: #0ea5e9;
-  --color-accent-foreground: #ffffff;
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-success: #059669;
-  --color-success-foreground: #ffffff;
-  --color-warning: #d97706;
-  --color-warning-foreground: #ffffff;
-  --color-info: #0284c7;
-  --color-info-foreground: #ffffff;
-  --color-card: #ffffff;
-  --color-card-foreground: #0f1419;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #0f1419;
+  /* ── Borders ────────────────────────────────────────────────── */
+  --color-border:         #E5E6EB;
+  --color-border-soft:    #F2F3F5;
+  --color-input:          #E5E6EB;
+  --color-ring:           #2563eb;
 
-  --color-sidebar: #0c4a6e;
-  --color-sidebar-foreground: #ffffff;
-  --color-sidebar-border: #075985;
-  --color-sidebar-muted: #bae6fd;
-  --color-sidebar-accent: rgba(14, 165, 233, 0.12);
-  --color-sidebar-accent-foreground: #ffffff;
-  --color-sidebar-hover: rgba(255, 255, 255, 0.1);
+  /* ── Brand: Azul (CTA) ─────────────────────────────────────── */
+  --color-primary:             #2563eb;
+  --color-primary-dark:        #1d4ed8;
+  --color-primary-soft:        #dbeafe;
+  --color-primary-foreground:  #FFFFFF;
 
-  --color-chat-sent: #f0f9fa;
+  /* ── Brand: Lavanda (Marca / IA) ────────────────────────────── */
+  --color-lavender:            #7B61FF;
+  --color-lavender-soft:       #EDEAFE;
+  --color-lavender-muted:      #F5F2FF;
+  --color-lavender-foreground: #FFFFFF;
+
+  /* ── Semânticas (mapeadas para os tokens do sistema) ─────────── */
+  --color-secondary:            #F7F8FA;
+  --color-secondary-foreground: #1F2329;
+  --color-accent:               #7B61FF;
+  --color-accent-foreground:    #FFFFFF;
+  --color-muted:                #F2F3F5;
+  --color-muted-foreground:     #86909C;
+
+  --color-card:             #FFFFFF;
+  --color-card-foreground:  #1F2329;
+  --color-popover:          #FFFFFF;
+  --color-popover-foreground: #1F2329;
+
+  /* ── Status ─────────────────────────────────────────────────── */
+  --color-success:             #00B42A;
+  --color-success-soft:        #E8F8EA;
+  --color-success-foreground:  #FFFFFF;
+
+  --color-warning:             #FF7D00;
+  --color-warning-soft:        #FFF3E8;
+  --color-warning-foreground:  #FFFFFF;
+
+  --color-destructive:         #F53F3F;
+  --color-destructive-soft:    #FFECE8;
+  --color-destructive-foreground: #FFFFFF;
+
+  --color-info:                #2563eb;
+  --color-info-foreground:     #FFFFFF;
+
+  /* ── Sidebar — Light (Lumen) ─────────────────────────────────── */
+  --color-sidebar:                  #F7F8FA;
+  --color-sidebar-foreground:       #1F2329;
+  --color-sidebar-border:           #E5E6EB;
+  --color-sidebar-muted:            #86909C;
+  --color-sidebar-active-bg:        #EDEAFE;
+  --color-sidebar-active-fg:        #2563eb;
+  --color-sidebar-hover:            #EEF0F3;
+
+  /* ── Chat ───────────────────────────────────────────────────── */
+  --color-chat-sent:            #dbeafe;
   --color-chat-sent-foreground: #1e293b;
-  --color-chat-sent-border: #cffafe;
-  --color-chat-received: #ffffff;
-  --color-chat-received-foreground: #0f172a;
-  /* Balão "Automação" — paleta NEUTRA (slate). Feedback do operador:
-     âmbar competia demais com a atenção e lia como "alerta/pendência"
-     quando na verdade automação é só "máquina falou". Slate é o tom
-     universal de UI administrativa (Linear/Notion/GitHub) e não
-     "briga" com as demais cores do chat (ciano enviado, branco
-     recebido, vermelho de alerta). */
-  --color-chat-bot: #f1f5f9;
-  --color-chat-bot-foreground: #334155;
-  --color-chat-bot-border: #e2e8f0;
-  --color-chat-bg: #f8fafc;
+  --color-chat-sent-border:     #bfdbfe;
+  --color-chat-received:        #FFFFFF;
+  --color-chat-received-foreground: #1F2329;
+  --color-chat-bot:             #dbeafe;
+  --color-chat-bot-foreground:  #1e293b;
+  --color-chat-bot-border:      #bfdbfe;
+  --color-chat-bg:              #F7F8FA;
 
-  --color-status-online: #10b981;
-  --color-status-away: #f59e0b;
-  --color-status-offline: #94a3b8;
+  /* ── Status de Presença ─────────────────────────────────────── */
+  --color-status-online:  #00B42A;
+  --color-status-away:    #FF7D00;
+  --color-status-offline: #C9CDD4;
 
-  --color-channel-whatsapp: #25d366;
-  --color-channel-instagram: #e1306c;
-  --color-channel-email: #6366f1;
-  --color-channel-meta: #0084ff;
+  /* ── Canais ─────────────────────────────────────────────────── */
+  --color-channel-whatsapp: #25D366;
+  --color-channel-instagram: #E1306C;
+  --color-channel-email:    #2563eb;
+  --color-channel-meta:     #0084FF;
 
-  --color-surface: #f9fafb;
-  --color-surface-foreground: #374151;
-  --color-subtle: #e5e7eb;
+  /* ── Surface / Subtle ───────────────────────────────────────── */
+  --color-surface:            #F7F8FA;
+  --color-surface-foreground: #4E5969;
+  --color-subtle:             #E5E6EB;
 
-  --color-chart-1: #0ea5e9;
-  --color-chart-2: #059669;
-  --color-chart-3: #d97706;
-  --color-chart-4: #7c3aed;
-  --color-chart-5: #dc2626;
+  /* ── Gráficos ───────────────────────────────────────────────── */
+  --color-chart-1: #2563eb;
+  --color-chart-2: #00B42A;
+  --color-chart-3: #FF7D00;
+  --color-chart-4: #7B61FF;
+  --color-chart-5: #F53F3F;
 
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
+  /* ── Extra (Tags coloridas do Lumen) ────────────────────────── */
+  --color-pink:      #F5319D;
+  --color-pink-soft: #FFE8F1;
+  --color-cyan:      #14C9C9;
+  --color-cyan-soft: #E8FFFB;
 
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  /* ── Radius (escala Lumen) ──────────────────────────────────── */
+  --radius-sm: 0.25rem;   /* 4px  */
+  --radius-md: 0.5rem;    /* 8px  */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-2xl: 1.25rem;  /* 20px */
 
-  /* Premium shadows (Spec "Modern High-Contrast" + "High-End Luxury UI") */
-  --shadow-premium: 0 25px 50px -12px rgba(13, 27, 62, 0.08);
-  --shadow-float: 0 10px 40px -10px rgba(13, 27, 62, 0.15);
-  --shadow-blue-glow: 0 10px 25px -5px rgba(80, 125, 241, 0.3);
-  --shadow-cyan-glow: 0 10px 25px -5px rgba(6, 182, 212, 0.2);
-  --shadow-green-glow: 0 10px 30px -10px rgba(34, 197, 94, 0.35);
+  /* ── Sombras Lumen ──────────────────────────────────────────── */
+  --shadow-sm:  0 1px 2px rgba(31, 35, 41, 0.04);
+  /* Cards principais (sidebar / fila expandida / kanban) */
+  --shadow-card: 0 4px 12px -2px rgba(51, 65, 85, 0.06);
+  --shadow-card-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
+  --shadow-md:  0 2px 8px rgba(31, 35, 41, 0.06);
+  --shadow-lg:  0 8px 24px rgba(31, 35, 41, 0.08);
+  --shadow-xl:  0 16px 40px rgba(31, 35, 41, 0.10);
+
+  /* ── Sombras de destaque (substituem as "premium" antigas) ──── */
+  --shadow-[var(--shadow-lg)]:    0 8px 24px rgba(31, 35, 41, 0.08);
+  --shadow-[var(--shadow-sm)]:      0 4px 16px rgba(31, 35, 41, 0.06);
+  --shadow-[var(--shadow-indigo-glow)]:  0 6px 20px -4px rgba(37, 99, 235, 0.30);
+  --shadow-indigo-glow: 0 6px 20px -4px rgba(37, 99, 235, 0.30);
+  --shadow-lavender-glow: 0 6px 20px -4px rgba(123, 97, 255, 0.28);
+  --shadow-green-glow: 0 6px 20px -6px rgba(0, 180, 42, 0.30);
+  --shadow-[var(--shadow-lavender-glow)]:  0 6px 20px -4px rgba(20, 201, 201, 0.25);
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   CHAT — bolha enviada + fundo da thread (`data-chat-theme` no <html>)
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --chat-bubble-sent-bg: #dbeafe;
+  --chat-bubble-sent-text: #1e3a5f;
+  --chat-bubble-sent-time: #60a5fa;
+  --chat-bubble-sent-check-read: #0284c7;
+  --chat-bg: #f8fafc;
+  --chat-bubble-received-text: #111b21;
+  --chat-bubble-received-time: #667781;
+}
+
+[data-chat-theme="whatsapp"] {
+  --chat-bubble-sent-bg: #d9fdd3;
+  --chat-bubble-sent-text: #111b21;
+  --chat-bubble-sent-time: #667781;
+  --chat-bubble-sent-check-read: #0d9488;
+  --chat-bg: #efeae2;
+}
+
+[data-chat-theme="slate"] {
+  --chat-bubble-sent-bg: #1e293b;
+  --chat-bubble-sent-text: #ffffff;
+  --chat-bubble-sent-time: rgba(255, 255, 255, 0.45);
+  --chat-bubble-sent-check-read: #7dd3fc;
+  --chat-bg: #f1f5f9;
+}
+
+[data-chat-theme="petroleo"] {
+  --chat-bubble-sent-bg: #0f4c75;
+  --chat-bubble-sent-text: #ffffff;
+  --chat-bubble-sent-time: rgba(255, 255, 255, 0.45);
+  --chat-bubble-sent-check-read: #7dd3fc;
+  --chat-bg: #e8f4f8;
+}
+
+[data-chat-theme="roxo"] {
+  --chat-bubble-sent-bg: #6d28d9;
+  --chat-bubble-sent-text: #ffffff;
+  --chat-bubble-sent-time: rgba(255, 255, 255, 0.45);
+  --chat-bubble-sent-check-read: #c4b5fd;
+  --chat-bg: #f5f3ff;
+}
+
+[data-chat-theme="azul"] {
+  --chat-bubble-sent-bg: #dbeafe;
+  --chat-bubble-sent-text: #1e3a5f;
+  --chat-bubble-sent-time: #60a5fa;
+  --chat-bubble-sent-check-read: #0284c7;
+  --chat-bg: #f8fafc;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   BASE
+   ══════════════════════════════════════════════════════════════════ */
 @layer base {
   * { @apply border-border; }
-  /* Força Outfit como fonte raiz: o Tailwind v4 NÃO aplica font-sans
-     automaticamente, então herdamos pela cascata para garantir que CADA
-     elemento (incluindo inputs/buttons/textareas que ignoram herança por
-     default no UA stylesheet) renderize com a tipografia Premium Core. */
+
   html {
     font-family: var(--font-sans);
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
     text-rendering: optimizeLegibility;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
   }
+
   input, button, textarea, select, optgroup {
     font-family: inherit;
   }
+
   ::selection {
-    background: rgba(14, 165, 233, 0.2);
-    color: #0c4a6e;
+    background: rgba(37, 99, 235, 0.15);
+    color: #1d4ed8;
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   DARK MODE — Lumen Dark (mantido para compatibilidade)
+   ══════════════════════════════════════════════════════════════════ */
 .dark {
-  --color-background: #0a0f1a;
-  --color-foreground: #f0f4f8;
-  --color-muted: #1a2332;
-  --color-muted-foreground: #8b94a8;
-  --color-border: #2a3344;
-  --color-input: #2a3344;
-  --color-card: #141b28;
-  --color-card-foreground: #f0f4f8;
-  --color-popover: #141b28;
-  --color-popover-foreground: #f0f4f8;
-  --color-sidebar: #0c1221;
-  --color-sidebar-foreground: #f0f4f8;
-  --color-sidebar-border: #1a2332;
-  --color-sidebar-accent: rgba(14, 165, 233, 0.15);
-  --color-sidebar-accent-foreground: #ffffff;
-  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-background:     #0F1117;
+  --color-foreground:     #F0F1F3;
+  --color-bg-subtle:      #171B24;
+  --color-bg-muted:       #1E2230;
+  --color-bg-hover:       #252B3B;
 
-  --color-chat-sent: #083344;
-  --color-chat-sent-foreground: #cffafe;
-  --color-chat-sent-border: #155e75;
-  --color-chat-received: #1e293b;
-  --color-chat-received-foreground: #e2e8f0;
-  --color-chat-bot: #1e293b;
-  --color-chat-bot-foreground: #cbd5e1;
-  --color-chat-bot-border: #334155;
-  --color-chat-bg: #0f172a;
+  --color-ink-soft:       #9BA8B9;
+  --color-ink-muted:      #606B7C;
+  --color-ink-subtle:     #3D4455;
 
-  --color-surface: #1e293b;
-  --color-surface-foreground: #cbd5e1;
-  --color-subtle: #334155;
+  --color-border:         #272D3E;
+  --color-border-soft:    #1E2230;
+  --color-input:          #272D3E;
 
-  ::selection { background: rgba(14, 165, 233, 0.25); color: #f0f4f8; }
+  --color-card:           #13161F;
+  --color-card-foreground: #F0F1F3;
+  --color-popover:        #13161F;
+  --color-popover-foreground: #F0F1F3;
+  --color-muted:          #1E2230;
+  --color-muted-foreground: #606B7C;
+  --color-secondary:      #1E2230;
+  --color-secondary-foreground: #F0F1F3;
+
+  --color-sidebar:              #0C0F17;
+  --color-sidebar-foreground:   #F0F1F3;
+  --color-sidebar-border:       #1E2230;
+  --color-sidebar-muted:        #606B7C;
+  --color-sidebar-active-bg:    rgba(123, 97, 255, 0.15);
+  --color-sidebar-active-fg:    #7B61FF;
+  --color-sidebar-hover:        rgba(255, 255, 255, 0.05);
+
+  --color-chat-sent:            #1A2B5C;
+  --color-chat-sent-foreground: #C7DCFF;
+  --color-chat-sent-border:     #253D7A;
+  --color-chat-received:        #1E2230;
+  --color-chat-received-foreground: #E5E6EB;
+  --color-chat-bot:             #1A2B5C;
+  --color-chat-bot-foreground:  #C7DCFF;
+  --color-chat-bot-border:      #253D7A;
+  --color-chat-bg:              #0F1117;
+
+  /* Fundo da thread no dark — bolhas seguem `data-chat-theme` (claro sobre fundo escuro). */
+  --chat-bg: var(--color-chat-bg);
+
+  --color-surface:            #1E2230;
+  --color-surface-foreground: #9BA8B9;
+  --color-subtle:             #272D3E;
+
+  ::selection { background: rgba(37, 99, 235, 0.2); color: #F0F1F3; }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   UTILITIES LUMEN
+   ══════════════════════════════════════════════════════════════════ */
 @layer utilities {
-  .font-heading {
-    font-family: var(--font-heading);
+  /* Fonte display (Plus Jakarta Sans) */
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-mono {
+    font-family: var(--font-mono);
   }
 
+  /* Scrollbars */
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--color-subtle) transparent;
   }
-  .scrollbar-thin::-webkit-scrollbar { width: 8px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--color-subtle); border-radius: 4px; }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--color-subtle); border-radius: 3px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+
+  /* Chat no workspace do negócio (Kanban): barra vertical mais legível que `scrollbar-thin`. */
+  .scrollbar-workspace {
+    scrollbar-width: auto;
+    scrollbar-color: var(--color-subtle) transparent;
+  }
+  .scrollbar-workspace::-webkit-scrollbar {
+    width: 10px;
+  }
+  .scrollbar-workspace::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-workspace::-webkit-scrollbar-thumb {
+    background: var(--color-subtle);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .scrollbar-workspace::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-muted);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
 
   .scrollbar-none {
     scrollbar-width: none;
     &::-webkit-scrollbar { display: none; }
   }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 
+  /* Glass (adaptado para light) */
   .glass {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(229, 230, 235, 0.7);
   }
   .dark .glass {
-    background: rgba(20, 27, 40, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(19, 22, 31, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+  /* Gradientes de texto */
   .text-gradient {
-    background: linear-gradient(135deg, #0c4a6e 0%, #0ea5e9 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #7B61FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-ai {
+    background: linear-gradient(135deg, #7B61FF 0%, #F5319D 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .eduit-gradient {
-    background: linear-gradient(135deg, #0c4a6e 0%, #075985 50%, #0369a1 100%);
+  /* Gradientes de superfície */
+  .lumen-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #7B61FF 100%);
   }
-  .eduit-accent-gradient {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  .lumen-ai-gradient {
+    background: linear-gradient(135deg, #7B61FF 0%, #F5319D 100%);
   }
-  .eduit-msg-bg {
-    background: var(--color-chat-bg);
-  }
-  .eduit-transition {
-    transition: all 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  .lumen-subtle-gradient {
+    background: linear-gradient(120deg, var(--color-lavender-muted) 0%, var(--color-primary-soft) 100%);
   }
 
-  .eduit-chat-sent-bubble {
-    background: var(--color-chat-sent);
-    color: var(--color-chat-sent-foreground);
-    border: 1px solid var(--color-chat-sent-border);
-    box-shadow: var(--shadow-float);
-  }
-  .eduit-chat-bot-bubble {
-    background: var(--color-chat-bot);
-    color: var(--color-chat-bot-foreground);
-    border: 1px solid var(--color-chat-bot-border);
-    box-shadow: var(--shadow-float);
-  }
-
-  .eduit-hover-lift {
-    transition: all 280ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .eduit-hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.12);
-  }
-
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  /* Transição padrão Lumen (ui-fidelity) */
+  .lumen-transition {
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* ────────────────────────────────────────────────────────────────────
@@ -324,6 +470,10 @@
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes loading {
+  from { width: 0%; }
+  to { width: 100%; }
+}
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -352,4 +502,34 @@
     stroke-dasharray: 6 4;
     animation: flow-dash 0.9s linear infinite;
   }
+}
+/* ── Kanban horizontal scrollbar (Kommo style — fino mas legível) ── */
+.kanban-board-hscroll::-webkit-scrollbar {
+  height: 8px;
+}
+.kanban-board-hscroll::-webkit-scrollbar-track {
+  background: #f4f4f5;
+}
+.kanban-board-hscroll::-webkit-scrollbar-thumb {
+  background-color: #06b6d4;
+  border-radius: 99px;
+}
+.kanban-board-hscroll {
+  scrollbar-width: auto;
+  scrollbar-color: #06b6d4 #f4f4f5;
+}
+
+/* ── Kanban vertical scrollbar ghost (hover only) ── */
+.kanban-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.kanban-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 99px;
+}
+.kanban-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: #d4d4d8;
 }

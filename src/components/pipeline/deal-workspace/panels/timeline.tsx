@@ -12,7 +12,7 @@ type TimelinePanelProps = {
 
 export function TimelinePanel({ dealId }: TimelinePanelProps) {
   return (
-    <div className={cn("flex min-h-0 flex-1 flex-col bg-[#f4f7fa]", "[&>*]:bg-transparent")}>
+    <div className={cn("flex min-h-0 flex-1 flex-col bg-[var(--color-chat-bg)]", "[&>*]:bg-transparent")}>
       <LegacyTimelinePanel dealId={dealId} />
     </div>
   );

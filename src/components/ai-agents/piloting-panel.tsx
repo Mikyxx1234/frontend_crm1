@@ -19,11 +19,13 @@ import { apiUrl } from "@/lib/api";
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   Ban,
   Bot,
   CalendarClock,
   CheckCheck,
   Clock,
+  Eye,
   Handshake,
   Keyboard,
   MessageCircle,
@@ -177,6 +179,54 @@ function Section({
 
 // ── Seção 1: Saudação ────────────────────────────────────────
 
+/**
+ * Heurística pra detectar quando o usuário escreveu INSTRUÇÕES pro
+ * agente no campo de saudação (que é enviado LITERAL pro cliente).
+ * Cenário recorrente: admin cola texto tipo "você deve sempre orientar
+ * o cliente a..." achando que está configurando o comportamento, mas
+ * o cliente recebe essa frase bizarra em segunda pessoa.
+ *
+ * Retornamos um array de sinais encontrados — zero significa "parece
+ * uma saudação legítima".
+ */
+function detectInstructionLeakSignals(text: string): string[] {
+  const normalized = text.toLowerCase();
+  const signals: string[] = [];
+  const patterns: Array<{ re: RegExp; label: string }> = [
+    { re: /\bvoc[êe]\s+deve\b/, label: '"você deve"' },
+    { re: /\bsempre\s+(oriente|orientar|informe|informar|pergunte|perguntar)\b/, label: '"sempre oriente/informe/pergunte"' },
+    { re: /\bnunca\s+(revele|diga|envie|fale|informe)\b/, label: '"nunca revele/diga"' },
+    { re: /\bap[óo]s\s+(passar|coletar|responder|enviar)\b/, label: '"após passar/coletar…"' },
+    { re: /\bencerre\s+o\s+atendimento\b/, label: '"encerre o atendimento"' },
+    { re: /\bfinalize\s+a\s+conversa\b/, label: '"finalize a conversa"' },
+    { re: /\borient(e|ar)\s+o\s+cliente\b/, label: '"oriente o cliente"' },
+    { re: /\bas\s+mensagens\s+que\s+(entrar|chegar)/, label: '"as mensagens que entrarão…"' },
+    { re: /\bn[úu]mero\s+desativado\b/, label: '"número desativado"' },
+  ];
+  for (const { re, label } of patterns) {
+    if (re.test(normalized) && !signals.includes(label)) {
+      signals.push(label);
+    }
+  }
+  return signals;
+}
+
+/** Preview simples: troca placeholders por valores de exemplo pro
+ *  admin ver como o texto vai chegar no cliente. Não precisa ser
+ *  idêntico ao renderTemplate do servidor (tem fallbacks diferentes)
+ *  — só precisa dar uma ideia. */
+function previewGreeting(raw: string): string {
+  if (!raw.trim()) return "";
+  return raw
+    .replace(/\{\{\s*contact\.firstName\s*\}\}/gi, "Maria")
+    .replace(/\{\{\s*contact\.name\s*\}\}/gi, "Maria Silva")
+    .replace(/\{\{\s*contactName\s*\}\}/gi, "Maria Silva")
+    .replace(/\{\{\s*deal\.title\s*\}\}/gi, "Curso de Gestão")
+    .replace(/\{\{\s*dealTitle\s*\}\}/gi, "Curso de Gestão")
+    .replace(/\{\{\s*stage\.name\s*\}\}/gi, "Negociação")
+    .replace(/\{\{\s*stageName\s*\}\}/gi, "Negociação");
+}
+
 function OpeningSection({
   value,
   patch,
@@ -184,12 +234,32 @@ function OpeningSection({
   value: PilotingValue;
   patch: (p: Partial<PilotingValue>) => void;
 }) {
+  const [showPreview, setShowPreview] = React.useState(false);
+  const signals = React.useMemo(
+    () => detectInstructionLeakSignals(value.openingMessage),
+    [value.openingMessage],
+  );
+  const preview = React.useMemo(
+    () => previewGreeting(value.openingMessage),
+    [value.openingMessage],
+  );
+
   return (
     <Section
       icon={MessageCircle}
       title="Saudação inicial"
       description="Mensagem enviada UMA vez, na primeira vez que o agente fala com o cliente."
     >
+      <div className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+        <div className="text-[12px] leading-relaxed">
+          Este texto é enviado <strong>palavra por palavra</strong> ao cliente.
+          Escreva como se fosse <em>você</em> falando com ele. Para definir{" "}
+          <em>comportamento</em> do agente (regras, tom, o que não dizer), use{" "}
+          <strong>“Instruções adicionais”</strong> lá em cima do formulário.
+        </div>
+      </div>
+
       <div className="grid gap-2">
         <Label htmlFor="pilot-opening">Texto da saudação</Label>
         <textarea
@@ -198,7 +268,12 @@ function OpeningSection({
           value={value.openingMessage}
           onChange={(e) => patch({ openingMessage: e.target.value })}
           placeholder="Ex.: Oi {{contact.firstName}}! Tudo bem? Sou o agente virtual. Como posso te ajudar hoje?"
-          className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className={cn(
+            "resize-none rounded-xl border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2",
+            signals.length > 0
+              ? "border-amber-400 focus-visible:ring-amber-500/40"
+              : "border-border focus-visible:ring-indigo-500/40",
+          )}
         />
         <p className="text-[11px] text-muted-foreground">
           Variáveis: <code>{"{{contact.firstName}}"}</code>,{" "}
@@ -206,6 +281,51 @@ function OpeningSection({
           <code>{"{{stage.name}}"}</code>. Deixe vazio pra desativar.
         </p>
       </div>
+
+      {signals.length > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <div className="text-[12px] leading-relaxed">
+            Este texto parece uma{" "}
+            <strong>instrução para o agente</strong>, não uma fala para o
+            cliente (encontramos {signals.join(", ")}). Se deixar assim, o
+            cliente vai receber essa frase literalmente no WhatsApp. Mova para{" "}
+            <strong>“Instruções adicionais”</strong> e troque aqui por uma
+            saudação curta — algo como “Oi {"{{contact.firstName}}"}, aqui é o
+            assistente virtual. Como posso ajudar?”.
+          </div>
+        </div>
+      )}
+
+      {value.openingMessage.trim().length > 0 && (
+        <div className="rounded-xl border border-dashed border-border bg-muted/20">
+          <button
+            type="button"
+            onClick={() => setShowPreview((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[12px] font-medium text-muted-foreground hover:text-foreground"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Eye className="size-3.5" />
+              Prévia (como o cliente verá)
+            </span>
+            <span className="text-[11px] text-muted-foreground/70">
+              {showPreview ? "Ocultar" : "Mostrar"}
+            </span>
+          </button>
+          {showPreview && (
+            <div className="border-t border-border/60 bg-background/50 p-3">
+              <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-[#e7ffdb] px-3 py-2 text-[13px] leading-relaxed text-slate-800 whitespace-pre-wrap dark:bg-emerald-500/15 dark:text-emerald-100">
+                {preview}
+              </div>
+              <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                Exemplo com contato fictício "Maria Silva" /
+                deal "Curso de Gestão".
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-2 sm:max-w-xs">
         <Label htmlFor="pilot-opening-delay">
           Delay antes de enviar (segundos)

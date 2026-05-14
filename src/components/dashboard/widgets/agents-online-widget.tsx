@@ -4,8 +4,9 @@ import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Briefcase, Moon, WifiOff } from "lucide-react";
 
+import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type AgentPresence = "ONLINE" | "AWAY" | "OFFLINE";
 
@@ -79,18 +80,12 @@ export function AgentsOnlineWidget() {
                 className="flex items-center gap-2.5 rounded-lg border border-border/40 bg-muted/10 px-2.5 py-1.5"
               >
                 <div className="relative shrink-0">
-                  {agent.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={agent.avatarUrl}
-                      alt={agent.name}
-                      className="size-7 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold uppercase text-primary">
-                      {getInitials(agent.name)}
-                    </div>
-                  )}
+                  <ChatAvatar
+                    user={{ id: agent.userId, name: agent.name, imageUrl: agent.avatarUrl }}
+                    size={28}
+                    channel={null}
+                    hideCartoon
+                  />
                   <span
                     className={cn(
                       "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-card",

@@ -1,6 +1,5 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
@@ -17,7 +16,7 @@ export type InboxFilters = {
 type Option = { id: string; name: string };
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(apiUrl(url));
+  const res = await fetch(url);
   const data = await res.json().catch(() => []);
   return (Array.isArray(data) ? data : data.items ?? data.users ?? data.tags ?? data.stages ?? []) as T;
 }

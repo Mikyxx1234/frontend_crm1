@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/manrope";
 
-import { auth } from "@/lib/auth-public";
+import { auth } from "@/lib/auth";
 import "@/lib/auth-types";
 
 import { Providers } from "./providers";
@@ -19,7 +19,7 @@ const outfit = Outfit({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
-  variable: "--font-outfit-next",
+  variable: "--font-display-next",
 });
 
 export const metadata: Metadata = {
@@ -80,6 +80,7 @@ export default async function RootLayout({
       lang="pt-BR"
       suppressHydrationWarning
       className={outfit.variable}
+      data-chat-theme="azul"
       style={{ fontFamily: "var(--font-sans)" }}
     >
       <body className="min-h-dvh font-sans antialiased">

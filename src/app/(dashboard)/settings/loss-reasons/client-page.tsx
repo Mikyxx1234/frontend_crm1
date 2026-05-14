@@ -27,7 +27,7 @@ async function fetchReasons(): Promise<LossReason[]> {
 }
 
 async function fetchSetting(key: string): Promise<string | null> {
-  const res = await fetch(apiUrl(`/api/settings/system?key=${key}`));
+  const res = await fetch(apiUrl(`/api/settings/org?key=${encodeURIComponent(key)}`));
   if (!res.ok) return null;
   const data = await res.json();
   return data.value ?? null;
@@ -43,8 +43,8 @@ export default function LossReasonsPage() {
   });
 
   const { data: requiredRaw } = useQuery({
-    queryKey: ["system-setting", "loss_reason_required"],
-    queryFn: () => fetchSetting("loss_reason_required"),
+    queryKey: ["org-setting", "deals.loss_reason_required"],
+    queryFn: () => fetchSetting("deals.loss_reason_required"),
   });
   const isRequired = requiredRaw === "true";
 
@@ -91,15 +91,20 @@ export default function LossReasonsPage() {
 
   const toggleRequired = useMutation({
     mutationFn: async (val: boolean) => {
-      const res = await fetch(apiUrl("/api/settings/system"), {
+      const res = await fetch(apiUrl("/api/settings/org"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "loss_reason_required", value: val ? "true" : "false" }),
+        body: JSON.stringify({
+          key: "deals.loss_reason_required",
+          value: val ? "true" : "false",
+        }),
       });
       if (!res.ok) throw new Error("Erro ao salvar");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["system-setting", "loss_reason_required"] });
+      queryClient.invalidateQueries({
+        queryKey: ["org-setting", "deals.loss_reason_required"],
+      });
       toast.success("Configuração salva");
     },
   });
@@ -113,7 +118,7 @@ export default function LossReasonsPage() {
       />
 
       {/* Toggle obrigatório */}
-      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-white px-5 py-4 shadow-sm">
         <div>
           <p className="text-sm font-semibold text-slate-800">Motivo obrigatório</p>
           <p className="text-xs text-slate-500">Exigir um motivo ao marcar negócio como perdido</p>
@@ -122,12 +127,12 @@ export default function LossReasonsPage() {
           type="button"
           onClick={() => toggleRequired.mutate(!isRequired)}
           disabled={toggleRequired.isPending}
-          className="text-slate-600 transition hover:text-slate-900"
+          className="text-[var(--color-ink-soft)] transition hover:text-slate-900"
         >
           {isRequired ? (
             <ToggleRight className="size-8 text-cyan-600" />
           ) : (
-            <ToggleLeft className="size-8 text-slate-400" />
+            <ToggleLeft className="size-8 text-[var(--color-ink-muted)]" />
           )}
         </button>
       </div>
@@ -166,7 +171,7 @@ export default function LossReasonsPage() {
         ) : reasons.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 py-10 text-center">
             <p className="text-sm text-slate-500">Nenhum motivo cadastrado</p>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
               Adicione motivos para padronizar a análise de negócios perdidos.
             </p>
           </div>
@@ -210,7 +215,7 @@ function ReasonRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 transition",
+        "flex items-center gap-3 rounded-lg border border-border bg-white px-4 py-3 transition",
         !reason.isActive && "opacity-50",
       )}
     >
@@ -246,7 +251,7 @@ function ReasonRow({
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          className="shrink-0 rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+          className="shrink-0 rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-red-50 hover:text-red-600"
           aria-label="Remover"
         >
           <Trash2 className="size-4" />

@@ -5,7 +5,7 @@ import { apiUrl } from "@/lib/api";
  * FunnelChart (Bento / Linear-Stripe)
  * ────────────────────────────────────
  * Dois blocos no DNA Studioia:
- *   1. Bar chart horizontal com cores da paleta SalesHub (`brand-navy`,
+ *   1. Bar chart horizontal com cores da paleta Lumen (`primary`,
  *      `indigo`, `purple`, `pink`, `amber`, `emerald`).
  *   2. Visão em "mini-funnel" vertical estreitando ao longo das etapas,
  *      com labels claras, contagem e conversão entre etapas.
@@ -57,12 +57,12 @@ async function fetchFunnel(pipelineId: string): Promise<FunnelStage[]> {
 }
 
 /**
- * Paleta alinhada ao SalesHub funnelStages (navy → indigo → purple → pink →
+ * Paleta alinhada ao SalesHub funnelStages (primary → indigo → purple → pink →
  * amber → emerald). A ordem reflete "entrada → fechamento" e transmite
  * intuitivamente o movimento de afunilamento.
  */
 const STAGE_COLORS = [
-  "#0f172a", // brand-navy (topo)
+  "#3370FF", // primary / indigo Lumen (topo)
   "#818cf8", // indigo
   "#a78bfa", // violet
   "#f472b6", // pink
@@ -86,7 +86,7 @@ function FunnelTooltip({
       : "Etapa inicial";
   return (
     <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.2)]">
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
         {row.stageName}
       </p>
       <p className="mt-0.5 text-[14px] font-bold tracking-tight text-slate-900">
@@ -95,7 +95,7 @@ function FunnelTooltip({
       <p className="text-[11px] font-semibold text-slate-500">
         {formatCurrency(row.totalValue)}
       </p>
-      <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+      <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--color-ink-muted)]">
         {conv}
       </p>
     </div>
@@ -135,7 +135,7 @@ export function FunnelChart({
           Selecione um pipeline para ver o funil.
         </p>
       ) : isLoading ? (
-        <div className="h-[360px] w-full animate-pulse rounded-2xl bg-slate-50" />
+        <div className="h-[360px] w-full animate-pulse rounded-2xl bg-[var(--color-bg-subtle)]" />
       ) : isError ? (
         <p className="py-12 text-center text-[13px] font-medium text-slate-500">
           Não foi possível carregar o funil.
@@ -205,16 +205,16 @@ export function FunnelChart({
                     className="w-full"
                   >
                     <div className="mb-1 flex items-baseline justify-between gap-2">
-                      <span className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-700">
+                      <span className="truncate text-[11px] font-bold uppercase tracking-wide text-foreground">
                         {stage.stageName}
                       </span>
                       <span className="shrink-0 text-[11px] font-bold text-slate-900">
                         {stage.dealCount}
                       </span>
                     </div>
-                    <div className="h-7 w-full overflow-hidden rounded-full bg-slate-50">
+                    <div className="h-7 w-full overflow-hidden rounded-full bg-[var(--color-bg-subtle)]">
                       <div
-                        className="flex h-full items-center justify-end rounded-full px-2.5 text-[10px] font-black uppercase tracking-wide text-white transition-all"
+                        className="flex h-full items-center justify-end rounded-full px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white transition-all"
                         style={{
                           width: `${widthPct}%`,
                           backgroundColor: bg,
@@ -226,7 +226,7 @@ export function FunnelChart({
                           }).format(stage.conversionFromPrevious)}%`}
                       </div>
                     </div>
-                    <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                    <p className="mt-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)]">
                       {formatCurrency(stage.totalValue)}
                     </p>
                   </motion.div>

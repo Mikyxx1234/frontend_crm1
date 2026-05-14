@@ -32,12 +32,13 @@ import { DealForm } from "@/components/pipeline/deal-form";
 import { KanbanBoard, type BoardStage } from "@/components/pipeline/kanban-board";
 import { PipelineListView } from "@/components/pipeline/pipeline-list-view";
 import { SalesHubView } from "@/components/pipeline/sales-hub-view";
+import { type DealQueueSortMode } from "@/components/sales-hub/deal-queue";
+import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  pageHeaderDescriptionClass,
-  pageHeaderTitleClass,
+  pageHeaderPrimaryCtaClass,
 } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
@@ -84,6 +85,21 @@ function saveViewMode(m: ViewMode) {
   try { localStorage.setItem(VIEW_MODE_KEY, m); } catch { /* noop */ }
 }
 
+const VIEW_HEADER: Record<ViewMode, { title: string; description: string }> = {
+  kanban: {
+    title: "Funil",
+    description: "Arraste e solte negócios entre etapas do pipeline.",
+  },
+  list: {
+    title: "Lista",
+    description: "Tabela completa com filtros, ordenação e ações em massa.",
+  },
+  saleshub: {
+    title: "Pipeline Ágil",
+    description: "Fila priorizada dos próximos negócios a atacar.",
+  },
+};
+
 function loadFilter(): FilterType {
   if (typeof window === "undefined") return null;
   const stored = localStorage.getItem(FILTER_STORAGE_KEY);
@@ -111,7 +127,7 @@ async function fetchBoard(pipelineId: string, status: StatusFilter = "OPEN"): Pr
   const params = new URLSearchParams();
   if (status !== "OPEN") params.set("status", status);
   const qs = params.toString();
-  const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/board${qs ? `?${qs}` : ""}`));
+  const res = await fetch(`/api/pipelines/${pipelineId}/board${qs ? `?${qs}` : ""}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao carregar quadro");
   if (Array.isArray(data)) return data;
@@ -138,6 +154,7 @@ export default function PipelinePage() {
   const pathname = usePathname();
 
   const [pipelineId, setPipelineId] = React.useState("");
+  const pipelineBootstrapRef = React.useRef(false);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [createStageId, setCreateStageId] = React.useState<string | null>(null);
   const [detailDealId, setDetailDealId] = React.useState<string | null>(null);
@@ -151,6 +168,25 @@ export default function PipelinePage() {
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>(loadStatusFilter);
 
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [salesHubQueueSearch, setSalesHubQueueSearch] = React.useState("");
+  const [salesHubSortMode, setSalesHubSortMode] = React.useState<DealQueueSortMode>(() => {
+    if (typeof window === "undefined") return "message_new";
+    const saved = window.localStorage.getItem("sales-hub:sort-mode");
+    if (
+      saved === "message_new" ||
+      saved === "message_old" ||
+      saved === "created_new" ||
+      saved === "created_old"
+    ) {
+      return saved;
+    }
+    return "message_new";
+  });
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("sales-hub:sort-mode", salesHubSortMode);
+  }, [salesHubSortMode]);
   const [filterAgent, setFilterAgent] = React.useState<string>("all");
   const [filterStage, setFilterStage] = React.useState<string>("all");
   const [filterMsg, setFilterMsg] = React.useState<"all" | "unread" | "no-reply">("all");
@@ -165,17 +201,11 @@ export default function PipelinePage() {
   });
 
   React.useEffect(() => {
-    // Quando estamos no SalesHub, o `?deal=` representa a selecao local
-    // do painel (nao deve abrir o <DealDetail> sheet por cima). O
-    // SalesHub cuida do deep-link consumindo o param direto na sua
-    // inicializacao; aqui apenas evitamos abrir o modal pra nao tampar
-    // a tela que o usuario acabou de escolher.
-    if (viewMode === "saleshub") return;
     const dealParam = searchParams.get("deal");
-    if (dealParam && dealParam !== detailDealId) {
-      setDetailDealId(dealParam);
+    if (dealParam) {
+      setDetailDealId((prev) => (prev === dealParam ? prev : dealParam));
     }
-  }, [searchParams, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const openDeal = React.useCallback(
     (id: string) => {
@@ -211,7 +241,14 @@ export default function PipelinePage() {
     }
   }, [pipelines, pipelineId]);
 
-  React.useEffect(() => { setDetailDealId(null); }, [pipelineId]);
+  React.useEffect(() => {
+    if (!pipelineId) return;
+    if (!pipelineBootstrapRef.current) {
+      pipelineBootstrapRef.current = true;
+      return;
+    }
+    setDetailDealId(null);
+  }, [pipelineId]);
 
   const { data: board = [], isLoading: boardLoading, isFetching: boardFetching, isError: boardError, error: boardErr } =
     useQuery({ queryKey: boardKey(pipelineId, statusFilter), queryFn: () => fetchBoard(pipelineId, statusFilter), enabled: isAuthenticated && !!pipelineId });
@@ -246,38 +283,27 @@ export default function PipelinePage() {
   const totalDeals = board.reduce((acc, s) => acc + s.deals.length, 0);
 
   return (
-    <div className="-mx-3 -mt-3 flex flex-1 flex-col overflow-hidden bg-slate-50/60 sm:-mx-4 md:-mx-8 md:-mt-2">
-      {/* ═══ HEADER ═══ */}
-      <div className="shrink-0 border-b border-slate-200/80 bg-white">
-        {/* Row 0: Título da página — igual às outras áreas do dashboard
-            (Conversas, Empresas, Contatos, etc.). Fica ANTES da toolbar
-            do pipeline pra que o usuário veja imediatamente em qual
-            seção do CRM está; antes só o nome do pipeline aparecia
-            pequeno (text-[13px]) no meio de outros controles, o que
-            causava desalinhamento visual entre páginas. */}
-        <div className="flex items-center gap-3.5 px-3 pt-3 pb-2 sm:px-4 sm:pt-4 sm:pb-2.5 md:px-5">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10">
-            <Filter className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <h1 className={pageHeaderTitleClass}>Sales Hub</h1>
-            <p className={cn(pageHeaderDescriptionClass, "mt-0.5")}>
-              Acompanhe seus negócios por etapa do funil.
-            </p>
-          </div>
-        </div>
+    <div className="-mx-3 -mt-3 -mb-3 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-bg-subtle)]/60 sm:-mx-4 sm:-mt-4 sm:-mb-4 md:-mx-8 md:-mt-8 md:-mb-8">
+      {/* ═══ HEADER — 1 linha estilo Kommo ═══ */}
+      <div className="shrink-0 border-b border-zinc-200 bg-white">
 
-        {/* Row 1: Pipeline + Search + Actions
-            Mobile: flex-wrap pra evitar overflow horizontal e gap menor.
-            View toggle de 3 botoes cabe inteiro em 360px. */}
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:flex-nowrap sm:gap-2.5 sm:px-4 md:px-5">
+        {/* Linha única: título | pipeline | busca | ações */}
+        <div className="flex items-center gap-2 px-4 py-2 md:px-6">
+
+          {/* Título */}
+          <span className="shrink-0 text-[13px] font-semibold text-zinc-800">
+            {VIEW_HEADER[viewMode].title}
+          </span>
+
+          <div className="h-4 w-px bg-zinc-200 shrink-0" />
+
           {/* Pipeline selector */}
           {plLoading ? (
-            <Skeleton className="h-8 w-32 rounded-lg" />
+            <Skeleton className="h-7 w-28 rounded-lg" />
           ) : plError ? (
             <p className="text-xs text-red-500">{plErr instanceof Error ? plErr.message : "Erro"}</p>
           ) : pipelines.length <= 1 ? (
-            <span className="text-[13px] font-bold text-slate-800">
+            <span className="text-[12px] font-medium text-zinc-600">
               {pipelines[0]?.name ?? "Pipeline"}
             </span>
           ) : (
@@ -285,41 +311,39 @@ export default function PipelinePage() {
               <select
                 value={pipelineId}
                 onChange={(e) => setPipelineId(e.target.value)}
-                className="h-8 cursor-pointer appearance-none rounded-lg border-0 bg-slate-100 py-0 pl-3 pr-8 text-[13px] font-bold text-slate-800 transition hover:bg-slate-200/80 focus:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-7 cursor-pointer appearance-none rounded-md border-0 bg-zinc-100 py-0 pl-2.5 pr-7 text-[12px] font-medium text-zinc-700 transition hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 aria-label="Selecionar pipeline"
               >
                 {pipelines.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+              <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
             </div>
           )}
 
           {boardFetching && !boardLoading && (
             <TooltipHost label="Atualizando" side="bottom">
-              <span className="size-2 rounded-full bg-blue-500 animate-pulse" aria-label="Atualizando" />
+              <span className="size-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" aria-label="Atualizando" />
             </TooltipHost>
           )}
 
-          {/* Search (escondido no Sales Hub — a fila tem busca própria). */}
+          {/* Busca */}
           {viewMode !== "saleshub" && (
-            <div className="relative ml-1 flex-1 max-w-xs">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+            <div className="relative w-36 sm:w-48">
+              <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar..."
-                className="h-8 w-full rounded-lg border-0 bg-slate-100 pl-8 pr-7 text-[13px] text-slate-700 placeholder:text-slate-400 transition hover:bg-slate-200/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-7 w-full rounded-md border-0 bg-zinc-100 pl-6 pr-6 text-[12px] text-zinc-700 placeholder:text-zinc-400 transition hover:bg-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-400 hover:text-slate-600"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
                 >
                   <X className="size-3" />
                 </button>
@@ -329,43 +353,44 @@ export default function PipelinePage() {
 
           <div className="flex-1" />
 
-          {/* Right controls */}
-          <div className="flex items-center gap-1.5">
-            {/* Filter toggle */}
-            <button
+          {/* Controles direita */}
+          <div className="flex items-center gap-1">
+            {/* Filtros */}
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setShowFilters((v) => !v)}
               className={cn(
-                "relative inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition",
-                showFilters || hasActiveAdvancedFilter || activeFilter
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-700",
+                "h-7 gap-1 px-2 text-[12px]",
+                (showFilters || hasActiveAdvancedFilter || activeFilter) &&
+                  "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
               )}
             >
-              <Filter className="size-3.5" strokeWidth={2} />
+              <Filter className="size-3" />
               <span className="hidden sm:inline">Filtros</span>
               {activeFilterCount > 0 && (
-                <span className="flex size-4 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white">
+                <span className="flex size-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] font-bold text-white">
                   {activeFilterCount}
                 </span>
               )}
-            </button>
+            </Button>
 
-            <div className="h-5 w-px bg-slate-200" />
+            <div className="h-4 w-px bg-zinc-200" />
 
             {/* View toggle */}
-            <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
+            <div className="flex h-7 items-center rounded-md bg-zinc-100 p-0.5">
               <TooltipHost label="Kanban" side="bottom">
                 <button
                   type="button"
                   onClick={() => { setViewMode("kanban"); saveViewMode("kanban"); setSelectedDeals(new Set()); }}
                   className={cn(
-                    "rounded-md p-1.5 transition",
-                    viewMode === "kanban" ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-600",
+                    "flex size-6 items-center justify-center rounded transition",
+                    viewMode === "kanban" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-400 hover:text-zinc-600",
                   )}
                   aria-label="Kanban"
                 >
-                  <LayoutGrid className="size-3.5" />
+                  <LayoutGrid className="size-3" />
                 </button>
               </TooltipHost>
               <TooltipHost label="Lista" side="bottom">
@@ -373,93 +398,47 @@ export default function PipelinePage() {
                   type="button"
                   onClick={() => { setViewMode("list"); saveViewMode("list"); }}
                   className={cn(
-                    "rounded-md p-1.5 transition",
-                    viewMode === "list" ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-600",
+                    "flex size-6 items-center justify-center rounded transition",
+                    viewMode === "list" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-400 hover:text-zinc-600",
                   )}
                   aria-label="Lista"
                 >
-                  <List className="size-3.5" />
+                  <List className="size-3" />
                 </button>
               </TooltipHost>
-              <TooltipHost label="Sales Hub" side="bottom">
+              <TooltipHost label="Pipeline Ágil" side="bottom">
                 <button
                   type="button"
                   onClick={() => {
                     setViewMode("saleshub");
                     saveViewMode("saleshub");
                     setSelectedDeals(new Set());
-                    // Se o DealDetail estiver aberto, fecha antes de entrar
-                    // no SalesHub — senao o modal tampa o painel bimodal.
                     if (detailDealId) closeDeal();
                   }}
                   className={cn(
-                    "rounded-md p-1.5 transition",
-                    viewMode === "saleshub" ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-600",
+                    "flex size-6 items-center justify-center rounded transition",
+                    viewMode === "saleshub" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-400 hover:text-zinc-600",
                   )}
-                  aria-label="Sales Hub"
+                  aria-label="Pipeline Ágil"
                 >
-                  <MessageSquare className="size-3.5" />
+                  <MessageSquare className="size-3" />
                 </button>
               </TooltipHost>
             </div>
 
             <CardFieldsConfig fields={cardFields} onChange={setCardFields} />
 
-            <button
-              type="button"
-              onClick={() => { setCreateStageId(null); setCreateOpen(true); }}
-              disabled={!pipelineId || stageOptionsForForm.length === 0 || createLoading}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
-              aria-label="Novo negócio"
-            >
-              {createLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" strokeWidth={2.5} />}
-              <span className="hidden sm:inline">Novo</span>
-            </button>
-          </div>
-        </div>
+            <div className="h-4 w-px bg-zinc-200" />
 
-        {/* Row 2: Status tabs (Abertos/Ganhos/Perdidos/Todos) +
-            quick filters. Ocultos no Sales Hub: ganha-se uma linha
-            inteira de altura que a StageRibbon usa melhor, e o
-            pipeline de vendas naturalmente foca em deals OPEN. */}
-        {viewMode !== "saleshub" && (
-        <div className="flex flex-wrap items-center gap-0 border-t border-slate-100 px-3 sm:px-4 md:px-5">
-          {STATUS_TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = statusFilter === tab.value;
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => { setStatusFilter(tab.value); saveStatusFilter(tab.value); }}
-                className={cn(
-                  "relative inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[12px] font-semibold transition",
-                  isActive
-                    ? tab.activeColor
-                    : "border-transparent text-slate-400 hover:text-slate-600",
-                )}
-              >
-                <Icon className="size-3.5" />
-                {tab.label}
-                {isActive && totalDeals > 0 && (
-                  <span className="ml-0.5 text-[10px] font-bold opacity-70">
-                    {totalDeals}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-
-          {/* Quick filters inline when filters panel is closed */}
-          <div className="ml-auto flex items-center gap-1">
+            {/* Filtros rápidos */}
             <button
               type="button"
               onClick={() => toggleFilter("mine")}
               className={cn(
-                "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition",
+                "inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition",
                 activeFilter === "mine"
                   ? "bg-blue-100 text-blue-700"
-                  : "text-slate-400 hover:bg-slate-100 hover:text-slate-600",
+                  : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600",
               )}
             >
               <UserIcon className="size-3" />
@@ -469,22 +448,70 @@ export default function PipelinePage() {
               type="button"
               onClick={() => toggleFilter("urgent")}
               className={cn(
-                "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition",
+                "inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition",
                 activeFilter === "urgent"
                   ? "bg-amber-100 text-amber-700"
-                  : "text-slate-400 hover:bg-slate-100 hover:text-slate-600",
+                  : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600",
               )}
             >
               <AlertTriangle className="size-3" />
               Urgentes
             </button>
+
+            <div className="h-4 w-px bg-zinc-200" />
+
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => { setCreateStageId(null); setCreateOpen(true); }}
+              disabled={!pipelineId || stageOptionsForForm.length === 0 || createLoading}
+              className={cn("h-7 gap-1 px-2.5 text-[12px]", pageHeaderPrimaryCtaClass)}
+              aria-label="Novo negócio"
+            >
+              {createLoading ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Plus className="size-3" />
+              )}
+              <span className="hidden sm:inline">Novo</span>
+            </Button>
           </div>
         </div>
+
+        {/* Status tabs */}
+        {viewMode !== "saleshub" && (
+          <div className="flex flex-wrap items-center gap-0 border-t border-zinc-100 px-4 md:px-6">
+            {STATUS_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = statusFilter === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => { setStatusFilter(tab.value); saveStatusFilter(tab.value); }}
+                  className={cn(
+                    "relative inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[12px] font-semibold transition",
+                    isActive
+                      ? tab.activeColor
+                      : "border-transparent text-zinc-400 hover:text-zinc-600",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  {tab.label}
+                  {isActive && totalDeals > 0 && (
+                    <span className="ml-0.5 text-[10px] font-bold opacity-70">
+                      {totalDeals}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         )}
 
-        {/* Row 3: Advanced filters (collapsible) */}
+        {/* Filtros avançados */}
         {showFilters && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-2 md:px-5">
+          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-100 px-4 py-2 md:px-6">
             <div className="relative">
               <select
                 value={filterAgent}
@@ -493,7 +520,7 @@ export default function PipelinePage() {
                   "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500/20",
                   filterAgent !== "all"
                     ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "border-slate-200 bg-white text-slate-600",
+                    : "border-zinc-200 bg-white text-zinc-500",
                 )}
               >
                 <option value="all">Agente</option>
@@ -502,7 +529,7 @@ export default function PipelinePage() {
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-slate-400" />
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
             </div>
 
             <div className="relative">
@@ -513,7 +540,7 @@ export default function PipelinePage() {
                   "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500/20",
                   filterStage !== "all"
                     ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "border-slate-200 bg-white text-slate-600",
+                    : "border-zinc-200 bg-white text-zinc-500",
                 )}
               >
                 <option value="all">Etapa</option>
@@ -521,7 +548,7 @@ export default function PipelinePage() {
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-slate-400" />
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
             </div>
 
             <div className="relative">
@@ -532,14 +559,14 @@ export default function PipelinePage() {
                   "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500/20",
                   filterMsg !== "all"
                     ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "border-slate-200 bg-white text-slate-600",
+                    : "border-zinc-200 bg-white text-zinc-500",
                 )}
               >
                 <option value="all">Mensagens</option>
                 <option value="unread">Não lidas</option>
                 <option value="no-reply">Sem resposta</option>
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-slate-400" />
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
             </div>
 
             <button
@@ -549,7 +576,7 @@ export default function PipelinePage() {
                 "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition",
                 filterOverdue
                   ? "border-red-300 bg-red-50 text-red-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300",
+                  : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300",
               )}
             >
               <Clock className="size-3" />
@@ -560,7 +587,7 @@ export default function PipelinePage() {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
               >
                 <X className="size-3" />
                 Limpar
@@ -571,17 +598,16 @@ export default function PipelinePage() {
       </div>
 
       {/* ═══ BOARD AREA ═══ */}
-      <div className="relative flex-1 overflow-hidden">
-        {/* Active filter badge */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {(activeFilterCount > 0 || searchQuery) && !showFilters && (
-          <div className="absolute left-5 top-3 z-10 flex items-center gap-1.5 rounded-full border border-blue-200 bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-slate-600 shadow-md backdrop-blur-sm">
+          <div className="absolute left-5 top-3 z-10 flex items-center gap-1.5 rounded-full border border-blue-200 bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-zinc-500 shadow-md backdrop-blur-sm">
             <Filter className="size-3 text-blue-500" strokeWidth={2} />
             {activeFilterCount} filtro{activeFilterCount !== 1 ? "s" : ""}
-            {searchQuery && <span className="text-slate-400">· &ldquo;{searchQuery.slice(0, 15)}&rdquo;</span>}
+            {searchQuery && <span className="text-zinc-400">· &ldquo;{searchQuery.slice(0, 15)}&rdquo;</span>}
             <button
               type="button"
               onClick={clearAllFilters}
-              className="ml-0.5 flex size-3.5 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+              className="ml-0.5 flex size-3.5 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600"
             >
               <X className="size-2.5" strokeWidth={2.5} />
             </button>
@@ -598,7 +624,7 @@ export default function PipelinePage() {
 
         {pipelineId && !boardLoading && board.length === 0 && !boardError && (
           <div className="flex items-center justify-center p-8">
-            <p className="text-[14px] font-medium text-slate-500">Este pipeline ainda não tem estágios configurados.</p>
+            <p className="text-[14px] font-medium text-zinc-500">Este pipeline ainda não tem estágios configurados.</p>
           </div>
         )}
 
@@ -626,6 +652,11 @@ export default function PipelinePage() {
               filterStage={filterStage}
               filterMsg={filterMsg}
               filterOverdue={filterOverdue}
+              onOpenFullDeal={openDeal}
+              queueSearch={salesHubQueueSearch}
+              onQueueSearchChange={setSalesHubQueueSearch}
+              sortMode={salesHubSortMode}
+              onSortModeChange={setSalesHubSortMode}
             />
           ) : viewMode === "list" ? (
             <PipelineListView
@@ -645,6 +676,7 @@ export default function PipelinePage() {
             <KanbanBoard
               pipelineId={pipelineId}
               stages={board}
+              statusFilter={statusFilter}
               visibleFields={cardFields}
               onDealClick={(id) => openDeal(id)}
               onAddCard={handleAddCard}
@@ -681,12 +713,11 @@ export default function PipelinePage() {
               onCancel={() => setCreateOpen(false)}
             />
           ) : (
-            <p className="text-sm text-[#64748b]">Selecione um pipeline com estágios.</p>
+            <p className="text-sm text-zinc-500">Selecione um pipeline com estágios.</p>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Bulk actions bar */}
       <BulkActionsBar
         selectedCount={selectedDeals.size}
         selectedIds={selectedDeals}
@@ -696,7 +727,6 @@ export default function PipelinePage() {
         users={userOptions}
       />
 
-      {/* Workspace fullscreen — variante kanban */}
       <DealWorkspace
         dealId={detailDealId}
         open={!!detailDealId}

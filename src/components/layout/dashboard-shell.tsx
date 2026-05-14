@@ -1,17 +1,20 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, Book, Bot, ChartBar as BarChart3, Building2, SquareCheck as CheckSquare, Circle, Coffee, FileBarChart, Filter, Headphones, LayoutDashboard, LogOut, Megaphone, MessageSquare, MoreHorizontal, Moon, Settings, Sun, UserCircle2, Users, Wifi, WifiOff, X, Zap } from "lucide-react";
+import { Bot, Building2, SquareCheck as CheckSquare, Circle, Coffee, FileBarChart, Filter, LayoutDashboard, LogOut, Megaphone, MessageSquare, MoreHorizontal, Moon, Settings, Sun, UserCircle2, Users, Wifi, WifiOff, X, Zap } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserRole } from "@prisma/client";
+
+import { ChatAvatar } from "@/components/inbox/chat-avatar";
+import { useChatTheme } from "@/hooks/use-chat-theme";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
 import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";
 import { WhatsAppHealthBanner } from "@/components/layout/whatsapp-health-banner";
@@ -21,6 +24,13 @@ import { PushNavigateListener } from "@/components/pwa/push-navigate-listener";
 import { PushPermissionPrompt } from "@/components/pwa/push-permission-prompt";
 import { useMobileLayout } from "@/hooks/use-mobile-layout";
 import { MOBILE_MODULES, type MobileModuleId } from "@/lib/mobile-layout";
+import {
+  computeHiddenSidebarRoutesFromAllowList,
+  filterItemsByRole,
+  SIDEBAR_GRANULAR_EXTRA_HREFS,
+  type Viewer,
+} from "@/lib/nav-visibility";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, getInitials } from "@/lib/utils";
 
 /**
@@ -43,48 +53,94 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>;
   end?: boolean;
   badgeKey?: string;
+  /**
+   * Roles que enxergam o item. Ausente = visivel pra todos os roles
+   * autenticados. Super-admin bypass (ve tudo). Filtrado no render
+   * via `filterItemsByRole` + viewer atual.
+   */
+  allowedRoles?: UserRole[];
+  requiredPermission?: string;
+  /**
+   * Marca de grupo visual: o item recebe um divisor sutil acima, pra
+   * separar blocos (operacional vs. gestão). Afeta só o render, não
+   * a semântica.
+   */
+  groupStart?: boolean;
+  /**
+   * Sub-itens exibidos em flyout lateral no hover/focus. Quando
+   * presente, o item-pai vira um botão guarda-chuva: o `href` aponta
+   * para o filho default (primeiro da lista) e o ícone fica `active`
+   * sempre que QUALQUER filho estiver na rota atual.
+   *
+   * Limitação proposital: não suportamos aninhamento N níveis (só 1).
+   * Se algum dia precisar de mais, vale repensar a forma da sidebar
+   * — flyouts em 2+ níveis viram labirinto sem affordance clara.
+   */
+  children?: NavItem[];
 }
 
+/** Gestao = ADMIN + MANAGER. MEMBER so ve o operacional. */
+const GESTAO: UserRole[] = [UserRole.ADMIN, UserRole.MANAGER];
+
+// Itens ocultos da sidebar mas ainda acessíveis via URL direta:
+//  • /analytics (Visão Geral de Performance) — módulo não finalizado;
+//    ainda não tem dados reais conectados.
+//  • /developers (API Docs) — uso pontual de dev; acessível via
+//    /developers ou link no hub de Configurações.
 const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  // Item ÚNICO de pipeline/funil de vendas. O ícone Funnel (`Filter`)
-  // representa o "funil de vendas" — semanticamente mais alinhado do
-  // que o foguete (Rocket) anterior.
-  //
-  // O href aponta pra `/pipeline` em vez de uma rota `/sales-hub`
-  // separada (que nunca existiu). A página `/pipeline` lembra a
-  // ÚLTIMA visualização escolhida pelo usuário (`pipeline-view-mode`
-  // no localStorage, gerenciado por `loadViewMode()`/`saveViewMode()`):
-  // se foi `saleshub` da última vez, abre direto no Sales Hub; se foi
-  // `kanban` ou `list`, abre no formato correspondente. Assim cada
-  // operador tem o seu modo de trabalho preservado entre sessões.
-  { href: "/pipeline", label: "Sales Hub", icon: Filter },
-  { href: "/contacts", label: "Contatos", icon: Users },
-  { href: "/companies", label: "Empresas", icon: Building2 },
-  { href: "/inbox", label: "Inbox", icon: MessageSquare },
-  { href: "/tasks", label: "Tarefas", icon: CheckSquare, badgeKey: "overdueTasks" },
-  { href: "/automations", label: "Automações", icon: Zap },
-  { href: "/ai-agents", label: "Agentes IA", icon: Bot },
-  { href: "/campaigns", label: "Campanhas", icon: Megaphone },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/analytics/inbox", label: "Atendimento", icon: Headphones },
-  // /monitor foi absorvido pelo dashboard principal como preset "Monitor"
-  // + botão de TV Wall. A rota /monitor ainda existe, mas redireciona
-  // para /?preset=monitor — não precisa aparecer na navegação principal.
-  { href: "/reports", label: "Relatórios", icon: FileBarChart },
+  // ─── Operacional ───
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
+  // "Pipeline" é o rótulo guarda-chuva na sidebar; a página tem 3 modos
+  // (kanban="Funil", list="Lista", saleshub="Pipeline Ágil") que aparecem
+  // como título dinâmico no header. A página lembra a ÚLTIMA visualização
+  // escolhida (`pipeline-view-mode` no localStorage).
+  { href: "/pipeline", label: "Pipeline", icon: Filter, requiredPermission: "pipeline:view" },
+  { href: "/contacts", label: "Contatos", icon: Users, requiredPermission: "contact:view" },
+  { href: "/companies", label: "Empresas", icon: Building2, requiredPermission: "company:view" },
+  { href: "/inbox", label: "Inbox", icon: MessageSquare, requiredPermission: "conversation:view" },
+  { href: "/tasks", label: "Tarefas", icon: CheckSquare, badgeKey: "overdueTasks", requiredPermission: "task:view" },
+
+  // ─── Gestão (ADMIN + MANAGER) ───
+  // "Automação" agrupa Fluxos (/automations) + Agentes IA (/ai-agents)
+  // num flyout lateral — economiza um slot vertical na sidebar e
+  // reflete a relação semântica (ambos automatizam atendimento).
+  // O href do pai aponta pro primeiro filho como rota default; o
+  // active state se propaga quando qualquer filho está ativo.
+  {
+    href: "/automations",
+    label: "Automação",
+    icon: Zap,
+    allowedRoles: GESTAO,
+    requiredPermission: "automation:view",
+    groupStart: true,
+    children: [
+      { href: "/automations", label: "Fluxos", icon: Zap, allowedRoles: GESTAO, requiredPermission: "automation:view" },
+      { href: "/ai-agents", label: "Agentes IA", icon: Bot, allowedRoles: GESTAO, requiredPermission: "ai_agent:view" },
+    ],
+  },
+  { href: "/campaigns", label: "Campanhas", icon: Megaphone, allowedRoles: GESTAO, requiredPermission: "campaign:view" },
+  { href: "/reports", label: "Relatórios", icon: FileBarChart, allowedRoles: GESTAO, requiredPermission: "report:view" },
 ];
 
 const bottomItems: NavItem[] = [
-  { href: "/developers", label: "Desenvolvedores", icon: Book },
-  { href: "/settings", label: "Configurações", icon: Settings },
+  { href: "/settings", label: "Configurações", icon: Settings, requiredPermission: "settings:team" },
 ];
+
+/** Hrefs considerados no allow list granular da sidebar (nav + bottom + extras). */
+export function getSidebarAllowlistTrackedHrefs(): string[] {
+  return [
+    ...navItems.flatMap((n) => [n.href, ...(n.children?.map((c) => c.href) ?? [])]),
+    ...bottomItems.map((n) => n.href),
+    ...SIDEBAR_GRANULAR_EXTRA_HREFS,
+  ];
+}
 
 type AgentOnlineStatus = "ONLINE" | "OFFLINE" | "AWAY";
 
 const STATUS_OPTIONS: { value: AgentOnlineStatus; label: string; icon: ComponentType<{ className?: string }>; dot: string; bg: string }[] = [
   { value: "ONLINE", label: "Online", icon: Wifi, dot: "bg-emerald-500", bg: "hover:bg-emerald-50 dark:hover:bg-emerald-950/30" },
   { value: "AWAY", label: "Ausente", icon: Coffee, dot: "bg-amber-500", bg: "hover:bg-amber-50 dark:hover:bg-amber-950/30" },
-  { value: "OFFLINE", label: "Offline", icon: WifiOff, dot: "bg-slate-400", bg: "hover:bg-slate-50 dark:hover:bg-slate-800/30" },
+  { value: "OFFLINE", label: "Offline", icon: WifiOff, dot: "bg-slate-400", bg: "hover:bg-[var(--color-bg-subtle)] dark:hover:bg-slate-800/30" },
 ];
 
 const STATUS_DOT_COLOR: Record<AgentOnlineStatus, string> = {
@@ -93,24 +149,15 @@ const STATUS_DOT_COLOR: Record<AgentOnlineStatus, string> = {
   OFFLINE: "#94a3b8",
 };
 
-/**
- * Tooltip unificado dos botões da sidebar vertical.
- *
- * Precisa ser usado dentro de um elemento `group` com `position: relative`.
- * Centraliza verticalmente com `top-1/2 -translate-y-1/2` (antes ficava
- * alinhado ao topo do ícone e a seta ao centro do tooltip — o que
- * desalinhava visualmente). Anima com leve deslize da esquerda e tem
- * `delay-100` pra não aparecer em hovers acidentais.
- */
-function SidebarRailTooltip({ label }: { label: string }) {
+/** Tooltip da rail lateral via Radix Portal — não corta em overflow nem perde z-index. */
+function SidebarRailTooltip({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <span
-      role="tooltip"
-      className="pointer-events-none absolute left-full top-1/2 z-50 ml-4 -translate-x-1 -translate-y-1/2 whitespace-nowrap rounded-lg bg-popover px-3 py-1.5 text-xs font-medium text-popover-foreground opacity-0 shadow-xl transition-[opacity,transform] duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-hover:delay-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
-    >
-      {label}
-      <span className="absolute -left-1.5 top-1/2 size-3 -translate-y-1/2 rotate-45 bg-popover" />
-    </span>
+    <Tooltip delayDuration={400}>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right" align="center" sideOffset={12} className="text-xs font-medium">
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -123,32 +170,136 @@ function SidebarIcon({
   const active = end ? pathname === href || pathname === "" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <Link
-      href={href}
-      aria-label={label}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "group relative flex size-11 items-center justify-center rounded-xl eduit-transition outline-none focus-visible:ring-2 focus-visible:ring-white/40",
-        active
-          ? "text-primary shadow-lg ring-1 ring-white/20"
-          : "text-sidebar-muted hover:bg-sidebar-hover hover:text-white hover:scale-105",
-      )}
-    >
-      {active && (
-        <motion.span
-          layoutId="sidebar-active"
-          className="absolute inset-0 rounded-xl bg-white/95 dark:bg-white/10"
-          transition={{ type: "spring", stiffness: 350, damping: 30 }}
-        />
-      )}
-      <Icon className="relative size-5" />
-      {badge != null && badge > 0 && (
-        <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-md ring-2 ring-sidebar">
-          {badge > 99 ? "99" : badge}
-        </span>
-      )}
-      <SidebarRailTooltip label={label} />
-    </Link>
+    <SidebarRailTooltip label={label}>
+      <Link
+        href={href}
+        aria-label={label}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "relative flex size-10 items-center justify-center rounded-lg lumen-transition outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25",
+          active
+            ? "bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-fg)] font-semibold shadow-[var(--shadow-sm)]"
+            : "text-[var(--color-sidebar-muted)] hover:bg-[var(--color-sidebar-hover)] hover:text-foreground",
+        )}
+      >
+        <Icon className="relative size-[18px]" />
+        {badge != null && badge > 0 && (
+          <span className="absolute -right-1 -top-1 flex size-[18px] items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow-sm ring-2 ring-sidebar">
+            {badge > 99 ? "99" : badge}
+          </span>
+        )}
+      </Link>
+    </SidebarRailTooltip>
+  );
+}
+
+/**
+ * Item-pai que abre um flyout lateral com sub-itens no hover/focus.
+ *
+ * Decisão (CSS-only via group-hover/focus-within):
+ *   Não usamos state React pra abrir/fechar — a abertura responde a
+ *   `:hover` e `:focus-within` no container `group`. O label da rail
+ *   lateral usa Radix Tooltip (Portal); o flyout permanece CSS-only.
+ *   Vantagens:
+ *     • Zero risco de "estado preso" se o componente desmontar mid-hover.
+ *     • Acessível via teclado (Tab entra no link-pai → focus-within no
+ *       container abre o flyout → Shift+Tab sai e fecha).
+ *     • Esc fecha automaticamente se o foco sair (o navegador move o
+ *       focus pro body).
+ *
+ * Active propagado: o ícone-pai herda o estado active de qualquer filho
+ * que case com a rota atual — preserva a "memória visual" do agrupamento.
+ *
+ * Click no ícone-pai navega para o `href` default (primeiro filho ou
+ * fallback) — mantém o comportamento dos outros itens da sidebar.
+ */
+function SidebarParentIcon({
+  href,
+  label,
+  icon: Icon,
+  items,
+}: {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  items: NavItem[];
+}) {
+  const pathname = usePathname();
+  const isChildActive = items.some(
+    (c) => pathname === c.href || pathname.startsWith(`${c.href}/`),
+  );
+  const active = pathname === href || pathname.startsWith(`${href}/`) || isChildActive;
+
+  return (
+    <div className="group relative">
+      <Link
+        href={href}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "relative flex size-10 items-center justify-center rounded-lg lumen-transition outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25",
+          active
+            ? "bg-[var(--color-sidebar-active-bg)] text-[var(--color-sidebar-active-fg)] font-semibold shadow-[var(--shadow-sm)]"
+            : "text-[var(--color-sidebar-muted)] hover:bg-[var(--color-sidebar-hover)] hover:text-foreground",
+        )}
+      >
+        <Icon className="relative size-[18px]" />
+        {/* Indicador visual sutil de que o item tem submenu — ponto
+            no canto inferior direito. Só aparece quando o item NÃO
+            está active (pra não competir com o highlight branco). */}
+        {!active && (
+          <span
+            aria-hidden="true"
+            className="absolute bottom-1 right-1 size-1 rounded-full bg-white/30"
+          />
+        )}
+      </Link>
+
+      {/* Flyout — anchor wrapper.
+          O wrapper externo permanece SEMPRE com pointer-events-auto e
+          é descendente do `.group`. Isso resolve o "gap de morte" que
+          ocorre quando o cursor sai do ícone e atravessa o pl-3 antes
+          de chegar no menu: como o wrapper captura hit-testing, o
+          `.group:hover` continua ativo durante a travessia.
+          Apenas a opacity/translate do menu interno é animada. */}
+      <div
+        aria-hidden={!active ? undefined : true}
+        className="absolute left-full top-1/2 z-50 -translate-y-1/2 pl-3"
+      >
+        <div
+          role="menu"
+          aria-label={`${label} — submenu`}
+          className="pointer-events-none min-w-[200px] -translate-x-1 overflow-hidden rounded-xl border border-border bg-popover py-1 text-popover-foreground opacity-0 shadow-2xl transition-[opacity,transform] duration-150 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-x-0 group-focus-within:opacity-100"
+        >
+          <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </div>
+          {items.map((child) => {
+            const ChildIcon = child.icon;
+            const childActive =
+              pathname === child.href || pathname.startsWith(`${child.href}/`);
+            return (
+              <Link
+                key={child.href}
+                href={child.href}
+                role="menuitem"
+                aria-current={childActive ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 text-sm lumen-transition outline-none focus-visible:bg-muted",
+                  childActive
+                    ? "bg-primary/10 font-semibold text-primary"
+                    : "text-foreground hover:bg-muted",
+                )}
+              >
+                <ChildIcon className="size-4 shrink-0" />
+                <span className="flex-1 truncate">{child.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -184,7 +335,7 @@ function StatusPopup({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" style={{ animation: "fade-in 0.2s ease" }}>
       <div ref={ref} className="w-[360px] rounded-2xl border border-border bg-card p-7 shadow-2xl" style={{ animation: "scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}>
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl eduit-gradient shadow-lg">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl lumen-gradient shadow-lg">
             <Wifi className="size-8 text-white" />
           </div>
           <h3 className="text-xl font-bold text-foreground">Definir Status</h3>
@@ -199,7 +350,7 @@ function StatusPopup({
               <button key={opt.value} type="button"
                 onClick={() => { onSelect(opt.value); onClose(); }}
                 className={cn(
-                  "flex w-full items-center gap-3.5 rounded-xl px-4 py-4 text-left eduit-transition",
+                  "flex w-full items-center gap-3.5 rounded-xl px-4 py-4 text-left lumen-transition",
                   isActive
                     ? "border-2 border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
                     : "border-2 border-transparent " + opt.bg,
@@ -242,11 +393,95 @@ function StatusPopup({
 // runtime (configurados pelo admin em /settings/mobile-layout).
 // MOBILE_PRIMARY foi removido — defaults vivem em src/lib/mobile-layout.ts.
 
+/**
+ * Tipo mínimo consumido pela UI da sidebar. O endpoint /api/organization
+ * devolve mais campos, mas pra renderizar o logo só precisamos disso.
+ */
+type OrgBranding = {
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+};
+
+/**
+ * Renderiza a logo da organização no topo da sidebar.
+ *
+ * Três estados, em ordem de preferência:
+ *   1. `logoUrl` salvo no onboarding → renderiza a imagem.
+ *   2. `name` disponível → renderiza iniciais (ex: "DW" pra DNA Work)
+ *      com gradiente EduIT no fallback.
+ *   3. Sem dados ainda (carregando / não autenticado) → "E" (marca
+ *      EduIT padrão) — mesmo comportamento antigo.
+ *
+ * Usa `size` pra reaproveitar no desktop (48px) e mobile (36px).
+ */
+function OrgLogo({
+  org,
+  size,
+  textSize,
+}: {
+  org: OrgBranding | null;
+  size: "sm" | "lg";
+  textSize: string;
+}) {
+  // lg compactado de size-12 (48px) -> size-10 (40px) pra alinhar com a
+  // densidade reduzida da sidebar (size-10 nos botoes) e ganhar
+  // ~8px de altura no cabecalho da nav.
+  const dimClass = size === "lg" ? "size-10" : "size-9";
+
+  if (org?.logoUrl) {
+    return (
+      <span
+        className={cn(
+          "flex items-center justify-center overflow-hidden rounded-xl bg-background shadow-sm ring-1 ring-white/20",
+          dimClass,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- logo vem como data: URL (base64) ou URL externa; next/image não cabe. */}
+        <img
+          src={org.logoUrl}
+          alt={org.name}
+          className="h-full w-full object-contain p-1"
+        />
+      </span>
+    );
+  }
+
+  if (org?.name) {
+    return (
+      <span
+        className={cn(
+          "flex items-center justify-center rounded-xl bg-background shadow-sm ring-1 ring-white/20",
+          dimClass,
+        )}
+      >
+        <span className={cn("font-bold text-gradient", textSize)}>
+          {getInitials(org.name)}
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={cn(
+        "flex items-center justify-center rounded-xl bg-background shadow-sm ring-1 ring-white/20",
+        dimClass,
+      )}
+    >
+      <span className={cn("font-bold text-gradient", textSize)}>E</span>
+    </span>
+  );
+}
+
 function getPageTitle(pathname: string | null): string {
-  if (!pathname || pathname === "/") return "Dashboard";
+  if (!pathname || pathname === "/" || pathname === "/dashboard") return "Dashboard";
   // Match contra navItems (canonical) e bottomItems pra cobrir tudo.
+  // Children têm prioridade sobre o pai — quando estamos em /ai-agents
+  // queremos o título "Agentes IA", não "Automação".
   const all: NavItem[] = [...navItems, ...bottomItems];
-  for (const item of all) {
+  const flat = all.flatMap((item) => (item.children ? [...item.children, item] : [item]));
+  for (const item of flat) {
     if (item.end ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`)) {
       return item.label;
     }
@@ -257,32 +492,36 @@ function getPageTitle(pathname: string | null): string {
 function MobileTopBar({
   badges,
   onAvatarClick,
+  userId,
   avatarUrl,
   displayName,
   dotColor,
   agentStatus,
+  org,
 }: {
   badges: Record<string, number>;
   onAvatarClick: () => void;
+  userId: string;
   avatarUrl: string | null | undefined;
   displayName: string;
   dotColor: string;
   agentStatus: AgentOnlineStatus;
+  org: OrgBranding | null;
 }) {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
   void badges;
   return (
-    <header className="pt-safe sticky top-0 z-30 flex shrink-0 items-center justify-between bg-brand-navy px-4 pb-3 shadow-md md:hidden">
+    <header className="pt-safe sticky top-0 z-30 flex shrink-0 items-center justify-between bg-sidebar border-b border-sidebar-border px-4 pb-3 shadow-[var(--shadow-sm)] md:hidden">
       <div className="flex items-center gap-3">
         <Link
-          href="/"
-          aria-label="Início"
-          className="flex size-9 items-center justify-center rounded-lg bg-white/95 shadow-sm ring-1 ring-white/20"
+          href="/dashboard"
+          aria-label={org?.name ?? "Início"}
+          className="flex shrink-0"
         >
-          <span className="text-base font-black text-gradient">E</span>
+          <OrgLogo org={org} size="sm" textSize="text-base" />
         </Link>
-        <h1 className="font-outfit text-[16px] font-black tracking-tight text-white">
+        <h1 className="font-display truncate text-[16px] font-bold tracking-tight text-foreground">
           {title}
         </h1>
       </div>
@@ -290,16 +529,17 @@ function MobileTopBar({
         type="button"
         onClick={onAvatarClick}
         aria-label={`Conta: ${displayName} · ${STATUS_OPTIONS.find((o) => o.value === agentStatus)?.label}`}
-        className="relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+        className="relative shrink-0 rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
       >
-        <Avatar className="size-9 ring-2 ring-white/20 shadow-sm">
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
-          <AvatarFallback className="bg-white text-[11px] font-bold text-primary">
-            {getInitials(displayName)}
-          </AvatarFallback>
-        </Avatar>
+        <ChatAvatar
+          user={{ id: userId, name: displayName, imageUrl: avatarUrl ?? null }}
+          size={32}
+          channel={null}
+          hideCartoon
+          className="ring-1 ring-border shadow-[var(--shadow-sm)]"
+        />
         <span
-          className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-[1.5px] border-brand-navy"
+          className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-[1.5px] border-sidebar"
           style={{ backgroundColor: dotColor }}
         />
       </button>
@@ -326,7 +566,7 @@ function MobileBottomNav({
 
   return (
     <nav
-      className="pb-safe sticky bottom-0 z-30 flex shrink-0 items-stretch border-t border-white/10 bg-brand-navy px-2 pt-1.5 shadow-[0_-8px_30px_-15px_rgba(13,27,62,0.5)] md:hidden"
+      className="pb-safe sticky bottom-0 z-30 flex shrink-0 items-stretch border-t border-sidebar-border bg-sidebar px-2 pt-1.5 shadow-[0_-4px_16px_-4px_rgba(31,35,41,0.08)] md:hidden"
       aria-label="Navegação principal"
     >
       {items.map((item) => {
@@ -341,7 +581,7 @@ function MobileBottomNav({
             aria-current={active ? "page" : undefined}
             className={cn(
               "relative flex flex-1 flex-col items-center gap-0.5 rounded-lg py-2 transition-colors",
-              active ? "text-white" : "text-sidebar-muted active:bg-white/5",
+              active ? "text-primary" : "text-[var(--color-sidebar-muted)] active:bg-[var(--color-sidebar-hover)]",
             )}
           >
             <span className="relative">
@@ -351,12 +591,12 @@ function MobileBottomNav({
                 strokeWidth={active ? 2.5 : 2}
               />
               {badge > 0 && (
-                <span className="absolute -right-2 -top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-white shadow-md ring-2 ring-brand-navy">
+                <span className="absolute -right-2 -top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-white shadow-md ring-2 ring-sidebar">
                   {badge > 99 ? "99" : badge}
                 </span>
               )}
             </span>
-            <span className={cn("text-[10px] font-semibold tracking-tight", active ? "text-white" : "text-sidebar-muted")}>
+            <span className={cn("text-[10px] font-semibold tracking-tight", active ? "text-primary" : "text-[var(--color-sidebar-muted)]")}>
               {item.label}
             </span>
             {active && (
@@ -394,20 +634,24 @@ function MobileMoreSheet({
   badges,
   agentStatus,
   onStatusClick,
+  userId,
   displayName,
   email,
   avatarUrl,
   onLogout,
+  visibleBottomItems,
 }: {
   open: boolean;
   onClose: () => void;
   badges: Record<string, number>;
   agentStatus: AgentOnlineStatus;
   onStatusClick: () => void;
+  userId: string;
   displayName: string;
   email: string | null | undefined;
   avatarUrl: string | null | undefined;
   onLogout: () => void;
+  visibleBottomItems: NavItem[];
 }) {
   const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
@@ -461,14 +705,15 @@ function MobileMoreSheet({
 
         {/* Header com perfil */}
         <div className="flex items-center gap-3 border-b border-border px-5 pb-4 pt-3">
-          <Avatar className="size-12 ring-2 ring-white shadow-sm">
-            {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
-            <AvatarFallback className="bg-linear-to-br from-[#fbcfe8] to-[#f9a8d4] text-sm font-black text-white">
-              {getInitials(displayName)}
-            </AvatarFallback>
-          </Avatar>
+          <ChatAvatar
+            user={{ id: userId, name: displayName, imageUrl: avatarUrl ?? null }}
+            size={32}
+            channel={null}
+            hideCartoon
+            className="shadow-[var(--shadow-sm)]"
+          />
           <div className="min-w-0 flex-1">
-            <p className="font-outfit truncate text-sm font-black text-foreground">{displayName}</p>
+            <p className="font-display truncate text-sm font-bold text-foreground">{displayName}</p>
             {email && <p className="truncate text-[11px] text-muted-foreground">{email}</p>}
           </div>
           <button
@@ -527,7 +772,7 @@ function MobileMoreSheet({
                   onClick={onClose}
                   className={cn(
                     "flex items-center gap-2.5 rounded-xl border px-3 py-3 transition-colors active:scale-[0.98]",
-                    active ? "border-brand-blue bg-brand-blue/10 text-brand-blue" : "border-border bg-card text-foreground active:bg-muted",
+                    active ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground active:bg-muted",
                   )}
                 >
                   <MobileModuleIcon
@@ -553,7 +798,7 @@ function MobileMoreSheet({
 
           <p className="mt-4 px-2 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Conta</p>
           <div className="grid grid-cols-1 gap-1.5">
-            {bottomItems.map((item) => {
+            {visibleBottomItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -601,27 +846,31 @@ function ThemeToggle() {
   const isDark = resolvedTheme === "dark";
   const label = isDark ? "Modo claro" : "Modo escuro";
   return (
-    <button
-      type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="group relative flex size-11 items-center justify-center rounded-xl text-sidebar-muted eduit-transition outline-none hover:bg-sidebar-hover hover:text-white hover:scale-105 focus-visible:ring-2 focus-visible:ring-white/40"
-      aria-label={label}
-    >
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.span
-          key={isDark ? "sun" : "moon"}
-          initial={{ rotate: -90, opacity: 0 }}
-          animate={{ rotate: 0, opacity: 1 }}
-          exit={{ rotate: 90, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
-        </motion.span>
-      </AnimatePresence>
-      <SidebarRailTooltip label={label} />
-    </button>
+    <SidebarRailTooltip label={label}>
+      <button
+        type="button"
+        onClick={() => setTheme(isDark ? "light" : "dark")}
+        className="relative flex size-10 items-center justify-center rounded-lg text-sidebar-muted lumen-transition outline-none hover:bg-sidebar-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/25"
+        aria-label={label}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={isDark ? "sun" : "moon"}
+            initial={{ rotate: -90, opacity: 0 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            exit={{ rotate: 90, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {isDark ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
+          </motion.span>
+        </AnimatePresence>
+      </button>
+    </SidebarRailTooltip>
   );
 }
+
+/** Evita reabrir o modal de status a cada refresh (F5) na mesma aba. */
+const AGENT_STATUS_AUTO_PROMPT_SESSION_KEY = "crm:agent-status-auto-prompt";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -634,6 +883,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   // O presence-reaper server-side rebaixa agentes inativos para AWAY/OFFLINE
   // automaticamente com base nesse timestamp.
   usePresenceHeartbeat({ enabled: status === "authenticated" });
+  useChatTheme();
 
   const { data: overdueData } = useQuery({
     queryKey: ["overdue-tasks-count"],
@@ -660,9 +910,64 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     enabled: status === "authenticated",
     staleTime: 60_000,
   });
-  const badges: Record<string, number> = { overdueTasks: overdueData?.count ?? 0 };
 
-  const { data: myStatusData } = useQuery<{
+  // Branding da org (logo + nome) — vem do /api/organization e é
+  // consumido pelo <OrgLogo> no topo da sidebar (desktop + mobile).
+  // Invalidamos essa chave no hub de Configurações > Branding quando
+  // o admin trocar a logo (via mutation.onSuccess(invalidate(["organization"]))).
+  const { data: organization } = useQuery<OrgBranding | null>({
+    queryKey: ["organization"],
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/api/organization"));
+      if (!r.ok) return null;
+      const json = (await r.json()) as OrgBranding | null;
+      return json;
+    },
+    enabled: status === "authenticated",
+    staleTime: 5 * 60_000,
+  });
+  const orgBranding: OrgBranding | null = organization ?? null;
+  const badges: Record<string, number> = { overdueTasks: overdueData?.count ?? 0 };
+  const { data: permissionsPanel } = useQuery<{
+    permissionKeys: string[];
+    role: UserRole | null;
+    scopeGrants?: {
+      sidebar?: { routes?: Partial<Record<"ADMIN" | "MANAGER" | "MEMBER", string[]>> };
+    };
+  }>({
+    queryKey: ["settings-permissions-panel"],
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/api/settings/permissions"));
+      if (!r.ok) return { permissionKeys: [], role: null };
+      return r.json();
+    },
+    enabled: status === "authenticated",
+    staleTime: 60_000,
+  });
+  const roleFromSession = (session?.user as { role?: UserRole } | undefined)?.role ?? null;
+  const sidebarAllowList =
+    roleFromSession
+      ? permissionsPanel?.scopeGrants?.sidebar?.routes?.[roleFromSession]
+      : undefined;
+  const hiddenRoutes = computeHiddenSidebarRoutesFromAllowList(
+    getSidebarAllowlistTrackedHrefs(),
+    sidebarAllowList,
+  );
+
+  // Visibilidade por role — filtra navItems/bottomItems antes do render.
+  // Super-admin EduIT sempre ve tudo (bypass em filterItemsByRole).
+  const viewer: Viewer = {
+    role: roleFromSession,
+    isSuperAdmin: Boolean(
+      (session?.user as { isSuperAdmin?: boolean } | undefined)?.isSuperAdmin,
+    ),
+    permissions: permissionsPanel?.permissionKeys ?? [],
+    hiddenRoutes,
+  };
+  const visibleNavItems = filterItemsByRole(navItems, viewer);
+  const visibleBottomItems = filterItemsByRole(bottomItems, viewer);
+
+  const { data: myStatusData, isSuccess: myAgentStatusLoaded } = useQuery<{
     status: AgentOnlineStatus;
     availableForVoiceCalls?: boolean;
   }>({
@@ -674,6 +979,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     enabled: !!myUserId,
     refetchInterval: 60_000,
   });
+  /** Só confiar em OFFLINE depois da API — evita modal full-screen “preso” no loading inicial. */
   const agentStatus: AgentOnlineStatus = myStatusData?.status ?? "OFFLINE";
   const voiceCallsEnabled = myStatusData?.availableForVoiceCalls ?? false;
 
@@ -691,7 +997,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   });
 
   const [statusPopupOpen, setStatusPopupOpen] = useState(false);
-  const [loginPromptShown, setLoginPromptShown] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
@@ -719,20 +1024,29 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, [accountMenuOpen]);
 
   useEffect(() => {
-    if (status === "authenticated" && myUserId && agentStatus === "OFFLINE" && !loginPromptShown) {
-      const timer = setTimeout(() => {
-        setStatusPopupOpen(true);
-        setLoginPromptShown(true);
-      }, 1500);
-      return () => clearTimeout(timer);
+    if (status !== "authenticated" || !myUserId || !myAgentStatusLoaded) return;
+    if (myStatusData?.status !== "OFFLINE") return;
+    try {
+      if (sessionStorage.getItem(AGENT_STATUS_AUTO_PROMPT_SESSION_KEY)) return;
+    } catch {
+      /* noop */
     }
-  }, [status, myUserId, agentStatus, loginPromptShown]);
+    const timer = setTimeout(() => {
+      try {
+        sessionStorage.setItem(AGENT_STATUS_AUTO_PROMPT_SESSION_KEY, "1");
+      } catch {
+        /* noop */
+      }
+      setStatusPopupOpen(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [status, myUserId, myAgentStatusLoaded, myStatusData?.status]);
 
   if (status === "loading") {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <div className="size-9 animate-pulse rounded-xl bg-primary/20" />
+          <div className="size-8 animate-pulse rounded-xl bg-primary/20" />
           <p className="text-sm text-muted-foreground">Carregando...</p>
         </div>
       </div>
@@ -744,51 +1058,100 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const dotColor = STATUS_DOT_COLOR[agentStatus];
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-brand-navy md:flex-row">
+    <div className="flex h-dvh flex-col overflow-hidden bg-bg-subtle md:flex-row">
+      <style>{`
+        .kanban-scroll::-webkit-scrollbar { width: 3px; }
+        .kanban-scroll::-webkit-scrollbar-track { background: transparent; }
+        .kanban-scroll::-webkit-scrollbar-thumb { background-color: transparent; border-radius: 99px; transition: background-color 0.2s; }
+        .kanban-scroll:hover::-webkit-scrollbar-thumb { background-color: #d4d4d8; }
+        .kanban-scroll { scrollbar-width: thin; scrollbar-color: transparent transparent; transition: scrollbar-color 0.2s; }
+        .kanban-scroll:hover { scrollbar-color: #d4d4d8 transparent; }
+      `}</style>
       {/* TopBar mobile only */}
       <MobileTopBar
         badges={badges}
         onAvatarClick={() => setMobileMoreOpen(true)}
+        userId={myUserId ?? ""}
         avatarUrl={profile?.avatarUrl}
         displayName={displayName}
         dotColor={dotColor}
         agentStatus={agentStatus}
+        org={orgBranding}
       />
 
-      <aside className="hidden w-20 shrink-0 flex-col items-center bg-brand-navy py-4 shadow-xl md:flex">
-        <Link
-          href="/"
-          aria-label="Início"
-          className="group relative mb-6 flex size-12 items-center justify-center rounded-xl bg-white/95 shadow-lg ring-1 ring-white/20 eduit-transition hover:scale-105 hover:shadow-xl"
-        >
-          <span className="text-lg font-black text-gradient">E</span>
-          <SidebarRailTooltip label="Início" />
-        </Link>
+      {/* Sidebar compactada: w-16 (era w-20), py-3 (era py-4), gap-1
+          (era gap-1.5) e icones size-10 (era size-11). Reduz altura
+          total ~120px e largura ~16px — chega a caber 13 itens em
+          viewports de ~720-768px sem scroll, que era a queixa
+          principal. */}
+      <aside className="hidden w-16 shrink-0 flex-col items-center bg-sidebar border-r border-sidebar-border py-3 shadow-[var(--shadow-sm)] md:flex">
+        <SidebarRailTooltip label={orgBranding?.name ?? "Início"}>
+          <Link
+            href="/dashboard"
+            aria-label={orgBranding?.name ?? "Início"}
+            className="relative mb-4 flex lumen-transition hover:scale-105"
+          >
+            <OrgLogo org={orgBranding} size="lg" textSize="text-base" />
+          </Link>
+        </SidebarRailTooltip>
 
-        <nav className="scrollbar-none flex flex-1 flex-col items-center gap-2 overflow-y-auto">
-          {navItems.map((item) => (
-            <SidebarIcon key={item.href} {...item} badge={item.badgeKey ? badges[item.badgeKey] : undefined} />
-          ))}
+        <nav
+          className="scrollbar-none flex flex-1 flex-col items-center gap-1 overflow-y-auto py-0.5"
+          aria-label="Navegação principal"
+        >
+          {visibleNavItems.map((item) => {
+            // Filtra children por role aqui também — defesa em
+            // profundidade: se um filho exigir role mais alto que o
+            // pai, não vaza no flyout.
+            const visibleChildren = item.children
+              ? filterItemsByRole(item.children, viewer)
+              : undefined;
+            return (
+              <div key={item.href} className="flex w-full flex-col items-center">
+                {/* Divisor visual sutil entre blocos (operacional ↔ gestão). */}
+                {item.groupStart && (
+                  <span
+                    aria-hidden="true"
+                    className="my-1 h-px w-6 rounded-full bg-[var(--color-sidebar-active-bg)]"
+                  />
+                )}
+                {visibleChildren && visibleChildren.length > 0 ? (
+                  <SidebarParentIcon
+                    href={item.href}
+                    label={item.label}
+                    icon={item.icon}
+                    items={visibleChildren}
+                  />
+                ) : (
+                  <SidebarIcon
+                    {...item}
+                    badge={item.badgeKey ? badges[item.badgeKey] : undefined}
+                  />
+                )}
+              </div>
+            );
+          })}
         </nav>
 
-        <div className="flex flex-col items-center gap-2 border-t border-white/10 pt-3">
-          <button
-            type="button"
-            onClick={() => setStatusPopupOpen(true)}
-            className="group relative flex size-11 items-center justify-center rounded-xl text-sidebar-muted eduit-transition outline-none hover:bg-sidebar-hover hover:text-white hover:scale-105 focus-visible:ring-2 focus-visible:ring-white/40"
-            aria-label={`Status: ${STATUS_OPTIONS.find((o) => o.value === agentStatus)?.label}`}
+        <div className="flex flex-col items-center gap-1 border-t border-border pt-2">
+          <SidebarRailTooltip
+            label={STATUS_OPTIONS.find((o) => o.value === agentStatus)?.label ?? "Status"}
           >
-            {agentStatus === "ONLINE" ? <Wifi className="size-5" /> : agentStatus === "AWAY" ? <Coffee className="size-5" /> : <WifiOff className="size-5" />}
-            <span
-              className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full border-2 border-sidebar shadow-sm"
-              style={{ backgroundColor: dotColor, boxShadow: agentStatus === "ONLINE" ? `0 0 8px ${dotColor}` : undefined }}
-            />
-            <SidebarRailTooltip
-              label={STATUS_OPTIONS.find((o) => o.value === agentStatus)?.label ?? "Status"}
-            />
-          </button>
+            <button
+              type="button"
+              onClick={() => setStatusPopupOpen(true)}
+              className="relative flex size-10 items-center justify-center rounded-lg text-sidebar-muted lumen-transition outline-none hover:bg-sidebar-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/25"
+              aria-label={`Status: ${STATUS_OPTIONS.find((o) => o.value === agentStatus)?.label}`}
+            >
+              {agentStatus === "ONLINE" ? <Wifi className="size-[18px]" /> : agentStatus === "AWAY" ? <Coffee className="size-[18px]" /> : <WifiOff className="size-[18px]" />}
+              <span
+                className="absolute -right-0.5 -top-0.5 flex size-3 items-center justify-center rounded-full border-2 border-sidebar shadow-[var(--shadow-sm)]"
+                style={{ backgroundColor: dotColor, boxShadow: agentStatus === "ONLINE" ? `0 0 6px ${dotColor}` : undefined }}
+              />
+            </button>
+          </SidebarRailTooltip>
 
-          {bottomItems.map((item) => (
+          {visibleBottomItems.map((item) => (
             <SidebarIcon key={item.href} {...item} />
           ))}
           <ThemeToggle />
@@ -800,50 +1163,57 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             O item "Perfil" foi removido do menu /settings/* para não
             duplicar o caminho — este é o ponto único de entrada.
           */}
-          <div className="relative mt-2" ref={accountMenuRef}>
-            <button
-              type="button"
-              onClick={() => setAccountMenuOpen((v) => !v)}
-              aria-haspopup="menu"
-              aria-expanded={accountMenuOpen}
-              aria-label="Abrir menu da conta"
-              className="group relative block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-            >
-              <Avatar className="size-11 cursor-pointer ring-2 ring-white/20 shadow-lg eduit-transition group-hover:ring-4 group-hover:ring-white/30">
-                {profile?.avatarUrl ? (
-                  <AvatarImage src={profile.avatarUrl} alt={displayName} />
-                ) : null}
-                <AvatarFallback className="bg-white text-sm font-bold text-primary">
-                  {getInitials(displayName)}
-                </AvatarFallback>
-              </Avatar>
-              <span
-                className="absolute -bottom-0.5 -right-0.5 flex size-3.5 rounded-full border-2 border-sidebar shadow-sm"
-                style={{
-                  backgroundColor: dotColor,
-                  boxShadow:
-                    agentStatus === "ONLINE" ? `0 0 6px ${dotColor}` : undefined,
-                }}
-              />
-              {!accountMenuOpen && <SidebarRailTooltip label={displayName} />}
-            </button>
+          <div className="relative mt-1" ref={accountMenuRef}>
+            <SidebarRailTooltip label={displayName}>
+              <button
+                type="button"
+                onClick={() => setAccountMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={accountMenuOpen}
+                aria-label="Abrir menu da conta"
+                className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+              >
+                <ChatAvatar
+                  user={{
+                    id: myUserId ?? displayName,
+                    name: displayName,
+                    imageUrl: profile?.avatarUrl ?? null,
+                  }}
+                  size={32}
+                  channel={null}
+                  hideCartoon
+                  className="cursor-pointer shadow-lg ring-1 ring-border lumen-transition hover:ring-4 hover:ring-primary/25"
+                />
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 flex size-3 rounded-full border-2 border-sidebar shadow-[var(--shadow-sm)]"
+                  style={{
+                    backgroundColor: dotColor,
+                    boxShadow:
+                      agentStatus === "ONLINE" ? `0 0 6px ${dotColor}` : undefined,
+                  }}
+                />
+              </button>
+            </SidebarRailTooltip>
 
             {accountMenuOpen && (
               <div
                 role="menu"
-                className="absolute bottom-0 left-full z-50 ml-4 w-[280px] overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-premium"
+                className="absolute bottom-0 left-full z-50 ml-4 w-[280px] overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-[var(--shadow-lg)]"
               >
                 {/* ── Header do popover ── */}
                 <div className="flex flex-col items-center gap-2 px-5 pt-6 pb-4">
-                  <Avatar className="size-16 shadow-float ring-4 ring-white">
-                    {profile?.avatarUrl ? (
-                      <AvatarImage src={profile.avatarUrl} alt={displayName} />
-                    ) : null}
-                    <AvatarFallback className="bg-linear-to-br from-[#fbcfe8] to-[#f9a8d4] text-base font-black text-white">
-                      {getInitials(displayName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <p className="font-outfit text-sm font-black text-foreground">
+                  <ChatAvatar
+                    user={{
+                      id: myUserId ?? displayName,
+                      name: displayName,
+                      imageUrl: profile?.avatarUrl ?? null,
+                    }}
+                    size={32}
+                    channel={null}
+                    hideCartoon
+                    className="shadow-[var(--shadow-sm)] ring-4 ring-white"
+                  />
+                  <p className="font-display text-sm font-bold text-foreground">
                     {displayName}
                   </p>
                   {user?.email && (
@@ -860,7 +1230,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   <Link
                     href="/settings/profile"
                     onClick={() => setAccountMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground eduit-transition hover:bg-muted"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground lumen-transition hover:bg-muted"
                     role="menuitem"
                   >
                     <UserCircle2 className="size-4 text-muted-foreground" />
@@ -875,9 +1245,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     type="button"
                     onClick={() => {
                       setAccountMenuOpen(false);
+                      try {
+                        sessionStorage.removeItem(AGENT_STATUS_AUTO_PROMPT_SESSION_KEY);
+                      } catch {
+                        /* noop */
+                      }
                       void signOut({ callbackUrl: "/login" });
                     }}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive eduit-transition hover:bg-destructive/10"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive lumen-transition hover:bg-destructive/10"
                     role="menuitem"
                   >
                     <LogOut className="size-4" />
@@ -893,12 +1268,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       {/* Wrapper "Inward Curve": navy aside + main com rounded-tl-[32px]
           deixa o canto superior esquerdo da área de conteúdo cortado em curva
           contra a sidebar escura — assinatura visual EduIT Premium Core.
-          shadow-premium no main reforça a separação navy/conteúdo. */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-brand-navy">
+          shadow-[var(--shadow-lg)] no main reforça a separação navy/conteúdo. */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         <main
           className={cn(
-            "flex min-h-0 flex-1 flex-col bg-background p-3 sm:p-4 md:rounded-tl-[32px] md:p-8 md:shadow-premium",
-            inboxHeightLocked ? "overflow-hidden" : "overflow-y-auto",
+            "flex min-h-0 flex-1 flex-col bg-background md:rounded-tl-[32px] md:shadow-[var(--shadow-lg)]",
+            inboxHeightLocked
+              ? "overflow-hidden px-3 pb-0 pt-3 sm:px-4 sm:pb-0 sm:pt-4 md:px-8 md:pb-0 md:pt-8"
+              : "overflow-y-auto p-3 sm:p-4 md:p-8",
           )}
         >
           <WhatsAppHealthBanner />
@@ -919,10 +1296,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         badges={badges}
         agentStatus={agentStatus}
         onStatusClick={() => setStatusPopupOpen(true)}
+        userId={myUserId ?? ""}
         displayName={displayName}
         email={user?.email}
         avatarUrl={profile?.avatarUrl}
-        onLogout={() => void signOut({ callbackUrl: "/login" })}
+        onLogout={() => {
+          try {
+            sessionStorage.removeItem(AGENT_STATUS_AUTO_PROMPT_SESSION_KEY);
+          } catch {
+            /* noop */
+          }
+          void signOut({ callbackUrl: "/login" });
+        }}
+        visibleBottomItems={visibleBottomItems}
       />
 
       <StatusPopup

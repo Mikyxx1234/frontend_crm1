@@ -1,9 +1,15 @@
 "use client";
 
+import { apiUrl } from "@/lib/api";
 import * as React from "react";
+import Link from "next/link";
+import { UserRole } from "@prisma/client";
+import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import {
+  ChevronRight,
+  Headphones,
   Maximize2,
   Minimize2,
   Pencil,
@@ -12,6 +18,7 @@ import {
   Save,
 } from "lucide-react";
 
+import { getSidebarAllowlistTrackedHrefs } from "@/components/layout/dashboard-shell";
 import { FiltersBar } from "@/components/dashboard/filters-bar";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
 import { WidgetPicker } from "@/components/dashboard/widget-picker";
@@ -23,6 +30,11 @@ import {
   type DashboardPresetId,
 } from "@/stores/dashboard-store";
 import { useDashboardLayoutSync } from "@/hooks/use-dashboard-layout-sync";
+import {
+  canSeeItem,
+  computeHiddenSidebarRoutesFromAllowList,
+  type Viewer,
+} from "@/lib/nav-visibility";
 import { cn } from "@/lib/utils";
 
 const VALID_PRESETS: DashboardPresetId[] = [
@@ -45,6 +57,44 @@ export default function DashboardHomePage() {
   const applyPreset = useDashboardStore((s) => s.applyPreset);
   const dirty = useDashboardStore((s) => s.dirty);
   const preset = useDashboardStore((s) => s.preset);
+
+  const { data: permissionsPanel } = useQuery({
+    queryKey: ["settings-permissions-panel"],
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/api/settings/permissions"));
+      if (!r.ok) return { permissionKeys: [] as string[], scopeGrants: undefined };
+      return r.json() as {
+        permissionKeys?: string[];
+        scopeGrants?: { sidebar?: { routes?: Record<string, string[]> } };
+      };
+    },
+    enabled: sessionStatus === "authenticated",
+    staleTime: 60_000,
+  });
+
+  const roleFromSession = (session?.user as { role?: UserRole } | undefined)?.role ?? null;
+  const sidebarAllowList =
+    roleFromSession != null
+      ? permissionsPanel?.scopeGrants?.sidebar?.routes?.[roleFromSession]
+      : undefined;
+  const hiddenRoutes = computeHiddenSidebarRoutesFromAllowList(
+    getSidebarAllowlistTrackedHrefs(),
+    sidebarAllowList,
+  );
+  const navViewer: Viewer = {
+    role: roleFromSession,
+    isSuperAdmin: Boolean((session?.user as { isSuperAdmin?: boolean } | undefined)?.isSuperAdmin),
+    permissions: permissionsPanel?.permissionKeys ?? [],
+    hiddenRoutes,
+  };
+  const showInboxAnalyticsLink = canSeeItem(
+    {
+      href: "/analytics/inbox",
+      allowedRoles: [UserRole.ADMIN, UserRole.MANAGER],
+      requiredPermission: "report:view",
+    },
+    navViewer,
+  );
 
   const [editing, setEditing] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -109,7 +159,7 @@ export default function DashboardHomePage() {
           </h1>
           <p className={cn(
             "text-sm capitalize",
-            tvWall ? "text-slate-400" : "text-muted-foreground",
+            tvWall ? "text-[var(--color-ink-muted)]" : "text-muted-foreground",
           )}>
             {today}
             {dirty && (
@@ -130,7 +180,7 @@ export default function DashboardHomePage() {
                 "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all",
                 tvWall
                   ? "border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
-                  : "border-primary/30 bg-primary/5 text-primary shadow-sm hover:-translate-y-0.5 hover:shadow-premium",
+                  : "border-primary/30 bg-primary/5 text-primary shadow-sm hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)]",
               )}
             >
               <Plus className="size-3.5" />
@@ -149,8 +199,8 @@ export default function DashboardHomePage() {
               className={cn(
                 "flex size-9 items-center justify-center rounded-xl border transition-all",
                 tvWall
-                  ? "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-100"
-                  : "border-border/60 bg-card text-muted-foreground shadow-sm hover:-translate-y-0.5 hover:text-foreground hover:shadow-premium",
+                  ? "border-white/10 bg-white/5 text-[var(--color-ink-muted)] hover:bg-white/10 hover:text-slate-100"
+                  : "border-border/60 bg-card text-muted-foreground shadow-sm hover:-translate-y-0.5 hover:text-foreground hover:shadow-[var(--shadow-lg)]",
               )}
             >
               <RotateCcw className="size-3.5" />
@@ -166,7 +216,7 @@ export default function DashboardHomePage() {
               "flex size-9 items-center justify-center rounded-xl border transition-all",
               tvWall
                 ? "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white"
-                : "border-border/60 bg-card text-muted-foreground shadow-sm hover:-translate-y-0.5 hover:text-foreground hover:shadow-premium",
+                : "border-border/60 bg-card text-muted-foreground shadow-sm hover:-translate-y-0.5 hover:text-foreground hover:shadow-[var(--shadow-lg)]",
             )}
           >
             {tvWall ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
@@ -179,10 +229,10 @@ export default function DashboardHomePage() {
             className={cn(
               "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all",
               editing
-                ? "border-primary bg-primary text-white shadow-premium"
+                ? "border-primary bg-primary text-white shadow-[var(--shadow-lg)]"
                 : tvWall
                   ? "border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
-                  : "border-border/60 bg-card text-muted-foreground shadow-sm hover:-translate-y-0.5 hover:text-foreground hover:shadow-premium",
+                  : "border-border/60 bg-card text-muted-foreground shadow-sm hover:-translate-y-0.5 hover:text-foreground hover:shadow-[var(--shadow-lg)]",
             )}
           >
             <Pencil className="size-3.5" />
@@ -191,8 +241,22 @@ export default function DashboardHomePage() {
         </div>
       </div>
 
-      {/* Barra de presets */}
-      <PresetBar />
+      {/* Barra de presets + atalho p/ métricas de inbox no contexto Atendimento */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <PresetBar />
+        {!tvWall && preset === "atendimento" && showInboxAnalyticsLink && (
+          <Link
+            href="/analytics/inbox"
+            className={cn(
+              "inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-semibold text-foreground shadow-[var(--shadow-sm)] lumen-transition hover:shadow-[var(--shadow-md)]",
+            )}
+          >
+            <Headphones className="size-3.5 shrink-0 text-primary" aria-hidden />
+            Relatório de inbox
+            <ChevronRight className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" aria-hidden />
+          </Link>
+        )}
+      </div>
 
       {/* Filtros só fora do modo TV Wall — TV limpa ao máximo */}
       {!tvWall && <FiltersBar />}

@@ -1,12 +1,8 @@
-/** Espelha enums Prisma do monólito — sem @prisma/client no frontend. */
-export type ChannelType = "WHATSAPP" | "INSTAGRAM" | "FACEBOOK" | "EMAIL" | "WEBCHAT";
-export type ChannelProvider = "META_CLOUD_API" | "BAILEYS_MD";
-export type ChannelStatus =
-  | "CONNECTED"
-  | "DISCONNECTED"
-  | "CONNECTING"
-  | "QR_READY"
-  | "FAILED";
+import type {
+  ChannelProvider,
+  ChannelStatus,
+  ChannelType,
+} from "@prisma/client";
 
 /** Canal como retornado pela API (datas serializadas como string). */
 export type ApiChannel = {
@@ -22,6 +18,11 @@ export type ApiChannel = {
   sessionData: unknown;
   createdAt: string;
   updatedAt: string;
+  /// Slug da Organization dona deste canal — usado pra montar a URL
+  /// do webhook Meta scoped (/api/webhooks/meta/{slug}). Vazio nao
+  /// deve acontecer (todo canal tem org), mas tipado como string
+  /// pra robustez.
+  organizationSlug: string;
 };
 
 export function parseChannelConfigRecord(

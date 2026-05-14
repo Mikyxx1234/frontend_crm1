@@ -1,339 +1,292 @@
 "use client";
 
-import type { ComponentType } from "react";
+import { apiUrl } from "@/lib/api";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Bell,
-  Clock,
-  FileText,
-  Kanban,
-  Key,
-  LayoutList,
-  MessageCircle,
-  Package,
-  Radio,
-  Settings2,
-  Shield,
-  Shuffle,
-  Smartphone,
-  Sparkles,
-  Tag,
-  ThumbsDown,
-  Upload,
-  UserCircle,
-  Users,
-  Zap,
-} from "lucide-react";
-import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useMemo } from "react";
+import { Settings2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { UserRole } from "@prisma/client";
 
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { filterSettingsNav, type Viewer } from "@/lib/nav-visibility";
+import {
+  SETTINGS_NAV,
+  SETTINGS_PERSONAL,
+  type SettingsNavIcon,
+  type SettingsNavItem,
+} from "@/lib/settings-nav";
 
-const sidebarItems = [
-  {
-    id: "canais",
-    label: "Canais",
-    description: "WhatsApp, redes e e-mail",
-    icon: Radio,
-    href: "/settings/channels" as const,
-  },
-  {
-    id: "equipe",
-    label: "Equipe",
-    description: "Membros e funcoes",
-    icon: Users,
-    href: "/settings/team" as const,
-  },
-  {
-    id: "permissoes",
-    label: "Permissoes",
-    description: "Visibilidade de leads",
-    icon: Shield,
-    href: "/settings/permissions" as const,
-  },
-  {
-    id: "pipeline",
-    label: "Pipeline",
-    description: "Estágios e automações",
-    icon: Kanban,
-    href: "/settings/pipeline" as const,
-  },
-  {
-    id: "distribuicao",
-    label: "Distribuição",
-    description: "Round-robin e regras",
-    icon: Shuffle,
-    href: "/settings/distribution" as const,
-  },
-  {
-    id: "horarios",
-    label: "Horários e Disponibilidade",
-    description: "Expediente e status dos agentes",
-    icon: Clock,
-    href: "/settings/schedules" as const,
-  },
-  {
-    id: "produtos",
-    label: "Produtos",
-    description: "Catálogo de produtos",
-    icon: Package,
-    href: "/settings/products" as const,
-  },
-  {
-    id: "tags",
-    label: "Tags",
-    description: "Gerenciar tags e cores",
-    icon: Tag,
-    href: "/settings/tags" as const,
-  },
-  {
-    id: "campos",
-    label: "Campos Personalizados",
-    description: "Contatos e negócios",
-    icon: LayoutList,
-    href: "/settings/custom-fields" as const,
-  },
-  {
-    id: "respostas-rapidas",
-    label: "Respostas Rápidas",
-    description: "Mensagens predefinidas",
-    icon: Zap,
-    href: "/settings/quick-replies" as const,
-  },
-  {
-    id: "templates",
-    label: "Templates",
-    description: "Modelos de mensagem",
-    icon: FileText,
-    href: "/settings/templates" as const,
-  },
-  {
-    id: "whatsapp-templates-meta",
-    label: "Templates Meta (WABA)",
-    description: "Criar e acompanhar na Meta",
-    icon: MessageCircle,
-    href: "/settings/whatsapp-templates" as const,
-  },
-  {
-    id: "motivos-perda",
-    label: "Motivos de perda",
-    description: "Razões de perda de negócios",
-    icon: ThumbsDown,
-    href: "/settings/loss-reasons" as const,
-  },
-  {
-    id: "api-tokens",
-    label: "Chaves de API",
-    description: "Tokens para integrações",
-    icon: Key,
-    href: "/settings/api-tokens" as const,
-  },
-  {
-    id: "ia",
-    label: "IA",
-    description: "Chave da OpenAI e agentes",
-    icon: Sparkles,
-    href: "/settings/ai" as const,
-  },
-  {
-    id: "importar",
-    label: "Importar base",
-    description: "CSV contatos e negócios",
-    icon: Upload,
-    href: "/settings/import" as const,
-  },
-  {
-    id: "notificacoes",
-    label: "Notificações",
-    description: "Push, e-mail e canais de aviso",
-    icon: Bell,
-    href: "/settings/notifications" as const,
-  },
-  {
-    id: "mobile-layout",
-    label: "Layout do app mobile",
-    description: "Personalizar barra inferior do PWA",
-    icon: Smartphone,
-    href: "/settings/mobile-layout" as const,
-  },
-  {
-    id: "geral",
-    label: "Geral",
-    description: "Preferências do workspace",
-    icon: Settings2,
-    href: null,
-  },
-] as const;
-
-export default function SettingsPage() {
+/**
+ * Hub de Configurações.
+ *
+ * A estrutura de grupos/itens vem de `SETTINGS_NAV` (fonte unica).
+ * Essa pagina eh so renderizacao — zero logica de negocio. Pra
+ * adicionar um novo item, edite `src/lib/settings-nav.ts`.
+ *
+ * Visibilidade:
+ *  - `filterSettingsNav` oculta itens/grupos que o role atual nao
+ *    pode ver. Super-admin bypass.
+ *  - MEMBER so ve "Respostas rápidas" e "Notificações" + atalhos
+ *    pessoais (perfil, suporte).
+ */
+export default function SettingsClientPage() {
   const pathname = usePathname();
-  const [tab, setTab] = useState<string>("canais");
+  const { data: session } = useSession();
+  const { data: permissionsPanel } = useQuery<{
+    permissionKeys: string[];
+    scopeGrants?: {
+      sidebar?: { settingsItems?: Partial<Record<"ADMIN" | "MANAGER" | "MEMBER", string[]>> };
+    };
+  }>({
+    queryKey: ["settings-permissions-panel"],
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/api/settings/permissions"));
+      if (!r.ok) return { permissionKeys: [] };
+      return r.json();
+    },
+  });
+  const role = (session?.user as { role?: UserRole } | undefined)?.role ?? null;
+  const settingsAllowList = role
+    ? permissionsPanel?.scopeGrants?.sidebar?.settingsItems?.[role]
+    : undefined;
+  const hiddenSettingsItemIds =
+    Array.isArray(settingsAllowList) && !settingsAllowList.includes("*")
+      ? SETTINGS_NAV.flatMap((g) => g.items.map((i) => i.id)).filter((id) => {
+          if (settingsAllowList.includes(id)) return false;
+          if (
+            id === "message-models" &&
+            (settingsAllowList.includes("templates") || settingsAllowList.includes("whatsapp-templates"))
+          ) {
+            return false;
+          }
+          return true;
+        })
+      : [];
+
+  const viewer: Viewer = useMemo(
+    () => ({
+      role,
+      isSuperAdmin: Boolean(
+        (session?.user as { isSuperAdmin?: boolean } | undefined)?.isSuperAdmin,
+      ),
+      permissions: permissionsPanel?.permissionKeys ?? [],
+      hiddenSettingsItemIds,
+    }),
+    [hiddenSettingsItemIds, permissionsPanel?.permissionKeys, role, session],
+  );
+
+  const groups = useMemo(() => filterSettingsNav(SETTINGS_NAV, viewer), [viewer]);
 
   return (
     <div className="w-full">
       <div className="mb-6">
         <PageHeader
           title="Configurações"
-          description="Gerencie integrações, perfil e preferências."
+          description="Organize canais, equipe, pipeline e integrações do seu workspace."
           icon={<Settings2 />}
         />
       </div>
 
-      <div className="flex flex-col gap-8 lg:flex-row">
-        <aside className="w-full shrink-0 lg:w-56">
-          <nav className="space-y-0.5">
-            {sidebarItems.map((item) => {
-              const active =
-                item.href != null
-                  ? pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`)
-                  : tab === item.id;
-              const Icon = item.icon;
-              const content = (
-                <span
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                    active
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-md",
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    <Icon className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium leading-tight">
-                      {item.label}
-                    </span>
-                    <span className="mt-0.5 block text-[11px] leading-tight text-muted-foreground">
-                      {item.description}
-                    </span>
-                  </span>
+      {/* Atalhos pessoais — topo, 2 cards compactos */}
+      <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {SETTINGS_PERSONAL.map((item) => (
+          <PersonalShortcut key={item.id} item={item} pathname={pathname} />
+        ))}
+      </section>
+
+      {/* Grupos — cada grupo renderiza um card com header + lista */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {groups.map((group) => {
+          const GroupIcon = group.icon;
+          return (
+            <section
+              key={group.id}
+              className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm"
+              aria-labelledby={`group-${group.id}`}
+            >
+              <header className="flex items-start gap-3 border-b border-border/60 bg-muted/30 px-4 py-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <GroupIcon className="size-4.5" />
                 </span>
-              );
-
-              if (item.href) {
-                return (
-                  <Link key={item.id} href={item.href} className="block">
-                    {content}
-                  </Link>
-                );
-              }
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="block w-full"
-                  onClick={() => setTab(item.id)}
-                >
-                  {content}
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
-
-        {/* Coluna direita oculta em < lg: o hub é a sidebar.
-            Em mobile o usuario clica no item e navega pra subpage,
-            sem precisar dos placeholder cards do lado. */}
-        <div className="hidden min-w-0 flex-1 lg:block">
-          <Tabs value={tab} onValueChange={setTab} className="w-full">
-            <TabsContent value="canais" className="mt-0">
-              <Card className="border-border/60 shadow-sm">
-                <CardHeader>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle className="text-lg">
-                      Canais de comunicação
-                    </CardTitle>
-                    <Badge variant="secondary" className="text-xs">
-                      Integrações
-                    </Badge>
-                  </div>
-                  <CardDescription>
-                    Conecte WhatsApp via Meta Cloud API, redes sociais e outros
-                    pontos de contato. A gestão completa fica na área dedicada.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Abra a lista de canais para conectar, ver QR Code e
-                    configurar credenciais.
-                  </p>
-                  <Link
-                    href="/settings/channels"
-                    className="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                <div className="min-w-0">
+                  <h2
+                    id={`group-${group.id}`}
+                    className="text-sm font-semibold leading-tight text-foreground"
                   >
-                    Ir para canais
-                  </Link>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    {group.label}
+                  </h2>
+                  {group.description ? (
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {group.description}
+                    </p>
+                  ) : null}
+                </div>
+              </header>
 
-            <TabsContent value="equipe" className="mt-0">
-              <PlaceholderCard
-                title="Equipe"
-                description="Convites, papéis e permissões serão configurados aqui."
-                icon={Users}
-              />
-            </TabsContent>
-
-            <TabsContent value="geral" className="mt-0">
-              <PlaceholderCard
-                title="Geral"
-                description="Idioma, fuso horário e notificações — em desenvolvimento."
-                icon={Bell}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
+              <ul className="divide-y divide-border/50">
+                {group.items.map((item) => (
+                  <li key={item.id}>
+                    <SettingsRow item={item} pathname={pathname} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
       </div>
+
+      {groups.length === 0 ? (
+        <div className="mt-8 rounded-xl border border-dashed border-border/60 bg-muted/20 p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Seu perfil não tem acesso a configurações do workspace. Peça para
+            um administrador ajustar suas permissões.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function PlaceholderCard({
-  title,
-  description,
-  icon: Icon,
+function SettingsRow({
+  item,
+  pathname,
 }: {
-  title: string;
-  description: string;
-  icon: ComponentType<{ className?: string }>;
+  item: SettingsNavItem;
+  pathname: string;
 }) {
-  return (
-    <Card className="border-border/60 shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2.5 text-lg">
-          <span className="flex size-8 items-center justify-center rounded-md bg-muted">
-            <Icon className="size-4 text-muted-foreground" />
+  const Icon: SettingsNavIcon = item.icon;
+  const active = item.href
+    ? pathname === item.href || pathname.startsWith(`${item.href}/`)
+    : false;
+
+  const body = (
+    <span
+      className={cn(
+        "flex w-full items-center gap-3 px-4 py-3 text-sm transition-colors",
+        active
+          ? "bg-primary/5"
+          : item.href
+            ? "hover:bg-muted/50"
+            : "opacity-60",
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-md",
+          active
+            ? "bg-primary/15 text-primary"
+            : "bg-muted text-muted-foreground",
+        )}
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          <span
+            className={cn(
+              "block truncate font-medium",
+              active ? "text-primary" : "text-foreground",
+            )}
+          >
+            {item.label}
           </span>
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex h-24 items-center justify-center rounded-lg border border-dashed bg-muted/20">
-          <p className="text-xs text-muted-foreground">Em breve</p>
-        </div>
-      </CardContent>
-    </Card>
+          {item.eyebrow ? (
+            <span className="inline-flex shrink-0 items-center rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary">
+              {item.eyebrow}
+            </span>
+          ) : null}
+        </span>
+        {item.description ? (
+          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+            {item.description}
+          </span>
+        ) : null}
+      </span>
+    </span>
   );
+
+  if (!item.href) {
+    return (
+      <span aria-disabled className="block cursor-not-allowed">
+        {body}
+      </span>
+    );
+  }
+
+  const isExternal =
+    item.href.startsWith("http") || item.href.startsWith("mailto:");
+
+  if (isExternal) {
+    return (
+      <a href={item.href} className="block" target="_blank" rel="noreferrer">
+        {body}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={item.href} className="block">
+      {body}
+    </Link>
+  );
+}
+
+function PersonalShortcut({
+  item,
+  pathname,
+}: {
+  item: SettingsNavItem;
+  pathname: string;
+}) {
+  const Icon: SettingsNavIcon = item.icon;
+  const active = item.href
+    ? pathname === item.href || pathname.startsWith(`${item.href}/`)
+    : false;
+  const isExternal =
+    item.href?.startsWith("http") || item.href?.startsWith("mailto:");
+
+  const body = (
+    <span
+      className={cn(
+        "flex items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3 shadow-sm transition-colors",
+        active
+          ? "border-primary/40 bg-primary/5"
+          : "hover:border-border hover:bg-muted/40",
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-10 shrink-0 items-center justify-center rounded-lg",
+          active ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+        )}
+      >
+        <Icon className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-foreground">
+          {item.label}
+        </span>
+        {item.description ? (
+          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+            {item.description}
+          </span>
+        ) : null}
+      </span>
+    </span>
+  );
+
+  if (!item.href) return <span className="opacity-60">{body}</span>;
+
+  if (isExternal) {
+    return (
+      <a href={item.href} target="_blank" rel="noreferrer">
+        {body}
+      </a>
+    );
+  }
+
+  return <Link href={item.href}>{body}</Link>;
 }

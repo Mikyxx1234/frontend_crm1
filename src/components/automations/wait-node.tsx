@@ -44,7 +44,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
       )}
     >
       {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-brand-navy to-[#1e3a8a] text-[10px] font-black tabular-nums text-white shadow-md ring-2 ring-white">
+        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[#1e3a8a] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
           {data.stepIndex}
         </span>
       )}
@@ -60,7 +60,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
           <Pause className="size-4" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-black tracking-tighter leading-tight text-slate-900">
+          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-slate-900">
             {data.label}
           </p>
           <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
@@ -71,7 +71,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
           <TooltipHost label="Remover espera" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -96,20 +96,21 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
             position={Position.Right}
             id="received"
             className="size-3! border-2! border-white! bg-emerald-500!"
+            style={{ top: "50%", transform: "translateY(-50%)" }}
           />
         </div>
 
         <div className="relative flex h-8 items-center gap-2 px-3.5">
-          <Clock className="size-3 shrink-0 text-slate-400" strokeWidth={2.4} />
+          <Clock className="size-3 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.4} />
           <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-slate-500">
             {data.timeoutLabel || "Cronômetro"}
           </span>
           <Handle
             type="source"
-            position={Position.Bottom}
+            position={Position.Right}
             id="timeout"
             className="size-3! border-2! border-white! bg-slate-400!"
-            style={{ left: "70%" }}
+            style={{ top: "50%", transform: "translateY(-50%)" }}
           />
         </div>
       </div>
@@ -130,19 +131,19 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
         <TooltipHost label="Ver eventos" side="bottom">
           <button
             type="button"
-            className="flex w-full items-center gap-2 border-t border-slate-100 px-3.5 py-2 transition-colors hover:bg-slate-50/60"
+            className="flex w-full items-center gap-2 border-t border-slate-100 px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
             onClick={(e) => {
               e.stopPropagation();
               data.onStatsClick?.();
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black tabular-nums text-emerald-700 ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-emerald-100">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-black tabular-nums text-rose-700 ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 ring-1 ring-rose-100">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>

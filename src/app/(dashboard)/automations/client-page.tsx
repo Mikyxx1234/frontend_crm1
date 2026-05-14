@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatDateTime } from "@/lib/utils";
 import { triggerTypeLabel } from "@/lib/automation-workflow";
@@ -220,7 +220,7 @@ export default function AutomationsPage() {
               <Upload className="size-4" />
               {importMutation.isPending ? "Importando…" : "Importar Bot Kommo"}
             </Button>
-            <Button asChild size="sm" className="gap-1.5">
+            <Button asChild size="sm" className={cn("gap-1.5", pageHeaderPrimaryCtaClass)}>
               <Link href="/automations/new">
                 <Plus className="size-4" />
                 Nova automação

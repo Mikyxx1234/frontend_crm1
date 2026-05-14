@@ -174,7 +174,7 @@ function MetricToggleBtn({
 
 function StageColumn({ stage, metric }: { stage: StageRow; metric: Metric }) {
   const top = stage.agents.slice(0, 5);
-  const color = stage.stageColor || "#507df1";
+  const color = stage.stageColor || "var(--color-primary)";
   const totalForBar =
     metric === "count" ? stage.totalCount : stage.totalValue;
 
@@ -222,11 +222,11 @@ function StageColumn({ stage, metric }: { stage: StageRow; metric: Metric }) {
               >
                 <span
                   className={cn(
-                    "inline-flex size-5 shrink-0 items-center justify-center rounded-md text-[10px] font-black",
+                    "inline-flex size-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
                     idx === 0
                       ? "bg-amber-100 text-amber-700"
                       : idx === 1
-                        ? "bg-slate-100 text-slate-700"
+                        ? "bg-slate-100 text-foreground"
                         : idx === 2
                           ? "bg-orange-100 text-orange-700"
                           : "bg-muted text-muted-foreground",

@@ -29,12 +29,12 @@ import { STEP_GROUPS, stepColor, stepDescription, stepIcon } from "./add-step-no
 //
 // Visual:
 //  - backdrop fixed inset-0 z-[70] bg-slate-900/30 backdrop-blur-md
-//  - card central rounded-[28px] bg-white/95 backdrop-blur-xl shadow-premium
+//  - card central rounded-[28px] bg-white/95 backdrop-blur-xl shadow-[var(--shadow-lg)]
 //  - header sticky com icone gradiente, titulo font-[900] tracking-tighter,
 //    subtitle, search input pill e botao X
 //  - secoes com eyebrow colorido (icone + label)
 //  - grid 2 cols de cards: icone pill colorido + titulo bold + descricao
-//    cinza, hover com shadow-blue-glow e border [#507df1]/30
+//    cinza, hover com shadow-[var(--shadow-indigo-glow)] e border [var(--color-primary)]/30
 //  - filtragem por search no titulo + descricao
 //  - ESC fecha; click no backdrop fecha
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ const GROUP_VISUAL: Record<
   Salesbot:     { Icon: Bot,           tone: "violet",  bg: "bg-violet-50",  ring: "ring-violet-200/70",  fg: "text-violet-600" },
   Acoes:        { Icon: Zap,           tone: "amber",   bg: "bg-amber-50",   ring: "ring-amber-200/70",   fg: "text-amber-600" },
   Logica:       { Icon: GitBranch,     tone: "cyan",    bg: "bg-cyan-50",    ring: "ring-cyan-200/70",    fg: "text-cyan-600" },
-  Integracoes:  { Icon: Globe,         tone: "slate",   bg: "bg-slate-100",  ring: "ring-slate-200/70",   fg: "text-slate-600" },
+  Integracoes:  { Icon: Globe,         tone: "slate",   bg: "bg-slate-100",  ring: "ring-slate-200/70",   fg: "text-[var(--color-ink-soft)]" },
 };
 
 // Matching tolerante a acento (referenciamos pelos titles do STEP_GROUPS)
@@ -58,7 +58,7 @@ function visualForGroup(title: string) {
     tone: "slate",
     bg: "bg-slate-100",
     ring: "ring-slate-200/70",
-    fg: "text-slate-600",
+    fg: "text-[var(--color-ink-soft)]",
   };
 }
 
@@ -173,7 +173,7 @@ export function StepPickerModal({
               "fixed left-1/2 top-1/2 z-71 -translate-x-1/2 -translate-y-1/2",
               "w-[min(720px,calc(100vw-32px))] max-h-[min(80vh,720px)]",
               "flex flex-col overflow-hidden rounded-[28px] border border-white/60",
-              "bg-white/95 shadow-premium backdrop-blur-xl",
+              "bg-white/95 shadow-[var(--shadow-lg)] backdrop-blur-xl",
             )}
             onClick={(e) => e.stopPropagation()}
             onWheel={stopWheel}
@@ -185,15 +185,15 @@ export function StepPickerModal({
                 <span
                   className={cn(
                     "flex size-11 shrink-0 items-center justify-center rounded-2xl",
-                    "bg-linear-to-br from-brand-blue to-[#7b9bff] text-white",
-                    "shadow-blue-glow ring-1 ring-white/40",
+                    "bg-linear-to-br from-primary to-[#7b9bff] text-white",
+                    "shadow-[var(--shadow-indigo-glow)] ring-1 ring-white/40",
                   )}
                 >
                   <Zap className="size-5" strokeWidth={2.4} />
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-[20px] font-black leading-tight tracking-tighter text-slate-950 sm:text-[22px]">
+                  <h2 className="text-[20px] font-bold leading-tight tracking-tighter text-slate-950 sm:text-[22px]">
                     {title}
                   </h2>
                   <p className="mt-0.5 text-[12px] font-medium tracking-tight text-slate-500">
@@ -227,7 +227,7 @@ export function StepPickerModal({
             {/* Body */}
             <div className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
               {filteredGroups.length === 0 ? (
-                <p className="py-12 text-center text-[13px] tracking-tight text-slate-400">
+                <p className="py-12 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
                   Nenhum passo encontrado para "{query}".
                 </p>
               ) : (
@@ -250,7 +250,7 @@ export function StepPickerModal({
                         </span>
                         <span
                           className={cn(
-                            "text-[10px] font-black uppercase tracking-widest",
+                            "text-[10px] font-semibold uppercase tracking-widest",
                             visual.fg,
                           )}
                         >
@@ -297,12 +297,12 @@ function SearchInput({
   return (
     <div
       className={cn(
-        "relative flex h-9 items-center gap-1.5 rounded-full border border-slate-200",
+        "relative flex h-9 items-center gap-1.5 rounded-full border border-border",
         "bg-white pl-3 pr-1 transition-colors",
-        "focus-within:border-brand-blue/50 focus-within:ring-2 focus-within:ring-brand-blue/20",
+        "focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20",
       )}
     >
-      <Search className="size-3.5 shrink-0 text-slate-400" strokeWidth={2.2} />
+      <Search className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.2} />
       <input
         ref={inputRef}
         type="text"
@@ -311,8 +311,8 @@ function SearchInput({
         placeholder="Pesquisar passos..."
         className={cn(
           "h-full min-w-0 flex-1 border-0 bg-transparent text-[13px]",
-          "tracking-tight text-slate-700 outline-none",
-          "placeholder:font-medium placeholder:text-slate-400",
+          "tracking-tight text-foreground outline-none",
+          "placeholder:font-medium placeholder:text-[var(--color-ink-muted)]",
           "w-[200px]",
         )}
       />
@@ -328,8 +328,8 @@ function CloseButton({ onClose }: { onClose: () => void }) {
       aria-label="Fechar"
       className={cn(
         "inline-flex size-9 items-center justify-center rounded-full",
-        "border border-slate-200 bg-white text-slate-500",
-        "transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-95",
+        "border border-border bg-white text-slate-500",
+        "transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900 active:scale-95",
       )}
     >
       <X className="size-4" strokeWidth={2.2} />
@@ -358,14 +358,14 @@ function StepCard({
       className={cn(
         "group/card flex w-full items-start gap-3 rounded-2xl border border-slate-100 bg-white",
         "px-3.5 py-3 text-left transition-all duration-150",
-        "hover:border-brand-blue/30 hover:shadow-blue-glow",
+        "hover:border-primary/30 hover:shadow-[var(--shadow-indigo-glow)]",
       )}
     >
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-xl",
-          "bg-slate-50 ring-1 ring-slate-100 transition-all",
-          "group-hover/card:bg-white group-hover/card:ring-brand-blue/20",
+          "bg-[var(--color-bg-subtle)] ring-1 ring-slate-100 transition-all",
+          "group-hover/card:bg-white group-hover/card:ring-primary/20",
           color,
         )}
       >

@@ -21,7 +21,7 @@ import { useSession } from "next-auth/react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import type { WhatsAppHealthStatus } from "@/lib/whatsapp-health-types";
+import type { WhatsAppHealthStatus } from "@/services/whatsapp-health";
 
 const DISMISS_KEY_PREFIX = "whatsapp-health-dismissed:";
 const DISMISS_TTL_MS = 30 * 60 * 1_000;

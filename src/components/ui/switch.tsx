@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
  *
  * Paleta segue o EduIT Premium Core:
  *  - off: pista `bg-slate-300`
- *  - on:  pista `bg-[#507df1]` (brand-blue)
+ *  - on:  pista `bg-primary` (primary)
  *  - thumb: `bg-white` com sombra sutil.
  */
 
@@ -47,8 +47,8 @@ export function Switch({
       onClick={() => onCheckedChange(!checked)}
       disabled={disabled}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[#507df1]/40",
-        checked ? "bg-[#507df1]" : "bg-slate-300",
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40",
+        checked ? "bg-primary" : "bg-slate-300",
         disabled && "cursor-not-allowed opacity-50",
         className,
       )}

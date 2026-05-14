@@ -39,7 +39,7 @@ export function DealHistoryButton({
       <SheetTrigger
         aria-label="Histórico do negócio"
         className={cn(
-          "inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[12px] font-medium text-slate-700 transition-colors hover:bg-slate-200",
+          "inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[12px] font-medium text-foreground transition-colors hover:bg-slate-200",
           className,
         )}
       >

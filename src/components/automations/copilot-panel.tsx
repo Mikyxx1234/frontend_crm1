@@ -40,7 +40,7 @@ import {
   type AutomationStep,
 } from "@/lib/automation-workflow";
 import { cn } from "@/lib/utils";
-import type { CopilotPatch } from "@/lib/copilot-client-types";
+import type { CopilotPatch } from "@/services/ai/automation-copilot";
 
 type AuditResponse = {
   automationId: string;
@@ -115,14 +115,14 @@ export function CopilotPanel(props: CopilotPanelProps) {
   const [tab, setTab] = useState<"audit" | "chat">("audit");
 
   return (
-    <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-slate-200/60 bg-white/90 backdrop-blur-xl">
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200/60 bg-linear-to-r from-[#eef4ff]/40 to-white px-4 py-2.5">
+    <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-border/60 bg-white/90 backdrop-blur-xl">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/60 bg-linear-to-r from-[#eef4ff]/40 to-white px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-brand-blue to-[#6f8cf5] text-white shadow-blue-glow">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-primary to-[#6f8cf5] text-white shadow-[var(--shadow-indigo-glow)]">
             <Sparkles className="size-3.5" strokeWidth={2.6} />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-[13px] font-black tracking-tight text-slate-900">
+            <span className="text-[13px] font-extrabold tracking-tight text-slate-900">
               Copilot de Automações
             </span>
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -134,7 +134,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
           type="button"
           onClick={onClose}
           aria-label="Fechar painel"
-          className="flex size-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          className="flex size-7 items-center justify-center rounded-full text-[var(--color-ink-muted)] transition-colors hover:bg-slate-100 hover:text-foreground"
         >
           <PanelRightClose className="size-4" strokeWidth={2.4} />
         </button>
@@ -210,7 +210,7 @@ function AuditTab({
   if (query.isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <Loader2 className="size-5 animate-spin text-slate-400" />
+        <Loader2 className="size-5 animate-spin text-[var(--color-ink-muted)]" />
       </div>
     );
   }
@@ -241,7 +241,7 @@ function AuditTab({
           type="button"
           onClick={() => query.refetch()}
           disabled={query.isFetching}
-          className="text-[11px] font-bold tracking-tight text-brand-blue hover:underline disabled:opacity-50"
+          className="text-[11px] font-bold tracking-tight text-primary hover:underline disabled:opacity-50"
         >
           {query.isFetching ? "Auditando…" : "Re-auditar"}
         </button>
@@ -262,7 +262,7 @@ function AuditTab({
 
         {issues.length > 0 && (
           <div className="space-y-2">
-            <h4 className="px-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <h4 className="px-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
               Problemas na automação
             </h4>
             {issues.map((iss, i) => {
@@ -286,7 +286,7 @@ function AuditTab({
 
         {crossConflicts.length > 0 && (
           <div className="space-y-2">
-            <h4 className="px-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <h4 className="px-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
               Conflitos com outras automações
             </h4>
             {crossConflicts.map((c, i) => {
@@ -323,7 +323,7 @@ function ResumePill({
 }) {
   const bg =
     count === 0
-      ? "bg-slate-50 text-slate-400 ring-slate-200"
+      ? "bg-[var(--color-bg-subtle)] text-[var(--color-ink-muted)] ring-slate-200"
       : tone === "error"
         ? "bg-rose-50 text-rose-700 ring-rose-200"
         : tone === "warning"
@@ -332,7 +332,7 @@ function ResumePill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ring-1",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ring-1",
         bg,
       )}
     >
@@ -365,7 +365,7 @@ function IssueCard({
       <div className="flex items-start gap-2">
         <Icon className="mt-0.5 size-4 shrink-0" strokeWidth={2.4} />
         <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-black leading-tight">{title}</div>
+          <div className="text-[12px] font-bold leading-tight">{title}</div>
           {hint && (
             <div className="mt-1 text-[11px] font-medium leading-relaxed opacity-80">
               {hint}
@@ -518,12 +518,12 @@ function ChatTab({
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl bg-slate-50/60 p-3"
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl bg-[var(--color-bg-subtle)]/60 p-3"
       >
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-            <Sparkles className="size-5 text-brand-blue" strokeWidth={2.2} />
-            <div className="text-[12px] font-bold text-slate-700">
+            <Sparkles className="size-5 text-primary" strokeWidth={2.2} />
+            <div className="text-[12px] font-bold text-foreground">
               Como posso ajudar com esta automação?
             </div>
             <div className="max-w-[280px] text-[11px] leading-relaxed text-slate-500">
@@ -549,7 +549,7 @@ function ChatTab({
         )}
       </div>
 
-      <div className="flex shrink-0 items-end gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+      <div className="flex shrink-0 items-end gap-2 rounded-xl border border-border bg-white p-2 shadow-sm">
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -599,7 +599,7 @@ function ChatBubble({
         className={cn(
           "max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed shadow-sm",
           isUser
-            ? "bg-brand-blue text-white"
+            ? "bg-primary text-white"
             : "bg-white text-slate-800 ring-1 ring-slate-200",
         )}
       >
@@ -640,12 +640,12 @@ function PatchDiffCard({
       style={{ borderColor: "#c9d7f5" }}
     >
       <div className="flex items-start gap-2">
-        <Sparkles className="mt-0.5 size-4 shrink-0 text-brand-blue" strokeWidth={2.4} />
+        <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={2.4} />
         <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-black leading-tight text-slate-900">
+          <div className="text-[12px] font-bold leading-tight text-slate-900">
             {patch.summary}
           </div>
-          <div className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
+          <div className="mt-0.5 text-[11px] leading-relaxed text-[var(--color-ink-soft)]">
             {patch.reasoning}
           </div>
 
@@ -665,9 +665,9 @@ function PatchDiffCard({
           </button>
 
           {open && (
-            <ul className="mt-2 space-y-1 rounded-lg bg-slate-50 p-2">
+            <ul className="mt-2 space-y-1 rounded-lg bg-[var(--color-bg-subtle)] p-2">
               {patch.ops.map((op, i) => (
-                <li key={i} className="font-mono text-[10px] leading-relaxed text-slate-700">
+                <li key={i} className="font-mono text-[10px] leading-relaxed text-foreground">
                   {formatOp(op)}
                 </li>
               ))}
@@ -705,7 +705,7 @@ function PatchDiffCard({
               </span>
             )}
             {patch.dismissed && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 ring-1 ring-slate-200">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-subtle)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 ring-1 ring-slate-200">
                 Descartado
               </span>
             )}

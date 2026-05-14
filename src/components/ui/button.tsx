@@ -12,8 +12,7 @@ function mergeRefs<T>(
     for (const ref of refs) {
       if (ref == null) continue;
       if (typeof ref === "function") ref(value);
-      else
-        (ref as React.MutableRefObject<T | null>).current = value;
+      else (ref as React.MutableRefObject<T | null>).current = value;
     }
   };
 }
@@ -53,26 +52,35 @@ function Slot({
 }
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-all duration-200 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.97]",
+  // Base: Lumen — fonte Inter, peso 600, radius 8px, transição suave
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-all duration-200 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
+        // Índigo sólido — CTA primário (Lumen)
         default:
-          "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:bg-primary/95 hover:-translate-y-0.5",
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary-dark hover:shadow-[var(--shadow-indigo-glow)]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-md hover:shadow-lg hover:bg-destructive/95 hover:-translate-y-0.5",
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 hover:shadow-md",
+        // Ghost com borda — ação secundária
         outline:
-          "border-2 border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground hover:border-accent",
+          "border border-border bg-background text-foreground shadow-sm hover:bg-bg-subtle hover:border-border",
+        // Superfície sutil
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/90 hover:shadow-md",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "bg-bg-muted text-foreground border border-border shadow-sm hover:bg-bg-hover",
+        // Fantasma sem borda
+        ghost: "text-ink-soft hover:bg-bg-muted hover:text-foreground",
+        // Link
         link: "text-primary underline-offset-4 hover:underline",
+        // Lavanda — IA / Copilot
+        ai:
+          "bg-lavender text-lavender-foreground shadow-sm hover:opacity-90 hover:shadow-[var(--shadow-lavender-glow)]",
       },
       size: {
-        default: "h-10 px-5 py-2",
-        sm: "h-9 rounded-lg px-3.5 text-xs",
-        lg: "h-12 rounded-xl px-8 text-base",
-        icon: "size-10",
+        default: "h-9 px-4 py-2",
+        sm:      "h-7 rounded-md px-3 text-xs",
+        lg:      "h-11 rounded-xl px-6 text-base",
+        icon:    "size-9",
       },
     },
     defaultVariants: {

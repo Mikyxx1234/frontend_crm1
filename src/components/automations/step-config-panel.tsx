@@ -32,6 +32,25 @@ import {
 
 type PipelineStage = { id: string; name: string };
 type Pipeline = { id: string; name: string; stages: PipelineStage[] };
+type CustomFieldOption = { id: string; name: string; label: string; entity: string };
+type VariableShortcutOption = { label: string; token: string; hint?: string };
+
+const UPDATE_FIELD_BUILTINS: Record<"contact" | "deal", Array<{ value: string; label: string }>> = {
+  contact: [
+    { value: "name", label: "Nome do contato" },
+    { value: "email", label: "E-mail" },
+    { value: "phone", label: "Telefone" },
+    { value: "source", label: "Origem" },
+    { value: "lifecycleStage", label: "Ciclo de vida" },
+    { value: "assignedToId", label: "Responsável" },
+  ],
+  deal: [
+    { value: "title", label: "Título do negócio" },
+    { value: "value", label: "Valor" },
+    { value: "status", label: "Status" },
+    { value: "stageId", label: "Etapa (ID)" },
+  ],
+};
 
 type Props = {
   open: boolean;
@@ -84,8 +103,164 @@ function uiDelayToMs(duration: number, unit: string): number {
   }
 }
 
+function VariableShortcutHint() {
+  return (
+    <p className="text-[11px] text-muted-foreground">
+      Atalho: digite <span className="font-mono">[</span> para abrir campos e variáveis.
+    </p>
+  );
+}
+
+type VariableShortcutTextareaProps = {
+  id: string;
+  value: string;
+  onChange: (next: string) => void;
+  options: VariableShortcutOption[];
+  rows?: number;
+  placeholder?: string;
+};
+
+function VariableShortcutTextarea({
+  id,
+  value,
+  onChange,
+  options,
+  rows = 3,
+  placeholder,
+}: VariableShortcutTextareaProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [startPos, setStartPos] = useState<number | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options.slice(0, 20);
+    return options
+      .filter((o) => o.label.toLowerCase().includes(q) || o.token.toLowerCase().includes(q))
+      .slice(0, 20);
+  }, [options, query]);
+
+  const refreshShortcutState = (el: HTMLTextAreaElement) => {
+    const caret = el.selectionStart ?? el.value.length;
+    const left = el.value.slice(0, caret);
+    const bracketStart = left.lastIndexOf("[");
+    if (bracketStart < 0) {
+      setOpen(false);
+      setQuery("");
+      setStartPos(null);
+      return;
+    }
+    const typed = left.slice(bracketStart + 1);
+    if (typed.includes("]") || typed.includes("\n")) {
+      setOpen(false);
+      setQuery("");
+      setStartPos(null);
+      return;
+    }
+    setStartPos(bracketStart);
+    setQuery(typed);
+    setOpen(true);
+  };
+
+  const applyToken = (token: string) => {
+    const el = inputRef.current;
+    if (!el || startPos == null) return;
+    const caret = el.selectionStart ?? value.length;
+    const next = `${value.slice(0, startPos)}${token}${value.slice(caret)}`;
+    onChange(next);
+    setOpen(false);
+    setQuery("");
+    setStartPos(null);
+    requestAnimationFrame(() => {
+      const pos = startPos + token.length;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  return (
+    <div className="relative">
+      <Textarea
+        id={id}
+        ref={inputRef}
+        rows={rows}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          refreshShortcutState(e.target);
+        }}
+        onKeyUp={(e) => refreshShortcutState(e.currentTarget)}
+        onClick={(e) => refreshShortcutState(e.currentTarget)}
+        onBlur={() => {
+          setTimeout(() => setOpen(false), 120);
+        }}
+        placeholder={placeholder}
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-border bg-white p-1 shadow-[var(--shadow-lg)]">
+          {filtered.map((opt) => (
+            <button
+              key={`${opt.label}-${opt.token}`}
+              type="button"
+              className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--color-bg-subtle)]"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => applyToken(opt.token)}
+            >
+              <span className="mt-0.5 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                {opt.token}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12px] font-semibold text-foreground">{opt.label}</span>
+                {opt.hint ? (
+                  <span className="block truncate text-[10px] text-slate-500">{opt.hint}</span>
+                ) : null}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [] }: Props) {
   const [draft, setDraft] = useState<Record<string, unknown>>({});
+  const [updateFieldFilter, setUpdateFieldFilter] = useState("");
+  const declaredVariables = useMemo(
+    () => collectDeclaredVariables(allSteps, step?.id ?? ""),
+    [allSteps, step?.id],
+  );
+  const variableShortcutOptions = useMemo<VariableShortcutOption[]>(() => {
+    const out: VariableShortcutOption[] = [
+      {
+        label: "Mensagem do cliente (passo anterior)",
+        token: "{{lastResponse}}",
+        hint: "Resposta recebida no último passo interativo",
+      },
+      {
+        label: "Primeiro nome da mensagem do cliente",
+        token: "{{lastResponse|first_name}}",
+        hint: "Aplica filtro de primeiro nome",
+      },
+    ];
+    for (const v of declaredVariables) {
+      const rawName = v.value.startsWith("variables.")
+        ? v.value.slice("variables.".length)
+        : v.value;
+      const name = rawName.trim();
+      if (!name) continue;
+      out.push({
+        label: `Variável: ${name}`,
+        token: `{{${name}}}`,
+      });
+      out.push({
+        label: `Variável: ${name} (primeiro nome)`,
+        token: `{{${name}|first_name}}`,
+      });
+    }
+    return out;
+  }, [declaredVariables]);
 
   const pipelinesQuery = useQuery({
     queryKey: ["pipelines-for-steps"],
@@ -95,6 +270,21 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       const res = await fetch(apiUrl("/api/pipelines"));
       if (!res.ok) return [] as Pipeline[];
       return (await res.json()) as Pipeline[];
+    },
+  });
+
+  const customFieldsQuery = useQuery({
+    queryKey: ["custom-fields-for-update-field"],
+    enabled: open && step?.type === "update_field",
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [contactRes, dealRes] = await Promise.all([
+        fetch(apiUrl("/api/custom-fields?entity=contact")),
+        fetch(apiUrl("/api/custom-fields?entity=deal")),
+      ]);
+      const contacts = contactRes.ok ? ((await contactRes.json()) as CustomFieldOption[]) : [];
+      const deals = dealRes.ok ? ((await dealRes.json()) as CustomFieldOption[]) : [];
+      return [...contacts, ...deals];
     },
   });
 
@@ -124,6 +314,17 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         branches: branches as unknown as Record<string, unknown>[],
         elseStepId: cfg.elseStepId ?? "",
       });
+      return;
+    }
+    if (step.type === "update_field") {
+      const cfg = (step.config ?? {}) as Record<string, unknown>;
+      const field = String(cfg.field ?? "");
+      setDraft({
+        entity: String(cfg.entity ?? "contact"),
+        field,
+        value: cfg.value ?? "",
+      });
+      setUpdateFieldFilter(field);
       return;
     }
     setDraft({ ...step.config });
@@ -242,6 +443,14 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         timeoutMs: Number(config.timeoutMs ?? 60_000),
         receivedGotoStepId: config.receivedGotoStepId ?? "",
         timeoutGotoStepId: config.timeoutGotoStepId ?? "",
+        saveToVariable: config.saveToVariable ?? "",
+      };
+    }
+    if (step.type === "update_field") {
+      config = {
+        entity: String(config.entity ?? "contact"),
+        field: String(config.field ?? ""),
+        value: config.value ?? "",
       };
     }
     if (step.type === "transfer_automation") {
@@ -422,12 +631,69 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
           {step.type === "update_field" && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="sc-field">Campo</Label>
+                <Label htmlFor="sc-uf-entity">Entidade</Label>
+                <SelectNative
+                  id="sc-uf-entity"
+                  value={String(draft.entity ?? "contact")}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      entity: e.target.value,
+                      field: "",
+                    }))
+                  }
+                >
+                  <option value="contact">Contato</option>
+                  <option value="deal">Negócio</option>
+                </SelectNative>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sc-field-filter">Localizar campo</Label>
                 <Input
+                  id="sc-field-filter"
+                  value={updateFieldFilter}
+                  onChange={(e) => setUpdateFieldFilter(e.target.value)}
+                  placeholder="Digite para filtrar campos..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sc-field">Campo</Label>
+                <SelectNative
                   id="sc-field"
                   value={String(draft.field ?? "")}
                   onChange={(e) => setDraft((d) => ({ ...d, field: e.target.value }))}
-                />
+                >
+                  <option value="">Selecione um campo…</option>
+                  <optgroup label="Campos nativos">
+                    {(UPDATE_FIELD_BUILTINS[
+                      String(draft.entity ?? "contact") === "deal" ? "deal" : "contact"
+                    ] ?? [])
+                      .filter((o) =>
+                        `${o.label} ${o.value}`
+                          .toLowerCase()
+                          .includes(updateFieldFilter.trim().toLowerCase()),
+                      )
+                      .map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="Campos personalizados">
+                    {(customFieldsQuery.data ?? [])
+                      .filter((f) => f.entity === String(draft.entity ?? "contact"))
+                      .filter((f) =>
+                        `${f.label} ${f.name}`
+                          .toLowerCase()
+                          .includes(updateFieldFilter.trim().toLowerCase()),
+                      )
+                      .map((f) => (
+                        <option key={f.id} value={f.name}>
+                          {f.label} ({f.name})
+                        </option>
+                      ))}
+                  </optgroup>
+                </SelectNative>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-val">Valor</Label>
@@ -436,6 +702,9 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                   value={String(draft.value ?? "")}
                   onChange={(e) => setDraft((d) => ({ ...d, value: e.target.value }))}
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Você pode usar variáveis no valor, ex.: {"{{"}lastResponse{"}}"}.
+                </p>
               </div>
             </>
           )}
@@ -482,13 +751,15 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-cw-msg">Conteúdo da mensagem</Label>
-                <Textarea
+                <VariableShortcutTextarea
                   id="sc-cw-msg"
                   rows={4}
                   value={String(draft.content ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))}
+                  onChange={(next) => setDraft((d) => ({ ...d, content: next }))}
                   placeholder="Ex.: Olá, tudo bem?"
+                  options={variableShortcutOptions}
                 />
+                <VariableShortcutHint />
                 <p className="text-[11px] text-muted-foreground">
                   O destinatário é resolvido automaticamente pelo telefone do contato.
                 </p>
@@ -525,13 +796,15 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
               <>
                 <div className="space-y-2">
                   <Label htmlFor="sc-int-body">Texto da mensagem</Label>
-                  <Textarea
+                  <VariableShortcutTextarea
                     id="sc-int-body"
                     rows={3}
                     value={String(draft.body ?? "")}
-                    onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
+                    onChange={(next) => setDraft((d) => ({ ...d, body: next }))}
                     placeholder="Escolha uma das opções abaixo:"
+                    options={variableShortcutOptions}
                   />
+                  <VariableShortcutHint />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sc-int-header">Cabeçalho (opcional)</Label>
@@ -772,6 +1045,16 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="sc-wfr-var">Salvar resposta em variável</Label>
+                  <Input
+                    id="sc-wfr-var"
+                    value={String(draft.saveToVariable ?? "")}
+                    onChange={(e) => setDraft((d) => ({ ...d, saveToVariable: e.target.value }))}
+                    placeholder="Ex.: lastResponse"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label>Até a mensagem recebida → ir para</Label>
                   <SelectNative
                     value={String(draft.receivedGotoStepId ?? "")}
@@ -811,13 +1094,15 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
               <>
                 <div className="space-y-2">
                   <Label htmlFor="sc-q-msg">Mensagem enviada ao lead</Label>
-                  <Textarea
+                  <VariableShortcutTextarea
                     id="sc-q-msg"
                     rows={3}
                     value={String(draft.message ?? "")}
-                    onChange={(e) => setDraft((d) => ({ ...d, message: e.target.value }))}
+                    onChange={(next) => setDraft((d) => ({ ...d, message: next }))}
                     placeholder="Ex.: Qual o seu nome completo?"
+                    options={variableShortcutOptions}
                   />
+                  <VariableShortcutHint />
                   <p className="text-[11px] text-muted-foreground">
                     Use variáveis: {"{{nome}}"}, {"{{telefone}}"}, {"{{campo_x}}"}
                   </p>
@@ -1591,7 +1876,7 @@ function StagePickerValue({
 
   if (isLoading) {
     return (
-      <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] italic text-slate-400">
+      <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
         Carregando estágios…
       </div>
     );
@@ -1636,7 +1921,7 @@ function PipelinePickerValue({
 
   if (isLoading) {
     return (
-      <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] italic text-slate-400">
+      <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
         Carregando pipelines…
       </div>
     );
@@ -1695,7 +1980,7 @@ function StageNamePickerValue({
 
   if (isLoading) {
     return (
-      <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] italic text-slate-400">
+      <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
         Carregando estágios…
       </div>
     );
@@ -1752,7 +2037,7 @@ function PipelineNamePickerValue({
 
   if (isLoading) {
     return (
-      <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] italic text-slate-400">
+      <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
         Carregando pipelines…
       </div>
     );
@@ -1811,7 +2096,7 @@ function CompanyPickerValue({
 
   if (isLoading) {
     return (
-      <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] italic text-slate-400">
+      <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
         Carregando empresas…
       </div>
     );
@@ -1877,7 +2162,7 @@ function OwnerPickerValue({
 
   if (loadingHumans || loadingAgents) {
     return (
-      <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] italic text-slate-400">
+      <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
         Carregando…
       </div>
     );
@@ -1997,11 +2282,11 @@ function ConditionStepConfig({
       {branches.map((branch, bIdx) => (
         <div
           key={branch.id}
-          className="space-y-3 rounded-lg border border-slate-200 bg-white p-3"
+          className="space-y-3 rounded-lg border border-border bg-white p-3"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded bg-cyan-50 text-[11px] font-black text-cyan-600 ring-1 ring-cyan-100">
+              <span className="flex size-6 items-center justify-center rounded bg-cyan-50 text-[11px] font-bold text-cyan-600 ring-1 ring-cyan-100">
                 {bIdx + 1}
               </span>
               <Input
@@ -2049,7 +2334,7 @@ function ConditionStepConfig({
                   ))}
                 </SelectNative>
                 {rule.op === "empty" || rule.op === "not_empty" ? (
-                  <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] italic text-slate-400">
+                  <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
                     (sem valor)
                   </div>
                 ) : (
@@ -2071,7 +2356,7 @@ function ConditionStepConfig({
                   <span className="text-destructive">×</span>
                 </Button>
                 {rIdx < branch.rules.length - 1 && (
-                  <span className="col-span-4 -my-1 text-center text-[10px] font-black tracking-widest text-slate-400">
+                  <span className="col-span-4 -my-1 text-center text-[10px] font-bold tracking-widest text-[var(--color-ink-muted)]">
                     E
                   </span>
                 )}
@@ -2554,6 +2839,11 @@ type TemplateOption = {
   language: string;
   category: string | null;
   bodyPreview: string;
+  hasButtons?: boolean;
+  hasVariables?: boolean;
+  buttonTypes?: string[];
+  flowAction?: string | null;
+  flowId?: string | null;
 };
 
 const CAT_LABEL: Record<string, string> = {

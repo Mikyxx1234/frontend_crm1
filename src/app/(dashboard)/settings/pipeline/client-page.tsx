@@ -726,7 +726,7 @@ function AutomationRuleForm({
     try {
       const url = initial ? `/api/automations/${initial.id}` : "/api/automations";
       const method = initial ? "PUT" : "POST";
-      const res = await fetch(apiUrl(url), {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

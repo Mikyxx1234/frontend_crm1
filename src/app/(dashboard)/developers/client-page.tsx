@@ -571,7 +571,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
+      className="rounded p-1 text-[var(--color-ink-muted)] transition-colors hover:bg-slate-700 hover:text-white"
       aria-label="Copiar"
     >
       {copied ? (
@@ -918,7 +918,7 @@ export default function DevelopersPage() {
       </aside>
 
       {/* Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto bg-slate-50/50 p-8">
+      <div ref={contentRef} className="flex-1 overflow-y-auto bg-[var(--color-bg-subtle)]/50 p-8">
         <div className="mx-auto max-w-3xl space-y-12">
           {sections.map((sec) => (
             <section key={sec.id} id={`section-${sec.id}`} className="scroll-mt-6">

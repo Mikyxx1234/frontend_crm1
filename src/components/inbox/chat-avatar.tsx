@@ -5,7 +5,16 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /** Cores determinísticas derivadas do nome/ID — Luz sempre laranja vibrante. */
-const FALLBACK_COLORS = ["#3b82f6", "#10b981", "#8b5cf6", "#ec4899", "#06b6d4"];
+const FALLBACK_COLORS = [
+  "#2563eb", // azul primário
+  "#059669", // verde esmeralda
+  "#7c3aed", // violeta
+  "#db2777", // rosa
+  "#0891b2", // ciano
+  "#d97706", // âmbar
+  "#dc2626", // vermelho
+  "#0f766e", // teal escuro
+];
 
 function getAvatarColor(seed: string): string {
   const normalized = seed.toLowerCase();
@@ -68,8 +77,7 @@ function WhatsappIcon({ size }: { size: number }) {
 function RobotIcon() {
   // Robozinho minimalista — antenas + cabeça arredondada + olhos
   // pretos + sorriso linear. Monocromático (branco) pra funcionar
-  // sobre qualquer cor de fundo. Aspect ratio 1:1, 82% do container
-  // (mesmo sizing do CartoonFallback pra não quebrar proporções).
+  // sobre qualquer cor de fundo. Aspect ratio 1:1, ~72% do container.
   return (
     <svg
       viewBox="0 0 64 64"
@@ -101,40 +109,6 @@ function RobotIcon() {
   );
 }
 
-function CartoonFallback() {
-  // SVG embutido com fills hex fixos (sem <defs>/gradient IDs) para evitar colisão
-  // quando muitos avatares são renderizados numa mesma página.
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      className="relative top-[2%] z-10 h-[82%] w-[82%]"
-    >
-      <path
-        d="M18,95 L82,95 L82,85 C82,75 72,68 62,65 L38,65 C28,68 18,75 18,85 Z"
-        fill="#7bc4ef"
-        stroke="#5a9bc8"
-        strokeWidth="0.8"
-      />
-      <path d="M42,65 Q50,74 58,65" fill="none" stroke="#5a9bc8" strokeWidth="1.2" />
-      <path d="M44,60 L44,68 Q50,72 56,68 L56,60" fill="#ffdac1" />
-      <circle cx="30" cy="48" r="6.5" fill="#ffdac1" stroke="#e0b9a0" strokeWidth="0.4" />
-      <circle cx="70" cy="48" r="6.5" fill="#ffdac1" stroke="#e0b9a0" strokeWidth="0.4" />
-      <path
-        d="M32,45 Q32,20 50,20 Q68,20 68,45 Q68,64 50,64 Q32,64 32,45"
-        fill="#ffdac1"
-      />
-      <path
-        d="M28,48 C25,35 28,22 40,15 L45,8 L52,13 L60,8 L65,15 C77,22 75,35 72,48 Q70,42 66,35 C60,24 40,24 34,35 Q31,42 28,48"
-        fill="#9c6b5b"
-        stroke="#5d4037"
-        strokeWidth="0.4"
-      />
-    </svg>
-  );
-}
-
 export function ChatAvatar({
   user,
   name,
@@ -144,14 +118,18 @@ export function ChatAvatar({
   bgColor: customBgColor,
   size = 60,
   channel = "whatsapp",
-  hideCartoon = false,
+  hideCartoon: _hideCartoon = false,
   isBot = false,
   className,
 }: ChatAvatarProps) {
   const finalName = user?.name || name || phone || "Usuário";
   const finalImageUrl = user?.imageUrl || imageUrl;
   const finalId = String(user?.id ?? finalName);
-  const initials = (finalName.trim().charAt(0) || "?").toUpperCase();
+  const parts = finalName.trim().split(/\s+/);
+  const initials =
+    parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : (parts[0]?.slice(0, 2) || "?").toUpperCase();
   // Detecta bot também por nome (fallback pra call-sites legados que
   // ainda não passam `isBot` explicitamente). "Automação" e "Sistema"
   // são os dois únicos senderNames que o backend carimba em mensagens
@@ -167,8 +145,6 @@ export function ChatAvatar({
   // no balão) — sem cor aleatória por hash do nome, que gerava
   // magentas/verdes aleatórios e parecia avatar de um agente humano.
   const bgColor = customBgColor || (isBotResolved ? "#475569" : getAvatarColor(finalId));
-  const isAgent = lowered.includes("agente") || lowered.includes("admin");
-  const showCartoon = !hideCartoon && !isAgent && !isBotResolved;
 
   const showUnread = typeof unreadCount === "number" && unreadCount > 0;
   const showChannel = channel === "whatsapp";
@@ -178,23 +154,23 @@ export function ChatAvatar({
   const badgeFontSize = Math.max(9, Math.round(size * 0.17));
   const badgeBorder = Math.max(1.5, Math.round(size * 0.033));
   const whatsappIconSize = Math.max(8, Math.round(badgeSize * 0.6));
-  const initialsFontSize = Math.max(12, Math.round(size * 0.36));
+  const initialsFontSize = Math.max(10, Math.round(size * 0.3));
 
   return (
     <div
-      className={cn("relative shrink-0", className)}
+      className={cn("relative shrink-0 rounded-full", className)}
       style={{ width: size, height: size }}
     >
       {showUnread && (
         <div
-          className="absolute z-20 flex items-center justify-center rounded-full font-black text-white shadow-lg"
+          className="absolute z-20 flex items-center justify-center rounded-full font-bold text-white shadow-lg"
           style={{
             width: badgeSize,
             height: badgeSize,
             top: -badgeSize * 0.18,
             right: -badgeSize * 0.18,
             fontSize: badgeFontSize,
-            border: `${badgeBorder}px solid #fff`,
+            border: `${badgeBorder}px solid var(--color-background)`,
             lineHeight: 1,
             backgroundColor: UNREAD_BADGE_COLOR,
           }}
@@ -204,10 +180,10 @@ export function ChatAvatar({
       )}
 
       <div
-        className="relative flex size-full items-center justify-center overflow-hidden rounded-full shadow-sm"
+        className="relative flex size-full items-center justify-center overflow-hidden rounded-full shadow-[var(--shadow-sm)]"
         style={{
           backgroundColor: bgColor,
-          border: `${badgeBorder}px solid #fff`,
+          border: `${badgeBorder}px solid var(--color-border)`,
         }}
       >
         {finalImageUrl ? (
@@ -225,17 +201,11 @@ export function ChatAvatar({
         ) : (
           <div className="relative flex size-full items-center justify-center">
             <span
-              className="pointer-events-none font-extrabold uppercase leading-none text-white/90"
+              className="pointer-events-none font-semibold uppercase leading-none text-white/95"
               style={{ fontSize: initialsFontSize }}
             >
               {initials}
             </span>
-
-            {showCartoon && (
-              <div className="pointer-events-none absolute inset-0 flex size-full items-center justify-center overflow-hidden">
-                <CartoonFallback />
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -249,7 +219,7 @@ export function ChatAvatar({
             bottom: -badgeSize * 0.08,
             left: -badgeSize * 0.08,
             backgroundColor: WHATSAPP_BADGE_COLOR,
-            border: `${badgeBorder}px solid #fff`,
+            border: `${badgeBorder}px solid var(--color-background)`,
           }}
         >
           <WhatsappIcon size={whatsappIconSize} />

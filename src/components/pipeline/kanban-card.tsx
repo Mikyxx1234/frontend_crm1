@@ -12,15 +12,16 @@ import type { CardVisibleFields } from "@/components/pipeline/card-fields-config
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import { prettifyChatMessageBody } from "@/lib/whatsapp-outbound-template-label";
-import { motion } from "framer-motion";
 import {
   cn,
   dealNumericValue,
   formatCurrency,
   formatDate,
   resolveContactAvatarDisplayUrl,
+  tagPillStyle,
 } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
+import { dt } from "@/lib/design-tokens";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import { TooltipHost } from "@/components/ui/tooltip";
 
@@ -210,25 +211,19 @@ export function KanbanCard({
 
   return (
     <>
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
+      <div
         className={cn(
-          // Tokens do design-system: card flat com border 1px black/6,
-          // radius 16, hover apenas intensifica borda. NUNCA inventar
-          // outra combinação aqui — usar ds.card.base é a regra.
-          "group relative",
-          ds.card.base,
-          isDragging && "rotate-1 border-blue-200 shadow-[0_2px_6px_rgba(15,23,42,0.08)]",
+          "group relative cursor-pointer rounded-xl border border-slate-100 bg-white transition-shadow",
+          dt.card.shadow,
+          dt.card.kanbanHover,
+          isDragging && "rotate-1 border-blue-200 shadow-[var(--shadow-card)]",
           isHighlighted && "animate-[kanban-highlight_3s_ease]",
         )}
       >
         <div className="relative flex">
           <button
             type="button"
-            className="flex shrink-0 cursor-grab touch-none items-start justify-center border-0 bg-transparent px-1.5 py-3 text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+            className="flex shrink-0 cursor-grab touch-none items-start justify-center border-0 bg-transparent px-1.5 py-2 text-slate-300 hover:text-slate-500 active:cursor-grabbing"
             aria-label="Arrastar negócio"
             onClick={(e) => e.stopPropagation()}
             {...dragHandleProps}
@@ -236,14 +231,16 @@ export function KanbanCard({
             <GripVertical className="size-4" strokeWidth={2} />
           </button>
 
-          <div className="flex min-w-0 flex-1 gap-2 py-3 pr-3">
-            <button
-              type="button"
+          <div className="flex min-w-0 flex-1 gap-2 py-2 pr-2.5">
+            <div
+              role="button"
+              tabIndex={0}
               onClick={onClick}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick?.(); }}
               className="min-w-0 flex-1 cursor-pointer rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             >
               <div className="flex flex-col gap-2">
-                {/* HEADER do card — avatar 36 + nome + data (canto sup. direito).
+                {/* HEADER do card — avatar 28 + nome + data (canto sup. direito).
                     Mantém a identidade DNA Chat (avatar do contato + badge canal)
                     mas LIBERA o restante do conteúdo a ocupar 100% da largura
                     abaixo, eliminando o efeito de "coluna estreita à direita". */}
@@ -257,7 +254,7 @@ export function KanbanCard({
                       }}
                       phone={deal.contact?.phone ?? undefined}
                       channel={avatarChannel}
-                      size={36}
+                      size={28}
                     />
                   ) : null}
 
@@ -271,34 +268,31 @@ export function KanbanCard({
                           />
                         </TooltipHost>
                       ) : null}
-                      <p
-                        className="min-w-0 flex-1 truncate text-[15px] leading-tight tracking-tight text-slate-900"
-                        style={{ fontWeight: 800 }}
-                      >
+                      <p className={cn("min-w-0 flex-1 truncate leading-tight", dt.text.title)}>
                         {contactLine || dealTitle}
                       </p>
                     </div>
 
                     {contactLine && dealTitle && contactLine !== dealTitle ? (
-                      <p className="mt-0.5 min-w-0 truncate text-[13px] font-medium text-slate-600">
+                      <p className="mt-0.5 min-w-0 truncate text-[13px] font-medium text-slate-700">
                         {dealTitle}
                       </p>
                     ) : null}
                   </div>
 
                   {/* #ID + data de criação — mesmo padrão do Sales Hub
-                      (`deal-queue.tsx`): `#123` em `font-black slate-700`
+                      (`deal-queue.tsx`): `#123` em `font-bold slate-700`
                       seguido pela data em `slate-400 tabular-nums`. O "#"
                       já carrega a semântica de identificador, dispensa o
                       label "LEAD ID:". Quando o deal não tem `number`
                       ainda (criado offline / pendente sync) cai pra "—". */}
                   {(deal.number != null || createdAtLabel) ? (
                     <div className="mt-0.5 flex shrink-0 items-center gap-1.5">
-                      <span className="text-[11px] font-black tabular-nums text-slate-700">
+                      <span className="text-[11px] font-semibold tabular-nums text-slate-700">
                         #{deal.number ?? "—"}
                       </span>
                       {createdAtLabel ? (
-                        <span className="text-[11px] tabular-nums text-slate-400">
+                        <span className={cn(dt.text.time, "text-[11px]")}>
                           {createdAtLabel}
                         </span>
                       ) : null}
@@ -314,17 +308,13 @@ export function KanbanCard({
                       mantém o aviso visual quando o cliente respondeu, mas em
                       soft chip (sem borda) alinhado ao DNA Chat. */}
                   {inboundPreview ? (
-                    <div className="mt-2 flex items-start gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5">
-                      <MessageCircle className="mt-0.5 size-3 shrink-0 text-blue-500" strokeWidth={2} />
-                      <p className="line-clamp-2 min-w-0 flex-1 text-[12px] leading-snug text-slate-600">
-                        {inboundPreview}
-                      </p>
-                      {interaction ? (
-                        <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{interaction}</span>
-                      ) : null}
+                    <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+                      <MessageCircle className="size-3 shrink-0 text-blue-400" strokeWidth={2} />
+                      <p className="min-w-0 flex-1 truncate">{inboundPreview}</p>
+                      {interaction ? <span className="shrink-0 tabular-nums">{interaction}</span> : null}
                     </div>
                   ) : interaction ? (
-                    <div className="mt-1.5 flex items-center gap-1 text-[12px] text-slate-400">
+                    <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
                       <Clock className="size-3" strokeWidth={2} />
                       <span className="tabular-nums">{interaction}</span>
                     </div>
@@ -336,8 +326,8 @@ export function KanbanCard({
                       alinhado com o Sales Hub e com o DNA neutro do chat
                       (cores fortes só pra status/ações, nunca pra texto). */}
                   {productLine ? (
-                    <div className="mt-2 flex items-center gap-2 text-[13px]">
-                      <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
+                    <div className="mt-1 flex items-center gap-2 text-[12px]">
+                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
                         {productLine}
                       </span>
                       {deal.productType === "SERVICE" && (
@@ -346,7 +336,7 @@ export function KanbanCard({
                         </span>
                       )}
                       {show("value") && valueNum > 0 ? (
-                        <span className="shrink-0 text-[13px] font-semibold tabular-nums tracking-tight text-slate-900">
+                        <span className="shrink-0 text-[13px] font-semibold tabular-nums text-slate-700">
                           {formatCurrency(valueNum)}
                         </span>
                       ) : null}
@@ -355,7 +345,7 @@ export function KanbanCard({
 
                   {/* Chips: tarefas + tags + status. Tudo soft (sem border, sem shadow).
                       Tags consomem `ds.tag.*` — DNA único Chat ⇄ Sales Hub ⇄ Kanban. */}
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
                     {show("activities") && pending > 0 ? (
                       <TooltipHost
                         label={
@@ -367,7 +357,7 @@ export function KanbanCard({
                       >
                         <span
                           className={cn(
-                            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums",
+                            "inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[11px] font-medium tabular-nums",
                             deal.hasOverdueActivity
                               ? "bg-red-50 text-red-700"
                               : "bg-blue-50 text-blue-700",
@@ -388,11 +378,8 @@ export function KanbanCard({
 
                     {primaryTags.map((tag) => (
                       <TooltipHost key={tag.id} label={tag.name} side="top">
-                        <span
-                          className={ds.tag.solid}
-                          style={{ backgroundColor: tag.color?.trim() || "#94a3b8" }}
-                        >
-                          <span className="truncate">{tag.name}</span>
+                        <span className={cn("max-w-full truncate", dt.pill.sm)} style={tagPillStyle(tag.name, tag.color)}>
+                          {tag.name}
                         </span>
                       </TooltipHost>
                     ))}
@@ -423,7 +410,7 @@ export function KanbanCard({
 
                   {showTagComposer ? (
                     <div
-                      className="mt-2 rounded-xl bg-slate-50 p-2"
+                      className="mt-2 rounded-xl bg-[var(--color-bg-subtle)] p-2"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center gap-2">
@@ -437,7 +424,7 @@ export function KanbanCard({
                             }
                           }}
                           placeholder={canCreateTag ? "Buscar ou criar tag" : "Buscar tag"}
-                          className="h-7 min-w-0 flex-1 rounded-lg bg-white px-2 text-[12px] text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/30"
+                          className="h-7 min-w-0 flex-1 rounded-lg bg-white px-2 text-[12px] text-foreground outline-none focus:ring-2 focus:ring-blue-500/30"
                         />
                         {canCreateTag && (
                           <button
@@ -454,7 +441,7 @@ export function KanbanCard({
                         <button
                           type="button"
                           onClick={() => setShowTagComposer(false)}
-                          className="inline-flex h-7 items-center justify-center rounded-lg px-2 text-slate-400 hover:bg-white hover:text-slate-700"
+                          className="inline-flex h-7 items-center justify-center rounded-lg px-2 text-[var(--color-ink-muted)] hover:bg-white hover:text-foreground"
                         >
                           <X className="size-3" strokeWidth={2} />
                         </button>
@@ -466,7 +453,7 @@ export function KanbanCard({
                               key={t.id}
                               type="button"
                               onClick={() => { tagMutation.mutate({ tagId: t.id }); setTagInput(""); }}
-                              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-[12px] text-slate-600 hover:bg-slate-50"
+                              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-[12px] text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]"
                             >
                               <span className="size-2 rounded-full" style={{ backgroundColor: t.color }} />
                               {t.name}
@@ -496,7 +483,7 @@ export function KanbanCard({
 
                   {show("owner") ? (
                     <div
-                      className="mt-2.5 border-t border-slate-100 pt-2.5"
+                      className="mt-1.5 border-t border-zinc-100 pt-1.5"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <CardOwnerSelector
@@ -509,10 +496,10 @@ export function KanbanCard({
                   ) : null}
                 </div>
               </div>
-            </button>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       <LossReasonDialog
         open={lostOpen}
@@ -572,20 +559,27 @@ function CardOwnerSelector({
         onClick={() => setOpen((value) => !value)}
         disabled={isPending}
         className={cn(
-          "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
-          "hover:bg-slate-50",
-          open && "bg-slate-50",
+          "flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-zinc-50",
+          open && "bg-zinc-100",
         )}
       >
-        <OwnerAvatar
-          name={currentOwner?.name ?? null}
-          imageUrl={currentAvatarUrl}
-          status={currentStatus}
-        />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-700">
+        {currentOwner?.name ? (
+          <OwnerAvatar
+            id={currentOwner.id}
+            name={currentOwner.name}
+            imageUrl={currentAvatarUrl}
+            status={currentStatus}
+            size={20}
+          />
+        ) : (
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 bg-slate-50 text-[10px] font-bold text-slate-400">
+            ?
+          </span>
+        )}
+        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-slate-700">
           {currentOwner?.name ?? "Sem responsável"}
         </span>
-        <ChevronDown className={cn("size-3.5 shrink-0 text-slate-400 transition-transform", open && "rotate-180 text-blue-600")} strokeWidth={2} />
+        <ChevronDown className={cn("size-3.5 shrink-0 text-[var(--color-ink-muted)] transition-transform", open && "rotate-180 text-blue-600")} strokeWidth={2} />
       </button>
 
       {open ? (
@@ -596,9 +590,9 @@ function CardOwnerSelector({
               onChange(null);
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50"
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-[var(--color-bg-subtle)]"
           >
-            <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-400">
+            <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-[var(--color-ink-muted)]">
               ?
             </div>
             <span className="min-w-0 truncate text-[13px] font-medium text-slate-500">Sem responsável</span>
@@ -615,18 +609,20 @@ function CardOwnerSelector({
                   setOpen(false);
                 }}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50",
+                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-[var(--color-bg-subtle)]",
                   selected && "bg-blue-50/60",
                 )}
               >
                 <OwnerAvatar
+                  id={user.id}
                   name={user.name}
                   imageUrl={user.avatarUrl ?? null}
                   status={status}
+                  size={24}
                 />
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium text-slate-700">{user.name}</span>
-                  <span className="block text-[11px] text-slate-400">{presenceLabel(status)}</span>
+                  <span className="block truncate text-[13px] font-medium text-foreground">{user.name}</span>
+                  <span className="block text-[11px] text-[var(--color-ink-muted)]">{presenceLabel(status)}</span>
                 </div>
                 {selected ? <Check className="size-3.5 shrink-0 text-blue-600" strokeWidth={2.5} /> : null}
               </button>
@@ -648,11 +644,13 @@ function CardOwnerSelector({
  * todo o app.
  */
 function OwnerAvatar({
+  id,
   name,
   imageUrl,
   status,
   size = 24,
 }: {
+  id?: string;
   name: string | null | undefined;
   imageUrl: string | null | undefined;
   status: "ONLINE" | "OFFLINE" | "AWAY";
@@ -661,7 +659,7 @@ function OwnerAvatar({
   return (
     <div className="relative shrink-0">
       <ChatAvatar
-        user={{ name: name ?? "?", imageUrl: imageUrl ?? null }}
+        user={{ id: id ?? name ?? "?", name: name ?? "?", imageUrl: imageUrl ?? null }}
         size={size}
         channel={null}
         hideCartoon

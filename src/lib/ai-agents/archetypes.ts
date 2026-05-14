@@ -9,8 +9,9 @@
  * daí o admin pode customizar livremente sem perder referência.
  */
 
-/** Espelha o enum `AIAgentArchetype` do Prisma no monólito — local para evitar @prisma/client no frontend. */
-export type ArchetypeId = "SDR" | "ATENDIMENTO" | "VENDEDOR" | "SUPORTE";
+import type { AIAgentArchetype } from "@prisma/client";
+
+export type ArchetypeId = AIAgentArchetype;
 
 export type ArchetypeDescriptor = {
   id: ArchetypeId;

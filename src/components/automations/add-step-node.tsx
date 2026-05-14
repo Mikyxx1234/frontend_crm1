@@ -217,8 +217,8 @@ export function AddStepNode({ data }: NodeProps<AddStepNodeData>) {
         className={cn(
           "flex items-center gap-2 rounded-full border-2 border-dashed px-4 py-2 text-[12px] font-bold tracking-tight transition-all duration-200",
           open
-            ? "border-brand-blue bg-[#eef4ff] text-brand-blue shadow-blue-glow"
-            : "animate-pulse-soft border-brand-blue/40 bg-white/80 text-slate-500 backdrop-blur-sm hover:-translate-y-px hover:border-brand-blue hover:bg-[#eef4ff] hover:text-brand-blue hover:shadow-blue-glow"
+            ? "border-primary bg-[#eef4ff] text-primary shadow-[var(--shadow-indigo-glow)]"
+            : "animate-pulse-soft border-primary/40 bg-white/80 text-slate-500 backdrop-blur-sm hover:-translate-y-px hover:border-primary hover:bg-[#eef4ff] hover:text-primary hover:shadow-[var(--shadow-indigo-glow)]"
         )}
       >
         <Plus className="size-3.5" strokeWidth={2.6} />

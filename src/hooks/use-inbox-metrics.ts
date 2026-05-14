@@ -1,6 +1,5 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useDashboardStore } from "@/stores/dashboard-store";
 
@@ -43,7 +42,7 @@ export function useInboxMetrics() {
     queryKey: ["inbox-metrics", from, to],
     queryFn: async () => {
       const url = `/api/analytics/inbox?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
-      const r = await fetch(apiUrl(url));
+      const r = await fetch(url);
       if (!r.ok) throw new Error("Falha ao carregar métricas de atendimento");
       return r.json();
     },

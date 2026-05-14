@@ -75,11 +75,11 @@ export function ConversationsPanel({
 
   if (selected) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col bg-white">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
         <div
           className={cn(
             "flex items-center gap-2 border-b border-slate-100",
-            "bg-white/80 px-4 py-3 backdrop-blur-md",
+            "bg-white/90 px-3 py-2 backdrop-blur-sm sm:px-4",
           )}
         >
           {conversations.length > 1 ? (
@@ -90,8 +90,8 @@ export function ConversationsPanel({
                 aria-label="Voltar"
                 className={cn(
                   "inline-flex size-8 items-center justify-center rounded-full",
-                  "border border-slate-200 bg-white text-slate-500",
-                  "transition-colors hover:bg-slate-50 hover:text-slate-800 active:scale-95",
+                  "border border-border bg-white text-slate-500",
+                  "transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-800 active:scale-95",
                 )}
               >
                 <ArrowLeft className="size-4" />
@@ -106,26 +106,29 @@ export function ConversationsPanel({
           ) : null}
           <span
             className={cn(
-              "ml-auto inline-flex items-center rounded-full border border-slate-200 bg-slate-50",
-              "px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-slate-500",
+              "ml-auto inline-flex items-center rounded-full border border-border bg-[var(--color-bg-subtle)]",
+              "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500",
             )}
           >
             {STATUS_LABEL[selected.status] ?? selected.status}
           </span>
         </div>
-        <ChatWindow
-          conversationId={selected.id}
-          conversationStatus={convStatus || selected.status}
-          onResolve={(s) => onStatusChange(s)}
-          onReopen={(s) => onStatusChange(s)}
-        />
+        <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-0 sm:px-2">
+          <ChatWindow
+            conversationId={selected.id}
+            conversationStatus={convStatus || selected.status}
+            onResolve={(s) => onStatusChange(s)}
+            onReopen={(s) => onStatusChange(s)}
+            compactChrome
+          />
+        </div>
       </div>
     );
   }
 
   if (autoCreateMutation.isPending) {
     return (
-      <CenterMessage icon={<Loader2 className="size-8 animate-spin text-slate-400" />}>
+      <CenterMessage icon={<Loader2 className="size-8 animate-spin text-[var(--color-ink-muted)]" />}>
         Abrindo chat...
       </CenterMessage>
     );
@@ -173,7 +176,7 @@ export function ConversationsPanel({
                 className={cn(
                   "group flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white",
                   "px-4 py-3 text-left transition-all",
-                  "hover:border-[#507df1]/30 hover:shadow-blue-glow active:scale-[0.99]",
+                  "hover:border-[var(--color-primary)]/30 hover:shadow-[var(--shadow-indigo-glow)] active:scale-[0.99]",
                 )}
               >
                 <ChannelBadge channel={c.channel} />
@@ -185,17 +188,17 @@ export function ConversationsPanel({
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-0.5 text-[12px] tracking-tight text-slate-400">
+                  <p className="mt-0.5 text-[12px] tracking-tight text-[var(--color-ink-muted)]">
                     {formatDistanceToNow(new Date(c.updatedAt), { addSuffix: true, locale: ptBR })}
                   </p>
                 </div>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest",
+                    "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest",
                     c.status === "OPEN"
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                       : c.status === "RESOLVED"
-                      ? "border-slate-200 bg-slate-50 text-slate-500"
+                      ? "border-border bg-[var(--color-bg-subtle)] text-slate-500"
                       : "border-amber-200 bg-amber-50 text-amber-700",
                   )}
                 >

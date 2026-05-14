@@ -29,7 +29,7 @@ export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
       )}
     >
       {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-brand-navy to-[#1e3a8a] text-[10px] font-black tabular-nums text-white shadow-md ring-2 ring-white">
+        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[#1e3a8a] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
           {data.stepIndex}
         </span>
       )}
@@ -43,7 +43,7 @@ export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
           <CornerDownRight className="size-4" strokeWidth={2.4} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-black tracking-tighter leading-tight text-slate-900">
+          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-slate-900">
             {data.label}
           </p>
           <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
@@ -54,7 +54,7 @@ export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
           <TooltipHost label="Remover passo" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();

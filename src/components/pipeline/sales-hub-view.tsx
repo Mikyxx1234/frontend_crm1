@@ -6,17 +6,28 @@ import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { MessageSquareOff } from "lucide-react";
+import { MessageSquareOff, Search, X } from "lucide-react";
 
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
 import { StageRibbon } from "@/components/sales-hub/stage-ribbon";
-import { DealQueue } from "@/components/sales-hub/deal-queue";
+import {
+  DealQueue,
+  DealQueueSortMenu,
+  filterDealsForQueueSearch,
+  type DealQueueSortMode,
+} from "@/components/sales-hub/deal-queue";
 import { ChatWindow } from "@/components/inbox/chat-window";
 import { ConversationHeader } from "@/components/inbox/conversation-header";
 import type { TransferControlUser } from "@/components/inbox/transfer-control";
 import { DealOutcomeButtons } from "@/components/sales-hub/deal-actions";
-import { DealHistoryButton } from "@/components/pipeline/deal-history-button";
+import { DealWorkspaceToolbarMenuItems } from "@/components/pipeline/deal-workspace/header";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn, pipelineDealMatchesSearch } from "@/lib/utils";
 
 /**
@@ -35,6 +46,7 @@ type ConversationRow = {
   channel: string;
   status: string;
   updatedAt: string;
+  lastInboundAt?: string | null;
   assignedToId: string | null;
   assignedTo?: { id: string; name: string; email?: string | null } | null;
   tags?: { id?: string; name: string; color: string }[] | null;
@@ -97,6 +109,13 @@ type SalesHubViewProps = {
   filterStage?: string;
   filterMsg?: "all" | "unread" | "no-reply";
   filterOverdue?: boolean;
+  /** Abre o `DealWorkspace` (ex.: link “deal completo” na fila). */
+  onOpenFullDeal?: (dealId: string) => void;
+  /** Busca da fila (campo acima dos cards). */
+  queueSearch: string;
+  onQueueSearchChange: (value: string) => void;
+  sortMode: DealQueueSortMode;
+  onSortModeChange: (mode: DealQueueSortMode) => void;
 };
 
 export function SalesHubView({
@@ -110,6 +129,11 @@ export function SalesHubView({
   filterStage = "all",
   filterMsg = "all",
   filterOverdue = false,
+  onOpenFullDeal,
+  queueSearch,
+  onQueueSearchChange,
+  sortMode,
+  onSortModeChange,
 }: SalesHubViewProps) {
   // IMPORTANTE: NAO usar o searchParam "?deal=" aqui.
   //
@@ -131,32 +155,6 @@ export function SalesHubView({
   const [recentlyMovedDealId, setRecentlyMovedDealId] = useState<string | null>(
     null,
   );
-  // Modo de ordenação da fila. Persiste na sessão via localStorage pra o
-  // operador não precisar reescolher toda vez que troca de página.
-  //   - message_new:  última mensagem (qualquer direção) mais recente primeiro
-  //   - message_old:  última mensagem mais antiga primeiro (quem está na fila há mais tempo)
-  //   - created_new:  deal criado mais recentemente primeiro (leads novos)
-  //   - created_old:  deal mais antigo primeiro (fila tradicional)
-  const [sortMode, setSortMode] = useState<
-    "message_new" | "message_old" | "created_new" | "created_old"
-  >(() => {
-    if (typeof window === "undefined") return "message_new";
-    const saved = window.localStorage.getItem("sales-hub:sort-mode");
-    if (
-      saved === "message_new" ||
-      saved === "message_old" ||
-      saved === "created_new" ||
-      saved === "created_old"
-    ) {
-      return saved;
-    }
-    return "message_new";
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("sales-hub:sort-mode", sortMode);
-  }, [sortMode]);
   // Seleção inicial: apenas no primeiro mount, se houver `?deal=` na URL
   // (ex: deep link vindo de uma mensagem de notificação), usamos pra
   // pre-selecionar o deal. Depois disso, nunca mais olhamos a URL.
@@ -169,6 +167,21 @@ export function SalesHubView({
     );
     return match?.id ?? null;
   });
+
+  const [pickedConversationId, setPickedConversationId] = useState<
+    string | null
+  >(null);
+  const [convListOpen, setConvListOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("conversations");
+  const hubChatSearchRef = useRef<{ open: () => void } | null>(null);
+
+  useEffect(() => {
+    setPickedConversationId(null);
+  }, [activeDealId]);
+
+  useEffect(() => {
+    setActiveTab("conversations");
+  }, [activeDealId, pickedConversationId]);
 
   const filteredStages = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -270,6 +283,11 @@ export function SalesHubView({
     });
   }, [filteredStages, selectedStageId, sortMode]);
 
+  const visibleDeals = useMemo(
+    () => filterDealsForQueueSearch(sortedDeals, queueSearch),
+    [sortedDeals, queueSearch],
+  );
+
   const totalDeals = filteredStages.reduce(
     (sum, s) => sum + s.deals.length,
     0,
@@ -289,16 +307,32 @@ export function SalesHubView({
       enabled: !!activeContactId,
       staleTime: 30_000,
     });
-  const activeConversation = contactConversations[0] ?? null;
+  const activeConversation = useMemo(() => {
+    if (contactConversations.length === 0) return null;
+    if (pickedConversationId) {
+      return (
+        contactConversations.find((c) => c.id === pickedConversationId) ??
+        contactConversations[0] ??
+        null
+      );
+    }
+    return contactConversations[0] ?? null;
+  }, [contactConversations, pickedConversationId]);
+
+  const hubHeaderTags = useMemo(() => {
+    const fromConv = activeConversation?.tags?.map((t) => ({
+      name: t.name,
+      color: t.color,
+    }));
+    if (fromConv && fromConv.length > 0) return fromConv;
+    return activeDeal?.tags?.map((t) => ({ name: t.name, color: t.color })) ?? [];
+  }, [activeConversation, activeDeal]);
 
   // ────────────────────────────────────────────────────────────────────
   //  Atribuição / transferência de responsável
   // ────────────────────────────────────────────────────────────────────
-  // O ConversationHeader unificado precisa das mesmas props que o Inbox
-  // passa pra renderizar o botão "Transferir conversa". Replicamos aqui
-  // a query de equipe + a função `assignConversation` (forma mais simples
-  // que extrair pra hook compartilhado, dado que são poucas linhas e não
-  // queremos acoplar tudo num hook de "inbox" reusado pelo SalesHub).
+  // `DealWorkspaceToolbarMenuItems` + `TransferControl` precisam das mesmas
+  // props que o Inbox passava ao `ConversationHeader`.
   const queryClient = useQueryClient();
   const { data: sessionData } = useSession();
   const myUserId = (sessionData?.user as { id?: string } | undefined)?.id;
@@ -385,6 +419,33 @@ export function SalesHubView({
     return () => clearTimeout(t);
   }, []);
 
+  const handleDeleteDealFromHub = useCallback(async () => {
+    if (!activeDeal) return;
+    if (
+      !window.confirm(
+        "Excluir este negócio? Esta ação não pode ser desfeita.",
+      )
+    ) {
+      return;
+    }
+    const res = await fetch(apiUrl(`/api/deals/${activeDeal.id}`), {
+      method: "DELETE",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast.error(
+        typeof data?.message === "string"
+          ? data.message
+          : "Não foi possível excluir o negócio.",
+      );
+      return;
+    }
+    toast.success("Negócio excluído");
+    handleDeselectDeal();
+    queryClient.invalidateQueries({ queryKey: ["pipeline-board", pipelineId] });
+    queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+  }, [activeDeal, handleDeselectDeal, pipelineId, queryClient]);
+
   const funnelStages = useMemo(
     () =>
       filteredStages.map((s) => ({
@@ -437,17 +498,17 @@ export function SalesHubView({
 
       // ↑ / ↓ — navega entre cards da fila
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        if (sortedDeals.length === 0) return;
+        if (visibleDeals.length === 0) return;
         e.preventDefault();
-        const curIdx = sortedDeals.findIndex((d) => d.id === activeDealId);
+        const curIdx = visibleDeals.findIndex((d) => d.id === activeDealId);
         const step = e.key === "ArrowDown" ? 1 : -1;
         const nextIdx =
           curIdx < 0
             ? e.key === "ArrowDown"
               ? 0
-              : sortedDeals.length - 1
-            : Math.max(0, Math.min(sortedDeals.length - 1, curIdx + step));
-        const nextDeal = sortedDeals[nextIdx];
+              : visibleDeals.length - 1
+            : Math.max(0, Math.min(visibleDeals.length - 1, curIdx + step));
+        const nextDeal = visibleDeals[nextIdx];
         if (nextDeal) handleSelectDeal(nextDeal.id);
         return;
       }
@@ -473,14 +534,12 @@ export function SalesHubView({
     activeDealId,
     handleDeselectDeal,
     handleSelectDeal,
-    sortedDeals,
+    visibleDeals,
     filteredStages,
     selectedStageId,
   ]);
 
-  const activeStage = activeDeal
-    ? stages.find((s) => s.id === activeDeal.stageId)
-    : undefined;
+  const hubChromeCompact = false;
 
   return (
     // DNA Chat: root branco, sem fundo cinza nem cartões flutuando.
@@ -494,22 +553,66 @@ export function SalesHubView({
         selectedStageId={selectedStageId}
         onSelectStage={handleSelectStage}
         totalDeals={totalDeals}
+        compact={hubChromeCompact}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Coluna 1 — Fila de deals (420px). Divisor 1px à direita
-            substitui o gap+cartão anterior. Mesmo padrão da
-            ConversationList no Inbox.
-            Mobile: ocupa 100% e desaparece quando um deal é selecionado
-            (`activeDeal`). O chat then fills full width with back button. */}
+      <div
+        className={cn(
+          "min-h-0 flex-1 overflow-hidden",
+          activeDeal
+            ? "grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)] md:grid-rows-1"
+            : "flex",
+        )}
+      >
+        {/* Coluna 1 — Fila: grid com coluna fixa estreita quando há deal
+            ativo (mesma ideia do DealWorkspace: sidebar | chat flexível).
+            Mobile: fila 100% até selecionar deal. */}
         <div
           className={cn(
-            "shrink-0 overflow-hidden border-r border-slate-100 bg-white md:w-[380px] xl:w-[420px]",
-            activeDeal ? "hidden md:block" : "w-full md:shrink-0",
+            "flex min-h-0 shrink-0 flex-col overflow-hidden border-r border-border bg-white",
+            activeDeal
+              ? "hidden min-w-0 md:flex"
+              : "w-full md:w-[300px] md:shrink-0 xl:w-[340px]",
           )}
         >
+          <div className="shrink-0 border-b border-border px-3 py-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-[var(--color-bg-subtle)] px-2.5">
+                <Search
+                  className="size-3 shrink-0 text-[var(--color-ink-muted)]"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+                <input
+                  type="text"
+                  value={queueSearch}
+                  onChange={(e) => onQueueSearchChange(e.target.value)}
+                  placeholder="Buscar deal..."
+                  autoComplete="off"
+                  className="min-w-0 flex-1 bg-transparent text-[12px] text-foreground placeholder:text-[var(--color-ink-muted)] outline-none"
+                  aria-label="Buscar deal na fila"
+                />
+                {queueSearch ? (
+                  <button
+                    type="button"
+                    onClick={() => onQueueSearchChange("")}
+                    className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink-soft)]"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="size-3" />
+                  </button>
+                ) : null}
+              </div>
+              <DealQueueSortMenu
+                sortMode={sortMode}
+                onSortModeChange={onSortModeChange}
+                iconOnly
+              />
+            </div>
+          </div>
+
           <DealQueue
-            deals={sortedDeals}
+            deals={visibleDeals}
             stages={filteredStages}
             activeDealId={activeDealId}
             onSelectDeal={handleSelectDeal}
@@ -518,19 +621,16 @@ export function SalesHubView({
             pipelineId={pipelineId}
             statusFilter={statusFilter}
             onMoved={handleDealMoved}
-            sortMode={sortMode}
-            onSortModeChange={setSortMode}
+            onOpenFullDeal={onOpenFullDeal}
           />
         </div>
 
-        {/* Coluna 2 — Chat. Ocupa toda a largura restante, sem cartão
-            envolvendo: o ChatWindow já tem o próprio layout. Plano,
-            sem shadows, sem rounding externo.
+        {/* Coluna 2 — Chat compacto (compactChrome) + barra mínima de ações.
             Mobile: hidden quando nenhum deal está ativo — a fila ocupa
             100% até o operador escolher um deal. */}
         <div
           className={cn(
-            "flex min-w-0 flex-1 flex-col overflow-hidden bg-white",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white",
             !activeDeal && "hidden md:flex",
           )}
         >
@@ -544,76 +644,28 @@ export function SalesHubView({
               title="Deal sem contato"
               subtitle="Este deal nao tem contato vinculado — atribua um contato para iniciar a conversa."
             />
-          ) : conversationsLoading ? (
-            <div className="flex flex-1 items-center justify-center">
-              <div className="size-6 animate-spin rounded-full border-2 border-brand-blue border-t-transparent" />
-            </div>
-          ) : !activeConversation ? (
-            <>
-              {/* Sem conversa: header sem chip de voz/transferir/tags
-                  (esses controles dependem de `conversationId`). Mantém
-                  só identidade + chip de etapa + Ganho/Perdido + X. */}
-              <ConversationHeader
-                contactId={activeDeal.contact?.id}
-                contactName={activeDeal.contact?.name ?? activeDeal.title}
-                contactEmail={activeDeal.contact?.email}
-                contactPhone={activeDeal.contact?.phone}
-                contactAvatarUrl={activeDeal.contact?.avatarUrl}
-                contactChannel={activeDeal.channel}
-                contactHref={
-                  activeDeal.contact?.id
-                    ? `/contacts/${activeDeal.contact.id}`
-                    : null
-                }
-                tags={activeDeal.tags}
-                stageName={activeStage?.name ?? "—"}
-                stageColor={activeStage?.color}
-                actions={
-                  <div className="flex items-center gap-1.5">
-                    <DealHistoryButton
-                      dealId={activeDeal.id}
-                      dealTitle={activeDeal.title}
-                    />
-                    <DealOutcomeButtons
-                      deal={activeDeal}
-                      pipelineId={pipelineId}
-                    />
-                  </div>
-                }
-                onBack={handleDeselectDeal}
-                onClose={handleDeselectDeal}
-              />
-              <SalesHubChatEmptyState
-                title="Sem conversa aberta"
-                subtitle={`${activeDeal.contact?.name ?? "Este contato"} ainda nao tem nenhuma conversa. Abra uma nova a partir do Inbox.`}
-              />
-            </>
           ) : (
             <>
-              {/* Header completo: idêntico ao do Inbox + slot de
-                  Ganho/Perdido (DealOutcomeButtons) entre o TagPopover
-                  e o X. Voz, transferir e tags ficam ativos porque
-                  `conversationId` está presente. */}
               <ConversationHeader
-                contactId={activeDeal.contact?.id}
-                contactName={activeDeal.contact?.name ?? activeDeal.title}
-                contactEmail={activeDeal.contact?.email}
-                contactPhone={activeDeal.contact?.phone}
-                contactAvatarUrl={activeDeal.contact?.avatarUrl}
-                contactChannel={activeDeal.channel}
-                contactHref={
-                  activeDeal.contact?.id
-                    ? `/contacts/${activeDeal.contact.id}`
-                    : null
+                contactId={activeContactId}
+                contactName={
+                  activeDeal.contact?.name ?? activeDeal.title ?? ""
                 }
-                tags={activeConversation.tags ?? activeDeal.tags}
-                stageName={activeStage?.name ?? "—"}
-                stageColor={activeStage?.color}
-                conversationId={activeConversation.id}
-                conversationChannel={activeConversation.channel}
+                contactPhone={activeDeal.contact?.phone ?? null}
+                contactHref={
+                  activeContactId ? `/contacts/${activeContactId}` : null
+                }
+                contactChannel={
+                  activeConversation?.channel ?? activeDeal.channel ?? null
+                }
+                tags={hubHeaderTags}
+                conversationId={activeConversation?.id ?? null}
+                conversationChannel={
+                  activeConversation?.channel ?? activeDeal.channel ?? null
+                }
                 canManageAssignee={canManageAssignee}
                 myUserId={myUserId}
-                currentAssigneeId={activeConversation.assignedToId}
+                currentAssigneeId={activeConversation?.assignedToId ?? null}
                 teamUsers={teamUsers}
                 assignLoading={assignLoading}
                 onAssign={(uid) => void assignConversation(uid)}
@@ -628,27 +680,93 @@ export function SalesHubView({
                     queryKey: ["inbox-conversations"],
                   });
                 }}
-                actions={
-                  <div className="flex items-center gap-1.5">
-                    <DealHistoryButton
-                      dealId={activeDeal.id}
-                      dealTitle={activeDeal.title}
-                    />
-                    <DealOutcomeButtons
-                      deal={activeDeal}
-                      pipelineId={pipelineId}
-                    />
-                  </div>
+                actionsSlot={
+                  <DealOutcomeButtons
+                    deal={activeDeal}
+                    pipelineId={pipelineId}
+                  />
                 }
-                onBack={handleDeselectDeal}
+                overflowMenu={
+                  <DealWorkspaceToolbarMenuItems
+                    conversationId={activeConversation?.id ?? null}
+                    conversationChannel={activeConversation?.channel ?? null}
+                    contactId={activeDeal.contact?.id ?? null}
+                    contactName={
+                      activeDeal.contact?.name ?? activeDeal.title
+                    }
+                    canManageAssignee={canManageAssignee}
+                    myUserId={myUserId}
+                    currentAssigneeId={
+                      activeConversation?.assignedToId ?? null
+                    }
+                    teamUsers={teamUsers}
+                    assignLoading={assignLoading}
+                    onAssign={(uid) => void assignConversation(uid)}
+                    tags={
+                      (activeConversation?.tags?.map((t) => ({
+                        name: t.name,
+                        color: t.color,
+                      })) ??
+                        activeDeal.tags?.map((t) => ({
+                          name: t.name,
+                          color: t.color,
+                        }))) ??
+                      []
+                    }
+                    onTagsUpdated={() => {
+                      queryClient.invalidateQueries({
+                        queryKey: [
+                          "saleshub-contact-conversations",
+                          activeContactId,
+                        ],
+                      });
+                      queryClient.invalidateQueries({
+                        queryKey: ["inbox-conversations"],
+                      });
+                    }}
+                    onEdit={() => onOpenFullDeal?.(activeDeal.id)}
+                    onDelete={handleDeleteDealFromHub}
+                  />
+                }
+                onOpenConversationList={
+                  contactConversations.length > 1
+                    ? () => setConvListOpen(true)
+                    : undefined
+                }
+                onSearch={() => hubChatSearchRef.current?.open()}
                 onClose={handleDeselectDeal}
+                tabs={[
+                  { key: "conversations", label: "Conversa" },
+                  { key: "activities", label: "Atividades" },
+                  { key: "notes", label: "Notas" },
+                  { key: "timeline", label: "Timeline" },
+                ]}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
               />
-              <ChatWindow
-                key={activeConversation.id}
-                conversationId={activeConversation.id}
-                conversationStatus={activeConversation.status}
-                contactId={activeContactId}
-              />
+              {conversationsLoading ? (
+                <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)]">
+                  <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : !activeConversation ? (
+                <SalesHubChatEmptyState
+                  title="Sem conversa aberta"
+                  subtitle={`${activeDeal.contact?.name ?? "Este contato"} ainda nao tem nenhuma conversa. Abra uma nova a partir do Inbox.`}
+                />
+              ) : activeTab !== "conversations" ? (
+                <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)] px-6 text-center text-[13px] text-[var(--color-ink-muted)]">
+                  Em breve
+                </div>
+              ) : (
+                <ChatWindow
+                  key={activeConversation.id}
+                  conversationId={activeConversation.id}
+                  conversationStatus={activeConversation.status}
+                  contactId={activeContactId}
+                  compactChrome
+                  inConversationSearchRef={hubChatSearchRef}
+                />
+              )}
             </>
           )}
         </div>
@@ -659,6 +777,41 @@ export function SalesHubView({
             telefone + e-mail + tags. Ganho/Perdido e mudar etapa moram
             no próprio card agora. */}
       </div>
+
+      <Dialog open={convListOpen} onOpenChange={setConvListOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Conversas do contato</DialogTitle>
+          </DialogHeader>
+          <ul className="max-h-72 space-y-1 overflow-y-auto">
+            {contactConversations.map((c) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  className={cn(
+                    "w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)]",
+                    c.id === activeConversation?.id &&
+                      "bg-primary/10 font-medium text-primary",
+                  )}
+                  onClick={() => {
+                    setPickedConversationId(c.id);
+                    setConvListOpen(false);
+                  }}
+                >
+                  <span className="font-medium capitalize">{c.channel}</span>
+                  <span className="text-[var(--color-ink-muted)]">
+                    {" "}
+                    · {c.status}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[var(--color-ink-muted)]">
+                    {new Date(c.updatedAt).toLocaleString("pt-BR")}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

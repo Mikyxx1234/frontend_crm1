@@ -47,14 +47,14 @@ export default function NotificationsSettingsPage() {
         icon={<Bell />}
       />
 
-      <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-premium">
+      <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
         <div className="flex items-start gap-4">
           <div
             className={cn(
               "flex size-12 shrink-0 items-center justify-center rounded-2xl text-white",
               isSubscribed
                 ? "bg-[#22c55e] shadow-green-glow"
-                : "bg-[#06b6d4] shadow-cyan-glow",
+                : "bg-[#06b6d4] shadow-[var(--shadow-lavender-glow)]",
             )}
           >
             {isSubscribed ? (
@@ -64,7 +64,7 @@ export default function NotificationsSettingsPage() {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-outfit text-lg font-black tracking-tight text-slate-900">
+            <h2 className="font-display text-lg font-extrabold tracking-tight text-slate-900">
               Notificações push neste dispositivo
             </h2>
             <p className="mt-1 text-sm text-slate-500">
@@ -107,7 +107,7 @@ export default function NotificationsSettingsPage() {
                   "text-sm font-bold transition-colors active:scale-[0.97]",
                   isSubscribed
                     ? "bg-slate-900 text-white hover:bg-slate-800"
-                    : "bg-[#507df1] text-white shadow-blue-glow hover:bg-[#4466d6]",
+                    : "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[#4466d6]",
                   "disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
                 )}
               >
@@ -134,8 +134,8 @@ export default function NotificationsSettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-premium">
-        <h2 className="font-outfit text-lg font-black tracking-tight text-slate-900">
+      <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
+        <h2 className="font-display text-lg font-extrabold tracking-tight text-slate-900">
           Sobre o aplicativo
         </h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -143,26 +143,26 @@ export default function NotificationsSettingsPage() {
           instale o EduIT na tela inicial.
         </p>
 
-        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-          <Smartphone className="mt-0.5 size-5 shrink-0 text-[#507df1]" />
-          <div className="text-sm text-slate-600">
+        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[var(--color-bg-subtle)] p-4">
+          <Smartphone className="mt-0.5 size-5 shrink-0 text-primary" />
+          <div className="text-sm text-[var(--color-ink-soft)]">
             <p className="font-bold text-slate-800">Como instalar</p>
             <ul className="mt-2 space-y-1.5 text-[13px]">
               <li>
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   Android (Chrome / Edge):
                 </span>{" "}
                 toque em ⋮ → &quot;Instalar app&quot; ou aceite o banner de
                 instalação que aparece no rodapé.
               </li>
               <li>
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-foreground">
                   iPhone (Safari):
                 </span>{" "}
                 toque em Compartilhar → &quot;Adicionar à Tela de Início&quot;.
               </li>
               <li>
-                <span className="font-semibold text-slate-700">Desktop:</span>{" "}
+                <span className="font-semibold text-foreground">Desktop:</span>{" "}
                 ícone de instalação (⊕) na barra de endereço, ao lado do cadeado.
               </li>
             </ul>
@@ -222,10 +222,10 @@ function StatusChip({ label, ok }: { label: string; ok: boolean }) {
     <span
       className={cn(
         "inline-flex h-7 items-center gap-1 rounded-full px-2.5",
-        "text-[11px] font-black uppercase tracking-[0.14em]",
+        "text-[11px] font-semibold uppercase tracking-[0.14em]",
         ok
           ? "bg-[#22c55e]/10 text-[#15803d]"
-          : "bg-slate-200 text-slate-600",
+          : "bg-slate-200 text-[var(--color-ink-soft)]",
       )}
     >
       {ok ? (

@@ -214,11 +214,11 @@ export default function SchedulesPage() {
                 const voiceOn = agent.agentStatus?.availableForVoiceCalls ?? false;
                 const sched = agent.schedule;
                 return (
-                  <tr key={agent.id} className="border-b last:border-b-0 hover:bg-muted/20 eduit-transition">
+                  <tr key={agent.id} className="border-b last:border-b-0 hover:bg-muted/20 lumen-transition">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative">
-                          <div className="flex size-9 items-center justify-center rounded-[12px] eduit-accent-gradient text-xs font-semibold text-white">
+                          <div className="flex size-9 items-center justify-center rounded-[12px] lumen-ai-gradient text-xs font-semibold text-white">
                             {agent.name.charAt(0).toUpperCase()}
                           </div>
                           <span className={cn("absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white", STATUS_DOT[status])} />
@@ -234,7 +234,7 @@ export default function SchedulesPage() {
                         type="button"
                         onClick={() => cycleStatus(agent)}
                         disabled={statusMutation.isPending}
-                        className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium eduit-transition hover:opacity-80", STATUS_COLORS[status])}
+                        className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium lumen-transition hover:opacity-80", STATUS_COLORS[status])}
                       >
                         <span className={cn("size-1.5 rounded-full", status === "ONLINE" ? "bg-white" : status === "AWAY" ? "bg-white" : "bg-[#64748b]")} />
                         {STATUS_LABELS[status]}
@@ -249,7 +249,7 @@ export default function SchedulesPage() {
                           }
                           disabled={voiceMutation.isPending}
                           className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium eduit-transition hover:opacity-80",
+                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium lumen-transition hover:opacity-80",
                             voiceOn ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
                           )}
                           aria-label="Disponível para receber ligações WhatsApp"
@@ -341,7 +341,7 @@ export default function SchedulesPage() {
                   return (
                     <button key={wd.value} type="button" onClick={() => toggleWeekday(wd.value)}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium eduit-transition",
+                        "inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium lumen-transition",
                         active
                           ? "bg-[#1e40af] text-white shadow-sm"
                           : "border border-border bg-card text-muted-foreground hover:border-accent hover:text-foreground"

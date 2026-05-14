@@ -8,7 +8,7 @@ import { apiUrl } from "@/lib/api";
  *   · Header "Linear/Stripe" (título 24px bold tracking-tight + subtítulo slate-500
  *     + botão "Exportar Relatório" em pill).
  *   · Filtros em card Bento branco, presets como pills com leve shadow no ativo.
- *   · Tabs minimalistas com underline em `brand-blue`, sem fundo pesado.
+ *   · Tabs minimalistas com underline em `primary`, sem fundo pesado.
  *   · Grid Bento para métricas e gráficos (espaço em branco generoso).
  *
  * A estrutura funcional (queries, presets, pipelineId) foi preservada.
@@ -27,7 +27,9 @@ import {
   subDays,
 } from "date-fns";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Calendar } from "lucide-react";
+import { ArrowUpRight, Calendar, ChartBar as BarChart3 } from "lucide-react";
+
+import { PageHeader } from "@/components/ui/page-header";
 
 import { ForecastChart } from "@/components/analytics/forecast-chart";
 import { FunnelChart } from "@/components/analytics/funnel-chart";
@@ -40,11 +42,7 @@ import { SourcesChart } from "@/components/analytics/sources-chart";
 import { TeamTable } from "@/components/analytics/team-table";
 import { StageRankingWidget } from "@/components/dashboard/widgets/stage-ranking-widget";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  bentoCardLargeClass,
-  bentoLabelClass,
-  dashboardPageTitleClass,
-} from "@/lib/dashboard-tokens";
+import { bentoCardLargeClass, bentoLabelClass } from "@/lib/dashboard-tokens";
 import { cn } from "@/lib/utils";
 
 type PeriodPreset = "7d" | "30d" | "90d" | "month" | "year" | "custom";
@@ -169,36 +167,33 @@ export default function AnalyticsPage() {
     PRESETS.find((p) => p.id === preset)?.label ?? "Período";
 
   return (
-    <div className="w-full space-y-8 font-outfit">
-      {/* ─── Header 70px · Linear/Stripe ─── */}
-      <motion.header
+    <div className="w-full space-y-8">
+      <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 340, damping: 28 }}
-        className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
       >
-        <div>
-          <span className={bentoLabelClass}>Analytics</span>
-          <h1 className={cn(dashboardPageTitleClass, "mt-1")}>
-            Visão Geral de Performance
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Métricas consolidadas de vendas e engajamento.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-500">
-            <Calendar className="size-3.5" />
-            {activePresetLabel}
-          </span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-black uppercase tracking-wider text-slate-600 transition-all hover:bg-slate-50 hover:shadow-sm"
-          >
-            Exportar Relatório <ArrowUpRight className="size-4" />
-          </button>
-        </div>
-      </motion.header>
+        <PageHeader
+          eyebrow="Analytics"
+          title="Visão Geral de Performance"
+          description="Métricas consolidadas de vendas e engajamento."
+          icon={<BarChart3 />}
+          actions={
+            <>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-bg-subtle)] px-3 py-1.5 text-[11px] font-bold text-slate-500">
+                <Calendar className="size-3.5" />
+                {activePresetLabel}
+              </span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-[13px] font-bold text-[var(--color-ink-soft)] transition-all hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
+              >
+                Exportar Relatório <ArrowUpRight className="size-4" />
+              </button>
+            </>
+          }
+        />
+      </motion.div>
 
       {/* ─── Filtros: period presets + pipeline picker (bento) ─── */}
       <motion.section
@@ -221,8 +216,8 @@ export default function AnalyticsPage() {
                     className={cn(
                       "rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-all",
                       active
-                        ? "bg-brand-blue text-white shadow-sm"
-                        : "bg-slate-50 text-slate-600 hover:bg-slate-100",
+                        ? "bg-primary text-white shadow-sm"
+                        : "bg-[var(--color-bg-subtle)] text-[var(--color-ink-soft)] hover:bg-slate-100",
                     )}
                   >
                     {p.label}
@@ -240,7 +235,7 @@ export default function AnalyticsPage() {
                 value={pipelineId}
                 onChange={(e) => setPipelineId(e.target.value)}
                 disabled={!pipelines?.length}
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] font-semibold text-slate-700 transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full appearance-none rounded-xl border border-border bg-[var(--color-bg-subtle)] px-4 py-2.5 text-[13px] font-semibold text-foreground transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {!pipelines?.length ? (
                   <option value="">Carregando…</option>
@@ -252,7 +247,7 @@ export default function AnalyticsPage() {
                   ))
                 )}
               </select>
-              <ArrowUpRight className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 rotate-90 text-slate-400" />
+              <ArrowUpRight className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 rotate-90 text-[var(--color-ink-muted)]" />
             </div>
           </div>
         </div>
@@ -266,7 +261,7 @@ export default function AnalyticsPage() {
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="flex-1 space-y-2 sm:max-w-[220px]">
@@ -276,7 +271,7 @@ export default function AnalyticsPage() {
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
@@ -285,7 +280,7 @@ export default function AnalyticsPage() {
 
       {/* ─── Tabs minimalistas (underline, sem fundo pesado) ─── */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="h-auto w-full justify-start gap-1 rounded-full bg-slate-50 p-1">
+        <TabsList className="h-auto w-full justify-start gap-1 rounded-full bg-[var(--color-bg-subtle)] p-1">
           {[
             { v: "overview", label: "Visão geral" },
             { v: "revenue", label: "Receita" },
@@ -298,7 +293,7 @@ export default function AnalyticsPage() {
             <TabsTrigger
               key={t.v}
               value={t.v}
-              className="rounded-full px-4 py-1.5 text-[12px] font-bold text-slate-600 transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+              className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--color-ink-soft)] transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
             >
               {t.label}
             </TabsTrigger>

@@ -62,7 +62,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
   return (
     <div className="group/node relative">
       {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-brand-navy to-[#1e3a8a] text-[10px] font-black tabular-nums text-white shadow-md ring-2 ring-white">
+        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[#1e3a8a] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
           {data.stepIndex}
         </span>
       )}
@@ -77,8 +77,8 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
         className={cn(
           "relative w-[300px] overflow-hidden rounded-2xl border bg-white transition-all duration-200",
           selected
-            ? "border-cyan-400 shadow-cyan-glow ring-2 ring-cyan-300/30"
-            : "border-cyan-200/80 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-cyan-300 hover:shadow-cyan-glow"
+            ? "border-cyan-400 shadow-[var(--shadow-lavender-glow)] ring-2 ring-cyan-300/30"
+            : "border-cyan-200/80 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-cyan-300 hover:shadow-[var(--shadow-lavender-glow)]"
         )}
       >
         {/* Header */}
@@ -87,7 +87,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
             <GitBranch className="size-3.5" strokeWidth={2.4} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-black tracking-tighter text-slate-900">
+            <p className="truncate text-[12px] font-extrabold tracking-tighter text-slate-900">
               {data.label}
             </p>
             <p className="truncate text-[10px] font-medium tracking-tight text-slate-500">
@@ -100,7 +100,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
             <TooltipHost label="Remover condição" side="top">
               <button
                 type="button"
-                className="flex size-6 items-center justify-center rounded-md text-slate-400 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+                className="flex size-6 items-center justify-center rounded-md text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation();
                   data.onDelete?.();
@@ -120,7 +120,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
               key={branch.id}
               className="relative flex items-center gap-2 border-b border-slate-100 px-3 py-2 last:border-b-0 hover:bg-cyan-50/30"
             >
-              <span className="flex size-5 shrink-0 items-center justify-center rounded bg-cyan-50 text-[10px] font-black tabular-nums text-cyan-600 ring-1 ring-cyan-100">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded bg-cyan-50 text-[10px] font-bold tabular-nums text-cyan-600 ring-1 ring-cyan-100">
                 {idx + 1}
               </span>
               <div className="min-w-0 flex-1">
@@ -129,7 +129,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
                     {branch.label}
                   </p>
                 )}
-                <p className="truncate text-[11px] font-medium tracking-tight text-slate-600">
+                <p className="truncate text-[11px] font-medium tracking-tight text-[var(--color-ink-soft)]">
                   <Filter className="mr-1 inline size-2.5 text-cyan-500" strokeWidth={2.4} />
                   Se {ruleSummary(branch)}
                 </p>
@@ -145,8 +145,8 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
           ))}
 
           {/* Else / Nenhuma das condições */}
-          <li className="relative flex items-center gap-2 border-t border-slate-200 bg-slate-50/60 px-3 py-2">
-            <span className="flex size-5 shrink-0 items-center justify-center rounded bg-rose-50 text-[10px] font-black text-rose-600 ring-1 ring-rose-100">
+          <li className="relative flex items-center gap-2 border-t border-border bg-[var(--color-bg-subtle)]/60 px-3 py-2">
+            <span className="flex size-5 shrink-0 items-center justify-center rounded bg-rose-50 text-[10px] font-bold text-rose-600 ring-1 ring-rose-100">
               ⊘
             </span>
             <p className="flex-1 truncate text-[11px] font-medium italic tracking-tight text-slate-500">

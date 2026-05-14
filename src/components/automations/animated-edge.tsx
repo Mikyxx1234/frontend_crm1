@@ -73,11 +73,11 @@ export function AnimatedEdgeDefs() {
     <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden>
       <defs>
         <linearGradient id="edge-grad-default" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#507df1" />
+          <stop offset="0%" stopColor="var(--color-primary)" />
           <stop offset="100%" stopColor="#06b6d4" />
         </linearGradient>
         <linearGradient id="edge-grad-button" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#507df1" />
+          <stop offset="0%" stopColor="var(--color-primary)" />
           <stop offset="100%" stopColor="#22c55e" />
         </linearGradient>
       </defs>
@@ -146,7 +146,7 @@ function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: "all",
             }}
-            className="nodrag nopan flex size-5 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-400 shadow-sm transition-all hover:border-rose-400 hover:bg-rose-50 hover:text-rose-500 hover:shadow-[0_4px_12px_-4px_rgba(244,63,94,0.4)]"
+            className="nodrag nopan flex size-5 items-center justify-center rounded-full border border-border bg-white text-[10px] font-bold text-[var(--color-ink-muted)] shadow-sm transition-all hover:border-rose-400 hover:bg-rose-50 hover:text-rose-500 hover:shadow-[0_4px_12px_-4px_rgba(244,63,94,0.4)]"
             title="Clique pra remover esta conexão"
           >
             {label}

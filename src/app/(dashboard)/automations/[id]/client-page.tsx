@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
+  Download,
   Pencil,
   Save,
   Settings2,
@@ -71,6 +72,7 @@ import {
   triggerTypeLabel,
   workflowStepsToPayload,
 } from "@/lib/automation-workflow";
+import { autoAlignWorkflowSteps } from "@/lib/automation-layout";
 import { cn, formatDateTime } from "@/lib/utils";
 
 type AutomationDetail = {
@@ -405,6 +407,37 @@ export default function AutomationDetailPage() {
     setNameDialogOpen(false);
   };
 
+  const handleAutoAlign = useCallback(() => {
+    setSteps((prev) => autoAlignWorkflowSteps(prev));
+    setDirty(true);
+  }, []);
+
+  const handleExportJson = useCallback(() => {
+    const payload = {
+      id,
+      name: name.trim(),
+      description: description.trim() || null,
+      triggerType,
+      triggerConfig,
+      active,
+      steps: workflowStepsToPayload(steps),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+    const safeName = (name.trim() || "automacao")
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeName || "automacao"}-fluxo.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [active, description, id, name, steps, triggerConfig, triggerType]);
+
   const logRows = logsQuery.data?.logs ?? logsQuery.data?.items ?? [];
 
   const statusVariant = (
@@ -450,11 +483,11 @@ export default function AutomationDetailPage() {
           glassmorphism + pill buttons + glow no Salvar — alinhado ao
           design system EduIT Premium. ActiveSwitch local mantido pra
           não desalinhar com os outros usos no Config dialog. */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-slate-200/60 bg-white/85 px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border/60 bg-white/85 px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
         {/* Breadcrumb */}
         <Link
           href="/automations"
-          className="group/back flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-slate-600 transition-colors hover:bg-[#eef4ff]/60 hover:text-brand-blue"
+          className="group/back flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-[var(--color-ink-soft)] transition-colors hover:bg-[#eef4ff]/60 hover:text-primary"
         >
           <ArrowLeft className="size-4 transition-transform group-hover/back:-translate-x-0.5" strokeWidth={2.4} />
           Automações
@@ -463,15 +496,15 @@ export default function AutomationDetailPage() {
         <button
           type="button"
           onClick={openNameEdit}
-          className="group/name flex items-center gap-1.5 rounded-lg px-2 py-1 text-[14px] font-black tracking-tighter text-slate-900 transition-colors hover:bg-slate-50"
+          className="group/name flex items-center gap-1.5 rounded-lg px-2 py-1 text-[14px] font-extrabold tracking-tighter text-slate-900 transition-colors hover:bg-[var(--color-bg-subtle)]"
         >
           {name}
-          <Pencil className="size-3 text-slate-400 transition-colors group-hover/name:text-brand-blue" strokeWidth={2.4} />
+          <Pencil className="size-3 text-[var(--color-ink-muted)] transition-colors group-hover/name:text-primary" strokeWidth={2.4} />
         </button>
 
         {/* Unsaved indicator — pílula âmbar */}
         {dirty && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-black tracking-tight text-amber-700 ring-1 ring-amber-200">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-extrabold tracking-tight text-amber-700 ring-1 ring-amber-200">
             <span className="size-1.5 animate-pulse-soft rounded-full bg-amber-500" />
             Alterações não salvas
           </span>
@@ -486,12 +519,12 @@ export default function AutomationDetailPage() {
               "flex items-center gap-2 rounded-full px-3 py-1 ring-1 transition-colors",
               active
                 ? "bg-emerald-50 ring-emerald-200"
-                : "bg-slate-50 ring-slate-200"
+                : "bg-[var(--color-bg-subtle)] ring-slate-200"
             )}
           >
             <span
               className={cn(
-                "text-[11px] font-black uppercase tracking-widest",
+                "text-[11px] font-semibold uppercase tracking-widest",
                 active ? "text-emerald-700" : "text-slate-500"
               )}
             >
@@ -527,8 +560,8 @@ export default function AutomationDetailPage() {
               className={cn(
                 "flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-bold tracking-tight transition-all",
                 copilotOpen
-                  ? "bg-brand-blue text-white shadow-blue-glow hover:-translate-y-px"
-                  : "border border-slate-200 bg-white text-slate-700 hover:-translate-y-px hover:border-[#c9d7f5] hover:text-brand-blue hover:shadow-sm",
+                  ? "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:-translate-y-px"
+                  : "border border-border bg-white text-foreground hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm",
               )}
             >
               <Sparkles className="size-3.5" strokeWidth={2.4} />
@@ -536,10 +569,32 @@ export default function AutomationDetailPage() {
             </button>
           </TooltipHost>
 
+          <TooltipHost label="Auto alinhar fluxo" side="bottom">
+            <button
+              type="button"
+              onClick={handleAutoAlign}
+              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
+            >
+              <Sparkles className="size-3.5" strokeWidth={2.4} />
+              Auto alinhar
+            </button>
+          </TooltipHost>
+
+          <TooltipHost label="Exportar fluxo em JSON" side="bottom">
+            <button
+              type="button"
+              onClick={handleExportJson}
+              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
+            >
+              <Download className="size-3.5" strokeWidth={2.4} />
+              Exportar JSON
+            </button>
+          </TooltipHost>
+
           <button
             type="button"
             onClick={() => setLogsOpen(true)}
-            className="h-9 rounded-full border border-slate-200 bg-white px-3.5 text-[12px] font-bold tracking-tight text-slate-700 transition-all hover:-translate-y-px hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm"
+            className="h-9 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-slate-300 hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
           >
             Logs
           </button>
@@ -558,7 +613,7 @@ export default function AutomationDetailPage() {
             disabled={!hydrated || saveMutation.isPending || !name.trim()}
             onClick={() => saveMutation.mutate()}
             className={cn(
-              "flex h-9 items-center gap-1.5 rounded-full bg-brand-blue px-4 text-[12px] font-black tracking-tight text-white shadow-blue-glow transition-all",
+              "flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-extrabold tracking-tight text-white shadow-[var(--shadow-indigo-glow)] transition-all",
               !hydrated || saveMutation.isPending || !name.trim()
                 ? "cursor-not-allowed opacity-60"
                 : "hover:-translate-y-px hover:bg-[#4466d6] hover:shadow-[0_14px_30px_-6px_rgba(80,125,241,0.45)]"

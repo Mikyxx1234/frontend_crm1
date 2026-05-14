@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -184,7 +184,7 @@ export default function DistributionSettingsPage() {
         description="Defina como novos leads são atribuídos à equipe por pipeline ou de forma global."
         icon={<Shuffle />}
         actions={
-          <Button type="button" className="gap-2 shadow-sm" onClick={openCreate}>
+          <Button type="button" className={`gap-2 ${pageHeaderPrimaryCtaClass}`} onClick={openCreate}>
             <Plus className="size-4" />
             Nova regra
           </Button>

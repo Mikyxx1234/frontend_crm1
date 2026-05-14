@@ -187,7 +187,7 @@ export function DealStageSelector({
         aria-haspopup="listbox"
         aria-expanded={stageOpen}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition-all hover:border-slate-300",
+          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 text-left transition-all hover:border-slate-300",
           stageOpen &&
             "border-blue-600 bg-white shadow-[0_0_0_3px_rgba(37,99,235,0.12)]",
           moveMutation.isPending && "cursor-wait opacity-60",
@@ -197,14 +197,14 @@ export function DealStageSelector({
           className="size-2 shrink-0 rounded-full"
           style={{ backgroundColor: stageColor }}
         />
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
           Etapa
         </span>
-        <span className="min-w-0 flex-1 truncate text-[12px] font-black tracking-tight text-slate-900">
+        <span className="min-w-0 flex-1 truncate text-[12px] font-extrabold tracking-tight text-slate-900">
           {currentStage?.name ?? "—"}
         </span>
         {showValue && deal.value != null && (
-          <span className="shrink-0 text-[12px] font-black tabular-nums tracking-tight text-slate-700">
+          <span className="shrink-0 text-[12px] font-bold tabular-nums tracking-tight text-foreground">
             {formatCurrency(dealValue(deal))}
           </span>
         )}
@@ -233,14 +233,14 @@ export function DealStageSelector({
             // elemento abaixo. max-h calibrada pra caber ~7 etapas
             // sem precisar rolar; caso ultrapasse, o scroll custom
             // aparece só quando necessário.
-            className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
+            className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                 Mover para
               </span>
-              <span className="text-[10px] font-bold tabular-nums text-slate-400">
+              <span className="text-[10px] font-bold tabular-nums text-[var(--color-ink-muted)]">
                 {stages.length} etapas
               </span>
             </div>
@@ -268,7 +268,7 @@ export function DealStageSelector({
                       }}
                       disabled={isCurrent}
                       className={cn(
-                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12px] font-bold tracking-tight text-slate-700 transition-colors hover:bg-slate-50",
+                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12px] font-bold tracking-tight text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
                         isCurrent &&
                           "cursor-default bg-blue-50/60 text-blue-700",
                       )}
@@ -355,18 +355,18 @@ export function DealStageBar({
     >
       {/* Label superior: "ETAPA" + bullet + nome da etapa em foco. */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
           Etapa
         </span>
         <span
           className="size-2 shrink-0 rounded-full transition-colors"
           style={{ backgroundColor: shownColor }}
         />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-black tracking-tight text-slate-900">
+        <span className="min-w-0 flex-1 truncate text-[13px] font-extrabold tracking-tight text-slate-900">
           {shownName}
         </span>
         {moveMutation.isPending && (
-          <span className="text-[10px] font-bold text-slate-400">
+          <span className="text-[10px] font-bold text-[var(--color-ink-muted)]">
             movendo…
           </span>
         )}
@@ -534,7 +534,8 @@ export function DealStepper({
 export function DealOutcomeButtons({
   deal,
   pipelineId,
-}: Pick<DealActionsProps, "deal" | "pipelineId">) {
+  className,
+}: Pick<DealActionsProps, "deal" | "pipelineId"> & { className?: string }) {
   const queryClient = useQueryClient();
 
   const statusMutation = useMutation({
@@ -561,6 +562,7 @@ export function DealOutcomeButtons({
       queryClient.invalidateQueries({
         queryKey: ["pipeline-board", pipelineId],
       });
+      queryClient.invalidateQueries({ queryKey: ["sales-hub"] });
     },
     onError: (e) => {
       toast.error(e instanceof Error ? e.message : "Erro ao atualizar");
@@ -579,7 +581,7 @@ export function DealOutcomeButtons({
     "inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-medium transition-colors disabled:opacity-60";
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className={cn("flex min-w-0 items-center gap-1.5", className)}>
       <motion.button
         type="button"
         onClick={(e) => {
@@ -591,6 +593,7 @@ export function DealOutcomeButtons({
         disabled={statusMutation.isPending || dealStatus === "WON"}
         className={cn(
           baseChip,
+          "min-w-0 flex-1",
           dealStatus === "WON"
             ? "bg-emerald-500 text-white"
             : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
@@ -610,6 +613,7 @@ export function DealOutcomeButtons({
         disabled={statusMutation.isPending || dealStatus === "LOST"}
         className={cn(
           baseChip,
+          "min-w-0 flex-1",
           dealStatus === "LOST"
             ? "bg-rose-500 text-white"
             : "bg-rose-50 text-rose-700 hover:bg-rose-100",

@@ -128,7 +128,7 @@ export default function ProductsSettingsPage() {
       };
       const url = editingId ? `/api/products/${editingId}` : "/api/products";
       const method = editingId ? "PUT" : "POST";
-      const res = await fetch(apiUrl(url), {
+      const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

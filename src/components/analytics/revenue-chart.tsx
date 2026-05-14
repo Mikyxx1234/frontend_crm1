@@ -6,7 +6,7 @@ import { apiUrl } from "@/lib/api";
  * ─────────────────────────────────────
  * Área da receita repaginada para o DNA Studioia: fundo branco, cartão
  * `rounded-[24px]/[32px]`, grid horizontal muito sutil (`#f1f5f9`), paleta
- * `brand-blue` com gradiente linear descendente para transparente. Tooltip
+ * `primary` com gradiente linear descendente para transparente. Tooltip
  * `rounded-2xl` com sombra suave e tipografia `slate-900`.
  */
 
@@ -30,7 +30,7 @@ export type RevenuePoint = { date: string; revenue: number; count: number };
 
 type GroupBy = "day" | "week" | "month";
 
-const BRAND_BLUE = "#507df1";
+const BRAND_BLUE = "var(--color-primary)";
 
 function normalizeRevenueResponse(json: unknown): RevenuePoint[] {
   if (Array.isArray(json)) return json as RevenuePoint[];
@@ -78,7 +78,7 @@ function RevenueTooltip({
         : "";
   return (
     <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.2)]">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-ink-muted)]">
         {labelStr}
       </p>
       <p className="mt-0.5 text-[14px] font-bold tracking-tight text-slate-900">
@@ -127,7 +127,7 @@ export function RevenueChart({
           </h3>
         </div>
         {!compact ? (
-          <div className="flex items-center gap-1 rounded-full bg-slate-50 p-0.5">
+          <div className="flex items-center gap-1 rounded-full bg-[var(--color-bg-subtle)] p-0.5">
             {(
               [
                 { id: "day" as const, label: "Dia" },
@@ -145,7 +145,7 @@ export function RevenueChart({
                     "rounded-full px-3 py-1 text-[11px] font-bold transition-all",
                     active
                       ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700",
+                      : "text-slate-500 hover:text-foreground",
                   )}
                 >
                   {g.label}
@@ -157,7 +157,7 @@ export function RevenueChart({
           <button
             type="button"
             aria-label="Mais opções"
-            className="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+            className="rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)]"
           >
             <MoreVertical className="size-4" />
           </button>
@@ -167,7 +167,7 @@ export function RevenueChart({
       {/* Chart body */}
       {isLoading ? (
         <div
-          className="w-full animate-pulse rounded-2xl bg-slate-50"
+          className="w-full animate-pulse rounded-2xl bg-[var(--color-bg-subtle)]"
           style={{ height }}
         />
       ) : isError ? (

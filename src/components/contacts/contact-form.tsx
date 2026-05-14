@@ -12,6 +12,10 @@ export type ContactFormValues = {
   name: string;
   email: string;
   phone: string;
+  /// Sempre comeca como "LEAD" na criacao (faz sentido: o modal se chama
+  /// "Novo lead"). O usuario muda na ficha quando o contato evolui no
+  /// funil. Pra mostrar o seletor ainda na criacao, passe
+  /// `showLifecycleStage`.
   lifecycleStage: string;
   source: string;
   companyId: string;
@@ -37,6 +41,7 @@ export function ContactForm({
   onSubmit,
   onCancel,
   submitLabel = "Salvar",
+  showLifecycleStage = false,
   className,
 }: {
   id?: string;
@@ -45,6 +50,14 @@ export function ContactForm({
   onSubmit: (values: ContactFormValues) => Promise<void>;
   onCancel?: () => void;
   submitLabel?: string;
+  /**
+   * Mostra o seletor "Estagio do ciclo" no formulario. Default false: na
+   * criacao de lead nao faz sentido pedir esse campo (o nome do modal ja
+   * indica que e LEAD; opcoes como "Cliente" ou "Evangelista" so atrapalham).
+   * Na ficha de edicao do contato, passe true pra deixar o usuario evoluir
+   * o estagio conforme o lead avanca no funil.
+   */
+  showLifecycleStage?: boolean;
   className?: string;
 }) {
   const [values, setValues] = useState<ContactFormValues>({
@@ -138,22 +151,24 @@ export function ContactForm({
         />
       </div>
 
-      <div className="grid gap-2">
-        <Label htmlFor="contact-stage">Estágio do ciclo</Label>
-        <SelectNative
-          id="contact-stage"
-          value={values.lifecycleStage}
-          onChange={(e) =>
-            setValues((s) => ({ ...s, lifecycleStage: e.target.value }))
-          }
-        >
-          {LIFECYCLE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </SelectNative>
-      </div>
+      {showLifecycleStage ? (
+        <div className="grid gap-2">
+          <Label htmlFor="contact-stage">Estágio do ciclo</Label>
+          <SelectNative
+            id="contact-stage"
+            value={values.lifecycleStage}
+            onChange={(e) =>
+              setValues((s) => ({ ...s, lifecycleStage: e.target.value }))
+            }
+          >
+            {LIFECYCLE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </SelectNative>
+        </div>
+      ) : null}
 
       <div className="grid gap-2">
         <Label htmlFor="contact-source">Origem</Label>

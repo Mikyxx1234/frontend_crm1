@@ -154,8 +154,8 @@ const EVENT_CONFIG: Record<
   },
   CONTACT_UNLINKED: {
     Icon: UserMinus,
-    ring: "ring-slate-500/30 text-slate-700",
-    bg: "bg-slate-50 dark:bg-slate-900/40",
+    ring: "ring-slate-500/30 text-foreground",
+    bg: "bg-[var(--color-bg-subtle)] dark:bg-slate-900/40",
     label: "Contato desvinculado",
   },
   AUTOMATION_EXECUTED: {

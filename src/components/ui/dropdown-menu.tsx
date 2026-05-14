@@ -27,6 +27,8 @@ export interface DropdownMenuProps {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Classe extra aplicada ao container relative que envolve trigger+content. */
+  className?: string;
 }
 
 function DropdownMenu({
@@ -34,6 +36,7 @@ function DropdownMenu({
   open: openProp,
   defaultOpen = false,
   onOpenChange,
+  className,
 }: DropdownMenuProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
   const isControlled = openProp !== undefined;
@@ -76,7 +79,10 @@ function DropdownMenu({
 
   return (
     <DropdownMenuContext.Provider value={value}>
-      <div ref={containerRef} className="relative inline-block text-left">
+      <div
+        ref={containerRef}
+        className={cn("relative inline-block text-left", className)}
+      >
         {children}
       </div>
     </DropdownMenuContext.Provider>

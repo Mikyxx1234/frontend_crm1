@@ -7,6 +7,7 @@ import type { Session } from "next-auth";
 import { useState } from "react";
 
 import { ConfirmProvider } from "@/hooks/use-confirm";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export function Providers({
   children,
@@ -37,7 +38,9 @@ export function Providers({
     <SessionProvider session={session}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
-          <ConfirmProvider>{children}</ConfirmProvider>
+          <TooltipProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </TooltipProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </SessionProvider>

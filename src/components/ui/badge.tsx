@@ -4,21 +4,32 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+  // Base Lumen: inline-flex, radius-sm (4px), peso 600, transição
+  "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-semibold transition-colors leading-none",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+          "border-transparent bg-primary text-primary-foreground",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-transparent bg-bg-muted text-ink-soft",
+        outline:
+          "border-border bg-background text-foreground",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
-        outline: "text-foreground border-border bg-background",
+          "border-transparent bg-[var(--color-destructive-soft)] text-destructive",
         success:
-          "border-transparent bg-success text-success-foreground shadow-sm hover:bg-success/90",
+          "border-transparent bg-[var(--color-success-soft)] text-[var(--color-success)]",
         warning:
-          "border-transparent bg-warning text-warning-foreground shadow-sm hover:bg-warning/90",
+          "border-transparent bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
+        // Índigo suave — estado, etapa
+        indigo:
+          "border-transparent bg-[var(--color-primary-soft)] text-primary",
+        // Lavanda — IA / Copilot
+        ai:
+          "border-transparent bg-[var(--color-lavender-soft)] text-[var(--color-lavender)]",
+        // Rosa — destaque especial
+        pink:
+          "border-transparent bg-[var(--color-pink-soft)] text-[var(--color-pink)]",
       },
     },
     defaultVariants: {
@@ -37,4 +48,27 @@ function Badge({ className, variant, ...props }: BadgeProps) {
   );
 }
 
-export { Badge, badgeVariants };
+// Badge de IA com gradiente lavanda→rosa e ícone estrela
+function AIBadge({
+  children = "IA",
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold leading-none text-white",
+        "bg-gradient-to-r from-[#7B61FF] to-[#F5319D]",
+        className
+      )}
+      {...props}
+    >
+      <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor" className="shrink-0">
+        <path d="M6 0 L7.2 4.8 L12 6 L7.2 7.2 L6 12 L4.8 7.2 L0 6 L4.8 4.8 Z" />
+      </svg>
+      {children}
+    </div>
+  );
+}
+
+export { Badge, badgeVariants, AIBadge };

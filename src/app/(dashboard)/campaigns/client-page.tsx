@@ -27,7 +27,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatDateTime } from "@/lib/utils";
 
@@ -130,7 +130,7 @@ export default function CampaignsPage() {
               </Button>
             </Link>
             <Link href="/campaigns/new">
-              <Button className="gap-2">
+              <Button className={cn("gap-2", pageHeaderPrimaryCtaClass)}>
                 <Plus className="size-4" />
                 Nova campanha
               </Button>

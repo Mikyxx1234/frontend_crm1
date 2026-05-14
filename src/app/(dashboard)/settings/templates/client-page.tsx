@@ -11,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -61,8 +62,22 @@ async function fetchTemplates(): Promise<TemplateRow[]> {
 
 export default function TemplatesSettingsPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<TemplateRow | null>(null);
+
+  React.useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    queueMicrotask(() => {
+      setEditing(null);
+      setFormOpen(true);
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.delete("new");
+      const qs = sp.toString();
+      router.replace(qs ? `/settings/message-models?${qs}` : "/settings/message-models?tab=internal");
+    });
+  }, [router, searchParams]);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["templates"],
@@ -135,7 +150,7 @@ export default function TemplatesSettingsPage() {
           </>
         }
         actions={
-          <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="gap-2 shadow-sm">
+          <Button onClick={() => { setEditing(null); setFormOpen(true); }} className={`gap-2 ${pageHeaderPrimaryCtaClass}`}>
             <Plus className="size-4" /> Novo Template
           </Button>
         }
@@ -144,7 +159,7 @@ export default function TemplatesSettingsPage() {
       <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
         <p>
           <strong>Duas coisas diferentes:</strong> esta lista fica só no banco do CRM (atalho na conversa). Já a{" "}
-          <Link href="/settings/whatsapp-templates" className="font-medium text-amber-950 underline underline-offset-2 hover:no-underline dark:text-amber-100">
+          <Link href="/settings/message-models?tab=whatsapp" className="font-medium text-amber-950 underline underline-offset-2 hover:no-underline dark:text-amber-100">
             Templates Meta (WABA)
           </Link>{" "}
           lista e cria modelos direto na conta comercial.

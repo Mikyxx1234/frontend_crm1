@@ -1,7 +1,7 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import type { ChannelProvider, ChannelType } from "./types";
+import type { ChannelProvider, ChannelType } from "@prisma/client";
 import {
   AtSign,
   Check,

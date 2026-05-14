@@ -19,7 +19,8 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2, Smile, X } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { dt } from "@/lib/design-tokens";
+import { cn, tagPillStyle } from "@/lib/utils";
 import { EmojiPicker } from "@/components/inbox/emoji-picker";
 
 type TagItem = { id: string; name: string; color: string };
@@ -57,8 +58,8 @@ function TagPreviewPill({ name, color }: { name: string; color: string }) {
   const { emoji, label } = splitEmojiPrefix(safe);
   return (
     <span
-      className="inline-flex h-[26px] items-center gap-1 rounded-full px-3 text-[12px] font-semibold"
-      style={{ backgroundColor: `${color}33`, color }}
+      className={cn(dt.pill.base, "min-h-[22px] gap-1 px-3")}
+      style={tagPillStyle(safe, color)}
     >
       {emoji && <span className="text-[13px] leading-none">{emoji}</span>}
       <span>{label || "Etiqueta"}</span>

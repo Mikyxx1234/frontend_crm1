@@ -7,6 +7,7 @@ import {
   Droppable,
   type DropResult,
   type DragStart,
+  type DragUpdate,
 } from "@hello-pangea/dnd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -64,7 +65,8 @@ function applyDragToBoard(
   return next;
 }
 
-const boardQueryKey = (pid: string) => ["pipeline-board", pid] as const;
+const boardQueryKey = (pid: string, status: "OPEN" | "WON" | "LOST" | "ALL" = "OPEN") =>
+  ["pipeline-board", pid, status] as const;
 type BoardUserOption = {
   id: string;
   name: string;
@@ -89,6 +91,7 @@ const TERMINAL_STAGE_NAMES = ["fechado", "perdido", "ganho", "won", "lost", "clo
 type KanbanBoardProps = {
   pipelineId: string;
   stages: BoardStage[];
+  statusFilter?: "OPEN" | "WON" | "LOST" | "ALL";
   visibleFields?: CardVisibleFields;
   onDealClick?: (dealId: string) => void;
   onAddCard?: (stageId: string) => void;
@@ -102,7 +105,7 @@ type KanbanBoardProps = {
 };
 
 export function KanbanBoard({
-  pipelineId, stages, visibleFields, onDealClick, onAddCard,
+  pipelineId, stages, statusFilter = "OPEN", visibleFields, onDealClick, onAddCard,
   filter, currentUserId,
   searchQuery = "", filterAgent = "all", filterStage = "all",
   filterMsg = "all", filterOverdue = false,
@@ -112,10 +115,55 @@ export function KanbanBoard({
   const [confirmMove, setConfirmMove] = React.useState<{ result: DropResult; stageName: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = React.useState<{ dealId: string; dealLabel: string } | null>(null);
   const [recentlyMoved, setRecentlyMoved] = React.useState<string | null>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [activeStageIdx, setActiveStageIdx] = React.useState(0);
+  const [scrollState, setScrollState] = React.useState({ left: 0, width: 0, client: 0 });
+  const isDraggingMinimap = React.useRef(false);
+
+  const scrollToStage = React.useCallback((idx: number) => {
+    if (!scrollRef.current) return;
+    const cols = scrollRef.current.querySelectorAll<HTMLElement>(':scope > [data-stage-col]');
+    const col = cols[idx];
+    if (!col) return;
+    col.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    setActiveStageIdx(idx);
+  }, []);
+
+  const scrollToPosition = React.useCallback((pct: number) => {
+    if (!scrollRef.current) return;
+    const el = scrollRef.current;
+    el.scrollLeft = pct * (el.scrollWidth - el.clientWidth);
+  }, []);
+
+  // Sync scroll state and active stage
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setScrollState({ left: el.scrollLeft, width: el.scrollWidth, client: el.clientWidth });
+      const cols = el.querySelectorAll<HTMLElement>(':scope > [data-stage-col]');
+      let closest = 0;
+      let minDist = Infinity;
+      cols.forEach((col, i) => {
+        const dist = Math.abs(col.getBoundingClientRect().left - el.getBoundingClientRect().left);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      setActiveStageIdx(closest);
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', update); ro.disconnect(); };
+  }, []);
   // `isDragging` serve apenas pra exibir/ocultar a zona de exclusão
   // no rodapé. Guarda o dealId em drag para a gente poder resolver
   // o título do card sem uma segunda passada pelo board.
   const [isDragging, setIsDragging] = React.useState<string | null>(null);
+  // Fallback do DnD: em alguns drops rápidos na lixeira o `destination`
+  // vem `null`. Guardamos SOMENTE se o usuário estava sobre a lixeira,
+  // sem interferir no drop normal entre colunas/etapas.
+  const wasOverDeleteZoneRef = React.useRef(false);
   const { data: users = [] } = useQuery({
     queryKey: ["users-list"],
     queryFn: fetchUsers,
@@ -174,9 +222,22 @@ export function KanbanBoard({
       return data;
     },
     onMutate: async (v: MoveVars) => {
-      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId) });
-      const prev = queryClient.getQueryData<BoardStage[]>(boardQueryKey(pipelineId));
-      if (prev) queryClient.setQueryData(boardQueryKey(pipelineId), applyDragToBoard(prev, v.dealId, v.fromStageId, v.fromIndex, v.toStageId, v.toIndex));
+      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) });
+      const prev = queryClient.getQueriesData<BoardStage[]>({ queryKey: boardQueryKey(pipelineId, statusFilter) });
+      queryClient.setQueriesData<BoardStage[]>(
+        { queryKey: boardQueryKey(pipelineId, statusFilter) },
+        (current) =>
+          current
+            ? applyDragToBoard(
+                current,
+                v.dealId,
+                v.fromStageId,
+                v.fromIndex,
+                v.toStageId,
+                v.toIndex,
+              )
+            : current,
+      );
       return { prev };
     },
     onSuccess: (_d, v) => {
@@ -188,10 +249,14 @@ export function KanbanBoard({
       setTimeout(() => setRecentlyMoved(null), 3000);
     },
     onError: (e, _v, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(boardQueryKey(pipelineId), ctx.prev);
+      if (ctx?.prev) {
+        for (const [key, data] of ctx.prev) {
+          queryClient.setQueryData(key, data);
+        }
+      }
       toast.error(e instanceof Error ? e.message : "Erro ao mover negócio");
     },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId) }); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) }); },
   });
 
   const statusMutation = useMutation({
@@ -206,10 +271,10 @@ export function KanbanBoard({
     },
     onMutate: async (input) => {
       setStatusBusy({ dealId: input.dealId, kind: input.status === "LOST" ? "lost" : "won" });
-      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId) });
-      const prev = queryClient.getQueryData<BoardStage[]>(boardQueryKey(pipelineId));
+      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) });
+      const prev = queryClient.getQueryData<BoardStage[]>(boardQueryKey(pipelineId, statusFilter));
       if (prev && (input.status === "WON" || input.status === "LOST")) {
-        queryClient.setQueryData(boardQueryKey(pipelineId), cloneBoard(prev).map((col) => ({ ...col, deals: col.deals.filter((d) => d.id !== input.dealId) })));
+        queryClient.setQueryData(boardQueryKey(pipelineId, statusFilter), cloneBoard(prev).map((col) => ({ ...col, deals: col.deals.filter((d) => d.id !== input.dealId) })));
       }
       return { prev };
     },
@@ -217,10 +282,10 @@ export function KanbanBoard({
       toast.success(input.status === "WON" ? "Negócio ganho!" : "Negócio marcado como perdido", { duration: 2500 });
     },
     onError: (e, _i, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(boardQueryKey(pipelineId), ctx.prev);
+      if (ctx?.prev) queryClient.setQueryData(boardQueryKey(pipelineId, statusFilter), ctx.prev);
       toast.error(e instanceof Error ? e.message : "Erro");
     },
-    onSettled: () => { setStatusBusy(null); queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId) }); },
+    onSettled: () => { setStatusBusy(null); queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) }); },
   });
 
   const deleteMutation = useMutation({
@@ -231,11 +296,11 @@ export function KanbanBoard({
       return data;
     },
     onMutate: async (dealId) => {
-      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId) });
-      const prev = queryClient.getQueryData<BoardStage[]>(boardQueryKey(pipelineId));
+      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) });
+      const prev = queryClient.getQueryData<BoardStage[]>(boardQueryKey(pipelineId, statusFilter));
       if (prev) {
         queryClient.setQueryData(
-          boardQueryKey(pipelineId),
+          boardQueryKey(pipelineId, statusFilter),
           cloneBoard(prev).map((col) => ({ ...col, deals: col.deals.filter((d) => d.id !== dealId) })),
         );
       }
@@ -245,21 +310,29 @@ export function KanbanBoard({
       toast.success("Negócio excluído", { duration: 2500 });
     },
     onError: (e, _v, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(boardQueryKey(pipelineId), ctx.prev);
+      if (ctx?.prev) queryClient.setQueryData(boardQueryKey(pipelineId, statusFilter), ctx.prev);
       toast.error(e instanceof Error ? e.message : "Erro ao excluir negócio");
     },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId) }); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) }); },
   });
 
   const executeDrag = React.useCallback((result: DropResult) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    const fromIdxResolved = stages
+      .find((s) => s.id === source.droppableId)
+      ?.deals.findIndex((d) => d.id === draggableId);
+    const realFromIndex = fromIdxResolved != null && fromIdxResolved >= 0 ? fromIdxResolved : source.index;
+    const toIdxResolved = stages
+      .find((s) => s.id === destination.droppableId)
+      ?.deals.findIndex((d) => d.id === draggableId);
+    const realToIndex = toIdxResolved != null && toIdxResolved >= 0 ? toIdxResolved : destination.index;
     moveMutation.mutate({
-      dealId: draggableId, fromStageId: source.droppableId, fromIndex: source.index,
-      toStageId: destination.droppableId, toIndex: destination.index,
+      dealId: draggableId, fromStageId: source.droppableId, fromIndex: realFromIndex,
+      toStageId: destination.droppableId, toIndex: realToIndex,
     });
-  }, [moveMutation]);
+  }, [moveMutation, stages]);
 
   const resolveDealLabel = React.useCallback((dealId: string): string => {
     for (const s of stages) {
@@ -273,20 +346,29 @@ export function KanbanBoard({
 
   const onDragStart = React.useCallback((start: DragStart) => {
     setIsDragging(start.draggableId);
+    wasOverDeleteZoneRef.current = false;
+  }, []);
+
+  const onDragUpdate = React.useCallback((update: DragUpdate) => {
+    wasOverDeleteZoneRef.current = update.destination?.droppableId === DELETE_DROPPABLE_ID;
   }, []);
 
   const onDragEnd = React.useCallback((result: DropResult) => {
     setIsDragging(null);
     const { destination, draggableId } = result;
-    if (!destination) return;
+    const droppedInDeleteZone =
+      destination?.droppableId === DELETE_DROPPABLE_ID ||
+      (!destination && wasOverDeleteZoneRef.current);
+    wasOverDeleteZoneRef.current = false;
 
     // Drop na zona de exclusão: abre confirmação. A deleção real só
     // acontece após o usuário confirmar no AlertDialog — protege contra
     // drop acidental durante scroll horizontal do kanban.
-    if (destination.droppableId === DELETE_DROPPABLE_ID) {
+    if (droppedInDeleteZone) {
       setConfirmDelete({ dealId: draggableId, dealLabel: resolveDealLabel(draggableId) });
       return;
     }
+    if (!destination) return;
 
     const destStage = stages.find((s) => s.id === destination.droppableId);
     if (destStage && TERMINAL_STAGE_NAMES.includes(destStage.name.toLowerCase())) {
@@ -297,33 +379,86 @@ export function KanbanBoard({
   }, [stages, executeDrag, resolveDealLabel]);
 
   return (
-    <>
-      <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <div
-          className="flex h-full gap-3 overflow-x-auto px-3 pb-4 pt-3 sm:gap-4 sm:px-5 sm:pb-6 sm:pt-5 md:px-6"
-          style={{ scrollbarWidth: "thin", scrollbarColor: "#06b6d4 transparent" }}
-          role="region"
-          aria-label="Pipeline Kanban"
-        >
-          {filteredStages.map((stage) => {
-            const totalValue = stage.deals.reduce((a, d) => a + dealNumericValue(d.value), 0);
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      <DragDropContext onDragStart={onDragStart} onDragUpdate={onDragUpdate} onDragEnd={onDragEnd}>
+        <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
+          {/* Kanban scroll area — full height, native scrollbar hidden */}
+          <div
+            ref={scrollRef}
+            className="flex h-full min-h-0 min-w-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden px-3 pt-3 pb-0 sm:gap-4 sm:px-5 sm:pt-5 md:px-6"
+            style={{ scrollbarWidth: "none" }}
+            role="region"
+            aria-label="Pipeline Kanban"
+          >
+            {filteredStages.map((stage, idx) => {
+              const totalValue = stage.deals.reduce((a, d) => a + dealNumericValue(d.value), 0);
+              return (
+                <div key={stage.id} data-stage-col={idx} className="flex h-full min-h-0 shrink-0 flex-col self-stretch">
+                  <KanbanColumn
+                    stage={{ id: stage.id, name: stage.name, color: stage.color, deals: stage.deals }}
+                    users={users}
+                    totalValue={totalValue}
+                    visibleFields={visibleFields}
+                    onDealClick={onDealClick}
+                    onAddCard={onAddCard}
+                    onMarkWon={(dealId) => statusMutation.mutate({ dealId, status: "WON" })}
+                    onMarkLost={(dealId, reason) => statusMutation.mutate({ dealId, status: "LOST", lostReason: reason })}
+                    statusBusy={statusBusy}
+                    recentlyMovedId={recentlyMoved}
+                  />
+                </div>
+              );
+            })}
+          </div>
 
-            return (
-              <KanbanColumn
-                key={stage.id}
-                stage={{ id: stage.id, name: stage.name, deals: stage.deals }}
-                users={users}
-                totalValue={totalValue}
-                visibleFields={visibleFields}
-                onDealClick={onDealClick}
-                onAddCard={onAddCard}
-                onMarkWon={(dealId) => statusMutation.mutate({ dealId, status: "WON" })}
-                onMarkLost={(dealId, reason) => statusMutation.mutate({ dealId, status: "LOST", lostReason: reason })}
-                statusBusy={statusBusy}
-                recentlyMovedId={recentlyMoved}
-              />
-            );
-          })}
+          {/* Minimap — floating bottom-right, Kommo style */}
+          {scrollState.width > scrollState.client + 10 && (
+            <div
+              className="group absolute bottom-3 right-4 z-40 cursor-pointer"
+              onMouseDown={(e) => {
+                const bar = e.currentTarget.querySelector<HTMLElement>('[data-minimap-bar]');
+                if (!bar) return;
+                const barRect = bar.getBoundingClientRect();
+                const onMove = (me: MouseEvent) => {
+                  const pct = Math.max(0, Math.min(1, (me.clientX - barRect.left) / barRect.width));
+                  scrollToPosition(pct);
+                };
+                const onUp = () => {
+                  window.removeEventListener('mousemove', onMove);
+                  window.removeEventListener('mouseup', onUp);
+                };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+              }}
+            >
+              <div
+                data-minimap-bar
+                className="relative h-10 w-44 max-w-[200px] min-h-[40px] cursor-pointer overflow-hidden rounded-md bg-zinc-300 opacity-60 transition-all duration-200 group-hover:opacity-100 group-hover:shadow-[var(--shadow-md)] sm:w-48 sm:max-w-[220px]"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const pct = (e.clientX - rect.left) / rect.width;
+                  scrollToPosition(pct);
+                }}
+              >
+                {filteredStages.map((_, i) => i > 0 && (
+                  <div
+                    key={i}
+                    className="absolute top-0 h-full w-px bg-white/60"
+                    style={{ left: `${(i / filteredStages.length) * 100}%` }}
+                  />
+                ))}
+                <div
+                  className="absolute inset-y-0 rounded-md bg-zinc-500 transition-[left,width] duration-75 group-hover:bg-primary"
+                  style={{
+                    width: `${Math.max(8, (scrollState.client / scrollState.width) * 100)}%`,
+                    left: `${scrollState.width > scrollState.client
+                      ? (scrollState.left / (scrollState.width - scrollState.client)) * (100 - Math.max(8, (scrollState.client / scrollState.width) * 100))
+                      : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Zona de exclusão — SEMPRE renderizada no DOM (mesmo sem drag ativo).
@@ -426,6 +561,6 @@ export function KanbanBoard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }

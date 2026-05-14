@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Download, Sparkles } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,6 +34,7 @@ import {
   newStepId,
   workflowStepsToPayload,
 } from "@/lib/automation-workflow";
+import { autoAlignWorkflowSteps } from "@/lib/automation-layout";
 import type { AutomationTemplate } from "@/lib/automation-templates";
 
 async function readErrorMessage(res: Response): Promise<string> {
@@ -130,6 +131,33 @@ export default function NewAutomationPage() {
   });
 
   const canNext1 = name.trim().length > 0;
+  const handleAutoAlign = useCallback(() => {
+    setSteps((prev) => autoAlignWorkflowSteps(prev));
+  }, []);
+  const handleExportJson = useCallback(() => {
+    const payload = {
+      name: name.trim(),
+      description: description.trim() || null,
+      triggerType,
+      triggerConfig,
+      active: false,
+      steps: workflowStepsToPayload(steps),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+    const safeName = (name.trim() || "automacao")
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeName || "automacao"}-fluxo.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [description, name, steps, triggerConfig, triggerType]);
   const stepTitle = useMemo(() => {
     if (wizard === 0) return "Escolher ponto de partida";
     if (wizard === 1) return "Nome e gatilho";
@@ -291,6 +319,16 @@ export default function NewAutomationPage() {
                 ? "Revise os passos do template e ajuste IDs de tag/estágio antes de salvar."
                 : "Arraste blocos da paleta, conecte os nós e clique para configurar cada passo."}
             </CardDescription>
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={handleAutoAlign} className="gap-2">
+                <Sparkles className="size-4" />
+                Auto alinhar
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={handleExportJson} className="gap-2">
+                <Download className="size-4" />
+                Exportar JSON
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-4">
             <WorkflowCanvas

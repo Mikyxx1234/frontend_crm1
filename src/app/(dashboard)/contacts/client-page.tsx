@@ -38,11 +38,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
-import { cn, formatCurrency, resolveContactAvatarDisplayUrl } from "@/lib/utils";
+import { dt } from "@/lib/design-tokens";
+import { cn, formatCurrency, resolveContactAvatarDisplayUrl, tagPillStyle } from "@/lib/utils";
 
 type TagRow = { id: string; name: string; color: string };
 
@@ -231,15 +232,49 @@ export default function ContactsPage() {
 
   return (
     <div className="w-full">
-      <div className="mb-4">
-        <PageHeader
-          title="Leads"
-          description="Consulte, crie, modifique ou remova seus leads."
-          icon={<Users />}
-        />
-      </div>
+      <PageHeader
+        className="mb-4"
+        title="Leads"
+        description="Consulte, crie, modifique ou remova seus leads."
+        icon={<Users />}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 px-2.5 text-sm sm:px-3"
+              onClick={() => setShowFilters((v) => !v)}
+            >
+              <Filter className="size-3.5" />
+              <span className="hidden sm:inline">Filtros</span>
+            </Button>
+            <TooltipHost label="Visualização em lista" side="bottom" className="hidden sm:inline-flex">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 p-0"
+                aria-label="Visualização em lista"
+              >
+                <LayoutList className="size-4" />
+              </Button>
+            </TooltipHost>
+            <Button
+              type="button"
+              size="sm"
+              className={cn("h-9 gap-1.5 px-2.5 text-sm sm:px-3", pageHeaderPrimaryCtaClass)}
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="size-3.5" />
+              <span className="hidden sm:inline">Novo Lead</span>
+            </Button>
+          </>
+        }
+      />
 
-      {/* Toolbar */}
+      {/* Toolbar de busca: fica abaixo do header. Filtros avancados (pills)
+          e a contagem de resultados vivem aqui. */}
       <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="relative w-full sm:w-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -247,7 +282,7 @@ export default function ContactsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Pesquisar..."
-            className="h-9 w-full pl-8 text-sm sm:w-[180px]"
+            className="h-9 w-full pl-8 text-sm sm:w-[240px]"
           />
         </div>
         {!listQuery.isLoading && (
@@ -255,39 +290,6 @@ export default function ContactsPage() {
             {total.toLocaleString("pt-BR")} resultados
           </span>
         )}
-
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1.5 px-2.5 text-sm sm:px-3"
-            onClick={() => setShowFilters((v) => !v)}
-          >
-            <Filter className="size-3.5" />
-            <span className="hidden sm:inline">Filtros</span>
-          </Button>
-          <TooltipHost label="Visualização em lista" side="bottom" className="hidden sm:inline-flex">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 w-9 p-0"
-              aria-label="Visualização em lista"
-            >
-              <LayoutList className="size-4" />
-            </Button>
-          </TooltipHost>
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 gap-1.5 bg-emerald-600 px-2.5 text-sm text-white hover:bg-emerald-700 sm:px-3"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="size-3.5" />
-            <span className="hidden sm:inline">Novo Lead</span>
-          </Button>
-        </div>
       </div>
 
       {/* Filters row */}
@@ -387,8 +389,8 @@ export default function ContactsPage() {
                       {c.tags.slice(0, 2).map((tag) => (
                         <span
                           key={tag.id}
-                          className="rounded px-1.5 py-0.5 text-[9px] font-semibold leading-none"
-                          style={{ backgroundColor: tag.color + "1f", color: tag.color }}
+                          className={cn(dt.pill.sm, "max-w-[72px] truncate leading-none")}
+                          style={tagPillStyle(tag.name, tag.color)}
                         >
                           {tag.name.length > 8 ? tag.name.slice(0, 8) + "…" : tag.name}
                         </span>
@@ -533,11 +535,8 @@ export default function ContactsPage() {
                       {c.tags.slice(0, 2).map((tag) => (
                         <span
                           key={tag.id}
-                          className="inline-flex items-center rounded-lg px-1.5 py-0.5 text-[10px] font-medium leading-none"
-                          style={{
-                            backgroundColor: tag.color + "18",
-                            color: tag.color,
-                          }}
+                          className={cn(dt.pill.base, "max-w-[140px] truncate leading-none")}
+                          style={tagPillStyle(tag.name, tag.color)}
                         >
                           {tag.name.length > 14 ? tag.name.slice(0, 14) + "..." : tag.name}
                         </span>

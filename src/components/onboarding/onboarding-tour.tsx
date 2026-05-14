@@ -59,9 +59,12 @@ export function OnboardingTour() {
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!pathname || pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/register")) {
+    if (!pathname || pathname.startsWith("/login") || pathname.startsWith("/register")) {
       return;
     }
+    // Só na home do app — evita overlay bloqueando Inbox/Pipeline logo após login (callbackUrl).
+    const isDashboardHome = pathname === "/" || pathname === "/dashboard";
+    if (!isDashboardHome) return;
     try {
       if (localStorage.getItem(STORAGE_KEY) === "1") return;
     } catch {
@@ -93,29 +96,37 @@ export function OnboardingTour() {
   const isLast = step === STEPS.length - 1;
 
   return (
-    <div className="fixed inset-0 z-100 flex items-end justify-center bg-black/40 px-3 pb-3 backdrop-blur-sm md:items-center md:p-6">
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 px-3 pb-3 backdrop-blur-sm md:items-center md:p-6"
+      role="presentation"
+      onClick={dismiss}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") dismiss();
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={current.title}
+        onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-premium ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800",
+          "relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-[var(--shadow-lg)] ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800",
           "animate-in fade-in slide-in-from-bottom-6 duration-300",
         )}
       >
-        <div className="bg-linear-to-br from-brand-blue/5 via-transparent to-brand-cyan/5 p-6 pb-4 text-center">
-          <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue ring-1 ring-brand-blue/20 dark:bg-brand-blue/20">
+        <div className="bg-linear-to-br from-[var(--color-primary-soft)] via-transparent to-[var(--color-lavender-muted)] p-6 pb-4 text-center">
+          <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20 dark:bg-primary/20">
             <Icon className="size-7" strokeWidth={2.2} />
           </div>
-          <h2 className="font-outfit text-[20px] font-black tracking-tight text-slate-900 dark:text-slate-50">
+          <h2 className="font-display text-[20px] font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
             {current.title}
           </h2>
-          <p className="mt-2 text-[14px] leading-relaxed text-slate-600 dark:text-slate-300">
+          <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-ink-soft)] dark:text-slate-300">
             {current.body}
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-[var(--color-bg-subtle)]/50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/40">
           <div className="flex items-center gap-1.5">
             {STEPS.map((_, i) => (
               <span
@@ -123,9 +134,9 @@ export function OnboardingTour() {
                 className={cn(
                   "h-1.5 rounded-full transition-all",
                   i === step
-                    ? "w-6 bg-brand-blue"
+                    ? "w-6 bg-primary"
                     : i < step
-                      ? "w-1.5 bg-brand-blue/50"
+                      ? "w-1.5 bg-primary/50"
                       : "w-1.5 bg-slate-300 dark:bg-slate-700",
                 )}
               />
@@ -136,7 +147,7 @@ export function OnboardingTour() {
               <button
                 type="button"
                 onClick={dismiss}
-                className="text-[12px] font-semibold text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                className="text-[12px] font-semibold text-slate-500 transition-colors hover:text-foreground dark:text-[var(--color-ink-muted)] dark:hover:text-slate-200"
               >
                 Pular
               </button>
@@ -144,7 +155,7 @@ export function OnboardingTour() {
             <button
               type="button"
               onClick={next}
-              className="inline-flex items-center gap-1.5 rounded-full bg-brand-blue px-4 py-2 text-[13px] font-bold text-white shadow-blue-glow transition-colors hover:bg-brand-blue/90 active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-[13px] font-bold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-primary/90 active:scale-95"
             >
               {current.cta ?? "Próximo"}
               <ArrowRight className="size-3.5" strokeWidth={2.6} />

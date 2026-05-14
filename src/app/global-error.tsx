@@ -9,7 +9,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="flex min-h-dvh items-center justify-center bg-slate-50 p-6">
+      <body className="flex min-h-dvh items-center justify-center bg-[var(--color-bg-subtle)] p-6">
         <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-8 text-center shadow-lg">
           <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-red-100">
             <svg className="size-7 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -21,7 +21,7 @@ export default function GlobalError({
             Ocorreu um erro inesperado. Tente recarregar a página.
           </p>
           {error.digest && (
-            <p className="mt-2 font-mono text-xs text-slate-400">
+            <p className="mt-2 font-mono text-xs text-[var(--color-ink-muted)]">
               Código: {error.digest}
             </p>
           )}

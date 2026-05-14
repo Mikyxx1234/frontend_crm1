@@ -4,9 +4,48 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSSE } from "@/hooks/use-sse";
+import { useIsMobile } from "@/hooks/use-media-query";
 import {
-  AlertCircle, AlertTriangle, ArrowRight, Bot, CheckCheck, CheckCircle2, CheckSquare, Clock, Download, FileText, Image as ImageIcon, LayoutTemplate, Loader2, Lock, Megaphone, Mic,
-  MoreHorizontal, Paperclip, Pause, Pencil, Phone, PhoneIncoming, PhoneOff, PhoneOutgoing, Pin, Play, Reply, RotateCcw, Save, Send, Share2, ShieldCheck, Smile, Smartphone, Timer, Volume2, Wrench, X, Zap,
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  Bot,
+  CheckCheck,
+  CheckCircle2,
+  CheckSquare,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Download,
+  FileText,
+  LayoutTemplate,
+  Loader2,
+  Lock,
+  Megaphone,
+  MoreHorizontal,
+  Paperclip,
+  Pause,
+  Pencil,
+  Phone,
+  PhoneIncoming,
+  PhoneOff,
+  PhoneOutgoing,
+  Pin,
+  Play,
+  Plus,
+  Reply,
+  RotateCcw,
+  Save,
+  Search,
+  Send,
+  Share2,
+  ShieldCheck,
+  Smile,
+  Smartphone,
+  Volume2,
+  Wrench,
+  X,
+  Zap,
 } from "lucide-react";
 import { AIDraftCard } from "@/components/inbox/ai-draft-card";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
@@ -16,68 +55,182 @@ import { AudioRecorder } from "@/components/inbox/audio-recorder";
 import { EmojiPicker } from "@/components/inbox/emoji-picker";
 import { QuickReplies } from "@/components/inbox/quick-replies";
 import { TemplatePicker } from "@/components/inbox/template-picker";
+import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TooltipHost } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipHost,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MotionDiv } from "@/components/ui/motion";
-import { parseTemplateMeta, prettifyChatMessageBody } from "@/lib/whatsapp-outbound-template-label";
+import {
+  parseTemplateMeta,
+  prettifyChatMessageBody,
+} from "@/lib/whatsapp-outbound-template-label";
+import { dt } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
+
+/** Texto da nota em uma linha (banner fixado estilo WhatsApp). */
+function notePreviewOneLine(content: string, maxChars = 140): string {
+  const t = prettifyChatMessageBody(content ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (t.length <= maxChars) return t;
+  return `${t.slice(0, Math.max(0, maxChars - 1))}…`;
+}
 
 type ConversationStatus = "OPEN" | "RESOLVED" | "PENDING" | "SNOOZED";
 type ReactionDto = { emoji: string; senderName: string };
 type InboxMessageDto = {
-  id: number | string; content: string; createdAt: string | null;
-  direction: "in" | "out" | "system"; messageType: string | number | undefined;
-  isPrivate?: boolean; senderName?: string | null;
+  id: number | string;
+  content: string;
+  createdAt: string | null;
+  direction: "in" | "out" | "system";
+  messageType: string | number | undefined;
+  isPrivate?: boolean;
+  senderName?: string | null;
   senderImageUrl?: string | null;
   mediaUrl?: string | null;
-  replyToId?: string | null; replyToPreview?: string | null;
-  reactions?: ReactionDto[]; sendStatus?: string; sendError?: string;
+  replyToId?: string | null;
+  replyToPreview?: string | null;
+  reactions?: ReactionDto[];
+  sendStatus?: string;
+  sendError?: string;
 };
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
-type SessionInfo = { lastInboundAt: string | null; active: boolean; expiresAt: string | null };
-type MessagesResponse = { messages: InboxMessageDto[]; pinnedNoteId?: string | null; channelProvider?: string | null; session?: SessionInfo };
+type SessionInfo = {
+  lastInboundAt: string | null;
+  active: boolean;
+  expiresAt: string | null;
+};
+type MessagesResponse = {
+  messages: InboxMessageDto[];
+  pinnedNoteId?: string | null;
+  channelProvider?: string | null;
+  session?: SessionInfo;
+};
 
-async function fetchMessages(conversationId: string): Promise<MessagesResponse> {
+async function fetchMessages(
+  conversationId: string,
+): Promise<MessagesResponse> {
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages`));
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao carregar mensagens");
-  return { messages: Array.isArray(data.messages) ? data.messages : [], pinnedNoteId: data.pinnedNoteId ?? null, channelProvider: data.channelProvider ?? null, session: data.session ?? undefined };
+  if (!res.ok)
+    throw new Error(
+      typeof data?.message === "string"
+        ? data.message
+        : "Erro ao carregar mensagens",
+    );
+  return {
+    messages: Array.isArray(data.messages) ? data.messages : [],
+    pinnedNoteId: data.pinnedNoteId ?? null,
+    channelProvider: data.channelProvider ?? null,
+    session: data.session ?? undefined,
+  };
 }
-async function postMessage(conversationId: string, content: string, asNote: boolean, replyToId?: string | null) {
-  const payload: Record<string, unknown> = asNote ? { content, messageType: "note", private: true } : { content };
+async function postMessage(
+  conversationId: string,
+  content: string,
+  asNote: boolean,
+  replyToId?: string | null,
+) {
+  const payload: Record<string, unknown> = asNote
+    ? { content, messageType: "note", private: true }
+    : { content };
   if (replyToId) payload.replyToId = replyToId;
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages`), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao enviar");
+  if (!res.ok)
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao enviar",
+    );
   return data as { message: InboxMessageDto; metaError?: string };
 }
-async function postAttachment(conversationId: string, file: File | Blob, caption: string, fileName?: string) {
-  const form = new FormData(); form.append("file", file, fileName ?? (file instanceof File ? file.name : "audio.ogg"));
+async function postAttachment(
+  conversationId: string,
+  file: File | Blob,
+  caption: string,
+  fileName?: string,
+) {
+  const form = new FormData();
+  form.append(
+    "file",
+    file,
+    fileName ?? (file instanceof File ? file.name : "audio.ogg"),
+  );
   if (caption) form.append("caption", caption);
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/attachments`), { method: "POST", body: form });
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/attachments`), {
+    method: "POST",
+    body: form,
+  });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao enviar anexo");
-  if (data.metaError) throw new Error(`Salvo localmente, mas falhou via WhatsApp: ${data.metaError}`);
+  if (!res.ok)
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao enviar anexo",
+    );
+  if (data.metaError)
+    throw new Error(
+      `Salvo localmente, mas falhou via WhatsApp: ${data.metaError}`,
+    );
   return data as { message: InboxMessageDto };
 }
 async function postReaction(messageId: string, emoji: string) {
-  const res = await fetch(apiUrl(`/api/messages/${encodeURIComponent(messageId)}/reactions`), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emoji }) });
-  if (!res.ok) throw new Error("Erro ao reagir"); return res.json();
-}
-async function postConversationAction(conversationId: string, action: "resolve" | "reopen") {
-  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/actions`), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
+  const res = await fetch(apiUrl(`/api/messages/${encodeURIComponent(messageId)}/reactions`),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emoji }),
+    },
+  );
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao atualizar status");
+  if (!res.ok) {
+    throw new Error(
+      typeof (data as { message?: unknown })?.message === "string"
+        ? (data as { message: string }).message
+        : "Não foi possível reagir.",
+    );
+  }
+  return data as { reactions?: ReactionDto[] };
+}
+async function postConversationAction(
+  conversationId: string,
+  action: "resolve" | "reopen",
+) {
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/actions`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok)
+    throw new Error(
+      typeof data?.message === "string"
+        ? data.message
+        : "Erro ao atualizar status",
+    );
   return data as { conversation: { status: ConversationStatus } };
 }
 
@@ -88,30 +241,239 @@ type ForwardPickRow = {
   contact: { id: string; name: string; phone: string | null };
 };
 
-async function postForward(targetConversationId: string, sourceConversationId: string, messageRef: string) {
-  const res = await fetch(apiUrl(`/api/conversations/${targetConversationId}/forward`), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sourceConversationId, messageRef }),
-  });
+async function postForward(
+  targetConversationId: string,
+  sourceConversationId: string,
+  messageRef: string,
+) {
+  const res = await fetch(apiUrl(`/api/conversations/${targetConversationId}/forward`),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceConversationId, messageRef }),
+    },
+  );
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao encaminhar");
+  if (!res.ok)
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao encaminhar",
+    );
   return data as { metaError?: string };
 }
 
-type ActivePanel = "none" | "quick-replies" | "emoji" | "templates" | "task" | "schedule";
-const ACTIVITY_TYPES = [{ value: "CALL", label: "Ligação" }, { value: "MEETING", label: "Reunião" }, { value: "TASK", label: "Tarefa" }, { value: "OTHER", label: "Outro" }];
+type ActivePanel =
+  | "none"
+  | "quick-replies"
+  | "emoji"
+  | "templates"
+  | "task"
+  | "schedule";
+const ACTIVITY_TYPES = [
+  { value: "CALL", label: "Ligação" },
+  { value: "MEETING", label: "Reunião" },
+  { value: "TASK", label: "Tarefa" },
+  { value: "OTHER", label: "Outro" },
+];
 
-export function ChatWindow({ conversationId, conversationStatus, contactId, onResolve, onReopen }: {
-  conversationId: string | null; conversationStatus?: ConversationStatus | string; contactId?: string;
-  onResolve?: (s: ConversationStatus) => void; onReopen?: (s: ConversationStatus) => void;
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function HighlightedText({
+  text,
+  query,
+  isCurrentMatch,
+}: {
+  text: string;
+  query: string;
+  isCurrentMatch: boolean;
+}) {
+  const q = query.trim();
+  if (!q) return <>{text}</>;
+  const parts = text.split(new RegExp(`(${escapeRegex(q)})`, "gi"));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === q.toLowerCase() ? (
+          <mark
+            key={i}
+            className={cn(
+              "rounded-[2px] px-px",
+              isCurrentMatch
+                ? "bg-[#f59e0b] text-white"
+                : "bg-[#fef3c7] text-[#92400e]",
+            )}
+          >
+            {part}
+          </mark>
+        ) : (
+          <React.Fragment key={i}>{part}</React.Fragment>
+        ),
+      )}
+    </>
+  );
+}
+
+type AttachPopoverProps = {
+  onFile: () => void;
+  onQuickReply: () => void;
+  onTemplate: () => void;
+  onTask: () => void;
+  onSchedule: () => void;
+  onNote: () => void;
+  noteMode: boolean;
+  isBaileysChannel: boolean;
+  signatureEnabled: boolean;
+  onToggleSignature: () => void;
+  onEditSignature: () => void;
+  isResolved: boolean;
+  statusPending: boolean;
+  onToggleResolve: () => void;
+};
+
+function AttachPopover({
+  onFile,
+  onQuickReply,
+  onTemplate,
+  onTask,
+  onSchedule,
+  onNote,
+  noteMode,
+  isBaileysChannel,
+  signatureEnabled,
+  onToggleSignature,
+  onEditSignature,
+  isResolved,
+  statusPending,
+  onToggleResolve,
+}: AttachPopoverProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--color-ink-soft)] shadow-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        aria-label="Anexos e mais opções"
+      >
+        <Plus className="size-5" strokeWidth={2} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="bottom-full start-0 z-[60] mb-1 mt-0 min-w-[208px] rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          onClick={onFile}
+        >
+          <Paperclip className="size-3.5 shrink-0" />
+          Anexar arquivo
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          onClick={onQuickReply}
+        >
+          <Zap className="size-3.5 shrink-0" />
+          Respostas rápidas
+        </DropdownMenuItem>
+        {!isBaileysChannel ? (
+          <DropdownMenuItem
+            className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+            onClick={onTemplate}
+          >
+            <FileText className="size-3.5 shrink-0" />
+            Templates
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          onClick={onTask}
+        >
+          <CheckSquare className="size-3.5 shrink-0" />
+          Nova tarefa
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          onClick={onSchedule}
+        >
+          <Clock className="size-3.5 shrink-0" />
+          Agendar mensagem
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          onClick={onNote}
+        >
+          <Lock className="size-3.5 shrink-0" />
+          {noteMode ? "Sair do modo nota" : "Nota interna"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          onClick={onToggleSignature}
+        >
+          {signatureEnabled ? "Desligar assinatura" : "Ligar assinatura"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          onClick={onEditSignature}
+        >
+          <Pencil className="size-3.5 shrink-0" />
+          Editar assinatura…
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          disabled={statusPending}
+          onClick={onToggleResolve}
+        >
+          {isResolved ? (
+            <>
+              <RotateCcw className="size-3.5 shrink-0" />
+              Reabrir conversa
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="size-3.5 shrink-0" />
+              Resolver conversa
+            </>
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function ChatWindow({
+  conversationId,
+  conversationStatus,
+  contactId,
+  onResolve,
+  onReopen,
+  compactChrome,
+  inConversationSearchRef,
+}: {
+  conversationId: string | null;
+  conversationStatus?: ConversationStatus | string;
+  contactId?: string;
+  onResolve?: (s: ConversationStatus) => void;
+  onReopen?: (s: ConversationStatus) => void;
+  /** Layout mais denso + alertas de sistema discretos (ex.: workspace do negócio). */
+  compactChrome?: boolean;
+  /** Preenchido pelo pai com `{ open }` para abrir a busca na conversa (ex.: botão no header). */
+  inConversationSearchRef?: React.MutableRefObject<{ open: () => void } | null>;
 }) {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const agentName = session?.user?.name ?? session?.user?.email ?? "Agente";
+  // Mobile breakpoint < 768px — usado pra copy progressiva no
+  // placeholder do composer ("Mensagem ou /" curto vs versao
+  // completa em desktop). SSR-safe (false no server, atualiza no
+  // mount sem hydration mismatch).
+  const isMobile = useIsMobile();
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  /** Handlers expostos por cada `AudioMessage` — menu ⋯ chama transcrever sem duplicar lógica. */
+  const audioTranscribeRefs = React.useRef<Map<string, () => void>>(new Map());
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchMatchIndex, setSearchMatchIndex] = React.useState(0);
   const [draft, setDraft] = React.useState("");
   // Modo de envio do composer — `false` = mensagem normal pro cliente,
   // `true` = nota interna (privada, só agentes veem). Antes existia um
@@ -125,54 +487,173 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
   const [activePanel, setActivePanel] = React.useState<ActivePanel>("none");
   const [pendingFile, setPendingFile] = React.useState<File | null>(null);
   const [replyTo, setReplyTo] = React.useState<InboxMessageDto | null>(null);
-  const [hoveredMsgId, setHoveredMsgId] = React.useState<string | number | null>(null);
-  const [reactionPickerMsgId, setReactionPickerMsgId] = React.useState<string | number | null>(null);
-  const [forwardingMessage, setForwardingMessage] = React.useState<InboxMessageDto | null>(null);
+  const [hoveredMsgId, setHoveredMsgId] = React.useState<
+    string | number | null
+  >(null);
+  const [reactionPickerMsgId, setReactionPickerMsgId] = React.useState<
+    string | number | null
+  >(null);
+  const [forwardingMessage, setForwardingMessage] =
+    React.useState<InboxMessageDto | null>(null);
   const [forwardSearch, setForwardSearch] = React.useState("");
-  const [pendingTemplate, setPendingTemplate] = React.useState<{ name: string; label?: string; content: string } | null>(null);
+  const [pendingTemplate, setPendingTemplate] = React.useState<{
+    name: string;
+    label?: string;
+    content: string;
+    /** ID Graph Meta — usado para montar componente de botão FLOW no envio. */
+    metaTemplateId?: string;
+    /** Metadados das variáveis do corpo (Config → operator_variables). */
+    operatorVariables?: OperatorVariableMeta[] | null;
+  } | null>(null);
+  // Valores das variaveis {{1}}, {{2}}... do template selecionado.
+  // Inicializado como {} sempre que pendingTemplate muda; o preview
+  // renderiza um input por placeholder e o usuario preenche antes do
+  // envio. Sem isso o Meta rejeita com code=132000 ("number of
+  // localizable_params (0) does not match the expected number of
+  // params (N)").
+  const [templateVars, setTemplateVars] = React.useState<
+    Record<string, string>
+  >({});
+  /** Opcional: templates com botão Flow — token de correlação; vazio = o servidor gera UUID por envio. */
+  const [flowTokenDraft, setFlowTokenDraft] = React.useState("");
+  /** JSON opcional: `flow_action_data` inicial (telas/dados do formulário Flow). */
+  const [flowActionJson, setFlowActionJson] = React.useState("");
+  const [flowJsonError, setFlowJsonError] = React.useState<string | null>(null);
+  const templatePlaceholders = React.useMemo(() => {
+    if (!pendingTemplate?.content) return [] as string[];
+    const fromMeta = pendingTemplate.operatorVariables?.map((v) => v.key).filter(Boolean);
+    if (fromMeta?.length) return fromMeta;
+    const set = new Set<string>();
+    const re = /\{\{([^}]+)\}\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(pendingTemplate.content))) set.add(m[1].trim());
+    const keys = Array.from(set);
+    const numKeys = keys.filter((k) => /^\d+$/.test(k));
+    if (numKeys.length === keys.length) {
+      return keys.sort((a, b) => Number(a) - Number(b));
+    }
+    return keys;
+  }, [pendingTemplate]);
+  // Sempre que troca o template, reseta as vars (preserva valores ja
+  // digitados pra mesma chave caso seja so um re-render).
+  /* eslint-disable react-hooks/set-state-in-effect -- merge de chaves ao trocar template */
+  React.useEffect(() => {
+    if (!pendingTemplate) {
+      setTemplateVars({});
+      return;
+    }
+    setTemplateVars((prev) => {
+      const next: Record<string, string> = {};
+      for (const k of templatePlaceholders) next[k] = prev[k] ?? "";
+      return next;
+    });
+  }, [pendingTemplate, templatePlaceholders]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  React.useEffect(() => {
+    setFlowTokenDraft("");
+    setFlowActionJson("");
+    setFlowJsonError(null);
+  }, [pendingTemplate?.name]);
+  const renderedTemplatePreview = React.useMemo(() => {
+    if (!pendingTemplate?.content) return "";
+    return pendingTemplate.content.replace(/\{\{([^}]+)\}\}/g, (_, raw: string) => {
+      const k = raw.trim();
+      const v = templateVars[k]?.trim();
+      return v ? v : `{{${k}}}`;
+    });
+  }, [pendingTemplate, templateVars]);
+  const allTemplateVarsFilled = templatePlaceholders.every(
+    (k) => templateVars[k]?.trim().length,
+  );
 
   // Assinatura do agente (toggle + texto personalizado) — persistido em localStorage.
   const [signatureEnabled, setSignatureEnabled] = React.useState<boolean>(true);
   const [signature, setSignature] = React.useState<string>("");
   const [signatureModalOpen, setSignatureModalOpen] = React.useState(false);
   const [signatureDraft, setSignatureDraft] = React.useState("");
+  /* eslint-disable react-hooks/set-state-in-effect -- hidrata assinatura do localStorage só no cliente */
   React.useEffect(() => {
     try {
-      const savedEnabled = window.localStorage.getItem("eduit:signature:enabled");
+      const savedEnabled = window.localStorage.getItem(
+        "eduit:signature:enabled",
+      );
       const savedValue = window.localStorage.getItem("eduit:signature:value");
       if (savedEnabled !== null) setSignatureEnabled(savedEnabled === "1");
       if (savedValue !== null) setSignature(savedValue);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
   const persistSignatureEnabled = React.useCallback((v: boolean) => {
     setSignatureEnabled(v);
-    try { window.localStorage.setItem("eduit:signature:enabled", v ? "1" : "0"); } catch { /* ignore */ }
+    try {
+      window.localStorage.setItem("eduit:signature:enabled", v ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
   }, []);
   const persistSignatureValue = React.useCallback((v: string) => {
     setSignature(v);
-    try { window.localStorage.setItem("eduit:signature:value", v); } catch { /* ignore */ }
+    try {
+      window.localStorage.setItem("eduit:signature:value", v);
+    } catch {
+      /* ignore */
+    }
   }, []);
   const effectiveSignature = (signature.trim() || agentName).trim();
 
-  const typingTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const messagesKey = ["conversation-messages", conversationId] as const;
 
-  const { data: messagesData, isLoading, isFetching, isError, error } = useQuery({
-    queryKey: messagesKey, queryFn: () => fetchMessages(conversationId!),
-    enabled: !!conversationId, staleTime: 4_000, gcTime: 5 * 60_000, refetchInterval: conversationId ? 30_000 : false,
+  const rowMax = compactChrome
+    ? "mx-auto w-full max-w-full"
+    : "mx-auto max-w-[1100px]";
+
+  const {
+    data: messagesData,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: messagesKey,
+    queryFn: () => fetchMessages(conversationId!),
+    enabled: !!conversationId,
+    staleTime: 4_000,
+    gcTime: 5 * 60_000,
+    refetchInterval: conversationId ? 30_000 : false,
   });
   const messages = messagesData?.messages ?? [];
   const pinnedNoteId = messagesData?.pinnedNoteId ?? null;
+  const pinnedCacheRef = React.useRef<InboxMessageDto | null>(null);
+  React.useEffect(() => {
+    if (!pinnedNoteId) {
+      pinnedCacheRef.current = null;
+      return;
+    }
+    const hit = messages.find(
+      (m) => String(m.id) === pinnedNoteId && m.isPrivate,
+    );
+    if (hit) pinnedCacheRef.current = hit;
+  }, [pinnedNoteId, messages]);
 
   // (Antes existia uma query `contact-primary-deal` aqui que servia
   // exclusivamente pra renderizar a aba "Timeline" no composer. A aba
   // foi removida — a timeline do deal continua acessível via
   // `/pipeline/[id]` e na sidebar de detalhes — então a query saiu
   // junto pra evitar requests órfãos por conversa aberta.)
-  const pinnedNote = pinnedNoteId ? messages.find((m) => String(m.id) === pinnedNoteId && m.isPrivate) : null;
+  const pinnedNote = pinnedNoteId
+    ? (messages.find((m) => String(m.id) === pinnedNoteId && m.isPrivate) ??
+      pinnedCacheRef.current)
+    : null;
   const sessionInfo = messagesData?.session;
   const sessionActive = sessionInfo?.active ?? true;
-  const sessionExpiresAt = sessionInfo?.expiresAt ? new Date(sessionInfo.expiresAt) : null;
+  const sessionExpiresAt = sessionInfo?.expiresAt
+    ? new Date(sessionInfo.expiresAt)
+    : null;
   const isBaileysChannel = messagesData?.channelProvider === "BAILEYS_MD";
 
   const [taskTitle, setTaskTitle] = React.useState("");
@@ -180,21 +661,64 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
   const [taskScheduled, setTaskScheduled] = React.useState("");
   const taskMutation = useMutation({
     mutationFn: async () => {
-      const body: Record<string, unknown> = { type: taskType, title: taskTitle.trim() };
+      const body: Record<string, unknown> = {
+        type: taskType,
+        title: taskTitle.trim(),
+      };
       if (contactId) body.contactId = contactId;
-      if (taskScheduled.trim()) body.scheduledAt = new Date(taskScheduled).toISOString();
-      const res = await fetch(apiUrl("/api/activities"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (taskScheduled.trim())
+        body.scheduledAt = new Date(taskScheduled).toISOString();
+      const res = await fetch(apiUrl("/api/activities"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
       if (!res.ok) throw new Error("Erro ao criar tarefa");
     },
-    onSuccess: () => { setTaskTitle(""); setTaskScheduled(""); setActivePanel("none"); queryClient.invalidateQueries({ queryKey: ["contact"] }); },
+    onSuccess: () => {
+      setTaskTitle("");
+      setTaskScheduled("");
+      setActivePanel("none");
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
+    },
   });
   const templateSendMutation = useMutation({
-    mutationFn: async (vars: { templateName: string; bodyPreview?: string }) => {
-      const res = await fetch(apiUrl(`/api/conversations/${conversationId}/template`), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateName: vars.templateName, bodyPreview: vars.bodyPreview }) });
+    mutationFn: async (vars: {
+      templateName: string;
+      bodyPreview?: string;
+      components?: unknown[];
+      flowToken?: string | null;
+      flowActionData?: Record<string, unknown> | null;
+      templateGraphId?: string | null;
+    }) => {
+      const res = await fetch(apiUrl(`/api/conversations/${conversationId}/template`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateName: vars.templateName,
+          bodyPreview: vars.bodyPreview,
+          ...(vars.components ? { components: vars.components } : {}),
+          ...(vars.flowToken ? { flowToken: vars.flowToken } : {}),
+          ...(vars.flowActionData && Object.keys(vars.flowActionData).length > 0
+            ? { flowActionData: vars.flowActionData }
+            : {}),
+          ...(vars.templateGraphId
+            ? { templateGraphId: vars.templateGraphId }
+            : {}),
+        }),
+      });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao enviar template"); return data;
+      if (!res.ok)
+        throw new Error(
+          typeof data?.message === "string"
+            ? data.message
+            : "Erro ao enviar template",
+        );
+      return data;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: messagesKey }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messagesKey });
+    },
   });
 
   // ── Agendar mensagem ───────────────────────────────
@@ -207,17 +731,40 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
   const [scheduleAt, setScheduleAt] = React.useState("");
   const [scheduleFile, setScheduleFile] = React.useState<File | null>(null);
   const [scheduleUseFallback, setScheduleUseFallback] = React.useState(false);
-  const [scheduleTemplate, setScheduleTemplate] = React.useState<{ name: string; label?: string; content?: string } | null>(null);
-  const [showScheduleTemplatePicker, setShowScheduleTemplatePicker] = React.useState(false);
+  const [scheduleTemplate, setScheduleTemplate] = React.useState<{
+    name: string;
+    label?: string;
+    content?: string;
+  } | null>(null);
+  const [showScheduleTemplatePicker, setShowScheduleTemplatePicker] =
+    React.useState(false);
   const scheduleFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const scheduledMessagesKey = ["scheduled-messages", conversationId] as const;
   const { data: pendingScheduledData } = useQuery({
     queryKey: scheduledMessagesKey,
     queryFn: async () => {
-      const res = await fetch(apiUrl(`/api/scheduled-messages?conversationId=${conversationId}`));
-      if (!res.ok) return { items: [] as Array<{ id: string; content: string; scheduledAt: string; createdBy?: { name?: string | null } | null; fallbackTemplateName?: string | null }> };
-      return res.json() as Promise<{ items: Array<{ id: string; content: string; scheduledAt: string; createdBy?: { name?: string | null } | null; fallbackTemplateName?: string | null }> }>;
+      const res = await fetch(apiUrl(`/api/scheduled-messages?conversationId=${conversationId}`),
+      );
+      if (!res.ok)
+        return {
+          items: [] as Array<{
+            id: string;
+            content: string;
+            scheduledAt: string;
+            createdBy?: { name?: string | null } | null;
+            fallbackTemplateName?: string | null;
+          }>,
+        };
+      return res.json() as Promise<{
+        items: Array<{
+          id: string;
+          content: string;
+          scheduledAt: string;
+          createdBy?: { name?: string | null } | null;
+          fallbackTemplateName?: string | null;
+        }>;
+      }>;
     },
     enabled: !!conversationId,
     staleTime: 15_000,
@@ -241,12 +788,24 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
       if (scheduleFile) {
         const form = new FormData();
         form.append("file", scheduleFile);
-        const up = await fetch(apiUrl("/api/uploads/automation-media"), { method: "POST", body: form });
-        const upData = (await up.json().catch(() => ({}))) as { url?: string; fileName?: string; mimeType?: string; message?: string };
+        const up = await fetch(apiUrl("/api/uploads/automation-media"), {
+          method: "POST",
+          body: form,
+        });
+        const upData = (await up.json().catch(() => ({}))) as {
+          url?: string;
+          fileName?: string;
+          mimeType?: string;
+          message?: string;
+        };
         if (!up.ok || !upData.url) {
           throw new Error(upData.message || "Falha ao enviar anexo");
         }
-        media = { url: upData.url, type: upData.mimeType, name: upData.fileName };
+        media = {
+          url: upData.url,
+          type: upData.mimeType,
+          name: upData.fileName,
+        };
       }
 
       const body: Record<string, unknown> = {
@@ -259,7 +818,10 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
       // escolheu um template. Caso contrário o backend cria o agendamento
       // sem fallback — worker marcará FAILED se sessão 24h expirar.
       if (scheduleUseFallback && scheduleTemplate) {
-        body.fallbackTemplate = { name: scheduleTemplate.name, language: "pt_BR" };
+        body.fallbackTemplate = {
+          name: scheduleTemplate.name,
+          language: "pt_BR",
+        };
       }
 
       const res = await fetch(apiUrl("/api/scheduled-messages"), {
@@ -269,7 +831,9 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(typeof data?.message === "string" ? data.message : "Erro ao agendar");
+        throw new Error(
+          typeof data?.message === "string" ? data.message : "Erro ao agendar",
+        );
       }
       return data;
     },
@@ -290,7 +854,9 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
 
   const cancelScheduledMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(apiUrl(`/api/scheduled-messages/${id}`), { method: "DELETE" });
+      const res = await fetch(apiUrl(`/api/scheduled-messages/${id}`), {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Erro ao cancelar");
     },
     onSuccess: () => {
@@ -300,20 +866,41 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     onError: () => toast.error("Falha ao cancelar agendamento"),
   });
 
-  useSSE(apiUrl("/api/sse/messages"), React.useCallback((event: string, data: unknown) => {
-    // contact_updated tem semantica diferente: nao mexe em mensagens,
-    // so refresha a lista pra pegar avatar/nome novos.
-    if (event === "contact_updated") {
-      queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
-      return;
-    }
-    if (event !== "new_message" && event !== "whatsapp_call" && event !== "message_status") return;
-    const p = data as { conversationId?: string };
-    if (p.conversationId === conversationId) queryClient.invalidateQueries({ queryKey: messagesKey });
-    if (event !== "message_status") queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
-  }, [conversationId, messagesKey, queryClient]), !!conversationId);
+  useSSE(
+    "/api/sse/messages",
+    React.useCallback(
+      (event: string, data: unknown) => {
+        // contact_updated tem semantica diferente: nao mexe em mensagens,
+        // so refresha a lista pra pegar avatar/nome novos.
+        if (event === "contact_updated") {
+          queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
+          return;
+        }
+        if (
+          event !== "new_message" &&
+          event !== "whatsapp_call" &&
+          event !== "message_status"
+        )
+          return;
+        const p = data as { conversationId?: string };
+        if (p.conversationId === conversationId)
+          queryClient.invalidateQueries({ queryKey: messagesKey });
+        if (event !== "message_status")
+          queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      },
+      [conversationId, messagesKey, queryClient],
+    ),
+    !!conversationId,
+  );
 
-  React.useEffect(() => { if (conversationId) fetch(apiUrl(`/api/conversations/${conversationId}/read`), { method: "POST" }).then(() => queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] })).catch(() => {}); }, [conversationId, queryClient]);
+  React.useEffect(() => {
+    if (conversationId)
+      fetch(apiUrl(`/api/conversations/${conversationId}/read`), { method: "POST" })
+        .then(() =>
+          queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] }),
+        )
+        .catch(() => {});
+  }, [conversationId, queryClient]);
 
   // Ao trocar de conversa: pular instantaneamente para a última mensagem (sem
   // animação e sem "rolagem visível pelo topo"). Enquanto as mensagens ainda
@@ -330,7 +917,76 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     });
     return () => cancelAnimationFrame(raf);
   }, [messages, conversationId]);
-  React.useEffect(() => { setNoteMode(false); setActivePanel("none"); setPendingFile(null); setReplyTo(null); setReactionPickerMsgId(null); setForwardingMessage(null); setForwardSearch(""); setPendingTemplate(null); setScheduleContent(""); setScheduleAt(""); setScheduleFile(null); setScheduleTemplate(null); setShowScheduleTemplatePicker(false); }, [conversationId]);
+  React.useEffect(() => {
+    setNoteMode(false);
+    setActivePanel("none");
+    setPendingFile(null);
+    setReplyTo(null);
+    setReactionPickerMsgId(null);
+    setForwardingMessage(null);
+    setForwardSearch("");
+    setPendingTemplate(null);
+    setScheduleContent("");
+    setScheduleAt("");
+    setScheduleFile(null);
+    setScheduleTemplate(null);
+    setShowScheduleTemplatePicker(false);
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchMatchIndex(0);
+  }, [conversationId]);
+
+  const searchMatches = React.useMemo(() => {
+    if (!searchQuery.trim() || !searchOpen) return [];
+    const q = searchQuery.trim().toLowerCase();
+    return messages
+      .map((m, i) => ({
+        i,
+        c: typeof m.content === "string" ? m.content : String(m.content ?? ""),
+      }))
+      .filter(({ c }) => c.toLowerCase().includes(q))
+      .map(({ i }) => i)
+      .reverse();
+  }, [messages, searchQuery, searchOpen]);
+
+  const currentMatchMessageIndex = searchMatches[searchMatchIndex] ?? null;
+
+  const openInConversationSearch = React.useCallback(() => {
+    setSearchOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  }, []);
+
+  React.useEffect(() => {
+    if (!inConversationSearchRef) return;
+    inConversationSearchRef.current = { open: openInConversationSearch };
+    return () => {
+      inConversationSearchRef.current = null;
+    };
+  }, [inConversationSearchRef, openInConversationSearch]);
+
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        openInConversationSearch();
+      }
+      if (e.key === "Escape" && searchOpen) {
+        setSearchOpen(false);
+        setSearchQuery("");
+        setSearchMatchIndex(0);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [searchOpen, openInConversationSearch]);
+
+  React.useEffect(() => {
+    if (currentMatchMessageIndex === null) return;
+    const el = document.querySelector(
+      `[data-msg-idx="${currentMatchMessageIndex}"]`,
+    );
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [currentMatchMessageIndex]);
 
   React.useEffect(() => {
     if (reactionPickerMsgId == null) return;
@@ -346,38 +1002,91 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
   }, [reactionPickerMsgId]);
 
   const sendMutation = useMutation({
-    mutationFn: ({ content, asNote, replyId }: { content: string; asNote: boolean; replyId?: string | null }) => postMessage(conversationId!, content, asNote, replyId),
+    mutationFn: ({
+      content,
+      asNote,
+      replyId,
+    }: {
+      content: string;
+      asNote: boolean;
+      replyId?: string | null;
+    }) => postMessage(conversationId!, content, asNote, replyId),
     onMutate: async ({ content, asNote, replyId }) => {
       await queryClient.cancelQueries({ queryKey: messagesKey });
       const previous = queryClient.getQueryData<MessagesResponse>(messagesKey);
-      const replyPreview = replyId ? messages.find((m) => String(m.id) === replyId)?.content?.slice(0, 80) : null;
-      const optimistic: InboxMessageDto = { id: `temp-${Date.now()}`, content, createdAt: new Date().toISOString(), direction: "out", messageType: asNote ? "note" : "text", isPrivate: asNote || undefined, senderName: agentName, replyToId: replyId, replyToPreview: replyPreview };
-      queryClient.setQueryData<MessagesResponse>(messagesKey, (old) => ({ messages: [...(old?.messages ?? []), optimistic], session: old?.session }));
+      const replyPreview = replyId
+        ? messages.find((m) => String(m.id) === replyId)?.content?.slice(0, 80)
+        : null;
+      const optimistic: InboxMessageDto = {
+        id: `temp-${Date.now()}`,
+        content,
+        createdAt: new Date().toISOString(),
+        direction: "out",
+        messageType: asNote ? "note" : "text",
+        isPrivate: asNote || undefined,
+        senderName: agentName,
+        replyToId: replyId,
+        replyToPreview: replyPreview,
+      };
+      queryClient.setQueryData<MessagesResponse>(messagesKey, (old) => ({
+        messages: [...(old?.messages ?? []), optimistic],
+        session: old?.session,
+      }));
       return { previous };
     },
     onError: (e, _v, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(messagesKey, ctx.previous);
-      toast.error(e instanceof Error ? e.message : "Não foi possível enviar a mensagem");
+      toast.error(
+        e instanceof Error ? e.message : "Não foi possível enviar a mensagem",
+      );
     },
     onSuccess: (data) => {
       if (data?.metaError) {
-        toast.warning(`Salvo localmente, mas não enviado via WhatsApp: ${data.metaError}`);
+        toast.warning(
+          `Salvo localmente, mas não enviado via WhatsApp: ${data.metaError}`,
+        );
       }
     },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: messagesKey }); queryClient.invalidateQueries({ queryKey: ["conversations"] }); },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: messagesKey });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
   });
   const attachMutation = useMutation({
-    mutationFn: ({ file, caption, fileName }: { file: File | Blob; caption: string; fileName?: string }) => postAttachment(conversationId!, file, caption, fileName),
+    mutationFn: ({
+      file,
+      caption,
+      fileName,
+    }: {
+      file: File | Blob;
+      caption: string;
+      fileName?: string;
+    }) => postAttachment(conversationId!, file, caption, fileName),
     onMutate: async ({ file, fileName }) => {
       await queryClient.cancelQueries({ queryKey: messagesKey });
       const previous = queryClient.getQueryData<MessagesResponse>(messagesKey);
       const name = fileName ?? (file instanceof File ? file.name : "audio.ogg");
       const mime = (file as File).type ?? "";
-      const isAudio = mime.startsWith("audio/") || /\.(webm|ogg|mp3|wav|m4a|opus|aac|amr)$/i.test(name);
-      const isImage = !isAudio && (mime.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(name));
-      const isVideo = !isAudio && !isImage && (mime.startsWith("video/") || /\.(mp4|mov|avi|3gp|mkv)$/i.test(name));
-      const optimisticType = isAudio ? "audio" : isImage ? "image" : isVideo ? "video" : "document";
-      const previewUrl = (isAudio || isImage || isVideo) ? URL.createObjectURL(file) : undefined;
+      const isAudio =
+        mime.startsWith("audio/") ||
+        /\.(webm|ogg|mp3|wav|m4a|opus|aac|amr)$/i.test(name);
+      const isImage =
+        !isAudio &&
+        (mime.startsWith("image/") ||
+          /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(name));
+      const isVideo =
+        !isAudio &&
+        !isImage &&
+        (mime.startsWith("video/") || /\.(mp4|mov|avi|3gp|mkv)$/i.test(name));
+      const optimisticType = isAudio
+        ? "audio"
+        : isImage
+          ? "image"
+          : isVideo
+            ? "video"
+            : "document";
+      const previewUrl =
+        isAudio || isImage || isVideo ? URL.createObjectURL(file) : undefined;
       const optimistic: InboxMessageDto = {
         id: `temp-att-${Date.now()}`,
         content: isAudio ? "" : `📎 ${name}`,
@@ -387,18 +1096,41 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
         senderName: agentName,
         mediaUrl: previewUrl,
       };
-      queryClient.setQueryData<MessagesResponse>(messagesKey, (old) => ({ messages: [...(old?.messages ?? []), optimistic], session: old?.session }));
+      queryClient.setQueryData<MessagesResponse>(messagesKey, (old) => ({
+        messages: [...(old?.messages ?? []), optimistic],
+        session: old?.session,
+      }));
       return { previous };
     },
-    onError: (_e, _v, ctx) => { if (ctx?.previous) queryClient.setQueryData(messagesKey, ctx.previous); },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: messagesKey }); queryClient.invalidateQueries({ queryKey: ["conversations"] }); setPendingFile(null); },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(messagesKey, ctx.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: messagesKey });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      setPendingFile(null);
+    },
   });
   const reactionMutation = useMutation({
-    mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string }) => postReaction(messageId, emoji),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: messagesKey }); setReactionPickerMsgId(null); setHoveredMsgId(null); },
+    mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string }) =>
+      postReaction(messageId, emoji),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: messagesKey });
+      setReactionPickerMsgId(null);
+      setHoveredMsgId(null);
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+    },
   });
   const forwardMutation = useMutation({
-    mutationFn: async ({ targetId, messageRef }: { targetId: string; messageRef: string }) => {
+    mutationFn: async ({
+      targetId,
+      messageRef,
+    }: {
+      targetId: string;
+      messageRef: string;
+    }) => {
       if (!conversationId) throw new Error("Sem conversa");
       return postForward(targetId, conversationId, messageRef);
     },
@@ -407,18 +1139,27 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
       queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
       setForwardingMessage(null);
       setForwardSearch("");
-      if (data.metaError) toast.warning(`Encaminhado salvo; WhatsApp: ${data.metaError}`);
+      if (data.metaError)
+        toast.warning(`Encaminhado salvo; WhatsApp: ${data.metaError}`);
       else toast.success("Mensagem encaminhada.");
     },
-    onError: (e) => { toast.error(e instanceof Error ? e.message : "Erro ao encaminhar"); },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Erro ao encaminhar");
+    },
   });
 
   const { data: forwardPickData, isLoading: forwardPickLoading } = useQuery({
     queryKey: ["forward-conversation-pick"],
     queryFn: async () => {
-      const res = await fetch(apiUrl("/api/conversations?perPage=80&sortBy=updatedAt&sortOrder=desc"));
+      const res = await fetch(apiUrl("/api/conversations?perPage=80&sortBy=updatedAt&sortOrder=desc"),
+      );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao listar conversas");
+      if (!res.ok)
+        throw new Error(
+          typeof data?.message === "string"
+            ? data.message
+            : "Erro ao listar conversas",
+        );
       return (data.items ?? []) as ForwardPickRow[];
     },
     enabled: !!forwardingMessage && !!conversationId,
@@ -437,13 +1178,20 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     });
   }, [forwardPickData, forwardSearch, conversationId]);
   const statusMutation = useMutation({
-    mutationFn: (action: "resolve" | "reopen") => postConversationAction(conversationId!, action),
-    onSuccess: (data, action) => { queryClient.invalidateQueries({ queryKey: ["conversations"] }); if (action === "resolve") onResolve?.(data.conversation.status); else onReopen?.(data.conversation.status); },
+    mutationFn: (action: "resolve" | "reopen") =>
+      postConversationAction(conversationId!, action),
+    onSuccess: (data, action) => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      if (action === "resolve") onResolve?.(data.conversation.status);
+      else onReopen?.(data.conversation.status);
+    },
   });
   const pinNoteMutation = useMutation({
     mutationFn: async (noteId: string | null) => {
       const res = await fetch(apiUrl(`/api/conversations/${conversationId}/pin-note`), {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ noteId }),
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ noteId }),
       });
       if (!res.ok) throw new Error("Erro ao fixar nota");
       return res.json();
@@ -451,20 +1199,34 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     onMutate: async (noteId) => {
       await queryClient.cancelQueries({ queryKey: messagesKey });
       const prev = queryClient.getQueryData<MessagesResponse>(messagesKey);
-      queryClient.setQueryData<MessagesResponse>(messagesKey, (old) => old ? { ...old, pinnedNoteId: noteId } : old);
+      queryClient.setQueryData<MessagesResponse>(messagesKey, (old) =>
+        old ? { ...old, pinnedNoteId: noteId } : old,
+      );
       return { prev };
     },
-    onError: (_e, _v, ctx) => { if (ctx?.prev) queryClient.setQueryData(messagesKey, ctx.prev); },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: messagesKey }); },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(messagesKey, ctx.prev);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: messagesKey });
+    },
   });
 
-  const togglePanel = (panel: ActivePanel) => setActivePanel((p) => (p === panel ? "none" : panel));
+  const togglePanel = (panel: ActivePanel) =>
+    setActivePanel((p) => (p === panel ? "none" : panel));
   const sendTypingIndicator = React.useCallback(() => {
     if (!conversationId || typingTimerRef.current) return;
-    fetch(apiUrl(`/api/conversations/${conversationId}/typing`), { method: "POST" }).catch(() => {});
-    typingTimerRef.current = setTimeout(() => { typingTimerRef.current = null; }, 20_000);
+    fetch(apiUrl(`/api/conversations/${conversationId}/typing`), {
+      method: "POST",
+    }).catch(() => {});
+    typingTimerRef.current = setTimeout(() => {
+      typingTimerRef.current = null;
+    }, 20_000);
   }, [conversationId]);
-  const insertEmoji = React.useCallback((emoji: string) => { setDraft((d) => d + emoji); textareaRef.current?.focus(); }, []);
+  const insertEmoji = React.useCallback((emoji: string) => {
+    setDraft((d) => d + emoji);
+    textareaRef.current?.focus();
+  }, []);
   const onSend = React.useCallback(() => {
     const text = draft.trim();
     // NÃO bloqueamos por `sendMutation.isPending` — o agente precisa
@@ -533,10 +1295,34 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     effectiveSignature,
   ]);
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (pendingFile) sendFile(); else onSend(); }
-    if (e.key === "Escape") { setReplyTo(null); setActivePanel("none"); }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (pendingFile) sendFile();
+      else onSend();
+    }
+    if (e.key === "Escape" && searchOpen) {
+      e.preventDefault();
+      setSearchOpen(false);
+      setSearchQuery("");
+      setSearchMatchIndex(0);
+      return;
+    }
+    if (e.key === "Escape") {
+      setReplyTo(null);
+      setActivePanel("none");
+    }
   };
-  const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; e.target.value = ""; if (f.size > 16 * 1024 * 1024) { toast.warning("O arquivo excede o limite de 16 MB."); return; } setPendingFile(f); setActivePanel("none"); };
+  const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    e.target.value = "";
+    if (f.size > 16 * 1024 * 1024) {
+      toast.warning("O arquivo excede o limite de 16 MB.");
+      return;
+    }
+    setPendingFile(f);
+    setActivePanel("none");
+  };
   /**
    * Handler de Ctrl+V / Cmd+V no composer.
    *
@@ -554,90 +1340,147 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
    * `preventDefault` só é chamado quando encontramos imagem, para não
    * quebrar o paste de texto em cenários normais.
    */
-  const onPaste = React.useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const items = e.clipboardData?.items;
-    if (!items || items.length === 0) return;
-    for (let i = 0; i < items.length; i += 1) {
-      const it = items[i];
-      if (it.kind !== "file" || !it.type.startsWith("image/")) continue;
-      const blob = it.getAsFile();
-      if (!blob) continue;
-      if (blob.size > 16 * 1024 * 1024) {
-        toast.warning("A imagem colada excede o limite de 16 MB.");
+  const onPaste = React.useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = e.clipboardData?.items;
+      if (!items || items.length === 0) return;
+      for (let i = 0; i < items.length; i += 1) {
+        const it = items[i];
+        if (it.kind !== "file" || !it.type.startsWith("image/")) continue;
+        const blob = it.getAsFile();
+        if (!blob) continue;
+        if (blob.size > 16 * 1024 * 1024) {
+          toast.warning("A imagem colada excede o limite de 16 MB.");
+          e.preventDefault();
+          return;
+        }
+        const ext = (blob.type.split("/")[1] || "png")
+          .split("+")[0]
+          .toLowerCase();
+        const stamp = new Date()
+          .toISOString()
+          .replace(/[-:.TZ]/g, "")
+          .slice(0, 14);
+        const fileName =
+          (blob as File).name && (blob as File).name !== "image.png"
+            ? (blob as File).name
+            : `screenshot-${stamp}.${ext}`;
+        const file = new File([blob], fileName, { type: blob.type });
         e.preventDefault();
+        setPendingFile(file);
+        setActivePanel("none");
+        toast.success("Imagem colada — digite a legenda e envie");
         return;
       }
-      const ext = (blob.type.split("/")[1] || "png").split("+")[0].toLowerCase();
-      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-      const fileName = (blob as File).name && (blob as File).name !== "image.png"
-        ? (blob as File).name
-        : `screenshot-${stamp}.${ext}`;
-      const file = new File([blob], fileName, { type: blob.type });
-      e.preventDefault();
-      setPendingFile(file);
-      setActivePanel("none");
-      toast.success("Imagem colada — digite a legenda e envie");
-      return;
-    }
-  }, []);
+    },
+    [],
+  );
   const sendFile = () => {
     if (!pendingFile || !conversationId) return;
     attachMutation.mutate({ file: pendingFile, caption: draft.trim() });
     setDraft("");
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
-  const sendAudio = React.useCallback((blob: Blob) => { if (!conversationId) return; const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm"; attachMutation.mutate({ file: blob, caption: "", fileName: `audio.${ext}` }); }, [conversationId, attachMutation]);
+  const sendAudio = React.useCallback(
+    (blob: Blob) => {
+      if (!conversationId) return;
+      const ext = blob.type.includes("ogg")
+        ? "ogg"
+        : blob.type.includes("mp4")
+          ? "m4a"
+          : "webm";
+      attachMutation.mutate({
+        file: blob,
+        caption: "",
+        fileName: `audio.${ext}`,
+      });
+    },
+    [conversationId, attachMutation],
+  );
   const isBusy = sendMutation.isPending || attachMutation.isPending;
   const isResolved = conversationStatus === "RESOLVED";
 
   if (!conversationId) return null;
-  if (isLoading) return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden eduit-msg-bg p-6">
-      {[1,2,3,4,5].map((i) => <Skeleton key={i} className={cn("h-14 rounded-[20px]", i % 2 ? "ml-16" : "mr-16")} />)}
-    </div>
-  );
-  if (isError) return (
-    <div className="flex min-h-0 flex-1 items-center justify-center eduit-msg-bg p-6">
-      <div className="rounded-[16px] border border-destructive/30 bg-destructive/5 px-5 py-3 text-[14px] text-destructive">
-        {error instanceof Error ? error.message : "Erro ao carregar mensagens."}
+  if (isLoading)
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[var(--chat-bg)] p-6">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton
+            key={i}
+            className={cn("h-14 rounded-[20px]", i % 2 ? "ml-16" : "mr-16")}
+          />
+        ))}
       </div>
-    </div>
-  );
+    );
+  if (isError)
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-[var(--chat-bg)] p-6">
+        <div className="rounded-[16px] border border-destructive/30 bg-destructive/5 px-5 py-3 text-[14px] text-destructive">
+          {error instanceof Error
+            ? error.message
+            : "Erro ao carregar mensagens."}
+        </div>
+      </div>
+    );
 
-  const META_DOMAINS = ["lookaside.fbsbx.com", "scontent.whatsapp.net", "graph.facebook.com"];
+  const META_DOMAINS = [
+    "lookaside.fbsbx.com",
+    "scontent.whatsapp.net",
+    "graph.facebook.com",
+  ];
   const resolveMediaUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
     if (url.startsWith("blob:") || url.startsWith("data:")) return url;
-    if (url.startsWith("/uploads/") || url.startsWith("/api/")) return apiUrl(url);
+    if (url.startsWith("/uploads/") || url.startsWith("/api/")) return url;
     try {
       const p = new URL(url, window.location.origin);
-      if (p.pathname.startsWith("/uploads/")) return apiUrl(p.pathname + p.search);
-      if (META_DOMAINS.some((d) => p.hostname.endsWith(d)))
-        return apiUrl(`/api/media/proxy?url=${encodeURIComponent(url)}`);
-    } catch {
-      /* ignore */
-    }
-    if (url.includes("/uploads/")) {
-      const idx = url.indexOf("/uploads/");
-      return apiUrl(url.slice(idx));
-    }
+      // Normaliza URLs absolutas do próprio app para paths internos,
+      // pois `/api/media/transcribe` só autoriza `"/..."`.
+      if (p.pathname.startsWith("/uploads/")) return `${p.pathname}${p.search}`;
+      if (p.pathname.startsWith("/api/")) return `${p.pathname}${p.search}`;
+      if (META_DOMAINS.some((d) => p.hostname.endsWith(d))) {
+        return `/api/media/proxy?url=${encodeURIComponent(url)}`;
+      }
+    } catch {}
+    if (url.includes("/uploads/")) return url.slice(url.indexOf("/uploads/"));
     return url;
   };
-  const detectMediaKind = (m: InboxMessageDto): "image" | "audio" | "video" | "document" | null => {
+  const detectMediaKind = (
+    m: InboxMessageDto,
+  ): "image" | "audio" | "video" | "document" | null => {
     const mt = String(m.messageType ?? "").toLowerCase();
     if (mt === "whatsapp_call_recording" && m.mediaUrl) return "audio";
-    if (mt === "image" || mt === "sticker") return "image"; if (mt === "audio" || mt === "ptt") return "audio"; if (mt === "video") return "video"; if (mt === "document") return "document";
+    if (mt === "image" || mt === "sticker") return "image";
+    if (mt === "audio" || mt === "ptt") return "audio";
+    if (mt === "video") return "video";
+    if (mt === "document") return "document";
     const u = m.mediaUrl ?? "";
-    if (/\.(jpg|jpeg|png|gif|webp)($|\?)/i.test(u)) return "image"; if (/\.(webm|ogg|mp3|wav|m4a|aac|amr|opus)($|\?)/i.test(u)) return "audio"; if (/\.(mp4|mov|avi|3gp)($|\?)/i.test(u)) return "video";
+    if (/\.(jpg|jpeg|png|gif|webp)($|\?)/i.test(u)) return "image";
+    if (/\.(webm|ogg|mp3|wav|m4a|aac|amr|opus)($|\?)/i.test(u)) return "audio";
+    if (/\.(mp4|mov|avi|3gp)($|\?)/i.test(u)) return "video";
     const c = m.content ?? "";
-    if (/\[imagem\]|\[image\]|\[sticker\]/i.test(c)) return "image"; if (/\[áudio\]|\[audio\]/i.test(c)) return "audio"; if (/\[vídeo\]|\[video\]/i.test(c)) return "video"; if (/\[documento\]|\[document\]/i.test(c)) return "document";
-    if ((mt === "attachment" || mt === "file") && u) { if (/image/i.test(u)) return "image"; if (/audio/i.test(u)) return "audio"; if (/video/i.test(u)) return "video"; return "document"; }
+    if (/\[imagem\]|\[image\]|\[sticker\]/i.test(c)) return "image";
+    if (/\[áudio\]|\[audio\]/i.test(c)) return "audio";
+    if (/\[vídeo\]|\[video\]/i.test(c)) return "video";
+    if (/\[documento\]|\[document\]/i.test(c)) return "document";
+    if ((mt === "attachment" || mt === "file") && u) {
+      if (/image/i.test(u)) return "image";
+      if (/audio/i.test(u)) return "audio";
+      if (/video/i.test(u)) return "video";
+      return "document";
+    }
     return null;
   };
 
-  const renderMedia = (m: InboxMessageDto, out: boolean, isNote: boolean) => {
+  const renderMedia = (
+    m: InboxMessageDto,
+    out: boolean,
+    isNote: boolean,
+    msgId: string,
+  ) => {
     if (!m.mediaUrl) return null;
-    const url = resolveMediaUrl(m.mediaUrl); if (!url) return null;
+    const url = resolveMediaUrl(m.mediaUrl);
+    if (!url) return null;
     const kind = detectMediaKind(m);
     // Mensagem otimista (ainda subindo p/ servidor) — `id` começa com "temp-".
     // Usado p/ exibir estado "Enviando…" em todos os tipos de mídia: o
@@ -646,23 +1489,35 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     const isUploading = typeof m.id === "string" && m.id.startsWith("temp-");
     if (kind === "audio") {
       const time = m.createdAt ? chatTime(m.createdAt) : undefined;
-      const showDelivery = out && !isNote && m.sendStatus !== "failed" && !isUploading;
-      const status = (m.sendStatus === "read" ? "read" : m.sendStatus === "delivered" ? "delivered" : "sent") as "sent" | "delivered" | "read";
+      const showDelivery =
+        out && !isNote && m.sendStatus !== "failed" && !isUploading;
+      const status = (
+        m.sendStatus === "read"
+          ? "read"
+          : m.sendStatus === "delivered"
+            ? "delivered"
+            : "sent"
+      ) as "sent" | "delivered" | "read";
       // Gravação de chamada outbound: extrai nome limpo de `senderName`
       // ("WhatsApp · chamada · Marcelo Pinheiro" → "Marcelo Pinheiro") em
       // vez do `effectiveSignature` global, garantindo que o áudio mostre
       // QUEM realmente conduziu a ligação.
-      const isCallRec = String(m.messageType ?? "").toLowerCase() === "whatsapp_call_recording";
-      const callAgentName = isCallRec && m.senderName
-        ? m.senderName.replace(/^WhatsApp\s+·\s+(?:chamada\s+·\s+)?/i, "").trim()
-        : "";
-      const audioSenderLabel = isCallRec && out
-        ? (callAgentName || "Gravação de chamada")
-        : out && !isNote && signatureEnabled
-          ? effectiveSignature
-          : !out
-            ? m.senderName ?? undefined
-            : undefined;
+      const isCallRec =
+        String(m.messageType ?? "").toLowerCase() === "whatsapp_call_recording";
+      const callAgentName =
+        isCallRec && m.senderName
+          ? m.senderName
+              .replace(/^WhatsApp\s+·\s+(?:chamada\s+·\s+)?/i, "")
+              .trim()
+          : "";
+      const audioSenderLabel =
+        isCallRec && out
+          ? callAgentName || "Gravação de chamada"
+          : out && !isNote && signatureEnabled
+            ? effectiveSignature
+            : !out
+              ? (m.senderName ?? undefined)
+              : undefined;
       return (
         <AudioMessage
           url={url}
@@ -672,20 +1527,41 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
           out={out && !isNote}
           senderLabel={audioSenderLabel}
           isUploading={isUploading}
+          onRegisterTranscribe={
+            isUploading
+              ? undefined
+              : (handler) => {
+                  if (handler) audioTranscribeRefs.current.set(msgId, handler);
+                  else audioTranscribeRefs.current.delete(msgId);
+                }
+          }
         />
       );
     }
 
-    const fileName = (m.content ?? "")
-      .replace(/^📎\s*/, "")
-      .replace(/^\[.*\]$/, "")
-      .trim() || (kind === "image" ? "image.jpeg" : kind === "video" ? "video.mp4" : "Documento");
+    const fileName =
+      (m.content ?? "")
+        .replace(/^📎\s*/, "")
+        .replace(/^\[.*\]$/, "")
+        .trim() ||
+      (kind === "image"
+        ? "image.jpeg"
+        : kind === "video"
+          ? "video.mp4"
+          : "Documento");
 
     if (kind === "video") {
       return (
         <div className="relative">
-          <video controls preload="metadata" src={url} className="mb-2 max-h-56 w-full rounded-xl" />
-          {isUploading && <UploadingOverlay label="Enviando vídeo…" rounded="rounded-xl" />}
+          <video
+            controls
+            preload="metadata"
+            src={url}
+            className="mb-2 max-h-56 w-full rounded-xl"
+          />
+          {isUploading && (
+            <UploadingOverlay label="Enviando vídeo…" rounded="rounded-xl" />
+          )}
         </div>
       );
     }
@@ -693,15 +1569,32 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     if (kind === "image") {
       return (
         <div className="w-full">
-          <div className="relative overflow-hidden rounded-lg border border-slate-100">
+          <div className="relative overflow-hidden rounded-xl border border-slate-100">
             {isUploading ? (
-              <img src={url} alt="" className="max-h-[420px] w-full object-cover opacity-70" loading="lazy" />
+              <img
+                src={url}
+                alt=""
+                className="max-h-[420px] w-full object-cover opacity-70"
+                loading="lazy"
+              />
             ) : (
-              <a href={url} target="_blank" rel="noopener noreferrer" className="group block">
-                <img src={url} alt="" className="max-h-[420px] w-full object-cover transition-opacity group-hover:opacity-[0.97]" loading="lazy" />
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block"
+              >
+                <img
+                  src={url}
+                  alt=""
+                  className="max-h-[420px] w-full object-cover transition-opacity group-hover:opacity-[0.97]"
+                  loading="lazy"
+                />
               </a>
             )}
-            {isUploading && <UploadingOverlay label="Enviando imagem…" rounded="rounded-lg" />}
+            {isUploading && (
+              <UploadingOverlay label="Enviando imagem…" rounded="rounded-xl" />
+            )}
           </div>
         </div>
       );
@@ -717,25 +1610,63 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     const isAudioFile = /^(mp3|wav|ogg|m4a|aac|amr|opus|webm)$/i.test(ext);
     const typeLabel = isUploading
       ? "Enviando…"
-      : isPdf ? "Arquivo PDF" : isAudioFile ? `Áudio ${ext.toUpperCase()}` : ext ? `Arquivo ${ext.toUpperCase()}` : "Arquivo";
-    const iconColor = isPdf ? "bg-indigo-600" : isAudioFile ? "bg-orange-500" : "bg-slate-500";
+      : isPdf
+        ? "Arquivo PDF"
+        : isAudioFile
+          ? `Áudio ${ext.toUpperCase()}`
+          : ext
+            ? `Arquivo ${ext.toUpperCase()}`
+            : "Arquivo";
+    const iconColor = isPdf
+      ? "bg-indigo-600"
+      : isAudioFile
+        ? "bg-orange-500"
+        : "bg-[var(--color-bg-subtle)]0";
 
     return (
       <div className="flex items-center gap-3">
-        <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg text-white", iconColor)}>
-          {isUploading ? <Loader2 className="size-5 animate-spin" /> : <FileText className="size-5" />}
+        <div
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-lg text-white",
+            iconColor,
+          )}
+        >
+          {isUploading ? (
+            <Loader2 className="size-5 animate-spin" />
+          ) : (
+            <FileText className="size-5" />
+          )}
         </div>
         <div className="min-w-0 flex-1 text-left">
-          <p className={cn("truncate text-sm font-bold", isUploading ? "text-slate-500" : "text-slate-800")}>{fileName}</p>
-          <p className="text-[11px] font-bold capitalize text-slate-400">{typeLabel}</p>
+          <p
+            className={cn(
+              "truncate text-sm font-bold",
+              isUploading ? "text-slate-500" : "text-slate-800",
+            )}
+          >
+            {fileName}
+          </p>
+          <p className="text-[11px] font-bold capitalize text-[var(--color-ink-muted)]">
+            {typeLabel}
+          </p>
         </div>
         {isUploading ? (
-          <span className="shrink-0 p-1.5 text-slate-400" aria-label="Enviando">
+          <span
+            className="shrink-0 p-1.5 text-[var(--color-ink-muted)]"
+            aria-label="Enviando"
+          >
             <Loader2 className="size-[18px] animate-spin" />
           </span>
         ) : (
           <TooltipHost label="Baixar arquivo" side="left">
-            <a href={url} target="_blank" rel="noopener noreferrer" download className="shrink-0 p-1.5 text-slate-400 hover:text-slate-600" aria-label="Baixar arquivo">
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="shrink-0 p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink-soft)]"
+              aria-label="Baixar arquivo"
+            >
               <Download className="size-[18px]" />
             </a>
           </TooltipHost>
@@ -749,80 +1680,173 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
     const c = prettifyChatMessageBody(raw).trim();
     if (!c) return null;
     if (/^📎\s*audio\.(webm|ogg|mp3|wav|m4a|aac|amr)$/i.test(c)) return null;
-    if (m.mediaUrl && /^\[(?:imagem|image|áudio|audio|ptt|vídeo|video|sticker|documento|document)\]$/i.test(c)) return null;
-    if (m.mediaUrl && /^📎\s/.test(c) && detectMediaKind(m) !== "document") return null;
+    if (
+      m.mediaUrl &&
+      /^\[(?:imagem|image|áudio|audio|ptt|vídeo|video|sticker|documento|document)\]$/i.test(
+        c,
+      )
+    )
+      return null;
+    if (m.mediaUrl && /^📎\s/.test(c) && detectMediaKind(m) !== "document")
+      return null;
     return c;
   };
 
+  /** Composer Meta sem sessão ativa (textarea desabilitado) — mesmo critério do `disabled` do textarea. */
+  const composeDisabled =
+    !isBaileysChannel && !sessionActive && sessionInfo != null && !noteMode;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {sessionInfo && <SessionBar active={sessionActive} expiresAt={sessionExpiresAt} />}
-
-      {/* Pinned note banner — fundo BRANCO sólido (sem gradient,
-          sem amarelo) ocupando a faixa inteira do chat, com borda
-          inferior pra separar do scroller. Identidade visual da
-          nota fixada vem de:
-            ▸ Borda lateral GROSSA (`border-l-4 slate-600`) — sinaliza
-              "anotação operacional importante" sem usar cor primária.
-            ▸ Chip do ícone Pin em `slate-100` ringado — peso semântico.
-            ▸ Nome do agente em `slate-800` — único elemento "humano"
-              ganha o destaque do header.
-          Banner full-width (sem `max-w-[900px]`) garante que o topo
-          fica "todo preenchido" — o operador entende que aquela faixa
-          inteira é a nota fixada, não um cartão flutuante. */}
+      {/* Nota fixada — faixa única estilo WhatsApp (baixa, truncada). */}
       {pinnedNote && (
-        <div className="sticky top-0 z-20 shrink-0 border-b border-slate-200/80 bg-white px-6 py-3 shadow-[0_1px_0_rgba(15,23,42,0.02)] border-l-4 border-l-slate-600">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 ring-1 ring-slate-200">
-              <Pin
-                className="size-3.5 rotate-45"
-                fill="currentColor"
-                strokeWidth={2}
-              />
+        <div className="sticky top-0 z-20 flex min-h-0 shrink-0 items-center gap-2 border-b border-border bg-[var(--color-bg-subtle)] px-3 py-1.5 md:px-4">
+          <Pin
+            className="size-3.5 shrink-0 rotate-45 text-[var(--color-ink-muted)]"
+            fill="currentColor"
+            strokeWidth={2}
+            aria-hidden
+          />
+          <div className="flex min-w-0 flex-1 items-baseline gap-2">
+            <span className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted)]">
+              NOTA FIXADA
             </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest">
-                <span className="text-slate-500">Nota Fixada</span>
-                {pinnedNote.senderName && (
-                  <>
-                    <span className="text-slate-300" aria-hidden>•</span>
-                    <span className="text-slate-800">
-                      {pinnedNote.senderName}
-                    </span>
-                  </>
-                )}
-              </div>
-              <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-slate-600">
-                {pinnedNote.content}
-              </p>
-            </div>
-            <TooltipHost label="Desfixar nota" side="left">
-              <button type="button" onClick={() => pinNoteMutation.mutate(null)}
-                aria-label="Desfixar nota"
-                className="mt-0.5 shrink-0 rounded-lg p-1 text-slate-500 eduit-transition hover:bg-slate-100 hover:text-slate-700">
-                <X className="size-3.5" />
-              </button>
-            </TooltipHost>
+            <p className="min-w-0 flex-1 truncate font-sans text-[12px] font-normal leading-snug text-[var(--color-ink-soft)]">
+              {pinnedNote.senderName ? (
+                <>
+                  <span className="font-semibold text-foreground">
+                    {pinnedNote.senderName}
+                  </span>
+                  <span className="text-[var(--color-ink-muted)]">: </span>
+                </>
+              ) : null}
+              <span>{notePreviewOneLine(pinnedNote.content ?? "")}</span>
+            </p>
           </div>
+          <TooltipHost label="Desfixar nota" side="left">
+            <button
+              type="button"
+              onClick={() => pinNoteMutation.mutate(null)}
+              aria-label="Desfixar nota"
+              className="shrink-0 rounded-md p-1 text-[var(--color-ink-muted)] lumen-transition hover:bg-background hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          </TooltipHost>
         </div>
       )}
 
+      {searchOpen ? (
+        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-white px-3">
+          <Search
+            className="size-3.5 shrink-0 text-[var(--color-ink-soft)]"
+            strokeWidth={2}
+          />
+          <input
+            ref={searchInputRef}
+            type="search"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchMatchIndex(0);
+            }}
+            placeholder="Buscar na conversa…"
+            className="flex-1 bg-transparent text-[13px] text-foreground placeholder:text-[var(--color-ink-muted)] focus:outline-none"
+            autoFocus
+          />
+          {searchMatches.length > 0 ? (
+            <span className="shrink-0 text-[11px] tabular-nums text-[var(--color-ink-soft)]">
+              {searchMatchIndex + 1}/{searchMatches.length}
+            </span>
+          ) : searchQuery.trim() ? (
+            <span className="shrink-0 text-[11px] text-[var(--color-ink-muted)]">
+              Nenhum resultado
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              if (searchMatchIndex < searchMatches.length - 1)
+                setSearchMatchIndex((i) => i + 1);
+            }}
+            disabled={searchMatchIndex >= searchMatches.length - 1}
+            className="inline-flex size-6 items-center justify-center rounded text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)] disabled:opacity-30"
+            aria-label="Anterior"
+          >
+            <ChevronUp className="size-3.5" strokeWidth={2.2} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (searchMatchIndex > 0) setSearchMatchIndex((i) => i - 1);
+            }}
+            disabled={searchMatchIndex <= 0}
+            className="inline-flex size-6 items-center justify-center rounded text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)] disabled:opacity-30"
+            aria-label="Próximo"
+          >
+            <ChevronDown className="size-3.5" strokeWidth={2.2} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchOpen(false);
+              setSearchQuery("");
+              setSearchMatchIndex(0);
+            }}
+            className="inline-flex size-6 items-center justify-center rounded text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]"
+            aria-label="Fechar busca"
+          >
+            <X className="size-3.5" strokeWidth={2.2} />
+          </button>
+        </div>
+      ) : null}
+
       {/* Messages — única zona de scroll vertical do chat
           Protocolo "High-End Luxury UI": px-12 + py-12 para respiro editorial,
-          fundo #f8fafc/40 + shadow-inner para profundidade no topo.
-          Mobile: px-4 + py-4 + gap-4 — em telas < 640px o respiro editorial
-          (px-12 = 48px de cada lado) deixaria as bolhas com menos de 280px,
-          então adaptamos pra px-4 + py-4. Identidade desktop é preservada
-          com sm:px-12 sm:py-12 + sm:gap-8. */}
-      <div className="scrollbar-thin relative min-h-0 flex-1 overflow-y-auto bg-[#f4f7fa] px-2.5 py-3 shadow-inner sm:px-12 sm:py-12">
-        {/* Mobile: px-2.5 py-3 (Kommo-like — chat ocupa quase 100% da tela
-            estreita); Desktop: px-12 py-12 (respiro editorial premium). */}
-        {isFetching && !isLoading && (
-          <div className="pointer-events-none absolute right-4 top-3 z-10 rounded-full bg-card px-3 py-1.5 text-[11px] font-medium text-muted-foreground shadow-float">Atualizando…</div>
+          fundo #f4f7fa + shadow-inner para profundidade no topo.
+          Mobile: px-4 + py-3 + gap-2 — alinhado com a regra
+          `ui-fidelity §7.bis` ("Body do chat mantem px-4 sm:px-12").
+          Versao anterior `px-2.5` era violacao da regra (bolhas grudadas
+          nas bordas em telas <375px) sob o pretexto de 'Kommo-like'.
+          16px (px-4) e o minimo aceitavel sem perder identidade. */}
+      <div
+        className={cn(
+          "relative min-h-0 flex-1 overflow-y-auto bg-[var(--chat-bg)] px-4 py-3 shadow-inner",
+          compactChrome
+            ? "scrollbar-workspace sm:px-4 sm:py-3"
+            : "scrollbar-thin sm:px-12 sm:py-12",
         )}
-        <div className="mx-auto flex w-full flex-col gap-2 sm:gap-8">
-          {/* Mobile: gap-2 entre mensagens (denso, log-feed estilo Kommo).
-              Desktop: gap-8 (respiro editorial). */}
+      >
+        {/* Mobile: px-4 py-3 (respeita regra). Desktop: px-12 py-12
+            (respiro editorial premium). */}
+        {isFetching && !isLoading && (
+          <div className="pointer-events-none absolute right-4 top-3 z-10 rounded-full bg-card px-3 py-1.5 text-[11px] font-medium text-muted-foreground shadow-[var(--shadow-sm)]">
+            Atualizando…
+          </div>
+        )}
+        {/* Empty state — conversa selecionada porem sem mensagens.
+            Acontece quando operador cria conversa nova manualmente
+            (sem mensagem inicial) ou apos limpeza historica. Padrao
+            do `visual-agent.mdc §7`: card minimalista centrado com
+            icone em pill, titulo font-extrabold tracking-tighter e
+            descricao font-medium slate-400. */}
+        {!isLoading && conversationId && messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
+            <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-slate-100">
+              <Send
+                className="size-5 text-[var(--color-ink-muted)]"
+                strokeWidth={2.2}
+              />
+            </div>
+            <p className="mb-1 text-[16px] font-extrabold tracking-tighter text-foreground">
+              Conversa nova
+            </p>
+            <p className="max-w-[280px] text-[13px] font-medium leading-relaxed text-[var(--color-ink-muted)]">
+              Envie a primeira mensagem ou um template para iniciar a conversa.
+            </p>
+          </div>
+        )}
+        <div className="mx-auto flex w-full flex-col gap-0.5">
           {messages.map((m, idx) => {
             const prev = idx > 0 ? messages[idx - 1] : null;
             const showDate = shouldShowDateSeparator(prev, m);
@@ -838,13 +1862,15 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <AIDraftCard
-                      messageId={String(m.id)}
-                      content={raw}
-                      createdAt={m.createdAt}
-                      senderName={m.senderName ?? null}
-                      conversationId={conversationId}
-                    />
+                    <div data-msg-idx={idx}>
+                      <AIDraftCard
+                        messageId={String(m.id)}
+                        content={raw}
+                        createdAt={m.createdAt}
+                        senderName={m.senderName ?? null}
+                        conversationId={conversationId}
+                      />
+                    </div>
                   </React.Fragment>
                 );
               }
@@ -864,7 +1890,9 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <CallActivityItem message={m} />
+                    <div data-msg-idx={idx}>
+                      <CallActivityItem message={m} />
+                    </div>
                   </React.Fragment>
                 );
               }
@@ -874,7 +1902,12 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <ConsentActivityItem message={m} verdict={consentVerdict} />
+                    <div data-msg-idx={idx}>
+                      <ConsentActivityItem
+                        message={m}
+                        verdict={consentVerdict}
+                      />
+                    </div>
                   </React.Fragment>
                 );
               }
@@ -887,11 +1920,16 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                 const systemBody =
                   raw === "[system]" || raw === "[Sistema]"
                     ? "Evento do sistema WhatsApp. Mensagens antigas não tinham o texto; as novas mostram o aviso da Meta (ex.: cliente alterou o número)."
-                    : (m.content || "Evento do sistema WhatsApp.");
+                    : m.content || "Evento do sistema WhatsApp.";
                 return (
                   <React.Fragment key={m.id}>
                     {showDate && <DateSep date={m.createdAt} />}
-                    <SystemEventRow body={systemBody} createdAt={m.createdAt} />
+                    <div data-msg-idx={idx}>
+                      <SystemEventRow
+                        body={systemBody}
+                        createdAt={m.createdAt}
+                      />
+                    </div>
                   </React.Fragment>
                 );
               }
@@ -899,254 +1937,336 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
 
             const out = m.direction === "out";
             const isNote = out && m.isPrivate === true;
-            const isBot = out && (m.senderName === "Automação" || m.senderName === "Sistema");
+            const isBot =
+              out &&
+              (m.senderName === "Automação" || m.senderName === "Sistema");
             const msgId = String(m.id);
             const isHov = hoveredMsgId === m.id;
             const grouped = groupReactions(m.reactions ?? []);
-            const showSenderName = m.senderName && (!prev || prev.direction !== m.direction);
+            const showSenderName =
+              m.senderName && (!prev || prev.direction !== m.direction);
             const next = idx < messages.length - 1 ? messages[idx + 1] : null;
             const isLastInGroup = !next || next.direction !== m.direction;
 
             const isPinned = pinnedNoteId === String(m.id);
-            const isAudioOnly = !isNote && detectMediaKind(m) === "audio" && !msgText(m);
+            const isAudioOnly =
+              !isNote && detectMediaKind(m) === "audio" && !msgText(m);
 
             return (
               <React.Fragment key={m.id}>
-              {showDate && <DateSep date={m.createdAt} />}
-              <MotionDiv
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
-                className={cn(
-                  "group flex w-full",
-                  // Nota interna = faixa "borda-a-borda" (Slack/Zendesk log).
-                  // Fora do grid de balões: sem items-end, sem gap, ocupa
-                  // a largura total disponível para enfatizar que é um
-                  // registro de sistema, não um balão de conversa.
-                  // Mobile: gap menor (gap-1.5) entre avatar e bolha pra
-                  // densidade tipo Kommo. Desktop intocado (gap-2).
-                  isNote ? "" : cn("items-end gap-1.5 md:gap-2", out ? "justify-end" : "justify-start"),
-                )}
-                onMouseEnter={() => setHoveredMsgId(m.id)} onMouseLeave={() => { if (reactionPickerMsgId !== m.id) setHoveredMsgId(null); }}>
-
-              <div
-                className={cn(
-                  "relative",
-                  // Mobile: bolha ocupa 92% pra aproveitar a tela estreita.
-                  // Desktop: 85% original (mantém respiro lateral premium).
-                  isNote ? "w-full" : "min-w-0 max-w-[92%] md:max-w-[85%]",
-                )}
-              >
-
-                {/*
+                {showDate && <DateSep date={m.createdAt} />}
+                <MotionDiv
+                  data-msg-idx={idx}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className={cn(
+                    "group flex w-full",
+                    // Nota interna: mesma largura máxima dos balões + alinhada
+                    // à direita (agente). Mobile: gap menor entre avatar e bolha.
+                    isNote
+                      ? "justify-end"
+                      : cn(
+                          "items-end gap-1.5 md:gap-2",
+                          out ? "justify-end" : "justify-start",
+                        ),
+                  )}
+                  onMouseEnter={() => setHoveredMsgId(m.id)}
+                  onMouseLeave={() => {
+                    if (reactionPickerMsgId !== m.id) setHoveredMsgId(null);
+                  }}
+                >
+                  <div
+                    className={cn(
+                      "relative",
+                      isNote
+                        ? "w-full ml-0 mr-0"
+                        : compactChrome
+                          ? "min-w-0 max-w-[75%]"
+                          : "min-w-0 max-w-[92%] md:max-w-[85%]",
+                    )}
+                  >
+                    {/*
                   NB: botão de pin pra notas mora INLINE no header da nota
                   (ver bloco `isNote ? (...)` abaixo). Em layout borda-a-
                   borda, um botão flutuante absoluto briga com a leitura
                   da faixa — então ele fica sempre visível na linha do
                   cabecalho, no canto direito.
                 */}
-                {reactionPickerMsgId === m.id && (
-                  <div data-reaction-picker className={cn("absolute bottom-full z-20 mb-1 flex items-center gap-0.5 rounded-[20px] border border-border bg-card px-1.5 py-1 shadow-lg", out ? "right-0" : "left-0")}>
-                    {QUICK_REACTIONS.map((emoji) => (
-                      <button key={emoji} type="button" onClick={() => reactionMutation.mutate({ messageId: msgId, emoji })}
-                        className="flex size-8 items-center justify-center rounded-xl text-base eduit-transition hover:scale-125 hover:bg-chat-bg">{emoji}</button>
-                    ))}
-                  </div>
-                )}
+                    {reactionPickerMsgId === m.id && (
+                      <div
+                        data-reaction-picker
+                        className={cn(
+                          "absolute bottom-full z-20 mb-1 flex items-center gap-0.5 rounded-[20px] border border-border bg-card px-1.5 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]",
+                          out ? "right-0" : "left-0",
+                        )}
+                      >
+                        {QUICK_REACTIONS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            disabled={
+                              msgId.startsWith("temp-") ||
+                              reactionMutation.isPending
+                            }
+                            onClick={() =>
+                              reactionMutation.mutate({
+                                messageId: msgId,
+                                emoji,
+                              })
+                            }
+                            className="flex size-8 items-center justify-center rounded-xl text-base lumen-transition hover:scale-125 hover:bg-[var(--chat-bg)] disabled:opacity-40"
+                            aria-label={
+                              msgId.startsWith("temp-")
+                                ? "Aguarde a mensagem terminar de enviar"
+                                : `Reagir com ${emoji}`
+                            }
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                <div className={cn(
-                  "relative",
-                  // Mobile: bolha mais "tight" (rounded-[14px]) pra densidade
-                  // estilo Kommo. Desktop preserva o rounded-[20px] da
-                  // identidade premium. Notas mantêm border-a-border
-                  // (sem rounded) em todos os breakpoints.
-                  isAudioOnly && "rounded-[14px] rounded-br-none md:rounded-[20px] md:rounded-br-none",
-                  !isAudioOnly && out && !isNote && !isBot && "eduit-chat-sent-bubble rounded-[14px] rounded-br-none shadow-float md:rounded-[20px] md:rounded-br-none",
-                  !isAudioOnly && out && !isNote && isBot && "eduit-chat-bot-bubble rounded-[14px] rounded-br-none shadow-float md:rounded-[20px] md:rounded-br-none",
-                  // Nota interna: FAIXA BORDA-A-BORDA (Slack/Zendesk log).
-                  // Paleta NEUTRA (slate) — feedback: o roxo/indigo
-                  // "puxava" a atenção como se fosse alerta, mas nota é
-                  // só lembrete interno. Mantém a borda lateral fininha
-                  // como único acento (`border-l-2 slate-300`) e fundo
-                  // `slate-50` (cinza claro). Pinned engrossa pra 4px e
-                  // escurece pra `slate-400` + fundo `slate-100`.
-                  !isAudioOnly && isNote && "w-full rounded-none border-y border-slate-200/80 bg-white border-l-[3px] border-l-slate-400",
-                  isPinned && isNote && "border-l-4 border-l-slate-600 bg-slate-50",
-                  !isAudioOnly && !out && !isNote && "rounded-[14px] rounded-tl-none border border-slate-100 bg-white shadow-float md:rounded-[20px] md:rounded-tl-none",
-                )}>
-                  {!isNote && (
-                    /* Chip flutuante: posicionado FORA da bolha (acima do canto
+                    <div
+                      className={cn(
+                        "relative",
+                        isNote &&
+                          cn(
+                            "w-full border-l-2 border-l-slate-200 bg-[#f8fafc]",
+                            isPinned &&
+                              "border-l-primary bg-[var(--color-primary-soft)]/35",
+                          ),
+                        !isNote &&
+                          (out ? dt.chat.bubble.sent : dt.chat.bubble.received),
+                      )}
+                      style={
+                        !isNote && out
+                          ? {
+                              background: "var(--chat-bubble-sent-bg)",
+                              color: "var(--chat-bubble-sent-text)",
+                            }
+                          : undefined
+                      }
+                    >
+                      {!isNote && (
+                        /* Chip flutuante: posicionado FORA da bolha (acima do canto
                        superior direito). Antes acompanhava o lado da mensagem
                        (out→direita, in→esquerda) criando um efeito espelhado.
                        Por preferência do operador o chip agora fica SEMPRE no
                        final do balão — canto direito — independente da direção
                        da mensagem. O `align="end"` do popover é mantido pra
                        evitar que o menu seja cortado pelo overflow do scroller. */
-                    <div
-                      // Em mobile o chip de ações (responder/encaminhar/
-                      // reagir) fica oculto: não existe hover, e long-press
-                      // é um padrão de outro ciclo. Em md+ continua o
-                      // comportamento original (aparece no hover/focus).
-                      className="absolute -top-3 right-2 z-20 hidden opacity-0 transition-opacity duration-150 md:block focus-within:opacity-100 group-hover:opacity-100"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
+                        <div
+                          // Em mobile o chip de ações (responder/encaminhar/
+                          // reagir) fica oculto: não existe hover, e long-press
+                          // é um padrão de outro ciclo. Em md+ continua o
+                          // comportamento original (aparece no hover/focus).
+                          className="absolute -top-3 right-2 z-20 hidden opacity-0 transition-opacity duration-150 md:block focus-within:opacity-100 group-hover:opacity-100"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              className={cn(
+                                "flex size-7 items-center justify-center rounded-full border border-border bg-white text-slate-500 shadow-[var(--shadow-sm)] outline-none transition-colors hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-offset-1",
+                                out
+                                  ? "focus-visible:ring-info/50"
+                                  : "focus-visible:ring-border",
+                              )}
+                              aria-label="Ações da mensagem"
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="z-50 min-w-44 rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
+                            >
+                              <DropdownMenuItem
+                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                                onClick={() => {
+                                  setReplyTo(m);
+                                  textareaRef.current?.focus();
+                                }}
+                              >
+                                <Reply className="size-3.5 shrink-0 opacity-70" />
+                                Responder
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                                onClick={() => setForwardingMessage(m)}
+                              >
+                                <Share2 className="size-3.5 shrink-0 opacity-70" />
+                                Encaminhar…
+                              </DropdownMenuItem>
+                              {detectMediaKind(m) === "audio" && m.mediaUrl ? (
+                                <DropdownMenuItem
+                                  className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                                  onClick={() =>
+                                    audioTranscribeRefs.current.get(msgId)?.()
+                                  }
+                                  disabled={
+                                    typeof m.id === "string" &&
+                                    m.id.startsWith("temp-")
+                                  }
+                                >
+                                  <FileText className="size-3.5 shrink-0 opacity-70" />
+                                  Transcrever áudio
+                                </DropdownMenuItem>
+                              ) : null}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                                onClick={() => setReactionPickerMsgId(m.id)}
+                              >
+                                <Smile className="size-3.5 shrink-0 opacity-70" />
+                                Reagir…
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+
+                      {m.replyToPreview && (
+                        <div
                           className={cn(
-                            "flex size-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-float outline-none transition-colors hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-offset-1",
-                            out ? "focus-visible:ring-info/50" : "focus-visible:ring-border",
+                            // Quote/reply: padding mais tight em mobile pra
+                            // não ocupar 1/3 da bolha. Desktop intocado.
+                            "mx-2 mt-1.5 flex flex-col gap-0.5 overflow-hidden rounded-xl border-l-4 p-1.5 md:mx-3 md:mt-2 md:p-2",
+                            out && !isNote
+                              ? "border-[color:var(--chat-bubble-sent-text)]/20 bg-[color:var(--chat-bubble-sent-text)]/10"
+                              : "border-accent bg-[var(--color-bg-subtle)]",
                           )}
-                          aria-label="Ações da mensagem"
                         >
-                          <MoreHorizontal className="size-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="z-100 min-w-44">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setReplyTo(m);
-                              textareaRef.current?.focus();
-                            }}
-                          >
-                            <Reply className="size-3.5 shrink-0 opacity-70" />
-                            Responder
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setForwardingMessage(m)}>
-                            <Share2 className="size-3.5 shrink-0 opacity-70" />
-                            Encaminhar…
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setReactionPickerMsgId(m.id)}>
-                            <Smile className="size-3.5 shrink-0 opacity-70" />
-                            Reagir…
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  )}
-
-                  {m.replyToPreview && (
-                    <div className={cn(
-                      // Quote/reply: padding mais tight em mobile pra
-                      // não ocupar 1/3 da bolha. Desktop intocado.
-                      "mx-2 mt-1.5 flex flex-col gap-0.5 overflow-hidden rounded-lg border-l-4 p-1.5 md:mx-3 md:mt-2 md:p-2",
-                      out && !isNote
-                        ? "border-accent bg-slate-100/60"
-                        : "border-accent bg-slate-50",
-                    )}>
-                      <span className="text-[9px] font-black uppercase text-accent tracking-tight">Respondendo</span>
-                      <span className="line-clamp-2 text-[11px] text-slate-500 md:text-[12px]">{m.replyToPreview}</span>
-                    </div>
-                  )}
-
-                  <div className={cn(
-                    isAudioOnly
-                      ? ""
-                      : isNote
-                        // Respiro generoso horizontal (px-8) pra combinar com
-                        // a "respiração" de uma faixa borda-a-borda; py-5 para
-                        // altura tipográfica confortável na leitura do log.
-                        // Em mobile (px-4 py-3) reduz pra evitar que a faixa
-                        // ocupe altura desproporcional na tela vertical.
-                        ? "px-4 py-3 md:px-8 md:py-5"
-                        // Mobile: padding mais tight (px-3 pb-1 pt-1) — Kommo
-                        // style. Desktop preserva os offsets exatos da
-                        // identidade (px-[14px] pb-2 pt-[6px]).
-                        : "px-3 pb-1 pt-1 md:px-[14px] md:pb-2 md:pt-[6px]",
-                  )}>
-                    {isNote ? (
-                      <div className="mb-2 flex items-center gap-2">
-                        {/* Ícone Lock dentro de "chip" — dá peso semântico
-                            sem precisar de cor primária. Mesmo padrão
-                            usado na nota fixada do topo. */}
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600 ring-1 ring-slate-200">
-                          <Lock className="size-3" strokeWidth={2.5} />
-                        </span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                          Nota interna
-                        </span>
-                        {m.senderName && (
-                          <>
-                            <span className="text-[10px] font-bold text-slate-300" aria-hidden>
-                              ·
-                            </span>
-                            {/* Nome do agente: cinza ESCURO (`slate-800`)
-                                em caps naturais (sem `uppercase`). É o
-                                único elemento "humano" do header da nota
-                                — recebe o peso visual; os labels técnicos
-                                em volta ficam em cinza médio. */}
-                            <span className="text-[11px] font-black tracking-tight text-slate-800">
-                              {m.senderName}
-                            </span>
-                          </>
-                        )}
-                        {/* Pin inline — sempre visível no header da nota.
-                            Clicável: alterna o estado fixar/desfixar.
-                            Em layout borda-a-borda, o botão flutuante no
-                            hover brigava com a leitura; inline é o padrão
-                            que Slack e Zendesk usam pra ações de log. */}
-                        <TooltipHost
-                          label={isPinned ? "Desfixar nota" : "Fixar no topo"}
-                          side="top"
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              pinNoteMutation.mutate(
-                                isPinned ? null : String(m.id),
-                              )
-                            }
-                            aria-label={
-                              isPinned ? "Desfixar nota" : "Fixar no topo"
-                            }
-                            aria-pressed={isPinned}
+                          <span className="text-[9px] font-semibold uppercase text-accent tracking-tight">
+                            Respondendo
+                          </span>
+                          <span
                             className={cn(
-                              "ml-auto flex size-6 items-center justify-center rounded-md eduit-transition hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50",
-                              isPinned
-                                ? "text-slate-600 hover:text-slate-800"
-                                : "text-slate-400 hover:text-slate-600",
+                              "line-clamp-2 text-[11px] md:text-[12px]",
+                              out && !isNote
+                                ? "text-[color:var(--chat-bubble-sent-text)]/70"
+                                : "text-slate-500",
                             )}
                           >
-                            {isPinned ? (
-                              <Pin
-                                className="size-3.5 rotate-45"
-                                fill="currentColor"
-                                strokeWidth={2}
-                              />
-                            ) : (
-                              <Pin className="size-3.5 rotate-45" strokeWidth={2} />
-                            )}
-                          </button>
-                        </TooltipHost>
-                      </div>
-                    ) : (out ? (
-                      // Mensagens enviadas: quando geradas por automação,
-                      // carimbamos um chip compacto "Automação" com ícone
-                      // de robô. Paleta neutra (slate) — o âmbar anterior
-                      // competia com alertas reais do chat.
-                      isBot && !isAudioOnly ? (
-                        <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-slate-200/70 px-2 py-0.5 ring-1 ring-slate-300/70">
-                          <Bot className="size-3 text-slate-600" strokeWidth={2.4} />
-                          <span className="font-outfit text-[10px] font-black uppercase tracking-[0.08em] text-slate-700">
-                            {m.senderName ?? "Automação"}
+                            {m.replyToPreview}
                           </span>
                         </div>
-                      ) : null
-                    ) : (showSenderName && !isAudioOnly ? (
-                      // Label do remetente (contato): preserva o case cadastrado
-                      // no CRM (sem `uppercase` forçado) e usa tipografia mais
-                      // leve — `font-semibold` + `tracking-tight` — evitando o
-                      // ar "MARCILIO"-like que `font-black tracking-widest`
-                      // produzia, e que o operador pediu pra suavizar. Bot
-                      // mantém destaque de cor (âmbar) só no ícone.
-                      <p className={cn(
-                        "font-outfit mb-1 text-[12px] font-semibold tracking-tight",
-                        isBot ? "text-chat-bot-foreground" : "text-brand-navy/90",
-                      )}>
-                        {isBot && <Bot className="inline size-3.5 shrink-0 mr-1" />}
-                        {m.senderName}:
-                      </p>
-                    ) : null))}
-                    {/*
+                      )}
+
+                      <div
+                        className={cn(
+                          isAudioOnly
+                            ? "px-[9px] py-[5px]"
+                            : isNote
+                              ? "px-3 py-1.5"
+                              : "px-[9px] py-[5px]",
+                        )}
+                      >
+                        {isNote ? (
+                          <div className="mb-1 flex min-h-0 items-center gap-1.5">
+                            <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-[var(--color-ink-muted)] ring-1 ring-border">
+                              <Lock className="size-3" strokeWidth={2.5} />
+                            </span>
+                            <span
+                              className={cn(dt.chat.noteLabel, "text-[9px]")}
+                            >
+                              Nota interna
+                            </span>
+                            {m.senderName ? (
+                              <>
+                                <span
+                                  className="text-[9px] text-[var(--color-ink-muted)]"
+                                  aria-hidden
+                                >
+                                  ·
+                                </span>
+                                <span className="truncate text-[10px] font-medium text-[var(--color-ink-soft)]">
+                                  {m.senderName}
+                                </span>
+                              </>
+                            ) : null}
+                            <TooltipHost
+                              label={
+                                isPinned ? "Desfixar nota" : "Fixar no topo"
+                              }
+                              side="top"
+                            >
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  pinNoteMutation.mutate(
+                                    isPinned ? null : String(m.id),
+                                  )
+                                }
+                                aria-label={
+                                  isPinned ? "Desfixar nota" : "Fixar no topo"
+                                }
+                                aria-pressed={isPinned}
+                                className={cn(
+                                  "ml-auto flex size-6 shrink-0 items-center justify-center rounded-md lumen-transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+                                  isPinned
+                                    ? "text-primary"
+                                    : "text-[var(--color-ink-muted)] hover:text-[var(--color-ink-soft)]",
+                                )}
+                              >
+                                {isPinned ? (
+                                  <Pin
+                                    className="size-3 rotate-45"
+                                    fill="currentColor"
+                                    strokeWidth={2}
+                                  />
+                                ) : (
+                                  <Pin
+                                    className="size-3 rotate-45"
+                                    strokeWidth={2}
+                                  />
+                                )}
+                              </button>
+                            </TooltipHost>
+                          </div>
+                        ) : out ? (
+                          // Mensagens enviadas: quando geradas por automação,
+                          // carimbamos um chip compacto "Automação" com ícone
+                          // de robô. Antes era `bg-slate-200/70` (cinza claro
+                          // semitransparente) — porem na bolha out (bg-chat-sent
+                          // `#f0f9fa` cyan ultra-claro) o chip se dissolvia no
+                          // fundo. Migrado pra `bg-white ring-1 ring-slate-200`
+                          // que cria contraste real (branco vs cyan claro)
+                          // sem virar alerta competindo com cores semanticas.
+                          isBot && !isAudioOnly ? (
+                            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-slate-200">
+                              <Bot
+                                className="size-3 text-[var(--color-ink-soft)]"
+                                strokeWidth={2.4}
+                              />
+                              <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground">
+                                {m.senderName ?? "Automação"}
+                              </span>
+                            </div>
+                          ) : null
+                        ) : showSenderName && !isAudioOnly && !compactChrome ? (
+                          // Label do remetente (contato): preserva o case cadastrado
+                          // no CRM (sem `uppercase` forçado) e usa tipografia mais
+                          // leve — `font-semibold` + `tracking-tight` — evitando o
+                          // ar "MARCILIO"-like que `font-bold tracking-widest`
+                          // produzia, e que o operador pediu pra suavizar. Bot
+                          // mantém destaque de cor (âmbar) só no ícone.
+                          // compactChrome: omitido — densidade workspace / inbox compacto.
+                          <p
+                            className={cn(
+                              "font-display mb-1 text-[12px] font-semibold tracking-tight",
+                              isBot
+                                ? "text-chat-bot-foreground"
+                                : "text-primary/90",
+                            )}
+                          >
+                            {isBot && (
+                              <Bot className="inline size-3.5 shrink-0 mr-1" />
+                            )}
+                            {m.senderName}:
+                          </p>
+                        ) : null}
+                        {/*
                       Mensagens do agente (out=true) NÃO renderizam mais um
                       label visual de assinatura: o prefixo "Nome: " é agora
                       embutido no próprio `content` ao enviar (ver `onSend`),
@@ -1155,206 +2275,358 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                       operador de que a assinatura faça parte da mensagem.
                     */}
 
-                    {String(m.messageType ?? "").toLowerCase() === "template" && (
-                      <TemplateBadge content={m.content ?? ""} />
-                    )}
+                        {String(m.messageType ?? "").toLowerCase() ===
+                          "template" && (
+                          <TemplateBadge content={m.content ?? ""} />
+                        )}
 
-                    {renderMedia(m, out, isNote)}
+                        {renderMedia(m, out, isNote, msgId)}
 
-                    {(() => {
-                      const text = msgText(m);
-                      const time = m.createdAt ? chatTime(m.createdAt) : "";
-                      const showCheck = out && !isNote && m.sendStatus !== "failed";
-                      const isFailed = m.sendStatus === "failed";
-                      const status = m.sendStatus || "sent";
-                      const isRead = status === "read";
-                      const isDelivered = status === "delivered" || isRead;
-                      // "Entrega não confirmada": mensagem ficou em `sent` sem
-                      // virar `delivered` por tempo demais. Pode indicar número
-                      // Meta pausado, quality rating rebaixado, ou mensagem
-                      // engolida silenciosamente pela Cloud API. Não é uma
-                      // falha definitiva (sweeper marca como `failed` após
-                      // 15 min), só um aviso visual proativo no chat para o
-                      // operador perceber antes que a automação continue.
-                      const stalePending = (() => {
-                        if (!out || isNote || isFailed || isDelivered) return false;
-                        if (status !== "sent") return false;
-                        if (!m.createdAt) return false;
-                        const ts = new Date(m.createdAt).getTime();
-                        if (!Number.isFinite(ts)) return false;
-                        return Date.now() - ts > 5 * 60 * 1_000;
-                      })();
-                      const checkColor = isRead ? "text-[#53bdeb]" : stalePending ? "text-amber-500" : "text-[#667781]";
-
-                      const fullTs = m.createdAt ? chatFullTimestamp(m.createdAt) : "";
-                      const tzOffset = m.createdAt ? chatTimezoneOffset(m.createdAt) : "";
-                      const tzName = chatTimezoneName();
-                      const relTime = m.createdAt ? chatRelativeTime(m.createdAt) : "";
-
-                      const timeEl = (
-                        <span className="group/time relative inline-flex items-center gap-1 whitespace-nowrap text-[10px] text-[#667781]" style={{ fontVariantNumeric: "tabular-nums" }}>
-                          <span className="cursor-default">{time}</span>
-                          {m.createdAt && (
-                            <span
-                              role="tooltip"
-                              className="pointer-events-none invisible absolute bottom-full right-0 z-50 mb-1.5 w-max max-w-[260px] rounded-lg bg-[#1e293b] px-3 py-2 text-left text-[11px] font-medium leading-tight text-white opacity-0 shadow-xl transition-[opacity,visibility] duration-150 group-hover/time:visible group-hover/time:opacity-100"
-                            >
-                              <span className="block font-bold">{fullTs}</span>
-                              <span className="block text-white/70">
-                                ({tzOffset}){tzName ? ` ${tzName}` : ""}
-                              </span>
-                              <span className="mt-1 block font-semibold text-white/90">{relTime}</span>
-                            </span>
-                          )}
-                          {isFailed ? <AlertTriangle className="size-3 text-destructive" /> : showCheck ? (
-                            isDelivered ? (
-                              <svg viewBox="0 0 16 11" height="11" width="16" fill="currentColor" className={checkColor}>
-                                <path d="M11.07.66 5.84 5.89 3.15 3.2a.54.54 0 0 0-.76 0l-.7.7c-.21.21-.21.54 0 .76l3.72 3.72c.21.21.54.21.76 0l6.25-6.25c.21-.21.21-.55 0-.76l-.7-.7a.54.54 0 0 0-.76 0l-.09.09Z" />
-                                <path d="M15.07.66 9.84 5.89 8.88 4.93a.54.54 0 0 0-.76 0l-.7.7c-.21.21-.21.54 0 .76l2.15 2.15c.21.21.54.21.76 0l6.25-6.25c.21-.21.21-.55 0-.76l-.7-.7a.54.54 0 0 0-.76 0Z" opacity=".75" />
-                              </svg>
-                            ) : stalePending ? (
-                              <span className="group/stale relative inline-flex items-center" title="Entrega não confirmada pela Meta após 5 min — número pode estar pausado ou flagged.">
-                                <Clock className="size-3 text-amber-500" strokeWidth={2.5} />
-                                <span
-                                  role="tooltip"
-                                  className="pointer-events-none invisible absolute bottom-full right-0 z-50 mb-1.5 w-max max-w-[240px] rounded-lg bg-amber-900 px-2.5 py-1.5 text-left text-[11px] font-medium leading-tight text-amber-50 opacity-0 shadow-xl transition-[opacity,visibility] duration-150 group-hover/stale:visible group-hover/stale:opacity-100"
-                                >
-                                  Entrega não confirmada após 5 min — número pode estar pausado, flagged ou com qualidade rebaixada.
-                                </span>
-                              </span>
-                            ) : (
-                              <svg viewBox="0 0 12 11" height="11" width="12" fill="currentColor" className="text-[#667781]">
-                                <path d="M11.07.66 5.84 5.89 3.15 3.2a.54.54 0 0 0-.76 0l-.7.7c-.21.21-.21.54 0 .76l3.72 3.72c.21.21.54.21.76 0l6.25-6.25c.21-.21.21-.55 0-.76l-.7-.7a.54.54 0 0 0-.76 0l-.09.09Z" />
-                              </svg>
-                            )
-                          ) : null}
-                        </span>
-                      );
-
-                      if (text) {
-                        // Nota interna: texto em aspas tipográficas curvas,
-                        // `font-medium` (sem itálico — feedback do operador:
-                        // itálico estava lendo como "citação literária",
-                        // a nota é só lembrete operacional).
-                        // `text-slate-600` (médio legível): meio termo
-                        // entre slate-700 (escuro, competia com mensagens)
-                        // e slate-500 (claro demais, parecia desabilitado).
-                        // O peso visual da identidade "isso é uma nota"
-                        // vem da BORDA LATERAL grossa + fundo amarelado
-                        // sutil (#fdfaf0), não do peso do texto. Aspas
-                        // curvas em `slate-400` enquadram o conteúdo.
-                        // Timestamp inline abaixo (não absolute) pra
-                        // respeitar o respiro vertical do `py-5`.
-                        if (isNote) {
-                          return (
-                            <>
-                              <p className="font-outfit text-[14px] font-medium leading-relaxed text-slate-600 whitespace-pre-wrap wrap-break-word">
-                                <span className="mr-0.5 select-none text-slate-400" aria-hidden>
-                                  “
-                                </span>
-                                {text}
-                                <span className="ml-0.5 select-none text-slate-400" aria-hidden>
-                                  ”
-                                </span>
-                              </p>
-                              <div className="mt-3 flex justify-end">{timeEl}</div>
-                            </>
+                        {(() => {
+                          const text = msgText(m);
+                          const time = m.createdAt ? chatTime(m.createdAt) : "";
+                          const showCheck =
+                            out && !isNote && m.sendStatus !== "failed";
+                          const isFailed = m.sendStatus === "failed";
+                          const status = m.sendStatus || "sent";
+                          const isRead = status === "read";
+                          const isDelivered = status === "delivered" || isRead;
+                          // "Entrega não confirmada": mensagem ficou em `sent` sem
+                          // virar `delivered` por tempo demais. Pode indicar número
+                          // Meta pausado, quality rating rebaixado, ou mensagem
+                          // engolida silenciosamente pela Cloud API. Não é uma
+                          // falha definitiva (sweeper marca como `failed` após
+                          // 15 min), só um aviso visual proativo no chat para o
+                          // operador perceber antes que a automação continue.
+                          const stalePending = (() => {
+                            if (!out || isNote || isFailed || isDelivered)
+                              return false;
+                            if (status !== "sent") return false;
+                            if (!m.createdAt) return false;
+                            const ts = new Date(m.createdAt).getTime();
+                            if (!Number.isFinite(ts)) return false;
+                            return Date.now() - ts > 5 * 60 * 1_000;
+                          })();
+                          const checkClassName = cn(
+                            stalePending && out && !isNote && "text-amber-600",
+                            stalePending && !out && "text-amber-500",
+                            !stalePending && isRead && dt.chat.check.read,
+                            !stalePending &&
+                              !isRead &&
+                              out &&
+                              !isNote &&
+                              dt.chat.check.sent,
+                            !stalePending &&
+                              !isRead &&
+                              !out &&
+                              dt.chat.check.default,
                           );
-                        }
-                        // Corpo da mensagem: `font-medium` (500) para leitura
-                        // confortável em parágrafos curtos e longos.
-                        // `font-semibold` (600) estava visualmente "pesado
-                        // demais" em mensagens curtas de chat — feedback real
-                        // de uso. Tracking default (sem `tracking-tighter`)
-                        // preserva ritmo natural de leitura.
-                        return (
-                          <p
-                            className={cn(
-                              // Mobile: 15px leading-snug (1.375) — aproveita
-                              // melhor a área de chat em telas grandes sem
-                              // sacrificar densidade no mobile.
-                              // Desktop: 16px leading-normal — leitura mais
-                              // confortável em conversas longas.
-                              "font-outfit text-[15px] font-medium leading-snug md:text-[16px] md:leading-normal",
-                              out ? "text-slate-800" : "text-slate-700",
-                            )}
+
+                          const fullTs = m.createdAt
+                            ? chatFullTimestamp(m.createdAt)
+                            : "";
+                          const tzOffset = m.createdAt
+                            ? chatTimezoneOffset(m.createdAt)
+                            : "";
+                          const tzName = chatTimezoneName();
+                          const relTime = m.createdAt
+                            ? chatRelativeTime(m.createdAt)
+                            : "";
+
+                          const timeRowClass = cn(
+                            "relative inline-flex items-center gap-1 whitespace-nowrap",
+                            dt.text.time,
+                            isNote && dt.chat.time.note,
+                            !isNote && out && dt.chat.time.sent,
+                            !isNote && !out && dt.chat.time.received,
+                          );
+                          const timeRowStyle = {
+                            fontVariantNumeric: "tabular-nums" as const,
+                            ...(!isNote && out
+                              ? { color: "var(--chat-bubble-sent-time)" }
+                              : {}),
+                          };
+
+                          const timeInner = (
+                            <span
+                              className={cn(timeRowClass)}
+                              style={timeRowStyle}
+                            >
+                              <span className="cursor-default">{time}</span>
+                              {isFailed ? (
+                                <AlertTriangle className="size-3 text-destructive" />
+                              ) : showCheck ? (
+                                isDelivered ? (
+                                  <svg
+                                    viewBox="0 0 16 11"
+                                    height="11"
+                                    width="16"
+                                    fill="currentColor"
+                                    className={cn("size-3.5", checkClassName)}
+                                  >
+                                    <path d="M11.07.66 5.84 5.89 3.15 3.2a.54.54 0 0 0-.76 0l-.7.7c-.21.21-.21.54 0 .76l3.72 3.72c.21.21.54.21.76 0l6.25-6.25c.21-.21.21-.55 0-.76l-.7-.7a.54.54 0 0 0-.76 0l-.09.09Z" />
+                                    <path
+                                      d="M15.07.66 9.84 5.89 8.88 4.93a.54.54 0 0 0-.76 0l-.7.7c-.21.21-.21.54 0 .76l2.15 2.15c.21.21.54.21.76 0l6.25-6.25c.21-.21.21-.55 0-.76l-.7-.7a.54.54 0 0 0-.76 0Z"
+                                      opacity=".75"
+                                    />
+                                  </svg>
+                                ) : stalePending ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center">
+                                        <Clock
+                                          className="size-3 text-amber-500"
+                                          strokeWidth={2.5}
+                                        />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="top"
+                                      align="end"
+                                      className="max-w-[240px] border border-[color:var(--color-warning)]/25 bg-[var(--color-warning-soft)] text-left text-[11px] font-medium leading-tight text-[var(--color-ink-soft)] shadow-[var(--shadow-lg)]"
+                                    >
+                                      Entrega não confirmada após 5 min — número
+                                      pode estar pausado, flagged ou com
+                                      qualidade rebaixada.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <svg
+                                    viewBox="0 0 12 11"
+                                    height="11"
+                                    width="12"
+                                    fill="currentColor"
+                                    className={cn("size-3.5", checkClassName)}
+                                  >
+                                    <path d="M11.07.66 5.84 5.89 3.15 3.2a.54.54 0 0 0-.76 0l-.7.7c-.21.21-.21.54 0 .76l3.72 3.72c.21.21.54.21.76 0l6.25-6.25c.21-.21.21-.55 0-.76l-.7-.7a.54.54 0 0 0-.76 0l-.09.09Z" />
+                                  </svg>
+                                )
+                              ) : null}
+                            </span>
+                          );
+
+                          const timeEl = m.createdAt ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                {timeInner}
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                align="end"
+                                className="max-w-[260px] px-3 py-2 text-left text-[11px] font-medium leading-tight"
+                              >
+                                <span className="block font-bold">
+                                  {fullTs}
+                                </span>
+                                <span className="block text-[var(--color-ink-muted)]">
+                                  ({tzOffset}){tzName ? ` ${tzName}` : ""}
+                                </span>
+                                <span className="mt-1 block font-semibold text-[var(--color-ink-soft)]">
+                                  {relTime}
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            timeInner
+                          );
+
+                          if (text) {
+                            // Nota interna: texto em aspas tipográficas curvas,
+                            // `font-medium` (sem itálico — feedback do operador:
+                            // itálico estava lendo como "citação literária",
+                            // a nota é só lembrete operacional).
+                            // `text-[var(--color-ink-soft)]` (médio legível): meio termo
+                            // entre slate-700 (escuro, competia com mensagens)
+                            // e slate-500 (claro demais, parecia desabilitado).
+                            // O peso visual da identidade "isso é uma nota"
+                            // vem da BORDA LATERAL grossa + fundo amarelado
+                            // sutil (#fdfaf0), não do peso do texto. Aspas
+                            // curvas em `slate-400` enquadram o conteúdo.
+                            // Timestamp inline abaixo (não absolute) pra
+                            // respeitar o respiro vertical do `py-5`.
+                            if (isNote) {
+                              return (
+                                <div className="space-y-0.5">
+                                  <p
+                                    className={cn(
+                                      "font-sans font-normal leading-[1.4]",
+                                      dt.chat.text.note,
+                                    )}
+                                  >
+                                    {searchOpen && searchQuery.trim() ? (
+                                      <HighlightedText
+                                        text={text}
+                                        query={searchQuery}
+                                        isCurrentMatch={
+                                          idx === currentMatchMessageIndex
+                                        }
+                                      />
+                                    ) : (
+                                      <span className="whitespace-pre-wrap wrap-break-word">
+                                        {text}
+                                      </span>
+                                    )}
+                                  </p>
+                                  <div className="flex justify-end">
+                                    {timeEl}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            const textBody = (
+                              <span className="whitespace-pre-wrap wrap-break-word">
+                                {searchOpen && searchQuery.trim() ? (
+                                  <HighlightedText
+                                    text={text}
+                                    query={searchQuery}
+                                    isCurrentMatch={
+                                      idx === currentMatchMessageIndex
+                                    }
+                                  />
+                                ) : (
+                                  text
+                                )}
+                              </span>
+                            );
+                            return (
+                              <div className="flex items-end gap-1.5">
+                                <p
+                                  className={cn(
+                                    "font-sans font-normal leading-[1.4] min-w-0 flex-1",
+                                    out && !isNote
+                                      ? dt.chat.text.sent
+                                      : dt.chat.text.received,
+                                  )}
+                                  style={
+                                    out && !isNote
+                                      ? {
+                                          color: "var(--chat-bubble-sent-text)",
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  {textBody}
+                                </p>
+                                <span className="flex-shrink-0 -mb-[3px]">
+                                  {timeEl}
+                                </span>
+                              </div>
+                            );
+                          }
+                          // Áudio tem seu próprio rodapé de delivery; evita duplicação.
+                          if (detectMediaKind(m) === "audio") return null;
+                          return (
+                            <div className="mt-1 flex justify-end items-center">
+                              {timeEl}
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {m.sendStatus === "failed" && (
+                        <div className="flex items-center gap-2 rounded-b-[16px] border-t border-[rgba(239,68,68,0.2)] bg-destructive/5 px-3.5 py-2">
+                          <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
+                          <span className="flex-1 truncate text-[11px] text-destructive">
+                            {m.sendError ?? "Falha ao enviar"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (conversationId && m.content)
+                                sendMutation.mutate({
+                                  content: m.content,
+                                  asNote: false,
+                                });
+                            }}
+                            className="shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-medium text-destructive lumen-transition hover:bg-destructive/10"
                           >
-                            <span className="whitespace-pre-wrap wrap-break-word">{text}</span>
-                            {/* Reserva pro timestamp inline. Mobile usa
-                                 60px (time menor); desktop preserva 72px. */}
-                            <span className="inline-block w-[60px] md:w-[72px]" />
-                            <span className="absolute bottom-[5px] right-3 md:bottom-[7px] md:right-[14px]">{timeEl}</span>
-                          </p>
-                        );
-                      }
-                      // Áudio tem seu próprio rodapé de delivery; evita duplicação.
-                      if (detectMediaKind(m) === "audio") return null;
-                      return <div className="mt-1 flex justify-end">{timeEl}</div>;
-                    })()}
-                  </div>
-
-                  {m.sendStatus === "failed" && (
-                    <div className="flex items-center gap-2 rounded-b-[16px] border-t border-[rgba(239,68,68,0.2)] bg-destructive/5 px-3.5 py-2">
-                      <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
-                      <span className="flex-1 truncate text-[11px] text-destructive">{m.sendError ?? "Falha ao enviar"}</span>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); if (conversationId && m.content) sendMutation.mutate({ content: m.content, asNote: false }); }}
-                        className="shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-medium text-destructive eduit-transition hover:bg-destructive/10">Reenviar</button>
+                            Reenviar
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {grouped.length > 0 && (
-                  <div className={cn("mt-1 flex flex-wrap gap-1", out ? "justify-end" : "justify-start")}>
-                    {grouped.map((g) => (
-                      <button key={g.emoji} type="button" onClick={() => reactionMutation.mutate({ messageId: msgId, emoji: g.emoji })}
-                        className="inline-flex items-center gap-0.5 rounded-full border border-border bg-card px-2 py-0.5 text-xs shadow-float eduit-transition hover:scale-105 hover:shadow-md" title={g.senders.join(", ")}>
-                        <span>{g.emoji}</span>{g.count > 1 && <span className="text-[10px] text-muted-foreground" style={{ fontVariantNumeric: "tabular-nums" }}>{g.count}</span>}
-                      </button>
-                    ))}
+                    {grouped.length > 0 && (
+                      <div
+                        className={cn(
+                          "mt-1 flex flex-wrap gap-1",
+                          out ? "justify-end" : "justify-start",
+                        )}
+                      >
+                        {grouped.map((g) => (
+                          <TooltipHost
+                            key={g.emoji}
+                            label={g.senders.join(", ")}
+                            side="top"
+                          >
+                            <button
+                              type="button"
+                              disabled={
+                                msgId.startsWith("temp-") ||
+                                reactionMutation.isPending
+                              }
+                              onClick={() =>
+                                reactionMutation.mutate({
+                                  messageId: msgId,
+                                  emoji: g.emoji,
+                                })
+                              }
+                              aria-label={`Reagiram com ${g.emoji}: ${g.senders.join(", ")}`}
+                              className="inline-flex items-center gap-0.5 rounded-full border border-border bg-card px-2 py-0.5 text-xs shadow-[var(--shadow-sm)] lumen-transition hover:scale-105 hover:shadow-md disabled:opacity-50"
+                            >
+                              <span>{g.emoji}</span>
+                              {g.count > 1 && (
+                                <span
+                                  className="text-[10px] text-muted-foreground"
+                                  style={{ fontVariantNumeric: "tabular-nums" }}
+                                >
+                                  {g.count}
+                                </span>
+                              )}
+                            </button>
+                          </TooltipHost>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {out && !isNote && isLastInGroup && (
-                <div className="group/avatar relative mb-0.5 hidden shrink-0 sm:block">
-                  {/* Avatar do agente em mensagens out: oculto em mobile
+                  {out && !isNote && isLastInGroup && (
+                    <div className="mb-0.5 hidden shrink-0 sm:block">
+                      {/* Avatar do agente em mensagens out: oculto em mobile
                       (< sm) pra ganhar largura — em chat estreito o
                       avatar pequeno pixela e disputa espaço com o
                       texto. Ainda visível em sm+ (tablet vertical em
                       diante) e em todo desktop. */}
-                  <ChatAvatar
-                    name={m.senderName || "Admin EduIT"}
-                    imageUrl={
-                      isBot
-                        ? null
-                        : m.senderImageUrl ??
-                          // Fallback p/ mensagens otimistas (ainda sem
-                          // resposta do servidor) E p/ DTOs antigos sem
-                          // `senderImageUrl`: usa a foto do agente logado
-                          // se o nome bater. Garante 0 flicker entre o
-                          // optimistic update e o refetch.
-                          ((session?.user?.name ?? "").toLowerCase() ===
-                          (m.senderName ?? "").toLowerCase()
-                            ? session?.user?.image ?? null
-                            : null)
-                    }
-                    size={32}
-                    channel="whatsapp"
-                    hideCartoon
-                    isBot={isBot}
-                  />
-                  <span
-                    role="tooltip"
-                    className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1e293b] px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition-[opacity,visibility] duration-150 group-hover/avatar:visible group-hover/avatar:opacity-100"
-                  >
-                    {m.senderName || "Admin EduIT"}
-                  </span>
-                </div>
-              )}
-              {out && !isNote && !isLastInGroup && (
-                <div className="hidden w-8 shrink-0 sm:block" />
-              )}
-              </MotionDiv>
+                      <TooltipHost
+                        label={m.senderName || "Admin EduIT"}
+                        side="top"
+                      >
+                        <ChatAvatar
+                          user={{
+                            id:
+                              (session?.user as { id?: string })?.id ??
+                              m.senderName ??
+                              "out",
+                            name: m.senderName || "Admin EduIT",
+                            imageUrl: isBot
+                              ? null
+                              : (m.senderImageUrl ??
+                                session?.user?.image ??
+                                null),
+                          }}
+                          size={28}
+                          channel={null}
+                          hideCartoon
+                          isBot={isBot}
+                        />
+                      </TooltipHost>
+                    </div>
+                  )}
+                  {out && !isNote && !isLastInGroup && (
+                    <div className="hidden w-7 shrink-0 sm:block" />
+                  )}
+                </MotionDiv>
               </React.Fragment>
             );
           })}
@@ -1362,38 +2634,62 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
         </div>
       </div>
 
-      {!sessionActive && sessionInfo && !isBaileysChannel && (
-        // Alerta "ação base" acima do input — hierarquia alta.
-        // px-8 py-4 dá respiro premium; ícone num círculo suave
-        // (bg-red-100) destaca sem agredir, e o CTA em brand-blue
-        // aproveita a sombra projetada azulada pra chamar ação.
-        <div className="shrink-0 border-t border-red-100/50 bg-red-50/50 px-3 py-3 sm:px-8 sm:py-4">
-          {/* Mobile: padding reduzido + CTA em width:full abaixo do texto.
-              Desktop: layout horizontal original com CTA à direita. */}
-          <div className="mx-auto flex max-w-[900px] flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <div className="flex items-center gap-3 sm:contents">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-red-100 sm:size-10">
-                <AlertCircle className="size-4 text-red-500 sm:size-5" strokeWidth={2.25} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-black tracking-tight text-slate-800 sm:text-[14px]">
-                  Janela de 24h expirada
-                </p>
-                <p className="mt-0.5 text-[11px] font-bold text-slate-400">
-                  Use um template oficial da Meta para reabrir a conversa
-                </p>
-              </div>
+      {!sessionActive &&
+        sessionInfo &&
+        !isBaileysChannel &&
+        (compactChrome ? (
+          <div className={cn("shrink-0", dt.chat.sessionExpiredCard)}>
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-50">
+              <AlertTriangle
+                className="size-4 text-red-500"
+                strokeWidth={2.25}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-semibold text-slate-900">
+                Sessão de 24h encerrada
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Só templates aprovados pelo WhatsApp
+              </p>
             </div>
             <button
               type="button"
               onClick={() => setActivePanel("templates")}
-              className="shrink-0 rounded-2xl bg-brand-blue px-4 py-2 text-[12px] font-black uppercase tracking-wide text-white shadow-lg shadow-blue-500/20 eduit-transition hover:bg-brand-blue/90 hover:shadow-xl hover:shadow-blue-500/25 active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-[13px]"
+              className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95"
             >
-              Enviar Template
+              Usar Template
             </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="shrink-0 border-t border-destructive/15 bg-destructive/5 px-3 py-2.5 sm:px-6 sm:py-3">
+            <div className="mx-auto flex max-w-[1100px] flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="flex min-w-0 items-start gap-2.5 sm:items-center">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                  <AlertCircle
+                    className="size-4 text-destructive"
+                    strokeWidth={2}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">
+                    Janela de 24h expirada
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
+                    Use um template oficial da Meta para reabrir a conversa
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActivePanel("templates")}
+                className="h-9 shrink-0 rounded-lg bg-primary px-3 text-xs font-semibold text-white shadow-[var(--shadow-sm)] lumen-transition hover:bg-[var(--color-primary-dark)] active:scale-[0.98] sm:px-4"
+              >
+                Enviar template
+              </button>
+            </div>
+          </div>
+        ))}
 
       {/* Banner de mensagens agendadas pendentes.
           Fica acima do composer como "barra de estado" discreta,
@@ -1402,7 +2698,7 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
           num "+N mais" pra não ocupar muito espaço vertical. */}
       {pendingScheduled.length > 0 && (
         <div className="shrink-0 border-t border-sky-100 bg-sky-50/70 px-3 py-2 sm:px-6">
-          <div className="mx-auto flex max-w-[900px] flex-col gap-1.5">
+          <div className={cn(rowMax, "flex flex-col gap-1.5")}>
             {pendingScheduled.slice(0, 2).map((sm) => {
               const when = new Date(sm.scheduledAt);
               const whenLabel = when.toLocaleString("pt-BR", {
@@ -1416,10 +2712,19 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                   key={sm.id}
                   className="flex items-center gap-2 rounded-xl bg-white/70 px-3 py-1.5 text-[12px] text-sky-900"
                 >
-                  <Clock className="size-3.5 shrink-0 text-sky-600" strokeWidth={2.25} />
-                  <span className="font-semibold">Agendada para {whenLabel}</span>
+                  <Clock
+                    className="size-3.5 shrink-0 text-sky-600"
+                    strokeWidth={2.25}
+                  />
+                  <span className="font-semibold">
+                    Agendada para {whenLabel}
+                  </span>
                   <span className="hidden truncate text-sky-800/80 sm:inline">
-                    — {sm.content.slice(0, 80) || (sm.fallbackTemplateName ? `Template: ${sm.fallbackTemplateName}` : "[anexo]")}
+                    —{" "}
+                    {sm.content.slice(0, 80) ||
+                      (sm.fallbackTemplateName
+                        ? `Template: ${sm.fallbackTemplateName}`
+                        : "[anexo]")}
                   </span>
                   <button
                     type="button"
@@ -1434,7 +2739,8 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
             })}
             {pendingScheduled.length > 2 && (
               <p className="text-[11px] font-medium text-sky-700">
-                +{pendingScheduled.length - 2} outro(s) agendamento(s) pendente(s)
+                +{pendingScheduled.length - 2} outro(s) agendamento(s)
+                pendente(s)
               </p>
             )}
           </div>
@@ -1445,14 +2751,36 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
       <div className="shrink-0 border-t border-border bg-card">
         {/* Mobile: px-3 (composer encosta nas bordas pra ganhar largura
             de digitação). Desktop: px-6 preserva o respiro premium. */}
-        <div className="mx-auto max-w-[900px] px-3 sm:px-6">
-          <QuickReplies open={activePanel === "quick-replies"} onPick={(t) => { setDraft(t); setActivePanel("none"); textareaRef.current?.focus(); }} />
+        <div className={cn(rowMax, "px-3 sm:px-6")}>
+          <QuickReplies
+            open={activePanel === "quick-replies"}
+            onPick={(t) => {
+              setDraft(t);
+              setActivePanel("none");
+              textareaRef.current?.focus();
+            }}
+          />
           <EmojiPicker open={activePanel === "emoji"} onPick={insertEmoji} />
           <TemplatePicker
             open={activePanel === "templates"}
+            onClose={() => setActivePanel("none")}
             onPick={(t) => {
-              if (!sessionActive && conversationId) {
-                setPendingTemplate({ name: t.name, label: t.label, content: t.content });
+              const hasFlowHint =
+                Boolean(t.flowId?.trim()) ||
+                Boolean(t.flowAction?.trim()) ||
+                (t.buttonTypes?.includes("FLOW") ?? false);
+              const requiresTemplateFlow = t.hasButtons || t.hasVariables || hasFlowHint;
+              const shouldUseTemplateRoute =
+                requiresTemplateFlow || (!sessionActive && !!conversationId);
+
+              if (shouldUseTemplateRoute && conversationId) {
+                setPendingTemplate({
+                  name: t.name,
+                  label: t.label,
+                  content: t.content,
+                  metaTemplateId: t.id,
+                  operatorVariables: t.operatorVariables,
+                });
               } else {
                 setDraft(t.content);
               }
@@ -1465,7 +2793,9 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
             <div className="rounded-t-[16px] border border-b-0 border-border bg-card p-4">
               <div className="mb-3 flex items-center gap-2">
                 <CheckSquare className="size-4 text-success" />
-                <span className="text-[14px] font-semibold text-info">Nova tarefa</span>
+                <span className="text-[14px] font-semibold text-info">
+                  Nova tarefa
+                </span>
                 <button
                   type="button"
                   onClick={() => setActivePanel("none")}
@@ -1501,16 +2831,21 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                   placeholder="Título da tarefa..."
                   className="h-9 min-w-0 flex-1 rounded-xl text-[14px]"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && taskTitle.trim()) taskMutation.mutate();
+                    if (e.key === "Enter" && taskTitle.trim())
+                      taskMutation.mutate();
                   }}
                 />
                 <Button
                   size="sm"
-                  className="eduit-accent-gradient h-9 shrink-0 rounded-xl border-0 px-5 text-white sm:w-auto"
+                  className="lumen-ai-gradient h-9 shrink-0 rounded-xl border-0 px-5 text-white sm:w-auto"
                   disabled={!taskTitle.trim() || taskMutation.isPending}
                   onClick={() => taskMutation.mutate()}
                 >
-                  {taskMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : "Criar"}
+                  {taskMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    "Criar"
+                  )}
                 </Button>
               </div>
             </div>
@@ -1668,14 +3003,16 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                 </button>
                 <Button
                   size="sm"
-                  className="eduit-accent-gradient h-9 shrink-0 rounded-xl border-0 px-5 text-white"
+                  className="lumen-ai-gradient h-9 shrink-0 rounded-xl border-0 px-5 text-white"
                   disabled={
                     scheduleMutation.isPending ||
                     (!scheduleContent.trim() && !scheduleFile) ||
                     !scheduleAt.trim() ||
                     // Se o operador marcou "usar fallback" em canal Meta,
                     // exige um template selecionado antes de permitir agendar.
-                    (!isBaileysChannel && scheduleUseFallback && !scheduleTemplate)
+                    (!isBaileysChannel &&
+                      scheduleUseFallback &&
+                      !scheduleTemplate)
                   }
                   onClick={() => scheduleMutation.mutate()}
                 >
@@ -1692,8 +3029,13 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
           {showScheduleTemplatePicker && (
             <TemplatePicker
               open
+              onClose={() => setShowScheduleTemplatePicker(false)}
               onPick={(t) => {
-                setScheduleTemplate({ name: t.name, label: t.label, content: t.content });
+                setScheduleTemplate({
+                  name: t.name,
+                  label: t.label,
+                  content: t.content,
+                });
                 setShowScheduleTemplatePicker(false);
               }}
             />
@@ -1701,27 +3043,56 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
         </div>
 
         {replyTo && (
-          <div className="mx-auto max-w-[900px] px-6 pt-2">
-            <div className="flex items-start gap-2 rounded-t-[16px] bg-chat-bg px-4 py-2.5">
+          <div
+            className={cn(rowMax, compactChrome ? "px-2 pt-1.5" : "px-6 pt-2")}
+          >
+            <div className="flex items-start gap-2 rounded-t-[16px] bg-[var(--chat-bg)] px-4 py-2.5">
               <div className="min-w-0 flex-1 border-l-[3px] border-accent pl-3">
-                {replyTo.senderName && <p className="text-[11px] font-semibold text-accent">{replyTo.senderName}</p>}
-                <p className="line-clamp-2 text-[13px] text-muted-foreground">{replyTo.content}</p>
+                {replyTo.senderName && (
+                  <p className="text-[11px] font-semibold text-accent">
+                    {replyTo.senderName}
+                  </p>
+                )}
+                <p className="line-clamp-2 text-[13px] text-muted-foreground">
+                  {replyTo.content}
+                </p>
               </div>
-              <button type="button" onClick={() => setReplyTo(null)} className="shrink-0 rounded-xl p-1 text-muted-foreground eduit-transition hover:bg-muted hover:text-info"><X className="size-4" /></button>
+              <button
+                type="button"
+                onClick={() => setReplyTo(null)}
+                className="shrink-0 rounded-xl p-1 text-muted-foreground lumen-transition hover:bg-muted hover:text-info"
+              >
+                <X className="size-4" />
+              </button>
             </div>
           </div>
         )}
         {pendingFile && (
-          <div className="mx-auto max-w-[900px] px-6 pt-2">
-            <div className="flex items-center gap-2 rounded-[16px] bg-chat-bg px-4 py-2.5">
-              <Paperclip className="size-4 text-muted-foreground" /><span className="max-w-[200px] truncate text-[14px] font-medium text-foreground">{pendingFile.name}</span>
-              <span className="text-[12px] text-muted-foreground">({(pendingFile.size / 1024).toFixed(0)} KB)</span>
-              <button type="button" onClick={() => setPendingFile(null)} className="ml-auto rounded-xl p-1 text-muted-foreground eduit-transition hover:bg-muted hover:text-info"><X className="size-4" /></button>
+          <div
+            className={cn(rowMax, compactChrome ? "px-2 pt-1.5" : "px-6 pt-2")}
+          >
+            <div className="flex items-center gap-2 rounded-[16px] bg-[var(--chat-bg)] px-4 py-2.5">
+              <Paperclip className="size-4 text-muted-foreground" />
+              <span className="max-w-[200px] truncate text-[14px] font-medium text-foreground">
+                {pendingFile.name}
+              </span>
+              <span className="text-[12px] text-muted-foreground">
+                ({(pendingFile.size / 1024).toFixed(0)} KB)
+              </span>
+              <button
+                type="button"
+                onClick={() => setPendingFile(null)}
+                className="ml-auto rounded-xl p-1 text-muted-foreground lumen-transition hover:bg-muted hover:text-info"
+              >
+                <X className="size-4" />
+              </button>
             </div>
           </div>
         )}
         {pendingTemplate && (
-          <div className="mx-auto max-w-[900px] px-6 pt-3">
+          <div
+            className={cn(rowMax, compactChrome ? "px-2 pt-2" : "px-6 pt-3")}
+          >
             <div className="rounded-[16px] border border-success/30 bg-success/5 p-4">
               <div className="flex items-start gap-3">
                 <LayoutTemplate className="mt-0.5 size-5 shrink-0 text-success" />
@@ -1730,284 +3101,571 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                     {pendingTemplate.label || pendingTemplate.name}
                   </p>
                   {pendingTemplate.label && (
-                    <p className="font-mono text-[11px] text-muted-foreground">{pendingTemplate.name}</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      {pendingTemplate.name}
+                    </p>
                   )}
-                  <p className="mt-1.5 whitespace-pre-wrap text-[13px] text-surface-foreground leading-relaxed">
-                    {pendingTemplate.content}
+                  {/* max-h evita que o preview cresca indefinidamente e
+                      empurre as mensagens pra fora da viewport (em
+                      zoom 100% com template longo a area de chat
+                      sumia). 180px ~= 9-10 linhas; o resto rola.
+                      O texto exibido eh o conteudo COM as variaveis
+                      ja substituidas pelos valores digitados abaixo. */}
+                  <p className="mt-1.5 max-h-[180px] overflow-y-auto whitespace-pre-wrap text-[13px] text-surface-foreground leading-relaxed">
+                    {renderedTemplatePreview || pendingTemplate.content}
                   </p>
+                  {templatePlaceholders.length > 0 && (
+                    <div className="mt-3 space-y-2 rounded-[12px] border border-success/20 bg-white p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Preencha as variaveis do template
+                      </p>
+                      {templatePlaceholders.map((k) => {
+                        const meta = pendingTemplate.operatorVariables?.find((v) => v.key === k);
+                        const label = meta?.label?.trim() || `Variável {{${k}}}`;
+                        return (
+                        <label key={k} className="flex flex-col gap-1">
+                          <span className="text-[11px] font-medium text-muted-foreground">
+                            {label}{" "}
+                            <code className="font-mono text-[11px] text-foreground">{`{{${k}}}`}</code>
+                          </span>
+                          <input
+                            type="text"
+                            value={templateVars[k] ?? ""}
+                            onChange={(e) =>
+                              setTemplateVars((prev) => ({
+                                ...prev,
+                                [k]: e.target.value,
+                              }))
+                            }
+                            placeholder={meta?.example ? `Ex.: ${meta.example}` : `Valor para {{${k}}}`}
+                            className="h-8 rounded-lg border border-border/60 bg-background px-2.5 text-[13px] outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-success/40"
+                          />
+                        </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="mt-3 space-y-2 rounded-[12px] border border-border/40 bg-white/80 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Flow (opcional)
+                    </p>
+                    <p className="text-[10px] leading-snug text-muted-foreground">
+                      Para templates com botão Flow: deixe em branco para o CRM
+                      gerar um{" "}
+                      <code className="font-mono text-[10px]">flow_token</code>{" "}
+                      (UUID) por envio, ou informe JSON de dados iniciais
+                      conforme a{" "}
+                      <a
+                        className="text-primary underline-offset-2 hover:underline"
+                        href="https://developers.facebook.com/docs/whatsapp/flows"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        documentação Meta (Flows)
+                      </a>
+                      .
+                    </p>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[11px] font-medium text-muted-foreground">
+                        Token do Flow (opcional)
+                      </span>
+                      <input
+                        type="text"
+                        value={flowTokenDraft}
+                        onChange={(e) => {
+                          setFlowTokenDraft(e.target.value);
+                          setFlowJsonError(null);
+                        }}
+                        placeholder="Vazio = UUID gerado automaticamente no envio"
+                        className="h-8 rounded-lg border border-border/60 bg-background px-2.5 font-mono text-[12px] outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-success/40"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[11px] font-medium text-muted-foreground">
+                        JSON inicial do Flow
+                      </span>
+                      <textarea
+                        value={flowActionJson}
+                        onChange={(e) => {
+                          setFlowActionJson(e.target.value);
+                          setFlowJsonError(null);
+                        }}
+                        placeholder='Ex.: {"screen":"NOME_DA_TELA","data":{"campo":"valor"}}'
+                        rows={3}
+                        className="resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 font-mono text-[11px] outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-success/40"
+                      />
+                    </label>
+                    {flowJsonError ? (
+                      <p className="text-[11px] text-destructive">
+                        {flowJsonError}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-                <button type="button" onClick={() => setPendingTemplate(null)}
-                  className="shrink-0 rounded-xl p-1 text-muted-foreground eduit-transition hover:bg-muted hover:text-info">
+                <button
+                  type="button"
+                  onClick={() => setPendingTemplate(null)}
+                  className="shrink-0 rounded-xl p-1 text-muted-foreground lumen-transition hover:bg-muted hover:text-info"
+                >
                   <X className="size-4" />
                 </button>
               </div>
               <div className="mt-3 flex items-center justify-end gap-2">
-                <Button type="button" variant="outline" size="sm" className="rounded-xl px-4 text-[13px]"
-                  onClick={() => setPendingTemplate(null)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl px-4 text-[13px]"
+                  onClick={() => setPendingTemplate(null)}
+                >
                   Cancelar
                 </Button>
-                <button type="button"
-                  disabled={templateSendMutation.isPending}
-                  onClick={() => {
-                    if (conversationId) {
-                      templateSendMutation.mutate({ templateName: pendingTemplate.name, bodyPreview: pendingTemplate.content }, { onSuccess: () => setPendingTemplate(null) });
-                    }
-                  }}
-                  className="flex items-center gap-2 rounded-[14px] eduit-accent-gradient px-5 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(0,212,170,0.3)] eduit-transition hover:scale-105 disabled:opacity-50">
-                  {templateSendMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                  Enviar Template
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {noteMode && (
-          <div className="mx-auto flex max-w-[900px] items-center gap-2 px-6 pt-2">
-            <Lock className="size-3 text-muted-foreground" />
-            <p className="text-[11px] font-semibold uppercase text-muted-foreground" style={{ letterSpacing: "0.5px" }}>Nota interna — visível apenas para a equipe</p>
-          </div>
-        )}
-
-        {/* Composer — agent header + toggle + input em um único cartão.
-            Mobile: padding lateral menor (px-3) e `pb` arbitrário com
-            env(safe-area-inset-bottom) + 0.75rem pra respeitar o home
-            indicator do iPhone. Desktop (sm+) mantém p-6 cheio (24px). */}
-        <footer className="border-t border-slate-100 bg-white px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:p-6">
-          <div className="rounded-[24px] border border-slate-100 bg-white shadow-sm">
-            {/* Cabeçalho: apenas assinatura do agente (toggle + nome +
-                lápis pra editar). O segmented Mensagem/Nota/Timeline
-                que ficava à direita foi removido — Nota virou toggle
-                inline na barra de ações; Timeline saiu da composer. */}
-            <div className="flex items-center border-b border-slate-100 px-5 py-3">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <TooltipHost label={signatureEnabled ? "Desligar assinatura" : "Ligar assinatura"} side="top">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={signatureEnabled}
-                    aria-label={signatureEnabled ? "Desligar assinatura" : "Ligar assinatura"}
-                    onClick={() => persistSignatureEnabled(!signatureEnabled)}
-                    className={cn(
-                      "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
-                      signatureEnabled ? "bg-brand-blue" : "bg-slate-300",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "inline-block size-4 transform rounded-full bg-white shadow transition-transform",
-                        signatureEnabled ? "translate-x-[18px]" : "translate-x-[2px]",
+                {/* Wrapper condicional:
+                    - faltam variaveis -> envelopa em TooltipHost com hint
+                    - tudo OK -> renderiza o button "puro" (sem balao
+                      vazio). Antes era `title=` nativo (violava
+                      `ui-fidelity §6.1`, gerava balao branco-com-laranja
+                      do SO competindo com identidade). */}
+                {(() => {
+                  const SendBtn = (
+                    <button
+                      type="button"
+                      disabled={
+                        templateSendMutation.isPending || !allTemplateVarsFilled
+                      }
+                      aria-label={
+                        !allTemplateVarsFilled
+                          ? "Enviar template (preencha todas as variáveis primeiro)"
+                          : "Enviar template"
+                      }
+                      onClick={() => {
+                        if (!conversationId) return;
+                        let flowActionData: Record<string, unknown> | null =
+                          null;
+                        const trimmedJson = flowActionJson.trim();
+                        if (trimmedJson) {
+                          try {
+                            const parsed: unknown = JSON.parse(trimmedJson);
+                            if (
+                              parsed === null ||
+                              typeof parsed !== "object" ||
+                              Array.isArray(parsed)
+                            ) {
+                              setFlowJsonError(
+                                "O JSON deve ser um objeto {...}, não lista ou primitivo.",
+                              );
+                              return;
+                            }
+                            flowActionData = parsed as Record<string, unknown>;
+                          } catch {
+                            setFlowJsonError(
+                              "JSON inválido. Corrija ou deixe em branco.",
+                            );
+                            return;
+                          }
+                        }
+                        setFlowJsonError(null);
+                        // Monta payload `components` no formato esperado
+                        // pelo Meta Cloud API quando o template tem
+                        // placeholders `{{N}}`. Sem isso o Graph rejeita
+                        // com code=132000 ("number of localizable_params
+                        // (0) does not match the expected number of params
+                        // (N)"). Para templates sem variaveis, omite o
+                        // campo `components` (envio simples).
+                        const components = templatePlaceholders.length
+                          ? [
+                              {
+                                type: "body",
+                                parameters: templatePlaceholders.map((k) => ({
+                                  type: "text",
+                                  text: templateVars[k] ?? "",
+                                })),
+                              },
+                            ]
+                          : undefined;
+                        const flowToken = flowTokenDraft.trim() || null;
+                        templateSendMutation.mutate(
+                          {
+                            templateName: pendingTemplate.name,
+                            bodyPreview:
+                              renderedTemplatePreview ||
+                              pendingTemplate.content,
+                            components,
+                            flowToken,
+                            flowActionData,
+                            templateGraphId:
+                              pendingTemplate.metaTemplateId ?? null,
+                          },
+                          { onSuccess: () => setPendingTemplate(null) },
+                        );
+                      }}
+                      className="flex items-center gap-2 rounded-[14px] lumen-ai-gradient px-5 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(123,97,255,0.25)] lumen-transition hover:scale-105 disabled:opacity-50"
+                    >
+                      {templateSendMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
                       )}
-                    />
-                  </button>
-                </TooltipHost>
-                <span
-                  className={cn(
-                    // max-w garante que o truncate so corte quando
-                    // realmente nao couber. Antes em mobile o "Caio"
-                    // virava "Caio…" cortado a meio caractere ("€aio")
-                    // porque o flex pai estreitava demais o slot do
-                    // nome. min-w-0 + max-w-[160px] em mobile (que e
-                    // ~3-4x o tamanho do nome tipico) e auto em sm+.
-                    "min-w-0 max-w-[160px] truncate text-[14px] font-bold transition-colors sm:max-w-none",
-                    signatureEnabled ? "text-slate-800" : "text-slate-400 line-through",
-                  )}
-                >
-                  {effectiveSignature}
-                </span>
-                <TooltipHost label="Customizar assinatura" side="top">
-                  <button
-                    type="button"
-                    onClick={() => { setSignatureDraft(signature); setSignatureModalOpen(true); }}
-                    className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                    aria-label="Customizar assinatura"
-                  >
-                    <Pencil className="size-3.5" />
-                  </button>
-                </TooltipHost>
+                      Enviar Template
+                    </button>
+                  );
+                  return !allTemplateVarsFilled ? (
+                    <TooltipHost
+                      label="Preencha todas as variáveis do template"
+                      side="top"
+                    >
+                      {SendBtn}
+                    </TooltipHost>
+                  ) : (
+                    SendBtn
+                  );
+                })()}
               </div>
-              {/* (Segmented picker Mensagem/Nota/Timeline removido —
-                  ver comentário em `noteMode`. A nota virou um toggle
-                  inline na barra de ações abaixo; a timeline saiu da
-                  composer por completo.) */}
             </div>
+          </div>
+        )}
+        {noteMode && !compactChrome ? (
+          <div className={cn(rowMax, "flex items-center gap-2 px-6 pt-2")}>
+            <Lock className="size-3 text-muted-foreground" />
+            <p
+              className="text-[11px] font-semibold uppercase text-muted-foreground"
+              style={{ letterSpacing: "0.5px" }}
+            >
+              Nota interna — visível apenas para a equipe
+            </p>
+          </div>
+        ) : null}
 
-          {/* Composer body — em mobile vira 2 linhas (textarea+send em
-              cima, toolbar embaixo) via flex-wrap+order. Sem isso o
-              textarea sumia na pratica: 7 icones + 2 botoes nao deixavam
-              espaco para o flex-1 do textarea (era o bug "nem area pra
-              digitar"). Desktop preserva a linha unica original. */}
-          <div className="flex flex-wrap items-end gap-2 p-3 sm:flex-nowrap sm:items-center sm:gap-3 sm:p-4">
-            <div className="order-3 flex w-full items-center gap-0.5 text-slate-400 sm:order-0 sm:w-auto">
-              <TooltipHost label="Anexar arquivo">
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-full p-2 transition-colors hover:bg-slate-50 hover:text-slate-700" aria-label="Anexar arquivo">
-                  <Paperclip size={18} />
-                </button>
-              </TooltipHost>
-              <input ref={fileInputRef} type="file" className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" onChange={onFileSelected} />
-              <TooltipHost label="Emojis">
-                <button type="button" onClick={() => togglePanel("emoji")}
-                  className={cn("rounded-full p-2 transition-colors hover:bg-slate-50 hover:text-slate-700", activePanel === "emoji" && "bg-slate-100 text-slate-900")} aria-label="Emojis">
-                  <Smile size={18} />
-                </button>
-              </TooltipHost>
-              <TooltipHost label="Respostas rápidas">
-                <button type="button" onClick={() => togglePanel("quick-replies")}
-                  className={cn("rounded-full p-2 transition-colors hover:bg-slate-50 hover:text-slate-700", activePanel === "quick-replies" && "bg-slate-100 text-slate-900")} aria-label="Respostas rápidas">
-                  <Zap size={18} />
-                </button>
-              </TooltipHost>
-              {!isBaileysChannel && (
-                <TooltipHost label="Templates de mensagem">
-                  <button type="button" onClick={() => togglePanel("templates")}
-                    className={cn("rounded-full p-2 transition-colors hover:bg-slate-50 hover:text-slate-700", activePanel === "templates" && "bg-slate-100 text-slate-900")} aria-label="Templates">
-                    <FileText size={18} />
-                  </button>
-                </TooltipHost>
+        {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
+        {compactChrome ? (
+          <footer className="shrink-0 overflow-visible border-t border-border bg-white pb-[calc(env(safe-area-inset-bottom,0px)+2px)]">
+            {noteMode ? (
+              <div
+                className={cn(
+                  rowMax,
+                  "flex h-6 items-center gap-2 border-b border-border bg-[var(--color-bg-subtle)]/70 px-2",
+                )}
+              >
+                <Lock className="size-3 shrink-0 text-[var(--color-ink-soft)]" />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                  Nota interna
+                </span>
+              </div>
+            ) : null}
+            <div
+              className={cn(
+                rowMax,
+                "flex items-end gap-1 bg-white px-2 py-1.5",
+                compactChrome && composeDisabled
+                  ? "min-h-[32px]"
+                  : composeDisabled
+                    ? "min-h-[40px]"
+                    : "min-h-[48px]",
               )}
-              <TooltipHost label="Criar tarefa">
-                <button type="button" onClick={() => togglePanel("task")}
-                  className={cn("rounded-full p-2 transition-colors hover:bg-slate-50 hover:text-slate-700", activePanel === "task" && "bg-slate-100 text-slate-900")} aria-label="Criar tarefa">
-                  <CheckSquare size={18} />
-                </button>
-              </TooltipHost>
-              <TooltipHost label="Agendar mensagem">
-                <button
-                  type="button"
-                  onClick={() => togglePanel("schedule")}
-                  className={cn(
-                    "rounded-full p-2 transition-colors hover:bg-slate-50 hover:text-slate-700",
-                    activePanel === "schedule" && "bg-slate-100 text-slate-900",
-                  )}
-                  aria-label="Agendar mensagem"
-                >
-                  <Clock size={18} />
-                </button>
-              </TooltipHost>
-              {/* Toggle "Nota interna" — substituiu a aba do segmented
-                  picker que existia no header da composer. Ativo, deixa
-                  o input em modo nota (fundo amarelo, placeholder
-                  "Nota interna…", e o `onSend` envia como `isPrivate`).
-                  Quando ativo, ganha um pill amber pra ficar visível
-                  mesmo com a barra cheia de ícones. Ícone Lock segue o
-                  mesmo padrão usado nos labels de nota interna no chat. */}
-              <TooltipHost label={noteMode ? "Sair do modo nota" : "Nota interna (só agentes)"}>
-                <button
-                  type="button"
-                  onClick={() => setNoteMode((v) => !v)}
-                  aria-label="Nota interna"
-                  aria-pressed={noteMode}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full transition-colors",
-                    // Paleta NEUTRA (slate) alinhada com a renderização
-                    // da nota no histórico do chat — antes era âmbar,
-                    // mas amarelo competia com badges de prioridade e
-                    // alertas. Cinza claro mantém destaque (contraste
-                    // sobre o composer branco) sem soar como warning.
-                    noteMode
-                      ? "bg-slate-200 px-2.5 py-1.5 text-slate-700 hover:bg-slate-300"
-                      : "p-2 hover:bg-slate-50 hover:text-slate-700",
-                  )}
-                >
-                  <Lock size={noteMode ? 14 : 18} strokeWidth={noteMode ? 2.5 : 2} />
-                  {noteMode && (
-                    <span className="text-[10px] font-black uppercase tracking-widest">
-                      Nota
-                    </span>
-                  )}
-                </button>
-              </TooltipHost>
-            </div>
-
-            {/* Input: quando a sessão expira (fora de nota), o campo vira
-                "não interativo" com opacity-50, cursor not-allowed e
-                placeholder reforçando a ação esperada. Mantemos o estilo
-                em nota (âmbar) e foco com ring brand-blue. */}
-            {(() => {
-              // O `isBusy` (mutation pendente) NÃO desabilita mais o
-              // textarea — antes, ao enviar com Enter, o browser tirava
-              // o foco do elemento `disabled` e o agente tinha que
-              // clicar de volta no input. Agora o textarea só fica
-              // disabled em estados que realmente bloqueiam envio
-              // (sessão expirada sem nota, etc), preservando o fluxo
-              // "Enter → próxima mensagem → Enter" sem cliques.
-              const composeDisabled =
-                !isBaileysChannel && !sessionActive && sessionInfo != null && !noteMode;
-              const expiredNoNote =
-                !sessionActive && sessionInfo != null && !isBaileysChannel && !noteMode;
-              return (
+            >
+              <AttachPopover
+                onFile={() => fileInputRef.current?.click()}
+                onQuickReply={() => togglePanel("quick-replies")}
+                onTemplate={() => togglePanel("templates")}
+                onTask={() => togglePanel("task")}
+                onSchedule={() => togglePanel("schedule")}
+                onNote={() => setNoteMode((v) => !v)}
+                noteMode={noteMode}
+                isBaileysChannel={isBaileysChannel}
+                signatureEnabled={signatureEnabled}
+                onToggleSignature={() =>
+                  persistSignatureEnabled(!signatureEnabled)
+                }
+                onEditSignature={() => {
+                  setSignatureDraft(signature);
+                  setSignatureModalOpen(true);
+                }}
+                isResolved={isResolved}
+                statusPending={statusMutation.isPending}
+                onToggleResolve={() =>
+                  statusMutation.mutate(isResolved ? "reopen" : "resolve")
+                }
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                onChange={onFileSelected}
+              />
+              <button
+                type="button"
+                onClick={() => togglePanel("emoji")}
+                className={cn(
+                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]",
+                  activePanel === "emoji" &&
+                    "bg-[var(--color-bg-subtle)] text-foreground",
+                )}
+                aria-label="Emojis"
+              >
+                <Smile className="size-5" strokeWidth={2} />
+              </button>
+              <textarea
+                ref={textareaRef}
+                value={draft}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  if (e.target.value.trim()) sendTypingIndicator();
+                }}
+                onKeyDown={onKeyDown}
+                onPaste={onPaste}
+                placeholder={
+                  pendingFile
+                    ? "Legenda (opcional)…"
+                    : noteMode
+                      ? "Nota interna…"
+                      : composeDisabled
+                        ? "Sessão expirada. Envie um template…"
+                        : "Mensagem"
+                }
+                rows={1}
+                disabled={composeDisabled}
+                className={cn(
+                  "flex-1 resize-none bg-transparent leading-snug text-foreground",
+                  dt.chat.fontSize.compact,
+                  "placeholder:text-[var(--color-ink-muted)]",
+                  "focus:outline-none",
+                  "max-h-[120px] min-h-[24px] self-center",
+                  noteMode &&
+                    "italic text-foreground placeholder:text-slate-500",
+                  composeDisabled &&
+                    "cursor-not-allowed text-[var(--color-ink-muted)]",
+                )}
+                style={{
+                  overflowY: draft.split("\n").length > 4 ? "auto" : "hidden",
+                }}
+              />
+              <div className="relative flex min-h-9 shrink-0 items-center justify-end">
                 <div
                   className={cn(
-                    // order-1 em mobile (linha 1, junto com Send).
-                    // sm:order-none retorna a ordem natural em desktop.
-                    "order-1 flex flex-1 items-center rounded-2xl bg-slate-50 px-4 py-2.5 transition-all sm:order-0",
-                    "focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-blue/20",
-                    // Modo nota: cinza claro (slate-100) ao invés de
-                    // amarelo. Mantém o destaque (mais escuro que o
-                    // estado idle slate-50 e contrastante com o branco
-                    // de mensagem normal) sem alarme visual de warning.
-                    noteMode && "bg-slate-100 focus-within:bg-slate-100 focus-within:ring-slate-300",
-                    expiredNoNote && "cursor-not-allowed opacity-50",
+                    "lumen-transition flex items-center justify-center",
+                    draft.trim() || pendingFile
+                      ? "relative opacity-100"
+                      : "pointer-events-none absolute inset-0 opacity-0",
                   )}
                 >
-                  <textarea
-                    ref={textareaRef}
-                    value={draft}
-                    onChange={(e) => {
-                      setDraft(e.target.value);
-                      if (e.target.value.trim()) sendTypingIndicator();
-                    }}
-                    onKeyDown={onKeyDown}
-                    onPaste={onPaste}
-                    placeholder={
-                      pendingFile
-                        ? "Legenda (opcional)…"
-                        : noteMode
-                          ? "Nota interna…"
-                          : expiredNoNote
-                            ? "Sessão expirada. Envie um template…"
-                            : "Digite uma mensagem ou use '/' para respostas rápidas"
-                    }
-                    rows={1}
-                    className={cn(
-                      "min-h-[24px] max-h-32 w-full resize-none bg-transparent text-[14px] text-slate-800 outline-none placeholder:text-slate-400",
-                      // Modo nota: texto cinza-escuro + placeholder
-                      // cinza médio. O `italic` permanece como dica
-                      // visual de "este texto não vai pro cliente".
-                      noteMode && "italic text-slate-700 placeholder:text-slate-500",
-                      expiredNoNote && "cursor-not-allowed",
+                  <button
+                    type="button"
+                    onClick={pendingFile ? sendFile : onSend}
+                    disabled={isBusy || (!pendingFile && !draft.trim())}
+                    className="inline-flex size-9 items-center justify-center rounded-full bg-[#25D366] text-white transition-transform active:scale-95 disabled:opacity-50"
+                    aria-label="Enviar"
+                  >
+                    {isBusy ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" strokeWidth={2.25} />
                     )}
-                    disabled={composeDisabled}
+                  </button>
+                </div>
+                <div
+                  className={cn(
+                    "lumen-transition flex min-w-0 items-center justify-end",
+                    draft.trim() || pendingFile
+                      ? "pointer-events-none absolute inset-0 opacity-0"
+                      : "relative opacity-100",
+                  )}
+                >
+                  <AudioRecorder
+                    onSend={sendAudio}
+                    disabled={isBusy}
+                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border-0 bg-[#2563eb] !p-0 text-white shadow-none hover:brightness-95 [&_svg]:!size-4"
                   />
                 </div>
-              );
-            })()}
-
-            {/* Resolver + Send/Audio — order-2 em mobile (acompanha o
-                textarea na linha 1). sm:order-none = posicao natural
-                (final da linha unica) em desktop. */}
-            <div className="order-2 flex shrink-0 items-center gap-1 sm:order-0">
-              <TooltipHost label={isResolved ? "Reabrir conversa" : "Resolver conversa"} side="top">
-                <button type="button"
-                  className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700 disabled:opacity-40"
-                  disabled={statusMutation.isPending}
-                  onClick={() => statusMutation.mutate(isResolved ? "reopen" : "resolve")}
-                  aria-label={isResolved ? "Reabrir conversa" : "Resolver conversa"}>
-                  {statusMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : isResolved ? <RotateCcw size={18} /> : <CheckCircle2 size={18} />}
-                </button>
-              </TooltipHost>
-              {draft.trim() || pendingFile ? (
-                <button type="button" onClick={pendingFile ? sendFile : onSend} disabled={isBusy || (!pendingFile && !draft.trim())}
-                  className="inline-flex size-10 items-center justify-center rounded-full bg-brand-blue text-white shadow-sm transition-all hover:bg-brand-blue/90 hover:shadow-md active:scale-95 disabled:opacity-50"
-                  aria-label="Enviar">
-                  {isBusy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" strokeWidth={2.25} />}
-                </button>
-              ) : (
-                <AudioRecorder onSend={sendAudio} disabled={isBusy} />
-              )}
+              </div>
             </div>
-          </div>
-          </div>
-        </footer>
+          </footer>
+        ) : (
+          <footer className="border-t border-slate-100 bg-white px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:p-6">
+            <div className="rounded-[24px] border border-slate-100 bg-white shadow-sm">
+              <div className="flex items-center border-b border-slate-100 px-5 py-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <TooltipHost
+                    label={
+                      signatureEnabled
+                        ? "Desligar assinatura"
+                        : "Ligar assinatura"
+                    }
+                    side="top"
+                  >
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={signatureEnabled}
+                      aria-label={
+                        signatureEnabled
+                          ? "Desligar assinatura"
+                          : "Ligar assinatura"
+                      }
+                      onClick={() => persistSignatureEnabled(!signatureEnabled)}
+                      className={cn(
+                        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+                        signatureEnabled ? "bg-primary" : "bg-slate-300",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-block size-4 transform rounded-full bg-white shadow transition-transform",
+                          signatureEnabled
+                            ? "translate-x-[18px]"
+                            : "translate-x-[2px]",
+                        )}
+                      />
+                    </button>
+                  </TooltipHost>
+                  <span
+                    className={cn(
+                      "min-w-0 max-w-[160px] truncate text-[14px] font-bold transition-colors sm:max-w-none",
+                      signatureEnabled
+                        ? "text-slate-800"
+                        : "text-[var(--color-ink-muted)] line-through",
+                    )}
+                  >
+                    {effectiveSignature}
+                  </span>
+                  <TooltipHost label="Customizar assinatura" side="top">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSignatureDraft(signature);
+                        setSignatureModalOpen(true);
+                      }}
+                      className="rounded-md p-1 text-[var(--color-ink-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
+                      aria-label="Customizar assinatura"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                  </TooltipHost>
+                </div>
+              </div>
+
+              <div
+                className={cn(
+                  rowMax,
+                  "flex min-h-[56px] items-end gap-2 p-3 sm:gap-3 sm:p-4",
+                )}
+              >
+                <AttachPopover
+                  onFile={() => fileInputRef.current?.click()}
+                  onQuickReply={() => togglePanel("quick-replies")}
+                  onTemplate={() => togglePanel("templates")}
+                  onTask={() => togglePanel("task")}
+                  onSchedule={() => togglePanel("schedule")}
+                  onNote={() => setNoteMode((v) => !v)}
+                  noteMode={noteMode}
+                  isBaileysChannel={isBaileysChannel}
+                  signatureEnabled={signatureEnabled}
+                  onToggleSignature={() =>
+                    persistSignatureEnabled(!signatureEnabled)
+                  }
+                  onEditSignature={() => {
+                    setSignatureDraft(signature);
+                    setSignatureModalOpen(true);
+                  }}
+                  isResolved={isResolved}
+                  statusPending={statusMutation.isPending}
+                  onToggleResolve={() =>
+                    statusMutation.mutate(isResolved ? "reopen" : "resolve")
+                  }
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                  onChange={onFileSelected}
+                />
+                <button
+                  type="button"
+                  onClick={() => togglePanel("emoji")}
+                  className={cn(
+                    "inline-flex size-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]",
+                    activePanel === "emoji" && "bg-slate-100 text-slate-900",
+                  )}
+                  aria-label="Emojis"
+                >
+                  <Smile className="size-5" strokeWidth={2} />
+                </button>
+                <textarea
+                  ref={textareaRef}
+                  value={draft}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    if (e.target.value.trim()) sendTypingIndicator();
+                  }}
+                  onKeyDown={onKeyDown}
+                  onPaste={onPaste}
+                  placeholder={
+                    pendingFile
+                      ? "Legenda (opcional)…"
+                      : noteMode
+                        ? "Nota interna…"
+                        : composeDisabled
+                          ? "Sessão expirada. Envie um template…"
+                          : isMobile
+                            ? "Mensagem ou /"
+                            : "Mensagem ou / para respostas rápidas"
+                  }
+                  rows={1}
+                  disabled={composeDisabled}
+                  className={cn(
+                    "min-h-[28px] max-h-[200px] min-w-0 flex-1 resize-none bg-transparent text-[15px] leading-relaxed text-slate-800 outline-none placeholder:text-[var(--color-ink-muted)] focus:outline-none",
+                    noteMode &&
+                      "italic text-foreground placeholder:text-slate-500",
+                    composeDisabled &&
+                      "cursor-not-allowed text-[var(--color-ink-muted)]",
+                  )}
+                  style={{
+                    overflowY: draft.split("\n").length > 4 ? "auto" : "hidden",
+                  }}
+                />
+                <div className="relative flex min-h-10 shrink-0 items-center justify-end">
+                  <div
+                    className={cn(
+                      "lumen-transition flex items-center justify-center",
+                      draft.trim() || pendingFile
+                        ? "relative opacity-100"
+                        : "pointer-events-none absolute inset-0 opacity-0",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={pendingFile ? sendFile : onSend}
+                      disabled={isBusy || (!pendingFile && !draft.trim())}
+                      className="inline-flex size-10 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm transition-transform active:scale-95 disabled:opacity-50"
+                      aria-label="Enviar"
+                    >
+                      {isBusy ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" strokeWidth={2.25} />
+                      )}
+                    </button>
+                  </div>
+                  <div
+                    className={cn(
+                      "lumen-transition flex min-w-0 items-center justify-end",
+                      draft.trim() || pendingFile
+                        ? "pointer-events-none absolute inset-0 opacity-0"
+                        : "relative opacity-100",
+                    )}
+                  >
+                    <AudioRecorder
+                      onSend={sendAudio}
+                      disabled={isBusy}
+                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border-0 bg-[#2563eb] !p-0 text-white shadow-none hover:brightness-95 [&_svg]:!size-5"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </footer>
+        )}
       </div>
 
       <Dialog
@@ -2023,7 +3681,8 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
           <DialogHeader>
             <DialogTitle>Encaminhar mensagem</DialogTitle>
             <DialogDescription>
-              O texto será enviado por WhatsApp para o contato da conversa escolhida. Mídias aparecem apenas como aviso no texto.
+              O texto será enviado por WhatsApp para o contato da conversa
+              escolhida. Mídias aparecem apenas como aviso no texto.
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -2035,9 +3694,13 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
           />
           <div className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-border p-1">
             {forwardPickLoading ? (
-              <div className="flex justify-center py-6"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
+              <div className="flex justify-center py-6">
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+              </div>
             ) : forwardPickFiltered.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma conversa encontrada.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Nenhuma conversa encontrada.
+              </p>
             ) : (
               forwardPickFiltered.map((row) => (
                 <button
@@ -2046,11 +3709,16 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                   disabled={forwardMutation.isPending}
                   onClick={() => {
                     if (!forwardingMessage) return;
-                    forwardMutation.mutate({ targetId: row.id, messageRef: String(forwardingMessage.id) });
+                    forwardMutation.mutate({
+                      targetId: row.id,
+                      messageRef: String(forwardingMessage.id),
+                    });
                   }}
-                  className="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2.5 text-left text-sm eduit-transition hover:bg-chat-bg disabled:opacity-50"
+                  className="flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2.5 text-left text-sm lumen-transition hover:bg-[var(--chat-bg)] disabled:opacity-50"
                 >
-                  <span className="font-medium text-foreground">{row.contact.name}</span>
+                  <span className="font-medium text-foreground">
+                    {row.contact.name}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {row.contact.phone ?? "—"} · {row.inboxName || row.channel}
                   </span>
@@ -2065,7 +3733,9 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
       <Dialog open={signatureModalOpen} onOpenChange={setSignatureModalOpen}>
         <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle className="text-[18px] font-black text-slate-800">Edição de assinatura</DialogTitle>
+            <DialogTitle className="text-[18px] font-bold text-slate-800">
+              Edição de assinatura
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <Input
@@ -2080,10 +3750,11 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                 }
               }}
               placeholder={agentName}
-              className="h-11 rounded-full border-slate-200 px-4 text-[14px]"
+              className="h-11 rounded-full border-border px-4 text-[14px]"
             />
             <DialogDescription className="text-[12px] text-slate-500">
-              Mantenha vazio se quiser utilizar o nome salvo no seu perfil como assinatura.
+              Mantenha vazio se quiser utilizar o nome salvo no seu perfil como
+              assinatura.
             </DialogDescription>
           </div>
           <div className="mt-2 flex items-center justify-end gap-2">
@@ -2102,7 +3773,7 @@ export function ChatWindow({ conversationId, conversationStatus, contactId, onRe
                 persistSignatureValue(signatureDraft.trim());
                 setSignatureModalOpen(false);
               }}
-              className="gap-1.5 rounded-full bg-brand-blue px-4 text-white shadow-lg shadow-blue-200/50 hover:bg-brand-blue/90"
+              className="gap-1.5 rounded-full bg-primary px-4 text-white shadow-lg shadow-[var(--shadow-indigo-glow)] hover:bg-primary/90"
             >
               <Save className="size-4" />
               Salvar
@@ -2121,7 +3792,13 @@ function TemplateBadge({ content }: { content: string }) {
   const isUtility = cat === "utility";
   const isAuth = cat?.includes("autenticação") || cat === "authentication";
   const Icon = isMkt ? Megaphone : isUtility ? Wrench : LayoutTemplate;
-  const label = isMkt ? "Marketing" : isUtility ? "Utility" : isAuth ? "Autenticação" : "Template";
+  const label = isMkt
+    ? "Marketing"
+    : isUtility
+      ? "Utility"
+      : isAuth
+        ? "Autenticação"
+        : "Template";
   const colors = isMkt
     ? "border-amber-300/60 bg-amber-50 text-amber-700"
     : isUtility
@@ -2130,29 +3807,60 @@ function TemplateBadge({ content }: { content: string }) {
 
   return (
     <div className="group/tpl relative mb-1.5">
-      <span className={cn("inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", colors)}>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+          colors,
+        )}
+      >
         <Icon className="size-3" />
         {label}
       </span>
       <div className="pointer-events-none absolute bottom-full left-0 z-30 mb-1 hidden w-max max-w-[260px] rounded-lg border border-border bg-card px-3 py-2 text-[11px] leading-snug text-surface-foreground shadow-lg group-hover/tpl:block">
         <p className="font-semibold text-foreground">{label}</p>
-        {meta?.name && <p className="mt-0.5 text-muted-foreground">Nome: <span className="font-mono">{meta.name}</span></p>}
+        {meta?.name && (
+          <p className="mt-0.5 text-muted-foreground">
+            Nome: <span className="font-mono">{meta.name}</span>
+          </p>
+        )}
         <p className="mt-1 text-[10px] text-muted-foreground">
-          {isMkt ? "Custo mais alto — mensagem promocional" : isUtility ? "Custo moderado — mensagem transacional" : isAuth ? "Custo baixo — autenticação" : "Modelo de mensagem WABA"}
+          {isMkt
+            ? "Custo mais alto — mensagem promocional"
+            : isUtility
+              ? "Custo moderado — mensagem transacional"
+              : isAuth
+                ? "Custo baixo — autenticação"
+                : "Modelo de mensagem WABA"}
         </p>
       </div>
     </div>
   );
 }
 
-function chatTime(date: Date | string): string { return new Date(date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); }
+function chatTime(date: Date | string): string {
+  return new Date(date).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 /** Formato detalhado para tooltip: "sex. 17/04/2026 13:00:09". */
 function chatFullTimestamp(date: Date | string): string {
   const d = new Date(date);
-  const weekday = d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(/\.$/, ".");
-  const dateStr = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const timeStr = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const weekday = d
+    .toLocaleDateString("pt-BR", { weekday: "short" })
+    .replace(/\.$/, ".");
+  const dateStr = d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const timeStr = d.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
   return `${weekday} ${dateStr} ${timeStr}`;
 }
 
@@ -2169,7 +3877,11 @@ function chatTimezoneOffset(date: Date | string): string {
 
 /** Nome IANA do fuso (America/Sao_Paulo). */
 function chatTimezoneName(): string {
-  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { return ""; }
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return "";
+  }
 }
 
 /** Tempo relativo em pt-BR: "32 minutos, 12 segundos atrás" / "agora mesmo". */
@@ -2177,7 +3889,8 @@ function chatRelativeTime(date: Date | string): string {
   const d = new Date(date);
   const diffSec = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
   if (diffSec < 5) return "agora mesmo";
-  if (diffSec < 60) return `${diffSec} segundo${diffSec === 1 ? "" : "s"} atrás`;
+  if (diffSec < 60)
+    return `${diffSec} segundo${diffSec === 1 ? "" : "s"} atrás`;
   const mins = Math.floor(diffSec / 60);
   const secs = diffSec % 60;
   if (mins < 60) {
@@ -2196,23 +3909,35 @@ function chatRelativeTime(date: Date | string): string {
   return `${days} dia${days === 1 ? "" : "s"} atrás`;
 }
 function chatDateLabel(date: Date | string | null): string {
-  if (!date) return ""; const d = new Date(date); const now = new Date();
+  if (!date) return "";
+  const d = new Date(date);
+  const now = new Date();
   if (d.toDateString() === now.toDateString()) return "Hoje";
-  const y = new Date(now); y.setDate(y.getDate() - 1);
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
   if (d.toDateString() === y.toDateString()) return "Ontem";
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
-function shouldShowDateSeparator(prev: InboxMessageDto | null, curr: InboxMessageDto): boolean {
-  if (!prev) return true; if (!prev.createdAt || !curr.createdAt) return false;
-  return new Date(prev.createdAt).toDateString() !== new Date(curr.createdAt).toDateString();
+function shouldShowDateSeparator(
+  prev: InboxMessageDto | null,
+  curr: InboxMessageDto,
+): boolean {
+  if (!prev) return true;
+  if (!prev.createdAt || !curr.createdAt) return false;
+  return (
+    new Date(prev.createdAt).toDateString() !==
+    new Date(curr.createdAt).toDateString()
+  );
 }
 
 function DateSep({ date }: { date: string | null }) {
   return (
     <div className="flex justify-center py-3">
-      <span className="rounded-full bg-[#c2f0d2] px-4 py-1 text-[11px] font-semibold text-[#1a6b3e] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-        {chatDateLabel(date)}
-      </span>
+      <span className={dt.chat.dateSep}>{chatDateLabel(date)}</span>
     </div>
   );
 }
@@ -2229,9 +3954,17 @@ function DateSep({ date }: { date: string | null }) {
  * a versão "rich" com os dois números formatados; outros eventos de
  * sistema (raros) caem no fallback compacto.
  */
-function SystemEventRow({ body, createdAt }: { body: string; createdAt: string | null }) {
+function SystemEventRow({
+  body,
+  createdAt,
+}: {
+  body: string;
+  createdAt: string | null;
+}) {
   const time = createdAt ? chatTime(createdAt) : "";
-  const match = body.match(/from\s+(\+?\d[\d\s-]{6,})\s+to\s+(\+?\d[\d\s-]{6,})/i);
+  const match = body.match(
+    /from\s+(\+?\d[\d\s-]{6,})\s+to\s+(\+?\d[\d\s-]{6,})/i,
+  );
 
   if (match) {
     const oldPhone = formatPhoneBR(match[1]);
@@ -2243,12 +3976,15 @@ function SystemEventRow({ body, createdAt }: { body: string; createdAt: string |
         transition={{ duration: 0.25 }}
         className="flex w-full justify-center py-2"
       >
-        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-[20px] border border-amber-200/80 bg-amber-50/80 px-4 py-3 shadow-float">
+        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-[20px] border border-amber-200/80 bg-amber-50/80 px-4 py-3 shadow-[var(--shadow-sm)]">
           <div className="flex items-center gap-2">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-100">
-              <Smartphone className="size-3.5 text-amber-700" strokeWidth={2.4} />
+              <Smartphone
+                className="size-3.5 text-amber-700"
+                strokeWidth={2.4}
+              />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
               Cliente trocou de número
             </p>
             {time && (
@@ -2261,8 +3997,11 @@ function SystemEventRow({ body, createdAt }: { body: string; createdAt: string |
             <span className="rounded-md bg-white/80 px-2 py-1 text-[12px] font-bold tabular-nums text-slate-500 line-through decoration-slate-400/60">
               {oldPhone}
             </span>
-            <ArrowRight className="size-3.5 shrink-0 text-amber-600" strokeWidth={2.5} />
-            <span className="rounded-md bg-white px-2 py-1 text-[12px] font-black tabular-nums text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+            <ArrowRight
+              className="size-3.5 shrink-0 text-amber-600"
+              strokeWidth={2.5}
+            />
+            <span className="rounded-md bg-white px-2 py-1 text-[12px] font-bold tabular-nums text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
               {newPhone}
             </span>
           </div>
@@ -2283,9 +4022,16 @@ function SystemEventRow({ body, createdAt }: { body: string; createdAt: string |
       className="flex w-full justify-center py-2"
     >
       <div className="flex max-w-[420px] items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50/80 px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-        <AlertCircle className="size-3.5 shrink-0 text-amber-600" strokeWidth={2.4} />
+        <AlertCircle
+          className="size-3.5 shrink-0 text-amber-600"
+          strokeWidth={2.4}
+        />
         <p className="text-[11px] font-semibold text-amber-800">{body}</p>
-        {time && <span className="text-[10px] tabular-nums text-amber-600/80">{time}</span>}
+        {time && (
+          <span className="text-[10px] tabular-nums text-amber-600/80">
+            {time}
+          </span>
+        )}
       </div>
     </MotionDiv>
   );
@@ -2340,10 +4086,13 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
   // strings antigas tinham `· agente: X` antes de 2026-04-18).
   const contentSuggestsIncoming = lower.includes("entrada");
   const contentSuggestsOutgoing =
-    lower.includes("saída") || lower.includes("saida") || lower.includes("agente:");
+    lower.includes("saída") ||
+    lower.includes("saida") ||
+    lower.includes("agente:");
   const isOutgoing =
     message.direction === "out" ||
-    (message.direction !== "in" && (senderSuggestsOutgoing || contentSuggestsOutgoing));
+    (message.direction !== "in" &&
+      (senderSuggestsOutgoing || contentSuggestsOutgoing));
   const isIncoming =
     message.direction === "in" ||
     (message.direction !== "out" &&
@@ -2357,17 +4106,22 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
   // "Marcelo Pinheiro"). Cobre tanto `whatsapp_call` quanto a versão
   // longa do `whatsapp_call_recording` (sender = "WhatsApp · chamada · Nome").
   const agentLabel = isOutgoing
-    ? senderName
-        .replace(/^WhatsApp\s+·\s+(?:chamada\s+·\s+)?/i, "")
-        .trim()
+    ? senderName.replace(/^WhatsApp\s+·\s+(?:chamada\s+·\s+)?/i, "").trim()
     : "";
 
-  const Icon = hasRecording ? Volume2 : isIncoming ? PhoneIncoming : isOutgoing ? PhoneOutgoing : Phone;
+  const Icon = hasRecording
+    ? Volume2
+    : isIncoming
+      ? PhoneIncoming
+      : isOutgoing
+        ? PhoneOutgoing
+        : Phone;
 
   const durationMatch = content.match(/(\d+m\d{2}s|\d+s)\b/);
   const timeMatch = content.match(/(\d{1,2}:\d{2}(?:[–-]\d{1,2}:\d{2})?)/);
   const duration = durationMatch?.[1] ?? null;
-  const timeLabel = timeMatch?.[1] ?? (message.createdAt ? chatTime(message.createdAt) : null);
+  const timeLabel =
+    timeMatch?.[1] ?? (message.createdAt ? chatTime(message.createdAt) : null);
 
   const label = hasRecording
     ? "Gravação de chamada"
@@ -2386,8 +4140,8 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
     : isIncoming
       ? "text-emerald-600"
       : isOutgoing
-        ? "text-brand-blue"
-        : "text-slate-600";
+        ? "text-primary"
+        : "text-[var(--color-ink-soft)]";
 
   // Lateralização: outbound (agente) → direita; inbound (cliente) →
   // esquerda; sem direção detectável (eventos de sistema antigos) →
@@ -2400,22 +4154,33 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
       ? "justify-start"
       : "justify-center";
   const sideTint = isOutgoing
-    ? "border-[#cffafe] bg-[#f0f9fa]/80"
+    ? "border-[var(--color-chat-sent-border)] bg-[var(--color-chat-sent)]/80"
     : isIncoming
       ? "border-slate-100 bg-white"
-      : "border-slate-100 bg-slate-50/70";
+      : "border-slate-100 bg-[var(--color-bg-subtle)]/70";
 
   return (
     <div className={cn("flex w-full", sideJustify)}>
       <div className="w-full max-w-[360px]">
-        <div className={cn("flex items-center gap-3 rounded-2xl border px-4 py-2.5", sideTint)}>
-
-          <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm", accent)}>
+        <div
+          className={cn(
+            "flex items-center gap-3 rounded-2xl border px-4 py-2.5",
+            sideTint,
+          )}
+        >
+          <div
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm",
+              accent,
+            )}
+          >
             <Icon className="size-4" strokeWidth={2.25} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-bold text-slate-900">{label}</p>
-            <div className="mt-0.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            <p className="truncate text-[12px] font-bold text-slate-900">
+              {label}
+            </p>
+            <div className="mt-0.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
               {duration && (
                 <span className="inline-flex items-center gap-1">
                   <Clock className="size-2.5" />
@@ -2425,7 +4190,10 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
               {timeLabel && <span>{timeLabel}</span>}
               {agentLabel && (
                 <span className="truncate normal-case tracking-normal text-slate-500">
-                  por <span className="font-bold text-slate-700">{agentLabel}</span>
+                  por{" "}
+                  <span className="font-bold text-foreground">
+                    {agentLabel}
+                  </span>
                 </span>
               )}
             </div>
@@ -2434,7 +4202,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="shrink-0 rounded-full bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-white transition-all hover:bg-slate-800 hover:shadow-sm"
+              className="shrink-0 rounded-full bg-slate-900 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white transition-all hover:bg-slate-800 hover:shadow-sm"
             >
               {expanded ? "Fechar" : "Ouvir"}
             </button>
@@ -2468,8 +4236,14 @@ function detectConsentVerdict(content: string): ConsentVerdict | null {
   // mensagem longa do cliente que por acaso contenha "recusou"/"aceitou".
   if (t.length > 120) return null;
 
-  const isAccept = t.includes("cliente aceitou") || t.includes("permissão para ligações concedida") || t.includes("permissao para ligacoes concedida");
-  const isDeny = t.includes("cliente recusou") || /\breject(ed)?\b/.test(t) || /\bdecline(d)?\b/.test(t);
+  const isAccept =
+    t.includes("cliente aceitou") ||
+    t.includes("permissão para ligações concedida") ||
+    t.includes("permissao para ligacoes concedida");
+  const isDeny =
+    t.includes("cliente recusou") ||
+    /\breject(ed)?\b/.test(t) ||
+    /\bdecline(d)?\b/.test(t);
   const isPermanent = t.includes("permanente") || t.includes("permanent");
 
   if (isDeny && !isAccept) return "denied";
@@ -2523,7 +4297,7 @@ function ConsentActivityItem({
           label: "Resposta de permissão",
           sub: "Cliente respondeu ao pedido",
           accent: "text-slate-500",
-          pillBg: "bg-slate-50 border-slate-100",
+          pillBg: "bg-[var(--color-bg-subtle)] border-slate-100",
         };
     }
   })();
@@ -2531,16 +4305,30 @@ function ConsentActivityItem({
   return (
     <div className="flex w-full justify-center">
       <div className="w-full max-w-[520px]">
-        <div className={cn("flex items-center gap-3 rounded-2xl border px-4 py-2.5", pillBg)}>
-          <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm", accent)}>
+        <div
+          className={cn(
+            "flex items-center gap-3 rounded-2xl border px-4 py-2.5",
+            pillBg,
+          )}
+        >
+          <div
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm",
+              accent,
+            )}
+          >
             <Icon className="size-4" strokeWidth={2.25} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-bold text-slate-900">{label}</p>
-            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">{sub}</p>
+            <p className="truncate text-[12px] font-bold text-slate-900">
+              {label}
+            </p>
+            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+              {sub}
+            </p>
           </div>
           {timeLabel && (
-            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
               {timeLabel}
             </span>
           )}
@@ -2550,10 +4338,20 @@ function ConsentActivityItem({
   );
 }
 
-function groupReactions(reactions: ReactionDto[]): { emoji: string; count: number; senders: string[] }[] {
+function groupReactions(
+  reactions: ReactionDto[],
+): { emoji: string; count: number; senders: string[] }[] {
   const map = new Map<string, string[]>();
-  for (const r of reactions) { const a = map.get(r.emoji) ?? []; a.push(r.senderName); map.set(r.emoji, a); }
-  return Array.from(map.entries()).map(([emoji, senders]) => ({ emoji, count: senders.length, senders }));
+  for (const r of reactions) {
+    const a = map.get(r.emoji) ?? [];
+    a.push(r.senderName);
+    map.set(r.emoji, a);
+  }
+  return Array.from(map.entries()).map(([emoji, senders]) => ({
+    emoji,
+    count: senders.length,
+    senders,
+  }));
 }
 
 function formatAudioTime(seconds: number): string {
@@ -2582,27 +4380,39 @@ interface AudioMessageProps {
    *  funcionando — operador pode revisar o áudio antes do servidor
    *  confirmar. */
   isUploading?: boolean;
+  /** Registra handler para o item "Transcrever áudio" do menu ⋯ da mensagem. */
+  onRegisterTranscribe?: (handler: (() => void) | null) => void;
 }
 
 /** Overlay translúcido com spinner — usado em previews de imagem/vídeo
  *  enquanto o anexo sobe. Centralizado, com fundo navy desfocado pra
  *  não disputar atenção com o conteúdo abaixo. */
-function UploadingOverlay({ label, rounded = "rounded-lg" }: { label: string; rounded?: string }) {
+function UploadingOverlay({
+  label,
+  rounded = "rounded-lg",
+}: {
+  label: string;
+  rounded?: string;
+}) {
+  // Sem `backdrop-blur` (caro em listas longas com muitas medias
+  // simultaneas, especialmente em mobile baixo-end). O cinza-navy
+  // /45 solido transmite a mesma intencao visual de "midia em
+  // upload" sem o custo de filtro de blur compositado por frame.
   return (
-    <div className={cn("absolute inset-0 flex items-center justify-center bg-brand-navy/30 backdrop-blur-[2px]", rounded)}>
-      <div className="flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-premium">
-        <Loader2 className="size-3.5 animate-spin text-[#507df1]" />
-        <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">{label}</span>
+    <div
+      className={cn(
+        "absolute inset-0 flex items-center justify-center bg-foreground/45",
+        rounded,
+      )}
+    >
+      <div className="flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-[var(--shadow-lg)]">
+        <Loader2 className="size-3.5 animate-spin text-primary" />
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-foreground">
+          {label}
+        </span>
       </div>
     </div>
   );
-}
-
-function formatAudioSize(bytes: number | null | undefined): string {
-  if (bytes == null || !Number.isFinite(bytes)) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // Ciclo de velocidades de reprodução. 1x → 1.25x → 1.5x → 2x → 0.75x → 1x.
@@ -2618,13 +4428,13 @@ function formatRate(rate: number): string {
 
 function AudioMessage({
   url,
-  fileSizeBytes,
   time,
   showDeliveryCheck = false,
   deliveryStatus = "delivered",
   out = false,
   senderLabel,
   isUploading = false,
+  onRegisterTranscribe,
 }: AudioMessageProps) {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -2645,8 +4455,13 @@ function AudioMessage({
 
   // Transcrição (Whisper free). `null` = ainda não pediu, `"loading"`
   // = chamando API, `string` = transcrição pronta, `Error` = falhou.
-  type TranscriptionState = null | "loading" | { text: string } | { error: string };
-  const [transcription, setTranscription] = React.useState<TranscriptionState>(null);
+  type TranscriptionState =
+    | null
+    | "loading"
+    | { text: string }
+    | { error: string };
+  const [transcription, setTranscription] =
+    React.useState<TranscriptionState>(null);
   const [transcriptionOpen, setTranscriptionOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -2695,7 +4510,10 @@ function AudioMessage({
       }
     };
     const onTime = () => setCurrentTime(a.currentTime);
-    const onEnd = () => { setIsPlaying(false); setCurrentTime(0); };
+    const onEnd = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
 
     a.addEventListener("loadedmetadata", onLoaded);
     a.addEventListener("durationchange", onDurationChange);
@@ -2736,15 +4554,22 @@ function AudioMessage({
   const togglePlay = React.useCallback(() => {
     const a = audioRef.current;
     if (!a) return;
-    if (isPlaying) { a.pause(); setIsPlaying(false); }
-    else { a.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false)); }
+    if (isPlaying) {
+      a.pause();
+      setIsPlaying(false);
+    } else {
+      a.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
+    }
   }, [isPlaying]);
 
   const cycleRate = React.useCallback(() => {
     setRateIndex((i) => (i + 1) % PLAYBACK_RATES.length);
   }, []);
 
-  const progress = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const progress =
+    duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
   const currentLabel = formatAudioTime(currentTime);
   // `--:--` enquanto a duração está sendo medida (truque do
   // MAX_SAFE_INTEGER pode demorar 1-2s em arquivos OGG sem header).
@@ -2755,23 +4580,15 @@ function AudioMessage({
     const a = audioRef.current;
     if (!a || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const ratio = Math.min(
+      1,
+      Math.max(0, (e.clientX - rect.left) / rect.width),
+    );
     a.currentTime = ratio * duration;
     setCurrentTime(a.currentTime);
   };
 
-  // Nome do arquivo — antes mostrávamos o nome cru do servidor
-  // (`1776450600867-ecf3aj.webm`) que é totalmente irrelevante pro
-  // operador. Padronizado pra "Áudio" + meta com formato/tamanho.
-  // Para download, usamos um nome amigável com timestamp do horário
-  // da mensagem (quando disponível), evitando colisões na pasta de
-  // downloads do operador.
-  const sizeLabel = formatAudioSize(fileSizeBytes);
-  const metaLabel = isUploading
-    ? "Enviando…"
-    : sizeLabel
-      ? `Áudio · ${sizeLabel}`
-      : "Áudio";
+  // Nome amigável para download MP3 (timestamp da mensagem quando disponível).
   const downloadName = (() => {
     const safeTime = (time ?? "").replace(/[^\d]/g, "");
     return safeTime ? `audio-${safeTime}` : `audio-${Date.now()}`;
@@ -2796,7 +4613,9 @@ function AudioMessage({
                 : `Erro HTTP ${res.status}.`,
           );
         }
-        const body = await res.json().catch(() => null) as { message?: string } | null;
+        const body = (await res.json().catch(() => null)) as {
+          message?: string;
+        } | null;
         throw new Error(body?.message ?? `HTTP ${res.status}`);
       }
       const blob = await res.blob();
@@ -2820,7 +4639,12 @@ function AudioMessage({
 
   const transcribe = React.useCallback(async () => {
     setTranscriptionOpen(true);
-    if (transcription && typeof transcription === "object" && "text" in transcription) return;
+    if (
+      transcription &&
+      typeof transcription === "object" &&
+      "text" in transcription
+    )
+      return;
     setTranscription("loading");
     try {
       const res = await fetch(apiUrl("/api/media/transcribe"), {
@@ -2858,185 +4682,179 @@ function AudioMessage({
     }
   }, [transcription, url]);
 
-  // Paleta de áudio segue a bolha de texto correspondente:
-  //  · out (agente): mantém cyan premium da bolha enviada (#f0f9fa / #cffafe)
-  //  · in  (cliente): branco + border-slate-100, idêntico à bolha de texto
-  //    recebida — nada de verde-lima. `playerBg` / `divider` usam slate-50/100
-  //    para o player aparecer sutilmente sobre o fundo branco do card.
-  const palette = out
-    ? {
-        bubbleBg: "bg-[#f0f9fa]",
-        bubbleBorder: "border-[#cffafe]",
-        playerBg: "bg-[#cffafe]",
-        divider: "bg-[#cffafe]",
-      }
-    : {
-        bubbleBg: "bg-white",
-        bubbleBorder: "border-slate-100",
-        playerBg: "bg-slate-50",
-        divider: "bg-slate-100",
-      };
+  React.useEffect(() => {
+    if (!onRegisterTranscribe) return;
+    const run = () => {
+      void transcribe();
+    };
+    onRegisterTranscribe(run);
+    return () => onRegisterTranscribe(null);
+  }, [onRegisterTranscribe, transcribe]);
+
+  const playerSurface = out
+    ? "bg-[color:var(--chat-bubble-sent-text)]/12"
+    : "bg-[var(--color-bg-subtle)]";
 
   return (
-    <div
-      className={cn(
-        "font-outfit rounded-[20px] border p-5 shadow-float",
-        out && "rounded-br-none",
-        palette.bubbleBg,
-        palette.bubbleBorder,
-      )}
-    >
-      {senderLabel && (
-        // Preserva o case cadastrado no CRM (sem `uppercase` forçado) — mesmo
-        // padrão do label de mensagens de texto, ver comentário em `chat-window`
-        // próximo ao render de `m.senderName`. Evita o ar "MARCELO PINHEIRO"
-        // que soa agressivo quando o nome é longo.
-        <p className="font-outfit mb-2 text-[11px] font-semibold tracking-tight text-brand-navy/90">
-          {senderLabel}:
-        </p>
-      )}
-      {/* Player bar interna */}
-      <div className={cn("flex items-center gap-3 rounded-2xl px-3 py-2.5", palette.playerBg)}>
-        {/* Play outline azul */}
-        <button
-          type="button"
-          onClick={togglePlay}
-          disabled={!ready}
-          aria-label={isPlaying ? "Pausar áudio" : "Reproduzir áudio"}
-          className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-[#6366f1] bg-white text-[#6366f1] shadow-sm transition-all duration-300 ease-in-out hover:bg-[#6366f1] hover:text-white active:scale-95 disabled:opacity-60"
+    <>
+      {senderLabel ? (
+        <span className="mb-1 block text-[11px] text-slate-400">
+          {senderLabel}
+        </span>
+      ) : null}
+
+      <div className="flex min-w-[220px] max-w-[320px] flex-col gap-1">
+        <div
+          className={cn(
+            "font-display flex items-center gap-2 rounded-[6px] px-2 py-1.5",
+            playerSurface,
+          )}
         >
-          {isPlaying
-            ? <Pause className="size-4" fill="currentColor" />
-            : <Play className="size-4 translate-x-px" fill="currentColor" />}
-        </button>
-
-        {/* Tempo + Seekbar */}
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="text-[11px] font-bold tabular-nums text-slate-500">
-            {currentLabel}<span className="text-slate-400">/</span>{durationLabel}
-          </span>
-          <div
-            onClick={onSeek}
-            role="slider"
-            aria-label="Posição do áudio"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(progress)}
-            className="relative h-[4px] w-full cursor-pointer rounded-full bg-slate-200"
+          <button
+            type="button"
+            onClick={togglePlay}
+            disabled={!ready}
+            aria-label={isPlaying ? "Pausar" : "Reproduzir"}
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all active:scale-95 disabled:opacity-60"
           >
-            <div
-              className="h-full rounded-full bg-[#6366f1] transition-[width] duration-150"
-              style={{ width: `${progress}%` }}
-            />
-            <div
-              className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#6366f1] shadow-[0_1px_4px_rgba(99,102,241,0.35)]"
-              style={{ left: `${progress}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Ícones direita — Volume (decorativo) + Velocidade (cíclico).
-            O botão de velocidade substituiu o ícone "SlidersHorizontal"
-            decorativo: clicar cicla 1x → 1.25x → 1.5x → 2x → 0.75x.
-            Mantém o tom da voz via `preservesPitch` (ver effect que
-            atualiza o `<audio>` quando `rate` muda). */}
-        <div className="flex shrink-0 items-center gap-1.5 text-slate-400">
-          <button type="button" aria-label="Volume" className="rounded p-1 transition-colors hover:bg-white/60 hover:text-slate-600">
-            <Volume2 className="size-4" />
+            {isPlaying ? (
+              <Pause className="size-4" fill="currentColor" />
+            ) : (
+              <Play className="size-4 translate-x-px" fill="currentColor" />
+            )}
           </button>
-          <TooltipHost label="Velocidade de reprodução" side="top">
-            <button
-              type="button"
-              onClick={cycleRate}
-              aria-label={`Velocidade ${formatRate(rate)} (clique pra trocar)`}
+
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            {isUploading ? (
+              <span
+                className={cn(
+                  "text-[10px] font-medium",
+                  out
+                    ? "text-[color:var(--chat-bubble-sent-text)]/90"
+                    : "text-primary",
+                )}
+              >
+                Enviando…
+              </span>
+            ) : null}
+            <div
+              onClick={onSeek}
+              role="slider"
+              aria-label="Posição do áudio"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progress)}
+              className="relative h-[3px] w-full cursor-pointer rounded-full bg-slate-200"
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-150"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span
               className={cn(
-                "min-w-[36px] rounded-full px-2 py-0.5 text-[11px] font-black tabular-nums tracking-tight transition-colors",
-                rate === 1
-                  ? "text-slate-500 hover:bg-white/60 hover:text-slate-700"
-                  : "bg-[#6366f1] text-white shadow-sm hover:bg-[#4f51d8]",
+                "text-[10px] tabular-nums",
+                out
+                  ? "text-[color:var(--chat-bubble-sent-time)]"
+                  : "text-slate-500",
               )}
             >
-              {formatRate(rate)}
+              {currentLabel}
+              <span
+                className={
+                  out
+                    ? "text-[color:var(--chat-bubble-sent-time)]/70"
+                    : "text-[var(--color-ink-muted)]"
+                }
+              >
+                /
+              </span>
+              {durationLabel}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={cycleRate}
+            disabled={isUploading}
+            className={cn(
+              "shrink-0 text-[10px] font-bold tabular-nums disabled:opacity-50",
+              out
+                ? "text-[color:var(--chat-bubble-sent-time)] hover:text-[color:var(--chat-bubble-sent-text)]"
+                : "text-[var(--color-ink-muted)] hover:text-foreground",
+            )}
+            aria-label={`Velocidade ${formatRate(rate)}`}
+          >
+            {formatRate(rate)}
+          </button>
+
+          {!isUploading ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                downloadMp3();
+              }}
+              disabled={downloading}
+              className={cn(
+                "inline-flex size-7 shrink-0 items-center justify-center rounded disabled:cursor-not-allowed disabled:opacity-60",
+                out
+                  ? "text-[color:var(--chat-bubble-sent-time)] hover:text-[color:var(--chat-bubble-sent-text)]"
+                  : "text-[var(--color-ink-muted)] hover:text-foreground",
+              )}
+              aria-label="Baixar MP3"
+            >
+              {downloading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Download className="size-3.5" />
+              )}
             </button>
-          </TooltipHost>
+          ) : null}
         </div>
-      </div>
 
-      {/* Divisor sutil */}
-      <div className={cn("my-3 h-px w-full", palette.divider)} />
-
-      {/* Footer: ícone + label "Áudio" + ações (transcrever + download).
-          O nome do arquivo cru (`1776xxx-yyy.webm`) sumiu — não traz
-          informação útil pro operador. Em troca temos um label limpo
-          "Áudio" + meta com tamanho, e a extensão original fica só na
-          conversão de download (que sempre vira `.mp3`). */}
-      <div className="flex items-center gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f97316] text-white shadow-sm">
-          <Megaphone className="size-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-black text-slate-800">Áudio</p>
-          <p className={cn("flex items-center gap-1.5 truncate text-[11px] font-bold", isUploading ? "text-[#507df1]" : "text-slate-500")}>
-            {isUploading && <Loader2 className="size-3 shrink-0 animate-spin" />}
-            <span className="truncate">{metaLabel}</span>
-          </p>
-        </div>
-        {/* Ações dependentes do servidor (transcrever/baixar) — escondidas
-            durante upload pra não tentar bater em URL de blob: local nem
-            chamar `/api/media/...` antes do servidor ter o arquivo. */}
-        {!isUploading && (
-          <>
-            <TooltipHost label={transcriptionOpen ? "Transcrição" : "Transcrever áudio"} side="top">
-              <button
-                type="button"
-                onClick={transcribe}
-                aria-label="Transcrever áudio com IA"
-                aria-pressed={transcriptionOpen}
+        {time || showDeliveryCheck ? (
+          <div
+            className={cn(
+              "flex justify-end gap-0.5 pr-0.5 text-[10px] font-bold tabular-nums",
+              out
+                ? "text-[color:var(--chat-bubble-sent-time)]"
+                : "text-slate-500",
+            )}
+          >
+            {time ? <span>{time}</span> : null}
+            {showDeliveryCheck ? (
+              <CheckCheck
                 className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors active:scale-95",
-                  transcriptionOpen
-                    ? "bg-[#6366f1] text-white shadow-sm hover:bg-[#4f51d8]"
-                    : "text-slate-400 hover:bg-white hover:text-slate-700",
+                  "size-3",
+                  out
+                    ? isRead
+                      ? "text-[color:var(--chat-bubble-sent-check-read)]"
+                      : "text-[color:var(--chat-bubble-sent-time)]"
+                    : isRead
+                      ? "text-[#06b6d4]"
+                      : "text-[var(--color-ink-muted)]",
                 )}
-              >
-                {transcription === "loading" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <FileText className="size-4" />
-                )}
-              </button>
-            </TooltipHost>
-            <TooltipHost label="Baixar como MP3" side="top">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  downloadMp3();
-                }}
-                disabled={downloading}
-                aria-label="Baixar áudio em MP3"
-                className="flex size-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white hover:text-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {downloading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-              </button>
-            </TooltipHost>
-          </>
-        )}
+                strokeWidth={2.5}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      {/* Painel de transcrição — expande abaixo do footer. Estados:
-          loading (skeleton), error (mensagem amigável + botão tentar
-          de novo), success (texto + botão copiar). Fechável via X. */}
-      {transcriptionOpen && (
-        <div className={cn("mt-3 rounded-2xl border border-dashed p-3", out ? "border-[#cffafe] bg-white/70" : "border-slate-200 bg-slate-50/70")}>
+      {transcriptionOpen ? (
+        <div
+          className={cn(
+            "mt-2 rounded-xl border border-dashed p-3",
+            out
+              ? "border-[var(--color-chat-sent-border)] bg-[color:var(--chat-bubble-sent-text)]/8"
+              : "border-border bg-[var(--color-bg-subtle)]/70",
+          )}
+        >
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <FileText className="size-3.5 text-[#6366f1]" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6366f1]">
+              <FileText className="size-3.5 text-primary" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-primary">
                 Transcrição
               </span>
             </div>
@@ -3044,22 +4862,24 @@ function AudioMessage({
               type="button"
               onClick={() => setTranscriptionOpen(false)}
               aria-label="Fechar transcrição"
-              className="rounded p-0.5 text-slate-400 transition-colors hover:bg-white hover:text-slate-700"
+              className="rounded p-0.5 text-[var(--color-ink-muted)] transition-colors hover:bg-white hover:text-foreground"
             >
               <X className="size-3.5" />
             </button>
           </div>
 
-          {transcription === "loading" && (
+          {transcription === "loading" ? (
             <div className="flex items-center gap-2 text-[12px] text-slate-500">
               <Loader2 className="size-3.5 animate-spin" />
               Transcrevendo… pode levar alguns segundos.
             </div>
-          )}
+          ) : null}
 
-          {transcription && typeof transcription === "object" && "text" in transcription && (
+          {transcription &&
+          typeof transcription === "object" &&
+          "text" in transcription ? (
             <div className="space-y-2">
-              <p className="whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-slate-700">
+              <p className="whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-foreground">
                 {transcription.text}
               </p>
               <button
@@ -3068,37 +4888,34 @@ function AudioMessage({
                   navigator.clipboard.writeText(transcription.text);
                   toast.success("Transcrição copiada.");
                 }}
-                className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-colors hover:bg-white hover:text-slate-700"
+                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500 transition-colors hover:bg-white hover:text-foreground"
               >
                 Copiar
               </button>
             </div>
-          )}
+          ) : null}
 
-          {transcription && typeof transcription === "object" && "error" in transcription && (
+          {transcription &&
+          typeof transcription === "object" &&
+          "error" in transcription ? (
             <div className="space-y-2">
-              <p className="text-[12px] font-medium text-red-600">{transcription.error}</p>
+              <p className="text-[12px] font-medium text-red-600">
+                {transcription.error}
+              </p>
               <button
                 type="button"
-                onClick={() => { setTranscription(null); transcribe(); }}
-                className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm hover:bg-slate-50"
+                onClick={() => {
+                  setTranscription(null);
+                  void transcribe();
+                }}
+                className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-foreground shadow-sm hover:bg-[var(--color-bg-subtle)]"
               >
                 Tentar de novo
               </button>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
-
-      {/* Delivery info: hora + double check ciano */}
-      {(time || showDeliveryCheck) && (
-        <div className="mt-2 flex items-center justify-end gap-1 text-[11px] font-bold tabular-nums text-slate-500">
-          {time && <span>{time}</span>}
-          {showDeliveryCheck && (
-            <CheckCheck className={cn("size-3.5", isRead ? "text-[#06b6d4]" : "text-slate-400")} />
-          )}
-        </div>
-      )}
+      ) : null}
 
       <audio ref={audioRef} preload="metadata" className="hidden">
         <source src={url} />
@@ -3106,63 +4923,6 @@ function AudioMessage({
         <source src={url} type="audio/webm" />
         <source src={url} type="audio/mp4" />
       </audio>
-    </div>
-  );
-}
-
-function SessionBar({ active, expiresAt }: { active: boolean; expiresAt: Date | null }) {
-  const [now, setNow] = React.useState(Date.now());
-  React.useEffect(() => {
-    if (!active || !expiresAt) return;
-    const i = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(i);
-  }, [active, expiresAt]);
-
-  if (!expiresAt) return null;
-  const remaining = expiresAt.getTime() - now;
-  const TOTAL_MS = 24 * 3_600_000;
-
-  let timeLabel = "";
-  if (active && remaining > 0) {
-    const h = Math.floor(remaining / 3_600_000);
-    const m = Math.floor((remaining % 3_600_000) / 60_000);
-    timeLabel = h > 0 ? `${h}h ${String(m).padStart(2, "0")}min` : `${m}min`;
-  }
-
-  const percent = active && remaining > 0
-    ? Math.min(100, Math.max(0, (remaining / TOTAL_MS) * 100))
-    : 0;
-
-  // ── Sessão EXPIRADA ─────────────────────────────────────────────────
-  // Topo "alerta fino" (h-10) em vermelho pastel com Clock stroke-3.
-  // Usado como cartão executivo acima do chat: comunica urgência sem
-  // roubar atenção do conteúdo abaixo (a faixa vermelha de 40px já
-  // carrega o peso). Tracking-tighter pra cair no mesmo ritmo tipográfico
-  // dos outros labels do sistema (SESSAO, NOTA FIXADA, etc).
-  if (!active) {
-    return (
-      <div className="flex h-10 shrink-0 items-center justify-center gap-2 border-b border-red-100 bg-red-50/80">
-        <Clock className="size-[14px] text-red-500" strokeWidth={3} />
-        <span className="text-[11px] font-black uppercase tracking-tighter text-red-500">
-          Sessão Expirada
-        </span>
-      </div>
-    );
-  }
-
-  // ── Sessão ATIVA ───────────────────────────────────────────────────
-  // Mantém o desenho cyan com barra de progresso sutil e borda lateral,
-  // coerente com o restante das "system messages" do chat.
-  return (
-    <div className="relative flex shrink-0 items-center gap-3 border-b border-l-4 border-brand-cyan/10 border-l-brand-cyan bg-chat-sent px-6 py-2.5 text-[12px] font-bold">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-brand-cyan/10">
-        <div
-          className="h-full bg-brand-cyan transition-all duration-500"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-      <Timer className="size-4 shrink-0 text-brand-cyan" />
-      <span className="text-brand-cyan">Sessão ativa — {timeLabel}</span>
-    </div>
+    </>
   );
 }

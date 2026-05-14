@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentPlayground } from "@/components/ai-agents/agent-playground";
 import { AgentWizard } from "@/components/ai-agents/agent-wizard";
@@ -153,7 +153,7 @@ export default function AIAgentsPage() {
         actions={
           <Button
             onClick={() => setCreating(true)}
-            className="gap-2 shadow-sm"
+            className={cn("gap-2", pageHeaderPrimaryCtaClass)}
             disabled={aiDisabled}
             title={aiDisabled ? "IA desativada — configure a chave da OpenAI" : undefined}
           >

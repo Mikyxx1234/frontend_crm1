@@ -6,17 +6,51 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInMinutes } from "date-fns";
 import { toast } from "sonner";
 import {
-  Check, CheckCheck, CheckSquare, FileText, Film, Image as ImageIcon, LayoutTemplate, ListChecks, Loader2, MessageSquare, Mic, Paperclip, Phone, Square, StickyNote, Tag as TagIcon, Timer, UserPlus, UserRound,
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  Bot,
+  Check,
+  CheckCheck,
+  CheckCircle2,
+  CheckSquare,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  FileText,
+  Film,
+  Filter,
+  Image as ImageIcon,
+  LayoutTemplate,
+  List,
+  ListChecks,
+  Loader2,
+  MessageCircle,
+  MessageSquare,
+  Mic,
+  Paperclip,
+  Phone,
+  Plus,
+  Search,
+  Square,
+  StickyNote,
+  UserPlus,
+  UserRound,
+  X,
 } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { MotionDiv, staggerItem } from "@/components/ui/motion";
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
+import { PresenceDashboard } from "@/components/inbox/presence-dashboard";
 import { SwipeRow } from "@/components/inbox/swipe-row";
-import { cn } from "@/lib/utils";
-import { ds } from "@/lib/design-system";
+import { dt } from "@/lib/design-tokens";
+import { cn, tagPillStyle } from "@/lib/utils";
 import type { InboxFilters } from "@/components/inbox/inbox-filters";
+import type { InboxTab } from "@/services/conversations";
+
+export type { InboxTab };
 
 export type ConversationLastMessagePreview = {
   content: string;
@@ -32,6 +66,7 @@ export type ConversationListRow = {
   status: string;
   inboxName: string | null;
   updatedAt: string;
+  lastMessageAt?: string | null;
   lastInboundAt?: string | null;
   lastMessageDirection?: string | null;
   lastMessagePreview: ConversationLastMessagePreview | null;
@@ -44,9 +79,259 @@ export type ConversationListRow = {
 };
 
 type ListResponse = { items: ConversationListRow[]; total: number; page: number; perPage: number };
-type InboxTab = "entrada" | "esperando" | "respondidas" | "automacao" | "finalizados" | "erro";
 
-function buildUrl(tab: InboxTab, filters: InboxFilters): string {
+export const TAB_CHIPS: Record<InboxTab, { label: string }> = {
+  todos: { label: "Todos" },
+  entrada: { label: "Entrada" },
+  esperando: { label: "Esperando" },
+  respondidas: { label: "Respondidos" },
+  automacao: { label: "Automação" },
+  finalizados: { label: "Finalizados" },
+  erro: { label: "Erros" },
+};
+
+/** Ordem no seletor de categoria (dropdown). */
+export const TAB_ORDER: InboxTab[] = [
+  "todos",
+  "esperando",
+  "entrada",
+  "respondidas",
+  "automacao",
+  "finalizados",
+  "erro",
+];
+
+type TabSemanticTone = "default" | "success" | "danger";
+
+type TabConfig = {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: TabSemanticTone;
+  dividerBefore?: boolean;
+};
+
+const TAB_CONFIG: Record<InboxTab, TabConfig> = {
+  todos: { label: "Todos", icon: List, tone: "default" },
+  esperando: { label: "Esperando", icon: Clock, tone: "default" },
+  entrada: { label: "Entrada", icon: Activity, tone: "default" },
+  respondidas: { label: "Respondidos", icon: MessageCircle, tone: "default" },
+  automacao: { label: "Automação", icon: Bot, tone: "default" },
+  finalizados: { label: "Finalizados", icon: CheckCircle2, tone: "success", dividerBefore: true },
+  erro: { label: "Erros", icon: AlertCircle, tone: "danger", dividerBefore: true },
+};
+
+function inboxTabTriggerToneClasses(tone: TabSemanticTone) {
+  switch (tone) {
+    case "success":
+      return {
+        icon: "text-[var(--color-success)]",
+        label: "text-[var(--color-success)]",
+        count: "bg-[var(--color-success)]/15 text-[var(--color-success)]",
+      };
+    case "danger":
+      return {
+        icon: "text-[var(--color-destructive)]",
+        label: "text-[var(--color-destructive)]",
+        count: "bg-destructive/10 text-[var(--color-destructive)]",
+      };
+    default:
+      return {
+        icon: "text-primary",
+        label: "text-primary",
+        count: "bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)]",
+      };
+  }
+}
+
+function inboxTabRowSurface(tone: TabSemanticTone, isActive: boolean) {
+  if (isActive) return "bg-[var(--color-primary-soft)]";
+  switch (tone) {
+    case "success":
+      return "hover:bg-[var(--color-success)]/10";
+    case "danger":
+      return "hover:bg-[var(--color-destructive)]/10";
+    default:
+      return "hover:bg-[var(--color-bg-subtle)]";
+  }
+}
+
+function inboxTabRowIconClass(tone: TabSemanticTone, isActive: boolean) {
+  if (isActive) return "text-primary";
+  switch (tone) {
+    case "success":
+      return "text-[var(--color-success)]";
+    case "danger":
+      return "text-[var(--color-destructive)]";
+    default:
+      return "text-[var(--color-ink-muted)]";
+  }
+}
+
+function inboxTabRowLabelClass(tone: TabSemanticTone, isActive: boolean) {
+  if (isActive) return "font-semibold text-primary";
+  switch (tone) {
+    case "success":
+      return "font-medium text-[var(--color-success)]";
+    case "danger":
+      return "font-medium text-[var(--color-destructive)]";
+    default:
+      return "font-medium text-foreground";
+  }
+}
+
+function inboxTabRowCountClass(tone: TabSemanticTone, isActive: boolean) {
+  if (isActive) {
+    return "bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)]";
+  }
+  switch (tone) {
+    case "success":
+      return "bg-[var(--color-success)]/15 text-[var(--color-success)]";
+    case "danger":
+      return "bg-destructive/10 text-[var(--color-destructive)]";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
+export type AgentPresenceStatus = "ONLINE" | "OFFLINE" | "AWAY";
+
+export type InboxListHeaderProps = {
+  search: string;
+  onSearchChange: (value: string) => void;
+  /** Busca já aplicada na API (debounced) — mostra aviso de busca global. */
+  appliedSearch?: string;
+  activeTab: InboxTab;
+  showFilters: boolean;
+  onToggleFilters: () => void;
+  selectionMode: boolean;
+  onExitSelectionMode: () => void;
+  onEnterSelectionMode: () => void;
+  counts: Record<InboxTab, number>;
+  onTabChange: (tab: InboxTab) => void;
+  myUserId?: string | null;
+  sessionUserName?: string | null;
+  sessionUserImage?: string | null;
+  myAgentStatus: AgentPresenceStatus;
+  agentCapacity?: {
+    activeConversations: number;
+    maxConcurrent: number;
+    loadPct: number;
+    tone: "healthy" | "busy" | "overloaded";
+  } | null;
+  agentCapacityLoading?: boolean;
+};
+
+export function InboxListHeader({
+  search,
+  onSearchChange,
+  appliedSearch = "",
+  activeTab,
+  showFilters,
+  onToggleFilters,
+  selectionMode,
+  onExitSelectionMode,
+  onEnterSelectionMode,
+  counts,
+  onTabChange,
+  myUserId,
+  sessionUserName,
+  sessionUserImage,
+  myAgentStatus,
+  agentCapacity,
+  agentCapacityLoading,
+}: InboxListHeaderProps) {
+  return (
+    <div className="shrink-0 bg-white">
+      <div className="flex items-center justify-between px-3 pb-1.5 pt-3">
+        <span className="text-[14px] font-semibold text-slate-900">Conversas</span>
+        <div className="flex min-w-0 max-w-[min(100%,11rem)] items-center gap-2">
+          {myUserId ? (
+            <div className="flex items-center gap-1.5">
+              <PresenceDashboard
+                agent={{ id: myUserId, name: sessionUserName ?? "Agente", imageUrl: sessionUserImage ?? null }}
+                status={myAgentStatus}
+                capacity={agentCapacity?.loadPct}
+                activeConversations={agentCapacity?.activeConversations}
+                maxConcurrent={agentCapacity?.maxConcurrent}
+                tone={agentCapacity?.tone}
+                capacityLoading={agentCapacityLoading}
+                compact
+              />
+
+              {counts.esperando > 0 ? (
+                <TooltipHost label={`${counts.esperando} esperando você`} side="bottom">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onTabChange("esperando");
+                    }}
+                    className="relative inline-flex h-7 items-center justify-center rounded-[4px] px-2 text-[var(--color-destructive)] lumen-transition hover:bg-slate-50"
+                    aria-label={`Esperando: ${counts.esperando}`}
+                  >
+                    <Clock className="size-3.5" strokeWidth={2.5} />
+                    <span className="ml-1 inline-flex min-w-[16px] items-center justify-center rounded-[4px] bg-[var(--color-destructive)] px-1 py-0.5 text-[9px] font-bold leading-none text-white tabular-nums">
+                      {counts.esperando > 99 ? "99+" : counts.esperando}
+                    </span>
+                  </button>
+                </TooltipHost>
+              ) : null}
+            </div>
+          ) : null}
+          <TooltipHost label={selectionMode ? "Sair seleção" : "Nova conversa"} side="bottom">
+            <button
+              type="button"
+              onClick={() => (selectionMode ? onExitSelectionMode() : onEnterSelectionMode())}
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-sm)] transition-colors hover:bg-primary/90"
+            >
+              <Plus className="size-3.5" strokeWidth={2.5} />
+            </button>
+          </TooltipHost>
+        </div>
+      </div>
+
+      {appliedSearch.trim().length > 0 && (
+        <p className="mx-3 mb-1.5 rounded-lg border border-primary/20 bg-[var(--color-primary-soft)] px-2.5 py-1.5 text-[11px] font-medium text-primary">
+          Buscando em <span className="font-semibold">todas as filas</span> — o contato pode aparecer mesmo fora da
+          aba atual.
+        </p>
+      )}
+
+      <div className="flex items-center gap-1.5 px-3 pb-2">
+        <div className="flex h-8 flex-1 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5">
+          <Search className="size-3 shrink-0 text-slate-400" strokeWidth={2} />
+          <input
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Nome, telefone ou responsável…"
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+          />
+          {search ? (
+            <button type="button" onClick={() => onSearchChange("")} className="text-slate-400 hover:text-slate-600">
+              <X className="size-3" />
+            </button>
+          ) : null}
+        </div>
+        <TooltipHost label="Filtros" side="bottom">
+          <button
+            type="button"
+            onClick={onToggleFilters}
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-400 transition-colors hover:text-slate-600",
+              showFilters && "border-blue-200 bg-blue-50 text-blue-600",
+            )}
+          >
+            <Filter className="size-3.5" />
+          </button>
+        </TooltipHost>
+      </div>
+
+    </div>
+  );
+}
+
+function buildUrl(tab: InboxTab, filters: InboxFilters, search: string): string {
   const q = new URLSearchParams({ perPage: "60", tab });
   if (filters.ownerId) q.set("ownerId", filters.ownerId);
   if (filters.channel) q.set("channel", filters.channel);
@@ -54,14 +339,152 @@ function buildUrl(tab: InboxTab, filters: InboxFilters): string {
   if (filters.tagIds?.length) q.set("tagIds", filters.tagIds.join(","));
   if (filters.sortBy) q.set("sortBy", filters.sortBy);
   if (filters.sortOrder) q.set("sortOrder", filters.sortOrder);
+  const s = search.trim();
+  if (s) q.set("search", s);
   return `/api/conversations?${q.toString()}`;
 }
 
-async function fetchConversations(tab: InboxTab, filters: InboxFilters): Promise<ListResponse> {
-  const res = await fetch(apiUrl(buildUrl(tab, filters)));
+async function fetchConversations(tab: InboxTab, filters: InboxFilters, search: string): Promise<ListResponse> {
+  const res = await fetch(buildUrl(tab, filters, search));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao carregar conversas");
   return data as ListResponse;
+}
+
+function InboxCategorySelect({
+  activeTab,
+  onTabChange,
+  tabCounts,
+  allowedTabKeys,
+}: {
+  activeTab: InboxTab;
+  onTabChange: (tab: InboxTab) => void;
+  tabCounts: Record<InboxTab, number>;
+  allowedTabKeys?: readonly InboxTab[];
+}) {
+  const [selectOpen, setSelectOpen] = React.useState(false);
+  const selectRef = React.useRef<HTMLDivElement>(null);
+
+  const includesTab = React.useCallback(
+    (k: InboxTab) => !allowedTabKeys?.length || allowedTabKeys.includes(k),
+    [allowedTabKeys],
+  );
+
+  const visibleKeys = React.useMemo(
+    () => TAB_ORDER.filter(includesTab),
+    [includesTab],
+  );
+
+  React.useEffect(() => {
+    if (!selectOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (selectRef.current && !selectRef.current.contains(e.target as Node)) {
+        setSelectOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [selectOpen]);
+
+  React.useEffect(() => {
+    setSelectOpen(false);
+  }, [activeTab]);
+
+  const activeConfig = TAB_CONFIG[activeTab];
+  const ActiveIcon = activeConfig.icon;
+  const triggerTone = inboxTabTriggerToneClasses(activeConfig.tone);
+  const activeCount = tabCounts[activeTab] ?? 0;
+
+  return (
+    <div className="shrink-0 border-b border-border px-3 pb-2 pt-1" ref={selectRef}>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setSelectOpen((v) => !v)}
+          aria-expanded={selectOpen}
+          aria-haspopup="listbox"
+          className={cn(
+            "flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-left shadow-[var(--shadow-sm)] transition-colors lumen-transition",
+            "hover:border-input",
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <ActiveIcon className={cn("size-3.5 shrink-0", triggerTone.icon)} />
+            <span className={cn("truncate text-[12px] font-semibold", triggerTone.label)}>
+              {activeConfig.label}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {activeCount > 0 ? (
+              <span
+                className={cn(
+                  "rounded px-1.5 text-[10px] font-semibold tabular-nums leading-[18px]",
+                  triggerTone.count,
+                )}
+              >
+                {activeCount}
+              </span>
+            ) : null}
+            {selectOpen ? (
+              <ChevronUp className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.5} />
+            ) : (
+              <ChevronDown className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.5} />
+            )}
+          </div>
+        </button>
+
+        {selectOpen ? (
+          <div
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-md)]"
+            role="listbox"
+            aria-label="Categoria da inbox"
+          >
+            {visibleKeys.map((key) => {
+              const config = TAB_CONFIG[key];
+              const Icon = config.icon;
+              const isActive = activeTab === key;
+              const count = tabCounts[key] ?? 0;
+              return (
+                <React.Fragment key={key}>
+                  {config.dividerBefore ? <div className="mx-2 my-0.5 h-px bg-border" /> : null}
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isActive}
+                    onClick={() => {
+                      onTabChange(key);
+                      setSelectOpen(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between px-3 py-2 text-left transition-colors lumen-transition",
+                      inboxTabRowSurface(config.tone, isActive),
+                    )}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Icon className={cn("size-3.5 shrink-0", inboxTabRowIconClass(config.tone, isActive))} />
+                      <span className={cn("truncate text-[11px]", inboxTabRowLabelClass(config.tone, isActive))}>
+                        {config.label}
+                      </span>
+                    </div>
+                    {count > 0 ? (
+                      <span
+                        className={cn(
+                          "rounded px-1.5 text-[10px] font-semibold tabular-nums leading-[18px]",
+                          inboxTabRowCountClass(config.tone, isActive),
+                        )}
+                      >
+                        {count}
+                      </span>
+                    ) : null}
+                  </button>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function shortTime(dateStr: string): string {
@@ -142,7 +565,7 @@ function describePreview(preview: ConversationLastMessagePreview | null): Previe
     else label = "Chamada";
     return {
       icon: Phone,
-      iconClass: isFailed ? "text-rose-500" : "text-brand-blue",
+      iconClass: isFailed ? "text-rose-500" : "text-primary",
       label,
     };
   }
@@ -152,7 +575,7 @@ function describePreview(preview: ConversationLastMessagePreview | null): Previe
     return { icon: ImageIcon, iconClass: "text-pink-500", label: "Imagem" };
   }
   if (mt === "whatsapp_call_recording") {
-    return { icon: Phone, iconClass: "text-brand-blue", label: "Gravação de chamada" };
+    return { icon: Phone, iconClass: "text-primary", label: "Gravação de chamada" };
   }
   if (/^\[(áudio|audio|ptt)\]$/i.test(raw) || mt === "audio" || mt === "ptt") {
     return { icon: Mic, iconClass: "text-cyan-500", label: "Áudio" };
@@ -192,6 +615,22 @@ function describePreview(preview: ConversationLastMessagePreview | null): Previe
     if (/\.(mp3|wav|ogg|m4a|aac|amr|opus|webm)($|\?)/i.test(u)) return { icon: Mic, iconClass: "text-cyan-500", label: "Áudio" };
     if (/\.(mp4|mov|avi|3gp|mkv)($|\?)/i.test(u)) return { icon: Film, iconClass: "text-rose-500", label: "Vídeo" };
     return { icon: Paperclip, iconClass: "text-slate-500", label: "Anexo" };
+  }
+
+  if (mt === "location" || /\[(localização|location)\]/i.test(raw)) {
+    return { icon: MessageSquare, iconClass: "text-emerald-600", label: "Localização" };
+  }
+  if (mt === "contacts" || /\[(contato|contacts)\]/i.test(raw)) {
+    return { icon: UserRound, iconClass: "text-sky-600", label: "Cartão de contato" };
+  }
+  if (mt === "reaction") {
+    return { icon: MessageCircle, iconClass: "text-rose-500", label: "Reação" };
+  }
+  if (mt === "interactive" || mt === "button" || mt === "list") {
+    return { icon: ListChecks, iconClass: "text-violet-600", label: mt === "list" ? "Lista" : "Botões" };
+  }
+  if (mt === "order" || mt === "product") {
+    return { icon: FileText, iconClass: "text-amber-700", label: "Pedido / catálogo" };
   }
 
   // Texto comum
@@ -239,22 +678,40 @@ async function fetchSelfAssignCapability(): Promise<SelfAssignResponse> {
 }
 
 export function ConversationList({
-  tab, search, selectedId, onSelect, filters = {},
-  selectionMode = false, selectedIds, onToggleSelect, onSelectAll,
+  tab,
+  searchQuery,
+  selectedId,
+  onSelect,
+  filters = {},
+  selectionMode = false,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
   currentUserId,
+  onTabChange,
+  tabCounts,
+  allowedTabKeys,
 }: {
-  tab: InboxTab; search: string; selectedId: string | null;
+  tab: InboxTab;
+  /** Texto de busca já debounced (sincronizado com o aviso no header). */
+  searchQuery: string;
+  selectedId: string | null;
   onSelect: (row: ConversationListRow) => void;
-  filters?: InboxFilters; selectionMode?: boolean;
-  selectedIds?: Set<string>; onToggleSelect?: (id: string) => void;
+  filters?: InboxFilters;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
   onSelectAll?: (ids: string[]) => void;
   currentUserId?: string | null;
+  onTabChange: (tab: InboxTab) => void;
+  tabCounts: Record<InboxTab, number>;
+  allowedTabKeys?: readonly InboxTab[];
 }) {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["inbox-conversations", tab, filters],
-    queryFn: () => fetchConversations(tab, filters),
+    queryKey: ["inbox-conversations", tab, filters, searchQuery],
+    queryFn: () => fetchConversations(tab, filters, searchQuery),
     refetchInterval: 20_000,
   });
 
@@ -321,59 +778,81 @@ export function ConversationList({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const filtered = React.useMemo(() => {
-    const items = data?.items ?? [];
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((row) => {
-      const assignee = row.assignedTo?.name?.toLowerCase() ?? "";
-      return (
-        row.contact.name.toLowerCase().includes(q)
-        || (row.contact.phone ?? "").includes(q)
-        || assignee.includes(q)
-      );
-    });
-  }, [data?.items, search]);
+  /** Lista já filtrada no servidor (aba ou busca global). */
+  const filtered = data?.items ?? [];
 
   if (isLoading) {
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="flex items-center gap-3 border-b border-border px-4 py-3">
-            <Skeleton className="size-10 shrink-0 rounded-lg" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-2/3 rounded" />
-              <Skeleton className="h-3 w-full rounded" />
+        <InboxCategorySelect
+          activeTab={tab}
+          onTabChange={onTabChange}
+          tabCounts={tabCounts}
+          allowedTabKeys={allowedTabKeys}
+        />
+        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="flex items-center gap-3 border-b border-slate-50 px-3 py-2.5">
+              <Skeleton className="size-9 shrink-0 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-2/3 rounded" />
+                <Skeleton className="h-3 w-full rounded" />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center p-6 text-center">
-        <p className="text-[13px] text-destructive">
-          {error instanceof Error ? error.message : "Erro ao carregar."}
-        </p>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <InboxCategorySelect
+          activeTab={tab}
+          onTabChange={onTabChange}
+          tabCounts={tabCounts}
+          allowedTabKeys={allowedTabKeys}
+        />
+        <div className="flex min-h-0 flex-1 items-center justify-center p-6 text-center">
+          <p className="text-[13px] text-destructive">
+            {error instanceof Error ? error.message : "Erro ao carregar."}
+          </p>
+        </div>
       </div>
     );
   }
 
   if (filtered.length === 0) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-        <div className="flex size-12 items-center justify-center rounded-xl bg-muted">
-          <MessageSquare className="size-6 text-muted-foreground/50" />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <InboxCategorySelect
+          activeTab={tab}
+          onTabChange={onTabChange}
+          tabCounts={tabCounts}
+          allowedTabKeys={allowedTabKeys}
+        />
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-muted">
+            <MessageSquare className="size-6 text-muted-foreground/50" />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {searchQuery ? "Nenhum resultado na busca (todas as filas)" : "Nenhuma conversa nesta aba"}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">{search ? "Nenhum resultado" : "Nenhuma conversa nesta aba"}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <InboxCategorySelect
+        activeTab={tab}
+        onTabChange={onTabChange}
+        tabCounts={tabCounts}
+        allowedTabKeys={allowedTabKeys}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
       {selectionMode && onSelectAll && filtered.length > 0 && (
         <div className="flex items-center justify-between border-b border-border px-4 py-2">
           <button type="button" onClick={() => onSelectAll(filtered.map((r) => r.id))}
@@ -409,6 +888,7 @@ export function ConversationList({
           />
         ))}
       </ul>
+      </div>
     </div>
   );
 }
@@ -432,12 +912,14 @@ function ConversationItem({
   onResolve?: () => void;
 }) {
   const unread = (row.unreadCount ?? 0) > 0;
-  const time = row.updatedAt ? shortTime(row.updatedAt) : "";
+  const timeSource = row.lastMessageAt ?? row.updatedAt;
+  const time = timeSource ? shortTime(timeSource) : "";
   const timer = getSessionTimer(row.lastInboundAt);
 
-  const hasTags = row.tags && row.tags.length > 0;
-  const visibleTags = (row.tags ?? []).slice(0, 2);
-  const extraTagCount = (row.tags ?? []).length - 2;
+  const tags = row.tags ?? [];
+  const visibleTags = tags.slice(0, 2);
+  const extraTagCount = tags.length - visibleTags.length;
+  const hasMetaRow = visibleTags.length > 0 || extraTagCount > 0;
 
   // Em mobile habilitamos swipe-to-action. Em desktop fica desativado
   // pra não atrapalhar drag de seleção / scroll mouse.
@@ -469,182 +951,179 @@ function ConversationItem({
       {...staggerItem}
       layout
       className={cn(
-        "group relative flex w-full cursor-pointer items-start gap-3 border-b border-slate-100 p-4 transition-colors duration-150",
-        // Paleta alinhada ao DNA do chat/sales-hub: azul para estados
-        // de atividade (unread/ativo), slate para neutro. Verde fica
-        // reservado só para sinalização semântica (Ganho, timer ok).
-        active
-          ? "bg-blue-50/60"
-          : unread
-            ? "bg-blue-50/30 hover:bg-blue-50/50"
-            : "bg-white hover:bg-slate-50",
+        "group relative flex w-full cursor-pointer gap-2 border-b border-slate-50 px-3 py-2.5 transition-colors duration-150 hover:bg-[#F8FAFC]",
+        active && "border-l-2 border-l-blue-600 bg-blue-50",
+        !active && unread && "bg-blue-50/30 hover:bg-blue-50/50",
+        !active && !unread && "bg-white",
       )}
       onClick={() => !selectionMode && onSelect(row)}
       aria-label={unread ? `${row.contact.name || "Conversa"} — ${row.unreadCount} mensagens não lidas` : undefined}
     >
-        {active && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />}
-        {!active && unread && (
-          <div aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
-        )}
+      {selectionMode && (
+        <button
+          type="button"
+          className="mt-2 shrink-0 text-muted-foreground transition-colors hover:text-accent"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect?.(row.id);
+          }}
+        >
+          {checked ? <CheckSquare className="size-4 text-accent" /> : <Square className="size-4" />}
+        </button>
+      )}
 
-        {selectionMode && (
-          <button
-            type="button"
-            className="mt-3 shrink-0 text-muted-foreground transition-colors hover:text-accent"
-            onClick={(e) => { e.stopPropagation(); onToggleSelect?.(row.id); }}
-          >
-            {checked ? <CheckSquare className="size-4 text-accent" /> : <Square className="size-4" />}
-          </button>
-        )}
+      <ChatAvatar
+        user={{ id: row.contact.id, name: row.contact.name, imageUrl: row.contact.avatarUrl }}
+        phone={row.contact.phone ?? undefined}
+        unreadCount={selectionMode ? 0 : row.unreadCount}
+        channel={row.channel as ChatAvatarChannel}
+        size={28}
+      />
 
-        {/* Avatar column — 60px avatar com badge de unread e canal */}
-        <ChatAvatar
-          user={{ id: row.contact.id, name: row.contact.name, imageUrl: row.contact.avatarUrl }}
-          phone={row.contact.phone ?? undefined}
-          unreadCount={selectionMode ? 0 : row.unreadCount}
-          channel={row.channel as ChatAvatarChannel}
-          size={52}
-        />
-
-        {/* Content */}
-        <div className="min-w-0 flex-1">
-          <div className="mb-0.5 flex items-start justify-between gap-2">
-            <h3
-              className={cn(
-                "truncate text-[16px] leading-tight tracking-tight text-slate-900",
-              )}
-              style={{ fontWeight: 800 }}
-            >
-              {row.contact.name || row.contact.phone || "Sem nome"}
-            </h3>
-            <div className="flex shrink-0 items-center gap-1.5">
-              {time && (
-                <span className={cn(
-                  "text-[11px] tabular-nums",
-                  unread ? "font-black text-blue-600" : "font-bold text-slate-400",
-                )}>
-                  {time}
-                </span>
-              )}
-              {unread && (
-                <TooltipHost
-                  label={`${row.unreadCount} nova${row.unreadCount === 1 ? "" : "s"} mensage${row.unreadCount === 1 ? "m" : "ns"}`}
-                  side="left"
-                >
-                  <span
-                    className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white shadow-sm tabular-nums"
-                    aria-label={`${row.unreadCount} mensagens não lidas`}
-                  >
-                    {row.unreadCount! > 99 ? "99+" : row.unreadCount}
-                  </span>
-                </TooltipHost>
-              )}
-            </div>
-          </div>
-
-          <div className={cn(
-            "mb-2 flex items-center gap-1.5 text-[12px]",
-            unread ? "font-semibold text-slate-700" : "font-medium text-slate-500",
-          )}>
-            {row.lastMessageDirection === "out" && (
-              <CheckCheck size={14} className={cn("shrink-0", active ? "text-blue-600" : "text-slate-300")} />
-            )}
-            {(() => {
-              const { icon: PreviewIcon, iconClass, label } = describePreview(row.lastMessagePreview);
-              return (
-                <>
-                  {PreviewIcon && <PreviewIcon size={13} className={cn("shrink-0", iconClass)} />}
-                  <span className={cn("truncate", !PreviewIcon && !unread && "text-slate-400")}>{label}</span>
-                </>
-              );
-            })()}
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex min-w-0 items-center gap-1">
-              {hasTags && (
-                <TagIcon size={11} className={ds.tag.icon} aria-hidden="true" />
-              )}
-              {hasTags && visibleTags.map((tag) => (
-                <TooltipHost key={tag.id ?? tag.name} label={tag.name} side="top">
-                  {/* Tag chip — `ds.tag.solid` é a fonte única de verdade
-                      pro DNA Chat ⇄ Sales Hub ⇄ Kanban ⇄ Lista. Não trocar
-                      por classe local (quebra consistência visual). */}
-                  <span
-                    className={ds.tag.solid}
-                    style={{ backgroundColor: tag.color }}
-                  >
-                    <span className="truncate">{tag.name}</span>
-                  </span>
-                </TooltipHost>
-              ))}
-              {extraTagCount > 0 && (
-                <span className={ds.tag.more}>+{extraTagCount}</span>
-              )}
-            </div>
-            <div className="flex flex-col items-end gap-1.5">
-              {row.assignedTo ? (
-                <TooltipHost label={`Responsável: ${row.assignedTo.name}`} side="left">
-                  <div className="relative">
-                    <ChatAvatar
-                      user={{
-                        id: row.assignedTo.id,
-                        name: row.assignedTo.name,
-                        imageUrl: row.assignedTo.avatarUrl ?? null,
-                      }}
-                      size={28}
-                      channel={null}
-                      hideCartoon
-                      className="ring-2 ring-white shadow-sm"
-                    />
-                  </div>
-                </TooltipHost>
-              ) : canSelfAssign && onSelfAssign ? (
-                <TooltipHost label="Atribuir para mim" side="left">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onSelfAssign(row.id); }}
-                    disabled={assigningId === row.id}
-                    aria-label="Atribuir para mim"
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="min-w-0 truncate text-[13px] font-semibold text-slate-900">
+            {row.contact.name || row.contact.phone || "Sem nome"}
+          </p>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* Timer de sessão — ícone + tempo ao lado da hora */}
+            {timer?.label === "Expirada" ? (
+              <TooltipHost label="Sessão de 24h encerrada" side="top">
+                <Clock className="size-3 text-red-400 shrink-0" strokeWidth={2.5} />
+              </TooltipHost>
+            ) : timer ? (
+              <TooltipHost label="Tempo restante de sessão WhatsApp" side="top">
+                <span className="inline-flex items-center gap-0.5">
+                  <Clock
                     className={cn(
-                      // Mesma paleta do DNA do chat/sales-hub: blue como
-                      // cor primária de ação. Evita a competição visual
-                      // do verde (reservado pra "Ganho" e timer saudável).
-                      "inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-blue-600 transition-all duration-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 active:scale-95 disabled:opacity-60",
+                      "size-3 shrink-0",
+                      timer.color === "var(--color-destructive)" && "text-red-400",
+                      timer.color === "var(--color-warning)" && "text-amber-400",
+                      timer.color === "var(--color-status-online)" && "text-emerald-400",
                     )}
-                  >
-                    {assigningId === row.id ? (
-                      <Loader2 size={10} className="animate-spin" aria-hidden="true" />
-                    ) : (
-                      <UserPlus size={10} aria-hidden="true" />
-                    )}
-                    <span>Pegar</span>
-                  </button>
-                </TooltipHost>
-              ) : (
-                <TooltipHost label="Sem responsável atribuído" side="left">
-                  <div className="flex size-[28px] items-center justify-center rounded-full border border-dashed border-slate-200 bg-white text-slate-300">
-                    <UserRound size={14} />
-                  </div>
-                </TooltipHost>
-              )}
-              {timer && (
-                timer.label === "Expirada" ? (
-                  <span className="rounded-md border border-red-100 bg-red-50 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#dc2626] tabular-nums">
-                    Expirada
-                  </span>
-                ) : (
+                    strokeWidth={2.5}
+                  />
                   <span
-                    className="rounded-md px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums leading-none"
-                    style={{ color: timer.color, backgroundColor: `${timer.color}14`, border: `1px solid ${timer.color}22` }}
+                    className={cn(
+                      "text-[10px] font-semibold tabular-nums",
+                      timer.color === "var(--color-destructive)" && "text-red-400",
+                      timer.color === "var(--color-warning)" && "text-amber-500",
+                      timer.color === "var(--color-status-online)" && "text-emerald-500",
+                    )}
                   >
                     {timer.label}
                   </span>
-                )
-              )}
-            </div>
+                </span>
+              </TooltipHost>
+            ) : null}
+            {time ? (
+              <span
+                className={cn(
+                  "shrink-0 text-[10px] tabular-nums text-slate-400",
+                  unread && "font-semibold text-blue-600",
+                )}
+              >
+                {time}
+              </span>
+            ) : null}
+            {unread ? (
+              <TooltipHost
+                label={`${row.unreadCount} nova${row.unreadCount === 1 ? "" : "s"} mensage${row.unreadCount === 1 ? "m" : "ns"}`}
+                side="left"
+              >
+                <span
+                  className="inline-flex min-w-[16px] items-center justify-center rounded-[4px] bg-primary px-1 py-0.5 text-[9px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
+                  aria-label={`${row.unreadCount} mensagens não lidas`}
+                >
+                  {row.unreadCount! > 99 ? "99+" : row.unreadCount}
+                </span>
+              </TooltipHost>
+            ) : null}
           </div>
         </div>
+
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+          {row.lastMessageDirection === "out" && (
+            <CheckCheck size={15} className={cn("shrink-0", active ? "text-blue-600" : "text-slate-300")} />
+          )}
+          {(() => {
+            const { icon: PreviewIcon, iconClass, label } = describePreview(row.lastMessagePreview);
+            return (
+              <>
+                {PreviewIcon ? <PreviewIcon size={14} className={cn("shrink-0", iconClass)} /> : null}
+                <p
+                  className={cn(
+                    "min-w-0 flex-1 truncate text-[12px] text-slate-400",
+                    unread && "font-medium text-slate-700",
+                  )}
+                >
+                  {label}
+                </p>
+              </>
+            );
+          })()}
+        </div>
+
+        {hasMetaRow ? (
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            {visibleTags.map((tag) => (
+              <TooltipHost key={tag.id ?? tag.name} label={tag.name} side="top">
+                <span className={dt.pill.sm} style={tagPillStyle(tag.name, tag.color)}>
+                  {tag.name}
+                </span>
+              </TooltipHost>
+            ))}
+            {extraTagCount > 0 ? (
+              <span className="text-[10px] text-slate-400">+{extraTagCount}</span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex shrink-0 flex-col items-end gap-1 self-start pt-0.5">
+        {row.assignedTo ? (
+          <TooltipHost label={`Responsável: ${row.assignedTo.name}`} side="left">
+            <ChatAvatar
+              user={{
+                id: row.assignedTo.id,
+                name: row.assignedTo.name,
+                imageUrl: row.assignedTo.avatarUrl ?? null,
+              }}
+              size={20}
+              channel={null}
+              hideCartoon
+            />
+          </TooltipHost>
+        ) : canSelfAssign && onSelfAssign ? (
+          <TooltipHost label="Atribuir para mim" side="left">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelfAssign(row.id);
+              }}
+              disabled={assigningId === row.id}
+              aria-label="Atribuir para mim"
+              className={cn(
+                "inline-flex items-center gap-1 rounded-[4px] border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary transition-all duration-200 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:opacity-60",
+              )}
+            >
+              {assigningId === row.id ? (
+                <Loader2 size={10} className="animate-spin" aria-hidden="true" />
+              ) : (
+                <UserPlus size={10} aria-hidden="true" />
+              )}
+              <span>Pegar</span>
+            </button>
+          </TooltipHost>
+        ) : (
+          <TooltipHost label="Sem responsável atribuído" side="left">
+            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-white text-slate-300">
+              <UserRound size={12} />
+            </div>
+          </TooltipHost>
+        )}
+      </div>
     </MotionDiv>
   );
 

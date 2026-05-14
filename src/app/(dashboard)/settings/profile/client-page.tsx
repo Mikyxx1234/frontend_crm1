@@ -5,7 +5,7 @@ import { apiUrl } from "@/lib/api";
  * Perfil do usuário logado.
  *
  * Layout inspirado na referência "Umbler Conta" (duas colunas num
- * fundo claro, cards brancos em `rounded-[28px]` com `shadow-premium`)
+ * fundo claro, cards brancos em `rounded-[28px]` com `shadow-[var(--shadow-lg)]`)
  * adaptado ao **EduIT Premium Core**:
  *
  *  - ESQUERDA "Dados do seu perfil": avatar editável (upload), nome,
@@ -57,6 +57,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Switch } from "@/components/ui/switch";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { useConfirm } from "@/hooks/use-confirm";
+import type { ChatThemeKey } from "@/lib/chat-theme";
+import {
+  CHAT_THEME_OPTIONS,
+  DEFAULT_CHAT_THEME,
+  isChatThemeKey,
+} from "@/lib/chat-theme";
 import { cn } from "@/lib/utils";
 import { AvatarCropDialog } from "@/components/profile/avatar-crop-dialog";
 
@@ -69,6 +75,8 @@ type Profile = {
   phone: string | null;
   signature: string | null;
   closingMessage: string | null;
+  /** Ausente em builds antigos sem migration `add_user_chat_theme`. */
+  chatTheme?: string | null;
 };
 
 type ApiToken = {
@@ -79,6 +87,136 @@ type ApiToken = {
   expiresAt: string | null;
   createdAt: string;
 };
+
+function ChatThemeField({
+  profile,
+  queryClient,
+}: {
+  profile: Profile;
+  queryClient: ReturnType<typeof useQueryClient>;
+}) {
+  const current: ChatThemeKey = isChatThemeKey(profile.chatTheme)
+    ? profile.chatTheme
+    : DEFAULT_CHAT_THEME;
+
+  const themeMutation = useMutation({
+    mutationFn: async (key: ChatThemeKey) => {
+      const r = await fetch(apiUrl("/api/profile"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatTheme: key }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (
+          r.status === 503 &&
+          j &&
+          typeof j === "object" &&
+          "code" in j &&
+          (j as { code?: unknown }).code === "CHAT_THEME_COLUMN_MISSING"
+        ) {
+          // Degradação graciosa: builds/dev sem migration aplicada não devem
+          // quebrar o Settings. Mantém tema atual e informa o operador.
+          return {
+            ...profile,
+            chatTheme: current,
+            _chatThemeBlockedMessage:
+              typeof (j as { message?: unknown }).message === "string"
+                ? (j as { message: string }).message
+                : "Tema indisponível até aplicar migrations.",
+          } as Profile & { _chatThemeBlockedMessage: string };
+        }
+
+        throw new Error(
+          typeof (j as { message?: string }).message === "string"
+            ? (j as { message: string }).message
+            : "Erro ao salvar tema",
+        );
+      }
+      return j as Profile;
+    },
+    onSuccess: (data) => {
+      const blockedMsg =
+        data && typeof data === "object" && "_chatThemeBlockedMessage" in data
+          ? String((data as unknown as { _chatThemeBlockedMessage?: unknown })._chatThemeBlockedMessage ?? "")
+          : "";
+      if (blockedMsg) {
+        toast.warning(blockedMsg);
+        queryClient.setQueryData(["profile"], profile);
+        return;
+      }
+      toast.success("Tema do chat atualizado");
+      queryClient.setQueryData(["profile"], data);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Tema das bolhas (inbox)
+        </p>
+        <p className="mt-1 text-[11px] leading-snug text-[var(--color-ink-muted)]">
+          Cor das mensagens enviadas e do fundo do histórico. Recebidas permanecem brancas; notas internas em cinza.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {CHAT_THEME_OPTIONS.map((theme) => {
+          const selected = current === theme.key;
+          return (
+            <button
+              key={theme.key}
+              type="button"
+              disabled={themeMutation.isPending}
+              onClick={() => themeMutation.mutate(theme.key)}
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-xl border-2 p-3 lumen-transition touch-target",
+                selected
+                  ? "border-primary bg-[var(--color-primary-soft)] shadow-[var(--shadow-sm)]"
+                  : "border-border bg-white hover:border-primary/30 hover:shadow-[var(--shadow-sm)]",
+              )}
+              aria-pressed={selected}
+              aria-label={`Tema ${theme.label}`}
+            >
+              <div
+                className="h-14 w-20 overflow-hidden rounded-lg border border-border shadow-[var(--shadow-sm)]"
+                style={{ background: theme.preview.chatBg }}
+              >
+                <div className="flex justify-end p-1.5">
+                  <div
+                    className="rounded-[6px] rounded-br-[1px] px-2 py-1"
+                    style={{ background: theme.preview.bubbleBg }}
+                  >
+                    <p
+                      className="text-[8px] font-medium"
+                      style={{ color: theme.preview.bubbleText }}
+                    >
+                      Oi!
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-start p-1.5">
+                  <div className="rounded-[6px] rounded-bl-[1px] border border-border bg-card px-2 py-1 shadow-[var(--shadow-sm)]">
+                    <p className="text-[8px] font-medium text-[color:var(--chat-bubble-received-text)]">
+                      Olá!
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <span className="text-[11px] font-medium text-[var(--color-ink-soft)]">
+                {theme.label}
+              </span>
+              {selected ? (
+                <Check className="size-3.5 shrink-0 text-primary" aria-hidden />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -117,7 +255,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="flex justify-center p-16">
-        <Loader2 className="size-8 animate-spin text-slate-400" aria-hidden />
+        <Loader2 className="size-8 animate-spin text-[var(--color-ink-muted)]" aria-hidden />
       </div>
     );
   }
@@ -126,24 +264,25 @@ export default function ProfilePage() {
     const msg =
       error instanceof Error ? error.message : "Não foi possível carregar o perfil.";
     return (
-      <div className="mx-auto mt-10 w-full max-w-xl rounded-[28px] border border-red-100 bg-red-50/50 p-8 text-center shadow-premium">
+      <div className="mx-auto mt-10 w-full max-w-xl rounded-[28px] border border-red-100 bg-red-50/50 p-8 text-center shadow-[var(--shadow-lg)]">
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-red-100 text-red-600">
           <AlertTriangle className="size-6" />
         </div>
-        <h2 className="mt-4 font-outfit text-lg font-black text-slate-900">
+        <h2 className="mt-4 font-display text-lg font-bold text-slate-900">
           Não foi possível carregar seu perfil
         </h2>
-        <p className="mt-2 text-sm text-slate-600">{msg}</p>
-        <p className="mt-1 text-[11px] text-slate-400">
+        <p className="mt-2 text-sm text-[var(--color-ink-soft)]">{msg}</p>
+        <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
           Se o erro mencionar coluna inexistente, a migration{" "}
           <code className="rounded bg-white px-1.5 py-0.5">add_user_profile_fields</code>{" "}
-          ainda não foi aplicada no servidor.
+          ainda não foi aplicada no servidor (ex.:{" "}
+          <code className="rounded bg-white px-1.5 py-0.5">add_user_chat_theme</code>).
         </p>
         <button
           type="button"
           onClick={() => void refetch()}
           disabled={isFetching}
-          className="mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-[#507df1] px-5 text-sm font-semibold text-white shadow-blue-glow transition-colors hover:bg-[#4466d6] disabled:opacity-60"
+          className="mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--color-primary-dark)] disabled:opacity-60"
         >
           {isFetching ? (
             <Loader2 className="size-4 animate-spin" />
@@ -272,8 +411,8 @@ function ProfileCard({
   });
 
   return (
-    <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-premium">
-      <h2 className="font-outfit text-lg font-black text-slate-900">
+    <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
+      <h2 className="font-display text-lg font-bold text-slate-900">
         Dados do seu perfil
       </h2>
 
@@ -285,7 +424,7 @@ function ProfileCard({
           real só ao clicar em "Salvar" abaixo (evita registro inconsistente).
         */}
         <div className="relative shrink-0">
-          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-[#fbcfe8] to-[#f9a8d4] ring-4 ring-white shadow-float">
+          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-[#fbcfe8] to-[#f9a8d4] ring-4 ring-white shadow-[var(--shadow-sm)]">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -294,7 +433,7 @@ function ProfileCard({
                 className="size-full object-cover"
               />
             ) : (
-              <span className="font-outfit text-2xl font-black text-white drop-shadow">
+              <span className="font-display text-2xl font-bold text-white drop-shadow">
                 {getInitials(name)}
               </span>
             )}
@@ -309,7 +448,7 @@ function ProfileCard({
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-md transition-colors hover:bg-slate-50 hover:text-slate-900",
+                "inline-flex size-8 items-center justify-center rounded-full border border-border bg-white text-[var(--color-ink-soft)] shadow-md transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900",
                 uploading && "cursor-wait opacity-80",
               )}
               aria-label="Alterar foto de perfil"
@@ -338,11 +477,11 @@ function ProfileCard({
         </div>
 
         <div className="min-w-0 flex-1 text-right">
-          <p className="truncate font-outfit text-sm font-black text-slate-900">
+          <p className="truncate font-display text-sm font-bold text-slate-900">
             {name || profile.name}
           </p>
           <p className="text-xs text-slate-500">Português (Brasil)</p>
-          <p className="mt-1.5 text-[11px] leading-snug text-slate-400">
+          <p className="mt-1.5 text-[11px] leading-snug text-[var(--color-ink-muted)]">
             Gerencie seus dados de acesso, idioma e assinatura pessoal do agente.
           </p>
         </div>
@@ -363,7 +502,7 @@ function ProfileCard({
             onChange={(e) => setName(e.target.value)}
             required
             autoComplete="name"
-            className="h-11 rounded-xl border-slate-200 bg-white text-sm focus-visible:ring-[#507df1]/30"
+            className="h-11 rounded-xl border-border bg-white text-sm focus-visible:ring-[var(--color-primary)]/30"
           />
         </Field>
 
@@ -377,14 +516,14 @@ function ProfileCard({
             value={signature}
             onChange={(e) => setSignature(e.target.value)}
             placeholder="Ex.: Marcelo · EduIT"
-            className="h-11 rounded-xl border-slate-200 bg-white text-sm focus-visible:ring-[#507df1]/30"
+            className="h-11 rounded-xl border-border bg-white text-sm focus-visible:ring-[var(--color-primary)]/30"
           />
         </Field>
 
         <Field id="phone" label="Telefone">
-          <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 focus-within:ring-2 focus-within:ring-[#507df1]/30">
+          <div className="flex h-11 items-center gap-2 rounded-xl border border-border bg-white px-3 focus-within:ring-2 focus-within:ring-[var(--color-primary)]/30">
             <span
-              className="inline-flex items-center gap-1 rounded-md bg-slate-50 px-2 py-1 text-xs font-bold text-slate-600"
+              className="inline-flex items-center gap-1 rounded-md bg-[var(--color-bg-subtle)] px-2 py-1 text-xs font-bold text-[var(--color-ink-soft)]"
               aria-hidden
             >
               <span className="text-sm leading-none">🇧🇷</span>
@@ -400,6 +539,8 @@ function ProfileCard({
           </div>
         </Field>
 
+        <ChatThemeField profile={profile} queryClient={queryClient} />
+
         {/* ── Toggle de mensagem de finalização ── */}
         <div className="space-y-3 rounded-2xl">
           <div className="flex items-center gap-3">
@@ -411,7 +552,7 @@ function ProfileCard({
             />
             <Label
               htmlFor="closing-toggle"
-              className="cursor-pointer text-sm font-medium text-slate-700"
+              className="cursor-pointer text-sm font-medium text-foreground"
             >
               Mensagem de finalização de conversa
             </Label>
@@ -437,7 +578,7 @@ function ProfileCard({
                   onChange={(e) => setClosingMessage(e.target.value)}
                   placeholder="Sua mensagem de encerramento"
                   rows={4}
-                  className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#507df1]/30"
+                  className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-foreground placeholder:text-[var(--color-ink-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
                 />
               </Field>
             </>
@@ -448,7 +589,7 @@ function ProfileCard({
           type="submit"
           disabled={saveMutation.isPending}
           className={cn(
-            "mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#507df1] text-sm font-semibold text-white shadow-blue-glow transition-colors duration-150 hover:bg-[#4466d6] disabled:opacity-60",
+            "mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors duration-150 hover:bg-[#4466d6] disabled:opacity-60",
           )}
         >
           {saveMutation.isPending ? (
@@ -495,10 +636,10 @@ function Field({
         className="text-xs font-semibold uppercase tracking-wider text-slate-500"
       >
         {label}
-        {required ? <span className="ml-0.5 text-[#507df1]">*</span> : null}
+        {required ? <span className="ml-0.5 text-primary">*</span> : null}
       </Label>
       {children}
-      {hint ? <p className="text-[11px] text-slate-400">{hint}</p> : null}
+      {hint ? <p className="text-[11px] text-[var(--color-ink-muted)]">{hint}</p> : null}
     </div>
   );
 }
@@ -594,10 +735,10 @@ function TokensCard() {
   const hasTokens = tokens.length > 0;
 
   return (
-    <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-premium">
+    <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h2 className="font-outfit text-lg font-black text-slate-900">
+          <h2 className="font-display text-lg font-bold text-slate-900">
             Tokens de Acesso
           </h2>
           <p className="mt-1 max-w-md text-sm leading-snug text-slate-500">
@@ -612,7 +753,7 @@ function TokensCard() {
               setJustCreated(null);
               setCreateOpen(true);
             }}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#507df1] px-4 text-xs font-semibold text-white shadow-blue-glow transition-colors hover:bg-[#4466d6]"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6]"
           >
             <Plus className="size-3.5" />
             Novo token
@@ -622,23 +763,23 @@ function TokensCard() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-14">
-          <Loader2 className="size-6 animate-spin text-slate-400" />
+          <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
         </div>
       ) : hasTokens ? (
         <ul className="mt-6 space-y-2">
           {tokens.map((t) => (
             <li
               key={t.id}
-              className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/40 px-4 py-3"
+              className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-[var(--color-bg-subtle)]/40 px-4 py-3"
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-[#507df1]">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-primary">
                 <Key className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-900">
                   {t.name}
                 </p>
-                <p className="mt-0.5 font-mono text-[11px] text-slate-400">
+                <p className="mt-0.5 font-mono text-[11px] text-[var(--color-ink-muted)]">
                   {t.tokenPrefix}… ·{" "}
                   {t.expiresAt
                     ? `expira em ${new Date(t.expiresAt).toLocaleDateString()}`
@@ -650,7 +791,7 @@ function TokensCard() {
                   type="button"
                   onClick={() => handleRevoke(t)}
                   disabled={revokeMutation.isPending}
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                   aria-label={`Revogar token ${t.name}`}
                 >
                   <Trash2 className="size-4" />
@@ -679,13 +820,13 @@ function TokensCard() {
           {justCreated ? (
             <>
               <DialogHeader>
-                <DialogTitle className="font-outfit">Token criado</DialogTitle>
+                <DialogTitle className="font-display">Token criado</DialogTitle>
                 <DialogDescription>
                   Copie agora — por segurança esta chave não será exibida novamente.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-[var(--color-bg-subtle)] px-3 py-2.5">
                   <code className="flex-1 truncate font-mono text-xs text-slate-800">
                     {justCreated.token}
                   </code>
@@ -714,7 +855,7 @@ function TokensCard() {
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle className="font-outfit">Novo token</DialogTitle>
+                <DialogTitle className="font-display">Novo token</DialogTitle>
                 <DialogDescription>
                   Dê um nome descritivo para identificar a integração que usará este token.
                 </DialogDescription>
@@ -787,13 +928,13 @@ function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
           Ilustração minimalista: dois cards sobrepostos + sparkles. Evita
           importar SVG externo, usando apenas Tailwind + ícones lucide.
         */}
-        <div className="absolute -left-3 -top-2 size-14 -rotate-12 rounded-xl border border-slate-200 bg-white shadow-sm" />
-        <div className="absolute -right-3 -top-1 size-14 rotate-12 rounded-xl border border-slate-200 bg-white shadow-sm" />
+        <div className="absolute -left-3 -top-2 size-14 -rotate-12 rounded-xl border border-border bg-white shadow-sm" />
+        <div className="absolute -right-3 -top-1 size-14 rotate-12 rounded-xl border border-border bg-white shadow-sm" />
         <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[#eef2ff]">
           <button
             type="button"
             onClick={onCreate}
-            className="inline-flex size-11 items-center justify-center rounded-full bg-[#507df1] text-white shadow-blue-glow transition-transform hover:scale-105"
+            className="inline-flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-[var(--shadow-indigo-glow)] transition-transform hover:scale-105"
             aria-label="Criar primeiro token"
           >
             <Plus className="size-5" />
@@ -808,7 +949,7 @@ function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
           aria-hidden
         />
       </div>
-      <p className="font-outfit text-sm font-black text-slate-700">
+      <p className="font-display text-sm font-bold text-foreground">
         Crie seu primeiro token!
       </p>
     </div>

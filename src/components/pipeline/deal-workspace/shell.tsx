@@ -30,6 +30,8 @@ type WorkspaceShellProps = {
   onClose: () => void;
   children: React.ReactNode;
   closeLabel?: string;
+  /** Quando true, não renderiza o X flutuante (ex.: fechar inline na barra de ações). */
+  hideFloatingClose?: boolean;
 };
 
 export function WorkspaceShell({
@@ -37,6 +39,7 @@ export function WorkspaceShell({
   onClose,
   children,
   closeLabel = "Fechar negocio",
+  hideFloatingClose = false,
 }: WorkspaceShellProps) {
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
 
@@ -63,9 +66,15 @@ export function WorkspaceShell({
 
   React.useEffect(() => {
     if (!open) return;
-    const t = window.setTimeout(() => closeRef.current?.focus(), 50);
+    const t = window.setTimeout(() => {
+      if (hideFloatingClose) {
+        document.querySelector<HTMLElement>("[data-deal-workspace-close]")?.focus();
+      } else {
+        closeRef.current?.focus();
+      }
+    }, 50);
     return () => window.clearTimeout(t);
-  }, [open]);
+  }, [open, hideFloatingClose]);
 
   return (
     <AnimatePresence>
@@ -81,33 +90,30 @@ export function WorkspaceShell({
           transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
           className={cn(
             "fixed inset-0 z-[60] flex flex-col overflow-hidden",
-            "bg-white font-outfit text-slate-900",
+            "bg-white font-display text-slate-900",
           )}
         >
-          {/* Botão fechar global — sempre visível no canto, além do que o
-              header já mostra. Garante saída 1-clique mesmo em scroll.
-              Discreto: sem shadow-premium nem backdrop-blur — uma simples
-              hairline `border-black/6` + bg branco. Combina com o
-              vocabulário flat do sales-hub. */}
-          <div className="pointer-events-none absolute right-4 top-3 z-[70] sm:right-6 sm:top-4">
-            <TooltipHost label="Fechar (Esc)" side="bottom">
-              <button
-                ref={closeRef}
-                type="button"
-                onClick={onClose}
-                aria-label={closeLabel}
-                className={cn(
-                  "pointer-events-auto inline-flex size-8 items-center justify-center rounded-full",
-                  "border border-black/6 bg-white text-slate-500",
-                  "transition-colors hover:bg-slate-50 hover:text-slate-900",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
-                  "active:scale-95",
-                )}
-              >
-                <X className="size-4" strokeWidth={2.2} />
-              </button>
-            </TooltipHost>
-          </div>
+          {!hideFloatingClose ? (
+            <div className="pointer-events-none absolute right-4 top-3 z-[70] sm:right-6 sm:top-4">
+              <TooltipHost label="Fechar (Esc)" side="bottom">
+                <button
+                  ref={closeRef}
+                  type="button"
+                  onClick={onClose}
+                  aria-label={closeLabel}
+                  className={cn(
+                    "pointer-events-auto inline-flex size-8 items-center justify-center rounded-full",
+                    "border border-black/6 bg-white text-slate-500",
+                    "transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+                    "active:scale-95",
+                  )}
+                >
+                  <X className="size-4" strokeWidth={2.2} />
+                </button>
+              </TooltipHost>
+            </div>
+          ) : null}
 
           {children}
         </motion.div>

@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Calendar,
   CheckCircle2,
@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Users,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,23 +36,43 @@ const TYPE_VISUAL: Record<
   EMAIL:    { Icon: Mail,          bg: "bg-emerald-50",  ring: "ring-emerald-200/70",  fg: "text-emerald-700" },
   MEETING:  { Icon: Users,         bg: "bg-violet-50",   ring: "ring-violet-200/70",   fg: "text-violet-700" },
   TASK:     { Icon: CheckCircle2,  bg: "bg-blue-50",     ring: "ring-blue-200/70",     fg: "text-blue-700" },
-  NOTE:     { Icon: MessageCircle, bg: "bg-slate-50",    ring: "ring-slate-200/70",    fg: "text-slate-600" },
+  NOTE:     { Icon: MessageCircle, bg: "bg-[var(--color-bg-subtle)]",    ring: "ring-slate-200/70",    fg: "text-[var(--color-ink-soft)]" },
   WHATSAPP: { Icon: MessageCircle, bg: "bg-green-50",    ring: "ring-green-200/70",    fg: "text-green-700" },
   OTHER:    { Icon: Calendar,      bg: "bg-amber-50",    ring: "ring-amber-200/70",    fg: "text-amber-700" },
 };
 
 type ActivitiesPanelProps = {
-  activities: DealDetailActivity[];
+  activities?: DealDetailActivity[]; // @deprecated — ignorado internamente
   dealId: string;
-  onCreated: () => void;
+  onCreated?: () => void;
 };
 
-export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPanelProps) {
+const activitiesKey = (dealId: string) => ["deal-activities", dealId] as const;
+
+export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
+  const queryClient = useQueryClient();
   const [type, setType] = React.useState("TASK");
   const [title, setTitle] = React.useState("");
   const [desc, setDesc] = React.useState("");
   const [scheduled, setScheduled] = React.useState("");
   const [open, setOpen] = React.useState(false);
+
+  const { data: activities = [], isLoading } = useQuery<DealDetailActivity[]>({
+    queryKey: activitiesKey(dealId),
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/activities?dealId=${dealId}&perPage=100`));
+      if (!res.ok) throw new Error("Erro ao carregar atividades");
+      const json = await res.json().catch(() => ({}));
+      return Array.isArray(json) ? json : (json.items ?? []);
+    },
+    enabled: Boolean(dealId),
+    staleTime: 30_000,
+  });
+
+  const invalidate = React.useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: activitiesKey(dealId) });
+    onCreated?.();
+  }, [dealId, queryClient, onCreated]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -68,7 +89,7 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
     },
     onSuccess: () => {
       setTitle(""); setDesc(""); setScheduled(""); setOpen(false);
-      onCreated();
+      invalidate();
     },
   });
 
@@ -77,7 +98,7 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
       fetch(apiUrl(`/api/activities/${id}/toggle`), { method: "POST" }).then((r) => {
         if (!r.ok) throw new Error();
       }),
-    onSuccess: () => onCreated(),
+    onSuccess: invalidate,
   });
 
   const deleteMut = useMutation({
@@ -85,17 +106,17 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
       fetch(apiUrl(`/api/activities/${id}`), { method: "DELETE" }).then((r) => {
         if (!r.ok) throw new Error();
       }),
-    onSuccess: () => onCreated(),
+    onSuccess: invalidate,
   });
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[#f4f7fa]">
+    <div className="flex min-h-0 flex-1 flex-col bg-[var(--color-chat-bg)]">
       <div className="scrollbar-thin flex-1 overflow-y-auto p-4 sm:p-6">
         {/* Composer glass */}
         <div
           className={cn(
-            "mb-5 rounded-2xl border border-slate-100 bg-white/80 p-4 backdrop-blur-md",
-            "shadow-[0_40px_100px_-40px_rgba(13,27,62,0.10)]",
+            "mb-5 rounded-2xl border border-border bg-card/90 p-4 backdrop-blur-md",
+            "shadow-[var(--shadow-sm)]",
           )}
         >
           {!open ? (
@@ -103,26 +124,26 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
               type="button"
               onClick={() => setOpen(true)}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-xl border border-dashed border-slate-200",
-                "bg-slate-50/60 px-3.5 py-3 text-left text-[13px]",
+                "flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border",
+                "bg-[var(--color-bg-subtle)]/60 px-3.5 py-3 text-left text-[13px]",
                 "tracking-tight text-slate-500 transition-colors",
-                "hover:border-[#507df1]/40 hover:bg-white hover:text-slate-800",
+                "hover:border-[var(--color-primary)]/40 hover:bg-white hover:text-slate-800",
               )}
             >
-              <Plus className="size-4 text-[#507df1]" strokeWidth={2.4} />
+              <Plus className="size-4 text-primary" strokeWidth={2.4} />
               <span className="font-semibold">Nova atividade</span>
             </button>
           ) : (
             <div className="space-y-2.5">
               <div className="grid gap-2.5 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                     Tipo
                   </label>
                   <SelectNative
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="h-9 rounded-xl border-slate-200 text-sm"
+                    className="h-9 rounded-xl border-border text-sm"
                   >
                     {ACTIVITY_TYPES.map((t) => (
                       <option key={t.value} value={t.value}>{t.label}</option>
@@ -130,14 +151,14 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
                   </SelectNative>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                     Agendar
                   </label>
                   <Input
                     type="datetime-local"
                     value={scheduled}
                     onChange={(e) => setScheduled(e.target.value)}
-                    className="h-9 rounded-xl border-slate-200 text-sm"
+                    className="h-9 rounded-xl border-border text-sm"
                   />
                 </div>
               </div>
@@ -145,7 +166,7 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Titulo da atividade..."
-                className="h-9 rounded-xl border-slate-200 text-sm"
+                className="h-9 rounded-xl border-border text-sm"
                 autoFocus
               />
               <Textarea
@@ -153,7 +174,7 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
                 placeholder="Descricao (opcional)"
-                className="rounded-xl border-slate-200 text-sm"
+                className="rounded-xl border-border text-sm"
               />
               <div className="flex items-center justify-end gap-2">
                 <Button
@@ -168,7 +189,7 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
                 <Button
                   type="button"
                   size="sm"
-                  className="rounded-full bg-[#507df1] px-4 text-[12px] font-bold text-white shadow-blue-glow hover:bg-[#4466d6]"
+                  className="rounded-full bg-primary px-4 text-[12px] font-bold text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[var(--color-primary-dark)]"
                   disabled={!title.trim() || mutation.isPending}
                   onClick={() => mutation.mutate()}
                 >
@@ -180,8 +201,12 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
         </div>
 
         {/* Timeline */}
-        {activities.length === 0 ? (
-          <p className="py-12 text-center text-[13px] tracking-tight text-slate-400">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
+          </div>
+        ) : activities.length === 0 ? (
+          <p className="py-12 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
             Nenhuma atividade registrada.
           </p>
         ) : (
@@ -259,9 +284,8 @@ function ActivityTimeline({
 
               <div
                 className={cn(
-                  "rounded-2xl border border-slate-100 bg-white p-3.5",
-                  "shadow-[0_40px_100px_-40px_rgba(13,27,62,0.10)] transition-shadow",
-                  "hover:shadow-[0_40px_100px_-30px_rgba(13,27,62,0.14)]",
+                  "rounded-2xl border border-border bg-card p-3.5",
+                  "shadow-[var(--shadow-sm)] lumen-transition hover:shadow-[var(--shadow-md)]",
                 )}
               >
                 <div className="flex items-start gap-2">
@@ -270,14 +294,14 @@ function ActivityTimeline({
                       <span
                         className={cn(
                           "inline-flex items-center rounded-full px-1.5 py-0.5",
-                          "text-[10px] font-black uppercase tracking-widest",
+                          "text-[10px] font-semibold uppercase tracking-widest",
                           visual.bg, visual.fg,
                         )}
                       >
                         {ACTIVITY_TYPES.find((t) => t.value === a.type)?.label ?? a.type}
                       </span>
                       {a.completed ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-emerald-600">
                           <CheckCircle2 className="size-3" /> Concluida
                         </span>
                       ) : (
@@ -297,7 +321,7 @@ function ActivityTimeline({
                         {a.description}
                       </p>
                     ) : null}
-                    <p className="mt-1.5 text-[11px] tracking-tight text-slate-400">
+                    <p className="mt-1.5 text-[11px] tracking-tight text-[var(--color-ink-muted)]">
                       {a.user.name} · {formatDateTime(a.scheduledAt ?? a.createdAt)}
                     </p>
                   </div>
@@ -308,7 +332,7 @@ function ActivityTimeline({
                       disabled={deletePending}
                       aria-label="Excluir"
                       className={cn(
-                        "shrink-0 rounded-full p-1 text-slate-400 opacity-0",
+                        "shrink-0 rounded-full p-1 text-[var(--color-ink-muted)] opacity-0",
                         "transition-all hover:bg-rose-50 hover:text-rose-500",
                         "group-hover:opacity-100",
                       )}

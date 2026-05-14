@@ -74,7 +74,7 @@ export function LossReasonDialog({
         <div className="space-y-3">
           {hasReasons ? (
             <>
-              <Label className="text-xs font-semibold text-slate-600">Selecione o motivo</Label>
+              <Label className="text-xs font-semibold text-[var(--color-ink-soft)]">Selecione o motivo</Label>
               <div className="flex flex-wrap gap-2">
                 {reasons.map((r) => (
                   <button
@@ -85,7 +85,7 @@ export function LossReasonDialog({
                       "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
                       selected === r.label
                         ? "border-red-400 bg-red-50 text-red-700"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50",
+                        : "border-border bg-white text-foreground hover:border-slate-300 hover:bg-[var(--color-bg-subtle)]",
                     )}
                   >
                     {r.label}
@@ -98,7 +98,7 @@ export function LossReasonDialog({
                     "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
                     isOther
                       ? "border-red-400 bg-red-50 text-red-700"
-                      : "border-dashed border-slate-300 bg-white text-slate-500 hover:border-slate-400 hover:bg-slate-50",
+                      : "border-dashed border-slate-300 bg-white text-slate-500 hover:border-slate-400 hover:bg-[var(--color-bg-subtle)]",
                   )}
                 >
                   Outro…

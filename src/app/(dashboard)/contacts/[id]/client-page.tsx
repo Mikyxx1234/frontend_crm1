@@ -31,7 +31,8 @@ import { Input } from "@/components/ui/input";
 import { SelectNative } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
-import { cn, formatCurrency, formatDateTime, getInitials } from "@/lib/utils";
+import { dt } from "@/lib/design-tokens";
+import { cn, formatCurrency, formatDateTime, getInitials, tagPillStyle, tagStyle } from "@/lib/utils";
 
 type ContactDetail = {
   id: string; name: string; email: string | null; phone: string | null;
@@ -177,8 +178,8 @@ export default function ContactDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">{contact.name}</h1>
               <span
-                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                style={{ backgroundColor: stageOpt?.color + "18", color: stageOpt?.color }}
+                className={cn(dt.pill.sm, "px-2.5 font-bold uppercase tracking-wider")}
+                style={tagStyle(stageOpt?.color)}
               >
                 {stageOpt?.label ?? contact.lifecycleStage}
               </span>
@@ -505,8 +506,8 @@ function TagsSection({ contact }: { contact: ContactDetail }) {
           {contact.tags.map((t) => (
             <span
               key={t.tag.id}
-              className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold shadow-sm"
-              style={{ backgroundColor: t.tag.color + "18", color: t.tag.color }}
+              className={cn(dt.pill.base, "gap-1 px-2.5 py-1")}
+              style={tagPillStyle(t.tag.name, t.tag.color)}
             >
               {t.tag.name}
               <button

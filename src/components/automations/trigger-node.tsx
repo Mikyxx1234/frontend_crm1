@@ -28,12 +28,12 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
       className={cn(
         "min-w-[230px] max-w-[280px] overflow-hidden rounded-2xl border bg-white transition-all duration-200",
         selected
-          ? "border-brand-blue/50 shadow-blue-glow ring-2 ring-brand-blue/30"
-          : "border-white/60 shadow-premium hover:-translate-y-px hover:shadow-blue-glow"
+          ? "border-primary/50 shadow-[var(--shadow-indigo-glow)] ring-2 ring-primary/30"
+          : "border-white/60 shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[var(--shadow-indigo-glow)]"
       )}
     >
       {/* Header com gradient brand */}
-      <div className="relative overflow-hidden bg-linear-to-br from-brand-blue via-[#5a87ff] to-[#7b9bff] px-4 py-3 text-white">
+      <div className="relative overflow-hidden bg-linear-to-br from-primary via-[#5a87ff] to-[#7b9bff] px-4 py-3 text-white">
         {/* Brilho neon sutil no topo */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/70 to-transparent" />
         {/* Halo radial decorativo no canto */}
@@ -44,10 +44,10 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
             <Zap className="size-4 text-white" strokeWidth={2.6} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/85">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/85">
               Gatilho
             </p>
-            <p className="mt-0.5 truncate text-[14px] font-black tracking-tighter leading-tight">
+            <p className="mt-0.5 truncate text-[14px] font-extrabold tracking-tighter leading-tight">
               {data.label}
             </p>
           </div>
@@ -70,19 +70,19 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
         <TooltipHost label="Ver eventos" side="bottom">
           <button
             type="button"
-            className="group/stats flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2 transition-colors hover:bg-slate-50/60"
+            className="group/stats flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
             onClick={(e) => {
               e.stopPropagation();
               data.onStatsClick?.();
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black tabular-nums text-emerald-700 ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-emerald-100">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-black tabular-nums text-rose-700 ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 ring-1 ring-rose-100">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>
@@ -94,7 +94,7 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
       <Handle
         type="source"
         position={Position.Right}
-        className="size-3.5! border-2! border-white! bg-brand-blue! shadow-blue-glow!"
+        className="size-3.5! border-2! border-white! bg-primary! shadow-[var(--shadow-indigo-glow)]!"
       />
     </div>
   );

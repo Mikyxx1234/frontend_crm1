@@ -1,5 +1,5 @@
-import ClientPage from "./client-page";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return <ClientPage />;
+export default function LegacyTemplatesRedirectPage() {
+  redirect("/settings/message-models?tab=internal");
 }

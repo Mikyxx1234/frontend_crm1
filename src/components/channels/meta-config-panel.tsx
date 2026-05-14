@@ -1,7 +1,7 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import { ExternalLink, Loader2, RefreshCw, ShieldCheck, ShieldOff } from "lucide-react";
+import { Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, ShieldCheck, ShieldOff, Webhook } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -19,6 +19,21 @@ function maskSecret(value: string): string {
   const t = value.trim();
   if (t.length <= 8) return "••••••••";
   return `••••••••${t.slice(-4)}`;
+}
+
+/**
+ * Gera verifyToken random de 40 chars (alfanumerico). Meta aceita ate
+ * 256 chars; 40 da entropia mais que suficiente sem ficar gigante na UI.
+ */
+function generateVerifyToken(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = new Uint8Array(40);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) {
+    out += chars[bytes[i] % chars.length];
+  }
+  return out;
 }
 
 const META_DOCS_URL =
@@ -56,18 +71,24 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
     typeof cfg.appName === "string" ? cfg.appName : "";
   const initialAppSecret =
     typeof cfg.appSecret === "string" ? cfg.appSecret : "";
+  const initialVerifyToken =
+    typeof cfg.verifyToken === "string" ? cfg.verifyToken : "";
   const wasEmbeddedSignup = cfg.embeddedSignup === true;
 
   const [channelName, setChannelName] = useState(channel.name);
   const [accessToken, setAccessToken] = useState("");
   const [appSecret, setAppSecret] = useState("");
+  const [verifyToken, setVerifyToken] = useState(initialVerifyToken);
   const [phoneNumberId, setPhoneNumberId] = useState(initialPnId);
   const [businessAccountId, setBusinessAccountId] = useState(initialWaba);
   const [appName, setAppName] = useState(initialAppName);
   const [showTokenHint, setShowTokenHint] = useState(!!initialToken);
+  const [revealAccessToken, setRevealAccessToken] = useState(false);
+  const [revealAppSecret, setRevealAppSecret] = useState(false);
   const [esReconnecting, setEsReconnecting] = useState(false);
   const [esError, setEsError] = useState<string | null>(null);
   const [esSuccess, setEsSuccess] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const embeddedSignup = useEmbeddedSignup();
 
@@ -78,13 +99,28 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
     setAppName(initialAppName);
     setAccessToken("");
     setAppSecret("");
+    setVerifyToken(initialVerifyToken);
     setShowTokenHint(!!initialToken);
-  }, [channel.id, channel.name, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret]);
+  }, [channel.id, channel.name, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret, initialVerifyToken]);
 
   const webhookBase =
     typeof window !== "undefined" ? window.location.origin : "";
-  /** URL sugerida para callback/webhook no painel Meta (ajuste o path ao endpoint real do projeto). */
-  const webhookUrl = `${webhookBase}/api/webhooks/meta`;
+
+  // URL scoped por org (rota nova multi-tenant). Quando organizationSlug nao
+  // veio (channel antigo carregado de cache?), cai pra rota legacy ate o
+  // proximo refetch. Apos Deploy 2 a rota legacy sai e isso vira erro
+  // visivel — desejavel pra forcar refresh do cache.
+  const webhookUrl = channel.organizationSlug
+    ? `${webhookBase}/api/webhooks/meta/${channel.organizationSlug}`
+    : `${webhookBase}/api/webhooks/meta`;
+
+  const copyToClipboard = (value: string, fieldName: string) => {
+    if (!value) return;
+    void navigator.clipboard.writeText(value).then(() => {
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 1500);
+    });
+  };
 
   const testQuery = useQuery({
     queryKey: ["channel-status-test", channel.id],
@@ -101,6 +137,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
         appName: appName.trim() || undefined,
         ...(accessToken.trim() ? { accessToken: accessToken.trim() } : {}),
         ...(appSecret.trim() ? { appSecret: appSecret.trim() } : {}),
+        ...(verifyToken.trim() ? { verifyToken: verifyToken.trim() } : {}),
       };
       const res = await fetch(apiUrl(`/api/channels/${channel.id}`), {
         method: "PUT",
@@ -174,6 +211,108 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
             </li>
           )}
         </ul>
+      </div>
+
+      <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-4 text-sm dark:border-blue-900/50 dark:bg-blue-950/20">
+        <div className="flex items-start gap-3">
+          <Webhook className="size-5 shrink-0 text-blue-600" />
+          <div className="flex-1 space-y-3">
+            <div>
+              <p className="font-semibold text-foreground">Webhook desta organizacao</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Configure ESTA URL e ESTE token no painel Meta (developers.facebook.com → seu app → WhatsApp → Configuracao).
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Callback URL
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={webhookUrl}
+                  className="font-mono text-xs"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 px-3"
+                  onClick={() => copyToClipboard(webhookUrl, "url")}
+                  title="Copiar URL"
+                >
+                  {copiedField === "url" ? (
+                    <Check className="size-3.5 text-green-600" />
+                  ) : (
+                    <Copy className="size-3.5" />
+                  )}
+                </Button>
+              </div>
+              {!channel.organizationSlug ? (
+                <p className="text-xs text-amber-600">
+                  Organization slug ausente — recarregue a pagina.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Verify Token
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={verifyToken}
+                  onChange={(e) => setVerifyToken(e.target.value)}
+                  placeholder="Clique em 'Gerar' pra criar um token aleatorio"
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="px-3 text-xs"
+                  onClick={() => setVerifyToken(generateVerifyToken())}
+                  title="Gerar token aleatorio"
+                >
+                  Gerar
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 px-3"
+                  disabled={!verifyToken.trim()}
+                  onClick={() => copyToClipboard(verifyToken, "token")}
+                  title="Copiar token"
+                >
+                  {copiedField === "token" ? (
+                    <Check className="size-3.5 text-green-600" />
+                  ) : (
+                    <Copy className="size-3.5" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cole o mesmo valor no campo &quot;Verify Token&quot; do painel Meta. Salve o canal aqui ANTES de clicar em &quot;Verify and save&quot; no painel da Meta.
+              </p>
+            </div>
+
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer font-medium hover:text-foreground">
+                Como configurar no painel Meta?
+              </summary>
+              <ol className="mt-2 ml-4 list-decimal space-y-1">
+                <li>Salve o canal aqui (botao &quot;Salvar&quot; abaixo) — verifyToken e appSecret precisam estar gravados no banco antes da Meta tentar verificar.</li>
+                <li>No painel Meta: <span className="font-mono">developers.facebook.com</span> → seu app → WhatsApp → Configuracao.</li>
+                <li>Em &quot;Webhook&quot; clique em &quot;Editar&quot;, cole a URL e o token acima e clique em &quot;Verify and save&quot;.</li>
+                <li>Subscreva o campo <span className="font-mono">messages</span> (e <span className="font-mono">calls</span> se usar ligacoes).</li>
+              </ol>
+            </details>
+          </div>
+        </div>
       </div>
 
       {embeddedSignup.isConfigured ? (
@@ -276,19 +415,47 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           </p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="meta-token">Access Token</Label>
-          <Input
-            id="meta-token"
-            type="password"
-            autoComplete="off"
-            value={accessToken}
-            onChange={(e) => setAccessToken(e.target.value)}
-            placeholder={
-              showTokenHint
-                ? "Deixe em branco para manter o token atual"
-                : "Cole o token permanente"
-            }
-          />
+          <Label htmlFor="meta-access-token">Access Token</Label>
+          <div className="flex gap-2">
+            <Input
+              id="meta-access-token"
+              name="metaAccessToken"
+              type={revealAccessToken ? "text" : "password"}
+              autoComplete="new-password"
+              data-1p-ignore
+              data-lpignore="true"
+              data-form-type="other"
+              spellCheck={false}
+              value={accessToken}
+              onChange={(e) => setAccessToken(e.target.value)}
+              placeholder={
+                showTokenHint
+                  ? "Deixe em branco para manter o token atual"
+                  : "Cole o token (começa com EAA...)"
+              }
+              className="font-mono text-xs"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="px-3"
+              onClick={() => setRevealAccessToken((v) => !v)}
+              title={revealAccessToken ? "Ocultar" : "Mostrar"}
+              aria-label={revealAccessToken ? "Ocultar token" : "Mostrar token"}
+            >
+              {revealAccessToken ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+            </Button>
+          </div>
+          {accessToken && accessToken.length < 50 ? (
+            <p className="text-xs text-amber-600">
+              Atenção: token muito curto ({accessToken.length} caracteres). Tokens válidos da Meta começam com <span className="font-mono">EAA</span> e têm 200+ caracteres.
+            </p>
+          ) : null}
           {showTokenHint && initialToken ? (
             <p className="text-xs text-muted-foreground">
               Valor salvo: <span className="font-mono">{maskSecret(initialToken)}</span>
@@ -321,18 +488,41 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
         ) : (
           <div className="space-y-2">
             <Label htmlFor="meta-app-secret">App Secret do seu App</Label>
-            <Input
-              id="meta-app-secret"
-              type="password"
-              autoComplete="off"
-              value={appSecret}
-              onChange={(e) => setAppSecret(e.target.value)}
-              placeholder={
-                initialAppSecret
-                  ? "Deixe em branco para manter o valor atual"
-                  : "Chave secreta do seu app Meta"
-              }
-            />
+            <div className="flex gap-2">
+              <Input
+                id="meta-app-secret"
+                name="metaAppSecret"
+                type={revealAppSecret ? "text" : "password"}
+                autoComplete="new-password"
+                data-1p-ignore
+                data-lpignore="true"
+                data-form-type="other"
+                spellCheck={false}
+                value={appSecret}
+                onChange={(e) => setAppSecret(e.target.value)}
+                placeholder={
+                  initialAppSecret
+                    ? "Deixe em branco para manter o valor atual"
+                    : "Chave secreta do seu app Meta (32 chars hex)"
+                }
+                className="font-mono text-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="px-3"
+                onClick={() => setRevealAppSecret((v) => !v)}
+                title={revealAppSecret ? "Ocultar" : "Mostrar"}
+                aria-label={revealAppSecret ? "Ocultar app secret" : "Mostrar app secret"}
+              >
+                {revealAppSecret ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </Button>
+            </div>
             {initialAppSecret ? (
               <p className="text-xs text-muted-foreground">
                 Valor salvo: <span className="font-mono">{maskSecret(initialAppSecret)}</span>
@@ -388,26 +578,6 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
       </div>
 
       <Separator />
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">Webhook (callback)</p>
-        <p className="text-xs text-muted-foreground">
-          Use a URL abaixo na configuração de webhook do app Meta quando aplicável
-          ao seu fluxo. Ajuste o caminho conforme o endpoint que você expuser para
-          receber eventos.
-        </p>
-        <div className="flex flex-col gap-2 rounded-md border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <code className="break-all text-xs text-foreground">{webhookUrl}</code>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => void navigator.clipboard.writeText(webhookUrl)}
-          >
-            Copiar
-          </Button>
-        </div>
-      </div>
 
       <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
         <p className="font-medium text-foreground">WhatsApp Calling API</p>

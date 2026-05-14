@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Mic, MicOff, Trash2, Send } from "lucide-react";
+import { Check, Mic, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -60,10 +60,22 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
 
   if (state === "idle") {
     return (
-      <TooltipHost label="Gravar mensagem de voz" side="top">
-        <button type="button" onClick={startRecording} disabled={disabled}
-          className={cn("flex size-[52px] items-center justify-center rounded-full eduit-accent-gradient text-white shadow-[0_4px_12px_rgba(0,212,170,0.3)] eduit-transition hover:scale-105 hover:shadow-[0_6px_16px_rgba(0,212,170,0.4)] disabled:opacity-50", className)}
-          aria-label="Gravar áudio">
+      <TooltipHost
+        label="Gravar mensagem de voz"
+        side="top"
+        align="center"
+        contentClassName="text-center"
+      >
+        <button
+          type="button"
+          onClick={startRecording}
+          disabled={disabled}
+          className={cn(
+            "flex size-[52px] items-center justify-center rounded-full bg-[#2563eb] text-white shadow-sm lumen-transition hover:scale-105 hover:brightness-110 disabled:opacity-50",
+            className,
+          )}
+          aria-label="Gravar áudio"
+        >
           <Mic className="size-5" />
         </button>
       </TooltipHost>
@@ -72,22 +84,32 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
 
   if (state === "recording") {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
-        <div className="flex items-center gap-2 rounded-full bg-[#ef4444]/10 px-3 py-1.5">
-          <span className="size-2.5 rounded-full bg-[#ef4444]" style={{ animation: "pulse-dot 2s infinite" }} />
-          <span className="text-[14px] font-medium text-[#ef4444]" style={{ fontVariantNumeric: "tabular-nums" }}>{formatTime(duration)}</span>
-        </div>
-        <TooltipHost label="Cancelar gravação" side="top">
-          <button type="button" onClick={discard} aria-label="Cancelar gravação"
-            className="flex size-10 items-center justify-center rounded-[14px] text-[#64748b] eduit-transition hover:bg-[#f8fafc] hover:text-[#1e40af] hover:scale-105">
-            <Trash2 className="size-[18px]" />
+      <div className={cn("flex min-w-0 shrink-0 flex-row items-center gap-2", className)}>
+        <TooltipHost label="Cancelar gravação" side="top" contentClassName="text-center">
+          <button
+            type="button"
+            onClick={discard}
+            aria-label="Cancelar gravação"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#64748b] lumen-transition hover:scale-105 hover:bg-muted hover:text-destructive"
+          >
+            <Trash2 className="size-4" />
           </button>
         </TooltipHost>
-        <TooltipHost label="Parar gravação" side="top">
-          <button type="button" onClick={stopRecording} aria-label="Parar gravação"
-            className="flex size-[52px] items-center justify-center rounded-full bg-[#ef4444] text-white eduit-transition hover:scale-105"
-            style={{ animation: "pulse-record 1s infinite" }}>
-            <MicOff className="size-5" />
+        <div className="flex min-w-0 items-center gap-1.5 rounded-full bg-[#ef4444]/10 px-2.5 py-1">
+          <span className="size-2 shrink-0 rounded-full bg-[#ef4444]" style={{ animation: "pulse-dot 2s infinite" }} />
+          <span className="text-[12px] font-medium text-[#ef4444]" style={{ fontVariantNumeric: "tabular-nums" }}>
+            {formatTime(duration)}
+          </span>
+        </div>
+        <TooltipHost label="Parar e revisar" side="top" contentClassName="text-center">
+          <button
+            type="button"
+            onClick={stopRecording}
+            aria-label="Parar gravação"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#ef4444] text-white lumen-transition hover:scale-105"
+            style={{ animation: "pulse-record 1s infinite" }}
+          >
+            <Check className="size-4" strokeWidth={2.5} />
           </button>
         </TooltipHost>
       </div>
@@ -96,17 +118,22 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      {audioUrl && <audio src={audioUrl} controls className="h-8 max-w-[180px]" />}
-      <TooltipHost label="Descartar áudio" side="top">
+      {audioUrl && <audio src={audioUrl} controls className="h-7 max-w-[160px]" />}
+      <TooltipHost label="Descartar áudio" side="top" contentClassName="text-center">
         <button type="button" onClick={discard} aria-label="Descartar áudio"
-          className="flex size-10 items-center justify-center rounded-[14px] text-[#ef4444] eduit-transition hover:bg-[#ef4444]/10 hover:scale-105">
-          <Trash2 className="size-[18px]" />
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#ef4444] lumen-transition hover:bg-[#ef4444]/10 hover:scale-105">
+          <Trash2 className="size-4" />
         </button>
       </TooltipHost>
-      <TooltipHost label="Enviar áudio" side="top">
-        <button type="button" onClick={send} disabled={disabled} aria-label="Enviar áudio"
-          className="flex size-[52px] items-center justify-center rounded-full eduit-accent-gradient text-white shadow-[0_4px_12px_rgba(0,212,170,0.3)] eduit-transition hover:scale-105 hover:shadow-[0_6px_16px_rgba(0,212,170,0.4)] disabled:opacity-50">
-          <Send className="size-5" />
+      <TooltipHost label="Enviar áudio" side="top" contentClassName="text-center">
+        <button
+          type="button"
+          onClick={send}
+          disabled={disabled}
+          aria-label="Enviar áudio"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-white shadow-sm lumen-transition hover:scale-105 hover:brightness-110 disabled:opacity-50"
+        >
+          <Send className="size-4" />
         </button>
       </TooltipHost>
     </div>

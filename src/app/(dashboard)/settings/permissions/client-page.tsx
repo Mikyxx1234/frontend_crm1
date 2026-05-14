@@ -14,17 +14,19 @@ type VisibilitySettings = Record<string, VisibilityMode>;
 
 type SelfAssignSettings = Record<string, boolean>;
 
-async function fetchSettings(): Promise<VisibilitySettings> {
-  const res = await fetch(apiUrl("/api/settings/visibility"));
+type ScopeGrantsPayload = Record<string, unknown>;
+type PermissionsPayload = {
+  canManage: boolean;
+  featureEnabled: boolean;
+  visibility: VisibilitySettings;
+  selfAssign: SelfAssignSettings;
+  scopeGrants: ScopeGrantsPayload;
+};
+
+async function fetchSettings(): Promise<PermissionsPayload> {
+  const res = await fetch(apiUrl("/api/settings/permissions"));
   if (!res.ok) throw new Error("Erro ao carregar");
   return res.json();
-}
-
-async function fetchSelfAssign(): Promise<SelfAssignSettings> {
-  const res = await fetch(apiUrl("/api/settings/self-assign"));
-  if (!res.ok) throw new Error("Erro ao carregar");
-  const data = (await res.json()) as { settings: SelfAssignSettings };
-  return data.settings;
 }
 
 const ROLES = [
@@ -70,24 +72,26 @@ export default function PermissionsPage() {
     queryKey: ["visibility-settings"],
     queryFn: fetchSettings,
   });
-
-  const { data: selfAssignSettings, isLoading: loadingSelfAssign } = useQuery({
-    queryKey: ["self-assign-settings"],
-    queryFn: fetchSelfAssign,
-  });
+  const [scopeDraft, setScopeDraft] = React.useState<string>("{}");
+  const [scopeDraftError, setScopeDraftError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (settings?.scopeGrants) {
+      setScopeDraft(JSON.stringify(settings.scopeGrants, null, 2));
+    }
+  }, [settings?.scopeGrants]);
 
   const mutation = useMutation({
     mutationFn: async (body: Record<string, VisibilityMode>) => {
-      const res = await fetch(apiUrl("/api/settings/visibility"), {
+      const res = await fetch(apiUrl("/api/settings/permissions"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ visibility: body }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || "Erro ao salvar");
       }
-      return res.json() as Promise<VisibilitySettings>;
+      return res.json() as Promise<PermissionsPayload>;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["visibility-settings"], data);
@@ -96,20 +100,37 @@ export default function PermissionsPage() {
 
   const selfAssignMutation = useMutation({
     mutationFn: async (body: Record<string, boolean>) => {
-      const res = await fetch(apiUrl("/api/settings/self-assign"), {
+      const res = await fetch(apiUrl("/api/settings/permissions"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ selfAssign: body }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || "Erro ao salvar");
       }
-      const data = (await res.json()) as { settings: SelfAssignSettings };
-      return data.settings;
+      const data = (await res.json()) as PermissionsPayload;
+      return data;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["self-assign-settings"], data);
+      queryClient.setQueryData(["visibility-settings"], data);
+    },
+  });
+  const scopeMutation = useMutation({
+    mutationFn: async (scopeGrants: ScopeGrantsPayload) => {
+      const res = await fetch(apiUrl("/api/settings/permissions"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scopeGrants }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Erro ao salvar");
+      }
+      return res.json() as Promise<PermissionsPayload>;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["visibility-settings"], data);
     },
   });
 
@@ -152,7 +173,7 @@ export default function PermissionsPage() {
       ) : (
         <div className="space-y-4">
           {ROLES.map((role) => {
-            const currentMode = settings?.[role.key] ?? (role.key === "MEMBER" ? "own" : "all");
+            const currentMode = settings?.visibility?.[role.key] ?? (role.key === "MEMBER" ? "own" : "all");
 
             return (
               <div
@@ -277,14 +298,14 @@ export default function PermissionsPage() {
 
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   {(["MANAGER", "MEMBER"] as const).map((roleKey) => {
-                    const enabled = selfAssignSettings?.[roleKey] ?? true;
+                    const enabled = settings?.selfAssign?.[roleKey] ?? true;
                     const roleLabel = roleKey === "MANAGER" ? "Gerente" : "Membro";
                     return (
                       <button
                         key={roleKey}
                         type="button"
                         onClick={() => handleSelfAssignChange(roleKey, !enabled)}
-                        disabled={selfAssignMutation.isPending || loadingSelfAssign}
+                        disabled={selfAssignMutation.isPending}
                         className={cn(
                           "flex items-center justify-between gap-3 rounded-xl border-2 p-4 text-left transition-all duration-200",
                           enabled
@@ -342,6 +363,60 @@ export default function PermissionsPage() {
               <strong>Como funciona:</strong> quando um usuario com visibilidade &quot;apenas os proprios&quot; acessa o pipeline ou inbox,
               ele ve somente os leads onde esta definido como responsavel. Leads sem responsavel ficam visiveis apenas para quem tem visibilidade total.
             </p>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-50">
+                Escopo granular (funil/etapa/campo/sidebar)
+              </h3>
+              <span className={cn("text-xs font-semibold", settings?.featureEnabled ? "text-emerald-600" : "text-amber-600")}>
+                {settings?.featureEnabled ? "Feature flag ativa" : "Feature flag inativa"}
+              </span>
+            </div>
+            <p className="mb-3 text-xs text-gray-500">
+              Edite os grants em JSON. Use arrays por role (ADMIN/MANAGER/MEMBER). Sem regra = fallback legado.
+              <span className="mt-2 block text-[11px] leading-relaxed text-gray-400">
+                <strong className="text-gray-500">Inbox (abas visíveis para Membro):</strong>{" "}
+                <code className="rounded bg-gray-100 px-1 py-0.5 text-[10px] dark:bg-gray-800">
+                  &quot;inbox&quot;: &#123; &quot;tabs&quot;: &#123; &quot;MEMBER&quot;: [&quot;entrada&quot;,&quot;esperando&quot;,&quot;respondidas&quot;] &#125; &#125;
+                </code>
+                — omitir <code className="text-[10px]">inbox.tabs</code> mantém o padrão (Esperando + Respondidos). Use{" "}
+                <code className="text-[10px]">[&quot;*&quot;]</code> para todas as abas.
+              </span>
+            </p>
+            <textarea
+              value={scopeDraft}
+              onChange={(e) => setScopeDraft(e.target.value)}
+              className="min-h-[220px] w-full rounded-xl border border-gray-300 bg-gray-50 p-3 font-mono text-xs text-gray-800 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
+            />
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  let parsed: ScopeGrantsPayload;
+                  try {
+                    parsed = JSON.parse(scopeDraft) as ScopeGrantsPayload;
+                  } catch {
+                    setScopeDraftError("JSON inválido.");
+                    return;
+                  }
+                  setScopeDraftError(null);
+                  scopeMutation.mutate(parsed);
+                }}
+                className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white"
+                disabled={scopeMutation.isPending}
+              >
+                Salvar grants granulares
+              </button>
+              {scopeDraftError ? (
+                <span className="text-xs text-red-600">{scopeDraftError}</span>
+              ) : null}
+              {scopeMutation.isError ? (
+                <span className="text-xs text-red-600">
+                  {scopeMutation.error instanceof Error ? scopeMutation.error.message : "Erro ao salvar grants"}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       )}

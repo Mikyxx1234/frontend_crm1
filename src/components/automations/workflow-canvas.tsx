@@ -157,6 +157,21 @@ function collectLeafStepIds(steps: AutomationStep[]): Set<string> {
   const leaves = new Set<string>();
   for (const step of steps) {
     if (TERMINAL_STEP_TYPES.has(step.type)) continue;
+    if (isInteractiveStep(step.type)) {
+      const cfg = step.config as Record<string, unknown>;
+      const buttons = Array.isArray(cfg.buttons)
+        ? (cfg.buttons as { gotoStepId?: string }[])
+        : [];
+      const hasAnyValidGoto = buttons.some(
+        (b) => b.gotoStepId && b.gotoStepId !== "__none__" && stepIds.has(b.gotoStepId)
+      );
+      const elseGoto = typeof cfg.elseGotoStepId === "string"
+        && cfg.elseGotoStepId
+        && cfg.elseGotoStepId !== "__none__"
+        && stepIds.has(cfg.elseGotoStepId);
+      if (!hasAnyValidGoto && !elseGoto) leaves.add(step.id);
+      continue;
+    }
     if (BRANCHING_STEP_TYPES.has(step.type)) continue;
     const next = readNextStepId(step.config);
     const hasRealNext = next && next !== NONE && stepIds.has(next);
@@ -232,10 +247,13 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
         : [];
 
       buttons.forEach((btn, idx) => {
-        if (!btn.gotoStepId || !stepIds.has(btn.gotoStepId)) return;
+        const gotoId = btn.gotoStepId && btn.gotoStepId !== "__none__"
+          ? btn.gotoStepId
+          : undefined;
+        if (!gotoId || !stepIds.has(gotoId)) return;
         out.push({
-          id: `${a.id}-btn_${idx}-${btn.gotoStepId}`,
-          source: a.id, target: btn.gotoStepId,
+          id: `${a.id}-btn_${idx}-${gotoId}`,
+          source: a.id, target: gotoId,
           sourceHandle: `btn_${idx}`,
           animated: false, data: EDGE_DATA_BUTTON, type: EDGE_TYPE,
           interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
@@ -459,7 +477,11 @@ function WorkflowCanvasInner({
       onDelete: (id: string) => void,
       onAddStep: (type: ActionStepType, afterStepId: string | null) => void
     ): Node[] => {
-      const triggerSummary = summarizeTriggerConfig(triggerType, triggerConfig);
+      const triggerSummary = summarizeTriggerConfig(
+        triggerType,
+        triggerConfig,
+        stageNameLookup,
+      );
       const ts = stats?.trigger ?? {};
       const triggerNode: Node = {
         id: TRIGGER_ID,
@@ -1181,14 +1203,14 @@ function WorkflowCanvasInner({
             color="#cbd5e1"
           />
           <Controls
-            className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/85! shadow-premium! backdrop-blur-xl! [&>button]:border-0! [&>button]:bg-transparent! [&>button]:text-slate-600! [&>button:hover]:bg-brand-blue/10! [&>button:hover]:text-brand-blue!"
+            className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/85! shadow-[var(--shadow-lg)]! backdrop-blur-xl! [&>button]:border-0! [&>button]:bg-transparent! [&>button]:text-[var(--color-ink-soft)]! [&>button:hover]:bg-primary/10! [&>button:hover]:text-primary!"
           />
           <MiniMap
-            className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/70! shadow-premium! backdrop-blur-xl!"
+            className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/70! shadow-[var(--shadow-lg)]! backdrop-blur-xl!"
             maskColor="rgba(13,27,62,0.06)"
             nodeColor={(n) => {
               if (isAddStepNodeId(n.id)) return "transparent";
-              if (n.id === TRIGGER_ID) return "#507df1";
+              if (n.id === TRIGGER_ID) return "var(--color-primary)";
               return "#94a3b8";
             }}
             nodeStrokeColor="rgba(255,255,255,0.7)"

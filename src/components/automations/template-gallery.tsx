@@ -80,7 +80,7 @@ export function TemplateGallery({ onApplyTemplate, onStartBlank }: TemplateGalle
                 "group inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors",
                 active
                   ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-black/6 bg-white text-slate-600 hover:border-black/10 hover:text-slate-900",
+                  : "border-black/6 bg-white text-[var(--color-ink-soft)] hover:border-black/10 hover:text-slate-900",
               )}
             >
               {f.label}
@@ -126,7 +126,7 @@ function HeroCard({ onStartBlank, total }: { onStartBlank: () => void; total: nu
             <p className="text-[11px] font-bold uppercase tracking-widest text-blue-200/90">
               Templates
             </p>
-            <h2 className="text-[18px] font-black tracking-tight sm:text-[20px]">
+            <h2 className="text-[18px] font-extrabold tracking-tight sm:text-[20px]">
               Comece com um fluxo pronto
             </h2>
             <p className="mt-1 max-w-lg text-[12px] text-slate-300 sm:text-[13px]">
@@ -188,10 +188,10 @@ function TemplateCard({
         <Icon className="size-5" />
       </div>
 
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-muted)]">
         {category.label}
       </p>
-      <h3 className="mt-1 text-[14px] font-black tracking-tight text-slate-900">
+      <h3 className="mt-1 text-[14px] font-extrabold tracking-tight text-slate-900">
         {template.name}
       </h3>
       <p className="mt-1.5 line-clamp-2 text-[12px] font-medium leading-snug text-slate-500">
@@ -221,7 +221,7 @@ function TemplateCard({
             {template.ready ? "Pronto" : "Ajustar"}
           </span>
         </div>
-        <span className="inline-flex items-center gap-1 text-[12px] font-bold text-slate-400 transition-colors group-hover:text-blue-600">
+        <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--color-ink-muted)] transition-colors group-hover:text-blue-600">
           Usar
           <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
         </span>

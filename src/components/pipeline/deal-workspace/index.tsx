@@ -11,15 +11,22 @@ import { toast } from "sonner";
 import { useConfirm } from "@/hooks/use-confirm";
 import { DealForm } from "@/components/pipeline/deal-form";
 import type { BoardStage } from "@/components/pipeline/kanban-board";
+import { ConversationHeader, type ConversationHeaderTab } from "@/components/inbox/conversation-header";
+import { WhatsappCallChip } from "@/components/inbox/whatsapp-call-chip";
 import type { TransferControlUser } from "@/components/inbox/transfer-control";
+import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn, dealNumericValue } from "@/lib/utils";
 
 import { WorkspaceShell } from "./shell";
-import { WorkspaceHeader } from "./header";
-import { WorkspaceTabs, type RightTabValue } from "./tabs";
+import {
+  DealHeaderWorkspaceOutcomes,
+  DealWorkspaceToolbarMenuItems,
+} from "./header";
+import { type RightTabValue } from "./tabs";
 import { WorkspaceSidebar } from "./sidebar";
-import { ConversationsPanel } from "./panels/conversations";
+import { DealChatPanel } from "./deal-chat-panel";
+import { WorkspaceConversationList } from "./workspace-conversation-list";
 import { ActivitiesPanel } from "./panels/activities";
 import { NotesPanel } from "./panels/notes";
 import { TimelinePanel } from "./panels/timeline";
@@ -56,7 +63,6 @@ async function fetchUsers(): Promise<UserOption[]> {
 
 const boardKey = (pipelineId: string) => ["pipeline-board", pipelineId] as const;
 const dealKey = (id: string) => ["deal", id] as const;
-
 type DealWorkspaceProps = {
   dealId: string | null;
   open: boolean;
@@ -79,7 +85,8 @@ export function DealWorkspace({
   const [rightTab, setRightTab] = React.useState<RightTabValue>("conversations");
   const [selectedConv, setSelectedConv] = React.useState<ConversationRow | null>(null);
   const [convStatus, setConvStatus] = React.useState("");
-  const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
+  const [convListOpen, setConvListOpen] = React.useState(false);
+  const inConversationSearchRef = React.useRef<{ open: () => void } | null>(null);
 
   const { data: deal, isLoading: dealLoading } = useQuery({
     queryKey: dealId ? dealKey(dealId) : ["deal", "none"],
@@ -95,6 +102,13 @@ export function DealWorkspace({
   });
 
   const [autoLoaded, setAutoLoaded] = React.useState(false);
+  const autoCreateConvRef = React.useRef(false);
+
+  const invalidateAll = React.useCallback(() => {
+    if (dealId) queryClient.invalidateQueries({ queryKey: dealKey(dealId) });
+    if (contactId) queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+    queryClient.invalidateQueries({ queryKey: boardKey(pipelineId) });
+  }, [dealId, contactId, queryClient]);
 
   React.useEffect(() => {
     if (!open) {
@@ -104,9 +118,45 @@ export function DealWorkspace({
       setConvStatus("");
       setRightTab("conversations");
       setAutoLoaded(false);
-      setMobileSidebarOpen(false);
+      setConvListOpen(false);
+      autoCreateConvRef.current = false;
     }
   }, [open]);
+
+  const autoCreateConversation = useMutation({
+    mutationFn: async () => {
+      if (!contactId) throw new Error("Sem contato");
+      const res = await fetch(apiUrl("/api/conversations/create"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId, skipSend: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao criar conversa");
+      return data.conversation as ConversationRow;
+    },
+    onSuccess: (conv) => {
+      if (contactId) queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+      invalidateAll();
+      setSelectedConv(conv);
+      setConvStatus(conv.status);
+    },
+  });
+
+  React.useEffect(() => {
+    if (
+      !open ||
+      !contactId ||
+      !contact ||
+      contact.conversations.length > 0 ||
+      autoCreateConvRef.current ||
+      autoCreateConversation.isPending
+    ) {
+      return;
+    }
+    autoCreateConvRef.current = true;
+    autoCreateConversation.mutate();
+  }, [open, contactId, contact, autoCreateConversation]);
 
   React.useEffect(() => {
     if (contact && !autoLoaded && contact.conversations.length > 0 && !selectedConv) {
@@ -116,12 +166,6 @@ export function DealWorkspace({
       setAutoLoaded(true);
     }
   }, [contact, autoLoaded, selectedConv]);
-
-  const invalidateAll = () => {
-    if (dealId) queryClient.invalidateQueries({ queryKey: dealKey(dealId) });
-    if (contactId) queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
-    queryClient.invalidateQueries({ queryKey: boardKey(pipelineId) });
-  };
 
   const statusMutation = useMutation({
     mutationFn: async (input: { status: "WON" | "LOST" | "OPEN"; lostReason?: string }) => {
@@ -246,14 +290,40 @@ export function DealWorkspace({
     },
   });
 
+  const dealUpdateMutation = useMutation({
+    mutationFn: async (body: Record<string, unknown>) => {
+      if (!dealId) throw new Error("Sem negocio");
+      const res = await fetch(apiUrl(`/api/deals/${dealId}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Erro ao atualizar negocio");
+      return res.json();
+    },
+    onSuccess: invalidateAll,
+  });
+
   const stageOptions = boardStages.map((s) => ({ id: s.id, name: s.name, color: s.color }));
   const isLoading = dealLoading || (!!contactId && contactLoading);
+  const workspaceTabs: ConversationHeaderTab[] = [
+    { key: "conversations", label: "Conversa", count: contact?.conversations.length ?? 0 },
+    { key: "activities", label: "Atividades", count: deal?.activities?.length ?? 0 },
+    { key: "notes", label: "Notas", count: deal?.notes?.length ?? 0 },
+    { key: "timeline", label: "Timeline" },
+  ];
+  const conversationTags =
+    selectedConv?.tags?.map((t) => ({ name: t.tag.name, color: t.tag.color })) ?? [];
 
   return (
-    <WorkspaceShell open={open} onClose={() => onOpenChange(false)}>
+    <WorkspaceShell
+      open={open}
+      onClose={() => onOpenChange(false)}
+      hideFloatingClose={!!deal && !isLoading}
+    >
       {isLoading ? (
         <div className="flex h-full items-center justify-center">
-          <Loader2 className="size-8 animate-spin text-slate-400" />
+          <Loader2 className="size-8 animate-spin text-[var(--color-ink-muted)]" />
         </div>
       ) : !deal ? (
         <div className="flex h-full items-center justify-center text-[14px] tracking-tight text-slate-500">
@@ -261,61 +331,105 @@ export function DealWorkspace({
         </div>
       ) : (
         <div className="flex h-full min-h-0 flex-col">
-          <WorkspaceHeader
-            deal={deal}
-            contact={contact}
-            onEdit={() => setEditing(true)}
-            onWon={() => statusMutation.mutate({ status: "WON" })}
-            onLostOpen={() => setLostOpen(true)}
-            onReopen={() => statusMutation.mutate({ status: "OPEN" })}
-            onDelete={async () => {
-              const ok = await confirm({
-                title: "Excluir negocio",
-                description: "Excluir este negocio? Esta acao nao pode ser desfeita.",
-                confirmLabel: "Excluir",
-                variant: "destructive",
-              });
-              if (ok) deleteMutation.mutate();
-            }}
-            lostOpen={lostOpen}
-            onLostConfirm={(reason) => statusMutation.mutate({ status: "LOST", lostReason: reason })}
-            onLostCancel={() => setLostOpen(false)}
-            statusBusy={statusMutation.isPending}
-            onToggleSidebar={() => setMobileSidebarOpen(true)}
-            conversation={selectedConv}
-            conversationTags={
-              selectedConv?.tags
-                ? selectedConv.tags.map((t) => ({ name: t.tag.name, color: t.tag.color }))
-                : null
+          <ConversationHeader
+            contactId={contact?.id ?? null}
+            contactName={contact?.name ?? deal.title}
+            contactPhone={contact?.phone ?? null}
+            contactAvatarUrl={contact?.avatarUrl ?? null}
+            contactChannel={selectedConv?.channel ?? "whatsapp"}
+            contactHref={contact?.id ? `/contacts/${contact.id}` : null}
+            conversationId={selectedConv?.id ?? null}
+            conversationChannel={selectedConv?.channel ?? null}
+            tabs={workspaceTabs}
+            activeTab={rightTab}
+            onTabChange={(key) => setRightTab(key as RightTabValue)}
+            onSearch={selectedConv ? () => inConversationSearchRef.current?.open() : undefined}
+            onClose={() => onOpenChange(false)}
+            onOpenConversationList={
+              contact && contact.conversations.length > 1
+                ? () => setConvListOpen(true)
+                : undefined
             }
-            myUserId={myUserId}
-            canManageAssignee={canManageAssignee}
-            currentAssigneeId={selectedConv?.assignedToId ?? null}
-            teamUsers={teamUsers}
-            assignLoading={assignLoading}
-            onAssign={(uid) => void assignConversation(uid)}
-            onTagsUpdated={() => {
-              if (contactId) queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
-            }}
+            phoneReplacement={
+              selectedConv ? (
+                <WhatsappCallChip
+                  conversationId={selectedConv.id}
+                  channel={selectedConv.channel}
+                />
+              ) : undefined
+            }
+            overflowMenu={
+              <DealWorkspaceToolbarMenuItems
+                conversationId={selectedConv?.id ?? null}
+                conversationChannel={selectedConv?.channel ?? null}
+                contactId={contact?.id ?? null}
+                contactName={contact?.name ?? deal.title}
+                canManageAssignee={canManageAssignee}
+                myUserId={myUserId}
+                currentAssigneeId={selectedConv?.assignedToId ?? null}
+                teamUsers={teamUsers}
+                assignLoading={assignLoading}
+                onAssign={(uid) => void assignConversation(uid)}
+                tags={conversationTags}
+                onTagsUpdated={() => {
+                  if (contactId) queryClient.invalidateQueries({ queryKey: ["contact", contactId] });
+                }}
+                onEdit={() => setEditing(true)}
+                onDelete={async () => {
+                  const ok = await confirm({
+                    title: "Excluir negocio",
+                    description: "Excluir este negocio? Esta acao nao pode ser desfeita.",
+                    confirmLabel: "Excluir",
+                    variant: "destructive",
+                  });
+                  if (ok) deleteMutation.mutate();
+                }}
+              />
+            }
+            actionsSlot={
+              <DealHeaderWorkspaceOutcomes
+                dealStatus={deal.status}
+                statusBusy={statusMutation.isPending}
+                onWon={() => statusMutation.mutate({ status: "WON" })}
+                onLostOpen={() => setLostOpen(true)}
+                onReopen={() => statusMutation.mutate({ status: "OPEN" })}
+              />
+            }
           />
 
-          {/* Two-column body */}
-          <div
-            className={cn(
-              "grid min-h-0 flex-1 grid-cols-1 overflow-hidden",
-              "md:grid-cols-[440px_minmax(0,1fr)] xl:grid-cols-[480px_minmax(0,1fr)]",
-            )}
-          >
-            {/* Sidebar — desktop
-                Background `slate-50` (DS canônico) em vez do `#f4f7fa` (que
-                é DNA do scroller de chat — `ui-fidelity §0`). Isso cria a
-                separação visual clara: sidebar = neutro CRM, painel
-                direito = chat scroller quando o tab "Conversas" estiver
-                ativo. Padding levemente compacto (4 sm:5) pra dar mais
-                ar pros cards flat. */}
-            <aside className="hidden min-h-0 border-r border-slate-100 bg-slate-50 md:block">
-              <div className="scrollbar-thin h-full overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
-                {contact ? (
+          {contact && contact.conversations.length > 1 ? (
+            <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-white px-2 py-1.5 lg:hidden">
+              {contact.conversations.map((c) => {
+                const active = selectedConv?.id === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedConv(c);
+                      setConvStatus(c.status);
+                    }}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors",
+                      active
+                        ? "border-primary bg-[var(--color-primary-soft)] text-primary"
+                        : "border-border bg-white text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]",
+                    )}
+                  >
+                    {c.inboxName?.trim() || "Conversa"}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {/* Layout 2 colunas (lg+): painel do negócio | chat fluido */}
+          <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
+            <aside className="hidden min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-white lg:flex">
+              <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+                {rightTab === "conversations" && contact ? (
+                  // Modo compacto é o único que tem SortableSidebar
+                  // Forçar compact=true sempre que WorkspaceSidebar for chamado do index.tsx
                   <WorkspaceSidebar
                     deal={deal}
                     contact={contact}
@@ -327,53 +441,12 @@ export function DealWorkspace({
                     ownerPending={ownerMutation.isPending}
                     onContactUpdate={(d) => contactUpdateMutation.mutate(d)}
                     isUpdating={contactUpdateMutation.isPending}
+                    onDealUpdate={(d) => dealUpdateMutation.mutate(d)}
+                    dealUpdatePending={dealUpdateMutation.isPending}
+                    density="compact"
                   />
-                ) : (
-                  <EmptySidebar />
-                )}
-              </div>
-            </aside>
-
-            {/* Right column — tabs + painéis
-                Header das tabs flat (sem `backdrop-blur-md` + bg-white/80
-                glassy que competia com a pílula azul das tabs). Padding
-                vertical reduzido (py-2.5) — a pílula h-10 já tem peso. */}
-            <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
-              <div
-                className={cn(
-                  "flex shrink-0 items-center gap-3 border-b border-slate-100",
-                  "bg-white px-5 py-2.5 sm:px-6",
-                )}
-              >
-                <WorkspaceTabs
-                  value={rightTab}
-                  onChange={(tab) => {
-                    setRightTab(tab);
-                    if (tab !== "conversations") setSelectedConv(null);
-                  }}
-                  conversationsCount={contact?.conversations.length ?? 0}
-                  activitiesCount={deal.activities.length}
-                  notesCount={deal.notes.length}
-                />
-              </div>
-
-              <div className="flex min-h-0 flex-1 flex-col">
-                {rightTab === "conversations" && (
-                  <ConversationsPanel
-                    conversations={contact?.conversations ?? []}
-                    selected={selectedConv}
-                    onSelect={(c) => {
-                      setSelectedConv(c);
-                      setConvStatus(c?.status ?? "");
-                    }}
-                    convStatus={convStatus}
-                    onStatusChange={setConvStatus}
-                    contactId={contactId}
-                    contactPhone={contact?.phone}
-                    onConversationCreated={invalidateAll}
-                  />
-                )}
-                {rightTab === "activities" && (
+                ) : null}
+                {rightTab === "activities" ? (
                   <ActivitiesPanel
                     activities={deal.activities}
                     dealId={deal.id}
@@ -382,52 +455,76 @@ export function DealWorkspace({
                       queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
                     }}
                   />
-                )}
-                {rightTab === "notes" && (
+                ) : null}
+                {rightTab === "notes" && contactId ? (
                   <NotesPanel
                     notes={deal.notes}
                     contactId={contactId}
                     dealId={deal.id}
                     onCreated={invalidateAll}
                   />
-                )}
-                {rightTab === "timeline" && <TimelinePanel dealId={deal.id} />}
+                ) : null}
+                {rightTab === "timeline" ? <TimelinePanel dealId={deal.id} /> : null}
               </div>
+            </aside>
+
+            <section className="relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-white">
+              {autoCreateConversation.isPending && !selectedConv ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3">
+                  <Loader2 className="size-8 animate-spin text-[var(--color-ink-muted)]" />
+                  <p className="text-[12px] text-[var(--color-ink-muted)]">Abrindo conversa…</p>
+                </div>
+              ) : selectedConv ? (
+                <DealChatPanel
+                  conversationId={selectedConv.id}
+                  conversationStatus={convStatus || selectedConv.status}
+                  onStatusChange={setConvStatus}
+                  contactId={contactId}
+                  inConversationSearchRef={inConversationSearchRef}
+                />
+              ) : (
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+                  <p className="text-[12px] font-medium text-[var(--color-ink-muted)]">
+                    {contact?.conversations.length === 0
+                      ? "Não foi possível abrir a conversa ainda."
+                      : "Carregando conversa…"}
+                  </p>
+                </div>
+              )}
             </section>
           </div>
 
-          {/* Mobile sidebar — bottom-sheet-ish drawer pela esquerda */}
           <AnimatePresence>
-            {mobileSidebarOpen && contact ? (
+            {convListOpen && contact && contact.conversations.length > 0 ? (
               <>
                 <motion.div
-                  key="ms-overlay"
+                  key="conv-list-overlay"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18 }}
-                  onClick={() => setMobileSidebarOpen(false)}
-                  className="fixed inset-0 z-[65] bg-slate-900/30 backdrop-blur-sm md:hidden"
+                  onClick={() => setConvListOpen(false)}
+                  className="fixed inset-0 z-[65] bg-slate-900/30 backdrop-blur-sm"
                 />
                 <motion.aside
-                  key="ms-panel"
+                  key="conv-list-panel"
                   initial={{ x: "-100%" }}
                   animate={{ x: 0 }}
                   exit={{ x: "-100%" }}
                   transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
-                    "fixed inset-y-0 left-0 z-[66] flex w-[88vw] max-w-md flex-col",
-                    "bg-slate-50 shadow-premium md:hidden",
+                    "fixed inset-y-0 left-0 z-[66] flex w-[88vw] max-w-sm flex-col",
+                    "bg-[var(--color-bg-subtle)] shadow-[var(--shadow-lg)]",
                   )}
                 >
                   <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-4 py-3">
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                      Dados do negócio
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">
+                      Conversas
                     </span>
                     <TooltipHost label="Fechar" side="left">
                       <button
                         type="button"
-                        onClick={() => setMobileSidebarOpen(false)}
+                        onClick={() => setConvListOpen(false)}
                         aria-label="Fechar"
                         className="inline-flex size-8 items-center justify-center rounded-full border border-black/6 bg-white text-slate-500 hover:bg-slate-100 active:scale-95"
                       >
@@ -435,18 +532,15 @@ export function DealWorkspace({
                       </button>
                     </TooltipHost>
                   </div>
-                  <div className="scrollbar-thin flex-1 overflow-y-auto px-4 py-4">
-                    <WorkspaceSidebar
-                      deal={deal}
-                      contact={contact}
-                      users={users}
-                      stageOptions={stageOptions}
-                      onStageChange={(stageId) => stageMutation.mutate(stageId)}
-                      stagePending={stageMutation.isPending}
-                      onOwnerChange={(ownerId) => ownerMutation.mutate(ownerId)}
-                      ownerPending={ownerMutation.isPending}
-                      onContactUpdate={(d) => contactUpdateMutation.mutate(d)}
-                      isUpdating={contactUpdateMutation.isPending}
+                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <WorkspaceConversationList
+                      conversations={contact.conversations}
+                      selectedId={selectedConv?.id ?? null}
+                      onSelect={(c) => {
+                        setSelectedConv(c);
+                        setConvStatus(c.status);
+                        setConvListOpen(false);
+                      }}
                     />
                   </div>
                 </motion.aside>
@@ -473,18 +567,18 @@ export function DealWorkspace({
                   transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
                     "w-full max-w-xl rounded-[28px] border border-slate-100 bg-white p-6 sm:p-8",
-                    "shadow-premium",
+                    "shadow-[var(--shadow-lg)]",
                   )}
                 >
                   <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-[18px] font-black tracking-tight text-slate-900">
+                    <h2 className="text-[18px] font-extrabold tracking-tight text-slate-900">
                       Editar negócio
                     </h2>
                     <button
                       type="button"
                       onClick={() => setEditing(false)}
                       aria-label="Fechar edição"
-                      className="inline-flex size-8 items-center justify-center rounded-full border border-black/6 bg-white text-slate-500 hover:bg-slate-50 active:scale-95"
+                      className="inline-flex size-8 items-center justify-center rounded-full border border-black/6 bg-white text-slate-500 hover:bg-[var(--color-bg-subtle)] active:scale-95"
                     >
                       <X className="size-4" />
                     </button>
@@ -508,6 +602,15 @@ export function DealWorkspace({
               </motion.div>
             ) : null}
           </AnimatePresence>
+
+          <LossReasonDialog
+            open={lostOpen}
+            onOpenChange={(o) => {
+              if (!o) setLostOpen(false);
+            }}
+            onConfirm={(reason) => statusMutation.mutate({ status: "LOST", lostReason: reason })}
+            isPending={statusMutation.isPending}
+          />
         </div>
       )}
     </WorkspaceShell>
@@ -516,7 +619,7 @@ export function DealWorkspace({
 
 function EmptySidebar() {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center text-[13px] tracking-tight text-slate-400">
+    <div className="flex flex-col items-center justify-center py-16 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
       <User className="mb-3 size-10 opacity-30" strokeWidth={1.5} />
       <p>Nenhum contato vinculado a este negocio.</p>
     </div>

@@ -20,7 +20,7 @@ const ACTIVITY_TYPES = [
   { key: "meeting", label: "Reuniões", icon: Calendar, color: "text-violet-600 bg-violet-50" },
   { key: "task", label: "Tarefas", icon: CheckSquare, color: "text-amber-600 bg-amber-50" },
   { key: "whatsapp", label: "WhatsApp", icon: MessageSquare, color: "text-green-600 bg-green-50" },
-  { key: "note", label: "Notas", icon: StickyNote, color: "text-slate-600 bg-slate-50" },
+  { key: "note", label: "Notas", icon: StickyNote, color: "text-[var(--color-ink-soft)] bg-[var(--color-bg-subtle)]" },
 ] as const;
 
 export function ActivitiesWidget() {

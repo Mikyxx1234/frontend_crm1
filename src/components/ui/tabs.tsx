@@ -79,7 +79,8 @@ const TabsList = React.forwardRef<
     ref={ref}
     role="tablist"
     className={cn(
-      "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
+      // TabsList Lumen: fundo bg-subtle, radius 8px, sem sombra pesada
+      "inline-flex h-9 items-center justify-center rounded-lg bg-[var(--color-bg-muted)] p-1 text-[var(--color-ink-soft)]",
       className
     )}
     {...props}
@@ -110,10 +111,11 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
         tabIndex={selected ? 0 : -1}
         data-state={selected ? "active" : "inactive"}
         className={cn(
-          "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+          // TabsTrigger Lumen: ativa = bg branco + sombra suave + texto índigo
+          "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50",
           selected
-            ? "bg-background text-foreground shadow-sm"
-            : "hover:text-foreground",
+            ? "bg-background text-primary shadow-[var(--shadow-sm)] font-semibold"
+            : "text-[var(--color-ink-soft)] hover:text-foreground hover:bg-[var(--color-bg-hover)]",
           className
         )}
         {...props}

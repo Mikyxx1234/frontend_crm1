@@ -7,7 +7,7 @@
  * Suporta 4 ops: add_step, update_step_config, remove_step, connect.
  */
 
-import type { CopilotPatch, CopilotPatchOp } from "@/lib/copilot-client-types";
+import type { CopilotPatch, CopilotPatchOp } from "@/services/ai/automation-copilot";
 
 import {
   newStepId,

@@ -47,7 +47,7 @@ export function StageHeader({
 
       {maxColumnValue > 0 && (
         <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-[#e2e8f0]">
-          <div className="h-full rounded-full eduit-transition" style={{ width: `${progressPct}%`, backgroundColor: dotColor }} />
+          <div className="h-full rounded-full lumen-transition" style={{ width: `${progressPct}%`, backgroundColor: dotColor }} />
         </div>
       )}
     </div>

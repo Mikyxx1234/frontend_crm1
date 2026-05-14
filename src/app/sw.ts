@@ -1,3 +1,4 @@
+import { apiUrl } from "@/lib/api";
 /// <reference lib="webworker" />
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { defaultCache } from "@serwist/next/worker";
@@ -153,14 +154,14 @@ self.addEventListener("pushsubscriptionchange", (event: any) => {
   event.waitUntil(
     (async () => {
       try {
-        const res = await fetch("/api/push/vapid-public");
+        const res = await fetch(apiUrl("/api/push/vapid-public"));
         if (!res.ok) return;
         const { publicKey } = (await res.json()) as { publicKey: string };
         const newSub = await self.registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
         });
-        await fetch("/api/push/subscribe", {
+        await fetch(apiUrl("/api/push/subscribe"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newSub.toJSON()),

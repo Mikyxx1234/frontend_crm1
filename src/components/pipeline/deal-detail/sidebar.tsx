@@ -13,8 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn, dealNumericValue, formatCurrency, formatDate, getInitials } from "@/lib/utils";
-import { ds } from "@/lib/design-system";
+import { dt } from "@/lib/design-tokens";
+import { cn, dealNumericValue, formatCurrency, formatDate, getInitials, tagPillStyle } from "@/lib/utils";
 
 import {
   CatalogProduct,
@@ -189,14 +189,14 @@ export function DealSidebar({
                   type={type}
                   value={draft[key]}
                   onChange={(e) => setDraft((p) => ({ ...p, [key]: e.target.value }))}
-                  className="h-9 rounded-lg border-slate-200 bg-slate-50 text-sm"
+                  className="h-9 rounded-lg border-border bg-[var(--color-bg-subtle)] text-sm"
                 />
               </div>
             ))}
             {contact.source && (
               <div className="grid gap-1.5">
                 <Label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Fonte</Label>
-                <div className="flex h-9 items-center rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm text-slate-500">
+                <div className="flex h-9 items-center rounded-lg border border-border bg-slate-100 px-3 text-sm text-slate-500">
                   {contact.source}
                 </div>
               </div>
@@ -206,17 +206,17 @@ export function DealSidebar({
           <div className="space-y-1.5">
             <div className="flex flex-wrap gap-2">
               {contact.company ? (
-                <Badge variant="outline" className="rounded-full border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                <Badge variant="outline" className="rounded-full border-border bg-white px-3 py-1 text-xs font-semibold text-[var(--color-ink-soft)]">
                   {contact.company.name}
                 </Badge>
               ) : null}
               {contact.source ? (
-                <Badge variant="outline" className="rounded-full border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                <Badge variant="outline" className="rounded-full border-border bg-white px-3 py-1 text-xs font-semibold text-[var(--color-ink-soft)]">
                   {contact.source}
                 </Badge>
               ) : null}
             </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="rounded-lg border border-border bg-[var(--color-bg-subtle)] px-4 py-3">
               <ContactInfoRows contact={contact} />
             </div>
           </div>
@@ -234,7 +234,7 @@ export function DealSidebar({
               .map((d) => (
                 <div
                   key={d.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm"
+                  className="flex items-center justify-between rounded-xl border border-border bg-[var(--color-bg-subtle)] px-3.5 py-2.5 text-sm"
                 >
                   <span className="truncate font-medium">{d.title}</span>
                   <Badge
@@ -363,10 +363,10 @@ function DealProductsSection({ dealId, compact = false }: { dealId: string; comp
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar produto…"
-            className="h-9 rounded-xl border-slate-200 bg-slate-50 text-sm"
+            className="h-9 rounded-xl border-border bg-[var(--color-bg-subtle)] text-sm"
             autoFocus
           />
-          <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="max-h-40 overflow-y-auto rounded-xl border border-border bg-white shadow-sm">
             {catalog.length === 0 ? (
               <p className="px-3 py-3 text-center text-xs text-muted-foreground">Nenhum produto encontrado</p>
             ) : (
@@ -376,7 +376,7 @@ function DealProductsSection({ dealId, compact = false }: { dealId: string; comp
                   type="button"
                   onClick={() => addMutation.mutate(p.id)}
                   disabled={addMutation.isPending}
-                  className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-slate-50"
+                  className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-[var(--color-bg-subtle)]"
                 >
                   <div className="min-w-0 flex-1">
                     <span className="font-medium">{p.name}</span>
@@ -421,7 +421,7 @@ function DealProductsSection({ dealId, compact = false }: { dealId: string; comp
                         min="0.01"
                         value={editQty}
                         onChange={(e) => setEditQty(e.target.value)}
-                        className="mt-1 h-8 rounded-lg border-slate-200 bg-white text-sm"
+                        className="mt-1 h-8 rounded-lg border-border bg-white text-sm"
                       />
                     </div>
                     <div>
@@ -433,7 +433,7 @@ function DealProductsSection({ dealId, compact = false }: { dealId: string; comp
                         max="100"
                         value={editDiscount}
                         onChange={(e) => setEditDiscount(e.target.value)}
-                        className="mt-1 h-8 rounded-lg border-slate-200 bg-white text-sm"
+                        className="mt-1 h-8 rounded-lg border-border bg-white text-sm"
                       />
                     </div>
                   </div>
@@ -466,9 +466,9 @@ function DealProductsSection({ dealId, compact = false }: { dealId: string; comp
                       )}
                     </div>
                     {item.productType === "SERVICE" ? (
-                      <div className="mt-1 text-slate-600">Valor fixo</div>
+                      <div className="mt-1 text-[var(--color-ink-soft)]">Valor fixo</div>
                     ) : (
-                      <div className="mt-1 text-slate-600">
+                      <div className="mt-1 text-[var(--color-ink-soft)]">
                         {item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}
                         {item.discount > 0 && <span className="ml-1 text-amber-600">-{item.discount}%</span>}
                       </div>
@@ -561,7 +561,7 @@ function SidebarDealSummaryCard({
   const dealTags = deal.tags ?? [];
 
   return (
-    <section className="border-b border-slate-200/90 pb-4">
+    <section className="border-b border-border/90 pb-4">
       <StageDropdown
         stages={stageOptions}
         currentStageId={deal.stage.id}
@@ -570,7 +570,7 @@ function SidebarDealSummaryCard({
         isPending={stagePending}
       />
 
-      <div className="mt-3 border-t border-slate-200/90 pt-3">
+      <div className="mt-3 border-t border-border/90 pt-3">
         <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Responsável</div>
         <CompactOwnerSelector
           currentOwner={deal.owner}
@@ -580,7 +580,7 @@ function SidebarDealSummaryCard({
         />
       </div>
 
-      <div className="mt-3 border-t border-slate-200/90 pt-3">
+      <div className="mt-3 border-t border-border/90 pt-3">
         <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Tags</div>
         <div className="flex flex-wrap items-center gap-1.5">
           {dealTags.length > 0 ? (
@@ -593,14 +593,14 @@ function SidebarDealSummaryCard({
               />
             ))
           ) : (
-            <span className="text-sm text-slate-400">Sem tags</span>
+            <span className="text-sm text-[var(--color-ink-muted)]">Sem tags</span>
           )}
           {!showTagComposer ? (
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="size-6 rounded-full border border-slate-200 bg-white text-slate-600 shadow-none hover:bg-slate-50"
+              className="size-6 rounded-full border border-border bg-white text-[var(--color-ink-soft)] shadow-none hover:bg-[var(--color-bg-subtle)]"
               onClick={() => setShowTagComposer(true)}
               disabled={addTagPending}
               aria-label="Adicionar tag"
@@ -675,7 +675,7 @@ function StageDropdown({
         disabled={isPending}
         className={cn(
           "flex w-full items-center justify-between rounded-xl px-3.5 py-3 text-left transition-colors",
-          "border border-slate-200 bg-white hover:border-slate-300",
+          "border border-border bg-white hover:border-slate-300",
           isPending && "cursor-wait opacity-70",
         )}
       >
@@ -688,11 +688,11 @@ function StageDropdown({
           <span className="truncate text-sm font-semibold text-slate-900">
             {current?.name ?? "—"}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-[var(--color-ink-muted)]">
             {currentIdx + 1}/{stages.length}
           </span>
         </div>
-        <ChevronDown className={cn("size-4 shrink-0 text-slate-400 transition-transform", open && "rotate-180")} />
+        <ChevronDown className={cn("size-4 shrink-0 text-[var(--color-ink-muted)] transition-transform", open && "rotate-180")} />
       </button>
 
       <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
@@ -713,7 +713,7 @@ function StageDropdown({
       </div>
 
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%-4px)] z-50 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="absolute left-0 right-0 top-[calc(100%-4px)] z-50 mt-1 overflow-hidden rounded-xl border border-border bg-white shadow-lg">
           <div className="border-b border-slate-100 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
             {pipelineName}
           </div>
@@ -771,12 +771,10 @@ function TagPillSmall({
   onRemove: () => void;
   isPending: boolean;
 }) {
-  const background = tag.color?.trim() || "#2563eb";
-
   return (
     <span
-      className={ds.tag.solidEditable}
-      style={{ backgroundColor: background }}
+      className={cn(dt.pill.base, "max-w-full gap-1")}
+      style={tagPillStyle(tag.name, tag.color)}
       title={tag.name}
     >
       <span className="max-w-[120px] truncate">{tag.name}</span>
@@ -784,7 +782,7 @@ function TagPillSmall({
         type="button"
         onClick={onRemove}
         disabled={isPending}
-        className="rounded-full p-0.5 opacity-70 transition hover:bg-white/15 hover:opacity-100 disabled:pointer-events-none"
+        className="rounded-[4px] p-0.5 opacity-70 transition hover:opacity-100 disabled:pointer-events-none"
         aria-label={`Remover tag ${tag.name}`}
       >
         <X className="size-2.5" />
@@ -832,7 +830,7 @@ function TagComposerInline({
   return (
     <div className={cn("mt-1.5", !isOpen && "hidden")}>
       {isOpen ? (
-        <div className="min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+        <div className="min-w-0 rounded-xl border border-border bg-white px-2.5 py-2">
           <div className="flex items-center gap-2">
             <Input
               value={draft}
@@ -844,13 +842,13 @@ function TagComposerInline({
                 }
               }}
               placeholder={canCreateTag ? "Buscar ou criar tag" : "Buscar tag"}
-              className="h-7 border-0 bg-transparent px-0 text-sm text-slate-700 shadow-none focus-visible:ring-0"
+              className="h-7 border-0 bg-transparent px-0 text-sm text-foreground shadow-none focus-visible:ring-0"
             />
             {canCreateTag && (
               <Button
                 type="button"
                 variant="ghost"
-                className="h-7 rounded-md px-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                className="h-7 rounded-md px-2.5 text-xs font-medium text-[var(--color-ink-soft)] hover:bg-slate-100"
                 onClick={onSubmit}
                 disabled={!draft.trim() || isPending}
               >
@@ -869,13 +867,13 @@ function TagComposerInline({
             </Button>
           </div>
           {draft && suggestions.length > 0 && (
-            <div className="mt-1.5 max-h-28 overflow-y-auto rounded-md border border-slate-200 bg-white">
+            <div className="mt-1.5 max-h-28 overflow-y-auto rounded-md border border-border bg-white">
               {suggestions.slice(0, 8).map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => onSelectExisting(t)}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-subtle)]"
                 >
                   <span className="size-2 rounded-full" style={{ backgroundColor: t.color || "#6b7280" }} />
                   {t.name}
@@ -943,30 +941,30 @@ function CompactOwnerSelector({
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={isPending}
-        className="flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50"
+        className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3.5 py-3 text-left shadow-none transition-colors hover:border-slate-300 hover:bg-[var(--color-bg-subtle)]"
       >
-        <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">
+        <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-foreground">
           {currentOwner?.name ? getInitials(currentOwner.name) : "?"}
           {currentOwner?.name ? <PresenceDot status={currentOwnerStatus} className="absolute -bottom-0.5 -right-0.5" /> : null}
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="truncate text-sm font-medium text-slate-800">{currentOwner?.name ?? "Sem responsável"}</span>
           {currentOwner?.name ? (
-            <span className="shrink-0 text-xs text-slate-400">· {presenceLabel(currentOwnerStatus)}</span>
+            <span className="shrink-0 text-xs text-[var(--color-ink-muted)]">· {presenceLabel(currentOwnerStatus)}</span>
           ) : null}
         </div>
         <ChevronDown className={cn("size-4 shrink-0 text-slate-500 transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-border bg-white p-1 shadow-lg">
           <button
             type="button"
             onClick={() => {
               onChange(null);
               setOpen(false);
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3.5 py-2.5 text-left text-sm hover:bg-slate-50"
+            className="flex w-full items-center gap-2 rounded-lg px-3.5 py-2.5 text-left text-sm hover:bg-[var(--color-bg-subtle)]"
           >
             <span className="text-slate-500">Sem responsável</span>
           </button>
@@ -979,15 +977,15 @@ function CompactOwnerSelector({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-3.5 py-2.5 text-left text-sm hover:bg-slate-50",
-                currentOwner?.id === u.id && "bg-slate-50",
+                "flex w-full items-center gap-2.5 rounded-lg px-3.5 py-2.5 text-left text-sm hover:bg-[var(--color-bg-subtle)]",
+                currentOwner?.id === u.id && "bg-[var(--color-bg-subtle)]",
               )}
             >
               <div className="flex size-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
                 {getInitials(u.name)}
               </div>
               <div className="min-w-0">
-                <span className="block truncate font-medium text-slate-700">{u.name}</span>
+                <span className="block truncate font-medium text-foreground">{u.name}</span>
                 <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
                   <PresenceDot status={u.agentStatus?.status ?? "OFFLINE"} />
                   <span>{presenceLabel(u.agentStatus?.status ?? "OFFLINE")}</span>
@@ -1046,7 +1044,7 @@ function ProductCustomFieldsInline({ productId }: { productId: string }) {
     <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
       {filled.map((v) => (
         <span key={v.fieldId}>
-          <span className="font-medium text-slate-600">{v.label}:</span> {v.value}
+          <span className="font-medium text-[var(--color-ink-soft)]">{v.label}:</span> {v.value}
         </span>
       ))}
     </div>

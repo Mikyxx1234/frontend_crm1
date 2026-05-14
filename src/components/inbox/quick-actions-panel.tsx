@@ -114,7 +114,7 @@ export function QuickActionsPanel({ conversationId, contactId, contactPhone, las
           <div className="grid grid-cols-2 gap-2">
             {contactPhone && (
               <a href={`tel:${contactPhone}`}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center eduit-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
                 <div className="flex size-9 items-center justify-center rounded-xl bg-[#10b981]/10">
                   <Phone className="size-4 text-[#10b981]" />
                 </div>
@@ -122,7 +122,7 @@ export function QuickActionsPanel({ conversationId, contactId, contactPhone, las
               </a>
             )}
             <button type="button" onClick={onSendTemplate}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center eduit-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
               <div className="flex size-9 items-center justify-center rounded-xl bg-[#3b82f6]/10">
                 <FileText className="size-4 text-[#3b82f6]" />
               </div>
@@ -136,14 +136,14 @@ export function QuickActionsPanel({ conversationId, contactId, contactPhone, las
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">Negócio</p>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={onCreateDeal}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center eduit-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
               <div className="flex size-9 items-center justify-center rounded-xl bg-[#f59e0b]/10">
                 <Target className="size-4 text-[#f59e0b]" />
               </div>
               <span className="text-[11px] font-medium text-[#1e293b]">Proposta</span>
             </button>
             <button type="button" onClick={onAddTask}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center eduit-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
               <div className="flex size-9 items-center justify-center rounded-xl bg-[#8b5cf6]/10">
                 <Plus className="size-4 text-[#8b5cf6]" />
               </div>
@@ -201,7 +201,7 @@ export function QuickActionsPanel({ conversationId, contactId, contactPhone, las
               {suggestions.map((s, i) => {
                 const Icon = s.icon;
                 return (
-                  <div key={i} className={cn("flex items-center gap-2 rounded-xl border p-2 eduit-transition hover:scale-[1.02]", URGENCY_STYLE[s.urgency])}>
+                  <div key={i} className={cn("flex items-center gap-2 rounded-xl border p-2 lumen-transition hover:scale-[1.02]", URGENCY_STYLE[s.urgency])}>
                     <Icon className="size-3.5 shrink-0" />
                     <span className="text-[11px] font-medium">{s.text}</span>
                   </div>

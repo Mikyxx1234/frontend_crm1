@@ -22,7 +22,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
   return (
     <div className="group/node relative pr-6 pb-6">
       {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-brand-navy to-[#1e3a8a] text-[10px] font-black tabular-nums text-white shadow-md ring-2 ring-white">
+        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[#1e3a8a] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
           {data.stepIndex}
         </span>
       )}
@@ -43,7 +43,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
           <span className="mx-auto mb-1 inline-flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-500 ring-1 ring-amber-100">
             <Clock className="size-3.5" strokeWidth={2.4} />
           </span>
-          <p className="text-[12px] font-black tracking-tighter leading-tight text-slate-900">
+          <p className="text-[12px] font-extrabold tracking-tighter leading-tight text-slate-900">
             {data.label}
           </p>
           <p className="mt-0.5 line-clamp-2 text-[10px] font-medium tracking-tight text-slate-500">
@@ -54,7 +54,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
           <TooltipHost label="Remover passo" side="top">
             <button
               type="button"
-              className="absolute -right-12 -top-2 flex size-7 -rotate-45 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="absolute -right-12 -top-2 flex size-7 -rotate-45 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -80,10 +80,10 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
         style={{ left: "50%" }}
         className="size-3! border-2! border-white! bg-rose-500!"
       />
-      <span className="pointer-events-none absolute right-0 top-[36%] inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black tracking-widest text-emerald-700 ring-1 ring-emerald-100">
+      <span className="pointer-events-none absolute right-0 top-[36%] inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-emerald-700 ring-1 ring-emerald-100">
         DENTRO
       </span>
-      <span className="pointer-events-none absolute bottom-0 left-1/2 inline-flex -translate-x-1/2 items-center rounded-full bg-rose-50 px-1.5 py-0.5 text-[9px] font-black tracking-widest text-rose-700 ring-1 ring-rose-100">
+      <span className="pointer-events-none absolute bottom-0 left-1/2 inline-flex -translate-x-1/2 items-center rounded-full bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-rose-700 ring-1 ring-rose-100">
         FORA
       </span>
     </div>

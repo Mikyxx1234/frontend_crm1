@@ -141,7 +141,7 @@ export function RemindButton({
           aria-label="Criar lembrete"
           aria-expanded={open}
           className={cn(
-            "flex size-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+            "flex size-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-slate-800 dark:hover:text-slate-100",
             open && "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
           )}
         >
@@ -161,7 +161,7 @@ export function RemindButton({
             className={cn(
               "z-50",
               // Mobile: sheet de baixo.
-              "fixed inset-x-3 bottom-3 rounded-3xl bg-white p-4 shadow-premium ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800",
+              "fixed inset-x-3 bottom-3 rounded-3xl bg-white p-4 shadow-[var(--shadow-lg)] ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800",
               // Desktop: popover ancorado embaixo do botão.
               "md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-full md:mt-2 md:w-[300px] md:rounded-2xl md:p-3",
             )}
@@ -169,8 +169,8 @@ export function RemindButton({
             aria-label="Escolher quando lembrar"
           >
             <div className="mb-2 flex items-center gap-2 px-1">
-              <Bell className="size-4 text-brand-blue" strokeWidth={2.2} />
-              <h3 className="text-[13px] font-black tracking-tight text-slate-800 dark:text-slate-100">
+              <Bell className="size-4 text-primary" strokeWidth={2.2} />
+              <h3 className="text-[13px] font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
                 Lembrar de {contactName}
               </h3>
             </div>
@@ -186,7 +186,7 @@ export function RemindButton({
                     onClick={() => createReminder(p)}
                     className={cn(
                       "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                      "hover:bg-slate-50 dark:hover:bg-slate-800/60",
+                      "hover:bg-[var(--color-bg-subtle)] dark:hover:bg-slate-800/60",
                       "disabled:cursor-not-allowed disabled:opacity-50",
                     )}
                   >
@@ -194,19 +194,19 @@ export function RemindButton({
                       <div className="text-[13px] font-bold text-slate-800 dark:text-slate-100">
                         {p.label}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="text-[11px] text-slate-500 dark:text-[var(--color-ink-muted)]">
                         {p.description}
                       </div>
                     </div>
                     {isLoading && (
-                      <span className="size-3.5 animate-spin rounded-full border-2 border-brand-blue border-t-transparent" />
+                      <span className="size-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                     )}
                   </button>
                 );
               })}
             </div>
 
-            <p className="mt-2 px-3 text-[10px] font-medium text-slate-400 dark:text-slate-500">
+            <p className="mt-2 px-3 text-[10px] font-medium text-[var(--color-ink-muted)] dark:text-slate-500">
               Aparece em <span className="font-bold">Tarefas</span> e na timeline do contato.
             </p>
           </div>

@@ -71,7 +71,7 @@ const iconBgMap: Record<string, string> = {
   send_whatsapp_template: "bg-green-50 ring-green-100",
   send_whatsapp_media: "bg-green-50 ring-green-100",
   send_whatsapp_interactive: "bg-violet-50 ring-violet-100",
-  webhook: "bg-slate-50 ring-slate-100",
+  webhook: "bg-[var(--color-bg-subtle)] ring-slate-100",
   update_lead_score: "bg-pink-50 ring-pink-100",
   transfer_to_ai_agent: "bg-violet-50 ring-violet-100",
 };
@@ -84,22 +84,22 @@ function StepIcon({ type }: { type: string }) {
 export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   const s = data.stats;
   const hasStats = s && (s.success > 0 || s.failed > 0);
-  const iconColor = stepColor[data.stepType] ?? "text-brand-blue";
-  const iconBg = iconBgMap[data.stepType] ?? "bg-brand-blue/10 ring-brand-blue/15";
+  const iconColor = stepColor[data.stepType] ?? "text-primary";
+  const iconBg = iconBgMap[data.stepType] ?? "bg-primary/10 ring-primary/15";
 
   return (
     <div
       className={cn(
         "group/node relative min-w-[230px] max-w-[290px] rounded-2xl border bg-white transition-all duration-200",
         selected
-          ? "border-brand-blue/50 shadow-blue-glow ring-2 ring-brand-blue/25"
+          ? "border-primary/50 shadow-[var(--shadow-indigo-glow)] ring-2 ring-primary/25"
           : data.incomplete
             ? "border-amber-300/70 shadow-[0_4px_16px_-8px_rgba(245,158,11,0.25)] ring-1 ring-amber-200/60 hover:-translate-y-px hover:border-amber-400/80"
-            : "border-slate-100 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-brand-blue/30 hover:shadow-blue-glow"
+            : "border-slate-100 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-primary/30 hover:shadow-[var(--shadow-indigo-glow)]"
       )}
     >
       {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-brand-navy to-[#1e3a8a] text-[10px] font-black tabular-nums text-white shadow-md ring-2 ring-white">
+        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[#1e3a8a] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
           {data.stepIndex}
         </span>
       )}
@@ -126,7 +126,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
           <StepIcon type={data.stepType} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-black tracking-tighter leading-tight text-slate-900">
+          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-slate-900">
             {data.label}
           </p>
           <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
@@ -137,7 +137,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
           <TooltipHost label="Remover passo" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -153,19 +153,19 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
         <TooltipHost label="Ver eventos" side="bottom">
           <button
             type="button"
-            className="flex w-full items-center gap-2 border-t border-slate-100 px-3.5 py-2 transition-colors hover:bg-slate-50/60"
+            className="flex w-full items-center gap-2 border-t border-slate-100 px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
             onClick={(e) => {
               e.stopPropagation();
               data.onStatsClick?.();
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black tabular-nums text-emerald-700 ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-emerald-100">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-black tabular-nums text-rose-700 ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 ring-1 ring-rose-100">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>
@@ -176,7 +176,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
       <Handle
         type="source"
         position={Position.Right}
-        className="size-3! border-2! border-white! bg-brand-blue! shadow-blue-glow!"
+        className="size-3! border-2! border-white! bg-primary! shadow-[var(--shadow-indigo-glow)]!"
       />
     </div>
   );

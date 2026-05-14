@@ -439,14 +439,29 @@ function FieldFormDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Identificador (slug)</Label>
+            <Label className="text-xs">Identificador (slug) — opcional</Label>
             <Input
               value={name}
-              onChange={(e) => setName(e.target.value.replace(/[^a-z0-9_]/gi, "_").toLowerCase())}
-              placeholder="ex: lead_source"
+              onChange={(e) => {
+                const cleaned = e.target.value
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .replace(/[^a-z0-9]+/g, "_")
+                  .replace(/^_+|_+$/g, "")
+                  .replace(/_+/g, "_");
+                setName(cleaned);
+              }}
+              placeholder="vazio = gerar automático pelo label"
               disabled={mode === "edit"}
               className="h-9 font-mono text-sm"
             />
+            {mode === "create" ? (
+              <p className="text-[11px] text-muted-foreground">
+                Se deixar vazio, o sistema gera automaticamente (ex.:{" "}
+                <span className="font-mono">fonte_do_lead</span>).
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">
@@ -529,7 +544,7 @@ function FieldFormDialog({
             <Button
               type="submit"
               disabled={
-                mutation.isPending || !name.trim() || !label.trim()
+                mutation.isPending || !label.trim()
               }
             >
               {mutation.isPending

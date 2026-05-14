@@ -109,7 +109,7 @@ export default function InboxAnalyticsPage() {
         description="Métricas de conversas, tempo de resposta e performance da equipe."
         icon={<Headphones />}
         actions={
-          <div className="flex rounded-xl border border-border/70 bg-card p-1 shadow-premium">
+          <div className="flex rounded-xl border border-border/70 bg-card p-1 shadow-[var(--shadow-lg)]">
             {PERIODS.map((p, i) => (
               <button
                 key={p.days}
@@ -118,7 +118,7 @@ export default function InboxAnalyticsPage() {
                 className={cn(
                   "rounded-lg px-4 py-1.5 text-sm font-bold transition-all duration-200",
                   periodIdx === i
-                    ? "bg-brand-blue text-white shadow-blue-glow"
+                    ? "bg-primary text-white shadow-[var(--shadow-indigo-glow)]"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -174,8 +174,8 @@ export default function InboxAnalyticsPage() {
           {/* Charts Row */}
           <div className="grid gap-4 lg:grid-cols-3">
             {/* Volume por Dia */}
-            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-premium lg:col-span-2">
-              <h3 className="mb-4 text-[11px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-[var(--shadow-lg)] lg:col-span-2">
+              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Volume de Mensagens por Dia
               </h3>
               {data.byDay.length > 0 ? (
@@ -222,8 +222,8 @@ export default function InboxAnalyticsPage() {
             </div>
 
             {/* Canais */}
-            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-premium">
-              <h3 className="mb-4 text-[11px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-[var(--shadow-lg)]">
+              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Conversas por Canal
               </h3>
               {data.byChannel.length > 0 ? (
@@ -275,8 +275,8 @@ export default function InboxAnalyticsPage() {
           {/* Second Row */}
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Horarios de Pico */}
-            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-premium">
-              <h3 className="mb-4 text-[11px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-[var(--shadow-lg)]">
+              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Horários de Pico (mensagens recebidas)
               </h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -298,8 +298,8 @@ export default function InboxAnalyticsPage() {
             </div>
 
             {/* Agentes */}
-            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-premium">
-              <h3 className="mb-4 text-[11px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-[var(--shadow-lg)]">
+              <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Performance por Agente
               </h3>
               {data.byAgent.length > 0 ? (
@@ -362,8 +362,8 @@ export default function InboxAnalyticsPage() {
           </div>
 
           {/* Ratio bar */}
-          <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-premium">
-            <h3 className="mb-3 text-[11px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+          <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-[var(--shadow-lg)]">
+            <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Proporção de Mensagens
             </h3>
             <div className="flex items-center gap-4">
@@ -435,13 +435,13 @@ function MetricCard({
   };
 
   return (
-    <div className="group/metric rounded-2xl border border-border/70 bg-card p-5 shadow-premium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-float">
+    <div className="group/metric rounded-2xl border border-border/70 bg-card p-5 shadow-[var(--shadow-lg)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {title}
           </p>
-          <p className="mt-2 text-3xl font-black tabular-nums tracking-tight text-foreground">
+          <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-foreground">
             {isText ? value : typeof value === "number" ? value.toLocaleString("pt-BR") : value}
           </p>
           {sub && <p className="mt-1.5 text-[11px] text-muted-foreground">{sub}</p>}

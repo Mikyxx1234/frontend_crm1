@@ -1,33 +1,50 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { Suspense, useState } from "react";
-import { Loader as Loader2 } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { Check, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
+function LoginShellFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#EEF2FF] via-[#F8FAFF] to-white p-6">
+      <div className="w-full max-w-sm space-y-4">
+        <div className="mx-auto h-20 w-48 animate-pulse rounded-2xl bg-slate-200/50" />
+        <div className="h-64 w-full animate-pulse rounded-2xl border border-slate-100 bg-white/80" />
+      </div>
+    </div>
+  );
+}
+
+function safeInternalPath(raw: string | null, fallback: string): string {
+  if (!raw || typeof raw !== "string") return fallback;
+  const t = raw.trim();
+  if (!t.startsWith("/") || t.startsWith("//") || t.includes("://")) return fallback;
+  return t;
+}
+
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = safeInternalPath(searchParams.get("callbackUrl"), "/dashboard");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (!loginSuccess) return;
+    const id = window.setTimeout(() => {
+      // Navegação completa: o cookie definido na resposta do `signIn` segue no próximo pedido HTTP.
+      window.location.assign(`${window.location.origin}${callbackUrl}`);
+    }, 1500);
+    return () => window.clearTimeout(id);
+  }, [loginSuccess, callbackUrl]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,98 +56,154 @@ function LoginForm() {
         password,
         redirect: false,
       });
-      if (result && !result.ok) {
+
+      if (result === undefined) {
+        setError(
+          "Não foi possível iniciar o login. Recarregue a página ou verifique se /api/auth está acessível.",
+        );
+        return;
+      }
+
+      if (!result.ok) {
         if (result.code === "database_unavailable") {
           setError(
             "Não foi possível conectar ao banco de dados. Inicie o PostgreSQL (ex.: docker compose up -d) e confira o DATABASE_URL no .env.",
           );
+        } else if (result.code === "account_locked") {
+          setError(
+            "Conta temporariamente bloqueada por várias tentativas. Aguarde alguns minutos ou peça a um admin para revisar o bloqueio.",
+          );
+        } else if (result.code === "mfa_required") {
+          setError(
+            "Esta conta exige MFA. Use o fluxo de código de autenticação (em desenvolvimento no login web).",
+          );
         } else if (result.error) {
           setError("E-mail ou senha incorretos.");
         } else {
-          setError("Não foi possível entrar. Tente de novo ou verifique o servidor.");
+          setError(
+            `Não foi possível entrar${result.code ? ` (${result.code})` : ""}. Tente de novo.`,
+          );
         }
         return;
       }
-      if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
-      }
-    } catch {
+
+      setLoginSuccess(true);
+    } catch (err) {
       setError(
-        "Erro ao contactar o servidor. Verifique se o PostgreSQL está em execução e se NEXTAUTH_URL coincide com a porta do app (ex.: http://localhost:3001).",
+        err instanceof Error && err.message.includes("URL")
+          ? "Resposta inválida do servidor de autenticação. Atualize as dependências do Auth.js ou abra um issue com o log do Network em /api/auth/callback/credentials."
+          : "Erro ao contactar o servidor. Verifique PostgreSQL, NEXTAUTH_URL (ex.: http://localhost:3000) e o console (F12).",
       );
     } finally {
       setLoading(false);
     }
   }
 
+  if (loginSuccess) {
+    return (
+      <div
+        className="fixed inset-0 z-[200] flex min-h-dvh w-screen flex-col items-center justify-center gap-4 bg-primary p-6 text-primary-foreground"
+        role="status"
+        aria-live="polite"
+        aria-label="Login concluído, carregando o CRM"
+      >
+        <div className="relative">
+          <div className="flex size-20 items-center justify-center rounded-full bg-primary-foreground/20">
+            <div className="flex size-16 items-center justify-center rounded-full bg-primary-foreground">
+              <Check className="size-8 text-primary" strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+        <h2 className="font-display text-[22px] font-bold tracking-tight">Acesso liberado</h2>
+        <p className="text-[14px] text-primary-foreground/80">Carregando o CRM…</p>
+        <div className="mt-2 h-0.5 w-32 overflow-hidden rounded-full bg-primary-foreground/20">
+          <div className="h-full rounded-full bg-primary-foreground/60 animate-[loading_1.5s_ease-in-out_forwards]" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Card className="border border-border/70 bg-card shadow-sm">
-      <CardHeader className="space-y-4 pb-2 pt-8 text-center">
-        <div className="mx-auto flex size-11 items-center justify-center rounded-lg bg-primary text-lg font-semibold text-primary-foreground">
-          E
-        </div>
-        <div className="space-y-1">
-          <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
-            EduIT CRM
-          </CardTitle>
-          <CardDescription className="text-sm font-normal text-muted-foreground">
-            Entre com sua conta para acessar o painel
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4 px-6 pb-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">
-              E-mail
-            </Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="voce@empresa.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-              className="h-10 border-border/80 bg-background text-sm"
-            />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#EEF2FF] via-[#F8FAFF] to-white p-6">
+      <div className="flex w-full max-w-sm flex-col items-center">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-200/80">
+            <ShieldCheck className="size-8 text-white" strokeWidth={2} />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">
+          <h1 className="font-display text-[22px] font-bold tracking-tight text-slate-900">CRM EduIT</h1>
+          <p className="mt-1 text-[14px] text-slate-500">Faça login para gerenciar conversas e negócios.</p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="w-full rounded-2xl border border-slate-100 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)]"
+        >
+          <div className="mb-4">
+            <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-slate-700">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                className="h-11 w-full rounded-full border border-slate-200 bg-white pl-9 pr-4 text-[14px] text-slate-800 placeholder:text-slate-400 transition-all focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-slate-700">
               Senha
-            </Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-              className="h-10 border-border/80 bg-background text-sm"
-            />
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className="h-11 w-full rounded-full border border-slate-200 bg-white pl-9 pr-11 text-[14px] text-slate-800 placeholder:text-slate-400 transition-all focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-50"
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
           </div>
+
           {error ? (
             <p
               role="alert"
               className={cn(
-                "rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-center text-sm text-destructive",
+                "mb-4 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-center text-sm text-destructive",
               )}
             >
               {error}
             </p>
           ) : null}
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4 px-6 pb-8 pt-2">
-          <Button
+
+          <button
             type="submit"
-            className="h-10 w-full text-sm font-medium"
             disabled={loading}
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[14px] font-semibold text-white shadow-md shadow-blue-200/80 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50"
           >
             {loading ? (
               <>
@@ -138,43 +211,30 @@ function LoginForm() {
                 Entrando…
               </>
             ) : (
-              "Entrar"
+              <>
+                <LogIn className="size-4" />
+                Entrar
+              </>
             )}
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
+          </button>
+
+          <p className="mt-4 text-center text-[13px] text-slate-500">
             Não tem uma conta?{" "}
-            <Link
-              href="/register"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
+            <Link href="/register" className="font-medium text-blue-600 underline-offset-4 hover:underline">
               Criar conta
             </Link>
           </p>
-        </CardFooter>
-      </form>
-    </Card>
+        </form>
+
+        <p className="mt-6 text-center text-[12px] text-slate-400">Acesso restrito · CRM EduIT</p>
+      </div>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <Card className="border border-border/70 bg-card shadow-sm">
-          <CardHeader className="space-y-4 pb-2 pt-8 text-center">
-            <div className="mx-auto size-11 animate-pulse rounded-lg bg-muted" />
-            <div className="space-y-2">
-              <div className="mx-auto h-6 w-32 animate-pulse rounded bg-muted" />
-              <div className="mx-auto h-4 w-48 animate-pulse rounded bg-muted" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 px-6">
-            <div className="h-10 w-full animate-pulse rounded-md bg-muted" />
-            <div className="h-10 w-full animate-pulse rounded-md bg-muted" />
-          </CardContent>
-        </Card>
-      }
-    >
+    <Suspense fallback={<LoginShellFallback />}>
       <LoginForm />
     </Suspense>
   );

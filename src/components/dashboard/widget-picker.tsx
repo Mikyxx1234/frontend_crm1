@@ -105,7 +105,7 @@ export function WidgetPicker({ open, onClose }: Props) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 12 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            className="fixed inset-x-4 top-[10vh] z-50 mx-auto flex max-h-[80vh] max-w-3xl flex-col overflow-hidden rounded-3xl border border-border/60 bg-card shadow-float"
+            className="fixed inset-x-4 top-[10vh] z-50 mx-auto flex max-h-[80vh] max-w-3xl flex-col overflow-hidden rounded-3xl border border-border/60 bg-card shadow-[var(--shadow-sm)]"
           >
             <header className="flex items-center gap-3 border-b border-border/40 px-6 py-4">
               <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -175,7 +175,7 @@ export function WidgetPicker({ open, onClose }: Props) {
                           )}>
                             <Icon className="size-3" />
                           </span>
-                          <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                             {CATEGORY_LABELS[cat]}
                           </h3>
                           <span className="text-[11px] text-muted-foreground/60">

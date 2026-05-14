@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type QuickReplyRow = {
@@ -123,7 +123,7 @@ export default function QuickRepliesSettingsPage() {
         description="Crie mensagens predefinidas para usar no chat com leads."
         icon={<Zap />}
         actions={
-          <Button onClick={openCreate} className="gap-2 shadow-sm">
+          <Button onClick={openCreate} className={`gap-2 ${pageHeaderPrimaryCtaClass}`}>
             <Plus className="size-4" /> Nova Resposta
           </Button>
         }

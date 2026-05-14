@@ -307,7 +307,7 @@ export function useWhatsappOutboundWebRtc(conversationId: string | null | undefi
   // cliente desligava a chamada, o PeerConnection podia ficar em estado
   // intermediário e o MediaRecorder nunca parava → blob perdido.
   useSSE(
-    apiUrl("/api/sse/messages"),
+    "/api/sse/messages",
     React.useCallback(
       (event: string, data: unknown) => {
         if (event !== "whatsapp_call") return;

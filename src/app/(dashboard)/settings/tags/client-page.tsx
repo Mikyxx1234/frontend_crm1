@@ -113,7 +113,7 @@ export default function TagsSettingsPage() {
 
       {/* Create new */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-1">
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-white p-1">
           {TAG_COLORS.map((c) => (
             <button
               key={c}
@@ -159,7 +159,7 @@ export default function TagsSettingsPage() {
         ) : tags.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 py-10 text-center">
             <p className="text-sm text-slate-500">Nenhuma tag cadastrada</p>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
               Crie tags para categorizar negócios e contatos.
             </p>
           </div>
@@ -223,7 +223,7 @@ function TagRow({
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 transition hover:bg-slate-50/50">
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-white px-4 py-3 transition hover:bg-[var(--color-bg-subtle)]/50">
       {/* Color dot + picker */}
       <div className="relative">
         <TooltipHost label="Alterar cor" side="top">
@@ -236,7 +236,7 @@ function TagRow({
           />
         </TooltipHost>
         {colorOpen && (
-          <div className="absolute left-0 top-full z-20 mt-1 flex gap-1 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 flex gap-1 rounded-lg border border-border bg-white p-1.5 shadow-lg">
             {TAG_COLORS.map((c) => (
               <button
                 key={c}
@@ -276,7 +276,7 @@ function TagRow({
       )}
 
       {/* Usage counts */}
-      <span className="shrink-0 text-[11px] text-slate-400">
+      <span className="shrink-0 text-[11px] text-[var(--color-ink-muted)]">
         {tag.dealCount} deal{tag.dealCount !== 1 ? "s" : ""} · {tag.contactCount} contato{tag.contactCount !== 1 ? "s" : ""}
       </span>
 
@@ -287,7 +287,7 @@ function TagRow({
             type="button"
             onClick={() => { setName(tag.name); setEditing(true); }}
             disabled={isPending}
-            className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
             aria-label="Renomear"
           >
             <Pencil className="size-3.5" />
@@ -297,7 +297,7 @@ function TagRow({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+            className="rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-red-50 hover:text-red-600"
             aria-label="Excluir"
           >
             <Trash2 className="size-3.5" />

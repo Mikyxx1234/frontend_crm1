@@ -32,7 +32,8 @@ import { ContactTimeline } from "@/components/contacts/contact-timeline";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn, formatCurrency, formatDateTime, getInitials } from "@/lib/utils";
+import { dt } from "@/lib/design-tokens";
+import { cn, formatCurrency, formatDateTime, getInitials, tagPillStyle, tagStyle } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────
 
@@ -258,11 +259,8 @@ export default function LeadPage() {
                   #{deal.number} · {deal.stage.pipeline.name}
                 </p>
                 <span
-                  className="mt-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                  style={{
-                    backgroundColor: (deal.stage.color || "#6366f1") + "18",
-                    color: deal.stage.color || "#6366f1",
-                  }}
+                  className={cn(dt.pill.sm, "mt-1.5 font-bold uppercase tracking-wider")}
+                  style={tagStyle(deal.stage.color || "#6366f1")}
                 >
                   {deal.stage.name}
                 </span>
@@ -669,8 +667,8 @@ function TagsSection({ contactId, tags, dealParam }: {
         {tags.map((t) => (
           <span
             key={t.tag.id}
-            className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-            style={{ backgroundColor: t.tag.color + "18", color: t.tag.color }}
+            className={cn(dt.pill.sm, "gap-0.5")}
+            style={tagPillStyle(t.tag.name, t.tag.color)}
           >
             {t.tag.name}
             <button

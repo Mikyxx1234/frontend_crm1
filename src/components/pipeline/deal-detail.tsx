@@ -264,7 +264,7 @@ export function DealDetail({ dealId, open, onOpenChange, pipelineId, boardStages
                       isUpdating={contactUpdateMutation.isPending}
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-16 text-center text-[13px] text-slate-400">
+                    <div className="flex flex-col items-center justify-center py-16 text-center text-[13px] text-[var(--color-ink-muted)]">
                       <User className="mb-3 size-10 opacity-30" strokeWidth={1.5} />
                       <p>Nenhum contato vinculado a este negócio.</p>
                     </div>

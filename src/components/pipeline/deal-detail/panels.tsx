@@ -42,7 +42,7 @@ export function DealTabs({
   return (
     <div className="border-b border-border/60 bg-white px-5 py-3">
       <Tabs value={rightTab} onValueChange={(v) => setRightTab(v as typeof rightTab)}>
-        <TabsList className="h-auto rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
+        <TabsList className="h-auto rounded-xl border border-border bg-[var(--color-bg-subtle)] p-1 shadow-sm">
           <TabsTrigger
             value="conversations"
             className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
@@ -177,6 +177,7 @@ export function ConversationsPanel({
           conversationStatus={convStatus || selected.status}
           onResolve={(s) => onStatusChange(s)}
           onReopen={(s) => onStatusChange(s)}
+          compactChrome
         />
       </div>
     );
@@ -228,7 +229,7 @@ export function ConversationsPanel({
               key={c.id}
               type="button"
               onClick={() => onSelect(c)}
-              className="flex w-full items-center gap-3 border-b border-border/40 px-5 py-4 text-left transition-colors hover:bg-slate-50/80"
+              className="flex w-full items-center gap-3 border-b border-border/40 px-5 py-4 text-left transition-colors hover:bg-[var(--color-bg-subtle)]/80"
             >
               <ChannelBadge channel={c.channel} />
               <div className="min-w-0 flex-1">
@@ -305,7 +306,7 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="scrollbar-thin flex-1 overflow-y-auto p-4">
-        <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+        <div className="mb-4 rounded-2xl border border-border bg-white p-4 shadow-sm space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Tipo</Label>
@@ -361,7 +362,7 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
                         type="button"
                         onClick={() => deleteMut.mutate(a.id)}
                         disabled={deleteMut.isPending}
-                        className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                        className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-red-50 hover:text-red-500"
                         aria-label="Excluir atividade"
                       >
                         <Trash2 className="size-3" />
@@ -395,7 +396,7 @@ export function NotesPanel({ notes, contactId, dealId, onCreated }: NotesPanelPr
   const mutation = useMutation({
     mutationFn: async (content: string) => {
       const endpoint = contactId ? `/api/contacts/${contactId}/notes` : `/api/deals/${dealId}/notes`;
-      const res = await fetch(apiUrl(endpoint), {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, dealId }),
@@ -420,7 +421,7 @@ export function NotesPanel({ notes, contactId, dealId, onCreated }: NotesPanelPr
         ) : (
           <div className="space-y-3">
             {notes.map((n) => (
-              <div key={n.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div key={n.id} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                 <p className="whitespace-pre-wrap text-sm">{n.content}</p>
                 <p className="mt-2 text-[11px] text-muted-foreground">
                   {n.user.name} · {formatDateTime(n.createdAt)}

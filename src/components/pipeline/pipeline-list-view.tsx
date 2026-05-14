@@ -227,7 +227,7 @@ export function PipelineListView({
                 <button
                   type="button"
                   onClick={() => handleSort(field)}
-                  className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-slate-400 hover:text-slate-700"
+                  className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)] hover:text-foreground"
                 >
                   {label}
                   <SortIcon field={field} />
@@ -239,7 +239,7 @@ export function PipelineListView({
         <tbody>
           {sorted.length === 0 ? (
             <tr>
-              <td colSpan={8} className="py-16 text-center text-[13px] text-slate-400">
+              <td colSpan={8} className="py-16 text-center text-[13px] text-[var(--color-ink-muted)]">
                 Nenhum negócio encontrado
               </td>
             </tr>
@@ -251,7 +251,7 @@ export function PipelineListView({
                 <tr
                   key={deal.id}
                   className={cn(
-                    "cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50",
+                    "cursor-pointer border-b border-slate-100 transition-colors hover:bg-[var(--color-bg-subtle)]",
                     selectedDeals.has(deal.id) && "bg-blue-50/50 hover:bg-blue-50/70",
                   )}
                 >
@@ -287,16 +287,16 @@ export function PipelineListView({
                           channel={normalizeChannel(deal.channel)}
                           size={28}
                         />
-                        <span className="min-w-0 truncate text-[13px] font-medium text-slate-700">
+                        <span className="min-w-0 truncate text-[13px] font-medium text-foreground">
                           {deal.contact.name}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-[13px] text-slate-400">—</span>
+                      <span className="text-[13px] text-[var(--color-ink-muted)]">—</span>
                     )}
                   </td>
                   <td
-                    className="px-4 py-3 text-[13px] font-medium tabular-nums text-slate-700"
+                    className="px-4 py-3 text-[13px] font-medium tabular-nums text-foreground"
                     onClick={() => onDealClick(deal.number?.toString() ?? deal.id)}
                   >
                     {formatCurrency(deal.value)}
@@ -335,10 +335,10 @@ export function PipelineListView({
                           channel={null}
                           hideCartoon
                         />
-                        <span className="min-w-0 truncate text-[13px] text-slate-700">{owner}</span>
+                        <span className="min-w-0 truncate text-[13px] text-foreground">{owner}</span>
                       </div>
                     ) : (
-                      <span className="text-[13px] text-slate-400">—</span>
+                      <span className="text-[13px] text-[var(--color-ink-muted)]">—</span>
                     )}
                   </td>
                   <td

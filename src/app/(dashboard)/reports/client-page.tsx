@@ -297,7 +297,7 @@ export default function ReportsClientPage() {
               icon={MessageCircle}
               label="Total de mensagens"
               value={summary.totalMessages.toLocaleString("pt-BR")}
-              color="text-slate-600"
+              color="text-[var(--color-ink-soft)]"
               bg="bg-slate-100"
             />
             <KpiCard

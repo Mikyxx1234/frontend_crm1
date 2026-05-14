@@ -1,105 +1,74 @@
 "use client";
 
 /**
- * ConversationHeader — topo PADRÃO do Inbox e do Sales Hub
- * ─────────────────────────────────────────────────────────
- * Header único usado pelas duas telas (Inbox `/inbox` + Sales Hub
- * `/sales-hub`/`/pipeline?view=hub`). Substitui:
- *   • o `<header>` inline gigante de `app/(dashboard)/inbox/client-page.tsx`
- *   • o componente `SalesHubChatHeader` (deletado).
- *
- * O objetivo é o "mix do útil ao agradável" descrito pelo operador:
- * o visual clean/elegante do Sales Hub (avatar grande, telefone+email
- * sempre visíveis, chip de etapa) + as funções úteis do Inbox (chip
- * de sessão de voz, transferir responsável, tags, fechar).
- *
- * Ordem dos slots à direita (escolhida pelo operador):
- *   voz ▾  |  ⇄ transferir  |  🏷 tags  |  [actions slot]  |  ✕ fechar
- *
- * Estrutura:
- *
- *   ┌──────────────────────────────────────────────────────────────────┐
- *   │ ▲ barrinha 2px de sessão (cyan=ativa, vermelho=expirada)         │
- *   ├──────────────────────────────────────────────────────────────────┤
- *   │  [avatar 44]   Nome do contato  [tag1] [tag2] [+N]               │
- *   │                ● Proposta Enviada                                │
- *   │                📞 +55 71 …    ✉ contato@…   [voz ▾][⇄][🏷][actions][X]│
- *   └──────────────────────────────────────────────────────────────────┘
- *
- * Cada slot é renderizado condicionalmente — passar `null`/`undefined`
- * omite a coluna sem deixar gap. Isso permite que o Sales Hub mostre
- * Ganho/Perdido onde o Inbox mostra nada, e vice-versa.
+ * ConversationHeader — barra única estilo WhatsApp (Inbox + Sales Hub).
+ * Uma linha ~46px: avatar + nome/telefone | tabs flex-1 | ações · buscar · (⋮ opcional)
  */
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, Tag as TagIcon, X } from "lucide-react";
-import { cn, resolveContactAvatarDisplayUrl } from "@/lib/utils";
-import { ds } from "@/lib/design-system";
-import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
-import { TooltipHost } from "@/components/ui/tooltip";
-import { RemindButton } from "@/components/inbox/remind-button";
-import { TagPopover } from "@/components/inbox/tag-popover";
-import { WhatsappCallChip } from "@/components/inbox/whatsapp-call-chip";
-import {
-  TransferControl,
-  type TransferControlUser,
-} from "@/components/inbox/transfer-control";
+import { ArrowLeft, MoreVertical, Phone, Search, X } from "lucide-react";
 
-type ContactTag = { name: string; color: string };
+import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TooltipHost } from "@/components/ui/tooltip";
+import { cn, resolveContactAvatarDisplayUrl } from "@/lib/utils";
+
+export type ConversationHeaderTab = {
+  key: string;
+  label: string;
+  count?: number;
+};
 
 export type ConversationHeaderProps = {
-  // ── Identidade do contato ──
   contactId?: string | null;
   contactName: string;
   contactPhone?: string | null;
   contactEmail?: string | null;
   contactAvatarUrl?: string | null;
   contactChannel?: string | null;
-  /**
-   * Link opcional pro perfil do contato. Quando passado, o nome
-   * vira clicável e leva pra `/contacts/[id]` (comportamento atual
-   * do Inbox).
-   */
   contactHref?: string | null;
-  /** Tags do contato/conversa — máx 2 visíveis + "+N". */
-  tags?: ContactTag[] | null;
+  tags?: { name: string; color: string }[] | null;
 
-  // ── Etapa (opcional, só no Sales Hub) ──
-  stageName?: string | null;
-  stageColor?: string | null;
-
-  // ── Sessão de conversa (CSW 24h) ──
-  /** Faixa fina no topo: cyan = ativa, vermelho = expirada, omitida se null. */
-  sessionActive?: boolean | null;
-
-  // ── Sessão de voz (Call Permission) ──
-  /** ID da conversa atual — necessário pro chip de voz e pro TagPopover. */
   conversationId?: string | null;
-  /** Canal da conversa atual — controla a visibilidade do chip de voz. */
   conversationChannel?: string | null;
 
-  // ── Atribuição / Transferência ──
   canManageAssignee?: boolean;
   myUserId?: string;
   currentAssigneeId?: string | null;
-  teamUsers?: TransferControlUser[];
+  teamUsers?: import("@/components/inbox/transfer-control").TransferControlUser[];
   assignLoading?: boolean;
   onAssign?: (userId: string | null) => void;
-
-  // ── Tags ──
-  /** Callback após mutação de tags (refetch). */
   onTagsUpdated?: () => void;
 
-  // ── Slot livre à direita ──
-  /** Ações específicas da tela (Ganho/Perdido no Sales Hub). */
-  actions?: React.ReactNode;
+  /** Conteúdo do menu ⋮ (voz, transferir, lembrete, tags…). */
+  overflowMenu?: React.ReactNode;
+  /** Ações extras antes de “Fechar” (ex.: Ganho/Perdido). */
+  actionsSlot?: React.ReactNode;
+  /** Ações na barra (ex.: transferir, lembrete) — usado no Inbox com `hideOverflowMenu`. */
+  toolbarActions?: React.ReactNode;
+  /**
+   * Substitui o atalho `tel:` na posição do telefone.
+   * `undefined` = mantém `tel:` quando houver número.
+   */
+  phoneReplacement?: React.ReactNode;
+  /** Esconde o menu ⋮; use com `toolbarActions` e `phoneReplacement` (Inbox). */
+  hideOverflowMenu?: boolean;
 
-  // ── Navegação ──
-  /** Botão "voltar" mobile (`< xl`). Quando passado, aparece à esquerda. */
   onBack?: () => void;
-  /** Botão "fechar" (X) à direita. Em mobile também serve como voltar. */
   onClose?: () => void;
+  onOpenConversationList?: () => void;
+  onSearch?: () => void;
+
+  tabs?: ConversationHeaderTab[] | null;
+  activeTab?: string;
+  onTabChange?: (key: string) => void;
 };
 
 function normalizeChannel(raw: string | null | undefined): ChatAvatarChannel {
@@ -115,241 +84,221 @@ export function ConversationHeader({
   contactId,
   contactName,
   contactPhone,
-  contactEmail,
   contactAvatarUrl,
   contactChannel,
   contactHref,
-  tags,
-  stageName,
-  stageColor,
-  sessionActive,
-  conversationId,
   conversationChannel,
-  canManageAssignee,
-  myUserId,
-  currentAssigneeId,
-  teamUsers = [],
-  assignLoading,
-  onAssign,
-  onTagsUpdated,
-  actions,
+  overflowMenu,
+  actionsSlot,
+  toolbarActions,
+  phoneReplacement,
+  hideOverflowMenu,
   onBack,
   onClose,
+  onOpenConversationList,
+  onSearch,
+  tabs,
+  activeTab,
+  onTabChange,
 }: ConversationHeaderProps) {
-  const visibleTags = (tags ?? []).slice(0, 2);
-  const extraTags = Math.max(0, (tags?.length ?? 0) - 2);
+  const telHref = contactPhone?.replace(/\s/g, "")
+    ? `tel:${contactPhone.replace(/\s/g, "")}`
+    : null;
 
-  const showCallChip = !!conversationId;
-  const showRemind = !!contactId;
-  const showTransfer =
-    !!conversationId &&
-    !!onAssign &&
-    (canManageAssignee || (!!myUserId && !currentAssigneeId));
-  const showTagPopover = !!conversationId;
+  const hasKebabContent =
+    !!overflowMenu || !!actionsSlot || !!onClose || !!onOpenConversationList;
+  const showKebab = !hideOverflowMenu && hasKebabContent;
 
-  const NameTag = contactHref ? Link : "h2";
-  const nameProps = contactHref
-    ? { href: contactHref }
-    : ({} as Record<string, never>);
+  const tabList = tabs?.filter(Boolean) ?? [];
 
   return (
-    <div className="shrink-0 bg-white">
-      {/* Banner fininho de sessão de conversa (CSW). */}
-      {sessionActive != null && (
-        <div
-          className={cn(
-            "h-[2px] w-full",
-            sessionActive ? "bg-brand-cyan" : "bg-red-400",
-          )}
-        />
-      )}
-
-      {/* Mobile: padding lateral 12px (px-3) e gap menor entre blocos
-          principais — em chat estreito ate 1px conta. Desktop preserva
-          px-6 py-4 + gap-3 da identidade premium. */}
-      <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5 md:gap-3 md:px-6 md:py-4">
-        {/* Botão voltar mobile (só aparece em < md). */}
-        {onBack && (
+    <div
+      className="flex shrink-0 items-stretch border-b border-border bg-white"
+      style={{ minHeight: 46 }}
+    >
+      <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-r border-border px-2 sm:px-3">
+        {onBack ? (
           <button
             type="button"
             onClick={onBack}
-            className="shrink-0 text-slate-400 transition-colors hover:text-slate-600 md:hidden"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)] md:hidden"
             aria-label="Voltar"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft className="size-[18px]" strokeWidth={2.2} />
           </button>
-        )}
+        ) : null}
 
-        {/* Avatar 36px em mobile (libera ~8px de largura), 44px em
-            desktop. ChatAvatar nao aceita prop responsiva; renderizamos
-            duas instancias mutuamente exclusivas com hidden/block. */}
-        <div className="shrink-0 md:hidden">
-          <ChatAvatar
-            user={{
-              id: contactId ?? undefined,
-              name: contactName,
-              imageUrl: resolveContactAvatarDisplayUrl(contactAvatarUrl ?? null),
-            }}
-            phone={contactPhone ?? undefined}
-            channel={normalizeChannel(contactChannel)}
-            size={36}
-          />
-        </div>
-        <div className="hidden shrink-0 md:block">
-          <ChatAvatar
-            user={{
-              id: contactId ?? undefined,
-              name: contactName,
-              imageUrl: resolveContactAvatarDisplayUrl(contactAvatarUrl ?? null),
-            }}
-            phone={contactPhone ?? undefined}
-            channel={normalizeChannel(contactChannel)}
-            size={44}
-          />
-        </div>
+        {onOpenConversationList ? (
+          <button
+            type="button"
+            onClick={onOpenConversationList}
+            className="hidden size-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] sm:flex"
+            aria-label="Lista de conversas"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+          </button>
+        ) : null}
 
-        <div className="min-w-0 flex-1">
-          {/* Linha 1 — Nome + tags + chip de etapa */}
-          <div className="flex items-center gap-2">
-            <NameTag
-              {...(nameProps as { href: string })}
-              className={cn(
-                ds.text.title,
-                "truncate text-[18px]",
-                contactHref && "transition-colors hover:text-accent",
-              )}
+        <ChatAvatar
+          user={{
+            id: contactId ?? undefined,
+            name: contactName,
+            imageUrl: resolveContactAvatarDisplayUrl(contactAvatarUrl ?? null),
+          }}
+          phone={contactPhone ?? undefined}
+          channel={normalizeChannel(contactChannel ?? conversationChannel)}
+          size={34}
+        />
+
+        <div className="min-w-0 max-w-[min(200px,40vw)] sm:max-w-[min(260px,32vw)]">
+          {contactHref ? (
+            <Link
+              href={contactHref}
+              className="block truncate text-[13px] font-semibold text-foreground transition-colors hover:text-primary"
             >
               {contactName}
-            </NameTag>
-
-            {visibleTags.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                {visibleTags.map((tag) => (
-                  <span
-                    key={tag.name}
-                    className={ds.tag.solidLg}
-                    style={{ backgroundColor: tag.color }}
-                  >
-                    {tag.name}
-                  </span>
-                ))}
-                {extraTags > 0 && (
-                  <span className={ds.tag.moreLg}>+{extraTags}</span>
-                )}
-              </div>
-            )}
-
-            {stageName && (
-              <span
-                className={cn(ds.chip.softer, "shrink-0")}
-                title={`Etapa: ${stageName}`}
-              >
-                <span
-                  className={ds.chip.dot}
-                  style={{ backgroundColor: stageColor ?? "#2563eb" }}
-                />
-                {stageName}
-              </span>
-            )}
-          </div>
-
-          {/* Linha 2 — Telefone + email.
-              Oculta em mobile (< md): em chat estreito o telefone
-              ficava sobreposto pelo chip "Voz" da direita, gerando o
-              "amontoado" do screenshot. A info nao se perde — o chip
-              de voz ja indica o canal, e o telefone esta no perfil
-              do contato a 1 tap. */}
-          {(contactPhone || contactEmail) && (
-            <div
-              className={cn(
-                "mt-0.5 hidden items-center gap-3 md:flex",
-                ds.text.meta,
-              )}
-            >
-              {contactPhone && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Phone className="size-3 text-slate-400" strokeWidth={2} />
-                  <span className="tabular-nums">{contactPhone}</span>
-                </span>
-              )}
-              {contactEmail && (
-                <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <Mail
-                    className="size-3 shrink-0 text-slate-400"
-                    strokeWidth={2}
-                  />
-                  <span className="truncate">{contactEmail}</span>
-                </span>
-              )}
-            </div>
+            </Link>
+          ) : (
+            <p className="truncate text-[13px] font-semibold text-foreground">{contactName}</p>
           )}
+          {contactPhone ? (
+            <p className="truncate font-mono text-[10px] text-[var(--color-ink-muted)] tabular-nums">
+              {contactPhone}
+            </p>
+          ) : null}
         </div>
+      </div>
 
-        {/* Lado direito — ordem fixa: voz | transferir | tags | actions | X.
-            Mobile: gap-0.5 (4 botoes muito apertados em 360px de largura).
-            Desktop: gap-2 da identidade premium. */}
-        <div className="ml-auto flex shrink-0 items-center gap-0.5 md:gap-2">
-          {showCallChip && (
-            <WhatsappCallChip
-              conversationId={conversationId!}
-              channel={conversationChannel ?? null}
-            />
-          )}
-
-          {showTransfer && (
-            <TransferControl
-              teamUsers={teamUsers}
-              currentAssigneeId={currentAssigneeId}
-              myUserId={myUserId}
-              canManageAssignee={!!canManageAssignee}
-              loading={assignLoading}
-              onAssign={(uid) => onAssign?.(uid)}
-            />
-          )}
-
-          {showRemind && (
-            <RemindButton
-              contactId={contactId!}
-              contactName={contactName}
-              conversationId={conversationId ?? undefined}
-            />
-          )}
-
-          {showTagPopover && (
-            <TagPopover
-              conversationId={conversationId!}
-              currentTags={tags ?? []}
-              onTagsUpdated={() => onTagsUpdated?.()}
-            >
-              <TooltipHost label="Tags" side="bottom">
+      {tabList.length > 0 ? (
+        <div className="relative flex min-w-0 flex-1 overflow-x-auto scrollbar-none">
+          <div role="tablist" className="flex min-h-0 min-w-0">
+            {tabList.map((tab) => {
+              const active = activeTab === tab.key;
+              const showCount = typeof tab.count === "number" && tab.count > 0;
+              return (
                 <button
+                  key={tab.key}
+                  role="tab"
                   type="button"
-                  className="p-2 text-slate-400 transition-colors hover:text-slate-600"
-                  aria-label="Tags"
+                  aria-selected={active}
+                  onClick={() => onTabChange?.(tab.key)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-0 text-[12px] font-medium transition-colors sm:px-3",
+                    active
+                      ? "border-b-2 border-primary font-semibold text-primary"
+                      : "border-b-2 border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink-soft)]",
+                  )}
                 >
-                  <TagIcon size={20} />
+                  {tab.label}
+                  {showCount ? (
+                    <span
+                      className={cn(
+                        "rounded px-1 text-[10px] font-semibold tabular-nums leading-4",
+                        active
+                          ? "bg-[var(--color-primary-soft)] text-primary"
+                          : "bg-[var(--color-bg-subtle)] text-[var(--color-ink-muted)]",
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  ) : null}
                 </button>
-              </TooltipHost>
-            </TagPopover>
-          )}
-
-          {actions && (
-            <div className="flex items-center gap-2">{actions}</div>
-          )}
-
-          {onClose && (
-            <TooltipHost label="Fechar" side="bottom">
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-2 text-accent transition-colors hover:text-accent/80"
-                aria-label="Fechar"
-              >
-                <X size={22} strokeWidth={3} />
-              </button>
-            </TooltipHost>
-          )}
+              );
+            })}
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
         </div>
+      ) : (
+        <div className="min-w-0 flex-1" />
+      )}
+
+      <div className="flex min-w-0 shrink-0 items-center gap-0.5 border-l border-border px-1.5 sm:px-2">
+        {toolbarActions ? (
+          <div className="flex min-w-0 max-w-[min(200px,38vw)] shrink items-center gap-0.5 overflow-hidden sm:max-w-none">
+            {toolbarActions}
+          </div>
+        ) : null}
+
+        {phoneReplacement !== undefined ? (
+          phoneReplacement ? (
+            <div className="flex max-w-[min(200px,42vw)] shrink-0 items-center justify-center sm:max-w-[240px]">
+              {phoneReplacement}
+            </div>
+          ) : null
+        ) : telHref ? (
+          <TooltipHost label="Ligar" side="bottom">
+            <a
+              href={telHref}
+              className="flex size-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)]"
+              aria-label="Ligar"
+            >
+              <Phone className="size-4" strokeWidth={1.5} />
+            </a>
+          </TooltipHost>
+        ) : null}
+
+        {onSearch ? (
+          <TooltipHost label="Buscar na conversa" side="bottom">
+            <button
+              type="button"
+              onClick={onSearch}
+              className="flex size-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)]"
+              aria-label="Buscar na conversa"
+            >
+              <Search className="size-4" strokeWidth={1.5} />
+            </button>
+          </TooltipHost>
+        ) : null}
+
+        {showKebab ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="flex size-8 shrink-0 rounded-lg border-0 bg-transparent p-0 text-[var(--color-ink-muted)] shadow-none ring-offset-0 hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0"
+              aria-label="Mais ações"
+            >
+              <MoreVertical className="size-4" strokeWidth={1.5} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[min(280px,calc(100vw-2rem))]">
+              {onOpenConversationList ? (
+                <DropdownMenuItem className="sm:hidden" onClick={() => onOpenConversationList()}>
+                  Conversas do contato
+                </DropdownMenuItem>
+              ) : null}
+              {onOpenConversationList ? <DropdownMenuSeparator className="sm:hidden" /> : null}
+              {overflowMenu}
+              {actionsSlot ? (
+                <>
+                  {overflowMenu ? <DropdownMenuSeparator /> : null}
+                  <div className="px-2 py-2">{actionsSlot}</div>
+                </>
+              ) : null}
+              {onClose ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onClose} className="text-[var(--color-ink-soft)]">
+                    <X className="mr-2 size-3.5" strokeWidth={2} />
+                    Fechar conversa
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+
+        {hideOverflowMenu && onClose ? (
+          <TooltipHost label="Fechar conversa" side="bottom">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar conversa"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)]"
+            >
+              <X className="size-4" strokeWidth={2} />
+            </button>
+          </TooltipHost>
+        ) : null}
       </div>
     </div>
   );

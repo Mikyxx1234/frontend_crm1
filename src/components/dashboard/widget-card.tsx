@@ -43,7 +43,7 @@ export const WidgetCard = React.memo(function WidgetCard({
       animate={{ opacity: 1, y: 0 }}
       transition={SUBTLE_SPRING}
       className={cn(
-        "group/widget flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-premium transition-shadow duration-300 hover:shadow-float",
+        "group/widget flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[var(--shadow-lg)] transition-shadow duration-300 hover:shadow-[var(--shadow-sm)]",
         editing && "ring-1 ring-primary/20",
         className,
       )}
@@ -61,7 +61,7 @@ export const WidgetCard = React.memo(function WidgetCard({
             <GripVertical className="size-4" />
           </span>
         )}
-        <h3 className="flex-1 truncate text-[13px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+        <h3 className="flex-1 truncate text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           {title}
         </h3>
         {editing && onRemove && (

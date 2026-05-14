@@ -85,8 +85,8 @@ export function BulkActionsBar({
   return (
     <>
       <div className="fixed inset-x-0 bottom-6 z-50 flex items-center justify-center px-4 transition-all animate-in slide-in-from-bottom-4 fade-in">
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-5 py-3 shadow-2xl shadow-slate-500/15 backdrop-blur-lg">
-          <div className="mr-2 flex items-center gap-2 border-r border-slate-200 pr-4">
+        <div className="flex items-center gap-2 rounded-2xl border border-border bg-white/95 px-5 py-3 shadow-2xl shadow-slate-500/15 backdrop-blur-lg">
+          <div className="mr-2 flex items-center gap-2 border-r border-border pr-4">
             <CheckCircle2 className="size-4 text-cyan-600" />
             <span className="text-[13px] font-bold text-slate-800">
               {selectedCount} selecionado{selectedCount !== 1 ? "s" : ""}
@@ -94,7 +94,7 @@ export function BulkActionsBar({
             <button
               type="button"
               onClick={onClear}
-              className="ml-1 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              className="ml-1 rounded-full p-1 text-[var(--color-ink-muted)] hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
             >
               <X className="size-3.5" />
             </button>
@@ -115,12 +115,12 @@ export function BulkActionsBar({
               <ChevronDown className="size-3" />
             </Button>
             {moveOpen && (
-              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-border bg-white py-1 shadow-xl">
                 {stages.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-foreground hover:bg-[var(--color-bg-subtle)]"
                     onClick={() => {
                       mutation.mutate({ dealIds, action: "move_stage", stageId: s.id });
                       setMoveOpen(false);
@@ -152,10 +152,10 @@ export function BulkActionsBar({
               <ChevronDown className="size-3" />
             </Button>
             {ownerOpen && (
-              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-border bg-white py-1 shadow-xl">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-slate-400 hover:bg-slate-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-subtle)]"
                   onClick={() => {
                     mutation.mutate({ dealIds, action: "change_owner", ownerId: null });
                     setOwnerOpen(false);
@@ -167,7 +167,7 @@ export function BulkActionsBar({
                   <button
                     key={u.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-foreground hover:bg-[var(--color-bg-subtle)]"
                     onClick={() => {
                       mutation.mutate({ dealIds, action: "change_owner", ownerId: u.id });
                       setOwnerOpen(false);

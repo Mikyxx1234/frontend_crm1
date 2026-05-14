@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 type CompanyRow = {
   id: string;
@@ -131,7 +131,7 @@ export default function CompaniesPage() {
         actions={
           <Button
             type="button"
-            className="gap-2 shadow-sm"
+            className={cn("gap-2", pageHeaderPrimaryCtaClass)}
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" />

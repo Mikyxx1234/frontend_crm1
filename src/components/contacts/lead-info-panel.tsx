@@ -19,13 +19,13 @@ import Link from "next/link";
 import * as React from "react";
 
 import { CustomFieldsSection } from "@/components/contacts/custom-fields-section";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { cn, formatCurrency } from "@/lib/utils";
+import { dt } from "@/lib/design-tokens";
+import { cn, formatCurrency, tagPillStyle, tagStyle } from "@/lib/utils";
 
 const LIFECYCLE_OPTIONS = [
   { value: "SUBSCRIBER", label: "Assinante", color: "bg-gray-400" },
@@ -230,13 +230,12 @@ export function LeadInfoPanel({ contact, onUpdate, isUpdating }: Props) {
         </h3>
         <div className="flex flex-wrap gap-1.5">
           {contact.tags.map((t) => (
-            <Badge
+            <span
               key={t.tag.id}
-              variant="outline"
-              className="gap-1 border-border/80 pr-1"
-              style={{ borderColor: t.tag.color + "60", backgroundColor: t.tag.color + "15" }}
+              className={cn(dt.pill.base, "gap-1 pr-1")}
+              style={tagPillStyle(t.tag.name, t.tag.color)}
             >
-              <span style={{ color: t.tag.color }}>{t.tag.name}</span>
+              {t.tag.name}
               <button
                 type="button"
                 onClick={() => removeTagMutation.mutate(t.tag.id)}
@@ -244,7 +243,7 @@ export function LeadInfoPanel({ contact, onUpdate, isUpdating }: Props) {
               >
                 <X className="size-3" />
               </button>
-            </Badge>
+            </span>
           ))}
         </div>
         <div className="relative">
@@ -308,13 +307,9 @@ export function LeadInfoPanel({ contact, onUpdate, isUpdating }: Props) {
                   <span className="truncate font-medium">{d.title}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Badge
-                    variant="outline"
-                    className="text-[10px]"
-                    style={{ borderColor: d.stage.color + "60", color: d.stage.color }}
-                  >
+                  <span className={dt.pill.sm} style={tagStyle(d.stage.color)}>
                     {d.stage.name}
-                  </Badge>
+                  </span>
                   <span className="text-xs font-semibold tabular-nums text-muted-foreground">
                     {formatCurrency(Number(d.value))}
                   </span>

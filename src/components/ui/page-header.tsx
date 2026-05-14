@@ -2,41 +2,66 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Classes padrão de tipografia para cabeçalhos de páginas do CRM.
- * Mantém uma única fonte de verdade para evitar que cada página
- * invente um tamanho/peso/cor diferente.
+ * ═══════════════════════════════════════════════════════════════════════
+ * DNA de headers do CRM — fonte única de verdade (layout compacto ~44px).
+ * ═══════════════════════════════════════════════════════════════════════
  *
- * Escolha do padrão:
- *   • Fonte — `font-heading` (Outfit) herdada via `globals.css`; aqui deixamos
- *     explícito para casos em que o h1 viva dentro de um container que
- *     sobrescreva a família.
- *   • Tamanho — `text-2xl md:text-3xl` (24 → 30px) equilibra densidade e
- *     presença; evita a variação entre xl/2xl/3xl que existia.
- *   • Peso — `font-bold` (700) é o meio-termo legível entre `semibold` (600,
- *     fraco demais) e `black` (900, muito pesado). Páginas "premium"
- *     específicas podem sobrepor via `className`.
- *   • Cor — `text-foreground` respeita dark mode (em vez de `slate-900`).
- *   • Tracking — `tracking-tight` dá o ar moderno usado no restante da UI.
+ * Todos os títulos de página do app respeitam esse padrão. Páginas com
+ * layout especial (Inbox, Pipeline) que não usam o componente `<PageHeader>`
+ * *devem* importar essas classes pra manter consistência visual.
+ *
+ * Anatomia do padrão:
+ *
+ *   ┌──┐  Título · descrição na mesma linha                      [ ações ]
+ *   │🔵│
+ *   └──┘
+ *    ^
+ *    └─ icon badge 28×28, bg/text primary (var(--color-primary))
+ *
+ * Decisões:
+ *   • Cor da marca = `primary` — acento no ícone.
+ *   • Fonte — `font-heading` (display) herdada via `globals.css`.
+ *   • Título — `text-[15px] font-semibold` (uma linha com descrição).
+ *   • Descrição — `text-[12px]` muted, baseline com o título.
+ *   • Ícone — `size-7`, rounded-lg, ícone SVG size-4.
  */
 export const pageHeaderTitleClass =
-  "font-heading text-2xl font-bold tracking-tight text-foreground md:text-3xl";
+  "font-heading text-[15px] font-semibold tracking-tight text-foreground";
 
 export const pageHeaderDescriptionClass =
-  "mt-1 text-sm text-muted-foreground";
+  "text-[12px] text-muted-foreground";
 
 export const pageHeaderEyebrowClass =
   "text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground";
 
+/**
+ * Badge do ícone da página. Reutilizado pelo `<PageHeader>` e por headers
+ * custom (Pipeline, Inbox). `[&>svg]:size-4` mantém o ícone proporcional.
+ */
+export const pageHeaderIconBadgeClass =
+  "flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&>svg]:size-4";
+
+/**
+ * CTA primário que acompanha o PageHeader (botão "Novo X" à direita).
+ * Preenchido com primary puro em vez da variant default do shadcn
+ * (que usa `primary` = azul marinho, destoa visualmente ao lado do
+ * icon badge azul vivo). Aplique via `className` no `<Button>`:
+ *
+ *   <Button className={pageHeaderPrimaryCtaClass}>Novo Lead</Button>
+ */
+export const pageHeaderPrimaryCtaClass =
+  "bg-primary text-white shadow-sm hover:bg-primary/90 focus-visible:ring-primary/30";
+
 type PageHeaderProps = {
   /** Texto do H1 ou node customizado (ex.: título + badge). */
   title: React.ReactNode;
-  /** Subtítulo/descrição exibido logo abaixo do título. */
+  /** Subtítulo/descrição na mesma linha do título (baseline). */
   description?: React.ReactNode;
   /** Pequeno rótulo acima do título (breadcrumb curto, categoria, etc.). */
   eyebrow?: React.ReactNode;
   /** Ícone opcional à esquerda do título. */
   icon?: React.ReactNode;
-  /** Ações à direita (botões, menus). Empilham abaixo em mobile. */
+  /** Ações à direita (botões, menus), alinhadas à mesma linha do título. */
   actions?: React.ReactNode;
   /** Classe extra no container externo. */
   className?: string;
@@ -73,22 +98,20 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
-        bordered && "border-b border-border pb-6",
+        "flex items-center justify-between gap-3",
+        bordered && "border-b border-zinc-200 pb-3",
         className,
       )}
     >
       <div className="min-w-0 flex-1">
         {eyebrow ? (
-          <div className={cn(pageHeaderEyebrowClass, "mb-1.5")}>{eyebrow}</div>
+          <div className={cn(pageHeaderEyebrowClass, "mb-0.5")}>{eyebrow}</div>
         ) : null}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-2.5">
           {icon ? (
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10 [&>svg]:size-5">
-              {icon}
-            </div>
+            <div className={pageHeaderIconBadgeClass}>{icon}</div>
           ) : null}
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-baseline gap-2">
             <h1 className={cn(pageHeaderTitleClass, titleClassName)}>
               {title}
             </h1>
@@ -106,9 +129,7 @@ export function PageHeader({
         </div>
       </div>
       {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:self-start">
-          {actions}
-        </div>
+        <div className="flex shrink-0 items-center gap-2">{actions}</div>
       ) : null}
     </div>
   );

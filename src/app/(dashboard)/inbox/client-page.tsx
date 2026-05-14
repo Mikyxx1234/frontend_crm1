@@ -3,47 +3,34 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDownToLine, ChevronDown, CircleAlert as AlertCircle, Bot, CircleCheck as CheckCircle2, SquareCheck as CheckSquare, Clock, Eye, Inbox, LayoutGrid, ListFilter as Filter, MessageSquare, Plus, Search, Send, SlidersHorizontal, X } from "lucide-react";
+import { ChevronsLeft, SquareCheck as CheckSquare, MessageSquare, X } from "lucide-react";
 import { AnimatePresence, MotionDiv } from "@/components/ui/motion";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
 import { ChannelBadge } from "@/components/inbox/channel-badge";
 import { ChatWindow } from "@/components/inbox/chat-window";
-import { ConversationList, type ConversationListRow } from "@/components/inbox/conversation-list";
+import {
+  ConversationList,
+  InboxListHeader,
+  type ConversationListRow,
+  type InboxTab,
+} from "@/components/inbox/conversation-list";
+import { useSSE } from "@/hooks/use-sse";
 import { ConversationHeader } from "@/components/inbox/conversation-header";
 import { InboxFilterBar, type InboxFilters } from "@/components/inbox/inbox-filters";
 import { ContactDealSidebar } from "@/components/inbox/contact-deal-sidebar";
-import { DailyStatsChips } from "@/components/inbox/daily-stats-chips";
-import { PresenceDashboard } from "@/components/inbox/presence-dashboard";
+import { RemindButton } from "@/components/inbox/remind-button";
+import { TransferControl } from "@/components/inbox/transfer-control";
+import { WhatsappCallChip } from "@/components/inbox/whatsapp-call-chip";
 import { DealForm } from "@/components/pipeline/deal-form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TooltipHost } from "@/components/ui/tooltip";
+import {
+  listAllowedInboxTabsForUser,
+  type ScopeGrants,
+} from "@/lib/authz/scope-grants-shared";
 import { cn } from "@/lib/utils";
-
-type InboxTab = "entrada" | "esperando" | "respondidas" | "automacao" | "finalizados" | "erro";
-type TabDef = {
-  key: InboxTab; label: string; icon: React.ElementType;
-  iconOnly?: boolean;
-};
-
-const TABS: TabDef[] = [
-  { key: "entrada", label: "Entrada", icon: ArrowDownToLine },
-  { key: "esperando", label: "Esperando", icon: Clock },
-  { key: "respondidas", label: "Respondidas", icon: Send },
-  { key: "finalizados", label: "Finalizados", icon: CheckCircle2 },
-  { key: "automacao", label: "Bot", icon: Bot },
-  { key: "erro", label: "Erro", icon: AlertCircle },
-];
-
-const TAB_ACCENT: Record<InboxTab, string> = {
-  entrada: "text-amber-600 dark:text-amber-400 border-amber-500",
-  esperando: "text-rose-600 dark:text-rose-400 border-rose-500",
-  respondidas: "text-emerald-600 dark:text-emerald-400 border-emerald-500",
-  automacao: "text-accent border-accent",
-  finalizados: "text-success border-success",
-  erro: "text-destructive border-destructive",
-};
 
 type PipelineListItem = { id: string; name: string; isDefault?: boolean };
 type BoardStage = { id: string; name: string };
@@ -66,7 +53,17 @@ async function fetchBoard(pipelineId: string): Promise<BoardStage[]> {
 }
 async function fetchTabCounts(): Promise<Record<InboxTab, number>> {
   const res = await fetch(apiUrl("/api/conversations?counts=1"));
-  if (!res.ok) return { entrada: 0, esperando: 0, respondidas: 0, automacao: 0, finalizados: 0, erro: 0 };
+  if (!res.ok) {
+    return {
+      todos: 0,
+      entrada: 0,
+      esperando: 0,
+      respondidas: 0,
+      automacao: 0,
+      finalizados: 0,
+      erro: 0,
+    };
+  }
   return res.json();
 }
 
@@ -83,16 +80,37 @@ export default function InboxPage() {
   const myUserId = (sessionData?.user as { id?: string })?.id;
   const myRole = (sessionData?.user as { role?: "ADMIN" | "MANAGER" | "MEMBER" })?.role;
   const canManageAssignee = myRole === "ADMIN" || myRole === "MANAGER";
-  const isAgent = myRole === "MEMBER";
+  const { data: permPanel } = useQuery({
+    queryKey: ["settings-permissions-panel"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/api/settings/permissions"));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro");
+      return data as { scopeGrants?: ScopeGrants };
+    },
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  });
 
-  const allowedTabs = React.useMemo<TabDef[]>(
-    () => (isAgent ? TABS.filter((t) => t.key === "esperando" || t.key === "respondidas") : TABS),
-    [isAgent],
-  );
+  const allowedTabKeys = React.useMemo<InboxTab[]>(() => {
+    const grants = permPanel?.scopeGrants ?? {};
+    return listAllowedInboxTabsForUser({ grants, role: myRole ?? null });
+  }, [permPanel?.scopeGrants, myRole]);
 
-  const [tab, setTab] = React.useState<InboxTab>(isAgent ? "esperando" : "entrada");
+  const [tab, setTab] = React.useState<InboxTab>("entrada");
   const [selected, setSelected] = React.useState<ConversationListRow | null>(null);
   const [search, setSearch] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  React.useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedSearch(search.trim()), 280);
+    return () => window.clearTimeout(id);
+  }, [search]);
+
+  React.useEffect(() => {
+    if (allowedTabKeys.length > 0 && !allowedTabKeys.includes(tab)) {
+      setTab(allowedTabKeys[0] ?? "esperando");
+    }
+  }, [allowedTabKeys, tab]);
   const [dealOpen, setDealOpen] = React.useState(false);
   const [showFilters, setShowFilters] = React.useState(false);
   const [filters, setFilters] = React.useState<InboxFilters>({});
@@ -100,12 +118,41 @@ export default function InboxPage() {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = React.useState(false);
   const [assignLoading, setAssignLoading] = React.useState(false);
-  // O painel direito (CRM/Lead) é sempre visível em telas grandes (≥ xl).
-  // O antigo botão `PanelRightOpen/Close` foi removido a pedido do operador
-  // — quem opera o Inbox quase sempre quer ver o contexto do contato/deal
-  // ao lado da conversa, e o toggle só roubava espaço/atenção do header.
-  // Em telas menores que xl, a sidebar é simplesmente ocultada via CSS
-  // (`hidden xl:flex`) — o operador rola pra ver o contexto se precisar.
+  /** Tabs do header petróleo (Conversa / Atividades / …). */
+  const [conversationDetailTab, setConversationDetailTab] = React.useState("chat");
+
+  // Painel direito (CRM/Lead): colapsavel, com estado persistido em
+  // localStorage. Dá prioridade pra area de chat quando o operador precisa
+  // de mais espaco. Default = aberto (preserva o comportamento atual).
+  //
+  // Usa lazy init pra evitar read de localStorage em SSR/hydration,
+  // e sync back no primeiro mount pra refletir o valor persistido.
+  const [rightPanelOpen, setRightPanelOpen] = React.useState(true);
+  React.useEffect(() => {
+    try {
+      const v = window.localStorage.getItem("inbox-right-panel-open");
+      if (v === "0") setRightPanelOpen(false);
+    } catch {
+      // localStorage bloqueado (private mode) — mantem default.
+    }
+  }, []);
+  const toggleRightPanel = React.useCallback(() => {
+    setRightPanelOpen((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem("inbox-right-panel-open", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const inboxConversationSearchRef = React.useRef<{ open: () => void } | null>(null);
+
+  React.useEffect(() => {
+    setConversationDetailTab("chat");
+  }, [selected?.id]);
 
   const toggleSelect = React.useCallback((id: string) => {
     setSelectedIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -157,8 +204,66 @@ export default function InboxPage() {
     } finally { setBulkLoading(false); }
   }, [selectedIds, queryClient, exitSelectionMode]);
 
-  const { data: counts = { entrada: 0, esperando: 0, respondidas: 0, automacao: 0, finalizados: 0, erro: 0 } } =
+  const {
+    data: counts = {
+      todos: 0,
+      entrada: 0,
+      esperando: 0,
+      respondidas: 0,
+      automacao: 0,
+      finalizados: 0,
+      erro: 0,
+    },
+  } =
     useQuery({ queryKey: ["conversations", "tab-counts"], queryFn: fetchTabCounts, refetchInterval: 15_000, enabled: isAuthenticated });
+
+  // ── Tempo real: SSE invalida lista + contadores imediatamente ──
+  // Antes desta integracao, lista (`inbox-conversations`) so rodava a cada
+  // 20s e contadores (`tab-counts`) a cada 15s, dando ao operador a sensacao
+  // de "delay" pra mover conversa entre tabs apos resposta. Agora qualquer
+  // evento que altera estado de conversa invalida ambas as queries — a UI
+  // reflete em <1s. Mantemos o polling como fallback caso o SSE caia.
+  //
+  // Throttle: invalidacoes em rajada (e.g. webhook spammando new_message
+  // por 5 mensagens seguidas) causariam refetch redundante. Coalescemos
+  // todas as invalidacoes em um unico flush de ate 250ms.
+  const invalidateRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleInboxRefresh = React.useCallback(() => {
+    if (invalidateRef.current) return;
+    invalidateRef.current = setTimeout(() => {
+      invalidateRef.current = null;
+      queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations", "tab-counts"] });
+    }, 250);
+  }, [queryClient]);
+
+  React.useEffect(() => {
+    return () => {
+      if (invalidateRef.current) {
+        clearTimeout(invalidateRef.current);
+        invalidateRef.current = null;
+      }
+    };
+  }, []);
+
+  useSSE(
+    "/api/sse/messages",
+    React.useCallback(
+      (event) => {
+        // Eventos que afetam tab/lista: nova msg (in/out), status (sent/read/failed),
+        // updates de conversa (assign, finalizar, hasError flip).
+        if (
+          event === "new_message" ||
+          event === "message_status" ||
+          event === "conversation_updated"
+        ) {
+          scheduleInboxRefresh();
+        }
+      },
+      [scheduleInboxRefresh],
+    ),
+    isAuthenticated,
+  );
 
   const { data: teamUsers = [] } = useQuery<TeamUser[]>({
     queryKey: ["users", "assign-picker"],
@@ -228,7 +333,12 @@ export default function InboxPage() {
   React.useEffect(() => { setSelected(null); exitSelectionMode(); }, [tab, exitSelectionMode]);
 
   return (
-    <div className="-mx-3 -mt-3 flex min-h-0 flex-1 flex-col overflow-hidden sm:-mx-4 md:-mx-8 md:-mt-2 md:flex-row">
+    // Wrapper full-bleed: anula EXATAMENTE o `p-3 sm:p-4 md:p-8` do <main> da
+    // DashboardShell em todos os breakpoints. Antes usavamos `md:-mt-2`,
+    // que sobrava 24px no topo e empurrava o titulo "Conversas" pra ~24px
+    // abaixo das paginas standard. Quem controla o spacing agora e o
+    // pt interno do header (md:pt-8 logo abaixo).
+    <div className="-mx-3 -mt-3 flex min-h-0 flex-1 flex-col overflow-hidden sm:-mx-4 sm:-mt-4 md:-mx-8 md:-mt-8 md:flex-row">
       {/* ═══════ SIDEBAR: CONVERSATION LIST ═══════
           Largura FIXA em md+: nunca muda em função da tab ativa nem da
           presença/ausência de uma conversa selecionada.
@@ -238,110 +348,37 @@ export default function InboxPage() {
           a sensação de painel "sobre" a área de chat — Premium Core spec. */}
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-slate-200 bg-white shadow-[10px_0_30px_-15px_rgba(13,27,62,0.08)] md:h-full md:w-[440px] md:shrink-0 md:grow-0 md:basis-[440px]",
+          // Sidebar esquerda (lista de conversas) — largura fixa 300px em md+
+          // (libera área central; painel CRM direito permanece conforme layout).
+          "flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-[var(--color-bg-subtle)]/60 shadow-[12px_0_36px_-14px_rgba(13,27,62,0.10)] md:h-full md:w-[300px] md:shrink-0 md:grow-0 md:basis-[300px] xl:w-[300px] xl:basis-[300px] 2xl:w-[300px] 2xl:basis-[300px]",
           selected ? "hidden md:flex" : "w-full flex-1",
         )}
       >
-        {/* Header */}
-        <div className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
-          {/* Linha 1: "Conversas" + ícones + "+"
-              Em mobile compactamos: titulo 2xl, escondemos ícones secundários
-              (Layout/Config/Chevron) — eles ficam só em md+. O "+" e a busca
-              continuam acessíveis em mobile pois são as ações primárias. */}
-          <div className="mb-4 flex items-center justify-between sm:mb-6">
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10">
-                <MessageSquare className="size-5" />
-              </div>
-              <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-                Conversas
-              </h1>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2">
-              <TooltipHost label="Layout" side="bottom" className="hidden md:inline-flex">
-                <button type="button" className="p-2 text-slate-400 hover:text-slate-600" aria-label="Layout"><LayoutGrid size={22} /></button>
-              </TooltipHost>
-              <TooltipHost label="Configurações" side="bottom" className="hidden md:inline-flex">
-                <button type="button" className="p-2 text-slate-400 hover:text-slate-600" aria-label="Configurações"><SlidersHorizontal size={22} /></button>
-              </TooltipHost>
-              <div className="mx-2 hidden h-6 w-px bg-slate-200 md:block" />
-              <TooltipHost label="Mais opções" side="bottom" className="hidden md:inline-flex">
-                <button type="button" className="p-2 text-slate-400 hover:text-slate-600" aria-label="Mais opções"><ChevronDown size={22} /></button>
-              </TooltipHost>
-              <TooltipHost label={selectionMode ? "Sair seleção" : "Nova conversa"} side="bottom">
-                <button
-                  type="button"
-                  onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
-                  className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-cyan-100 transition-colors duration-150 hover:bg-accent/90"
-                  aria-label={selectionMode ? "Sair seleção" : "Nova conversa"}
-                >
-                  <Plus size={26} strokeWidth={3} />
-                </button>
-              </TooltipHost>
-            </div>
-          </div>
-
-          {/* Linha 2: Filtro + Busca */}
-          <div className="flex items-center gap-3 border-t border-slate-100 py-3 sm:gap-6 sm:py-4">
-            <TooltipHost label="Filtros" side="bottom">
-              <button
-                type="button"
-                onClick={() => setShowFilters((v) => !v)}
-                className={cn("text-slate-400 transition-colors", showFilters && "text-accent")}
-                aria-label="Filtros"
-              >
-                <Filter size={22} />
-              </button>
-            </TooltipHost>
-            <div className="flex flex-1 items-center gap-3 sm:gap-4">
-              <Search size={18} className="shrink-0 text-slate-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por nome ou telefone"
-                className="w-full border-none bg-transparent text-base text-slate-700 outline-none placeholder:text-slate-400 sm:text-lg"
-              />
-              {search && (
-                <button type="button" onClick={() => setSearch("")} className="shrink-0 text-slate-400 hover:text-slate-600">
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Painel do dia — chips compactos com pulse pessoal do consultor.
-              Ficam logo abaixo da busca pra serem o "primeiro olhar" ao abrir
-              o Inbox. Em mobile usam scroll horizontal silencioso (poucos itens
-              cabem em 360px se houver número de 3 dígitos). */}
-          <div className="mt-3 sm:mt-4">
-            <DailyStatsChips
-              onPendingClick={() => setTab("entrada")}
-              onCriticalClick={() => setTab("entrada")}
-            />
-          </div>
-
-          {/* PresenceDashboard ocupa muito espaço vertical em mobile. Mantemos
-              só em sm+ — operador mobile foca em conversas, status fica no
-              MoreSheet do shell. */}
-          {myUserId && sessionData?.user && (
-            <div className="hidden sm:block">
-              <PresenceDashboard
-                agent={{
-                  id: myUserId,
-                  name: sessionData.user.name ?? "Agente",
-                  imageUrl: sessionData.user.image ?? null,
-                }}
-                status={myAgentStatus}
-                capacity={agentCapacity?.loadPct}
-                activeConversations={agentCapacity?.activeConversations}
-                maxConcurrent={agentCapacity?.maxConcurrent}
-                tone={agentCapacity?.tone}
-                capacityLoading={agentCapacityLoading}
-              />
-            </div>
-          )}
-        </div>
+        {/* Header compacto — paddings reduzidos vs versao anterior pra
+            liberar verticais pra lista de conversas. Title em text-lg
+            (era text-2xl/3xl) + badge size-8 + botao + size-9. A sidebar
+            agora ocupa ~22% menos altura no header, deixando ate ~3
+            cards extra de conversa visiveis acima do fold em monitores
+            13"/14". */}
+        <InboxListHeader
+          search={search}
+          onSearchChange={setSearch}
+          appliedSearch={debouncedSearch}
+          activeTab={tab}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((v) => !v)}
+          selectionMode={selectionMode}
+          onExitSelectionMode={exitSelectionMode}
+          onEnterSelectionMode={() => setSelectionMode(true)}
+          counts={counts}
+          onTabChange={setTab}
+          myUserId={myUserId ?? null}
+          sessionUserName={sessionData?.user?.name ?? null}
+          sessionUserImage={sessionData?.user?.image ?? null}
+          myAgentStatus={myAgentStatus}
+          agentCapacity={agentCapacity ?? null}
+          agentCapacityLoading={agentCapacityLoading}
+        />
 
         {showFilters && (
           <InboxFilterBar value={filters} onChange={setFilters} onClose={() => setShowFilters(false)} />
@@ -367,61 +404,13 @@ export default function InboxPage() {
           </div>
         )}
 
-        {/* Tabs — ativa expande com rótulo; inativas ficam compactas com ícone */}
-        <div className="shrink-0 px-6 pb-4">
-          <div
-            className="font-outfit mb-6 flex items-center gap-1 rounded-full bg-[#f1f5f9] p-1 shadow-inner ring-1 ring-slate-200/50"
-            role="tablist"
-            aria-label="Filtro de conversas"
-          >
-            {allowedTabs.map((t) => {
-              const active = tab === t.key;
-              const count = counts[t.key] ?? 0;
-              const Icon = t.icon;
-              const tabButton = (
-                <button
-                  type="button"
-                  role="tab"
-                  onClick={() => setTab(t.key)}
-                  aria-pressed={active}
-                  aria-selected={active}
-                  aria-label={count > 0 ? `${t.label} (${count})` : t.label}
-                  className={cn(
-                    "group relative flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-[14px] transition-colors duration-150 active:scale-[0.97]",
-                    active
-                      ? "h-10 bg-brand-blue px-4 font-semibold text-white shadow-blue-glow"
-                      : "h-10 w-9 font-medium text-slate-500 hover:bg-white hover:text-slate-800",
-                  )}
-                >
-                  <Icon className="size-[18px] shrink-0" strokeWidth={active ? 2.2 : 2} />
-                  {active && <span className="truncate">{t.label}</span>}
-                  {count > 0 && (
-                    <span
-                      className={cn(
-                        "inline-flex shrink-0 items-center justify-center tabular-nums",
-                        active
-                          ? "rounded-full bg-white/25 px-1.5 py-0.5 text-[11px] font-bold text-white"
-                          : "absolute -right-1 -top-1 size-[17px] rounded-full bg-brand-blue px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-[#f1f5f9]",
-                      )}
-                    >
-                      {count > 99 ? "99+" : count}
-                    </span>
-                  )}
-                </button>
-              );
-              return (
-                <div key={t.key} className={cn("relative", active ? "flex-1 min-w-0" : "shrink-0")}>
-                  {active ? tabButton : <TooltipHost label={t.label} side="bottom">{tabButton}</TooltipHost>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <ConversationList
             tab={tab}
-            search={search}
+            onTabChange={setTab}
+            tabCounts={counts}
+            allowedTabKeys={allowedTabKeys}
+            searchQuery={debouncedSearch}
             selectedId={selected?.id ?? null}
             onSelect={setSelected}
             filters={filters}
@@ -435,32 +424,28 @@ export default function InboxPage() {
       </div>
 
       {/* ═══════ DETAIL AREA ═══════ */}
-      <div className={cn("flex min-h-0 min-w-0 flex-1 overflow-hidden bg-[#eef0f4]", !selected && "hidden md:flex")}>
+      <div
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 overflow-hidden bg-[var(--color-chat-bg)]",
+          !selected && "hidden md:flex",
+        )}
+      >
         {selected ? (
           <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
             {/* Chat (centro): só esta coluna rola as mensagens; cabeçalhos fixos */}
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#eef0f4]">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-chat-bg)]">
               {/*
-                Topo unificado: substitui o `<header>` artesanal e o
-                `SalesHubChatHeader` por um único componente que vive
-                em `src/components/inbox/conversation-header.tsx`. Inclui
-                avatar + nome + tags + telefone/email + chip de voz +
-                transferir + tags + fechar. A ordem fixa dos botões
-                (voz | transferir | tags | actions | X) foi escolhida
-                pelo operador. O slot `actions` é deixado vazio aqui
-                porque no Inbox não tem Ganho/Perdido — esse slot é
-                quem faz o componente render exatamente igual nas
-                duas telas (Inbox + Sales Hub).
+                Topo unificado (`conversation-header.tsx`): Inbox usa
+                `toolbarActions` + chip de voz no lugar do `tel:` e
+                `hideOverflowMenu` com fechar na barra; Sales Hub mantém
+                overflow com tags e ações de negócio.
               */}
               <ConversationHeader
                 contactId={selected.contact.id}
                 contactName={selected.contact.name}
                 contactPhone={selected.contact.phone}
-                contactEmail={selected.contact.email}
-                contactAvatarUrl={selected.contact.avatarUrl}
-                contactChannel={selected.channel}
                 contactHref={`/contacts/${selected.contact.id}`}
-                tags={selected.tags ?? []}
+                contactChannel={selected.channel}
                 conversationId={selected.id}
                 conversationChannel={selected.channel}
                 canManageAssignee={canManageAssignee}
@@ -469,44 +454,109 @@ export default function InboxPage() {
                 teamUsers={teamUsers}
                 assignLoading={assignLoading}
                 onAssign={(uid) => void assignConversation(uid)}
-                onTagsUpdated={() => {
-                  queryClient.invalidateQueries({ queryKey: ["inbox-conversations"] });
-                }}
+                toolbarActions={
+                  <>
+                    {canManageAssignee || (!selected.assignedToId && myUserId) ? (
+                      <TransferControl
+                        teamUsers={teamUsers}
+                        currentAssigneeId={selected.assignedToId}
+                        myUserId={myUserId}
+                        canManageAssignee={canManageAssignee}
+                        loading={assignLoading}
+                        onAssign={(uid) => void assignConversation(uid)}
+                      />
+                    ) : null}
+                    <RemindButton
+                      contactId={selected.contact.id}
+                      contactName={selected.contact.name}
+                      conversationId={selected.id}
+                    />
+                  </>
+                }
+                {...(selected.channel === "whatsapp" || selected.channel === "meta"
+                  ? {
+                      phoneReplacement: (
+                        <WhatsappCallChip conversationId={selected.id} channel={selected.channel} />
+                      ),
+                    }
+                  : {})}
+                hideOverflowMenu
                 onBack={() => setSelected(null)}
                 onClose={() => setSelected(null)}
+                onSearch={() => inboxConversationSearchRef.current?.open()}
+                tabs={[
+                  { key: "chat", label: "Conversa" },
+                  { key: "activities", label: "Atividades" },
+                  { key: "notes", label: "Notas" },
+                  { key: "timeline", label: "Timeline" },
+                ]}
+                activeTab={conversationDetailTab}
+                onTabChange={setConversationDetailTab}
               />
 
-              <ChatWindow
-                conversationId={selected.id}
-                conversationStatus={selected.status}
-                onResolve={(next) => {
-                  setSelected((s) => (s ? { ...s, status: next } : s));
-                  queryClient.invalidateQueries({ queryKey: ["conversations"] });
-                }}
-                onReopen={(next) => {
-                  setSelected((s) => (s ? { ...s, status: next } : s));
-                  queryClient.invalidateQueries({ queryKey: ["conversations"] });
-                }}
-              />
+              {conversationDetailTab === "chat" ? (
+                <ChatWindow
+                  conversationId={selected.id}
+                  conversationStatus={selected.status}
+                  contactId={selected.contact.id}
+                  compactChrome
+                  inConversationSearchRef={inboxConversationSearchRef}
+                  onResolve={(next) => {
+                    setSelected((s) => (s ? { ...s, status: next } : s));
+                    queryClient.invalidateQueries({ queryKey: ["conversations"] });
+                  }}
+                  onReopen={(next) => {
+                    setSelected((s) => (s ? { ...s, status: next } : s));
+                    queryClient.invalidateQueries({ queryKey: ["conversations"] });
+                  }}
+                />
+              ) : (
+                <div className="flex flex-1 items-center justify-center bg-[var(--color-chat-bg)] px-6 text-center text-[13px] text-[var(--color-ink-muted)]">
+                  Em breve
+                </div>
+              )}
             </div>
 
-            {/* Lead + negócios (direita): altura da viewport da área útil; rolagem interna.
-                Sempre visível em telas ≥ xl — o antigo toggle do header
-                foi removido. Em telas menores fica oculta via Tailwind
-                (sem render no DOM móvel). */}
-            <div className="hidden xl:flex">
-              <ContactDealSidebar
-                side="right"
-                contactId={selected.contact.id}
-                contactName={selected.contact.name}
-                contactPhone={selected.contact.phone}
-                lastInboundAt={selected.lastInboundAt}
-                conversationId={selected.id}
-                channel={selected.channel}
-                onBack={() => setSelected(null)}
-                onCreateDeal={() => setDealOpen(true)}
-              />
-            </div>
+            {/* Lead + negócios (direita): colapsavel em telas ≥ lg.
+                Estado persistido em localStorage (`inbox-right-panel-open`).
+                Container externo limita largura; rail colapsado 36px.
+                Em telas menores que lg continua sem render (sem DOM movel). */}
+            {rightPanelOpen ? (
+              <div className="hidden lg:flex lg:w-[280px] xl:w-[300px] lg:shrink-0">
+                <ContactDealSidebar
+                  side="right"
+                  contactId={selected.contact.id}
+                  contactName={selected.contact.name}
+                  contactPhone={selected.contact.phone}
+                  lastInboundAt={selected.lastInboundAt}
+                  conversationId={selected.id}
+                  channel={selected.channel}
+                  onBack={() => setSelected(null)}
+                  onCreateDeal={() => setDealOpen(true)}
+                  onCollapse={toggleRightPanel}
+                />
+              </div>
+            ) : (
+              <div className="hidden w-9 shrink-0 flex-col items-center gap-2 border-l border-border bg-white py-3 lg:flex">
+                <TooltipHost label="Expandir painel CRM" side="left">
+                  <button
+                    type="button"
+                    onClick={toggleRightPanel}
+                    aria-label="Expandir painel CRM"
+                    className="flex size-8 items-center justify-center rounded-full text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900"
+                  >
+                    <ChevronsLeft className="size-4" />
+                  </button>
+                </TooltipHost>
+                <span
+                  aria-hidden
+                  className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-ink-muted)] [writing-mode:vertical-rl]"
+                  style={{ transform: "rotate(180deg)" }}
+                >
+                  Painel CRM
+                </span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center">

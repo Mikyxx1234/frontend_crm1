@@ -47,7 +47,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
-import { cn, formatCurrency, formatDateTime, getInitials } from "@/lib/utils";
+import { dt } from "@/lib/design-tokens";
+import { cn, formatCurrency, formatDateTime, getInitials, tagPillStyle, tagStyle } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────
 
@@ -414,10 +415,16 @@ function ContactLeftPanel({
         <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tags</h3>
         <div className="flex flex-wrap gap-1">
           {contact.tags.map((t) => (
-            <Badge key={t.tag.id} variant="outline" className="gap-1 border-border/80 pr-1 text-[10px]" style={{ borderColor: t.tag.color + "60", backgroundColor: t.tag.color + "15" }}>
-              <span style={{ color: t.tag.color }}>{t.tag.name}</span>
-              <button type="button" onClick={() => removeTagMutation.mutate(t.tag.id)} className="rounded-sm p-0.5 opacity-60 hover:opacity-100"><X className="size-2.5" /></button>
-            </Badge>
+            <span
+              key={t.tag.id}
+              className={cn(dt.pill.base, "gap-1 pr-1")}
+              style={tagPillStyle(t.tag.name, t.tag.color)}
+            >
+              {t.tag.name}
+              <button type="button" onClick={() => removeTagMutation.mutate(t.tag.id)} className="rounded-sm p-0.5 opacity-60 hover:opacity-100">
+                <X className="size-2.5" />
+              </button>
+            </span>
           ))}
         </div>
         <div className="relative">
@@ -469,7 +476,9 @@ function ContactLeftPanel({
                   <span className="truncate font-medium">{d.title}</span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <Badge variant="outline" className="text-[9px]" style={{ borderColor: d.stage.color + "60", color: d.stage.color }}>{d.stage.name}</Badge>
+                  <span className={dt.pill.sm} style={tagStyle(d.stage.color)}>
+                    {d.stage.name}
+                  </span>
                   <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">{formatCurrency(Number(d.value))}</span>
                 </div>
               </div>
@@ -677,7 +686,7 @@ function ActivitiesPanel({
                         type="button"
                         onClick={() => deleteMut.mutate(a.id)}
                         disabled={deleteMut.isPending}
-                        className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                        className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-red-50 hover:text-red-500"
                         aria-label="Excluir atividade"
                       >
                         <Trash2 className="size-3" />

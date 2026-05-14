@@ -26,12 +26,12 @@ export default function DashboardError({
           Algo deu errado ao carregar esta seção.
         </p>
         {error.message && (
-          <p className="mt-2 font-mono text-xs text-slate-400">
+          <p className="mt-2 font-mono text-xs text-[var(--color-ink-muted)]">
             {error.message}
           </p>
         )}
         {error.digest && (
-          <p className="mt-1 font-mono text-xs text-slate-400">
+          <p className="mt-1 font-mono text-xs text-[var(--color-ink-muted)]">
             Código: {error.digest}
           </p>
         )}

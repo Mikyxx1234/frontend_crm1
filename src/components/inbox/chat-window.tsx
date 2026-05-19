@@ -42,6 +42,7 @@ import {
   ShieldCheck,
   Smile,
   Smartphone,
+  Upload,
   Volume2,
   Wrench,
   X,
@@ -486,6 +487,12 @@ export function ChatWindow({
   const [noteMode, setNoteMode] = React.useState(false);
   const [activePanel, setActivePanel] = React.useState<ActivePanel>("none");
   const [pendingFile, setPendingFile] = React.useState<File | null>(null);
+  // Drag-and-drop: contador de profundidade pra lidar com dragenter/leave
+  // disparando em filhos quando o cursor passa por dentro do composer/anexos
+  // (sem isso, o overlay pisca enquanto se arrasta). Só consideramos
+  // "arrastando" se o dataTransfer tem `Files` — texto/link não conta.
+  const dragDepthRef = React.useRef(0);
+  const [isDraggingFile, setIsDraggingFile] = React.useState(false);
   const [replyTo, setReplyTo] = React.useState<InboxMessageDto | null>(null);
   const [hoveredMsgId, setHoveredMsgId] = React.useState<
     string | number | null
@@ -1312,16 +1319,33 @@ export function ChatWindow({
       setActivePanel("none");
     }
   };
+  /**
+   * Aceita um arquivo vindo de QUALQUER origem (botão de anexo, paste,
+   * drag-and-drop) e prepara como anexo pendente. Centraliza a validação
+   * de tamanho (16 MB, limite do attachments endpoint) e o toast de erro
+   * pra evitar três cópias da mesma lógica espalhadas.
+   *
+   * Retorna `true` quando o arquivo foi aceito — chamadores que queiram
+   * dar feedback adicional (toast de "imagem colada", por ex.) podem
+   * encadear a partir disso.
+   */
+  const acceptIncomingFile = React.useCallback(
+    (file: File | null | undefined): boolean => {
+      if (!file) return false;
+      if (file.size > 16 * 1024 * 1024) {
+        toast.warning("O arquivo excede o limite de 16 MB.");
+        return false;
+      }
+      setPendingFile(file);
+      setActivePanel("none");
+      return true;
+    },
+    [],
+  );
   const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (!f) return;
     e.target.value = "";
-    if (f.size > 16 * 1024 * 1024) {
-      toast.warning("O arquivo excede o limite de 16 MB.");
-      return;
-    }
-    setPendingFile(f);
-    setActivePanel("none");
+    acceptIncomingFile(f);
   };
   /**
    * Handler de Ctrl+V / Cmd+V no composer.
@@ -1367,14 +1391,68 @@ export function ChatWindow({
             : `screenshot-${stamp}.${ext}`;
         const file = new File([blob], fileName, { type: blob.type });
         e.preventDefault();
-        setPendingFile(file);
-        setActivePanel("none");
-        toast.success("Imagem colada — digite a legenda e envie");
+        if (acceptIncomingFile(file)) {
+          toast.success("Imagem colada — digite a legenda e envie");
+        }
         return;
       }
     },
-    [],
+    [acceptIncomingFile],
   );
+
+  /**
+   * Drag-and-drop de arquivos diretamente sobre a janela de conversa.
+   *
+   * Por que counter ao invés de boolean simples? `dragenter`/`dragleave`
+   * disparam ao atravessar QUALQUER elemento filho (composer, bolha,
+   * sidebar interna). Sem contador, o overlay fica piscando ON/OFF
+   * conforme o cursor entra em sub-componentes.
+   *
+   * Por que checar `dataTransfer.types` por "Files"? Sem esse filtro,
+   * selecionar texto na própria página e arrastar acionaria o overlay
+   * sem motivo. Só queremos saber de drops vindos do SO/explorer.
+   */
+  const hasFiles = (e: React.DragEvent): boolean => {
+    const types = e.dataTransfer?.types;
+    if (!types) return false;
+    for (let i = 0; i < types.length; i += 1) {
+      if (types[i] === "Files") return true;
+    }
+    return false;
+  };
+  const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepthRef.current += 1;
+    if (dragDepthRef.current === 1) setIsDraggingFile(true);
+  };
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  };
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDraggingFile(false);
+  };
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepthRef.current = 0;
+    setIsDraggingFile(false);
+    if (composeDisabled) {
+      toast.warning("Não é possível anexar arquivos neste momento.");
+      return;
+    }
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    if (files.length > 1) {
+      toast.message("Vários arquivos arrastados — usando o primeiro.");
+    }
+    acceptIncomingFile(files[0]);
+  };
   const sendFile = () => {
     if (!pendingFile || !conversationId) return;
     attachMutation.mutate({ file: pendingFile, caption: draft.trim() });
@@ -1697,7 +1775,37 @@ export function ChatWindow({
     !isBaileysChannel && !sessionActive && sessionInfo != null && !noteMode;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div
+      className="relative flex min-h-0 flex-1 flex-col"
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      {/*
+        Drop overlay — aparece quando o usuário está arrastando arquivo do
+        sistema operacional sobre a janela. `pointer-events-none` é crucial:
+        sem ele, o overlay engoliria os eventos de drag dos filhos e o
+        contador `dragDepth` ficaria preso, deixando o overlay travado.
+      */}
+      {isDraggingFile && (
+        <div
+          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-white/40 p-6 backdrop-blur-sm"
+          aria-hidden
+        >
+          <div className="flex max-w-md flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-primary/60 bg-white/70 px-8 py-7 text-center shadow-2xl backdrop-blur-md">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+              <Upload className="size-6" />
+            </span>
+            <p className="font-sans text-[15px] font-semibold text-slate-800">
+              Solte o arquivo para anexar
+            </p>
+            <p className="font-sans text-[12px] text-slate-600">
+              Imagens, vídeos, áudios ou documentos · até 16 MB
+            </p>
+          </div>
+        </div>
+      )}
       {/* Nota fixada — faixa única estilo WhatsApp (baixa, truncada). */}
       {pinnedNote && (
         <div className="sticky top-0 z-20 flex min-h-0 shrink-0 items-center gap-2 border-b border-border bg-[var(--color-bg-subtle)] px-3 py-1.5 md:px-4">

@@ -8,11 +8,217 @@ import { apiUrl } from "@/lib/api";
 
 import type { AdvancedDealFilters, FilterOptionsResponse, SavedFilter } from "./types";
 
+/**
+ * Fallback: lista custom fields de uma entidade direto via `/api/custom-fields?entity=...`.
+ *
+ * Existe porque o endpoint principal `/api/kanban/filter-options` às vezes
+ * devolve `dealCustomFields: []` / `contactCustomFields: []` mesmo quando a
+ * org tem campos cadastrados (versão de backend desatualizada / RBAC). Esse
+ * endpoint alternativo (também publico e auth-only) sempre traz a lista
+ * completa de campos da org.
+ *
+ * Retorna `null` em qualquer erro pra não derrubar o painel inteiro.
+ */
+async function fetchCustomFieldsByEntity(
+  entity: "deal" | "contact",
+): Promise<FilterOptionsResponse["dealCustomFields"] | null> {
+  try {
+    const res = await fetch(apiUrl(`/api/custom-fields?entity=${entity}`), {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    if (!Array.isArray(data)) return null;
+    return data
+      .filter((cf): cf is Record<string, unknown> => !!cf && typeof cf === "object")
+      .map((cf) => ({
+        id: String(cf.id ?? ""),
+        name: String(cf.name ?? ""),
+        label: String(cf.label ?? cf.name ?? ""),
+        type: String(cf.type ?? "TEXT"),
+        options: Array.isArray(cf.options)
+          ? (cf.options as unknown[]).map((o) => String(o))
+          : [],
+        entity,
+      }));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Tenta buscar pipelines via `/api/pipelines` (existe há mais tempo no backend).
+ * Usado quando `/api/kanban/filter-options` está indisponível (404/erro).
+ */
+async function fetchPipelinesFallback(): Promise<FilterOptionsResponse["pipelines"]> {
+  try {
+    const res = await fetch(apiUrl("/api/pipelines"), {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    if (!Array.isArray(data)) return [];
+    return data.map((p: Record<string, unknown>) => ({
+      id: String(p.id ?? ""),
+      name: String(p.name ?? ""),
+      stages: Array.isArray(p.stages)
+        ? (p.stages as Record<string, unknown>[]).map((s, i) => ({
+            id: String(s.id ?? ""),
+            name: String(s.name ?? ""),
+            color: String(s.color ?? "#94a3b8"),
+            position: typeof s.position === "number" ? s.position : i,
+          }))
+        : [],
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchUsersFallback(): Promise<FilterOptionsResponse["users"]> {
+  try {
+    const res = await fetch(apiUrl("/api/users"), {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    const arr = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+    return arr.map((u: Record<string, unknown>) => ({
+      id: String(u.id ?? ""),
+      name: String(u.name ?? ""),
+      avatarUrl: typeof u.avatarUrl === "string" ? u.avatarUrl : null,
+      role: String(u.role ?? "MEMBER"),
+      type: String(u.type ?? "USER"),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchTagsFallback(): Promise<FilterOptionsResponse["tags"]> {
+  try {
+    const res = await fetch(apiUrl("/api/tags"), {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    const arr = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+    return arr.map((t: Record<string, unknown>) => ({
+      id: String(t.id ?? ""),
+      name: String(t.name ?? ""),
+      color: String(t.color ?? "#94a3b8"),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
-  const res = await fetch(apiUrl("/api/kanban/filter-options"), { cache: "no-store" });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message ?? "Erro ao carregar opções.");
-  return data as FilterOptionsResponse;
+  const res = await fetch(apiUrl("/api/kanban/filter-options"), {
+    cache: "no-store",
+    credentials: "include",
+  });
+  const data = await res.json().catch(() => ({} as Record<string, unknown>));
+
+  const primaryFailed = !res.ok;
+  if (primaryFailed && typeof window !== "undefined") {
+    console.warn(
+      `[kanban-filter-options] HTTP ${res.status} — tentando fallback`,
+      data?.message ?? "(sem mensagem)",
+    );
+  }
+
+  // 1) Sempre considera o que o primário trouxe (mesmo que parcial).
+  let dealCustomFields = Array.isArray(data?.dealCustomFields)
+    ? data.dealCustomFields
+    : [];
+  let contactCustomFields = Array.isArray(data?.contactCustomFields)
+    ? data.contactCustomFields
+    : [];
+  let pipelines = Array.isArray(data?.pipelines) ? data.pipelines : [];
+  let users = Array.isArray(data?.users) ? data.users : [];
+  let tags = Array.isArray(data?.tags) ? data.tags : [];
+  const sources = Array.isArray(data?.sources) ? data.sources : [];
+
+  // 2) Fallback: chama endpoints individuais (que existem há mais tempo) p/
+  //    preencher campos faltantes. Ocorre quando o primário falhou (404/etc)
+  //    OU quando devolveu arrays vazios mesmo com 200.
+  const needsDealCfs = dealCustomFields.length === 0;
+  const needsContactCfs = contactCustomFields.length === 0;
+  const needsPipelines = pipelines.length === 0;
+  const needsUsers = users.length === 0;
+  const needsTags = tags.length === 0;
+
+  if (
+    primaryFailed ||
+    needsDealCfs ||
+    needsContactCfs ||
+    needsPipelines ||
+    needsUsers ||
+    needsTags
+  ) {
+    const [
+      dealFb,
+      contactFb,
+      pipelinesFb,
+      usersFb,
+      tagsFb,
+    ] = await Promise.all([
+      needsDealCfs ? fetchCustomFieldsByEntity("deal") : Promise.resolve(null),
+      needsContactCfs ? fetchCustomFieldsByEntity("contact") : Promise.resolve(null),
+      needsPipelines ? fetchPipelinesFallback() : Promise.resolve(null),
+      needsUsers ? fetchUsersFallback() : Promise.resolve(null),
+      needsTags ? fetchTagsFallback() : Promise.resolve(null),
+    ]);
+
+    if (dealFb && dealFb.length > 0) {
+      dealCustomFields = dealFb;
+      if (typeof window !== "undefined") {
+        console.info(
+          `[kanban-filter-options] fallback: ${dealFb.length} campos de negócio via /api/custom-fields`,
+        );
+      }
+    }
+    if (contactFb && contactFb.length > 0) {
+      contactCustomFields = contactFb;
+      if (typeof window !== "undefined") {
+        console.info(
+          `[kanban-filter-options] fallback: ${contactFb.length} campos de contato via /api/custom-fields`,
+        );
+      }
+    }
+    if (pipelinesFb && pipelinesFb.length > 0) pipelines = pipelinesFb;
+    if (usersFb && usersFb.length > 0) users = usersFb;
+    if (tagsFb && tagsFb.length > 0) tags = tagsFb;
+  }
+
+  // 3) Só lança se NADA foi recuperado e a primária falhou — assim a UI
+  //    ainda consegue renderizar o painel com o que tem.
+  const totallyEmpty =
+    primaryFailed &&
+    pipelines.length === 0 &&
+    users.length === 0 &&
+    tags.length === 0 &&
+    dealCustomFields.length === 0 &&
+    contactCustomFields.length === 0;
+  if (totallyEmpty) {
+    throw new Error(
+      (data?.message as string) ?? `Erro ao carregar opções (HTTP ${res.status}).`,
+    );
+  }
+
+  return {
+    pipelines,
+    users,
+    tags,
+    dealCustomFields,
+    contactCustomFields,
+    sources,
+  } as FilterOptionsResponse;
 }
 
 export async function fetchBoardWithFilters(

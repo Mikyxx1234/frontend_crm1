@@ -220,7 +220,7 @@ export function FilterChips({ filters, options, onPatch, className }: Props) {
           key={`${chip.label}-${idx}`}
           type="button"
           onClick={chip.onRemove}
-          className="group inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+          className="group inline-flex items-center gap-1 rounded-full border border-primary/25 bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-medium text-primary backdrop-blur-sm transition-all hover:border-[var(--color-danger)]/35 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
           title="Remover filtro"
         >
           <span>{chip.label}</span>

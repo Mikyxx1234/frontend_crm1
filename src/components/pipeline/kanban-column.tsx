@@ -80,39 +80,39 @@ export function KanbanColumn({
   const remaining = Math.max(0, (stage.totalCount ?? visibleCount) - visibleCount);
   return (
     <div className="flex h-full min-h-0 w-[280px] shrink-0 flex-col self-stretch sm:w-[300px]">
-      <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-50/60">
-        <header className="shrink-0 border-b border-zinc-200/80 bg-white px-3 py-2.5">
+      <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[22px] border border-white/55 bg-white/30 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        <header className="relative shrink-0 border-b border-white/40 bg-white/50 px-3 py-2.5 backdrop-blur">
           {/* Barra de cor da etapa — 3px no topo */}
           {stage.color ? (
             <div
-              className="absolute inset-x-0 top-0 h-[3px] rounded-t-xl"
+              className="absolute inset-x-0 top-0 h-[3px] rounded-t-[22px]"
               style={{ backgroundColor: stage.color }}
             />
           ) : null}
           <div className="flex items-start justify-between gap-2">
-            <h3 className="min-w-0 truncate text-[13px] font-semibold leading-tight text-zinc-800">
+            <h3 className="min-w-0 truncate font-display text-[13px] font-semibold leading-tight text-foreground">
               {stage.name}
             </h3>
             <div className="flex shrink-0 items-center gap-1">
               {attentionInColumn > 0 ? (
                 <TooltipHost label={`${attentionInColumn} negócio(s) precisam de atenção`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center rounded bg-amber-100 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-amber-900">
+                  <span className="flex min-w-5 items-center justify-center rounded-full border border-amber-300/40 bg-amber-100/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-amber-900">
                     {attentionInColumn}
                   </span>
                 </TooltipHost>
               ) : null}
               {unreadInColumn > 0 ? (
                 <TooltipHost label={`${unreadInColumn} mensagem(ns) não lida(s) nesta etapa`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-teal-600">
+                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-emerald-50/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-700">
                     <MessageCircle className="size-3" />
                     {unreadInColumn}
                   </span>
                 </TooltipHost>
               ) : null}
-              <span className="flex min-w-5 items-center justify-center rounded bg-zinc-100 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-500">{count}</span>
+              <span className="flex min-w-5 items-center justify-center rounded-full border border-white/55 bg-white/60 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-ink-soft)]">{count}</span>
             </div>
           </div>
-          <p className="mt-0.5 text-[11px] tabular-nums text-zinc-400">{formatCurrency(totalValue)}</p>
+          <p className="mt-0.5 text-[11px] tabular-nums text-[var(--color-ink-muted)]">{formatCurrency(totalValue)}</p>
         </header>
 
         <Droppable droppableId={stage.id}>
@@ -125,7 +125,7 @@ export function KanbanColumn({
               {...droppableRest}
               className={cn(
                 "kanban-scroll flex min-h-[120px] flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden p-2",
-                snapshot.isDraggingOver && "bg-blue-50/30",
+                snapshot.isDraggingOver && "bg-primary/10",
               )}
               style={{ ...ghostScrollStyle, ...droppableStyle }}
             >
@@ -167,7 +167,7 @@ export function KanbanColumn({
                   type="button"
                   disabled={loadingMore}
                   onClick={() => onLoadMore?.(stage.id)}
-                  className="mt-0.5 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-blue-200 bg-blue-50/40 py-2 text-[11px] font-medium text-blue-700 transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
+                  className="mt-0.5 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 py-2 text-[11px] font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 disabled:opacity-60"
                 >
                   {loadingMore ? "Carregando..." : `Carregar mais (${remaining})`}
                 </button>
@@ -176,7 +176,7 @@ export function KanbanColumn({
               <button
                 type="button"
                 onClick={() => onAddCard?.(stage.id)}
-                className="mt-0.5 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-zinc-200 py-2 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-white hover:text-zinc-600"
+                className="mt-0.5 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/55 py-2 text-xs font-medium text-[var(--color-ink-muted)] transition-colors hover:border-primary/40 hover:bg-white/40 hover:text-foreground"
                 aria-label={`Adicionar negócio em ${stage.name}`}
               >
                 <Plus className="size-4" strokeWidth={2.5} />

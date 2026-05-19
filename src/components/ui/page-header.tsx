@@ -26,20 +26,20 @@ import { cn } from "@/lib/utils";
  *   • Ícone — `size-7`, rounded-lg, ícone SVG size-4.
  */
 export const pageHeaderTitleClass =
-  "font-heading text-[15px] font-semibold tracking-tight text-foreground";
+  "font-display text-[18px] font-bold tracking-tight text-foreground";
 
 export const pageHeaderDescriptionClass =
   "text-[12px] text-muted-foreground";
 
 export const pageHeaderEyebrowClass =
-  "text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground";
+  "font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground";
 
 /**
  * Badge do ícone da página. Reutilizado pelo `<PageHeader>` e por headers
  * custom (Pipeline, Inbox). `[&>svg]:size-4` mantém o ícone proporcional.
  */
 export const pageHeaderIconBadgeClass =
-  "flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&>svg]:size-4";
+  "flex size-8 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary border border-primary/15 [&>svg]:size-4";
 
 /**
  * CTA primário que acompanha o PageHeader (botão "Novo X" à direita).
@@ -50,7 +50,7 @@ export const pageHeaderIconBadgeClass =
  *   <Button className={pageHeaderPrimaryCtaClass}>Novo Lead</Button>
  */
 export const pageHeaderPrimaryCtaClass =
-  "bg-primary text-white shadow-sm hover:bg-primary/90 focus-visible:ring-primary/30";
+  "rounded-full bg-primary text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] hover:bg-primary-dark hover:shadow-[var(--shadow-indigo-glow)] focus-visible:ring-primary/25";
 
 type PageHeaderProps = {
   /** Texto do H1 ou node customizado (ex.: título + badge). */
@@ -99,7 +99,7 @@ export function PageHeader({
     <div
       className={cn(
         "flex items-center justify-between gap-3",
-        bordered && "border-b border-zinc-200 pb-3",
+        bordered && "border-b border-white/40 pb-3",
         className,
       )}
     >

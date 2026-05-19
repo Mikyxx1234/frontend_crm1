@@ -62,6 +62,16 @@ export function useKanbanFilters(): UseKanbanFiltersResult {
   const [filters, setFiltersState] = React.useState<AdvancedDealFilters>({});
   const hydrated = React.useRef(false);
 
+  // Refs estáveis p/ acessar dependências dentro do callback sem reanexar
+  // o setter a cada render (estabilidade do `setFilters` é importante pois
+  // ele é prop de muitos componentes filhos).
+  const pathnameRef = React.useRef(pathname);
+  pathnameRef.current = pathname;
+  const searchParamsRef = React.useRef(searchParams);
+  searchParamsRef.current = searchParams;
+  const routerRef = React.useRef(router);
+  routerRef.current = router;
+
   // Reidrata uma vez (URL > localStorage)
   React.useEffect(() => {
     if (hydrated.current) return;
@@ -84,40 +94,48 @@ export function useKanbanFilters(): UseKanbanFiltersResult {
     }
   }, [searchParams]);
 
-  const writeToUrl = React.useCallback(
-    (next: AdvancedDealFilters) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (isEmptyFilters(next)) {
-        params.delete(URL_PARAM);
-      } else {
-        const encoded = encode(next);
-        if (encoded) params.set(URL_PARAM, encoded);
-      }
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [pathname, router, searchParams],
-  );
-
-  const persist = React.useCallback((next: AdvancedDealFilters) => {
+  // Sincroniza URL e localStorage como SIDE-EFFECT depois do commit. Antes
+  // chamávamos `router.replace` dentro do updater de `setState`, o que
+  // disparava o aviso "Cannot update a component (Router) while rendering
+  // a different component (PipelinePage)" no React 18+/StrictMode — porque
+  // o updater pode ser executado durante render (replay para detecção de
+  // efeitos). Mover para useEffect garante que router.replace acontece
+  // SEMPRE fora da fase de render.
+  React.useEffect(() => {
+    if (!hydrated.current) return;
+    // URL
+    const params = new URLSearchParams(searchParamsRef.current.toString());
+    if (isEmptyFilters(filters)) {
+      params.delete(URL_PARAM);
+    } else {
+      const encoded = encode(filters);
+      if (encoded) params.set(URL_PARAM, encoded);
+    }
+    const qs = params.toString();
+    const nextUrl = qs ? `${pathnameRef.current}?${qs}` : pathnameRef.current;
+    // Evita push redundante quando a URL já reflete o estado.
+    const current = `${pathnameRef.current}${
+      searchParamsRef.current.toString() ? `?${searchParamsRef.current.toString()}` : ""
+    }`;
+    if (nextUrl !== current) {
+      routerRef.current.replace(nextUrl, { scroll: false });
+    }
+    // localStorage
     try {
-      if (isEmptyFilters(next)) localStorage.removeItem(LS_KEY);
-      else localStorage.setItem(LS_KEY, JSON.stringify(next));
+      if (isEmptyFilters(filters)) localStorage.removeItem(LS_KEY);
+      else localStorage.setItem(LS_KEY, JSON.stringify(filters));
     } catch {
       /* noop */
     }
-  }, []);
+  }, [filters]);
 
   const setFilters = React.useCallback<UseKanbanFiltersResult["setFilters"]>(
     (next) => {
-      setFiltersState((prev) => {
-        const value = typeof next === "function" ? next(prev) : next;
-        writeToUrl(value);
-        persist(value);
-        return value;
-      });
+      setFiltersState((prev) =>
+        typeof next === "function" ? next(prev) : next,
+      );
     },
-    [persist, writeToUrl],
+    [],
   );
 
   const patch = React.useCallback(

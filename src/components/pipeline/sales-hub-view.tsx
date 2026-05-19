@@ -734,6 +734,7 @@ export function SalesHubView({
                     : undefined
                 }
                 onSearch={() => hubChatSearchRef.current?.open()}
+                onBack={handleDeselectDeal}
                 onClose={handleDeselectDeal}
                 tabs={[
                   { key: "conversations", label: "Conversa" },

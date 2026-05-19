@@ -52,35 +52,38 @@ function Slot({
 }
 
 const buttonVariants = cva(
-  // Base: Lumen — fonte Inter, peso 600, radius 8px, transição suave
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-all duration-200 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
+  // Base glassmorphism: fonte display, peso 600, radius full, transição suave
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-display text-sm font-semibold transition-all duration-200 outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        // Índigo sólido — CTA primário (Lumen)
+        // Brand sólido com glow — CTA primário
         default:
-          "bg-primary text-primary-foreground shadow-sm hover:bg-primary-dark hover:shadow-[var(--shadow-indigo-glow)]",
+          "bg-primary text-primary-foreground shadow-[0_4px_14px_rgba(91,111,245,0.35)] hover:bg-primary-dark hover:-translate-y-px hover:shadow-[var(--shadow-indigo-glow)]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 hover:shadow-md",
-        // Ghost com borda — ação secundária
+          "bg-destructive text-destructive-foreground shadow-[0_4px_14px_rgba(239,68,68,0.30)] hover:bg-destructive/90 hover:-translate-y-px",
+        // Outline limpo
         outline:
-          "border border-border bg-background text-foreground shadow-sm hover:bg-bg-subtle hover:border-border",
-        // Superfície sutil
+          "border border-primary/60 bg-transparent text-primary hover:bg-primary/10",
+        // Glass — fundo translúcido com blur, padrão do design system
         secondary:
-          "bg-bg-muted text-foreground border border-border shadow-sm hover:bg-bg-hover",
-        // Fantasma sem borda
-        ghost: "text-ink-soft hover:bg-bg-muted hover:text-foreground",
+          "bg-white/40 backdrop-blur border border-white/55 text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-white/60 hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
+        // Fantasma sem fundo
+        ghost: "border border-white/20 text-[var(--color-ink-soft)] hover:bg-white/30 hover:text-foreground",
         // Link
         link: "text-primary underline-offset-4 hover:underline",
         // Lavanda — IA / Copilot
         ai:
-          "bg-lavender text-lavender-foreground shadow-sm hover:opacity-90 hover:shadow-[var(--shadow-lavender-glow)]",
+          "bg-lavender text-lavender-foreground shadow-[0_4px_14px_rgba(167,139,250,0.35)] hover:opacity-95 hover:-translate-y-px hover:shadow-[var(--shadow-lavender-glow)]",
+        // Glass puro — superfície translúcida no plano da UI
+        glass:
+          "bg-white/40 backdrop-blur border border-white/55 text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-white/60 hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm:      "h-7 rounded-md px-3 text-xs",
-        lg:      "h-11 rounded-xl px-6 text-base",
-        icon:    "size-9",
+        default: "h-9 px-5 py-2",
+        sm:      "h-7 px-3.5 text-xs",
+        lg:      "h-11 px-7 text-base",
+        icon:    "size-9 rounded-md",
       },
     },
     defaultVariants: {

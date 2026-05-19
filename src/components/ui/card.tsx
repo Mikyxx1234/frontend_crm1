@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-// Card Lumen: bordas leves, sombra suave, radius 12px, hover sutil
+// Card glass: superfície translúcida com blur, radius 22px, hover sobe sutil
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -10,7 +10,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border border-border bg-card text-card-foreground shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)]",
+      "rounded-[22px] border border-white/55 bg-white/40 text-card-foreground shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:shadow-[var(--glass-shadow)]",
       className
     )}
     {...props}
@@ -37,7 +37,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "font-display text-base font-bold leading-tight tracking-tight text-foreground",
+      "font-display text-[17px] font-bold leading-tight tracking-tight text-foreground",
       className
     )}
     {...props}

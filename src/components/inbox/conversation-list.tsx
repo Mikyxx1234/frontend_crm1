@@ -241,9 +241,9 @@ export function InboxListHeader({
   agentCapacityLoading,
 }: InboxListHeaderProps) {
   return (
-    <div className="shrink-0 bg-white">
+    <div className="shrink-0 border-b border-white/40 bg-white/40 backdrop-blur">
       <div className="flex items-center justify-between px-3 pb-1.5 pt-3">
-        <span className="text-[14px] font-semibold text-slate-900">Conversas</span>
+        <span className="font-display text-[15px] font-bold text-foreground">Conversas</span>
         <div className="flex min-w-0 max-w-[min(100%,11rem)] items-center gap-2">
           {myUserId ? (
             <div className="flex items-center gap-1.5">
@@ -283,7 +283,7 @@ export function InboxListHeader({
             <button
               type="button"
               onClick={() => (selectionMode ? onExitSelectionMode() : onEnterSelectionMode())}
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-sm)] transition-colors hover:bg-primary/90"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:bg-primary-dark hover:shadow-[var(--shadow-indigo-glow)]"
             >
               <Plus className="size-3.5" strokeWidth={2.5} />
             </button>
@@ -299,16 +299,16 @@ export function InboxListHeader({
       )}
 
       <div className="flex items-center gap-1.5 px-3 pb-2">
-        <div className="flex h-8 flex-1 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5">
-          <Search className="size-3 shrink-0 text-slate-400" strokeWidth={2} />
+        <div className="flex h-9 flex-1 items-center gap-1.5 rounded-full border border-white/55 bg-white/55 px-3 backdrop-blur transition-all focus-within:border-primary focus-within:bg-white/75 focus-within:ring-[3px] focus-within:ring-primary/15">
+          <Search className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2} />
           <input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Nome, telefone ou responsável…"
-            className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-700 outline-none placeholder:text-slate-400"
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-foreground outline-none placeholder:text-[var(--color-ink-muted)]"
           />
           {search ? (
-            <button type="button" onClick={() => onSearchChange("")} className="text-slate-400 hover:text-slate-600">
+            <button type="button" onClick={() => onSearchChange("")} className="text-[var(--color-ink-muted)] hover:text-foreground">
               <X className="size-3" />
             </button>
           ) : null}
@@ -318,8 +318,8 @@ export function InboxListHeader({
             type="button"
             onClick={onToggleFilters}
             className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-400 transition-colors hover:text-slate-600",
-              showFilters && "border-blue-200 bg-blue-50 text-blue-600",
+              "flex size-9 shrink-0 items-center justify-center rounded-full border border-white/55 bg-white/55 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/70 hover:text-foreground",
+              showFilters && "border-primary/40 bg-primary/15 text-primary",
             )}
           >
             <Filter className="size-3.5" />
@@ -951,10 +951,10 @@ function ConversationItem({
       {...staggerItem}
       layout
       className={cn(
-        "group relative flex w-full cursor-pointer gap-2 border-b border-slate-50 px-3 py-2.5 transition-colors duration-150 hover:bg-[#F8FAFC]",
-        active && "border-l-2 border-l-blue-600 bg-blue-50",
-        !active && unread && "bg-blue-50/30 hover:bg-blue-50/50",
-        !active && !unread && "bg-white",
+        "group relative flex w-full cursor-pointer gap-2 border-b border-white/30 px-3 py-2.5 transition-all duration-150 hover:bg-white/40",
+        active && "border-l-2 border-l-primary bg-white/60 shadow-[var(--glass-shadow-sm)]",
+        !active && unread && "bg-primary/8 hover:bg-primary/12",
+        !active && !unread && "bg-transparent",
       )}
       onClick={() => !selectionMode && onSelect(row)}
       aria-label={unread ? `${row.contact.name || "Conversa"} — ${row.unreadCount} mensagens não lidas` : undefined}
@@ -1133,7 +1133,7 @@ function ConversationItem({
   }
 
   return (
-    <SwipeRow rightActions={swipeActions} className="bg-white">
+    <SwipeRow rightActions={swipeActions} className="bg-transparent">
       {item}
     </SwipeRow>
   );

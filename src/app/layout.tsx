@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit } from "next/font/google";
+import { DM_Sans, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
-import "@fontsource-variable/inter";
-import "@fontsource-variable/manrope";
 
 import { auth } from "@/lib/auth-public";
 import "@/lib/auth-types";
@@ -10,14 +8,22 @@ import "@/lib/auth-types";
 import { Providers } from "./providers";
 import "./globals.css";
 
-/* Outfit via next/font: bundling local + preload + zero FOUT.
-   Mais robusto que `@import` da CDN no globals.css — garante a fonte
-   carregada antes do primeiro paint. A variável é exposta como classe
-   no <html> para complementar o `font-family: var(--font-sans)`
-   declarado em @layer base. */
-const outfit = Outfit({
+/* Fontes via next/font: bundling local + preload + zero FOUT.
+   - DM Sans   → body (via --font-sans-next)
+   - Plus Jakarta Sans → display/headings (via --font-display-next)
+   Mantemos os import @import url(...) em globals.css como fallback
+   pra navegadores que não recebem o CSS dos chunks do Next em
+   tempo de paint (paranoia útil em SSR + cache estale). */
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-sans-next",
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
   variable: "--font-display-next",
 });
@@ -55,17 +61,18 @@ export const metadata: Metadata = {
 };
 
 /* Viewport mobile-first:
-   - `width=device-width` + `initialScale=1` â†’ escala correta no celular.
-   - `viewportFit: "cover"` â†’ usa safe-area do iPhone (notch/home indicator)
+   - `width=device-width` + `initialScale=1` → escala correta no celular.
+   - `viewportFit: "cover"` → usa safe-area do iPhone (notch/home indicator)
      com env(safe-area-inset-*); combinado com utilities `.pb-safe` etc.
-   - `maximumScale=5` (não 1) â†’ permite zoom acessibilidade.
-   - `themeColor` navy combina com a sidebar e address bar do Chrome Android. */
+   - `maximumScale=5` (não 1) → permite zoom acessibilidade.
+   - `themeColor` agora é o azul-claro do mesh — combina com a barra
+     de URL do Chrome Android quando o app está aberto. */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
-  themeColor: "#0d1b3e",
+  themeColor: "#dde8f5",
 };
 
 export default async function RootLayout({
@@ -79,7 +86,7 @@ export default async function RootLayout({
     <html
       lang="pt-BR"
       suppressHydrationWarning
-      className={outfit.variable}
+      className={`${dmSans.variable} ${plusJakarta.variable}`}
       data-chat-theme="azul"
       style={{ fontFamily: "var(--font-sans)" }}
     >
@@ -90,8 +97,12 @@ export default async function RootLayout({
           richColors
           toastOptions={{
             style: {
-              borderRadius: "14px",
+              borderRadius: "22px",
               fontFamily: "var(--font-sans)",
+              background: "var(--glass-bg-overlay)",
+              backdropFilter: "var(--glass-blur)",
+              border: "1px solid var(--glass-border)",
+              boxShadow: "var(--glass-shadow)",
             },
           }}
         />

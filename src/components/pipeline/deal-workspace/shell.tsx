@@ -90,8 +90,9 @@ export function WorkspaceShell({
           transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
           className={cn(
             "fixed inset-0 z-[60] flex flex-col overflow-hidden",
-            "bg-white font-display text-slate-900",
+            "font-display text-foreground",
           )}
+          style={{ background: "var(--bg-gradient)" }}
         >
           {!hideFloatingClose ? (
             <div className="pointer-events-none absolute right-4 top-3 z-[70] sm:right-6 sm:top-4">
@@ -103,9 +104,9 @@ export function WorkspaceShell({
                   aria-label={closeLabel}
                   className={cn(
                     "pointer-events-auto inline-flex size-8 items-center justify-center rounded-full",
-                    "border border-black/6 bg-white text-slate-500",
-                    "transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+                    "border border-white/55 bg-white/70 text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur",
+                    "transition-all hover:bg-white/85 hover:text-foreground hover:shadow-[var(--glass-shadow)]",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                     "active:scale-95",
                   )}
                 >

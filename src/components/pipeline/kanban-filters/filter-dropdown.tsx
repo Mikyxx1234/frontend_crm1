@@ -25,6 +25,7 @@ type Props = {
   value: AdvancedDealFilters;
   options: FilterOptionsResponse | null;
   optionsLoading: boolean;
+  optionsError?: string | null;
   onApply: (next: AdvancedDealFilters) => void;
   onClear: () => void;
   onRequestSave?: (current: AdvancedDealFilters) => void;
@@ -42,6 +43,7 @@ export function FilterDropdown({
   value,
   options,
   optionsLoading,
+  optionsError,
   onApply,
   onClear,
   onRequestSave,
@@ -77,8 +79,8 @@ export function FilterDropdown({
       ref={ref}
       style={{ width, maxHeight }}
       className={cn(
-        "absolute left-0 top-full z-50 mt-1 flex flex-col overflow-hidden",
-        "rounded-lg border border-zinc-200 bg-white shadow-xl",
+        "absolute left-0 top-full z-50 mt-2 flex flex-col overflow-hidden",
+        "rounded-[22px] border border-white/55 bg-white/80 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
         className,
       )}
     >
@@ -86,6 +88,7 @@ export function FilterDropdown({
         value={value}
         options={options}
         optionsLoading={optionsLoading}
+        optionsError={optionsError}
         onApply={onApply}
         onClear={onClear}
         onRequestSave={onRequestSave}

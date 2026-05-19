@@ -316,6 +316,8 @@ export type FilterPanelBodyProps = {
   value: AdvancedDealFilters;
   options: FilterOptionsResponse | null;
   optionsLoading: boolean;
+  /** Mensagem de erro do carregamento de opções (se houver). */
+  optionsError?: string | null;
   onApply: (next: AdvancedDealFilters) => void;
   onClear: () => void;
   onRequestSave?: (current: AdvancedDealFilters) => void;
@@ -339,6 +341,7 @@ export function FilterPanelBody({
   value,
   options,
   optionsLoading,
+  optionsError,
   onApply,
   onClear,
   onRequestSave,
@@ -415,9 +418,9 @@ export function FilterPanelBody({
   return (
     <div className={cn("flex h-full min-h-0 flex-col", className)}>
       {withHeader && (
-        <div className="border-b border-zinc-200 px-4 py-3">
-          <h3 className="text-[13px] font-semibold text-zinc-800">Filtros avançados</h3>
-          <p className="mt-0.5 text-[11px] text-zinc-500">
+        <div className="border-b border-white/40 px-4 py-3">
+          <h3 className="font-display text-[14px] font-bold text-foreground">Filtros avançados</h3>
+          <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">
             Combine critérios para refinar o Kanban.
           </p>
         </div>
@@ -667,7 +670,13 @@ export function FilterPanelBody({
           <Label className="text-[11px] font-semibold text-zinc-700">
             Campos personalizados do negócio
           </Label>
-          {options && options.dealCustomFields.length > 0 ? (
+          {optionsLoading ? (
+            <p className="text-[11px] text-[var(--color-ink-muted)]">Carregando campos…</p>
+          ) : optionsError ? (
+            <p className="text-[11px] text-[var(--color-danger)]">
+              Erro ao carregar campos: {optionsError}
+            </p>
+          ) : options && options.dealCustomFields.length > 0 ? (
             <div className="flex items-center gap-2">
               <SelectNative
                 value={pickDealCfId}
@@ -694,7 +703,7 @@ export function FilterPanelBody({
             </div>
           ) : (
             <p className="text-[11px] text-zinc-400">
-              Nenhum campo personalizado de negócio.
+              Nenhum campo personalizado de negócio cadastrado em Configurações.
             </p>
           )}
           <div className="space-y-2">
@@ -731,7 +740,13 @@ export function FilterPanelBody({
           <Label className="text-[11px] font-semibold text-zinc-700">
             Campos personalizados do contato
           </Label>
-          {options && options.contactCustomFields.length > 0 ? (
+          {optionsLoading ? (
+            <p className="text-[11px] text-[var(--color-ink-muted)]">Carregando campos…</p>
+          ) : optionsError ? (
+            <p className="text-[11px] text-[var(--color-danger)]">
+              Erro ao carregar campos: {optionsError}
+            </p>
+          ) : options && options.contactCustomFields.length > 0 ? (
             <div className="flex items-center gap-2">
               <SelectNative
                 value={pickContactCfId}
@@ -758,7 +773,7 @@ export function FilterPanelBody({
             </div>
           ) : (
             <p className="text-[11px] text-zinc-400">
-              Nenhum campo personalizado de contato.
+              Nenhum campo personalizado de contato cadastrado em Configurações.
             </p>
           )}
           <div className="space-y-2">
@@ -791,12 +806,12 @@ export function FilterPanelBody({
         </section>
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-zinc-200 bg-zinc-50/80 px-4 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-t border-white/40 bg-white/30 px-4 py-2.5 backdrop-blur-sm">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="gap-1 text-xs text-zinc-600"
+          className="gap-1 text-xs text-[var(--color-ink-soft)]"
           onClick={() => {
             setDraft({});
             onClear();

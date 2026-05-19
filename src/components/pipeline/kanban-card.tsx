@@ -213,10 +213,11 @@ export function KanbanCard({
     <>
       <div
         className={cn(
-          "group relative cursor-pointer rounded-xl border border-slate-100 bg-white transition-shadow",
+          "group relative cursor-pointer rounded-[18px] border border-white/55 bg-white/55 backdrop-blur-sm transition-all",
           dt.card.shadow,
           dt.card.kanbanHover,
-          isDragging && "rotate-1 border-blue-200 shadow-[var(--shadow-card)]",
+          "hover:-translate-y-0.5 hover:bg-white/70 hover:shadow-[var(--glass-shadow)]",
+          isDragging && "rotate-1 border-primary/40 bg-white/85 shadow-[var(--glass-shadow-lg)]",
           isHighlighted && "animate-[kanban-highlight_3s_ease]",
         )}
       >

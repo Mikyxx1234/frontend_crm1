@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 /* Classes usadas só em strings em `design-tokens.ts` — precisam entrar no scan (v4: @source). */
 @source "../lib/design-tokens.ts";
@@ -6,163 +6,188 @@
 @source not "../../arquivos_modificados";
 
 /* ══════════════════════════════════════════════════════════════════
-   LUMEN DESIGN SYSTEM — EduIT CRM
-   Inspiração: Lark Suite · Light-first · Inter + Plus Jakarta Sans
-   CTA: Azul #2563eb · Marca/IA: Lavanda #7B61FF
+   GLASS DESIGN SYSTEM v2 — CRM EduIT
+   Glassmorphism-first · Plus Jakarta Sans (display) + DM Sans (body)
+   Brand: #5b6ff5 · Mesh: #dde8f5 → #b8cfec → #e8d5f0
    ══════════════════════════════════════════════════════════════════ */
 
 @theme {
   /* ── Tipografia ─────────────────────────────────────────────── */
-  --font-sans:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-sans:    "DM Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "DM Sans", system-ui, sans-serif;
   --font-mono:    "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
 
-  /* ── Surfaces ───────────────────────────────────────────────── */
-  --color-background:     #F8FAFC;
-  --color-bg-subtle:      #F7F8FA;
-  --color-bg-muted:       #F2F3F5;
-  --color-bg-hover:       #EEF0F3;
+  /* ── Surfaces (base do mesh + camadas translúcidas) ─────────── */
+  /* O background é coberto pelo gradient mesh aplicado em <body>. */
+  --color-background:     #dde8f5;
+  --color-bg-subtle:      rgba(255, 255, 255, 0.35);
+  --color-bg-muted:       rgba(255, 255, 255, 0.45);
+  --color-bg-hover:       rgba(255, 255, 255, 0.55);
 
   /* ── Foreground / Texto ─────────────────────────────────────── */
-  --color-foreground:     #1F2329;
-  --color-ink-soft:       #4E5969;
-  /* Um passo mais claro que #86909C — melhor separação visual do ink-soft em previews/labels */
-  --color-ink-muted:      #b0bac4;
-  --color-ink-subtle:     #C9CDD4;
+  --color-foreground:     #1e2a3b;
+  --color-ink-soft:       #4a5568;
+  --color-ink-muted:      #718096;
+  --color-ink-subtle:     #a0aec0;
 
-  /* ── Borders ────────────────────────────────────────────────── */
-  --color-border:         #E5E6EB;
-  --color-border-soft:    #F2F3F5;
-  --color-input:          #E5E6EB;
-  --color-ring:           #2563eb;
+  /* ── Borders translúcidas ───────────────────────────────────── */
+  --color-border:         rgba(255, 255, 255, 0.55);
+  --color-border-soft:    rgba(255, 255, 255, 0.35);
+  --color-input:          rgba(255, 255, 255, 0.55);
+  --color-ring:           #5b6ff5;
 
-  /* ── Brand: Azul (CTA) ─────────────────────────────────────── */
-  --color-primary:             #2563eb;
-  --color-primary-dark:        #1d4ed8;
-  --color-primary-soft:        #dbeafe;
+  /* ── Brand: Periwinkle/Indigo Vivo (CTA) ─────────────────────── */
+  --color-primary:             #5b6ff5;
+  --color-primary-dark:        #3d52e8;
+  --color-primary-soft:        rgba(91, 111, 245, 0.15);
   --color-primary-foreground:  #FFFFFF;
 
   /* ── Brand: Lavanda (Marca / IA) ────────────────────────────── */
-  --color-lavender:            #7B61FF;
-  --color-lavender-soft:       #EDEAFE;
-  --color-lavender-muted:      #F5F2FF;
+  --color-lavender:            #a78bfa;
+  --color-lavender-soft:       rgba(167, 139, 250, 0.15);
+  --color-lavender-muted:      rgba(167, 139, 250, 0.08);
   --color-lavender-foreground: #FFFFFF;
 
-  /* ── Semânticas (mapeadas para os tokens do sistema) ─────────── */
-  --color-secondary:            #F7F8FA;
-  --color-secondary-foreground: #1F2329;
-  --color-accent:               #7B61FF;
+  /* ── Semânticas ─────────────────────────────────────────────── */
+  --color-secondary:            rgba(255, 255, 255, 0.40);
+  --color-secondary-foreground: #1e2a3b;
+  --color-accent:               #a78bfa;
   --color-accent-foreground:    #FFFFFF;
-  --color-muted:                #F2F3F5;
-  --color-muted-foreground:     #86909C;
+  --color-muted:                rgba(255, 255, 255, 0.40);
+  --color-muted-foreground:     #718096;
 
-  --color-card:             #FFFFFF;
-  --color-card-foreground:  #1F2329;
-  --color-popover:          #FFFFFF;
-  --color-popover-foreground: #1F2329;
+  /* Card é translúcido por padrão — vira "glass card" via tokens. */
+  --color-card:               rgba(255, 255, 255, 0.40);
+  --color-card-foreground:    #1e2a3b;
+  --color-popover:            rgba(255, 255, 255, 0.75);
+  --color-popover-foreground: #1e2a3b;
 
   /* ── Status ─────────────────────────────────────────────────── */
-  --color-success:             #00B42A;
-  --color-success-soft:        #E8F8EA;
+  --color-success:             #10b981;
+  --color-success-soft:        rgba(16, 185, 129, 0.12);
   --color-success-foreground:  #FFFFFF;
 
-  --color-warning:             #FF7D00;
-  --color-warning-soft:        #FFF3E8;
+  --color-warning:             #f59e0b;
+  --color-warning-soft:        rgba(245, 158, 11, 0.12);
   --color-warning-foreground:  #FFFFFF;
 
-  --color-destructive:         #F53F3F;
-  --color-destructive-soft:    #FFECE8;
+  --color-destructive:         #ef4444;
+  --color-destructive-soft:    rgba(239, 68, 68, 0.12);
   --color-destructive-foreground: #FFFFFF;
 
-  --color-info:                #2563eb;
+  --color-info:                #5b6ff5;
   --color-info-foreground:     #FFFFFF;
 
-  /* ── Sidebar — Light (Lumen) ─────────────────────────────────── */
-  --color-sidebar:                  #F7F8FA;
-  --color-sidebar-foreground:       #1F2329;
-  --color-sidebar-border:           #E5E6EB;
-  --color-sidebar-muted:            #86909C;
-  --color-sidebar-active-bg:        #EDEAFE;
-  --color-sidebar-active-fg:        #2563eb;
-  --color-sidebar-hover:            #EEF0F3;
+  /* ── Sidebar — glass ─────────────────────────────────────────── */
+  --color-sidebar:                  rgba(255, 255, 255, 0.30);
+  --color-sidebar-foreground:       #1e2a3b;
+  --color-sidebar-border:           rgba(255, 255, 255, 0.45);
+  --color-sidebar-muted:            #718096;
+  --color-sidebar-active-bg:        #5b6ff5;
+  --color-sidebar-active-fg:        #FFFFFF;
+  --color-sidebar-hover:            rgba(255, 255, 255, 0.50);
 
   /* ── Chat ───────────────────────────────────────────────────── */
-  --color-chat-sent:            #dbeafe;
-  --color-chat-sent-foreground: #1e293b;
-  --color-chat-sent-border:     #bfdbfe;
-  --color-chat-received:        #FFFFFF;
-  --color-chat-received-foreground: #1F2329;
-  --color-chat-bot:             #dbeafe;
-  --color-chat-bot-foreground:  #1e293b;
-  --color-chat-bot-border:      #bfdbfe;
-  --color-chat-bg:              #F7F8FA;
+  --color-chat-sent:            rgba(91, 111, 245, 0.18);
+  --color-chat-sent-foreground: #1e2a3b;
+  --color-chat-sent-border:     rgba(91, 111, 245, 0.30);
+  --color-chat-received:        rgba(255, 255, 255, 0.60);
+  --color-chat-received-foreground: #1e2a3b;
+  --color-chat-bot:             rgba(91, 111, 245, 0.18);
+  --color-chat-bot-foreground:  #1e2a3b;
+  --color-chat-bot-border:      rgba(91, 111, 245, 0.30);
+  --color-chat-bg:              transparent;
 
   /* ── Status de Presença ─────────────────────────────────────── */
-  --color-status-online:  #00B42A;
-  --color-status-away:    #FF7D00;
-  --color-status-offline: #C9CDD4;
+  --color-status-online:  #10b981;
+  --color-status-away:    #f59e0b;
+  --color-status-offline: #94a3b8;
 
   /* ── Canais ─────────────────────────────────────────────────── */
   --color-channel-whatsapp: #25D366;
   --color-channel-instagram: #E1306C;
-  --color-channel-email:    #2563eb;
+  --color-channel-email:    #5b6ff5;
   --color-channel-meta:     #0084FF;
 
   /* ── Surface / Subtle ───────────────────────────────────────── */
-  --color-surface:            #F7F8FA;
-  --color-surface-foreground: #4E5969;
-  --color-subtle:             #E5E6EB;
+  --color-surface:            rgba(255, 255, 255, 0.35);
+  --color-surface-foreground: #4a5568;
+  --color-subtle:             rgba(255, 255, 255, 0.55);
 
   /* ── Gráficos ───────────────────────────────────────────────── */
-  --color-chart-1: #2563eb;
-  --color-chart-2: #00B42A;
-  --color-chart-3: #FF7D00;
-  --color-chart-4: #7B61FF;
-  --color-chart-5: #F53F3F;
+  --color-chart-1: #5b6ff5;
+  --color-chart-2: #10b981;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #a78bfa;
+  --color-chart-5: #ef4444;
 
-  /* ── Extra (Tags coloridas do Lumen) ────────────────────────── */
-  --color-pink:      #F5319D;
-  --color-pink-soft: #FFE8F1;
-  --color-cyan:      #14C9C9;
-  --color-cyan-soft: #E8FFFB;
+  /* ── Extras (tags coloridas) ────────────────────────────────── */
+  --color-pink:      #f472b6;
+  --color-pink-soft: rgba(244, 114, 182, 0.15);
+  --color-cyan:      #06b6d4;
+  --color-cyan-soft: rgba(6, 182, 212, 0.15);
 
-  /* ── Radius (escala Lumen) ──────────────────────────────────── */
-  --radius-sm: 0.25rem;   /* 4px  */
-  --radius-md: 0.5rem;    /* 8px  */
-  --radius-lg: 0.75rem;   /* 12px */
-  --radius-xl: 1rem;      /* 16px */
-  --radius-2xl: 1.25rem;  /* 20px */
+  /* ── Radius (escala glassmorphism) ──────────────────────────── */
+  --radius-sm:  0.375rem;   /* 6px  */
+  --radius-md:  0.625rem;   /* 10px */
+  --radius-lg:  1rem;       /* 16px */
+  --radius-xl:  1.375rem;   /* 22px */
+  --radius-2xl: 2rem;       /* 32px */
 
-  /* ── Sombras Lumen ──────────────────────────────────────────── */
-  --shadow-sm:  0 1px 2px rgba(31, 35, 41, 0.04);
-  /* Cards principais (sidebar / fila expandida / kanban) */
-  --shadow-card: 0 4px 12px -2px rgba(51, 65, 85, 0.06);
-  --shadow-card-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
-  --shadow-md:  0 2px 8px rgba(31, 35, 41, 0.06);
-  --shadow-lg:  0 8px 24px rgba(31, 35, 41, 0.08);
-  --shadow-xl:  0 16px 40px rgba(31, 35, 41, 0.10);
+  /* ── Sombras glass (suaves, blueish) ────────────────────────── */
+  --shadow-sm:      0 1px 2px rgba(100, 130, 180, 0.06);
+  --shadow-card-sm: 0 4px 16px rgba(100, 130, 180, 0.12);
+  --shadow-card:    0 8px 32px rgba(100, 130, 180, 0.18);
+  --shadow-md:      0 4px 16px rgba(100, 130, 180, 0.12);
+  --shadow-lg:      0 8px 32px rgba(100, 130, 180, 0.18);
+  --shadow-xl:      0 16px 48px rgba(100, 130, 180, 0.24);
 
-  /* ── Sombras de destaque (substituem as "premium" antigas) ──── */
-  --shadow-[var(--shadow-lg)]:    0 8px 24px rgba(31, 35, 41, 0.08);
-  --shadow-[var(--shadow-sm)]:      0 4px 16px rgba(31, 35, 41, 0.06);
-  --shadow-[var(--shadow-indigo-glow)]:  0 6px 20px -4px rgba(37, 99, 235, 0.30);
-  --shadow-indigo-glow: 0 6px 20px -4px rgba(37, 99, 235, 0.30);
-  --shadow-lavender-glow: 0 6px 20px -4px rgba(123, 97, 255, 0.28);
-  --shadow-green-glow: 0 6px 20px -6px rgba(0, 180, 42, 0.30);
-  --shadow-[var(--shadow-lavender-glow)]:  0 6px 20px -4px rgba(20, 201, 201, 0.25);
+  /* ── Sombras de destaque (brand glow) ───────────────────────── */
+  --shadow-indigo-glow: 0 6px 20px -4px rgba(91, 111, 245, 0.35);
+  --shadow-lavender-glow: 0 6px 20px -4px rgba(167, 139, 250, 0.30);
+  --shadow-green-glow: 0 6px 20px -6px rgba(16, 185, 129, 0.30);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GLASSMORPHISM TOKENS (fora do @theme — não viram utilities Tailwind,
+   ficam disponíveis via var() pra uso pontual)
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  /* Glass backgrounds */
+  --glass-bg:         rgba(255, 255, 255, 0.25);
+  --glass-bg-strong:  rgba(255, 255, 255, 0.40);
+  --glass-bg-subtle:  rgba(255, 255, 255, 0.12);
+  --glass-bg-overlay: rgba(255, 255, 255, 0.60);
+
+  /* Glass borders */
+  --glass-border:        rgba(255, 255, 255, 0.55);
+  --glass-border-subtle: rgba(255, 255, 255, 0.30);
+
+  /* Glass shadows */
+  --glass-shadow:     0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:  0 16px 48px rgba(100, 130, 180, 0.24);
+  --glass-shadow-sm:  0 4px 16px rgba(100, 130, 180, 0.12);
+
+  /* Blur */
+  --glass-blur:        blur(16px);
+  --glass-blur-strong: blur(24px);
+  --glass-blur-subtle: blur(8px);
+
+  /* Mesh gradient base — usado em <body> */
+  --bg-gradient: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dce8f5 100%);
 }
 
 /* ══════════════════════════════════════════════════════════════════
    CHAT — bolha enviada + fundo da thread (`data-chat-theme` no <html>)
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  --chat-bubble-sent-bg: #dbeafe;
-  --chat-bubble-sent-text: #1e3a5f;
-  --chat-bubble-sent-time: #60a5fa;
-  --chat-bubble-sent-check-read: #0284c7;
-  --chat-bg: #f8fafc;
-  --chat-bubble-received-text: #111b21;
-  --chat-bubble-received-time: #667781;
+  --chat-bubble-sent-bg: linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%);
+  --chat-bubble-sent-text: #ffffff;
+  --chat-bubble-sent-time: rgba(255, 255, 255, 0.7);
+  --chat-bubble-sent-check-read: #c7d2fe;
+  --chat-bg: transparent;
+  --chat-bubble-received-text: #1e2a3b;
+  --chat-bubble-received-time: #718096;
 }
 
 [data-chat-theme="whatsapp"] {
@@ -174,39 +199,39 @@
 }
 
 [data-chat-theme="slate"] {
-  --chat-bubble-sent-bg: #1e293b;
+  --chat-bubble-sent-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   --chat-bubble-sent-text: #ffffff;
   --chat-bubble-sent-time: rgba(255, 255, 255, 0.45);
   --chat-bubble-sent-check-read: #7dd3fc;
-  --chat-bg: #f1f5f9;
+  --chat-bg: rgba(255, 255, 255, 0.20);
 }
 
 [data-chat-theme="petroleo"] {
-  --chat-bubble-sent-bg: #0f4c75;
+  --chat-bubble-sent-bg: linear-gradient(135deg, #0f4c75 0%, #093a5c 100%);
   --chat-bubble-sent-text: #ffffff;
   --chat-bubble-sent-time: rgba(255, 255, 255, 0.45);
   --chat-bubble-sent-check-read: #7dd3fc;
-  --chat-bg: #e8f4f8;
+  --chat-bg: rgba(255, 255, 255, 0.20);
 }
 
 [data-chat-theme="roxo"] {
-  --chat-bubble-sent-bg: #6d28d9;
+  --chat-bubble-sent-bg: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
   --chat-bubble-sent-text: #ffffff;
-  --chat-bubble-sent-time: rgba(255, 255, 255, 0.45);
-  --chat-bubble-sent-check-read: #c4b5fd;
-  --chat-bg: #f5f3ff;
+  --chat-bubble-sent-time: rgba(255, 255, 255, 0.55);
+  --chat-bubble-sent-check-read: #ddd6fe;
+  --chat-bg: rgba(255, 255, 255, 0.20);
 }
 
 [data-chat-theme="azul"] {
-  --chat-bubble-sent-bg: #dbeafe;
-  --chat-bubble-sent-text: #1e3a5f;
-  --chat-bubble-sent-time: #60a5fa;
-  --chat-bubble-sent-check-read: #0284c7;
-  --chat-bg: #f8fafc;
+  --chat-bubble-sent-bg: linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%);
+  --chat-bubble-sent-text: #ffffff;
+  --chat-bubble-sent-time: rgba(255, 255, 255, 0.7);
+  --chat-bubble-sent-check-read: #c7d2fe;
+  --chat-bg: transparent;
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   BASE
+   BASE — body com mesh gradient fixo
    ══════════════════════════════════════════════════════════════════ */
 @layer base {
   * { @apply border-border; }
@@ -219,10 +244,14 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
     font-family: var(--font-sans);
     text-rendering: optimizeLegibility;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   input, button, textarea, select, optgroup {
@@ -230,68 +259,80 @@
   }
 
   ::selection {
-    background: rgba(37, 99, 235, 0.15);
-    color: #1d4ed8;
+    background: rgba(91, 111, 245, 0.20);
+    color: #3d52e8;
   }
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   DARK MODE — Lumen Dark (mantido para compatibilidade)
+   DARK MODE — glass deep navy + brand
    ══════════════════════════════════════════════════════════════════ */
 .dark {
-  --color-background:     #0F1117;
-  --color-foreground:     #F0F1F3;
-  --color-bg-subtle:      #171B24;
-  --color-bg-muted:       #1E2230;
-  --color-bg-hover:       #252B3B;
+  --color-background:     #0b1220;
+  --color-foreground:     #e8edf5;
+  --color-bg-subtle:      rgba(255, 255, 255, 0.04);
+  --color-bg-muted:       rgba(255, 255, 255, 0.06);
+  --color-bg-hover:       rgba(255, 255, 255, 0.08);
 
-  --color-ink-soft:       #9BA8B9;
-  --color-ink-muted:      #606B7C;
-  --color-ink-subtle:     #3D4455;
+  --color-ink-soft:       #9ba8b9;
+  --color-ink-muted:      #6b7a8c;
+  --color-ink-subtle:     #3d4455;
 
-  --color-border:         #272D3E;
-  --color-border-soft:    #1E2230;
-  --color-input:          #272D3E;
+  --color-border:         rgba(255, 255, 255, 0.08);
+  --color-border-soft:    rgba(255, 255, 255, 0.05);
+  --color-input:          rgba(255, 255, 255, 0.08);
 
-  --color-card:           #13161F;
-  --color-card-foreground: #F0F1F3;
-  --color-popover:        #13161F;
-  --color-popover-foreground: #F0F1F3;
-  --color-muted:          #1E2230;
-  --color-muted-foreground: #606B7C;
-  --color-secondary:      #1E2230;
-  --color-secondary-foreground: #F0F1F3;
+  --color-card:           rgba(255, 255, 255, 0.05);
+  --color-card-foreground: #e8edf5;
+  --color-popover:        rgba(20, 28, 45, 0.85);
+  --color-popover-foreground: #e8edf5;
+  --color-muted:          rgba(255, 255, 255, 0.05);
+  --color-muted-foreground: #6b7a8c;
+  --color-secondary:      rgba(255, 255, 255, 0.05);
+  --color-secondary-foreground: #e8edf5;
 
-  --color-sidebar:              #0C0F17;
-  --color-sidebar-foreground:   #F0F1F3;
-  --color-sidebar-border:       #1E2230;
-  --color-sidebar-muted:        #606B7C;
-  --color-sidebar-active-bg:    rgba(123, 97, 255, 0.15);
-  --color-sidebar-active-fg:    #7B61FF;
-  --color-sidebar-hover:        rgba(255, 255, 255, 0.05);
+  --color-sidebar:              rgba(255, 255, 255, 0.04);
+  --color-sidebar-foreground:   #e8edf5;
+  --color-sidebar-border:       rgba(255, 255, 255, 0.08);
+  --color-sidebar-muted:        #6b7a8c;
+  --color-sidebar-active-bg:    #5b6ff5;
+  --color-sidebar-active-fg:    #FFFFFF;
+  --color-sidebar-hover:        rgba(255, 255, 255, 0.06);
 
-  --color-chat-sent:            #1A2B5C;
-  --color-chat-sent-foreground: #C7DCFF;
-  --color-chat-sent-border:     #253D7A;
-  --color-chat-received:        #1E2230;
-  --color-chat-received-foreground: #E5E6EB;
-  --color-chat-bot:             #1A2B5C;
-  --color-chat-bot-foreground:  #C7DCFF;
-  --color-chat-bot-border:      #253D7A;
-  --color-chat-bg:              #0F1117;
+  --color-chat-sent:            rgba(91, 111, 245, 0.30);
+  --color-chat-sent-foreground: #e8edf5;
+  --color-chat-sent-border:     rgba(91, 111, 245, 0.45);
+  --color-chat-received:        rgba(255, 255, 255, 0.05);
+  --color-chat-received-foreground: #e8edf5;
+  --color-chat-bot:             rgba(91, 111, 245, 0.30);
+  --color-chat-bot-foreground:  #e8edf5;
+  --color-chat-bot-border:      rgba(91, 111, 245, 0.45);
+  --color-chat-bg:              transparent;
 
-  /* Fundo da thread no dark — bolhas seguem `data-chat-theme` (claro sobre fundo escuro). */
-  --chat-bg: var(--color-chat-bg);
+  --chat-bg: transparent;
 
-  --color-surface:            #1E2230;
-  --color-surface-foreground: #9BA8B9;
-  --color-subtle:             #272D3E;
+  --color-surface:            rgba(255, 255, 255, 0.04);
+  --color-surface-foreground: #9ba8b9;
+  --color-subtle:             rgba(255, 255, 255, 0.10);
 
-  ::selection { background: rgba(37, 99, 235, 0.2); color: #F0F1F3; }
+  /* Glass tokens no dark — fundo mais escuro, borda mais sutil. */
+  --glass-bg:         rgba(20, 28, 45, 0.45);
+  --glass-bg-strong:  rgba(20, 28, 45, 0.60);
+  --glass-bg-subtle:  rgba(20, 28, 45, 0.30);
+  --glass-bg-overlay: rgba(20, 28, 45, 0.75);
+  --glass-border:        rgba(255, 255, 255, 0.10);
+  --glass-border-subtle: rgba(255, 255, 255, 0.06);
+  --glass-shadow:     0 8px 32px rgba(0, 0, 0, 0.35);
+  --glass-shadow-lg:  0 16px 48px rgba(0, 0, 0, 0.45);
+  --glass-shadow-sm:  0 4px 16px rgba(0, 0, 0, 0.25);
+
+  --bg-gradient: linear-gradient(135deg, #0b1220 0%, #131b30 40%, #1c1530 70%, #0e1426 100%);
+
+  ::selection { background: rgba(91, 111, 245, 0.30); color: #e8edf5; }
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   UTILITIES LUMEN
+   UTILITIES GLASS
    ══════════════════════════════════════════════════════════════════ */
 @layer utilities {
   /* Fonte display (Plus Jakarta Sans) */
@@ -305,16 +346,16 @@
   /* Scrollbars */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-subtle) transparent;
+    scrollbar-color: rgba(100, 130, 180, 0.30) transparent;
   }
   .scrollbar-thin::-webkit-scrollbar { width: 6px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--color-subtle); border-radius: 3px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(100, 130, 180, 0.30); border-radius: 99px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 
   /* Chat no workspace do negócio (Kanban): barra vertical mais legível que `scrollbar-thin`. */
   .scrollbar-workspace {
     scrollbar-width: auto;
-    scrollbar-color: var(--color-subtle) transparent;
+    scrollbar-color: rgba(100, 130, 180, 0.30) transparent;
   }
   .scrollbar-workspace::-webkit-scrollbar {
     width: 10px;
@@ -323,13 +364,13 @@
     background: transparent;
   }
   .scrollbar-workspace::-webkit-scrollbar-thumb {
-    background: var(--color-subtle);
+    background: rgba(100, 130, 180, 0.30);
     border-radius: 5px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   .scrollbar-workspace::-webkit-scrollbar-thumb:hover {
-    background: var(--color-ink-muted);
+    background: rgba(100, 130, 180, 0.50);
     border: 2px solid transparent;
     background-clip: padding-box;
   }
@@ -344,27 +385,47 @@
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 
-  /* Glass (adaptado para light) */
+  /* ────────────────────────────────────────────────────────────────
+     GLASS variants — core do design system v2
+     ──────────────────────────────────────────────────────────────── */
   .glass {
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(20px) saturate(160%);
-    -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(229, 230, 235, 0.7);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
-  .dark .glass {
-    background: rgba(19, 22, 31, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+  .glass-strong {
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  .glass-subtle {
+    background: var(--glass-bg-subtle);
+    backdrop-filter: var(--glass-blur-subtle);
+    -webkit-backdrop-filter: var(--glass-blur-subtle);
+    border: 1px solid var(--glass-border-subtle);
+    box-shadow: var(--glass-shadow-sm);
+  }
+  .glass-overlay {
+    background: var(--glass-bg-overlay);
+    backdrop-filter: var(--glass-blur-strong);
+    -webkit-backdrop-filter: var(--glass-blur-strong);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow-lg);
   }
 
   /* Gradientes de texto */
   .text-gradient {
-    background: linear-gradient(135deg, #2563eb 0%, #7B61FF 100%);
+    background: linear-gradient(135deg, #5b6ff5 0%, #a78bfa 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .text-gradient-ai {
-    background: linear-gradient(135deg, #7B61FF 0%, #F5319D 100%);
+    background: linear-gradient(135deg, #a78bfa 0%, #f472b6 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -372,23 +433,28 @@
 
   /* Gradientes de superfície */
   .lumen-gradient {
-    background: linear-gradient(135deg, #2563eb 0%, #7B61FF 100%);
+    background: linear-gradient(135deg, #5b6ff5 0%, #a78bfa 100%);
   }
   .lumen-ai-gradient {
-    background: linear-gradient(135deg, #7B61FF 0%, #F5319D 100%);
+    background: linear-gradient(135deg, #a78bfa 0%, #f472b6 100%);
   }
   .lumen-subtle-gradient {
-    background: linear-gradient(120deg, var(--color-lavender-muted) 0%, var(--color-primary-soft) 100%);
+    background: linear-gradient(120deg, rgba(167, 139, 250, 0.15) 0%, rgba(91, 111, 245, 0.15) 100%);
   }
 
-  /* Transição padrão Lumen (ui-fidelity) */
+  /* Mesh background utility — para uso pontual em containers */
+  .mesh-background {
+    background: var(--bg-gradient);
+  }
+
+  /* Transição padrão (ui-fidelity) */
   .lumen-transition {
     transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* ────────────────────────────────────────────────────────────────────
+  /* ────────────────────────────────────────────────────────────────
      SAFE-AREA UTILITIES (mobile / iPhone notch + home indicator)
-     ────────────────────────────────────────────────────────────────────
+     ────────────────────────────────────────────────────────────────
      Combinam com `viewportFit: "cover"` em layout.tsx. Use em:
        • Composer fixo no rodapé do chat → `pb-safe`
        • Sidebar/bottom-nav mobile → `pb-safe`
@@ -461,9 +527,9 @@
   100% { box-shadow: 0 0 0 12px transparent; }
 }
 @keyframes kanban-highlight {
-  0% { box-shadow: 0 0 0 0 rgba(6,182,212,0.4); }
-  15% { box-shadow: 0 0 0 4px rgba(6,182,212,0.25); }
-  70% { box-shadow: 0 0 0 4px rgba(6,182,212,0.1); }
+  0% { box-shadow: 0 0 0 0 rgba(91, 111, 245, 0.4); }
+  15% { box-shadow: 0 0 0 4px rgba(91, 111, 245, 0.25); }
+  70% { box-shadow: 0 0 0 4px rgba(91, 111, 245, 0.1); }
   100% { box-shadow: none; }
 }
 @keyframes kanban-enter {
@@ -503,20 +569,21 @@
     animation: flow-dash 0.9s linear infinite;
   }
 }
-/* ── Kanban horizontal scrollbar (Kommo style — fino mas legível) ── */
+/* ── Kanban horizontal scrollbar (cyan brand-ish) ── */
 .kanban-board-hscroll::-webkit-scrollbar {
   height: 8px;
 }
 .kanban-board-hscroll::-webkit-scrollbar-track {
-  background: #f4f4f5;
+  background: rgba(255, 255, 255, 0.20);
+  border-radius: 99px;
 }
 .kanban-board-hscroll::-webkit-scrollbar-thumb {
-  background-color: #06b6d4;
+  background-color: rgba(91, 111, 245, 0.55);
   border-radius: 99px;
 }
 .kanban-board-hscroll {
   scrollbar-width: auto;
-  scrollbar-color: #06b6d4 #f4f4f5;
+  scrollbar-color: rgba(91, 111, 245, 0.55) rgba(255, 255, 255, 0.20);
 }
 
 /* ── Kanban vertical scrollbar ghost (hover only) ── */
@@ -531,5 +598,5 @@
   border-radius: 99px;
 }
 .kanban-scroll:hover::-webkit-scrollbar-thumb {
-  background-color: #d4d4d8;
+  background-color: rgba(100, 130, 180, 0.30);
 }

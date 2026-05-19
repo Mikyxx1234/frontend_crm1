@@ -224,8 +224,18 @@ async function fetchBoard(
     }),
   });
 
+  // Backend desatualizado (POST não existe) → degrada para GET e aplica
+  // filtros client-side no que dá. Evita travar o board inteiro só porque
+  // o backend deployado não suporta filtros avançados ainda.
   if (res.status === 404 || res.status === 405) {
-    throw new BackendOutdatedError();
+    if (typeof window !== "undefined") {
+      console.warn(
+        "[pipeline-board] POST não suportado pelo backend — usando GET + filtragem client-side. Faça redeploy do backend para filtros avançados server-side.",
+      );
+    }
+    const fallback = await fetchBoardGet(pipelineId, status);
+    const filteredByStandard = applyFiltersClientSide(fallback, advancedFilters);
+    return applyCustomFieldFiltersClientSide(filteredByStandard, advancedFilters);
   }
 
   const data = await res.json().catch(() => ({}));
@@ -236,6 +246,343 @@ async function fetchBoard(
     throw new Error(`${msg}${detail}`);
   }
   return (Array.isArray(data) ? data : Array.isArray(data.stages) ? data.stages : []) as BoardStage[];
+}
+
+/**
+ * Filtragem client-side sobre o resultado do GET. Usada SOMENTE quando o
+ * backend está desatualizado e o POST com filtros não existe.
+ *
+ * Cobre os critérios mais comuns (status, owner, sources, tags, datas,
+ * search) — custom fields ficam de fora porque o GET não traz os valores
+ * dos campos personalizados de cada deal. O usuário pode aplicar custom
+ * fields, mas para ele ter efeito é necessário redeploy do backend.
+ */
+function applyFiltersClientSide(
+  stages: BoardStage[],
+  filters: AdvancedDealFilters | undefined,
+): BoardStage[] {
+  if (!filters || isEmptyFilters(filters)) return stages;
+
+  const search = (filters.search ?? "").trim().toLowerCase();
+  const contactSearch = (filters.contactSearch ?? "").trim().toLowerCase();
+  const ownerIds = new Set((filters.ownerIds ?? []).filter((x): x is string => !!x));
+  const sources = new Set(filters.sources ?? []);
+  const tagIds = new Set(filters.tagIds ?? []);
+  const tagMode = filters.tagMode ?? "any";
+  const statuses = new Set(filters.statuses ?? []);
+
+  const inRange = (
+    iso: string | null | undefined,
+    range: { from?: string | null; to?: string | null } | undefined,
+  ): boolean => {
+    if (!range || (!range.from && !range.to)) return true;
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return false;
+    if (range.from) {
+      const f = new Date(range.from).getTime();
+      if (t < f) return false;
+    }
+    if (range.to) {
+      const tEnd = new Date(range.to).getTime();
+      if (t > tEnd + 24 * 60 * 60 * 1000 - 1) return false;
+    }
+    return true;
+  };
+
+  const matches = (deal: Record<string, unknown>): boolean => {
+    if (search) {
+      const hay = [
+        String(deal.title ?? ""),
+        String((deal.contact as Record<string, unknown> | undefined)?.name ?? ""),
+        String((deal.contact as Record<string, unknown> | undefined)?.email ?? ""),
+        String((deal.contact as Record<string, unknown> | undefined)?.phone ?? ""),
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    if (contactSearch) {
+      const c = deal.contact as Record<string, unknown> | undefined;
+      const hay = [
+        String(c?.name ?? ""),
+        String(c?.email ?? ""),
+        String(c?.phone ?? ""),
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!hay.includes(contactSearch)) return false;
+    }
+    if (statuses.size > 0) {
+      const st = String(deal.status ?? "");
+      if (!statuses.has(st as never)) return false;
+    }
+    if (filters.withoutOwner) {
+      const owner = deal.owner as Record<string, unknown> | null | undefined;
+      if (owner && owner.id) return false;
+    } else if (ownerIds.size > 0) {
+      const oid = String((deal.owner as Record<string, unknown> | undefined)?.id ?? "");
+      if (!ownerIds.has(oid)) return false;
+    }
+    if (sources.size > 0) {
+      const src = String((deal.contact as Record<string, unknown> | undefined)?.source ?? "");
+      if (!sources.has(src)) return false;
+    }
+    if (filters.withoutContact) {
+      const c = deal.contact as unknown;
+      if (c) return false;
+    }
+    if (filters.contactHasPhone === true) {
+      const phone = (deal.contact as Record<string, unknown> | undefined)?.phone;
+      if (!phone) return false;
+    } else if (filters.contactHasPhone === false) {
+      const phone = (deal.contact as Record<string, unknown> | undefined)?.phone;
+      if (phone) return false;
+    }
+    if (filters.contactHasEmail === true) {
+      const email = (deal.contact as Record<string, unknown> | undefined)?.email;
+      if (!email) return false;
+    } else if (filters.contactHasEmail === false) {
+      const email = (deal.contact as Record<string, unknown> | undefined)?.email;
+      if (email) return false;
+    }
+    if (!inRange(String(deal.createdAt ?? ""), filters.createdAt)) return false;
+    if (!inRange(String(deal.updatedAt ?? ""), filters.updatedAt)) return false;
+    if (!inRange(String(deal.closedAt ?? ""), filters.closedAt)) return false;
+
+    if (tagIds.size > 0 || filters.withoutTags) {
+      const dealTagIds = new Set(
+        Array.isArray(deal.tags)
+          ? (deal.tags as Array<{ tag?: { id?: string } } | { id?: string }>)
+              .map((t) => {
+                if (typeof t === "object" && t !== null) {
+                  if ("tag" in t && t.tag) return String(t.tag.id ?? "");
+                  if ("id" in t) return String(t.id ?? "");
+                }
+                return "";
+              })
+              .filter(Boolean)
+          : [],
+      );
+      if (filters.withoutTags) {
+        if (dealTagIds.size > 0) return false;
+      } else {
+        const ids = [...tagIds];
+        if (tagMode === "all") {
+          if (!ids.every((id) => dealTagIds.has(id))) return false;
+        } else if (tagMode === "none") {
+          if (ids.some((id) => dealTagIds.has(id))) return false;
+        } else {
+          if (!ids.some((id) => dealTagIds.has(id))) return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  return stages.map((stage) => ({
+    ...stage,
+    deals: Array.isArray(stage.deals)
+      ? (stage.deals as Array<Record<string, unknown>>).filter(matches)
+      : [],
+  }));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Custom-field filtering client-side (fallback p/ backend desatualizado).
+//
+// Quando o POST /board não está disponível, o GET retorna deals SEM os
+// valores dos campos personalizados. Para o filtro de Custom Field
+// realmente filtrar, fazemos um round-trip extra: buscamos os valores de
+// cada deal via `/api/deals/{id}/custom-fields` (e do contato via
+// `/api/contacts/{id}/custom-fields`) em paralelo limitado.
+//
+// Cache em memória de uma execução p/ não refetchar o mesmo deal várias
+// vezes durante a mesma rodada do filter (ex.: quando há 2+ critérios de
+// custom field). O React Query já dá outro nível de cache acima do
+// fetchBoard.
+// ─────────────────────────────────────────────────────────────────────────
+
+type CustomFieldValuesRow = {
+  fieldId: string;
+  name: string;
+  label: string;
+  type: string;
+  options: string[];
+  value: string | null;
+};
+
+async function fetchDealCustomFieldValues(
+  dealId: string,
+): Promise<CustomFieldValuesRow[]> {
+  try {
+    const res = await fetch(apiUrl(`/api/deals/${dealId}/custom-fields`), {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    return Array.isArray(data) ? (data as CustomFieldValuesRow[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchContactCustomFieldValues(
+  contactId: string,
+): Promise<CustomFieldValuesRow[]> {
+  try {
+    const res = await fetch(apiUrl(`/api/contacts/${contactId}/custom-fields`), {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    return Array.isArray(data) ? (data as CustomFieldValuesRow[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Roda promessas com concorrência limitada (sem dependências externas). */
+async function withConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let idx = 0;
+  async function runner() {
+    while (idx < items.length) {
+      const i = idx++;
+      out[i] = await worker(items[i]);
+    }
+  }
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    () => runner(),
+  );
+  await Promise.all(runners);
+  return out;
+}
+
+function matchesCustomFieldFilter(
+  row: CustomFieldValuesRow | undefined,
+  filter: { operator?: string; value?: unknown },
+): boolean {
+  const op = filter.operator ?? "contains";
+  const v = (row?.value ?? "").toString().trim();
+  const filled = v !== "";
+
+  switch (op) {
+    case "filled":
+      return filled;
+    case "empty":
+      return !filled;
+    case "eq":
+      return v.toLowerCase() === String(filter.value ?? "").toLowerCase();
+    case "neq":
+      return v.toLowerCase() !== String(filter.value ?? "").toLowerCase();
+    case "contains":
+      return v.toLowerCase().includes(String(filter.value ?? "").toLowerCase());
+    case "not_contains":
+      return !v.toLowerCase().includes(
+        String(filter.value ?? "").toLowerCase(),
+      );
+    case "in":
+      if (!Array.isArray(filter.value)) return false;
+      return (filter.value as string[]).some(
+        (x) => String(x).toLowerCase() === v.toLowerCase(),
+      );
+    case "gt":
+      return Number(v) > Number(filter.value);
+    case "lt":
+      return Number(v) < Number(filter.value);
+    case "before":
+      return !!v && new Date(v).getTime() < new Date(String(filter.value)).getTime();
+    case "after":
+      return !!v && new Date(v).getTime() > new Date(String(filter.value)).getTime();
+    case "between": {
+      const range = filter.value as { from?: string | null; to?: string | null };
+      if (!v) return false;
+      const t = new Date(v).getTime();
+      if (range?.from && t < new Date(range.from).getTime()) return false;
+      if (range?.to && t > new Date(range.to).getTime() + 24 * 60 * 60 * 1000 - 1)
+        return false;
+      return true;
+    }
+    default:
+      return true;
+  }
+}
+
+async function applyCustomFieldFiltersClientSide(
+  stages: BoardStage[],
+  filters: AdvancedDealFilters | undefined,
+): Promise<BoardStage[]> {
+  const dealCfs = filters?.dealCustomFields ?? [];
+  const contactCfs = filters?.contactCustomFields ?? [];
+  if (dealCfs.length === 0 && contactCfs.length === 0) return stages;
+
+  // Coleta IDs únicos pra evitar refetch quando o mesmo deal/contact
+  // aparece em múltiplos estágios (raro, mas defensivo).
+  const dealIds = new Set<string>();
+  const contactIds = new Set<string>();
+  for (const stage of stages) {
+    for (const d of stage.deals as Array<Record<string, unknown>>) {
+      if (d.id) dealIds.add(String(d.id));
+      const cid = (d.contact as Record<string, unknown> | undefined)?.id;
+      if (cid) contactIds.add(String(cid));
+    }
+  }
+
+  // Concorrência 6 (= limite típico do browser p/ HTTP1.1 same-origin).
+  const dealRows =
+    dealCfs.length > 0
+      ? await withConcurrency([...dealIds], 6, async (id) => ({
+          id,
+          rows: await fetchDealCustomFieldValues(id),
+        }))
+      : [];
+  const contactRows =
+    contactCfs.length > 0
+      ? await withConcurrency([...contactIds], 6, async (id) => ({
+          id,
+          rows: await fetchContactCustomFieldValues(id),
+        }))
+      : [];
+
+  const dealMap = new Map<string, CustomFieldValuesRow[]>();
+  for (const r of dealRows) dealMap.set(r.id, r.rows);
+  const contactMap = new Map<string, CustomFieldValuesRow[]>();
+  for (const r of contactRows) contactMap.set(r.id, r.rows);
+
+  const matches = (deal: Record<string, unknown>): boolean => {
+    const dealId = String(deal.id ?? "");
+    const contactId = String(
+      (deal.contact as Record<string, unknown> | undefined)?.id ?? "",
+    );
+
+    for (const cf of dealCfs) {
+      const rows = dealMap.get(dealId) ?? [];
+      const row = rows.find((r) => r.name === cf.name);
+      if (!matchesCustomFieldFilter(row, cf)) return false;
+    }
+    for (const cf of contactCfs) {
+      const rows = contactMap.get(contactId) ?? [];
+      const row = rows.find((r) => r.name === cf.name);
+      if (!matchesCustomFieldFilter(row, cf)) return false;
+    }
+    return true;
+  };
+
+  return stages.map((stage) => ({
+    ...stage,
+    deals: Array.isArray(stage.deals)
+      ? (stage.deals as Array<Record<string, unknown>>).filter(matches)
+      : [],
+  }));
 }
 
 type UserOption = { id: string; name: string };
@@ -590,7 +937,7 @@ export default function PipelinePage() {
           {viewMode !== "saleshub" && (
             <div className="relative w-56 sm:w-72">
               <div ref={searchAnchorRef} className="relative">
-                <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
                 <input
                   type="text"
                   value={searchQuery}
@@ -599,26 +946,25 @@ export default function PipelinePage() {
                   onClick={() => setAdvancedPanelOpen(true)}
                   placeholder="Buscar e filtrar..."
                   className={cn(
-                    "h-7 w-full rounded-md border bg-zinc-100 pl-6 pr-12 text-[12px] text-zinc-700 placeholder:text-zinc-400 transition hover:bg-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                    "h-8 w-full rounded-full border bg-white/55 pl-7 pr-12 text-[12px] text-foreground placeholder:text-[var(--color-ink-muted)] backdrop-blur transition-all hover:bg-white/70 focus:bg-white/80 focus:outline-none focus:ring-[3px] focus:ring-primary/15",
                     advancedPanelOpen
-                      ? "border-blue-300 bg-white ring-2 ring-blue-500/20"
-                      : "border-transparent",
+                      ? "border-primary bg-white/80 ring-[3px] ring-primary/15"
+                      : "border-white/55",
                   )}
                 />
-                {/* Botão de filtro à direita dentro do input */}
                 <button
                   type="button"
                   onClick={() => setAdvancedPanelOpen((v) => !v)}
                   className={cn(
-                    "absolute right-1 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded px-1 text-zinc-400 transition hover:bg-zinc-200 hover:text-zinc-700",
-                    advancedCount > 0 && "text-blue-600",
+                    "absolute right-1.5 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded-full px-1 text-[var(--color-ink-muted)] transition hover:bg-white/55 hover:text-foreground",
+                    advancedCount > 0 && "text-primary",
                   )}
                   title="Filtros avançados"
                   aria-label="Abrir filtros"
                 >
                   <SlidersHorizontal className="size-3" />
                   {advancedCount > 0 && (
-                    <span className="flex size-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] font-bold text-white">
+                    <span className="flex size-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-white">
                       {advancedCount}
                     </span>
                   )}
@@ -630,7 +976,7 @@ export default function PipelinePage() {
                       e.stopPropagation();
                       setSearchQuery("");
                     }}
-                    className="absolute right-8 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                    className="absolute right-8 top-1/2 -translate-y-1/2 text-[var(--color-ink-muted)] hover:text-foreground"
                     aria-label="Limpar busca"
                   >
                     <X className="size-3" />
@@ -645,6 +991,11 @@ export default function PipelinePage() {
                 value={advancedFilters}
                 options={filterOptions}
                 optionsLoading={filterOptionsQuery.isLoading}
+                optionsError={
+                  filterOptionsQuery.error instanceof Error
+                    ? filterOptionsQuery.error.message
+                    : null
+                }
                 onApply={(next) => setAdvancedFilters(next)}
                 onClear={clearAdvancedFilters}
                 onRequestSave={(current) => {
@@ -667,15 +1018,15 @@ export default function PipelinePage() {
               size="sm"
               onClick={() => setShowFilters((v) => !v)}
               className={cn(
-                "h-7 gap-1 px-2 text-[12px]",
+                "h-8 gap-1 px-3 text-[12px]",
                 (showFilters || hasActiveAdvancedFilter || activeFilter) &&
-                  "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
+                  "border-primary/30 bg-[var(--color-primary-soft)] text-primary hover:bg-[var(--color-primary-soft)]/80",
               )}
             >
               <Filter className="size-3" />
               <span className="hidden sm:inline">Filtros</span>
               {activeFilterCount > 0 && (
-                <span className="flex size-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] font-bold text-white">
+                <span className="flex size-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-white">
                   {activeFilterCount}
                 </span>
               )}
@@ -689,7 +1040,7 @@ export default function PipelinePage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setSavedMenuOpen((v) => !v)}
-                className="h-7 gap-1 px-2 text-[12px]"
+                className="h-8 gap-1 px-3 text-[12px]"
                 title="Filtros salvos"
               >
                 <Bookmark className="size-3" />

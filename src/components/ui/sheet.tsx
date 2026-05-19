@@ -79,14 +79,14 @@ const SheetTrigger = React.forwardRef<HTMLButtonElement, SheetTriggerProps>(
 SheetTrigger.displayName = "SheetTrigger";
 
 const sheetPanelVariants = cva(
-  "relative z-50 grid gap-4 border border-border bg-background text-foreground shadow-lg transition-[transform,opacity] duration-300 ease-out",
+  "relative z-50 grid gap-4 border border-white/55 bg-white/75 text-foreground shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[transform,opacity] duration-300 ease-out",
   {
     variants: {
       side: {
-        top: "w-full max-h-[85vh] rounded-b-xl",
-        bottom: "w-full max-h-[85vh] rounded-t-xl",
-        left: "h-full max-w-sm",
-        right: "h-full max-w-sm",
+        top: "w-full max-h-[85vh] rounded-b-[32px]",
+        bottom: "w-full max-h-[85vh] rounded-t-[32px]",
+        left: "h-full max-w-sm rounded-r-[22px]",
+        right: "h-full max-w-sm rounded-l-[22px]",
       },
     },
     defaultVariants: {
@@ -161,7 +161,7 @@ const SheetContent = React.forwardRef<HTMLDialogElement, SheetContentProps>(
         ref={setRefs}
         className={cn(
           "fixed inset-0 z-50 m-0 max-h-none max-w-none border-0 bg-transparent",
-          "backdrop:bg-black/50 backdrop:backdrop-blur-[1px]",
+          "backdrop:bg-black/30 backdrop:backdrop-blur-md",
           "open:flex open:h-full open:w-full open:max-h-none open:max-w-none"
         )}
         onCancel={(e) => {
@@ -220,7 +220,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h2
     ref={ref}
-    className={cn("text-lg font-semibold text-foreground", className)}
+    className={cn("font-display text-lg font-bold tracking-tight text-foreground", className)}
     {...props}
   />
 ));

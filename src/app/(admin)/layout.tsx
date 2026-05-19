@@ -24,18 +24,21 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted/30">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/70">
+    <div className="flex min-h-screen flex-col">
+      <header className="glass-overlay sticky top-0 z-40 rounded-none border-x-0 border-t-0">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+            <div
+              className="flex size-8 items-center justify-center rounded-lg text-white shadow-sm"
+              style={{ background: "linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%)" }}
+            >
               <ShieldCheck className="size-4" />
             </div>
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 EduIT
               </span>
-              <span className="text-sm font-semibold text-foreground">
+              <span className="font-display text-sm font-semibold text-foreground">
                 Admin
               </span>
             </div>
@@ -43,21 +46,21 @@ export default async function AdminLayout({
           <nav className="flex items-center gap-1">
             <Link
               href="/admin/organizations"
-              className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-white/40"
             >
               <Building2 className="size-4" />
               Organizações
             </Link>
             <Link
               href="/admin/billing"
-              className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-white/40"
             >
               <CreditCard className="size-4" />
               Billing
             </Link>
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-white/40 hover:text-foreground"
             >
               <LayoutDashboard className="size-4" />
               Voltar pro CRM

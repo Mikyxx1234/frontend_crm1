@@ -59,8 +59,11 @@ export const dt = {
     bubble: {
       /** Cores via `var(--chat-bubble-sent-*)` no wrapper; padding no bloco interno (`px-[9px] py-[5px]`). */
       sent: "rounded-[10px] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
+      /** Recebida — fundo SOLIDO (bg-white) p/ contraste contra qualquer painel.
+       *  Antes usava `bg-card` (rgba .40) que ficava invisivel quando o painel
+       *  do chat era branco solido. */
       received:
-        "rounded-[10px] rounded-bl-[2px] border border-border-soft bg-card shadow-[0_1px_1px_rgba(0,0,0,0.06)]",
+        "rounded-[10px] rounded-bl-[2px] border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
       /** Nota interna — faixa compacta (menos altura que bolha de conversa). */
       note: "border-l-2 border-l-[#e2e8f0] bg-[#f8fafc]",
       audio: "rounded-[10px] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
@@ -84,7 +87,8 @@ export const dt = {
       compact: "text-[14px]",
       full: "text-[15px]",
     },
-    dateSep: "rounded-full bg-emerald-100 px-3 py-0.5 text-[11px] font-medium text-emerald-700",
+    dateSep:
+      "rounded-full border border-[var(--color-success)]/25 bg-[var(--color-success-soft)] px-3 py-0.5 font-display text-[11px] font-semibold text-[var(--color-success)] shadow-[var(--glass-shadow-sm)] backdrop-blur",
     /** Card de sessão 24h encerrada (footer compactChrome) — ver `chat-window.tsx`. */
     sessionExpiredCard:
       "mx-3 my-2 flex items-center gap-3 rounded-xl border border-red-200 bg-card px-3 py-2.5 shadow-[0_2px_8px_rgba(220,38,38,0.08)]",

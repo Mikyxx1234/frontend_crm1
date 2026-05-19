@@ -76,7 +76,7 @@ function SidebarSectionHeading({
 }) {
   return (
     <div className={cn("px-4 pt-3 pb-1", className)}>
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{children}</span>
+      <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">{children}</span>
     </div>
   );
 }
@@ -288,7 +288,7 @@ export function WorkspaceSidebar({
       : undefined;
 
     const kommoRow =
-      "flex items-center justify-between border-b border-border px-4 py-2.5 transition-colors hover:bg-slate-50";
+      "flex items-center justify-between border-b border-white/30 px-4 py-2.5 transition-colors hover:bg-white/30";
 
     const renderSection = (section: SectionConfig) => {
       switch (section.id) {
@@ -360,9 +360,9 @@ export function WorkspaceSidebar({
           );
         case "produtos":
           return (
-            <div key="produtos" className="border-b border-border">
+            <div key="produtos" className="border-b border-white/30">
               <div className="flex items-center justify-between px-4 pt-2">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Produtos</span>
+                <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Produtos</span>
                 <TooltipHost label={compactProductsAddOpen ? "Fechar" : "Adicionar produto"} side="left">
                   <button type="button" onClick={() => setCompactProductsAddOpen((v) => !v)} className="text-base leading-none text-[var(--color-ink-muted)] transition-colors hover:text-primary">
                     +
@@ -377,9 +377,9 @@ export function WorkspaceSidebar({
         case "contato":
           return (
             <div key="contato">
-              <div className="mt-1 border-t border-border">
+              <div className="mt-1 border-t border-white/30">
                 <div className="flex items-center justify-between px-4 pt-3 pb-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Contato</span>
+                  <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Contato</span>
                   <button type="button" onClick={(e) => { e.stopPropagation(); editingBasic ? saveBasic() : startEdit(); }} className="text-[var(--color-ink-muted)] transition-colors hover:text-primary">
                     {editingBasic ? <Check className="size-3" /> : <Pencil className="size-3" />}
                   </button>
@@ -409,7 +409,7 @@ export function WorkspaceSidebar({
         case "campos_contato":
           return (
             <div key="campos_contato">
-              <SidebarSectionHeading className="mt-1 border-t border-border">Campos do contato</SidebarSectionHeading>
+              <SidebarSectionHeading className="mt-1 border-t border-white/30">Campos do contato</SidebarSectionHeading>
               <CustomFieldsSection contactId={contact.id} variant="kompact" />
             </div>
           );
@@ -419,7 +419,7 @@ export function WorkspaceSidebar({
     };
 
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <SortableSidebar
           sections={sections}
           isAdmin={isAdmin}

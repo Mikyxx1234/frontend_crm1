@@ -344,6 +344,7 @@ export function DealWorkspace({
             activeTab={rightTab}
             onTabChange={(key) => setRightTab(key as RightTabValue)}
             onSearch={selectedConv ? () => inConversationSearchRef.current?.open() : undefined}
+            onBack={() => onOpenChange(false)}
             onClose={() => onOpenChange(false)}
             onOpenConversationList={
               contact && contact.conversations.length > 1
@@ -398,7 +399,7 @@ export function DealWorkspace({
           />
 
           {contact && contact.conversations.length > 1 ? (
-            <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-white px-2 py-1.5 lg:hidden">
+            <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-white/40 bg-white/40 px-2 py-1.5 backdrop-blur-md lg:hidden">
               {contact.conversations.map((c) => {
                 const active = selectedConv?.id === c.id;
                 return (
@@ -410,10 +411,10 @@ export function DealWorkspace({
                       setConvStatus(c.status);
                     }}
                     className={cn(
-                      "shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors",
+                      "shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium transition-all backdrop-blur",
                       active
-                        ? "border-primary bg-[var(--color-primary-soft)] text-primary"
-                        : "border-border bg-white text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]",
+                        ? "border-primary/30 bg-[var(--color-primary-soft)] text-primary shadow-[var(--glass-shadow-sm)]"
+                        : "border-white/55 bg-white/55 text-[var(--color-ink-soft)] hover:bg-white/75",
                     )}
                   >
                     {c.inboxName?.trim() || "Conversa"}
@@ -425,7 +426,7 @@ export function DealWorkspace({
 
           {/* Layout 2 colunas (lg+): painel do negócio | chat fluido */}
           <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
-            <aside className="hidden min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-white lg:flex">
+            <aside className="hidden min-h-0 min-w-0 flex-col overflow-hidden border-r border-white/40 bg-white/35 backdrop-blur-xl lg:flex">
               <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
                 {rightTab === "conversations" && contact ? (
                   // Modo compacto é o único que tem SortableSidebar
@@ -468,7 +469,7 @@ export function DealWorkspace({
               </div>
             </aside>
 
-            <section className="relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-white">
+            <section className="relative flex min-h-0 min-w-0 flex-col overflow-hidden">
               {autoCreateConversation.isPending && !selectedConv ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3">
                   <Loader2 className="size-8 animate-spin text-[var(--color-ink-muted)]" />
@@ -514,11 +515,11 @@ export function DealWorkspace({
                   transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
                     "fixed inset-y-0 left-0 z-[66] flex w-[88vw] max-w-sm flex-col",
-                    "bg-[var(--color-bg-subtle)] shadow-[var(--shadow-lg)]",
+                    "border-r border-white/40 bg-white/65 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
                   )}
                 >
-                  <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-4 py-3">
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">
+                  <div className="flex shrink-0 items-center justify-between border-b border-white/40 bg-white/45 px-4 py-3 backdrop-blur">
+                    <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-muted)]">
                       Conversas
                     </span>
                     <TooltipHost label="Fechar" side="left">
@@ -526,7 +527,7 @@ export function DealWorkspace({
                         type="button"
                         onClick={() => setConvListOpen(false)}
                         aria-label="Fechar"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-black/6 bg-white text-slate-500 hover:bg-slate-100 active:scale-95"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-white/55 bg-white/70 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/85 hover:text-foreground active:scale-95"
                       >
                         <X className="size-4" />
                       </button>
@@ -557,7 +558,7 @@ export function DealWorkspace({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="absolute inset-0 z-[55] flex items-start justify-center overflow-y-auto bg-slate-900/15 px-4 py-10 backdrop-blur-sm"
+                className="absolute inset-0 z-[55] flex items-start justify-center overflow-y-auto bg-black/25 px-4 py-10 backdrop-blur-md"
                 onClick={(e: React.MouseEvent) => { if (e.target === e.currentTarget) setEditing(false); }}
               >
                 <motion.div
@@ -566,19 +567,19 @@ export function DealWorkspace({
                   exit={{ y: 8, opacity: 0 }}
                   transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
-                    "w-full max-w-xl rounded-[28px] border border-slate-100 bg-white p-6 sm:p-8",
-                    "shadow-[var(--shadow-lg)]",
+                    "w-full max-w-xl rounded-[28px] border border-white/55 bg-white/80 p-6 sm:p-8 backdrop-blur-xl",
+                    "shadow-[var(--glass-shadow-lg)]",
                   )}
                 >
                   <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-[18px] font-extrabold tracking-tight text-slate-900">
+                    <h2 className="font-display text-[18px] font-bold tracking-tight text-foreground">
                       Editar negócio
                     </h2>
                     <button
                       type="button"
                       onClick={() => setEditing(false)}
                       aria-label="Fechar edição"
-                      className="inline-flex size-8 items-center justify-center rounded-full border border-black/6 bg-white text-slate-500 hover:bg-[var(--color-bg-subtle)] active:scale-95"
+                      className="inline-flex size-8 items-center justify-center rounded-full border border-white/55 bg-white/70 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/85 hover:text-foreground active:scale-95"
                     >
                       <X className="size-4" />
                     </button>

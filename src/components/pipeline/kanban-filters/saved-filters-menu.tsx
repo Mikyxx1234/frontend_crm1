@@ -76,11 +76,11 @@ export function SavedFiltersMenu({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full z-40 mt-1 w-72 rounded-md border border-zinc-200 bg-white shadow-lg"
+      className="absolute right-0 top-full z-40 mt-2 w-72 rounded-[18px] border border-white/55 bg-white/80 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
     >
-      <div className="flex items-center justify-between border-b border-zinc-100 px-3 py-2">
-        <span className="text-[12px] font-semibold text-zinc-800">Filtros salvos</span>
-        {loading && <Loader2 className="size-3 animate-spin text-zinc-400" />}
+      <div className="flex items-center justify-between border-b border-white/40 px-3 py-2">
+        <span className="font-display text-[12px] font-bold text-foreground">Filtros salvos</span>
+        {loading && <Loader2 className="size-3 animate-spin text-[var(--color-ink-muted)]" />}
       </div>
 
       <div className="max-h-80 overflow-y-auto py-1">
@@ -94,7 +94,7 @@ export function SavedFiltersMenu({
           return (
             <div
               key={f.id}
-              className="group flex items-start gap-2 px-3 py-2 hover:bg-zinc-50"
+              className="group flex items-start gap-2 px-3 py-2 transition-colors hover:bg-white/45"
             >
               <button
                 type="button"
@@ -198,10 +198,10 @@ export function SaveFilterDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
-        <h2 className="text-base font-semibold text-zinc-800">Salvar filtro</h2>
-        <p className="mt-0.5 text-[12px] text-zinc-500">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/30 p-4 backdrop-blur-md">
+      <div className="w-full max-w-sm rounded-[22px] border border-white/55 bg-white/80 p-5 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
+        <h2 className="font-display text-base font-bold text-foreground">Salvar filtro</h2>
+        <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
           Reutilize esse conjunto de critérios depois.
         </p>
         <form

@@ -1569,7 +1569,7 @@ export function ChatWindow({
     if (kind === "image") {
       return (
         <div className="w-full">
-          <div className="relative overflow-hidden rounded-xl border border-slate-100">
+          <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-white">
             {isUploading ? (
               <img
                 src={url}
@@ -3338,16 +3338,16 @@ export function ChatWindow({
 
         {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
         {compactChrome ? (
-          <footer className="shrink-0 overflow-visible border-t border-border bg-white pb-[calc(env(safe-area-inset-bottom,0px)+2px)]">
+          <footer className="shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl">
             {noteMode ? (
               <div
                 className={cn(
                   rowMax,
-                  "flex h-6 items-center gap-2 border-b border-border bg-[var(--color-bg-subtle)]/70 px-2",
+                  "flex h-6 items-center gap-2 border-b border-white/40 bg-amber-50/40 px-2 backdrop-blur",
                 )}
               >
                 <Lock className="size-3 shrink-0 text-[var(--color-ink-soft)]" />
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                <span className="font-display text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink-soft)]">
                   Nota interna
                 </span>
               </div>
@@ -3355,7 +3355,7 @@ export function ChatWindow({
             <div
               className={cn(
                 rowMax,
-                "flex items-end gap-1 bg-white px-2 py-1.5",
+                "flex items-end gap-1 px-2 py-1.5",
                 compactChrome && composeDisabled
                   ? "min-h-[32px]"
                   : composeDisabled
@@ -3397,9 +3397,9 @@ export function ChatWindow({
                 type="button"
                 onClick={() => togglePanel("emoji")}
                 className={cn(
-                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]",
+                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-transparent text-[var(--color-ink-soft)] transition-all hover:border-white/55 hover:bg-white/55 hover:text-foreground",
                   activePanel === "emoji" &&
-                    "bg-[var(--color-bg-subtle)] text-foreground",
+                    "border-primary/30 bg-[var(--color-primary-soft)] text-primary",
                 )}
                 aria-label="Emojis"
               >
@@ -3453,7 +3453,11 @@ export function ChatWindow({
                     type="button"
                     onClick={pendingFile ? sendFile : onSend}
                     disabled={isBusy || (!pendingFile && !draft.trim())}
-                    className="inline-flex size-9 items-center justify-center rounded-full bg-[#25D366] text-white transition-transform active:scale-95 disabled:opacity-50"
+                    className="inline-flex size-9 items-center justify-center rounded-full text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow-indigo-glow)] active:scale-95 disabled:opacity-50"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+                    }}
                     aria-label="Enviar"
                   >
                     {isBusy ? (
@@ -3474,16 +3478,16 @@ export function ChatWindow({
                   <AudioRecorder
                     onSend={sendAudio}
                     disabled={isBusy}
-                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border-0 bg-[#2563eb] !p-0 text-white shadow-none hover:brightness-95 [&_svg]:!size-4"
+                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border border-white/55 bg-white/55 !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-4"
                   />
                 </div>
               </div>
             </div>
           </footer>
         ) : (
-          <footer className="border-t border-slate-100 bg-white px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:p-6">
-            <div className="rounded-[24px] border border-slate-100 bg-white shadow-sm">
-              <div className="flex items-center border-b border-slate-100 px-5 py-3">
+          <footer className="border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6">
+            <div className="rounded-[22px] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur">
+              <div className="flex items-center border-b border-white/40 px-5 py-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <TooltipHost
                     label={
@@ -3637,7 +3641,11 @@ export function ChatWindow({
                       type="button"
                       onClick={pendingFile ? sendFile : onSend}
                       disabled={isBusy || (!pendingFile && !draft.trim())}
-                      className="inline-flex size-10 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm transition-transform active:scale-95 disabled:opacity-50"
+                      className="inline-flex size-10 items-center justify-center rounded-full text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow-indigo-glow)] active:scale-95 disabled:opacity-50"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+                      }}
                       aria-label="Enviar"
                     >
                       {isBusy ? (
@@ -3658,7 +3666,7 @@ export function ChatWindow({
                     <AudioRecorder
                       onSend={sendAudio}
                       disabled={isBusy}
-                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border-0 bg-[#2563eb] !p-0 text-white shadow-none hover:brightness-95 [&_svg]:!size-5"
+                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border border-white/55 bg-white/55 !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-5"
                     />
                   </div>
                 </div>
@@ -3800,16 +3808,16 @@ function TemplateBadge({ content }: { content: string }) {
         ? "Autenticação"
         : "Template";
   const colors = isMkt
-    ? "border-amber-300/60 bg-amber-50 text-amber-700"
+    ? "border-amber-300/50 bg-amber-50/70 text-amber-700"
     : isUtility
-      ? "border-sky-300/60 bg-sky-50 text-sky-700"
-      : "border-violet-300/60 bg-violet-50 text-violet-700";
+      ? "border-sky-300/50 bg-sky-50/70 text-sky-700"
+      : "border-primary/25 bg-[var(--color-primary-soft)] text-primary";
 
   return (
     <div className="group/tpl relative mb-1.5">
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+          "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide shadow-[var(--glass-shadow-sm)] backdrop-blur",
           colors,
         )}
       >
@@ -3976,7 +3984,7 @@ function SystemEventRow({
         transition={{ duration: 0.25 }}
         className="flex w-full justify-center py-2"
       >
-        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-[20px] border border-amber-200/80 bg-amber-50/80 px-4 py-3 shadow-[var(--shadow-sm)]">
+        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-[20px] border border-amber-200/60 bg-amber-50/55 px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
           <div className="flex items-center gap-2">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-100">
               <Smartphone
@@ -4021,7 +4029,7 @@ function SystemEventRow({
       transition={{ duration: 0.25 }}
       className="flex w-full justify-center py-2"
     >
-      <div className="flex max-w-[420px] items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50/80 px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="flex max-w-[420px] items-center gap-2 rounded-full border border-amber-200/60 bg-amber-50/55 px-3 py-1.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
         <AlertCircle
           className="size-3.5 shrink-0 text-amber-600"
           strokeWidth={2.4}

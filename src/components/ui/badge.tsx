@@ -4,32 +4,41 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  // Base Lumen: inline-flex, radius-sm (4px), peso 600, transição
-  "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-semibold transition-colors leading-none",
+  // Base glass: inline-flex, radius-full (pill), peso 600, font-display
+  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-display text-[11px] font-semibold leading-none tracking-wide transition-colors",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground",
+          "border-primary/25 bg-[var(--color-primary-soft)] text-primary",
         secondary:
-          "border-transparent bg-bg-muted text-ink-soft",
+          "border-white/40 bg-white/50 text-[var(--color-ink-soft)] backdrop-blur-sm",
         outline:
-          "border-border bg-background text-foreground",
+          "border-white/55 bg-transparent text-foreground",
         destructive:
-          "border-transparent bg-[var(--color-destructive-soft)] text-destructive",
+          "border-destructive/25 bg-[var(--color-destructive-soft)] text-destructive",
         success:
-          "border-transparent bg-[var(--color-success-soft)] text-[var(--color-success)]",
+          "border-[var(--color-success)]/25 bg-[var(--color-success-soft)] text-[#065f46]",
         warning:
-          "border-transparent bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
+          "border-[var(--color-warning)]/25 bg-[var(--color-warning-soft)] text-[#92600a]",
         // Índigo suave — estado, etapa
         indigo:
-          "border-transparent bg-[var(--color-primary-soft)] text-primary",
+          "border-primary/25 bg-[var(--color-primary-soft)] text-primary",
         // Lavanda — IA / Copilot
         ai:
-          "border-transparent bg-[var(--color-lavender-soft)] text-[var(--color-lavender)]",
+          "border-[var(--color-lavender)]/25 bg-[var(--color-lavender-soft)] text-[var(--color-lavender)]",
         // Rosa — destaque especial
         pink:
-          "border-transparent bg-[var(--color-pink-soft)] text-[var(--color-pink)]",
+          "border-[var(--color-pink)]/25 bg-[var(--color-pink-soft)] text-[var(--color-pink)]",
+        // Lead (laranja warm) — novo
+        lead:
+          "border-[var(--color-warning)]/25 bg-[var(--color-warning-soft)] text-[#92600a]",
+        // Glass — translúcida com blur
+        glass:
+          "border-white/55 bg-white/45 text-foreground backdrop-blur-sm shadow-[var(--glass-shadow-sm)]",
+        // Muted — chip neutro
+        muted:
+          "border-white/40 bg-slate-400/15 text-[var(--color-ink-muted)]",
       },
     },
     defaultVariants: {
@@ -57,8 +66,8 @@ function AIBadge({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold leading-none text-white",
-        "bg-gradient-to-r from-[#7B61FF] to-[#F5319D]",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold leading-none text-white shadow-[var(--shadow-lavender-glow)]",
+        "bg-gradient-to-r from-[#a78bfa] to-[#f472b6]",
         className
       )}
       {...props}

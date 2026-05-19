@@ -113,19 +113,21 @@ export function ConversationHeader({
 
   return (
     <div
-      className="flex shrink-0 items-stretch border-b border-border bg-white"
+      className="flex shrink-0 items-stretch border-b border-white/40 bg-white/40 backdrop-blur-md"
       style={{ minHeight: 46 }}
     >
       <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-r border-border px-2 sm:px-3">
         {onBack ? (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)] md:hidden"
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="size-[18px]" strokeWidth={2.2} />
-          </button>
+          <TooltipHost label="Voltar (Esc)" side="bottom">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)]"
+              aria-label="Voltar"
+            >
+              <ArrowLeft className="size-[18px]" strokeWidth={2.2} />
+            </button>
+          </TooltipHost>
         ) : null}
 
         {onOpenConversationList ? (
@@ -208,7 +210,7 @@ export function ConversationHeader({
               );
             })}
           </div>
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white/40 to-transparent" />
         </div>
       ) : (
         <div className="min-w-0 flex-1" />

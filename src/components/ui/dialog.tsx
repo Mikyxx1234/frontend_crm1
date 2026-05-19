@@ -144,7 +144,7 @@ const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
           // que, mesmo se algum agente de acessibilidade/tema ignorar
           // `open:flex`, o backdrop continue ocupando a tela toda.
           "fixed inset-0 z-50 m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-0",
-          "backdrop:bg-black/50 backdrop:backdrop-blur-[1px]",
+          "backdrop:bg-black/30 backdrop:backdrop-blur-md",
           "open:flex open:items-center open:justify-center open:p-4",
           className
         )}
@@ -158,14 +158,11 @@ const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
         <div
           role="document"
           className={cn(
-            // Painel base:
-            // - `mx-auto my-auto` é cinto-e-suspensório: se por algum
-            //   motivo o variant `open:flex` não for aplicado (certas
-            //   extensões/bloqueios de CSS), o painel ainda centraliza.
-            // - `max-h-[calc(100dvh-2rem)] + overflow-y-auto` evita
-            //   vazamento em mobile quando o form é longo. 100dvh
-            //   acompanha a barra de URL no Safari iOS.
-            "relative z-50 mx-auto my-auto grid max-h-[calc(100dvh-2rem)] w-full gap-4 overflow-y-auto rounded-xl border border-border bg-background p-6 text-foreground shadow-lg transition-[opacity,transform] duration-200",
+            // Painel base glass:
+            // - radius 22-32px alinhado ao design system
+            // - bg branco translúcido + blur forte
+            // - max-h dinâmico acompanha o viewport mobile (100dvh)
+            "relative z-50 mx-auto my-auto grid max-h-[calc(100dvh-2rem)] w-full gap-4 overflow-y-auto rounded-[22px] border border-white/55 bg-white/75 p-6 text-foreground shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[opacity,transform] duration-200",
             DIALOG_SIZE_CLASS[size],
             panelClassName
           )}
@@ -211,7 +208,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h2
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("font-display text-lg font-bold leading-tight tracking-tight text-foreground", className)}
     {...props}
   />
 ));

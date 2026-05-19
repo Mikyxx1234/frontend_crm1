@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 
 function LoginShellFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#EEF2FF] via-[#F8FAFF] to-white p-6">
+    <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-4">
-        <div className="mx-auto h-20 w-48 animate-pulse rounded-2xl bg-slate-200/50" />
-        <div className="h-64 w-full animate-pulse rounded-2xl border border-slate-100 bg-white/80" />
+        <div className="mx-auto h-20 w-48 animate-pulse rounded-[22px] bg-white/30" />
+        <div className="h-64 w-full animate-pulse rounded-[22px] border border-white/40 bg-white/30 backdrop-blur" />
       </div>
     </div>
   );
@@ -124,26 +124,32 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#EEF2FF] via-[#F8FAFF] to-white p-6">
+    <div className="flex min-h-screen items-center justify-center p-6">
       <div className="flex w-full max-w-sm flex-col items-center">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-200/80">
+          <div
+            className="mb-4 flex size-16 items-center justify-center rounded-2xl text-white"
+            style={{
+              background: "linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%)",
+              boxShadow: "0 12px 32px -8px rgba(91,111,245,0.55)",
+            }}
+          >
             <ShieldCheck className="size-8 text-white" strokeWidth={2} />
           </div>
-          <h1 className="font-display text-[22px] font-bold tracking-tight text-slate-900">CRM EduIT</h1>
-          <p className="mt-1 text-[14px] text-slate-500">Faça login para gerenciar conversas e negócios.</p>
+          <h1 className="font-display text-[22px] font-bold tracking-tight text-foreground">CRM EduIT</h1>
+          <p className="mt-1 text-[14px] text-[var(--color-ink-soft)]">Faça login para gerenciar conversas e negócios.</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="w-full rounded-2xl border border-slate-100 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)]"
+          className="glass-overlay w-full rounded-[32px] p-8"
         >
           <div className="mb-4">
-            <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-slate-700">
+            <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-[var(--color-ink-soft)]">
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
+              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]" aria-hidden />
               <input
                 id="email"
                 name="email"
@@ -154,17 +160,17 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 w-full rounded-full border border-slate-200 bg-white pl-9 pr-4 text-[14px] text-slate-800 placeholder:text-slate-400 transition-all focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-50"
+                className="h-11 w-full rounded-full border border-white/55 bg-white/55 pl-9 pr-4 text-[14px] text-foreground placeholder:text-[var(--color-ink-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
           </div>
 
           <div className="mb-6">
-            <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-slate-700">
+            <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-[var(--color-ink-soft)]">
               Senha
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
+              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]" aria-hidden />
               <input
                 id="password"
                 name="password"
@@ -175,12 +181,12 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 w-full rounded-full border border-slate-200 bg-white pl-9 pr-11 text-[14px] text-slate-800 placeholder:text-slate-400 transition-all focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-50"
+                className="h-11 w-full rounded-full border border-white/55 bg-white/55 pl-9 pr-11 text-[14px] text-foreground placeholder:text-[var(--color-ink-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
               <button
                 type="button"
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-muted)] transition-colors hover:text-foreground"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
               >
@@ -193,7 +199,7 @@ function LoginForm() {
             <p
               role="alert"
               className={cn(
-                "mb-4 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-center text-sm text-destructive",
+                "mb-4 rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive backdrop-blur",
               )}
             >
               {error}
@@ -203,7 +209,11 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-[14px] font-semibold text-white shadow-md shadow-blue-200/80 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full text-[14px] font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
+            style={{
+              background: "linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%)",
+              boxShadow: "0 6px 20px -4px rgba(91,111,245,0.45)",
+            }}
           >
             {loading ? (
               <>
@@ -218,15 +228,15 @@ function LoginForm() {
             )}
           </button>
 
-          <p className="mt-4 text-center text-[13px] text-slate-500">
+          <p className="mt-4 text-center text-[13px] text-[var(--color-ink-soft)]">
             Não tem uma conta?{" "}
-            <Link href="/register" className="font-medium text-blue-600 underline-offset-4 hover:underline">
+            <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
               Criar conta
             </Link>
           </p>
         </form>
 
-        <p className="mt-6 text-center text-[12px] text-slate-400">Acesso restrito · CRM EduIT</p>
+        <p className="mt-6 text-center text-[12px] text-[var(--color-ink-muted)]">Acesso restrito · CRM EduIT</p>
       </div>
     </div>
   );

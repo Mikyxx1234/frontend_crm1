@@ -5,6 +5,85 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-05-19 — Visual refresh glassmorphism via remap de tokens
+
+**Decisão.** Reskin completo do CRM seguindo o design system
+`design-system-crm.html` (glassmorphism-first, brand `#5b6ff5`, mesh
+`#dde8f5 → #b8cfec → #e8d5f0`, Plus Jakarta Sans + DM Sans). O caminho
+foi **trocar o conteúdo dos tokens** do `@theme` em
+`src/app/globals.css` em vez de reescrever componentes. Como o app já
+estava todo em Tailwind v4 + tokens semânticos (`bg-card`,
+`bg-sidebar`, `border-border`, `--color-primary`, etc.), mudar o valor
+das variáveis cascateou automaticamente para os 25+ primitivos em
+`src/components/ui/` e para o resto do app sem tocar em lógica.
+
+Mudanças concretas:
+- Remap completo do `@theme` (brand, surfaces, borders, radius,
+  sombras) + adição de tokens glass (`--glass-bg*`, `--glass-blur*`,
+  `--glass-shadow*`) e utilities `.glass-strong`, `.glass-overlay`,
+  `.glass-subtle`.
+- `body { background: linear-gradient(...) ; background-attachment: fixed }`
+  com o mesh — todo o app passa a ter o fundo glass por padrão.
+- Polimento manual em ~8 componentes de alto impacto visual:
+  `dashboard-shell` (aside, mobile bars, popovers), `Button`,
+  `Card`, `Input`, `Badge`, `Dialog`, `PageHeader`, `Tabs`,
+  `widget-card`, `kanban-column`, `kanban-card`, `conversation-list`,
+  `conversation-header`. O `chat-window` se atualiza sozinho via
+  `--chat-bubble-sent-bg` (gradient brand).
+- `src/app/layout.tsx`: troca de `Outfit` (next/font) por
+  `Plus_Jakarta_Sans` + `DM_Sans`. `themeColor` ajustado para
+  `#dde8f5` para combinar com a barra de URL do Chrome Android.
+
+**Contexto.** O usuário pediu uma grande atualização visual com a
+restrição absoluta de "não mexer em endpoints, payloads, autenticação,
+rewrites ou nada do backend". O projeto já tinha um design system
+"Lumen" funcional baseado em tokens — reaproveitar essa infraestrutura
+deu ~60% do impacto visual mudando 1 arquivo (`globals.css`) e os
+outros 40% vieram de polimentos pontuais nos componentes mais
+visíveis. Sem dependências novas (fontes via `next/font/google`,
+zero pacote adicionado em `package.json`).
+
+**Alternativas descartadas.**
+
+- **Reescrever os componentes de UI usando classes Tailwind explícitas
+  glass (ex.: `bg-white/40 backdrop-blur`).** Funcionaria, mas
+  duplicaria informação que já mora nos tokens — qualquer ajuste
+  futuro (ex.: trocar opacidade de 40% para 35%) viraria
+  find-and-replace por dezenas de arquivos. Manter os tokens como
+  fonte única significa que ajustes finos são one-liners.
+- **Criar componentes novos (`GlassCard`, `MetricCard`, `LeadCard`).**
+  O plano original sugeria, mas o sistema atual já tem `<Card>`,
+  `<WidgetCard>`, `<KanbanCard>` etc. cumprindo esses papéis. Criar
+  paralelos duplicaria abstrações e exigiria refatorar todos os
+  consumidores. Polimos os existentes em vez disso.
+- **Aplicar dark mode redesenhado com a mesma intensidade.** O design
+  system fornecido é light-first. Mantivemos dark mode funcional (com
+  remap dos tokens e gradient mesh escuro próprio) mas não há a mesma
+  fidelidade visual — trade-off explícito documentado no plano.
+- **Importar fontes só via `@import url(...)` em `globals.css`.**
+  Funciona mas tem FOUT (Flash of Unstyled Text) em SSR. Usar
+  `next/font/google` faz bundling local + preload + zero FOUT no
+  primeiro paint. O `@import` ficou como fallback.
+
+**Impacto.**
+
+- Zero alteração em `next.config.ts`, `middleware.ts`, `src/lib/api.ts`,
+  `src/lib/auth-public.ts`, `src/services/**`, providers, queries
+  do react-query, payloads, ou qualquer chamada de rede. Verificado
+  com `git diff` (mudanças concentradas em CSS + props de className).
+- Build passou (`next build`) em 54 rotas com exit code 0; sem novos
+  erros de TS/Tailwind. Warnings de `jose/CompressionStream` em Edge
+  Runtime são pré-existentes (origem em `next-auth/jose`).
+- Para introduzir novas telas: usar `<Card>`, `<Button variant="glass">`,
+  `<Badge variant="lead">`, ou as utilities `.glass`, `.glass-strong`,
+  `.glass-overlay`, `.glass-subtle` em vez de classes Tailwind brutas.
+- Para alinhar telas legadas que ainda não foram polidas: trocar
+  `bg-white` por `bg-white/40 backdrop-blur` + `border-white/55`, e
+  `rounded-xl` por `rounded-[22px]`. Os tokens `bg-card`,
+  `border-border`, `text-foreground` já apontam para os valores glass.
+
+---
+
 ### 2026-05-14 — `apiUrl()` retorna sempre path relativo
 
 **Decisão.** `src/lib/api.ts > apiUrl(path)` retorna sempre `path` relativo

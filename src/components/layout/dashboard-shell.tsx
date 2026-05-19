@@ -332,13 +332,13 @@ function StatusPopup({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" style={{ animation: "fade-in 0.2s ease" }}>
-      <div ref={ref} className="w-[360px] rounded-2xl border border-border bg-card p-7 shadow-2xl" style={{ animation: "scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md" style={{ animation: "fade-in 0.2s ease" }}>
+      <div ref={ref} className="w-[360px] rounded-[32px] border border-white/55 bg-white/70 p-7 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl" style={{ animation: "scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}>
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl lumen-gradient shadow-lg">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl lumen-gradient shadow-[var(--shadow-indigo-glow)]">
             <Wifi className="size-8 text-white" />
           </div>
-          <h3 className="text-xl font-bold text-foreground">Definir Status</h3>
+          <h3 className="font-display text-xl font-bold text-foreground">Definir Status</h3>
           <p className="mt-2 text-sm text-muted-foreground">Selecione sua disponibilidade para atendimento</p>
         </div>
 
@@ -512,7 +512,7 @@ function MobileTopBar({
   const title = getPageTitle(pathname);
   void badges;
   return (
-    <header className="pt-safe sticky top-0 z-30 flex shrink-0 items-center justify-between bg-sidebar border-b border-sidebar-border px-4 pb-3 shadow-[var(--shadow-sm)] md:hidden">
+    <header className="pt-safe sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-white/40 bg-white/40 px-4 pb-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-xl md:hidden">
       <div className="flex items-center gap-3">
         <Link
           href="/dashboard"
@@ -566,7 +566,7 @@ function MobileBottomNav({
 
   return (
     <nav
-      className="pb-safe sticky bottom-0 z-30 flex shrink-0 items-stretch border-t border-sidebar-border bg-sidebar px-2 pt-1.5 shadow-[0_-4px_16px_-4px_rgba(31,35,41,0.08)] md:hidden"
+      className="pb-safe sticky bottom-0 z-30 flex shrink-0 items-stretch border-t border-white/40 bg-white/40 px-2 pt-1.5 shadow-[0_-4px_16px_-4px_rgba(100,130,180,0.18)] backdrop-blur-xl md:hidden"
       aria-label="Navegação principal"
     >
       {items.map((item) => {
@@ -695,12 +695,12 @@ function MobileMoreSheet({
         style={{ animation: "fade-in 0.2s ease" }}
       />
       <div
-        className="pb-safe absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-card shadow-2xl"
+        className="pb-safe absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[32px] border border-white/55 bg-white/75 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
         style={{ animation: "slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}
       >
         {/* Drag handle visual */}
-        <div className="sticky top-0 z-10 bg-card pt-2 pb-1">
-          <div className="mx-auto h-1 w-10 rounded-full bg-slate-300" />
+        <div className="sticky top-0 z-10 bg-white/40 pt-2 pb-1 backdrop-blur">
+          <div className="mx-auto h-1 w-10 rounded-full bg-white/70" />
         </div>
 
         {/* Header com perfil */}
@@ -1044,9 +1044,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background">
+      <div className="flex min-h-dvh items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="size-8 animate-pulse rounded-xl bg-primary/20" />
+          <div className="size-8 animate-pulse rounded-xl bg-primary/30" />
           <p className="text-sm text-muted-foreground">Carregando...</p>
         </div>
       </div>
@@ -1058,7 +1058,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const dotColor = STATUS_DOT_COLOR[agentStatus];
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-bg-subtle md:flex-row">
+    <div className="flex h-dvh flex-col overflow-hidden md:flex-row">
       <style>{`
         .kanban-scroll::-webkit-scrollbar { width: 3px; }
         .kanban-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -1084,7 +1084,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           total ~120px e largura ~16px — chega a caber 13 itens em
           viewports de ~720-768px sem scroll, que era a queixa
           principal. */}
-      <aside className="hidden w-16 shrink-0 flex-col items-center bg-sidebar border-r border-sidebar-border py-3 shadow-[var(--shadow-sm)] md:flex">
+      <aside className="hidden w-16 shrink-0 flex-col items-center border-r border-white/40 bg-white/30 py-3 shadow-[var(--glass-shadow)] backdrop-blur-xl md:flex">
         <SidebarRailTooltip label={orgBranding?.name ?? "Início"}>
           <Link
             href="/dashboard"
@@ -1198,7 +1198,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             {accountMenuOpen && (
               <div
                 role="menu"
-                className="absolute bottom-0 left-full z-50 ml-4 w-[280px] overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-[var(--shadow-lg)]"
+                className="absolute bottom-0 left-full z-50 ml-4 w-[280px] overflow-hidden rounded-[22px] border border-white/55 bg-white/75 text-popover-foreground shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
               >
                 {/* â”€â”€ Header do popover â”€â”€ */}
                 <div className="flex flex-col items-center gap-2 px-5 pt-6 pb-4">
@@ -1269,10 +1269,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           deixa o canto superior esquerdo da área de conteúdo cortado em curva
           contra a sidebar escura — assinatura visual EduIT Premium Core.
           shadow-[var(--shadow-lg)] no main reforça a separação navy/conteúdo. */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <main
           className={cn(
-            "flex min-h-0 flex-1 flex-col bg-background md:rounded-tl-[32px] md:shadow-[var(--shadow-lg)]",
+            "flex min-h-0 flex-1 flex-col md:rounded-tl-[32px]",
             inboxHeightLocked
               ? "overflow-hidden px-3 pb-0 pt-3 sm:px-4 sm:pb-0 sm:pt-4 md:px-8 md:pb-0 md:pt-8"
               : "overflow-y-auto p-3 sm:p-4 md:p-8",

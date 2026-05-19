@@ -43,32 +43,32 @@ export const WidgetCard = React.memo(function WidgetCard({
       animate={{ opacity: 1, y: 0 }}
       transition={SUBTLE_SPRING}
       className={cn(
-        "group/widget flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[var(--shadow-lg)] transition-shadow duration-300 hover:shadow-[var(--shadow-sm)]",
-        editing && "ring-1 ring-primary/20",
+        "group/widget flex h-full flex-col overflow-hidden rounded-[22px] border border-white/55 bg-white/45 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+        editing && "ring-1 ring-primary/30",
         className,
       )}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border/40 px-5 py-3">
+      <div className="flex items-center gap-2 border-b border-white/40 px-5 py-3">
         {editing && (
           <span
             className={cn(
               dragHandleClass,
-              "cursor-grab rounded p-0.5 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing",
+              "cursor-grab rounded p-0.5 text-muted-foreground/70 transition-colors hover:bg-white/40 hover:text-foreground active:cursor-grabbing",
             )}
             aria-label="Arrastar widget"
           >
             <GripVertical className="size-4" />
           </span>
         )}
-        <h3 className="flex-1 truncate text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <h3 className="flex-1 truncate font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           {title}
         </h3>
         {editing && onRemove && (
           <button
             type="button"
             onClick={onRemove}
-            className="rounded-md p-1 text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-md p-1 text-muted-foreground/60 transition-colors hover:bg-white/40 hover:text-foreground"
             aria-label="Remover widget"
           >
             <X className="size-3.5" />
@@ -91,7 +91,7 @@ export const WidgetCard = React.memo(function WidgetCard({
 
       {/* Footer */}
       {footer && !isLoading && (
-        <div className="border-t border-border/40 px-5 py-2.5">
+        <div className="border-t border-white/40 px-5 py-2.5">
           {footer}
         </div>
       )}

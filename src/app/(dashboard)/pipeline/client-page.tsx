@@ -168,6 +168,38 @@ async function fetchPipelines(): Promise<PipelineListItem[]> {
   return Array.isArray(list) ? list : [];
 }
 
+/** Detecta se o backend ainda nao foi atualizado (POST nao existe). */
+class BackendOutdatedError extends Error {
+  constructor() {
+    super(
+      "O backend desta instalação ainda não foi atualizado para suportar filtros avançados. " +
+        "Faça redeploy do backend (as migrations rodam automaticamente no boot).",
+    );
+    this.name = "BackendOutdatedError";
+  }
+}
+
+async function fetchBoardGet(
+  pipelineId: string,
+  status: StatusFilter,
+): Promise<BoardStage[]> {
+  const params = new URLSearchParams();
+  if (status !== "OPEN") params.set("status", status);
+  const qs = params.toString();
+  const res = await fetch(
+    `/api/pipelines/${pipelineId}/board${qs ? `?${qs}` : ""}`,
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail =
+      typeof data?.detail === "string" ? ` (${data.detail})` : "";
+    const msg = typeof data?.message === "string" ? data.message : "Erro ao carregar quadro";
+    throw new Error(`${msg}${detail}`);
+  }
+  if (Array.isArray(data)) return data as BoardStage[];
+  return (Array.isArray(data.stages) ? data.stages : []) as BoardStage[];
+}
+
 async function fetchBoard(
   pipelineId: string,
   status: StatusFilter = "OPEN",
@@ -178,19 +210,10 @@ async function fetchBoard(
   const hasOffsets =
     !!offsetByStage && Object.values(offsetByStage).some((v) => (v ?? 0) > 0);
 
-  // Sem filtros avançados e sem paginação → GET (compatibilidade).
   if (!hasAdv && !hasOffsets) {
-    const params = new URLSearchParams();
-    if (status !== "OPEN") params.set("status", status);
-    const qs = params.toString();
-    const res = await fetch(`/api/pipelines/${pipelineId}/board${qs ? `?${qs}` : ""}`);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao carregar quadro");
-    if (Array.isArray(data)) return data;
-    return Array.isArray(data.stages) ? data.stages : [];
+    return fetchBoardGet(pipelineId, status);
   }
 
-  // Caso contrário → POST com body (filtros e/ou paginação por etapa).
   const res = await fetch(`/api/pipelines/${pipelineId}/board`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -200,8 +223,18 @@ async function fetchBoard(
       offsetByStage: offsetByStage ?? {},
     }),
   });
+
+  if (res.status === 404 || res.status === 405) {
+    throw new BackendOutdatedError();
+  }
+
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao carregar quadro");
+  if (!res.ok) {
+    const detail =
+      typeof data?.detail === "string" ? ` (${data.detail})` : "";
+    const msg = typeof data?.message === "string" ? data.message : "Erro ao carregar quadro";
+    throw new Error(`${msg}${detail}`);
+  }
   return (Array.isArray(data) ? data : Array.isArray(data.stages) ? data.stages : []) as BoardStage[];
 }
 
@@ -953,8 +986,38 @@ export default function PipelinePage() {
 
         {boardError && pipelineId && (
           <div className="flex items-center justify-center p-8">
-            <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-4 text-[14px] font-medium text-red-700 shadow-sm">
-              {boardErr instanceof Error ? boardErr.message : "Erro ao carregar o quadro."}
+            <div className="max-w-xl rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-[14px] text-red-800 shadow-sm">
+              <div className="mb-2 font-semibold">Erro ao carregar o quadro.</div>
+              <div className="text-[13px] leading-relaxed">
+                {boardErr instanceof Error
+                  ? boardErr.message
+                  : "Tente novamente em alguns instantes."}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    queryClient.invalidateQueries({
+                      queryKey: ["pipeline", pipelineId, "board"],
+                    })
+                  }
+                  className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100"
+                >
+                  Tentar novamente
+                </button>
+                {!advancedFiltersEmpty && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearAdvancedFilters();
+                      setStageOffsets({});
+                    }}
+                    className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100"
+                  >
+                    Limpar filtros e recarregar
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}

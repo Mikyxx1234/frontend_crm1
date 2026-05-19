@@ -1,6 +1,6 @@
 "use client";
 
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getApiBaseUrl } from "@/lib/api";
 import { Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, ShieldCheck, ShieldOff, Webhook } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -103,8 +103,15 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
     setShowTokenHint(!!initialToken);
   }, [channel.id, channel.name, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret, initialVerifyToken]);
 
+  // A URL do webhook PRECISA apontar para o backend (não para o frontend).
+  // A Meta entrega o callback HTTP direto no backend — o frontend não tem
+  // /api/webhooks/meta. Em produção, NEXT_PUBLIC_API_BASE_URL é o domínio
+  // público do backend (ex.: https://backend-backend.v74knz.easypanel.host).
+  // Em dev sem essa env setada, cai pro window.location.origin (que aí
+  // ativa o rewrite do Next pro backend local).
   const webhookBase =
-    typeof window !== "undefined" ? window.location.origin : "";
+    getApiBaseUrl() ||
+    (typeof window !== "undefined" ? window.location.origin : "");
 
   // URL scoped por org (rota nova multi-tenant). Quando organizationSlug nao
   // veio (channel antigo carregado de cache?), cai pra rota legacy ate o

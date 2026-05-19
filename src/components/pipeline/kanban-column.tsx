@@ -22,6 +22,9 @@ export type KanbanColumnStage = {
   name: string;
   color?: string;
   deals: BoardDeal[];
+  /** Total real (independente do limit do board). */
+  totalCount?: number;
+  hasMore?: boolean;
 };
 
 type KanbanColumnProps = {
@@ -41,6 +44,8 @@ type KanbanColumnProps = {
   visibleFields?: CardVisibleFields;
   onDealClick?: (dealId: string) => void;
   onAddCard?: (stageId: string) => void;
+  onLoadMore?: (stageId: string) => void;
+  loadingMore?: boolean;
   onMarkWon: (dealId: string) => void;
   onMarkLost: (dealId: string, reason: string) => void;
   statusBusy: { dealId: string; kind: "won" | "lost" } | null;
@@ -59,14 +64,20 @@ export function KanbanColumn({
   visibleFields,
   onDealClick,
   onAddCard,
+  onLoadMore,
+  loadingMore,
   onMarkWon,
   onMarkLost,
   statusBusy,
   recentlyMovedId,
 }: KanbanColumnProps) {
-  const count = stage.deals.length;
+  const visibleCount = stage.deals.length;
+  // `count` prefere o total do servidor (independente do limit). Cai pro
+  // visível só quando a info ainda não chegou (board legado).
+  const count = stage.totalCount ?? visibleCount;
   const unreadInColumn = stage.deals.reduce((a, d) => a + (d.unreadCount ?? 0), 0);
   const attentionInColumn = stage.deals.filter((d) => d.isRotting || d.priority === "HIGH").length;
+  const remaining = Math.max(0, (stage.totalCount ?? visibleCount) - visibleCount);
   return (
     <div className="flex h-full min-h-0 w-[280px] shrink-0 flex-col self-stretch sm:w-[300px]">
       <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-50/60">
@@ -150,6 +161,17 @@ export function KanbanColumn({
                 </Draggable>
               ))}
               {provided.placeholder}
+
+              {stage.hasMore && remaining > 0 && (
+                <button
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={() => onLoadMore?.(stage.id)}
+                  className="mt-0.5 flex items-center justify-center gap-1.5 rounded-md border border-dashed border-blue-200 bg-blue-50/40 py-2 text-[11px] font-medium text-blue-700 transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
+                >
+                  {loadingMore ? "Carregando..." : `Carregar mais (${remaining})`}
+                </button>
+              )}
 
               <button
                 type="button"

@@ -5,7 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Plus, Save, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, RefreshCw, Save, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ type FlowFieldRow = {
   fieldKey: string;
   label: string;
   fieldType: string;
+  options: string[];
   required: boolean;
   sortOrder: number;
   mapping: FlowMapping;
@@ -48,16 +49,78 @@ type FlowDefDetail = {
   screens: FlowScreenRow[];
 };
 
-type CustomFieldOpt = { id: string; label: string; name: string };
+type CustomFieldOpt = { id: string; label: string; name: string; type?: string };
 
-const FIELD_TYPES = ["TEXT", "EMAIL", "PHONE", "TEXTAREA"] as const;
+const FIELD_TYPE_OPTIONS = [
+  { value: "TEXT", label: "Texto curto" },
+  { value: "TEXTAREA", label: "Resposta longa" },
+  { value: "EMAIL", label: "E-mail" },
+  { value: "PHONE", label: "Telefone" },
+  { value: "DROPDOWN", label: "Lista (seleção única)" },
+  { value: "RADIO", label: "Seleção única (botões)" },
+  { value: "MULTI_SELECT", label: "Seleção múltipla" },
+  { value: "DATE", label: "Data" },
+] as const;
 
-const NATIVE_KEYS = [
-  { value: "", label: "— (sem mapeamento)" },
-  { value: "name", label: "Nome (contato)" },
-  { value: "phone", label: "Telefone" },
-  { value: "email", label: "E-mail" },
+const FIELD_TYPES_WITH_OPTIONS = new Set(["DROPDOWN", "RADIO", "MULTI_SELECT", "SELECT"]);
+
+type MappingNativeOpt = { key: string; label: string };
+
+const DEFAULT_DEAL_NATIVE_FIELDS: MappingNativeOpt[] = [
+  { key: "title", label: "Título do negócio" },
+  { key: "value", label: "Valor do negócio" },
+  { key: "expectedClose", label: "Previsão de fechamento" },
 ];
+
+function fieldTypeNeedsOptions(fieldType: string): boolean {
+  return FIELD_TYPES_WITH_OPTIONS.has(fieldType.toUpperCase());
+}
+
+function parseOptionsText(text: string): string[] {
+  return text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+function DealMappingSelect({
+  value,
+  onChange,
+  nativeFields,
+  customFields,
+  customFieldsHint,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  nativeFields: MappingNativeOpt[];
+  customFields: CustomFieldOpt[];
+  customFieldsHint?: React.ReactNode;
+}) {
+  return (
+    <>
+      <SelectNative value={value} onChange={(e) => onChange(e.target.value)} className="w-full text-xs">
+        <option value="">— Não mapear —</option>
+        <optgroup label="Negócio (campos padrão)">
+          {nativeFields.map((o) => (
+            <option key={o.key} value={`d:${o.key}`}>
+              {o.label}
+            </option>
+          ))}
+        </optgroup>
+        {customFields.length > 0 ? (
+          <optgroup label="Negócio (campos personalizados)">
+            {customFields.map((cf) => (
+              <option key={cf.id} value={`cf:${cf.id}`}>
+                {cf.label}
+              </option>
+            ))}
+          </optgroup>
+        ) : null}
+      </SelectNative>
+      {customFieldsHint}
+    </>
+  );
+}
 
 function toUpsertInput(d: FlowDefDetail): FlowDefinitionUpsertInput {
   return {
@@ -70,11 +133,15 @@ function toUpsertInput(d: FlowDefDetail): FlowDefinitionUpsertInput {
         fieldKey: f.fieldKey,
         label: f.label,
         fieldType: f.fieldType,
+        options: f.options ?? [],
         required: f.required,
         sortOrder: fi,
         mapping: f.mapping
           ? {
-              targetKind: f.mapping.targetKind as "CONTACT_NATIVE" | "CUSTOM_FIELD",
+              targetKind: f.mapping.targetKind as
+                | "CONTACT_NATIVE"
+                | "DEAL_NATIVE"
+                | "CUSTOM_FIELD",
               nativeKey: f.mapping.nativeKey,
               customFieldId: f.mapping.customFieldId,
             }
@@ -100,10 +167,24 @@ function newField(screen: FlowScreenRow): FlowFieldRow {
     fieldKey: `campo_${n}`,
     label: `Campo ${n}`,
     fieldType: "TEXT",
+    options: [],
     required: false,
     sortOrder: n - 1,
     mapping: null,
   };
+}
+
+function mappingSelectValue(f: FlowFieldRow): string {
+  if (f.mapping?.targetKind === "CUSTOM_FIELD" && f.mapping.customFieldId) {
+    return `cf:${f.mapping.customFieldId}`;
+  }
+  if (f.mapping?.targetKind === "DEAL_NATIVE" && f.mapping.nativeKey) {
+    return `d:${f.mapping.nativeKey}`;
+  }
+  if (f.mapping?.targetKind === "CONTACT_NATIVE" && f.mapping.nativeKey) {
+    return `n:${f.mapping.nativeKey}`;
+  }
+  return "";
 }
 
 export default function FlowDefinitionEditorPage() {
@@ -111,15 +192,42 @@ export default function FlowDefinitionEditorPage() {
   const id = typeof params.id === "string" ? params.id : "";
   const queryClient = useQueryClient();
 
-  const { data: customFields = [] } = useQuery({
-    queryKey: ["custom-fields", "contact", "flow-editor"],
-    queryFn: async () => {
-      const r = await fetch(apiUrl("/api/custom-fields?entity=contact"));
-      if (!r.ok) return [] as CustomFieldOpt[];
-      const j: unknown = await r.json();
-      return Array.isArray(j) ? (j as CustomFieldOpt[]) : [];
-    },
-  });
+  const { data: mappingFields, isError: mappingFieldsError, isLoading: mappingFieldsLoading } =
+    useQuery({
+      queryKey: ["whatsapp-flow-deal-mapping-fields"],
+      queryFn: async () => {
+        const r = await fetch(apiUrl("/api/whatsapp-flow-definitions/lead-mapping-fields"));
+        if (r.ok) {
+          return r.json() as Promise<{
+            nativeFields: MappingNativeOpt[];
+            customFields: CustomFieldOpt[];
+          }>;
+        }
+        const fallback = await fetch(apiUrl("/api/custom-fields?entity=deal"));
+        if (fallback.ok) {
+          const j: unknown = await fallback.json();
+          const list = Array.isArray(j) ? (j as CustomFieldOpt[]) : [];
+          return { nativeFields: DEFAULT_DEAL_NATIVE_FIELDS, customFields: list };
+        }
+        throw new Error("Não foi possível carregar os campos do negócio.");
+      },
+      staleTime: 0,
+    });
+  const nativeFields = mappingFields?.nativeFields ?? DEFAULT_DEAL_NATIVE_FIELDS;
+  const customFields = mappingFields?.customFields ?? [];
+  const customFieldsHint =
+    mappingFieldsLoading ? (
+      <p className="mt-1 text-[10px] text-muted-foreground">Carregando campos do negócio…</p>
+    ) : customFields.length === 0 ? (
+      <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[10px] leading-snug text-amber-900 dark:text-amber-200">
+        Nenhum campo personalizado de <strong>negócio</strong> nesta organização — só aparecem
+        Título, Valor e Previsão de fechamento.{" "}
+        <Link href="/settings/custom-fields?entity=deal" className="font-medium underline">
+          Criar campos do negócio
+        </Link>
+        {mappingFieldsError ? " (falha ao carregar a lista)" : null}
+      </p>
+    ) : null;
 
   const { data: loaded, isLoading } = useQuery({
     queryKey: ["whatsapp-flow-definition", id],
@@ -137,7 +245,16 @@ export default function FlowDefinitionEditorPage() {
   React.useEffect(() => {
     if (!loaded) return;
     queueMicrotask(() => {
-      setDraft(loaded);
+      setDraft({
+        ...loaded,
+        screens: loaded.screens.map((s) => ({
+          ...s,
+          fields: s.fields.map((f) => ({
+            ...f,
+            options: Array.isArray(f.options) ? f.options : [],
+          })),
+        })),
+      });
       setSelectedScreenIdx(0);
     });
   }, [loaded]);
@@ -157,7 +274,9 @@ export default function FlowDefinitionEditorPage() {
       setDraft(row);
       queryClient.setQueryData(["whatsapp-flow-definition", id], row);
       queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-definitions"] });
-      toast.success("Rascunho guardado.");
+      toast.success(
+        row.status === "PUBLISHED" ? "Mapeamento guardado." : "Rascunho guardado.",
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -183,6 +302,24 @@ export default function FlowDefinitionEditorPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const syncFromMetaMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(
+        apiUrl(`/api/whatsapp-flow-definitions/${encodeURIComponent(id)}/sync-from-meta`),
+        { method: "POST" },
+      );
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof j?.message === "string" ? j.message : "Erro ao sincronizar.");
+      return j as FlowDefDetail;
+    },
+    onSuccess: (row) => {
+      setDraft(row);
+      queryClient.setQueryData(["whatsapp-flow-definition", id], row);
+      toast.success("Perguntas atualizadas a partir da Meta.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const updateDraft = React.useCallback((updater: (d: FlowDefDetail) => FlowDefDetail) => {
     setDraft((prev) => {
       if (!prev) return prev;
@@ -190,6 +327,54 @@ export default function FlowDefinitionEditorPage() {
       return updater(base);
     });
   }, []);
+
+  const setFieldMapping = React.useCallback(
+    (fieldId: string, screenIdx: number, value: string) => {
+      updateDraft((d) => {
+        const screens = d.screens.map((s, i) => {
+          if (i !== screenIdx) return s;
+          const fields = s.fields.map((x) => {
+            if (x.id !== fieldId) return x;
+            if (!value) return { ...x, mapping: null };
+            if (value.startsWith("cf:")) {
+              return {
+                ...x,
+                mapping: {
+                  targetKind: "CUSTOM_FIELD",
+                  nativeKey: null,
+                  customFieldId: value.slice(3),
+                },
+              };
+            }
+            if (value.startsWith("d:")) {
+              return {
+                ...x,
+                mapping: {
+                  targetKind: "DEAL_NATIVE",
+                  nativeKey: value.slice(2),
+                  customFieldId: null,
+                },
+              };
+            }
+            if (value.startsWith("n:")) {
+              return {
+                ...x,
+                mapping: {
+                  targetKind: "CONTACT_NATIVE",
+                  nativeKey: value.slice(2),
+                  customFieldId: null,
+                },
+              };
+            }
+            return x;
+          });
+          return { ...s, fields };
+        });
+        return { ...d, screens };
+      });
+    },
+    [updateDraft],
+  );
 
   const activeScreen =
     draft && draft.screens.length > 0
@@ -209,6 +394,97 @@ export default function FlowDefinitionEditorPage() {
     );
   }
 
+  const isImportedFromMeta = Boolean(draft.metaFlowId?.trim());
+
+  if (isImportedFromMeta) {
+    return (
+      <div className="w-full space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/settings/message-models?tab=flows"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" /> Modelos de mensagem
+          </Link>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={syncFromMetaMutation.isPending || saveMutation.isPending}
+            onClick={() => syncFromMetaMutation.mutate()}
+          >
+            {syncFromMetaMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            <span className="ml-2">Atualizar perguntas da Meta</span>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={saveMutation.isPending || syncFromMetaMutation.isPending}
+            onClick={() => saveMutation.mutate(toUpsertInput(draft))}
+          >
+            {saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            <span className="ml-2">Guardar mapeamento</span>
+          </Button>
+        </div>
+
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
+          <p className="font-medium text-foreground">{draft.name}</p>
+          <p className="mt-1 text-muted-foreground">
+            Flow vinculado à Meta (<code className="text-xs">{draft.metaFlowId}</code>). Abaixo estão as{" "}
+            <strong>perguntas do formulário</strong> — escolha em qual campo do lead cada resposta será gravada.
+            Se faltar pergunta, use <strong>Atualizar perguntas da Meta</strong>.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {draft.screens.map((screen, si) => (
+            <div key={screen.id} className="rounded-lg border border-border bg-card p-4">
+              <p className="mb-3 text-sm font-semibold">{screen.title || `Tela ${si + 1}`}</p>
+              {screen.fields.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhum campo nesta tela.</p>
+              ) : (
+                <div className="space-y-3">
+                  {screen.fields.map((f) => (
+                    <div
+                      key={f.id}
+                      className="grid gap-2 rounded-md border border-border/60 bg-muted/20 p-3 sm:grid-cols-[1fr_1fr]"
+                    >
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Pergunta no WhatsApp
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold text-foreground">{f.label}</p>
+                        {f.required ? (
+                          <p className="mt-0.5 text-[10px] text-amber-700">Obrigatória no formulário</p>
+                        ) : null}
+                      </div>
+                      <div>
+                        <Label className="text-xs">Gravar no campo do negócio</Label>
+                        <div className="mt-0.5">
+                          <DealMappingSelect
+                            value={mappingSelectValue(f)}
+                            onChange={(v) => setFieldMapping(f.id, si, v)}
+                            nativeFields={nativeFields}
+                            customFields={customFields}
+                            customFieldsHint={customFieldsHint}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (draft.status !== "DRAFT") {
     return (
       <div className="w-full space-y-4">
@@ -219,8 +495,7 @@ export default function FlowDefinitionEditorPage() {
           <ArrowLeft className="size-4" /> Modelos de mensagem
         </Link>
         <p className="text-sm text-muted-foreground">
-          Este flow já está <strong>{draft.status}</strong> na Meta (id:{" "}
-          <code className="text-xs">{draft.metaFlowId ?? "—"}</code>). Só é possível editar rascunhos no CRM.
+          Este flow está <strong>{draft.status}</strong> e não pode ser editado.
         </p>
       </div>
     );
@@ -468,9 +743,12 @@ export default function FlowDefinitionEditorPage() {
                               updateDraft((d) => {
                                 const screens = d.screens.map((s, i) => {
                                   if (i !== selectedScreenIdx) return s;
-                                  const fields = s.fields.map((x) =>
-                                    x.id === f.id ? { ...x, fieldType: v } : x,
-                                  );
+                                  const fields = s.fields.map((x) => {
+                                    if (x.id !== f.id) return x;
+                                    const next = { ...x, fieldType: v };
+                                    if (!fieldTypeNeedsOptions(v)) next.options = [];
+                                    return next;
+                                  });
                                   return { ...s, fields };
                                 });
                                 return { ...d, screens };
@@ -478,9 +756,9 @@ export default function FlowDefinitionEditorPage() {
                             }}
                             className="mt-0.5 w-full"
                           >
-                            {FIELD_TYPES.map((t) => (
-                              <option key={t} value={t}>
-                                {t}
+                            {FIELD_TYPE_OPTIONS.map((t) => (
+                              <option key={t.value} value={t.value}>
+                                {t.label}
                               </option>
                             ))}
                           </SelectNative>
@@ -505,6 +783,30 @@ export default function FlowDefinitionEditorPage() {
                           />
                           Obrigatório
                         </label>
+                        {fieldTypeNeedsOptions(f.fieldType) ? (
+                          <div className="sm:col-span-2">
+                            <Label className="text-xs">Opções (uma por linha)</Label>
+                            <textarea
+                              value={(f.options ?? []).join("\n")}
+                              onChange={(e) => {
+                                const options = parseOptionsText(e.target.value);
+                                updateDraft((d) => {
+                                  const screens = d.screens.map((s, i) => {
+                                    if (i !== selectedScreenIdx) return s;
+                                    const fields = s.fields.map((x) =>
+                                      x.id === f.id ? { ...x, options } : x,
+                                    );
+                                    return { ...s, fields };
+                                  });
+                                  return { ...d, screens };
+                                });
+                              }}
+                              rows={3}
+                              className="mt-0.5 w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+                              placeholder={"Opção 1\nOpção 2\nOpção 3"}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   ))
@@ -537,78 +839,27 @@ export default function FlowDefinitionEditorPage() {
               </div>
             </div>
           </div>
-          {activeScreen && activeScreen.fields.length > 0 ? (
+          {draft.screens.some((s) => s.fields.length > 0) ? (
             <div className="space-y-2 border-t border-border pt-2">
               <p className="text-xs font-semibold text-muted-foreground">Mapeamento (CRM)</p>
               <p className="text-[10px] leading-snug text-muted-foreground">
-                Escolha o destino de cada campo para automações futuras (respostas de Flow na inbox).
+                Cada resposta do Flow no WhatsApp é gravada no negócio aberto do contato (campo mapeado abaixo).
               </p>
-              {activeScreen.fields.map((f) => (
+              {customFieldsHint}
+              {draft.screens.flatMap((screen, si) =>
+                screen.fields.map((f) => ({ f, si, screenTitle: screen.title })),
+              ).map(({ f, si, screenTitle }) => (
                 <div key={`map-${f.id}`} className="rounded border border-border/60 bg-card p-2">
-                  <p className="mb-1 truncate text-[11px] font-medium">{f.label}</p>
-                  <SelectNative
-                    value={
-                      f.mapping?.targetKind === "CUSTOM_FIELD" && f.mapping.customFieldId
-                        ? `cf:${f.mapping.customFieldId}`
-                        : f.mapping?.targetKind === "CONTACT_NATIVE" && f.mapping.nativeKey
-                          ? `n:${f.mapping.nativeKey}`
-                          : ""
-                    }
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      updateDraft((d) => {
-                        const screens = d.screens.map((s, i) => {
-                          if (i !== selectedScreenIdx) return s;
-                          const fields = s.fields.map((x) => {
-                            if (x.id !== f.id) return x;
-                            if (!v) return { ...x, mapping: null };
-                            if (v.startsWith("cf:")) {
-                              return {
-                                ...x,
-                                mapping: {
-                                  targetKind: "CUSTOM_FIELD",
-                                  nativeKey: null,
-                                  customFieldId: v.slice(3),
-                                },
-                              };
-                            }
-                            if (v.startsWith("n:")) {
-                              return {
-                                ...x,
-                                mapping: {
-                                  targetKind: "CONTACT_NATIVE",
-                                  nativeKey: v.slice(2),
-                                  customFieldId: null,
-                                },
-                              };
-                            }
-                            return x;
-                          });
-                          return { ...s, fields };
-                        });
-                        return { ...d, screens };
-                      });
-                    }}
-                    className="w-full text-xs"
-                  >
-                    <option value="">—</option>
-                    <optgroup label="Contato (nativo)">
-                      {NATIVE_KEYS.filter((o) => o.value).map((o) => (
-                        <option key={o.value} value={`n:${o.value}`}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                    {customFields.length ? (
-                      <optgroup label="Campos personalizados">
-                        {customFields.map((cf) => (
-                          <option key={cf.id} value={`cf:${cf.id}`}>
-                            {cf.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ) : null}
-                  </SelectNative>
+                  <p className="mb-0.5 truncate text-[11px] font-medium">{f.label}</p>
+                  {screenTitle ? (
+                    <p className="mb-1 text-[10px] text-muted-foreground">{screenTitle}</p>
+                  ) : null}
+                  <DealMappingSelect
+                    value={mappingSelectValue(f)}
+                    onChange={(v) => setFieldMapping(f.id, si, v)}
+                    nativeFields={nativeFields}
+                    customFields={customFields}
+                  />
                 </div>
               ))}
             </div>

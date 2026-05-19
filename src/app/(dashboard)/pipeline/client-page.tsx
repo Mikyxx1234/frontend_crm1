@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
+  Bookmark,
   CheckCircle2,
   ChevronDown,
   Clock,
@@ -16,11 +17,35 @@ import {
   Loader as Loader2,
   Plus,
   Search,
+  SlidersHorizontal,
+  Star,
   TriangleAlert as AlertTriangle,
   User as UserIcon,
   X,
   XCircle,
 } from "lucide-react";
+import {
+  createSavedFilter as apiCreateSavedFilter,
+  deleteSavedFilter as apiDeleteSavedFilter,
+  duplicateSavedFilter as apiDuplicateSavedFilter,
+  fetchBoardWithFilters,
+  fetchFilterOptions,
+  fetchSavedFilters,
+  updateSavedFilter as apiUpdateSavedFilter,
+} from "@/components/pipeline/kanban-filters/api";
+import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
+import { FilterPanel } from "@/components/pipeline/kanban-filters/filter-panel";
+import {
+  SaveFilterDialog,
+  SavedFiltersMenu,
+} from "@/components/pipeline/kanban-filters/saved-filters-menu";
+import {
+  countActiveFilters,
+  isEmptyFilters,
+  type AdvancedDealFilters,
+  type SavedFilter,
+} from "@/components/pipeline/kanban-filters/types";
+import { useKanbanFilters } from "@/components/pipeline/kanban-filters/use-kanban-filters";
 import {
   CardFieldsConfig,
   loadCardFields,
@@ -44,7 +69,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const boardKey = (pid: string, status: StatusFilter = "OPEN") => ["pipeline-board", pid, status] as const;
+/**
+ * Inclui hash dos filtros avançados na key — assim o React Query refetcha
+ * quando o filtro muda. Stringificamos com chaves ordenadas pra evitar
+ * cache miss falso por reordenação.
+ */
+function stableStringify(obj: AdvancedDealFilters): string {
+  const keys = Object.keys(obj).sort();
+  return JSON.stringify(obj, keys);
+}
+
+const boardKey = (
+  pid: string,
+  status: StatusFilter = "OPEN",
+  advancedFilters?: AdvancedDealFilters,
+) =>
+  [
+    "pipeline-board",
+    pid,
+    status,
+    advancedFilters && !isEmptyFilters(advancedFilters) ? stableStringify(advancedFilters) : "",
+  ] as const;
 
 type PipelineListItem = { id: string; name: string; isDefault?: boolean };
 type FilterType = "mine" | "urgent" | "vip" | null;
@@ -123,15 +168,41 @@ async function fetchPipelines(): Promise<PipelineListItem[]> {
   return Array.isArray(list) ? list : [];
 }
 
-async function fetchBoard(pipelineId: string, status: StatusFilter = "OPEN"): Promise<BoardStage[]> {
-  const params = new URLSearchParams();
-  if (status !== "OPEN") params.set("status", status);
-  const qs = params.toString();
-  const res = await fetch(`/api/pipelines/${pipelineId}/board${qs ? `?${qs}` : ""}`);
+async function fetchBoard(
+  pipelineId: string,
+  status: StatusFilter = "OPEN",
+  advancedFilters?: AdvancedDealFilters,
+  offsetByStage?: Record<string, number>,
+): Promise<BoardStage[]> {
+  const hasAdv = !!advancedFilters && !isEmptyFilters(advancedFilters);
+  const hasOffsets =
+    !!offsetByStage && Object.values(offsetByStage).some((v) => (v ?? 0) > 0);
+
+  // Sem filtros avançados e sem paginação → GET (compatibilidade).
+  if (!hasAdv && !hasOffsets) {
+    const params = new URLSearchParams();
+    if (status !== "OPEN") params.set("status", status);
+    const qs = params.toString();
+    const res = await fetch(`/api/pipelines/${pipelineId}/board${qs ? `?${qs}` : ""}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao carregar quadro");
+    if (Array.isArray(data)) return data;
+    return Array.isArray(data.stages) ? data.stages : [];
+  }
+
+  // Caso contrário → POST com body (filtros e/ou paginação por etapa).
+  const res = await fetch(`/api/pipelines/${pipelineId}/board`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      status,
+      filters: advancedFilters ?? {},
+      offsetByStage: offsetByStage ?? {},
+    }),
+  });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao carregar quadro");
-  if (Array.isArray(data)) return data;
-  return Array.isArray(data.stages) ? data.stages : [];
+  return (Array.isArray(data) ? data : Array.isArray(data.stages) ? data.stages : []) as BoardStage[];
 }
 
 type UserOption = { id: string; name: string };
@@ -193,6 +264,78 @@ export default function PipelinePage() {
   const [filterOverdue, setFilterOverdue] = React.useState(false);
   const [showFilters, setShowFilters] = React.useState(false);
 
+  // Filtros avançados — sincronizados com URL + localStorage
+  const {
+    filters: advancedFilters,
+    setFilters: setAdvancedFilters,
+    patch: patchAdvancedFilters,
+    clear: clearAdvancedFilters,
+    isEmpty: advancedFiltersEmpty,
+  } = useKanbanFilters();
+  const [advancedPanelOpen, setAdvancedPanelOpen] = React.useState(false);
+  const [savedMenuOpen, setSavedMenuOpen] = React.useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
+  const [editingSavedFilter, setEditingSavedFilter] = React.useState<SavedFilter | null>(null);
+  const savedAnchorRef = React.useRef<HTMLButtonElement | null>(null);
+
+  // Paginação por coluna ("Carregar mais"). Mapa stageId -> offset.
+  // Reseta quando muda pipeline / status / filtros.
+  const [stageOffsets, setStageOffsets] = React.useState<Record<string, number>>({});
+  const [loadingMoreStage, setLoadingMoreStage] = React.useState<string | null>(null);
+
+  // Reset paginação quando mudar contexto (filtros/status/pipeline).
+  const offsetsKey = stableStringify(advancedFilters);
+  React.useEffect(() => {
+    setStageOffsets({});
+    setLoadingMoreStage(null);
+    // intencional: queremos resetar quando QUALQUER um desses mudar
+  }, [pipelineId, statusFilter, offsetsKey]);
+
+  const filterOptionsQuery = useQuery({
+    queryKey: ["kanban-filter-options"],
+    queryFn: fetchFilterOptions,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60_000,
+  });
+  const filterOptions = filterOptionsQuery.data ?? null;
+
+  const savedFiltersQuery = useQuery({
+    queryKey: ["kanban-saved-filters"],
+    queryFn: () => fetchSavedFilters("kanban_deals"),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  });
+  const savedFilters = savedFiltersQuery.data ?? [];
+
+  // Auto-aplica filtro default ao primeiro carregamento (se nenhum filtro
+  // na URL/localStorage). Aguarda `currentUserId` chegar — durante a
+  // primeira renderização a sessão NextAuth ainda está em "loading".
+  const defaultAppliedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (defaultAppliedRef.current) return;
+    if (savedFiltersQuery.isLoading) return;
+    if (!currentUserId) return;
+    if (!advancedFiltersEmpty) {
+      // Já há filtros (URL/localStorage); não sobrescrevemos.
+      defaultAppliedRef.current = true;
+      return;
+    }
+    // Procura padrão do próprio usuário primeiro, depois um shared.
+    const myDefault = savedFilters.find((f) => f.isDefault && f.userId === currentUserId);
+    const sharedDefault = savedFilters.find((f) => f.isDefault && f.isShared);
+    const def = myDefault ?? sharedDefault;
+    if (def?.filterConfig && Object.keys(def.filterConfig).length > 0) {
+      setAdvancedFilters(def.filterConfig);
+    }
+    defaultAppliedRef.current = true;
+  }, [
+    savedFilters,
+    savedFiltersQuery.isLoading,
+    advancedFiltersEmpty,
+    currentUserId,
+    setAdvancedFilters,
+  ]);
+
   const { data: userOptions = [] } = useQuery({
     queryKey: ["user-options"],
     queryFn: fetchUserOptions,
@@ -250,8 +393,23 @@ export default function PipelinePage() {
     setDetailDealId(null);
   }, [pipelineId]);
 
+  const stageOffsetsHash = React.useMemo(() => JSON.stringify(stageOffsets), [stageOffsets]);
   const { data: board = [], isLoading: boardLoading, isFetching: boardFetching, isError: boardError, error: boardErr } =
-    useQuery({ queryKey: boardKey(pipelineId, statusFilter), queryFn: () => fetchBoard(pipelineId, statusFilter), enabled: isAuthenticated && !!pipelineId });
+    useQuery({
+      queryKey: [...boardKey(pipelineId, statusFilter, advancedFilters), stageOffsetsHash] as const,
+      queryFn: () => fetchBoard(pipelineId, statusFilter, advancedFilters, stageOffsets),
+      enabled: isAuthenticated && !!pipelineId,
+    });
+
+  /**
+   * "Carregar mais" — pede +100 cards na etapa. O backend retorna o set
+   * acumulado (`perStage + extra`) e marca `hasMore` apropriadamente.
+   */
+  const handleLoadMore = React.useCallback((stageId: string) => {
+    setLoadingMoreStage(stageId);
+    setStageOffsets((prev) => ({ ...prev, [stageId]: (prev[stageId] ?? 0) + 100 }));
+    setTimeout(() => setLoadingMoreStage(null), 800);
+  }, []);
 
   const stageOptionsForForm = board.map((s) => ({ id: s.id, name: s.name }));
 
@@ -263,12 +421,15 @@ export default function PipelinePage() {
   const hasActiveAdvancedFilter =
     filterAgent !== "all" || filterStage !== "all" || filterMsg !== "all" || filterOverdue;
 
+  const advancedCount = countActiveFilters(advancedFilters);
+
   const activeFilterCount =
     (filterAgent !== "all" ? 1 : 0) +
     (filterStage !== "all" ? 1 : 0) +
     (filterMsg !== "all" ? 1 : 0) +
     (filterOverdue ? 1 : 0) +
-    (activeFilter ? 1 : 0);
+    (activeFilter ? 1 : 0) +
+    advancedCount;
 
   const clearAllFilters = () => {
     setSearchQuery("");
@@ -278,9 +439,72 @@ export default function PipelinePage() {
     setFilterOverdue(false);
     setActiveFilter(null);
     saveFilter(null);
+    clearAdvancedFilters();
   };
 
-  const totalDeals = board.reduce((acc, s) => acc + s.deals.length, 0);
+  // Handlers de filtros salvos
+  const canShareSavedFilter =
+    (sessionData?.user as { role?: string } | undefined)?.role === "ADMIN" ||
+    (sessionData?.user as { role?: string } | undefined)?.role === "MANAGER";
+
+  const handleApplySaved = (sf: SavedFilter) => {
+    setAdvancedFilters(sf.filterConfig ?? {});
+  };
+
+  const handleSaveCurrent = async (data: { name: string; isShared: boolean; isDefault: boolean }) => {
+    try {
+      if (editingSavedFilter) {
+        await apiUpdateSavedFilter(editingSavedFilter.id, {
+          name: data.name,
+          filterConfig: advancedFilters,
+          isShared: data.isShared,
+          isDefault: data.isDefault,
+        });
+      } else {
+        await apiCreateSavedFilter({
+          name: data.name,
+          filterConfig: advancedFilters,
+          isShared: data.isShared,
+          isDefault: data.isDefault,
+        });
+      }
+      setEditingSavedFilter(null);
+      queryClient.invalidateQueries({ queryKey: ["kanban-saved-filters"] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao salvar filtro.");
+    }
+  };
+
+  const handleDuplicateSaved = async (sf: SavedFilter) => {
+    try {
+      await apiDuplicateSavedFilter(sf.id);
+      queryClient.invalidateQueries({ queryKey: ["kanban-saved-filters"] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao duplicar.");
+    }
+  };
+
+  const handleDeleteSaved = async (sf: SavedFilter) => {
+    try {
+      await apiDeleteSavedFilter(sf.id);
+      queryClient.invalidateQueries({ queryKey: ["kanban-saved-filters"] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao excluir.");
+    }
+  };
+
+  const handleToggleDefault = async (sf: SavedFilter) => {
+    try {
+      await apiUpdateSavedFilter(sf.id, { isDefault: !sf.isDefault });
+      queryClient.invalidateQueries({ queryKey: ["kanban-saved-filters"] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao atualizar filtro.");
+    }
+  };
+
+  // `totalCount` é o filtrado completo no DB (independente do limit/paginação);
+  // cai pro array carregado quando o backend antigo não devolver a chave.
+  const totalDeals = board.reduce((acc, s) => acc + (s.totalCount ?? s.deals.length), 0);
 
   return (
     <div className="-mx-3 -mt-3 -mb-3 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-bg-subtle)]/60 sm:-mx-4 sm:-mt-4 sm:-mb-4 md:-mx-8 md:-mt-8 md:-mb-8">
@@ -375,6 +599,58 @@ export default function PipelinePage() {
                 </span>
               )}
             </Button>
+
+            {/* Filtros avançados (Kommo-like) */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setAdvancedPanelOpen(true)}
+              className={cn(
+                "h-7 gap-1 px-2 text-[12px]",
+                advancedCount > 0 && "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
+              )}
+              title="Filtros avançados"
+            >
+              <SlidersHorizontal className="size-3" />
+              <span className="hidden md:inline">Avançados</span>
+              {advancedCount > 0 && (
+                <span className="flex size-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] font-bold text-white">
+                  {advancedCount}
+                </span>
+              )}
+            </Button>
+
+            {/* Filtros salvos */}
+            <div className="relative">
+              <Button
+                ref={savedAnchorRef}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSavedMenuOpen((v) => !v)}
+                className="h-7 gap-1 px-2 text-[12px]"
+                title="Filtros salvos"
+              >
+                <Bookmark className="size-3" />
+                <span className="hidden md:inline">Salvos</span>
+                {savedFilters.some((f) => f.isDefault) && (
+                  <Star className="size-2.5 fill-amber-400 text-amber-500" />
+                )}
+              </Button>
+              <SavedFiltersMenu
+                open={savedMenuOpen}
+                onOpenChange={setSavedMenuOpen}
+                filters={savedFilters}
+                loading={savedFiltersQuery.isLoading}
+                currentUserId={currentUserId}
+                onApply={handleApplySaved}
+                onDuplicate={handleDuplicateSaved}
+                onDelete={handleDeleteSaved}
+                onToggleDefault={handleToggleDefault}
+                anchorRef={savedAnchorRef}
+              />
+            </div>
 
             <div className="h-4 w-px bg-zinc-200" />
 
@@ -597,9 +873,43 @@ export default function PipelinePage() {
         )}
       </div>
 
+      {/* Barra de chips dos filtros avançados ativos */}
+      {advancedCount > 0 && (
+        <div className="flex items-center gap-2 border-b border-zinc-100 bg-white px-4 py-2 md:px-6">
+          <FilterChips
+            filters={advancedFilters}
+            options={filterOptions}
+            onPatch={patchAdvancedFilters}
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 gap-1 text-[11px] text-zinc-500"
+            onClick={() => {
+              setEditingSavedFilter(null);
+              setSaveDialogOpen(true);
+            }}
+          >
+            Salvar
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 gap-1 text-[11px] text-zinc-500"
+            onClick={clearAdvancedFilters}
+          >
+            <X className="size-3" />
+            Limpar
+          </Button>
+        </div>
+      )}
+
       {/* ═══ BOARD AREA ═══ */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        {(activeFilterCount > 0 || searchQuery) && !showFilters && (
+        {(activeFilterCount > 0 || searchQuery) && !showFilters && advancedCount === 0 && (
           <div className="absolute left-5 top-3 z-10 flex items-center gap-1.5 rounded-full border border-blue-200 bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-zinc-500 shadow-md backdrop-blur-sm">
             <Filter className="size-3 text-blue-500" strokeWidth={2} />
             {activeFilterCount} filtro{activeFilterCount !== 1 ? "s" : ""}
@@ -680,6 +990,8 @@ export default function PipelinePage() {
               visibleFields={cardFields}
               onDealClick={(id) => openDeal(id)}
               onAddCard={handleAddCard}
+              onLoadMore={handleLoadMore}
+              loadMoreStageId={loadingMoreStage}
               filter={activeFilter}
               currentUserId={currentUserId}
               searchQuery={searchQuery}
@@ -733,6 +1045,32 @@ export default function PipelinePage() {
         onOpenChange={(open) => { if (!open) closeDeal(); }}
         pipelineId={pipelineId}
         boardStages={board}
+      />
+
+      {/* Painel de filtros avançados (Kommo-like) */}
+      <FilterPanel
+        open={advancedPanelOpen}
+        onOpenChange={setAdvancedPanelOpen}
+        value={advancedFilters}
+        options={filterOptions}
+        optionsLoading={filterOptionsQuery.isLoading}
+        onApply={(next) => setAdvancedFilters(next)}
+        onClear={clearAdvancedFilters}
+        onRequestSave={(current) => {
+          // commita o draft antes de abrir o dialog (pra "salvar" refletir
+          // exatamente o que o usuário acabou de configurar)
+          setAdvancedFilters(current);
+          setEditingSavedFilter(null);
+          setSaveDialogOpen(true);
+        }}
+      />
+
+      <SaveFilterDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        defaultName={editingSavedFilter?.name ?? ""}
+        canShare={canShareSavedFilter}
+        onSubmit={handleSaveCurrent}
       />
     </div>
   );

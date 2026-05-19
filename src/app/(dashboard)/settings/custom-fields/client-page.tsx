@@ -53,7 +53,7 @@ const TYPES = [
 ] as const;
 
 const ENTITY_LABELS: Record<string, string> = {
-  contact: "Contato",
+  contact: "Lead (contato)",
   deal: "Negócio",
   product: "Produto/Serviço",
 };
@@ -403,6 +403,7 @@ function FieldFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
+        <DialogClose />
         <DialogHeader>
           <DialogTitle>{mode === "create" ? "Novo campo" : "Editar campo"}</DialogTitle>
           <DialogDescription>
@@ -538,9 +539,9 @@ function FieldFormDialog({
           <Separator />
 
           <DialogFooter>
-            <DialogClose>
-              <Button type="button" variant="outline">Cancelar</Button>
-            </DialogClose>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button
               type="submit"
               disabled={

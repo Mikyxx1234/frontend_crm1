@@ -35,6 +35,14 @@ export type BoardStage = {
   isIncoming?: boolean;
   conversionRate?: number;
   avgDaysInStage?: number;
+  /** Total real de cards na etapa (independente do limit do board). */
+  totalCount?: number;
+  /** Quantos cards foram carregados até agora (offset + take). */
+  loadedCount?: number;
+  /** true quando ainda há cards a carregar. */
+  hasMore?: boolean;
+  /** Offset atual (paginação por etapa). */
+  offset?: number;
   deals: BoardDeal[];
 };
 
@@ -65,7 +73,12 @@ function applyDragToBoard(
   return next;
 }
 
-const boardQueryKey = (pid: string, status: "OPEN" | "WON" | "LOST" | "ALL" = "OPEN") =>
+/**
+ * Prefix usado em `cancel/get/setQueriesData` (suporta prefix match em
+ * React Query — pega TODAS as variantes do board com filtros avançados
+ * diferentes).
+ */
+const boardQueryPrefix = (pid: string, status: "OPEN" | "WON" | "LOST" | "ALL" = "OPEN") =>
   ["pipeline-board", pid, status] as const;
 type BoardUserOption = {
   id: string;
@@ -95,6 +108,9 @@ type KanbanBoardProps = {
   visibleFields?: CardVisibleFields;
   onDealClick?: (dealId: string) => void;
   onAddCard?: (stageId: string) => void;
+  /** Disparado quando o usuário clica em "Carregar mais" numa coluna. */
+  onLoadMore?: (stageId: string) => void;
+  loadMoreStageId?: string | null;
   filter?: "mine" | "urgent" | "vip" | null;
   currentUserId?: string;
   searchQuery?: string;
@@ -106,6 +122,7 @@ type KanbanBoardProps = {
 
 export function KanbanBoard({
   pipelineId, stages, statusFilter = "OPEN", visibleFields, onDealClick, onAddCard,
+  onLoadMore, loadMoreStageId,
   filter, currentUserId,
   searchQuery = "", filterAgent = "all", filterStage = "all",
   filterMsg = "all", filterOverdue = false,
@@ -222,10 +239,12 @@ export function KanbanBoard({
       return data;
     },
     onMutate: async (v: MoveVars) => {
-      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) });
-      const prev = queryClient.getQueriesData<BoardStage[]>({ queryKey: boardQueryKey(pipelineId, statusFilter) });
+      await queryClient.cancelQueries({ queryKey: boardQueryPrefix(pipelineId, statusFilter) });
+      const prev = queryClient.getQueriesData<BoardStage[]>({
+        queryKey: boardQueryPrefix(pipelineId, statusFilter),
+      });
       queryClient.setQueriesData<BoardStage[]>(
-        { queryKey: boardQueryKey(pipelineId, statusFilter) },
+        { queryKey: boardQueryPrefix(pipelineId, statusFilter) },
         (current) =>
           current
             ? applyDragToBoard(
@@ -256,7 +275,9 @@ export function KanbanBoard({
       }
       toast.error(e instanceof Error ? e.message : "Erro ao mover negócio");
     },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) }); },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: boardQueryPrefix(pipelineId, statusFilter) });
+    },
   });
 
   const statusMutation = useMutation({
@@ -271,10 +292,21 @@ export function KanbanBoard({
     },
     onMutate: async (input) => {
       setStatusBusy({ dealId: input.dealId, kind: input.status === "LOST" ? "lost" : "won" });
-      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) });
-      const prev = queryClient.getQueryData<BoardStage[]>(boardQueryKey(pipelineId, statusFilter));
-      if (prev && (input.status === "WON" || input.status === "LOST")) {
-        queryClient.setQueryData(boardQueryKey(pipelineId, statusFilter), cloneBoard(prev).map((col) => ({ ...col, deals: col.deals.filter((d) => d.id !== input.dealId) })));
+      await queryClient.cancelQueries({ queryKey: boardQueryPrefix(pipelineId, statusFilter) });
+      const prev = queryClient.getQueriesData<BoardStage[]>({
+        queryKey: boardQueryPrefix(pipelineId, statusFilter),
+      });
+      if (input.status === "WON" || input.status === "LOST") {
+        queryClient.setQueriesData<BoardStage[]>(
+          { queryKey: boardQueryPrefix(pipelineId, statusFilter) },
+          (current) =>
+            current
+              ? cloneBoard(current).map((col) => ({
+                  ...col,
+                  deals: col.deals.filter((d) => d.id !== input.dealId),
+                }))
+              : current,
+        );
       }
       return { prev };
     },
@@ -282,10 +314,17 @@ export function KanbanBoard({
       toast.success(input.status === "WON" ? "Negócio ganho!" : "Negócio marcado como perdido", { duration: 2500 });
     },
     onError: (e, _i, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(boardQueryKey(pipelineId, statusFilter), ctx.prev);
+      if (ctx?.prev) {
+        for (const [key, data] of ctx.prev) {
+          queryClient.setQueryData(key, data);
+        }
+      }
       toast.error(e instanceof Error ? e.message : "Erro");
     },
-    onSettled: () => { setStatusBusy(null); queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) }); },
+    onSettled: () => {
+      setStatusBusy(null);
+      queryClient.invalidateQueries({ queryKey: boardQueryPrefix(pipelineId, statusFilter) });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -296,24 +335,36 @@ export function KanbanBoard({
       return data;
     },
     onMutate: async (dealId) => {
-      await queryClient.cancelQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) });
-      const prev = queryClient.getQueryData<BoardStage[]>(boardQueryKey(pipelineId, statusFilter));
-      if (prev) {
-        queryClient.setQueryData(
-          boardQueryKey(pipelineId, statusFilter),
-          cloneBoard(prev).map((col) => ({ ...col, deals: col.deals.filter((d) => d.id !== dealId) })),
-        );
-      }
+      await queryClient.cancelQueries({ queryKey: boardQueryPrefix(pipelineId, statusFilter) });
+      const prev = queryClient.getQueriesData<BoardStage[]>({
+        queryKey: boardQueryPrefix(pipelineId, statusFilter),
+      });
+      queryClient.setQueriesData<BoardStage[]>(
+        { queryKey: boardQueryPrefix(pipelineId, statusFilter) },
+        (current) =>
+          current
+            ? cloneBoard(current).map((col) => ({
+                ...col,
+                deals: col.deals.filter((d) => d.id !== dealId),
+              }))
+            : current,
+      );
       return { prev };
     },
     onSuccess: () => {
       toast.success("Negócio excluído", { duration: 2500 });
     },
     onError: (e, _v, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(boardQueryKey(pipelineId, statusFilter), ctx.prev);
+      if (ctx?.prev) {
+        for (const [key, data] of ctx.prev) {
+          queryClient.setQueryData(key, data);
+        }
+      }
       toast.error(e instanceof Error ? e.message : "Erro ao excluir negócio");
     },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: boardQueryKey(pipelineId, statusFilter) }); },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: boardQueryPrefix(pipelineId, statusFilter) });
+    },
   });
 
   const executeDrag = React.useCallback((result: DropResult) => {
@@ -395,12 +446,21 @@ export function KanbanBoard({
               return (
                 <div key={stage.id} data-stage-col={idx} className="flex h-full min-h-0 shrink-0 flex-col self-stretch">
                   <KanbanColumn
-                    stage={{ id: stage.id, name: stage.name, color: stage.color, deals: stage.deals }}
+                    stage={{
+                      id: stage.id,
+                      name: stage.name,
+                      color: stage.color,
+                      deals: stage.deals,
+                      totalCount: stage.totalCount,
+                      hasMore: stage.hasMore,
+                    }}
                     users={users}
                     totalValue={totalValue}
                     visibleFields={visibleFields}
                     onDealClick={onDealClick}
                     onAddCard={onAddCard}
+                    onLoadMore={onLoadMore}
+                    loadingMore={loadMoreStageId === stage.id}
                     onMarkWon={(dealId) => statusMutation.mutate({ dealId, status: "WON" })}
                     onMarkLost={(dealId, reason) => statusMutation.mutate({ dealId, status: "LOST", lostReason: reason })}
                     statusBusy={statusBusy}

@@ -28,24 +28,24 @@ import { cn } from "@/lib/utils";
  */
 export function LandingClient() {
   return (
-    <main className="min-h-dvh bg-linear-to-b from-zinc-50 via-white to-zinc-100 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+    <main className="min-h-dvh bg-zinc-950 text-white">
       <Header />
       <section className="relative mx-auto max-w-6xl px-6 py-12 md:py-20">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <div className="flex flex-col justify-center">
-            <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-              <Sparkles className="size-3.5" />
+            <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 bg-primary/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
+              <Sparkles className="size-3.5 text-white" />
               CRM multi-tenant EduIT
             </span>
-            <h1 className="font-heading text-4xl font-bold leading-[1.05] tracking-tight text-foreground md:text-5xl lg:text-6xl">
+            <h1 className="font-heading text-4xl font-bold leading-[1.05] tracking-tight text-white md:text-5xl lg:text-6xl">
               Seu CRM, seu funil,<br />seu time — em um lugar só.
             </h1>
-            <p className="mt-5 max-w-xl text-base text-muted-foreground md:text-lg">
+            <p className="mt-5 max-w-xl text-base text-zinc-300 md:text-lg">
               Cadastre sua empresa em 30 segundos e comece a centralizar
               conversas de WhatsApp, pipeline de vendas e equipe no mesmo
               dashboard.
             </p>
-            <ul className="mt-8 grid gap-3 text-sm text-foreground md:grid-cols-2">
+            <ul className="mt-8 grid gap-3 text-sm text-white md:grid-cols-2">
               <Feature
                 icon={MessageCircle}
                 label="Inbox unificado"
@@ -73,12 +73,12 @@ export function LandingClient() {
         </div>
       </section>
 
-      <footer className="border-t border-border bg-background py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-muted-foreground md:flex-row md:justify-between md:text-left">
+      <footer className="border-t border-zinc-800 py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-zinc-400 md:flex-row md:justify-between md:text-left">
           <span>© {new Date().getFullYear()} EduIT CRM. Todos os direitos reservados.</span>
           <span>
             Já tem conta?{" "}
-            <Link href="/login" className="font-semibold text-primary hover:underline">
+            <Link href="/login" className="font-semibold text-white hover:underline">
               Entrar
             </Link>
           </span>
@@ -95,13 +95,13 @@ function Header() {
         <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-sm)]">
           <span className="text-base font-bold">E</span>
         </div>
-        <span className="font-heading text-lg font-extrabold tracking-tight">
+        <span className="font-heading text-lg font-extrabold tracking-tight text-white">
           EduIT CRM
         </span>
       </div>
       <Link
         href="/login"
-        className="text-sm font-semibold text-muted-foreground hover:text-foreground"
+        className="text-sm font-semibold text-zinc-300 hover:text-white"
       >
         Entrar →
       </Link>
@@ -120,12 +120,12 @@ function Feature({
 }) {
   return (
     <li className="flex gap-3">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/25 text-white">
         <Icon className="size-4" />
       </div>
       <div>
-        <div className="font-semibold">{label}</div>
-        <div className="text-xs text-muted-foreground">{desc}</div>
+        <div className="font-semibold text-white">{label}</div>
+        <div className="text-xs text-zinc-400">{desc}</div>
       </div>
     </li>
   );

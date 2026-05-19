@@ -11,6 +11,7 @@ import {
   Loader2,
   MessageCircle,
   Plus,
+  Download,
   Workflow,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -58,6 +59,15 @@ type FlowListRow = {
   updatedAt: string;
 };
 
+type MetaFlowListItem = {
+  id: string;
+  name: string;
+  status: string;
+  categories: string[];
+  alreadyImported: boolean;
+  crmFlowDefinitionId: string | null;
+};
+
 const INTERNAL_STATUS: Record<string, string> = {
   DRAFT: "Rascunho",
   PENDING_APPROVAL: "Pendente",
@@ -78,6 +88,7 @@ export default function MessageModelsHubPage() {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [newOpen, setNewOpen] = React.useState(false);
+  const [importOpen, setImportOpen] = React.useState(false);
 
   const tab = searchParams.get("tab") ?? "overview";
   const validTab = ["overview", "internal", "whatsapp", "flows"].includes(tab) ? tab : "overview";
@@ -170,6 +181,44 @@ export default function MessageModelsHubPage() {
     },
     onSuccess: (out) => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-definitions"] });
+      router.push(`/settings/message-models/flows/${out.id}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const {
+    data: metaFlowsData,
+    isLoading: loadingMetaFlows,
+    refetch: refetchMetaFlows,
+  } = useQuery({
+    queryKey: ["whatsapp-flow-meta-list"],
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/api/whatsapp-flow-definitions/meta-flows"));
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        throw new Error(typeof j?.message === "string" ? j.message : "Erro ao listar flows na Meta.");
+      }
+      return (j.items ?? []) as MetaFlowListItem[];
+    },
+    enabled: importOpen && canSubmitMeta,
+  });
+
+  const importFlowMutation = useMutation({
+    mutationFn: async (metaFlowId: string) => {
+      const r = await fetch(apiUrl("/api/whatsapp-flow-definitions/import"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metaFlowId }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof j?.message === "string" ? j.message : "Erro ao importar.");
+      return j as { id: string; created: boolean };
+    },
+    onSuccess: (out) => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-definitions"] });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-meta-list"] });
+      setImportOpen(false);
+      toast.success(out.created ? "Flow importado da Meta." : "Flow já estava no CRM — abrindo editor.");
       router.push(`/settings/message-models/flows/${out.id}`);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -336,20 +385,43 @@ export default function MessageModelsHubPage() {
 
         {canSubmitMeta ? (
           <TabsContent value="flows" className="mt-4 space-y-3">
+            <div className="rounded-lg border border-sky-200/80 bg-sky-50/80 px-3 py-2 text-xs text-sky-950 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-100">
+              Flows criados só no <strong>Meta Business Manager</strong> não aparecem aqui automaticamente.
+              Use <strong>Importar da Meta</strong> para trazer o cadastro (ex.: estagiário) e configurar o mapeamento
+              das respostas no lead.
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-muted-foreground">
-                Desenhe o formulário, mapeie campos do contato e publique na WABA para obter o{" "}
-                <code className="text-xs">flow_id</code> usado nos templates.
+                Desenhe no CRM ou importe um flow já publicado na WABA; depois mapeie cada resposta para o campo do
+                lead.
               </p>
-              <Button
-                type="button"
-                size="sm"
-                disabled={createFlowMutation.isPending}
-                onClick={() => createFlowMutation.mutate()}
-              >
-                {createFlowMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Workflow className="size-4" />}
-                <span className="ml-2">Novo flow</span>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setImportOpen(true);
+                    void refetchMetaFlows();
+                  }}
+                >
+                  <Download className="size-4" />
+                  <span className="ml-2">Importar da Meta</span>
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={createFlowMutation.isPending}
+                  onClick={() => createFlowMutation.mutate()}
+                >
+                  {createFlowMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Workflow className="size-4" />
+                  )}
+                  <span className="ml-2">Novo flow</span>
+                </Button>
+              </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-left text-sm">
@@ -441,6 +513,72 @@ export default function MessageModelsHubPage() {
               <span className="text-xs text-muted-foreground">Formulário interativo + publicação na Meta.</span>
             </button>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Importar flow da Meta</DialogTitle>
+            <DialogDescription>
+              Selecione um flow já publicado na sua conta WhatsApp Business. O CRM importa os campos para você
+              configurar o mapeamento no lead.
+            </DialogDescription>
+          </DialogHeader>
+          {loadingMetaFlows ? (
+            <div className="space-y-2 py-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : (metaFlowsData ?? []).length === 0 ? (
+            <p className="py-4 text-sm text-muted-foreground">
+              Nenhum flow encontrado na WABA ou API Meta não configurada.
+            </p>
+          ) : (
+            <ul className="max-h-[320px] space-y-2 overflow-y-auto py-1">
+              {(metaFlowsData ?? []).map((mf) => (
+                <li
+                  key={mf.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-card px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{mf.name}</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">
+                      {mf.id} · {mf.status}
+                    </p>
+                  </div>
+                  {mf.alreadyImported ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (mf.crmFlowDefinitionId) {
+                          setImportOpen(false);
+                          router.push(`/settings/message-models/flows/${mf.crmFlowDefinitionId}`);
+                        }
+                      }}
+                    >
+                      Abrir no CRM
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={importFlowMutation.isPending}
+                      onClick={() => importFlowMutation.mutate(mf.id)}
+                    >
+                      {importFlowMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        "Importar"
+                      )}
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </DialogContent>
       </Dialog>
     </div>

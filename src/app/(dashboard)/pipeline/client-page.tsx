@@ -34,7 +34,7 @@ import {
   updateSavedFilter as apiUpdateSavedFilter,
 } from "@/components/pipeline/kanban-filters/api";
 import { FilterChips } from "@/components/pipeline/kanban-filters/filter-chips";
-import { FilterPanel } from "@/components/pipeline/kanban-filters/filter-panel";
+import { FilterDropdown } from "@/components/pipeline/kanban-filters/filter-dropdown";
 import {
   SaveFilterDialog,
   SavedFiltersMenu,
@@ -277,6 +277,7 @@ export default function PipelinePage() {
   const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
   const [editingSavedFilter, setEditingSavedFilter] = React.useState<SavedFilter | null>(null);
   const savedAnchorRef = React.useRef<HTMLButtonElement | null>(null);
+  const searchAnchorRef = React.useRef<HTMLDivElement | null>(null);
 
   // Paginação por coluna ("Carregar mais"). Mapa stageId -> offset.
   // Reseta quando muda pipeline / status / filtros.
@@ -552,26 +553,73 @@ export default function PipelinePage() {
             </TooltipHost>
           )}
 
-          {/* Busca */}
+          {/* Busca — clicar/focar abre o dropdown de filtros avançados */}
           {viewMode !== "saleshub" && (
-            <div className="relative w-36 sm:w-48">
-              <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar..."
-                className="h-7 w-full rounded-md border-0 bg-zinc-100 pl-6 pr-6 text-[12px] text-zinc-700 placeholder:text-zinc-400 transition hover:bg-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              />
-              {searchQuery && (
+            <div className="relative w-56 sm:w-72">
+              <div ref={searchAnchorRef} className="relative">
+                <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setAdvancedPanelOpen(true)}
+                  onClick={() => setAdvancedPanelOpen(true)}
+                  placeholder="Buscar e filtrar..."
+                  className={cn(
+                    "h-7 w-full rounded-md border bg-zinc-100 pl-6 pr-12 text-[12px] text-zinc-700 placeholder:text-zinc-400 transition hover:bg-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                    advancedPanelOpen
+                      ? "border-blue-300 bg-white ring-2 ring-blue-500/20"
+                      : "border-transparent",
+                  )}
+                />
+                {/* Botão de filtro à direita dentro do input */}
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                  onClick={() => setAdvancedPanelOpen((v) => !v)}
+                  className={cn(
+                    "absolute right-1 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded px-1 text-zinc-400 transition hover:bg-zinc-200 hover:text-zinc-700",
+                    advancedCount > 0 && "text-blue-600",
+                  )}
+                  title="Filtros avançados"
+                  aria-label="Abrir filtros"
                 >
-                  <X className="size-3" />
+                  <SlidersHorizontal className="size-3" />
+                  {advancedCount > 0 && (
+                    <span className="flex size-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] font-bold text-white">
+                      {advancedCount}
+                    </span>
+                  )}
                 </button>
-              )}
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchQuery("");
+                    }}
+                    className="absolute right-8 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+              {/* Dropdown de filtros avançados ancorado abaixo do input */}
+              <FilterDropdown
+                open={advancedPanelOpen}
+                onOpenChange={setAdvancedPanelOpen}
+                anchorRef={searchAnchorRef}
+                value={advancedFilters}
+                options={filterOptions}
+                optionsLoading={filterOptionsQuery.isLoading}
+                onApply={(next) => setAdvancedFilters(next)}
+                onClear={clearAdvancedFilters}
+                onRequestSave={(current) => {
+                  setAdvancedFilters(current);
+                  setEditingSavedFilter(null);
+                  setSaveDialogOpen(true);
+                }}
+              />
             </div>
           )}
 
@@ -596,27 +644,6 @@ export default function PipelinePage() {
               {activeFilterCount > 0 && (
                 <span className="flex size-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] font-bold text-white">
                   {activeFilterCount}
-                </span>
-              )}
-            </Button>
-
-            {/* Filtros avançados (Kommo-like) */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setAdvancedPanelOpen(true)}
-              className={cn(
-                "h-7 gap-1 px-2 text-[12px]",
-                advancedCount > 0 && "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
-              )}
-              title="Filtros avançados"
-            >
-              <SlidersHorizontal className="size-3" />
-              <span className="hidden md:inline">Avançados</span>
-              {advancedCount > 0 && (
-                <span className="flex size-3.5 items-center justify-center rounded-full bg-blue-600 text-[8px] font-bold text-white">
-                  {advancedCount}
                 </span>
               )}
             </Button>
@@ -1047,23 +1074,7 @@ export default function PipelinePage() {
         boardStages={board}
       />
 
-      {/* Painel de filtros avançados (Kommo-like) */}
-      <FilterPanel
-        open={advancedPanelOpen}
-        onOpenChange={setAdvancedPanelOpen}
-        value={advancedFilters}
-        options={filterOptions}
-        optionsLoading={filterOptionsQuery.isLoading}
-        onApply={(next) => setAdvancedFilters(next)}
-        onClear={clearAdvancedFilters}
-        onRequestSave={(current) => {
-          // commita o draft antes de abrir o dialog (pra "salvar" refletir
-          // exatamente o que o usuário acabou de configurar)
-          setAdvancedFilters(current);
-          setEditingSavedFilter(null);
-          setSaveDialogOpen(true);
-        }}
-      />
+      {/* O FilterDropdown vive ancorado no input de busca (header acima). */}
 
       <SaveFilterDialog
         open={saveDialogOpen}

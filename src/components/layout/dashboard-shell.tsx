@@ -9,7 +9,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bot, Building2, SquareCheck as CheckSquare, Circle, Coffee, FileBarChart, Filter, LayoutDashboard, LogOut, Megaphone, MessageSquare, MoreHorizontal, Moon, Settings, Sun, UserCircle2, Users, Wifi, WifiOff, X, Zap } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { UserRole } from "@/lib/prisma-enum-types";
 
@@ -999,18 +1000,48 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [statusPopupOpen, setStatusPopupOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const [accountMenuPos, setAccountMenuPos] = useState<{ left: number; bottom: number } | null>(null);
+  const [accountPortalReady, setAccountPortalReady] = useState(false);
 
-  // Fecha o popover de conta quando o clique sai da árvore do menu.
-  // Não usa `pointer-events-none` em overlay (já que é num canto da
-  // sidebar) — preferimos detectar via event listener global.
+  useEffect(() => {
+    setAccountPortalReady(true);
+  }, []);
+
+  // O popover é renderizado em portal (no document.body) pra escapar do
+  // stacking context criado por `backdrop-blur` no <aside>. Posicionamos
+  // via fixed coords calculadas a partir do trigger — recalcula em open,
+  // resize e scroll pra acompanhar mudanças de layout.
+  useLayoutEffect(() => {
+    if (!accountMenuOpen) return;
+    const update = () => {
+      const rect = accountTriggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setAccountMenuPos({
+        left: rect.right + 12,
+        bottom: window.innerHeight - rect.bottom,
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [accountMenuOpen]);
+
+  // Fecha o popover de conta quando o clique sai do trigger ou do menu.
+  // Como o menu está em portal, precisamos checar AMBOS os refs (não está
+  // mais dentro de uma única árvore DOM por causa do createPortal).
   useEffect(() => {
     if (!accountMenuOpen) return;
     const handler = (e: MouseEvent) => {
-      if (!accountMenuRef.current) return;
-      if (!accountMenuRef.current.contains(e.target as Node)) {
-        setAccountMenuOpen(false);
-      }
+      const target = e.target as Node;
+      if (accountTriggerRef.current?.contains(target)) return;
+      if (accountMenuRef.current?.contains(target)) return;
+      setAccountMenuOpen(false);
     };
     const esc = (e: KeyboardEvent) => {
       if (e.key === "Escape") setAccountMenuOpen(false);
@@ -1163,9 +1194,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             O item "Perfil" foi removido do menu /settings/* para não
             duplicar o caminho — este é o ponto único de entrada.
           */}
-          <div className="relative mt-1" ref={accountMenuRef}>
+          <div className="relative mt-1">
             <SidebarRailTooltip label={displayName}>
               <button
+                ref={accountTriggerRef}
                 type="button"
                 onClick={() => setAccountMenuOpen((v) => !v)}
                 aria-haspopup="menu"
@@ -1195,12 +1227,20 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               </button>
             </SidebarRailTooltip>
 
-            {accountMenuOpen && (
+            {accountPortalReady && accountMenuOpen && accountMenuPos &&
+              createPortal(
               <div
+                ref={accountMenuRef}
                 role="menu"
-                className="absolute bottom-0 left-full z-50 ml-4 w-[280px] overflow-hidden rounded-[22px] border border-white/55 bg-white/75 text-popover-foreground shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+                style={{
+                  position: "fixed",
+                  left: accountMenuPos.left,
+                  bottom: accountMenuPos.bottom,
+                  zIndex: 1000,
+                }}
+                className="w-[280px] overflow-hidden rounded-[22px] border border-white/55 bg-white/85 text-popover-foreground shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
               >
-                {/* â”€â”€ Header do popover â”€â”€ */}
+                {/* Header do popover */}
                 <div className="flex flex-col items-center gap-2 px-5 pt-6 pb-4">
                   <ChatAvatar
                     user={{
@@ -1259,7 +1299,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     <span className="font-medium">Sair</span>
                   </button>
                 </div>
-              </div>
+              </div>,
+              document.body,
             )}
           </div>
         </div>

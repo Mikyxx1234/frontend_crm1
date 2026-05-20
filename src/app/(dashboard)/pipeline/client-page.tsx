@@ -122,6 +122,31 @@ function saveStatusFilter(s: StatusFilter) {
 
 type ViewMode = "kanban" | "list" | "saleshub";
 
+/**
+ * Mapeamento URL <-> ViewMode interno.
+ * "saleshub" é histórico interno; na URL ele aparece como "agile" para
+ * combinar com o rótulo "Pipeline Ágil" e ficar amigável pra usuário.
+ */
+const URL_TO_VIEW: Record<string, ViewMode> = {
+  kanban: "kanban",
+  list: "list",
+  agile: "saleshub",
+};
+const VIEW_TO_URL: Record<ViewMode, "kanban" | "list" | "agile"> = {
+  kanban: "kanban",
+  list: "list",
+  saleshub: "agile",
+};
+
+export function viewSegmentToMode(seg: string | undefined | null): ViewMode | null {
+  if (!seg) return null;
+  return URL_TO_VIEW[seg] ?? null;
+}
+
+export function viewModeToSegment(mode: ViewMode): "kanban" | "list" | "agile" {
+  return VIEW_TO_URL[mode];
+}
+
 function loadViewMode(): ViewMode {
   if (typeof window === "undefined") return "kanban";
   const stored = localStorage.getItem(VIEW_MODE_KEY);
@@ -597,7 +622,17 @@ async function fetchUserOptions(): Promise<UserOption[]> {
   return ((data.items ?? data) as UserOption[]);
 }
 
-export default function PipelinePage() {
+type PipelinePageProps = {
+  /**
+   * View vinda do segmento de URL (`/pipeline/kanban` | `/list` | `/agile`).
+   * Se ausente, caímos no fallback de localStorage — usado pelo redirect
+   * em `/pipeline` raiz que pode renderizar essa página por brevíssimo
+   * instante antes do redirect efetuar.
+   */
+  initialView?: ViewMode;
+};
+
+export default function PipelinePage({ initialView }: PipelinePageProps = {}) {
   const queryClient = useQueryClient();
   const { data: sessionData, status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
@@ -616,7 +651,19 @@ export default function PipelinePage() {
   const [activeFilter, setActiveFilter] = React.useState<FilterType>(loadFilter);
   const [createLoading, setCreateLoading] = React.useState(false);
 
-  const [viewMode, setViewMode] = React.useState<ViewMode>(loadViewMode);
+  // View vem da URL quando disponível (`/pipeline/<view>`). Localstorage só
+  // alimenta o fallback do `/pipeline` raiz (redirect) — não é fonte de
+  // verdade aqui dentro da página.
+  const viewMode: ViewMode = initialView ?? loadViewMode();
+  const setViewMode = React.useCallback(
+    (next: ViewMode) => {
+      saveViewMode(next);
+      const qs = searchParams.toString();
+      const target = `/pipeline/${viewModeToSegment(next)}${qs ? `?${qs}` : ""}`;
+      router.push(target);
+    },
+    [router, searchParams],
+  );
   const [selectedDeals, setSelectedDeals] = React.useState<Set<string>>(new Set());
 
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>(loadStatusFilter);
@@ -1075,7 +1122,7 @@ export default function PipelinePage() {
               <TooltipHost label="Kanban" side="bottom">
                 <button
                   type="button"
-                  onClick={() => { setViewMode("kanban"); saveViewMode("kanban"); setSelectedDeals(new Set()); }}
+                  onClick={() => { setSelectedDeals(new Set()); setViewMode("kanban"); }}
                   className={cn(
                     "flex size-6 items-center justify-center rounded transition",
                     viewMode === "kanban"
@@ -1090,7 +1137,7 @@ export default function PipelinePage() {
               <TooltipHost label="Lista" side="bottom">
                 <button
                   type="button"
-                  onClick={() => { setViewMode("list"); saveViewMode("list"); }}
+                  onClick={() => setViewMode("list")}
                   className={cn(
                     "flex size-6 items-center justify-center rounded transition",
                     viewMode === "list"
@@ -1106,10 +1153,9 @@ export default function PipelinePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setViewMode("saleshub");
-                    saveViewMode("saleshub");
                     setSelectedDeals(new Set());
                     if (detailDealId) closeDeal();
+                    setViewMode("saleshub");
                   }}
                   className={cn(
                     "flex size-6 items-center justify-center rounded transition",

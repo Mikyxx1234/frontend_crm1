@@ -125,7 +125,7 @@ function EngagementBadge({ value }: { value: string }) {
         ? "bg-amber-100 text-amber-900"
         : value === "Baixo"
           ? "bg-blue-50 text-blue-700"
-          : "bg-slate-100 text-slate-600";
+          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 dark:text-slate-600";
   return (
     <span className={cn("inline-flex items-center rounded-[4px] px-2 py-0.5 text-[10px] font-semibold leading-tight", tone)}>
       {value}
@@ -193,12 +193,12 @@ export function ContactDealSidebar(props: Props) {
         return (
           <div key="negocio">
             <div className="px-4 pb-1 pt-3">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Negócio</span>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Negócio</span>
             </div>
             {activeDeal ? (
               <>
-                <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="mb-1.5 text-[10px] font-bold text-slate-900">Negócio ativo</p>
+                <div className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 px-4 py-3">
+                  <p className="mb-1.5 text-[10px] font-bold text-slate-900 dark:text-slate-100">Negócio ativo</p>
                   <Link href={`/leads/${activeDeal.id}`} className="mb-1.5 block w-full truncate text-left text-[12px] font-medium text-blue-600 hover:underline">{activeDeal.title}</Link>
                   <div className="flex items-center gap-2">
                     <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
@@ -208,13 +208,13 @@ export function ContactDealSidebar(props: Props) {
                   </div>
                 </div>
                 {activeDeal.owner ? (
-                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
-                    <span className="text-[12px] text-slate-400">Responsável</span>
-                    <span className="text-[12px] font-medium text-slate-700">{activeDeal.owner.name}</span>
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-2">
+                    <span className="text-[12px] text-slate-400 dark:text-slate-500">Responsável</span>
+                    <span className="text-[12px] font-medium text-slate-700 dark:text-slate-200">{activeDeal.owner.name}</span>
                   </div>
                 ) : null}
-                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
-                  <span className="text-[12px] text-slate-400">Estágio</span>
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-2">
+                  <span className="text-[12px] text-slate-400 dark:text-slate-500">Estágio</span>
                   <span
                     className="rounded-[4px] px-2 py-0.5 text-[11px] font-semibold"
                     style={{
@@ -228,10 +228,10 @@ export function ContactDealSidebar(props: Props) {
                 </div>
               </>
             ) : (
-              <div className="border-b border-slate-100 px-4 py-3">
-                <p className="mb-2 text-[10px] font-bold text-slate-900">Negócio ativo</p>
+              <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-3">
+                <p className="mb-2 text-[10px] font-bold text-slate-900 dark:text-slate-100">Negócio ativo</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] text-slate-400">Nenhum negócio</span>
+                  <span className="text-[12px] text-slate-400 dark:text-slate-500">Nenhum negócio</span>
                   <button type="button" onClick={onCreateDeal} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-600 transition-colors hover:bg-blue-100">+ Criar</button>
                 </div>
               </div>
@@ -242,7 +242,7 @@ export function ContactDealSidebar(props: Props) {
         return (
           <div key="contato">
             <div className="px-4 pb-1 pt-3">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Contato</span>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Contato</span>
             </div>
             {displayPhone ? <SidebarField label="Telefone" icon="Phone" value={displayPhone} href={`tel:${displayPhone.replace(/\s/g, "")}`} /> : null}
             {displayEmail ? <SidebarField label="E-mail" icon="Mail" value={displayEmail} href={`mailto:${displayEmail}`} /> : null}
@@ -264,8 +264,8 @@ export function ContactDealSidebar(props: Props) {
           <div key="campos_contato">
             {visibleCustomFields.length > 0 ? (
               <>
-                <div className="mt-1 border-t border-slate-100 px-4 pb-1 pt-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Campos do contato</span>
+                <div className="mt-1 border-t border-slate-100 dark:border-slate-800 px-4 pb-1 pt-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Campos do contato</span>
                 </div>
                 {(extraFieldsOpen ? visibleCustomFields : visibleCustomFields.slice(0, 3)).map((f) => {
                   const fieldDisplay = formatInboxPanelValue(f);
@@ -285,7 +285,7 @@ export function ContactDealSidebar(props: Props) {
             ) : (
               <div className="px-4 py-4 text-center">
                 <Tag className="mx-auto mb-1.5 size-4 text-slate-200" />
-                <p className="text-[12px] text-slate-300">Nenhum campo configurado</p>
+                <p className="text-[12px] text-slate-300 dark:text-slate-600">Nenhum campo configurado</p>
               </div>
             )}
           </div>
@@ -295,13 +295,13 @@ export function ContactDealSidebar(props: Props) {
           <div key="todos_negocios">
             {allDeals.length > 0 ? (
               <>
-                <div className="mt-1 border-t border-slate-100 px-4 pb-1 pt-3">
-                  <p className="text-[10px] font-bold text-slate-900">Todos os negócios</p>
+                <div className="mt-1 border-t border-slate-100 dark:border-slate-800 px-4 pb-1 pt-3">
+                  <p className="text-[10px] font-bold text-slate-900 dark:text-slate-100">Todos os negócios</p>
                 </div>
                 {allDeals.map((d) => (
                   <Link key={d.id} href={`/leads/${d.id}`} className={cn(dt.card.row, "block w-full cursor-pointer text-left")}>
                     <span className={cn(dt.text.value, "truncate")}>{d.title}</span>
-                    <span className="ml-2 shrink-0 text-[11px] text-slate-400">{d.stage.name}</span>
+                    <span className="ml-2 shrink-0 text-[11px] text-slate-400 dark:text-slate-500">{d.stage.name}</span>
                   </Link>
                 ))}
               </>
@@ -316,19 +316,24 @@ export function ContactDealSidebar(props: Props) {
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 max-h-full w-[min(100%,280px)] shrink-0 flex-col overflow-hidden bg-white",
-        "sm:w-[280px] xl:w-[300px]",
-        side === "right" ? "border-l border-slate-100" : "border-r border-slate-100",
+        // Preenche o container pai. A largura é controlada pelo pai
+        // (que pode ser fixo ou redimensionável via useResizablePanel).
+        // `flex-1` garante que o painel ocupe TODA a altura do flex item
+        // pai, evitando o body gradient vazar embaixo quando o conteúdo
+        // interno é curto (bug do refactor de width: `h-full` dependia
+        // de altura explícita do pai, que não vinha do `lg:flex` puro).
+        "flex min-h-0 w-full flex-1 shrink-0 flex-col overflow-hidden bg-white dark:bg-slate-900",
+        side === "right" ? "border-l border-slate-100 dark:border-slate-800" : "border-r border-slate-100 dark:border-slate-800",
       )}
     >
-      <div className="relative flex h-8 shrink-0 items-center justify-between border-b border-slate-100 bg-white px-3">
-        <span className="text-[11px] font-medium text-slate-400">CRM</span>
+      <div className="relative flex h-8 shrink-0 items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-3">
+        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">CRM</span>
         <div className="flex items-center gap-0.5">
           {onCollapse ? (
             <button
               type="button"
               onClick={onCollapse}
-              className="inline-flex size-6 items-center justify-center rounded text-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-500"
+              className="inline-flex size-6 items-center justify-center rounded text-slate-300 dark:text-slate-600 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-500 dark:hover:text-slate-300"
               aria-label="Recolher"
             >
               {side === "right" ? (
@@ -341,13 +346,13 @@ export function ContactDealSidebar(props: Props) {
         </div>
       </div>
 
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-white">
-        <div className="border-b border-slate-100 px-4 py-3">
-          <p className="text-[14px] font-semibold text-slate-900">{displayName}</p>
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-white dark:bg-slate-900">
+        <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-3">
+          <p className="text-[14px] font-semibold text-slate-900 dark:text-slate-100">{displayName}</p>
           {contact?.company?.name ? (
-            <p className="mt-0.5 truncate text-[11px] text-slate-400">{contact.company.name}</p>
+            <p className="mt-0.5 truncate text-[11px] text-slate-400 dark:text-slate-500">{contact.company.name}</p>
           ) : null}
-          {displayPhone ? <p className="mt-0.5 text-[11px] text-slate-400">{displayPhone}</p> : null}
+          {displayPhone ? <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{displayPhone}</p> : null}
         </div>
         <SortableSidebar
           sections={sections}
@@ -365,7 +370,7 @@ export function ContactDealSidebar(props: Props) {
         <Link
           href={`/contacts/${contactId}`}
           className={cn(
-            "mt-auto flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[12px] font-medium transition-colors hover:text-blue-700",
+            "mt-auto flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3 text-[12px] font-medium transition-colors hover:text-blue-700",
             dt.text.link,
           )}
         >

@@ -41,7 +41,7 @@ export function StageRibbon({
   return (
     <div
       className={cn(
-        "relative shrink-0 border-b border-border bg-white",
+        "relative shrink-0 border-b border-border bg-white dark:bg-slate-900",
         compact ? "shadow-none" : "shadow-[0_1px_0_rgba(15,23,42,0.03)]",
       )}
     >
@@ -64,7 +64,7 @@ export function StageRibbon({
             compact ? "h-8 min-h-8" : "h-9 min-h-9",
             selectedStageId === null
               ? "bg-primary text-[var(--color-primary-foreground)]"
-              : "bg-slate-100 text-slate-500 hover:bg-slate-200",
+              : "bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700",
           )}
         >
           <span>Todos</span>
@@ -73,7 +73,7 @@ export function StageRibbon({
               "mt-px text-[9px] font-bold tabular-nums",
               selectedStageId === null
                 ? "text-[var(--color-primary-foreground)]/80"
-                : "text-slate-400",
+                : "text-slate-400 dark:text-slate-500",
             )}
           >
             {totalDeals}
@@ -97,7 +97,7 @@ export function StageRibbon({
               className={cn(
                 "relative flex shrink-0 flex-col items-center justify-center px-5 text-[11.5px] font-medium whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2",
                 compact ? "h-8 min-h-8" : "h-9 min-h-9",
-                isActive ? "text-white" : "text-slate-500 hover:opacity-90",
+                isActive ? "text-white" : "text-slate-500 hover:opacity-90 dark:text-slate-200",
               )}
             >
               <span className="max-w-[160px] truncate">{stage.name}</span>
@@ -108,7 +108,7 @@ export function StageRibbon({
           );
         })}
       </div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent dark:from-slate-900" />
     </div>
   );
 }

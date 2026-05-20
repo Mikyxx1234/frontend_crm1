@@ -2,8 +2,24 @@
 @import "tailwindcss";
 /* Classes usadas só em strings em `design-tokens.ts` — precisam entrar no scan (v4: @source). */
 @source "../lib/design-tokens.ts";
-/* Cópias de backup no root: não participam do scan (evita utilitários “fantasma” / cache inválido). */
+/* Cópias de backup no root: não participam do scan (evita utilitários "fantasma" / cache inválido). */
 @source not "../../arquivos_modificados";
+
+/* ──────────────────────────────────────────────────────────────────
+   DARK MODE — variant baseado em classe (não em media query)
+   ──────────────────────────────────────────────────────────────────
+   Em Tailwind v4, sem este `@custom-variant`, o `dark:` default usa
+   `@media (prefers-color-scheme: dark)` — ou seja, segue o tema do
+   SO do usuário, ignorando next-themes. Resultado: utilitários como
+   `dark:bg-slate-900` aplicavam mesmo em light mode quando o Windows/
+   macOS do operador estava em dark. Isso causou o bug do "painel CRM
+   preto em light mode".
+
+   Aqui forçamos o `dark:` a só disparar quando há a classe `.dark` no
+   ancestral (`<html class="dark">` setado pelo next-themes). Combinado
+   com o `attribute="class"` do ThemeProvider, o tema do app fica 100%
+   controlado pelo usuário via toggle. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ══════════════════════════════════════════════════════════════════
    GLASS DESIGN SYSTEM v2 — CRM EduIT
@@ -61,6 +77,12 @@
   --color-card-foreground:    #1e2a3b;
   --color-popover:            rgba(255, 255, 255, 0.75);
   --color-popover-foreground: #1e2a3b;
+
+  /* Background SÓLIDO pra dropdowns/menus — evita bleed-through das
+     conversas/conteúdo atrás. Usado via `style={{ backgroundColor:
+     "var(--dropdown-solid-bg)" }}` em componentes que abrem em cima
+     de listas com framer-motion (que cria stacking contexts isolados). */
+  --dropdown-solid-bg: #ffffff;
 
   /* ── Status ─────────────────────────────────────────────────── */
   --color-success:             #10b981;
@@ -286,6 +308,9 @@
   --color-card-foreground: #e8edf5;
   --color-popover:        rgba(20, 28, 45, 0.85);
   --color-popover-foreground: #e8edf5;
+
+  /* Override do navy sólido pros dropdowns/menus no dark. */
+  --dropdown-solid-bg: #1a2238;
   --color-muted:          rgba(255, 255, 255, 0.05);
   --color-muted-foreground: #6b7a8c;
   --color-secondary:      rgba(255, 255, 255, 0.05);
@@ -330,6 +355,48 @@
 
   ::selection { background: rgba(91, 111, 245, 0.30); color: #e8edf5; }
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   DARK MODE — fallback global pra surfaces glass com bg-white/<n>
+   ──────────────────────────────────────────────────────────────────
+   Vários componentes (footers, headers, pills de filtro, painéis CRM)
+   usam `bg-white/45`, `bg-white/55`, `bg-white/65` etc como camada
+   glassmorphism. Em dark mode essas opacidades brancas ficam berrantes
+   sobre o navy. Estes overrides reduzem a opacidade pra manter o efeito
+   "frosted" sem agredir o olho. Escopo restrito a `.dark` e a classes
+   utilitárias específicas — não afeta `bg-white` puro (que continua
+   branco onde foi intencional, ex.: ícones em badges coloridos).
+
+   Borders translúcidas brancas seguem mesma lógica. */
+.dark .bg-white\/30 { background-color: rgba(255, 255, 255, 0.04); }
+.dark .bg-white\/40 { background-color: rgba(255, 255, 255, 0.05); }
+.dark .bg-white\/45 { background-color: rgba(255, 255, 255, 0.05); }
+.dark .bg-white\/55 { background-color: rgba(255, 255, 255, 0.07); }
+.dark .bg-white\/60 { background-color: rgba(255, 255, 255, 0.08); }
+.dark .bg-white\/65 { background-color: rgba(255, 255, 255, 0.08); }
+.dark .bg-white\/70 { background-color: rgba(255, 255, 255, 0.10); }
+.dark .bg-white\/75 { background-color: rgba(255, 255, 255, 0.10); }
+.dark .bg-white\/80 { background-color: rgba(255, 255, 255, 0.12); }
+
+.dark .hover\:bg-white\/40:hover { background-color: rgba(255, 255, 255, 0.07); }
+.dark .hover\:bg-white\/55:hover { background-color: rgba(255, 255, 255, 0.09); }
+.dark .hover\:bg-white\/70:hover { background-color: rgba(255, 255, 255, 0.10); }
+.dark .hover\:bg-white\/75:hover { background-color: rgba(255, 255, 255, 0.12); }
+
+.dark .border-white\/30 { border-color: rgba(255, 255, 255, 0.06); }
+.dark .border-white\/40 { border-color: rgba(255, 255, 255, 0.08); }
+.dark .border-white\/55 { border-color: rgba(255, 255, 255, 0.10); }
+.dark .border-white\/60 { border-color: rgba(255, 255, 255, 0.10); }
+
+.dark .hover\:border-white\/55:hover { border-color: rgba(255, 255, 255, 0.14); }
+
+/* `bg-slate-50` e `border-slate-100` aparecem como background sutil de
+   menus e dividers. No dark eles ficam quase preto pra preservar contraste. */
+.dark .bg-slate-50 { background-color: rgba(255, 255, 255, 0.04); }
+.dark .hover\:bg-slate-50:hover { background-color: rgba(255, 255, 255, 0.06); }
+.dark .focus\:bg-slate-50:focus { background-color: rgba(255, 255, 255, 0.06); }
+.dark .border-slate-100 { border-color: rgba(255, 255, 255, 0.08); }
+.dark .border-slate-200 { border-color: rgba(255, 255, 255, 0.10); }
 
 /* ══════════════════════════════════════════════════════════════════
    UTILITIES GLASS

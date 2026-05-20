@@ -100,10 +100,13 @@ const FILTER_STORAGE_KEY = "kanban-active-filter";
 const STATUS_STORAGE_KEY = "pipeline-status-filter";
 
 const STATUS_TABS: { value: StatusFilter; label: string; icon: typeof CheckCircle2; color: string; activeColor: string }[] = [
-  { value: "OPEN", label: "Abertos", icon: Clock, color: "text-slate-500", activeColor: "text-blue-700 border-blue-600 bg-blue-50" },
-  { value: "WON", label: "Ganhos", icon: CheckCircle2, color: "text-slate-500", activeColor: "text-emerald-700 border-emerald-600 bg-emerald-50" },
-  { value: "LOST", label: "Perdidos", icon: XCircle, color: "text-slate-500", activeColor: "text-red-700 border-red-600 bg-red-50" },
-  { value: "ALL", label: "Todos", icon: LayoutGrid, color: "text-slate-500", activeColor: "text-slate-800 border-slate-600 bg-slate-100" },
+  // `activeColor` carrega variantes `dark:` p/ todos os tons; o variant
+  // `dark:` foi reconfigurado em `globals.css` (@custom-variant) p/ disparar
+  // só com classe `.dark`, então essas combinações são confiáveis nos dois temas.
+  { value: "OPEN", label: "Abertos", icon: Clock, color: "text-[var(--color-ink-muted)]", activeColor: "text-blue-700 border-blue-600 bg-blue-50 dark:text-blue-300 dark:border-blue-500 dark:bg-blue-500/10" },
+  { value: "WON", label: "Ganhos", icon: CheckCircle2, color: "text-[var(--color-ink-muted)]", activeColor: "text-emerald-700 border-emerald-600 bg-emerald-50 dark:text-emerald-300 dark:border-emerald-500 dark:bg-emerald-500/10" },
+  { value: "LOST", label: "Perdidos", icon: XCircle, color: "text-[var(--color-ink-muted)]", activeColor: "text-red-700 border-red-600 bg-red-50 dark:text-red-300 dark:border-red-500 dark:bg-red-500/10" },
+  { value: "ALL", label: "Todos", icon: LayoutGrid, color: "text-[var(--color-ink-muted)]", activeColor: "text-slate-800 border-slate-600 bg-slate-100 dark:text-slate-100 dark:border-slate-400 dark:bg-white/10" },
 ];
 
 function loadStatusFilter(): StatusFilter {
@@ -889,18 +892,20 @@ export default function PipelinePage() {
 
   return (
     <div className="-mx-3 -mt-3 -mb-3 flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-bg-subtle)]/60 sm:-mx-4 sm:-mt-4 sm:-mb-4 md:-mx-8 md:-mt-8 md:-mb-8">
-      {/* ═══ HEADER — 1 linha estilo Kommo ═══ */}
-      <div className="shrink-0 border-b border-zinc-200 bg-white">
+      {/* ═══ HEADER — 1 linha estilo Kommo ═══
+          Surface translúcido baseado em tokens (`--glass-bg-overlay` +
+          `--color-border`) para respeitar light/dark sem `bg-white` fixo. */}
+      <div className="shrink-0 border-b border-[var(--color-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md">
 
         {/* Linha única: título | pipeline | busca | ações */}
         <div className="flex items-center gap-2 px-4 py-2 md:px-6">
 
           {/* Título */}
-          <span className="shrink-0 text-[13px] font-semibold text-zinc-800">
+          <span className="shrink-0 text-[13px] font-semibold text-foreground">
             {VIEW_HEADER[viewMode].title}
           </span>
 
-          <div className="h-4 w-px bg-zinc-200 shrink-0" />
+          <div className="h-4 w-px bg-[var(--color-border)] shrink-0" />
 
           {/* Pipeline selector */}
           {plLoading ? (
@@ -908,7 +913,7 @@ export default function PipelinePage() {
           ) : plError ? (
             <p className="text-xs text-red-500">{plErr instanceof Error ? plErr.message : "Erro"}</p>
           ) : pipelines.length <= 1 ? (
-            <span className="text-[12px] font-medium text-zinc-600">
+            <span className="text-[12px] font-medium text-[var(--color-ink-soft)]">
               {pipelines[0]?.name ?? "Pipeline"}
             </span>
           ) : (
@@ -916,14 +921,14 @@ export default function PipelinePage() {
               <select
                 value={pipelineId}
                 onChange={(e) => setPipelineId(e.target.value)}
-                className="h-7 cursor-pointer appearance-none rounded-md border-0 bg-zinc-100 py-0 pl-2.5 pr-7 text-[12px] font-medium text-zinc-700 transition hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-7 cursor-pointer appearance-none rounded-md border-0 bg-[var(--color-bg-muted)] py-0 pl-2.5 pr-7 text-[12px] font-medium text-foreground transition hover:bg-[var(--color-bg-hover)] focus:outline-none focus:ring-2 focus:ring-primary/20"
                 aria-label="Selecionar pipeline"
               >
                 {pipelines.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
+              <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
             </div>
           )}
 
@@ -946,17 +951,17 @@ export default function PipelinePage() {
                   onClick={() => setAdvancedPanelOpen(true)}
                   placeholder="Buscar e filtrar..."
                   className={cn(
-                    "h-8 w-full rounded-full border bg-white/55 pl-7 pr-12 text-[12px] text-foreground placeholder:text-[var(--color-ink-muted)] backdrop-blur transition-all hover:bg-white/70 focus:bg-white/80 focus:outline-none focus:ring-[3px] focus:ring-primary/15",
+                    "h-8 w-full rounded-full border bg-[var(--color-input)] pl-7 pr-12 text-[12px] text-foreground placeholder:text-[var(--color-ink-muted)] backdrop-blur transition-all hover:bg-[var(--color-bg-hover)] focus:bg-[var(--color-bg-hover)] focus:outline-none focus:ring-[3px] focus:ring-primary/15",
                     advancedPanelOpen
-                      ? "border-primary bg-white/80 ring-[3px] ring-primary/15"
-                      : "border-white/55",
+                      ? "border-primary bg-[var(--color-bg-hover)] ring-[3px] ring-primary/15"
+                      : "border-[var(--color-border)]",
                   )}
                 />
                 <button
                   type="button"
                   onClick={() => setAdvancedPanelOpen((v) => !v)}
                   className={cn(
-                    "absolute right-1.5 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded-full px-1 text-[var(--color-ink-muted)] transition hover:bg-white/55 hover:text-foreground",
+                    "absolute right-1.5 top-1/2 flex h-5 -translate-y-1/2 items-center gap-0.5 rounded-full px-1 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-bg-hover)] hover:text-foreground",
                     advancedCount > 0 && "text-primary",
                   )}
                   title="Filtros avançados"
@@ -1063,17 +1068,19 @@ export default function PipelinePage() {
               />
             </div>
 
-            <div className="h-4 w-px bg-zinc-200" />
+            <div className="h-4 w-px bg-[var(--color-border)]" />
 
             {/* View toggle */}
-            <div className="flex h-7 items-center rounded-md bg-zinc-100 p-0.5">
+            <div className="flex h-7 items-center rounded-md bg-[var(--color-bg-muted)] p-0.5">
               <TooltipHost label="Kanban" side="bottom">
                 <button
                   type="button"
                   onClick={() => { setViewMode("kanban"); saveViewMode("kanban"); setSelectedDeals(new Set()); }}
                   className={cn(
                     "flex size-6 items-center justify-center rounded transition",
-                    viewMode === "kanban" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-400 hover:text-zinc-600",
+                    viewMode === "kanban"
+                      ? "bg-[var(--glass-bg-overlay)] text-foreground shadow-sm"
+                      : "text-[var(--color-ink-muted)] hover:text-foreground",
                   )}
                   aria-label="Kanban"
                 >
@@ -1086,7 +1093,9 @@ export default function PipelinePage() {
                   onClick={() => { setViewMode("list"); saveViewMode("list"); }}
                   className={cn(
                     "flex size-6 items-center justify-center rounded transition",
-                    viewMode === "list" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-400 hover:text-zinc-600",
+                    viewMode === "list"
+                      ? "bg-[var(--glass-bg-overlay)] text-foreground shadow-sm"
+                      : "text-[var(--color-ink-muted)] hover:text-foreground",
                   )}
                   aria-label="Lista"
                 >
@@ -1104,7 +1113,9 @@ export default function PipelinePage() {
                   }}
                   className={cn(
                     "flex size-6 items-center justify-center rounded transition",
-                    viewMode === "saleshub" ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-400 hover:text-zinc-600",
+                    viewMode === "saleshub"
+                      ? "bg-[var(--glass-bg-overlay)] text-foreground shadow-sm"
+                      : "text-[var(--color-ink-muted)] hover:text-foreground",
                   )}
                   aria-label="Pipeline Ágil"
                 >
@@ -1115,7 +1126,7 @@ export default function PipelinePage() {
 
             <CardFieldsConfig fields={cardFields} onChange={setCardFields} />
 
-            <div className="h-4 w-px bg-zinc-200" />
+            <div className="h-4 w-px bg-[var(--color-border)]" />
 
             {/* Filtros rápidos */}
             <button
@@ -1124,8 +1135,8 @@ export default function PipelinePage() {
               className={cn(
                 "inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition",
                 activeFilter === "mine"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600",
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                  : "text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground",
               )}
             >
               <UserIcon className="size-3" />
@@ -1137,15 +1148,15 @@ export default function PipelinePage() {
               className={cn(
                 "inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition",
                 activeFilter === "urgent"
-                  ? "bg-amber-100 text-amber-700"
-                  : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600",
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                  : "text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground",
               )}
             >
               <AlertTriangle className="size-3" />
               Urgentes
             </button>
 
-            <div className="h-4 w-px bg-zinc-200" />
+            <div className="h-4 w-px bg-[var(--color-border)]" />
 
             <Button
               type="button"
@@ -1167,7 +1178,7 @@ export default function PipelinePage() {
 
         {/* Status tabs */}
         {viewMode !== "saleshub" && (
-          <div className="flex flex-wrap items-center gap-0 border-t border-zinc-100 px-4 md:px-6">
+          <div className="flex flex-wrap items-center gap-0 border-t border-[var(--color-border-soft)] px-4 md:px-6">
             {STATUS_TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = statusFilter === tab.value;
@@ -1180,7 +1191,7 @@ export default function PipelinePage() {
                     "relative inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[12px] font-semibold transition",
                     isActive
                       ? tab.activeColor
-                      : "border-transparent text-zinc-400 hover:text-zinc-600",
+                      : "border-transparent text-[var(--color-ink-muted)] hover:text-foreground",
                   )}
                 >
                   <Icon className="size-3.5" />
@@ -1198,16 +1209,16 @@ export default function PipelinePage() {
 
         {/* Filtros avançados */}
         {showFilters && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-100 px-4 py-2 md:px-6">
+          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border-soft)] px-4 py-2 md:px-6">
             <div className="relative">
               <select
                 value={filterAgent}
                 onChange={(e) => setFilterAgent(e.target.value)}
                 className={cn(
-                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary/20",
                   filterAgent !== "all"
-                    ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "border-zinc-200 bg-white text-zinc-500",
+                    ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
+                    : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)]",
                 )}
               >
                 <option value="all">Agente</option>
@@ -1216,7 +1227,7 @@ export default function PipelinePage() {
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
             </div>
 
             <div className="relative">
@@ -1224,10 +1235,10 @@ export default function PipelinePage() {
                 value={filterStage}
                 onChange={(e) => setFilterStage(e.target.value)}
                 className={cn(
-                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary/20",
                   filterStage !== "all"
-                    ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "border-zinc-200 bg-white text-zinc-500",
+                    ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
+                    : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)]",
                 )}
               >
                 <option value="all">Etapa</option>
@@ -1235,7 +1246,7 @@ export default function PipelinePage() {
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
             </div>
 
             <div className="relative">
@@ -1243,17 +1254,17 @@ export default function PipelinePage() {
                 value={filterMsg}
                 onChange={(e) => setFilterMsg(e.target.value as "all" | "unread" | "no-reply")}
                 className={cn(
-                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500/20",
+                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary/20",
                   filterMsg !== "all"
-                    ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "border-zinc-200 bg-white text-zinc-500",
+                    ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
+                    : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)]",
                 )}
               >
                 <option value="all">Mensagens</option>
                 <option value="unread">Não lidas</option>
                 <option value="no-reply">Sem resposta</option>
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-zinc-400" />
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
             </div>
 
             <button
@@ -1262,8 +1273,8 @@ export default function PipelinePage() {
               className={cn(
                 "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition",
                 filterOverdue
-                  ? "border-red-300 bg-red-50 text-red-700"
-                  : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300",
+                  ? "border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"
+                  : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)] hover:border-[var(--color-ink-muted)]",
               )}
             >
               <Clock className="size-3" />
@@ -1274,7 +1285,7 @@ export default function PipelinePage() {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground"
               >
                 <X className="size-3" />
                 Limpar
@@ -1286,7 +1297,7 @@ export default function PipelinePage() {
 
       {/* Barra de chips dos filtros avançados ativos */}
       {advancedCount > 0 && (
-        <div className="flex items-center gap-2 border-b border-zinc-100 bg-white px-4 py-2 md:px-6">
+        <div className="flex items-center gap-2 border-b border-[var(--color-border-soft)] bg-[var(--glass-bg-overlay)] backdrop-blur-md px-4 py-2 md:px-6">
           <FilterChips
             filters={advancedFilters}
             options={filterOptions}
@@ -1297,7 +1308,7 @@ export default function PipelinePage() {
             type="button"
             variant="ghost"
             size="sm"
-            className="h-6 gap-1 text-[11px] text-zinc-500"
+            className="h-6 gap-1 text-[11px] text-[var(--color-ink-soft)]"
             onClick={() => {
               setEditingSavedFilter(null);
               setSaveDialogOpen(true);
@@ -1309,7 +1320,7 @@ export default function PipelinePage() {
             type="button"
             variant="ghost"
             size="sm"
-            className="h-6 gap-1 text-[11px] text-zinc-500"
+            className="h-6 gap-1 text-[11px] text-[var(--color-ink-soft)]"
             onClick={clearAdvancedFilters}
           >
             <X className="size-3" />
@@ -1321,14 +1332,14 @@ export default function PipelinePage() {
       {/* ═══ BOARD AREA ═══ */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {(activeFilterCount > 0 || searchQuery) && !showFilters && advancedCount === 0 && (
-          <div className="absolute left-5 top-3 z-10 flex items-center gap-1.5 rounded-full border border-blue-200 bg-white/95 px-2.5 py-1 text-[10px] font-semibold text-zinc-500 shadow-md backdrop-blur-sm">
-            <Filter className="size-3 text-blue-500" strokeWidth={2} />
+          <div className="absolute left-5 top-3 z-10 flex items-center gap-1.5 rounded-full border border-blue-200 bg-[var(--glass-bg-overlay)] px-2.5 py-1 text-[10px] font-semibold text-[var(--color-ink-soft)] shadow-md backdrop-blur-sm dark:border-blue-500/40">
+            <Filter className="size-3 text-blue-500 dark:text-blue-400" strokeWidth={2} />
             {activeFilterCount} filtro{activeFilterCount !== 1 ? "s" : ""}
-            {searchQuery && <span className="text-zinc-400">· &ldquo;{searchQuery.slice(0, 15)}&rdquo;</span>}
+            {searchQuery && <span className="text-[var(--color-ink-muted)]">· &ldquo;{searchQuery.slice(0, 15)}&rdquo;</span>}
             <button
               type="button"
               onClick={clearAllFilters}
-              className="ml-0.5 flex size-3.5 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-200 hover:text-zinc-600"
+              className="ml-0.5 flex size-3.5 items-center justify-center rounded-full text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground"
             >
               <X className="size-2.5" strokeWidth={2.5} />
             </button>
@@ -1337,7 +1348,7 @@ export default function PipelinePage() {
 
         {boardError && pipelineId && (
           <div className="flex items-center justify-center p-8">
-            <div className="max-w-xl rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-[14px] text-red-800 shadow-sm">
+            <div className="max-w-xl rounded-xl border border-red-200 bg-red-50 px-6 py-5 text-[14px] text-red-800 shadow-sm dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
               <div className="mb-2 font-semibold">Erro ao carregar o quadro.</div>
               <div className="text-[13px] leading-relaxed">
                 {boardErr instanceof Error
@@ -1352,7 +1363,7 @@ export default function PipelinePage() {
                       queryKey: ["pipeline", pipelineId, "board"],
                     })
                   }
-                  className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100"
+                  className="rounded-md border border-red-300 bg-white/80 px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/5 dark:text-red-200 dark:hover:bg-red-500/15"
                 >
                   Tentar novamente
                 </button>
@@ -1363,7 +1374,7 @@ export default function PipelinePage() {
                       clearAdvancedFilters();
                       setStageOffsets({});
                     }}
-                    className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100"
+                    className="rounded-md border border-red-300 bg-white/80 px-3 py-1.5 text-[12px] font-medium text-red-700 hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/5 dark:text-red-200 dark:hover:bg-red-500/15"
                   >
                     Limpar filtros e recarregar
                   </button>
@@ -1375,7 +1386,7 @@ export default function PipelinePage() {
 
         {pipelineId && !boardLoading && board.length === 0 && !boardError && (
           <div className="flex items-center justify-center p-8">
-            <p className="text-[14px] font-medium text-zinc-500">Este pipeline ainda não tem estágios configurados.</p>
+            <p className="text-[14px] font-medium text-[var(--color-ink-soft)]">Este pipeline ainda não tem estágios configurados.</p>
           </div>
         )}
 
@@ -1384,10 +1395,10 @@ export default function PipelinePage() {
             <div className="flex h-full gap-3 overflow-hidden px-4 py-3 md:px-5 md:py-3.5">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex w-[300px] shrink-0 flex-col gap-1.5">
-                  <Skeleton className="h-[72px] w-full rounded-xl border border-gray-200" />
-                  <Skeleton className="h-[76px] w-full rounded-md border border-gray-200" />
-                  <Skeleton className="h-[76px] w-full rounded-md border border-gray-200" />
-                  <Skeleton className="h-[76px] w-full rounded-md border border-gray-200 opacity-60" />
+                  <Skeleton className="h-[72px] w-full rounded-xl border border-[var(--color-border)]" />
+                  <Skeleton className="h-[76px] w-full rounded-md border border-[var(--color-border)]" />
+                  <Skeleton className="h-[76px] w-full rounded-md border border-[var(--color-border)]" />
+                  <Skeleton className="h-[76px] w-full rounded-md border border-[var(--color-border)] opacity-60" />
                 </div>
               ))}
             </div>
@@ -1466,7 +1477,7 @@ export default function PipelinePage() {
               onCancel={() => setCreateOpen(false)}
             />
           ) : (
-            <p className="text-sm text-zinc-500">Selecione um pipeline com estágios.</p>
+            <p className="text-sm text-[var(--color-ink-soft)]">Selecione um pipeline com estágios.</p>
           )}
         </DialogContent>
       </Dialog>

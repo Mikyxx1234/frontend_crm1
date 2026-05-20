@@ -85,7 +85,7 @@ function MultiPickButtons({
   emptyLabel: string;
 }) {
   if (items.length === 0) {
-    return <p className="text-[11px] text-zinc-400">{emptyLabel}</p>;
+    return <p className="text-[11px] text-[var(--color-ink-muted)]">{emptyLabel}</p>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -99,8 +99,8 @@ function MultiPickButtons({
             className={cn(
               "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition",
               active
-                ? "border-blue-300 bg-blue-100 text-blue-800"
-                : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300",
+                ? "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200"
+                : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)] hover:border-[var(--color-ink-muted)]",
             )}
           >
             {item.label ?? item.name}
@@ -123,7 +123,7 @@ function DateRangeField({
   const preset = detectPreset(value);
   return (
     <div className="space-y-1.5">
-      <Label className="text-[11px] font-semibold text-zinc-700">{label}</Label>
+      <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">{label}</Label>
       <SelectNative
         value={preset}
         onChange={(e) => {
@@ -148,7 +148,7 @@ function DateRangeField({
             onChange={(e) => onChange({ ...value, from: e.target.value || null })}
             className="h-7 text-[11px]"
           />
-          <span className="text-[11px] text-zinc-400">a</span>
+          <span className="text-[11px] text-[var(--color-ink-muted)]">a</span>
           <Input
             type="date"
             value={value?.to ?? ""}
@@ -189,18 +189,18 @@ function CustomFieldRow({
   }, []);
 
   return (
-    <div className="space-y-1.5 rounded-md border border-zinc-200 bg-zinc-50/60 p-2">
+    <div className="space-y-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-col">
-          <span className="text-[11px] font-semibold text-zinc-700">{field.label}</span>
-          <span className="text-[9px] uppercase tracking-wide text-zinc-400">
+          <span className="text-[11px] font-semibold text-[var(--color-ink-soft)]">{field.label}</span>
+          <span className="text-[9px] uppercase tracking-wide text-[var(--color-ink-muted)]">
             {field.entity === "deal" ? "Negócio" : "Contato"} · {field.type}
           </span>
         </div>
         <button
           type="button"
           onClick={onRemove}
-          className="text-zinc-400 hover:text-red-600"
+          className="text-[var(--color-ink-muted)] hover:text-red-600 dark:hover:text-red-400"
           aria-label="Remover"
         >
           <X className="size-3.5" />
@@ -305,7 +305,7 @@ function CustomFieldRow({
             />
           )
         ) : (
-          <span className="self-center text-[10px] italic text-zinc-400">sem valor</span>
+          <span className="self-center text-[10px] italic text-[var(--color-ink-muted)]">sem valor</span>
         )}
       </div>
     </div>
@@ -416,9 +416,12 @@ export function FilterPanelBody({
   }
 
   return (
+    // Background herdado do host (FilterDropdown via Portal aplica
+    // cor literal inline). Aqui o root é transparent pra não conflitar
+    // com hosts diferentes (Sheet, popover, etc).
     <div className={cn("flex h-full min-h-0 flex-col", className)}>
       {withHeader && (
-        <div className="border-b border-white/40 px-4 py-3">
+        <div className="border-b border-[var(--glass-border-subtle)] px-4 py-3">
           <h3 className="font-display text-[14px] font-bold text-foreground">Filtros avançados</h3>
           <p className="mt-0.5 text-[11px] text-[var(--color-ink-muted)]">
             Combine critérios para refinar o Kanban.
@@ -429,7 +432,7 @@ export function FilterPanelBody({
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4">
         {/* Busca */}
         <section className="space-y-1.5">
-          <Label className="text-[11px] font-semibold text-zinc-700">Busca</Label>
+          <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">Busca</Label>
           <Input
             value={draft.search ?? ""}
             onChange={(e) => setDraftField("search", e.target.value || undefined)}
@@ -440,7 +443,7 @@ export function FilterPanelBody({
 
         {/* Status */}
         <section className="space-y-1.5">
-          <Label className="text-[11px] font-semibold text-zinc-700">Status</Label>
+          <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">Status</Label>
           <div className="flex flex-wrap gap-1.5">
             {STATUS_OPTIONS.map((s) => {
               const active = (draft.statuses ?? []).includes(s.value);
@@ -457,8 +460,8 @@ export function FilterPanelBody({
                   className={cn(
                     "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition",
                     active
-                      ? "border-blue-300 bg-blue-100 text-blue-800"
-                      : "border-zinc-200 bg-white text-zinc-600",
+                      ? "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200"
+                      : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)]",
                   )}
                 >
                   {s.label}
@@ -470,7 +473,7 @@ export function FilterPanelBody({
 
         {/* Etapas */}
         <section className="space-y-1.5">
-          <Label className="text-[11px] font-semibold text-zinc-700">Etapas</Label>
+          <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">Etapas</Label>
           <MultiPickButtons
             items={stages}
             selected={draft.stageIds ?? []}
@@ -481,8 +484,8 @@ export function FilterPanelBody({
 
         {/* Responsável */}
         <section className="space-y-1.5">
-          <Label className="text-[11px] font-semibold text-zinc-700">Responsável</Label>
-          <label className="flex items-center gap-2 text-[11px] text-zinc-600">
+          <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">Responsável</Label>
+          <label className="flex items-center gap-2 text-[11px] text-[var(--color-ink-soft)]">
             <input
               type="checkbox"
               checked={!!draft.withoutOwner}
@@ -514,8 +517,8 @@ export function FilterPanelBody({
 
         {/* Tags */}
         <section className="space-y-2">
-          <Label className="text-[11px] font-semibold text-zinc-700">Tags</Label>
-          <label className="flex items-center gap-2 text-[11px] text-zinc-600">
+          <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">Tags</Label>
+          <label className="flex items-center gap-2 text-[11px] text-[var(--color-ink-soft)]">
             <input
               type="checkbox"
               checked={!!draft.withoutTags}
@@ -556,7 +559,7 @@ export function FilterPanelBody({
         {/* Origem */}
         {options?.sources && options.sources.length > 0 && (
           <section className="space-y-1.5">
-            <Label className="text-[11px] font-semibold text-zinc-700">Origem</Label>
+            <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">Origem</Label>
             <div className="flex flex-wrap gap-1.5">
               {options.sources.map((src) => {
                 const active = (draft.sources ?? []).includes(src);
@@ -568,8 +571,8 @@ export function FilterPanelBody({
                     className={cn(
                       "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition",
                       active
-                        ? "border-blue-300 bg-blue-100 text-blue-800"
-                        : "border-zinc-200 bg-white text-zinc-600",
+                        ? "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200"
+                        : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)]",
                     )}
                   >
                     {src}
@@ -581,15 +584,15 @@ export function FilterPanelBody({
         )}
 
         {/* Contato */}
-        <section className="space-y-2 rounded-md border border-zinc-200 p-3">
-          <Label className="text-[11px] font-semibold text-zinc-700">Contato</Label>
+        <section className="space-y-2 rounded-md border border-[var(--color-border)] p-3">
+          <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">Contato</Label>
           <Input
             value={draft.contactSearch ?? ""}
             onChange={(e) => setDraftField("contactSearch", e.target.value || undefined)}
             placeholder="Nome, telefone, e-mail..."
             className="h-8 text-xs"
           />
-          <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-600">
+          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--color-ink-soft)]">
             <label className="flex items-center gap-1.5">
               <input
                 type="checkbox"
@@ -667,7 +670,7 @@ export function FilterPanelBody({
 
         {/* Custom fields — Deal */}
         <section className="space-y-2">
-          <Label className="text-[11px] font-semibold text-zinc-700">
+          <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">
             Campos personalizados do negócio
           </Label>
           {optionsLoading ? (
@@ -702,7 +705,7 @@ export function FilterPanelBody({
               </Button>
             </div>
           ) : (
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-[var(--color-ink-muted)]">
               Nenhum campo personalizado de negócio cadastrado em Configurações.
             </p>
           )}
@@ -737,7 +740,7 @@ export function FilterPanelBody({
 
         {/* Custom fields — Contact */}
         <section className="space-y-2">
-          <Label className="text-[11px] font-semibold text-zinc-700">
+          <Label className="text-[11px] font-semibold text-[var(--color-ink-soft)]">
             Campos personalizados do contato
           </Label>
           {optionsLoading ? (
@@ -772,7 +775,7 @@ export function FilterPanelBody({
               </Button>
             </div>
           ) : (
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-[var(--color-ink-muted)]">
               Nenhum campo personalizado de contato cadastrado em Configurações.
             </p>
           )}
@@ -806,7 +809,7 @@ export function FilterPanelBody({
         </section>
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-white/40 bg-white/30 px-4 py-2.5 backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] px-4 py-2.5">
         <Button
           type="button"
           variant="ghost"

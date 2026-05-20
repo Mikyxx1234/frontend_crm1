@@ -1845,7 +1845,7 @@ export function ChatWindow({
       )}
 
       {searchOpen ? (
-        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-white px-3">
+        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-white dark:bg-slate-900/70 px-3">
           <Search
             className="size-3.5 shrink-0 text-[var(--color-ink-soft)]"
             strokeWidth={2}
@@ -3446,7 +3446,7 @@ export function ChatWindow({
 
         {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
         {compactChrome ? (
-          <footer className="shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl">
+          <footer className="shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
             {noteMode ? (
               <div
                 className={cn(
@@ -3593,8 +3593,8 @@ export function ChatWindow({
             </div>
           </footer>
         ) : (
-          <footer className="border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6">
-            <div className="rounded-[22px] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur">
+          <footer className="border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-white/5">
+            <div className="rounded-[22px] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-white/10 dark:bg-white/8">
               <div className="flex items-center border-b border-white/40 px-5 py-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <TooltipHost
@@ -3726,7 +3726,7 @@ export function ChatWindow({
                   rows={1}
                   disabled={composeDisabled}
                   className={cn(
-                    "min-h-[28px] max-h-[200px] min-w-0 flex-1 resize-none bg-transparent text-[15px] leading-relaxed text-slate-800 outline-none placeholder:text-[var(--color-ink-muted)] focus:outline-none",
+                    "min-h-[28px] max-h-[200px] min-w-0 flex-1 resize-none bg-transparent text-[15px] leading-relaxed text-slate-800 dark:text-slate-100 outline-none placeholder:text-[var(--color-ink-muted)] focus:outline-none",
                     noteMode &&
                       "italic text-foreground placeholder:text-slate-500",
                     composeDisabled &&

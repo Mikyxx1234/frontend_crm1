@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -72,11 +73,42 @@ type Props = {
 export function CardFieldsConfig({ fields, onChange }: Props) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
+  const buttonWrapRef = React.useRef<HTMLDivElement>(null);
+  const [pos, setPos] = React.useState<{ top: number; right: number } | null>(
+    null,
+  );
+  const [isDark, setIsDark] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const update = () => setIsDark(document.documentElement.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function compute() {
+      const rect = buttonWrapRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    compute();
+    window.addEventListener("scroll", compute, true);
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute, true);
+      window.removeEventListener("resize", compute);
+    };
+  }, [open]);
 
   React.useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: PointerEvent) => {
       if (ref.current?.contains(e.target as Node)) return;
+      if (buttonWrapRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
@@ -97,7 +129,7 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
   };
 
   return (
-    <div ref={ref} className="relative inline-block">
+    <div ref={buttonWrapRef} className="relative inline-block">
       <TooltipHost label="Configurar campos do card" side="bottom">
         <Button
           type="button"
@@ -111,41 +143,58 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
         </Button>
       </TooltipHost>
 
-      {open && (
-        <div className="absolute right-0 z-50 mt-1 w-56 rounded-md border border-border bg-popover p-2 shadow-lg">
-          <p className="mb-2 text-xs font-semibold text-foreground">
-            Campos visíveis no card
-          </p>
-          <div className="flex flex-col gap-0.5">
-            {FIELD_LABELS.map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                className={cn(
-                  "flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted",
-                )}
-                onClick={() => toggle(key)}
-              >
-                <span
+      {open && pos && typeof document !== "undefined" &&
+        createPortal(
+          // Portal direto no <body> + posição fixed + cor literal inline:
+          // escapa de stacking context/backdrop-filter dos pais que estavam
+          // deixando o popover translúcido.
+          <div
+            ref={ref}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              right: pos.right,
+              width: 224,
+              zIndex: 9999,
+              backgroundColor: isDark ? "#1a2238" : "#ffffff",
+              isolation: "isolate",
+            }}
+            className="rounded-md border border-border p-2 shadow-lg dark:border-slate-700"
+          >
+            <p className="mb-2 text-xs font-semibold text-foreground">
+              Campos visíveis no card
+            </p>
+            <div className="flex flex-col gap-0.5">
+              {FIELD_LABELS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
                   className={cn(
-                    "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
-                    fields[key]
-                      ? "border-primary bg-primary text-white"
-                      : "border-border bg-white"
+                    "flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted",
                   )}
+                  onClick={() => toggle(key)}
                 >
-                  {fields[key] && (
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M2 5L4.5 7.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </span>
-                <span className="text-foreground">{label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+                  <span
+                    className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
+                      fields[key]
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-white dark:border-slate-600 dark:bg-slate-800"
+                    )}
+                  >
+                    {fields[key] && (
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M2 5L4.5 7.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </span>
+                  <span className="text-foreground">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

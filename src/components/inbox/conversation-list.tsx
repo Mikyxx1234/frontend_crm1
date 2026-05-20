@@ -241,7 +241,7 @@ export function InboxListHeader({
   agentCapacityLoading,
 }: InboxListHeaderProps) {
   return (
-    <div className="shrink-0 border-b border-white/40 bg-white/40 backdrop-blur">
+    <div className="relative z-30 shrink-0 border-b border-white/40 bg-white/40 backdrop-blur dark:border-white/10 dark:bg-white/5">
       <div className="flex items-center justify-between px-3 pb-1.5 pt-3">
         <span className="font-display text-[15px] font-bold text-foreground">Conversas</span>
         <div className="flex min-w-0 max-w-[min(100%,11rem)] items-center gap-2">
@@ -435,7 +435,8 @@ function InboxCategorySelect({
 
         {selectOpen ? (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-md)]"
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-[70] overflow-hidden rounded-lg border border-slate-200 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-slate-700 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+            style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
             role="listbox"
             aria-label="Categoria da inbox"
           >
@@ -951,9 +952,9 @@ function ConversationItem({
       {...staggerItem}
       layout
       className={cn(
-        "group relative flex w-full cursor-pointer gap-2 border-b border-white/30 px-3 py-2.5 transition-all duration-150 hover:bg-white/40",
-        active && "border-l-2 border-l-primary bg-white/60 shadow-[var(--glass-shadow-sm)]",
-        !active && unread && "bg-primary/8 hover:bg-primary/12",
+        "group relative flex w-full cursor-pointer gap-2 border-b border-white/30 px-3 py-2.5 transition-all duration-150 hover:bg-white/40 dark:border-white/5 dark:hover:bg-white/5",
+        active && "border-l-2 border-l-primary bg-white/60 shadow-[var(--glass-shadow-sm)] dark:bg-white/10",
+        !active && unread && "bg-primary/8 hover:bg-primary/12 dark:bg-primary/15 dark:hover:bg-primary/20",
         !active && !unread && "bg-transparent",
       )}
       onClick={() => !selectionMode && onSelect(row)}
@@ -982,7 +983,7 @@ function ConversationItem({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="min-w-0 truncate text-[13px] font-semibold text-slate-900">
+          <p className="min-w-0 truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
             {row.contact.name || row.contact.phone || "Sem nome"}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
@@ -1019,7 +1020,7 @@ function ConversationItem({
             {time ? (
               <span
                 className={cn(
-                  "shrink-0 text-[10px] tabular-nums text-slate-400",
+                  "shrink-0 text-[10px] tabular-nums text-slate-400 dark:text-slate-500",
                   unread && "font-semibold text-blue-600",
                 )}
               >
@@ -1044,7 +1045,7 @@ function ConversationItem({
 
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
           {row.lastMessageDirection === "out" && (
-            <CheckCheck size={15} className={cn("shrink-0", active ? "text-blue-600" : "text-slate-300")} />
+            <CheckCheck size={15} className={cn("shrink-0", active ? "text-blue-600" : "text-slate-300 dark:text-slate-600")} />
           )}
           {(() => {
             const { icon: PreviewIcon, iconClass, label } = describePreview(row.lastMessagePreview);
@@ -1053,8 +1054,8 @@ function ConversationItem({
                 {PreviewIcon ? <PreviewIcon size={14} className={cn("shrink-0", iconClass)} /> : null}
                 <p
                   className={cn(
-                    "min-w-0 flex-1 truncate text-[12px] text-slate-400",
-                    unread && "font-medium text-slate-700",
+                    "min-w-0 flex-1 truncate text-[12px] text-slate-400 dark:text-slate-500",
+                    unread && "font-medium text-slate-700 dark:text-slate-200",
                   )}
                 >
                   {label}
@@ -1074,7 +1075,7 @@ function ConversationItem({
               </TooltipHost>
             ))}
             {extraTagCount > 0 ? (
-              <span className="text-[10px] text-slate-400">+{extraTagCount}</span>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">+{extraTagCount}</span>
             ) : null}
           </div>
         ) : null}
@@ -1118,7 +1119,7 @@ function ConversationItem({
           </TooltipHost>
         ) : (
           <TooltipHost label="Sem responsável atribuído" side="left">
-            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-white text-slate-300">
+            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600">
               <UserRound size={12} />
             </div>
           </TooltipHost>

@@ -1325,7 +1325,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <PushPermissionPrompt />
       <PushNavigateListener />
 
-      {/* Onboarding: 4 passos no primeiro acesso ao dashboard. */}
+      {/* Onboarding: tour de 4 passos. Não abre mais automaticamente — fica
+          disponível para acionar via prop `open` (futuro botão "Ajuda"). */}
       <OnboardingTour />
     </div>
   );

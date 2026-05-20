@@ -213,18 +213,20 @@ export function KanbanCard({
     <>
       <div
         className={cn(
-          "group relative cursor-pointer rounded-[18px] border border-white/55 bg-white/55 backdrop-blur-sm transition-all",
+          // Surface: tokens de glass do tema — `bg-white/55` causava cartões
+          // esbranquiçados em dark mode mesmo com o variant `.dark` ativo.
+          "group relative cursor-pointer rounded-[18px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] backdrop-blur-sm transition-all",
           dt.card.shadow,
           dt.card.kanbanHover,
-          "hover:-translate-y-0.5 hover:bg-white/70 hover:shadow-[var(--glass-shadow)]",
-          isDragging && "rotate-1 border-primary/40 bg-white/85 shadow-[var(--glass-shadow-lg)]",
+          "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
+          isDragging && "rotate-1 border-primary/40 bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-lg)]",
           isHighlighted && "animate-[kanban-highlight_3s_ease]",
         )}
       >
         <div className="relative flex">
           <button
             type="button"
-            className="flex shrink-0 cursor-grab touch-none items-start justify-center border-0 bg-transparent px-1.5 py-2 text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+            className="flex shrink-0 cursor-grab touch-none items-start justify-center border-0 bg-transparent px-1.5 py-2 text-[var(--color-ink-subtle)] hover:text-[var(--color-ink-soft)] active:cursor-grabbing"
             aria-label="Arrastar negócio"
             onClick={(e) => e.stopPropagation()}
             {...dragHandleProps}
@@ -275,21 +277,21 @@ export function KanbanCard({
                     </div>
 
                     {contactLine && dealTitle && contactLine !== dealTitle ? (
-                      <p className="mt-0.5 min-w-0 truncate text-[13px] font-medium text-slate-700">
+                      <p className="mt-0.5 min-w-0 truncate text-[13px] font-medium text-[var(--color-ink-soft)]">
                         {dealTitle}
                       </p>
                     ) : null}
                   </div>
 
                   {/* #ID + data de criação — mesmo padrão do Sales Hub
-                      (`deal-queue.tsx`): `#123` em `font-bold slate-700`
-                      seguido pela data em `slate-400 tabular-nums`. O "#"
+                      (`deal-queue.tsx`): `#123` em `font-bold` no token de ink,
+                      seguido pela data em `--color-ink-muted` `tabular-nums`. O "#"
                       já carrega a semântica de identificador, dispensa o
                       label "LEAD ID:". Quando o deal não tem `number`
                       ainda (criado offline / pendente sync) cai pra "—". */}
                   {(deal.number != null || createdAtLabel) ? (
                     <div className="mt-0.5 flex shrink-0 items-center gap-1.5">
-                      <span className="text-[11px] font-semibold tabular-nums text-slate-700">
+                      <span className="text-[11px] font-semibold tabular-nums text-[var(--color-ink-soft)]">
                         #{deal.number ?? "—"}
                       </span>
                       {createdAtLabel ? (
@@ -309,13 +311,13 @@ export function KanbanCard({
                       mantém o aviso visual quando o cliente respondeu, mas em
                       soft chip (sem borda) alinhado ao DNA Chat. */}
                   {inboundPreview ? (
-                    <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
-                      <MessageCircle className="size-3 shrink-0 text-blue-400" strokeWidth={2} />
+                    <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--color-ink-muted)]">
+                      <MessageCircle className="size-3 shrink-0 text-blue-500 dark:text-blue-400" strokeWidth={2} />
                       <p className="min-w-0 flex-1 truncate">{inboundPreview}</p>
                       {interaction ? <span className="shrink-0 tabular-nums">{interaction}</span> : null}
                     </div>
                   ) : interaction ? (
-                    <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+                    <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--color-ink-muted)]">
                       <Clock className="size-3" strokeWidth={2} />
                       <span className="tabular-nums">{interaction}</span>
                     </div>
@@ -337,7 +339,7 @@ export function KanbanCard({
                         </span>
                       )}
                       {show("value") && valueNum > 0 ? (
-                        <span className="shrink-0 text-[13px] font-semibold tabular-nums text-slate-700">
+                        <span className="shrink-0 text-[13px] font-semibold tabular-nums text-foreground">
                           {formatCurrency(valueNum)}
                         </span>
                       ) : null}
@@ -360,8 +362,8 @@ export function KanbanCard({
                           className={cn(
                             "inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[11px] font-medium tabular-nums",
                             deal.hasOverdueActivity
-                              ? "bg-red-50 text-red-700"
-                              : "bg-blue-50 text-blue-700",
+                              ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
+                              : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
                           )}
                         >
                           {deal.hasOverdueActivity ? (
@@ -425,7 +427,7 @@ export function KanbanCard({
                             }
                           }}
                           placeholder={canCreateTag ? "Buscar ou criar tag" : "Buscar tag"}
-                          className="h-7 min-w-0 flex-1 rounded-lg bg-white px-2 text-[12px] text-foreground outline-none focus:ring-2 focus:ring-blue-500/30"
+                          className="h-7 min-w-0 flex-1 rounded-lg bg-[var(--color-input)] px-2 text-[12px] text-foreground outline-none focus:ring-2 focus:ring-primary/30"
                         />
                         {canCreateTag && (
                           <button
@@ -434,7 +436,7 @@ export function KanbanCard({
                               if (tagInput.trim()) tagMutation.mutate({ tagName: tagInput.trim(), color: tagColor });
                             }}
                             disabled={!tagInput.trim() || tagMutation.isPending}
-                            className="inline-flex h-7 items-center justify-center rounded-lg bg-slate-900 px-2 text-[11px] font-medium text-white disabled:opacity-50"
+                            className="inline-flex h-7 items-center justify-center rounded-lg bg-primary px-2 text-[11px] font-medium text-primary-foreground disabled:opacity-50"
                           >
                             <Check className="size-3" strokeWidth={2} />
                           </button>
@@ -442,19 +444,19 @@ export function KanbanCard({
                         <button
                           type="button"
                           onClick={() => setShowTagComposer(false)}
-                          className="inline-flex h-7 items-center justify-center rounded-lg px-2 text-[var(--color-ink-muted)] hover:bg-white hover:text-foreground"
+                          className="inline-flex h-7 items-center justify-center rounded-lg px-2 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground"
                         >
                           <X className="size-3" strokeWidth={2} />
                         </button>
                       </div>
                       {tagInput && tagSuggestions.length > 0 && (
-                        <div className="mt-1.5 max-h-24 overflow-y-auto rounded-lg bg-white">
+                        <div className="mt-1.5 max-h-24 overflow-y-auto rounded-lg bg-[var(--color-popover)] backdrop-blur-md">
                           {tagSuggestions.slice(0, 6).map((t: { id: string; name: string; color: string }) => (
                             <button
                               key={t.id}
                               type="button"
                               onClick={() => { tagMutation.mutate({ tagId: t.id }); setTagInput(""); }}
-                              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-[12px] text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]"
+                              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-[12px] text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-hover)]"
                             >
                               <span className="size-2 rounded-full" style={{ backgroundColor: t.color }} />
                               {t.name}
@@ -471,7 +473,7 @@ export function KanbanCard({
                               onClick={() => setTagColor(color)}
                               className={cn(
                                 "size-3.5 rounded-full transition",
-                                tagColor === color ? "scale-110 ring-2 ring-slate-300 ring-offset-1" : "",
+                                tagColor === color ? "scale-110 ring-2 ring-[var(--color-border)] ring-offset-1" : "",
                               )}
                               style={{ backgroundColor: color }}
                               aria-label={`Selecionar cor ${color}`}
@@ -484,7 +486,7 @@ export function KanbanCard({
 
                   {show("owner") ? (
                     <div
-                      className="mt-1.5 border-t border-zinc-100 pt-1.5"
+                      className="mt-1.5 border-t border-[var(--color-border-soft)] pt-1.5"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <CardOwnerSelector
@@ -560,8 +562,8 @@ function CardOwnerSelector({
         onClick={() => setOpen((value) => !value)}
         disabled={isPending}
         className={cn(
-          "flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-zinc-50",
-          open && "bg-zinc-100",
+          "flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-[var(--color-bg-hover)]",
+          open && "bg-[var(--color-bg-hover)]",
         )}
       >
         {currentOwner?.name ? (
@@ -573,14 +575,14 @@ function CardOwnerSelector({
             size={20}
           />
         ) : (
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 bg-slate-50 text-[10px] font-bold text-slate-400">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[10px] font-bold text-[var(--color-ink-muted)]">
             ?
           </span>
         )}
-        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-slate-700">
+        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[var(--color-ink-soft)]">
           {currentOwner?.name ?? "Sem responsável"}
         </span>
-        <ChevronDown className={cn("size-3.5 shrink-0 text-[var(--color-ink-muted)] transition-transform", open && "rotate-180 text-blue-600")} strokeWidth={2} />
+        <ChevronDown className={cn("size-3.5 shrink-0 text-[var(--color-ink-muted)] transition-transform", open && "rotate-180 text-primary")} strokeWidth={2} />
       </button>
 
       {open ? (
@@ -593,10 +595,10 @@ function CardOwnerSelector({
             }}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-[var(--color-bg-subtle)]"
           >
-            <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-[var(--color-ink-muted)]">
+            <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-subtle)] text-[10px] font-semibold text-[var(--color-ink-muted)]">
               ?
             </div>
-            <span className="min-w-0 truncate text-[13px] font-medium text-slate-500">Sem responsável</span>
+            <span className="min-w-0 truncate text-[13px] font-medium text-[var(--color-ink-soft)]">Sem responsável</span>
           </button>
           {users.map((user) => {
             const status = user.agentStatus?.status ?? "OFFLINE";
@@ -611,7 +613,7 @@ function CardOwnerSelector({
                 }}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-[var(--color-bg-subtle)]",
-                  selected && "bg-blue-50/60",
+                  selected && "bg-primary/10 dark:bg-primary/15",
                 )}
               >
                 <OwnerAvatar
@@ -625,7 +627,7 @@ function CardOwnerSelector({
                   <span className="block truncate text-[13px] font-medium text-foreground">{user.name}</span>
                   <span className="block text-[11px] text-[var(--color-ink-muted)]">{presenceLabel(status)}</span>
                 </div>
-                {selected ? <Check className="size-3.5 shrink-0 text-blue-600" strokeWidth={2.5} /> : null}
+                {selected ? <Check className="size-3.5 shrink-0 text-primary" strokeWidth={2.5} /> : null}
               </button>
             );
           })}
@@ -683,10 +685,12 @@ function PresenceDot({
   return (
     <span
       className={cn(
-        "inline-flex size-2 rounded-full ring-2 ring-white",
+        // Ring usa `--color-card` (branco em light, navy em dark) — evita
+        // o anel branco fixo que ficava destoante sobre cards escuros.
+        "inline-flex size-2 rounded-full ring-2 ring-[var(--color-card)]",
         status === "ONLINE" && "bg-emerald-500",
         status === "AWAY" && "bg-amber-400",
-        status === "OFFLINE" && "bg-slate-400",
+        status === "OFFLINE" && "bg-slate-400 dark:bg-slate-500",
         className,
       )}
       aria-hidden

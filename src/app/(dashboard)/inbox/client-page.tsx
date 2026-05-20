@@ -17,6 +17,7 @@ import {
   type InboxTab,
 } from "@/components/inbox/conversation-list";
 import { useSSE } from "@/hooks/use-sse";
+import { useResizablePanel } from "@/hooks/use-resizable-panel";
 import { ConversationHeader } from "@/components/inbox/conversation-header";
 import { InboxFilterBar, type InboxFilters } from "@/components/inbox/inbox-filters";
 import { ContactDealSidebar } from "@/components/inbox/contact-deal-sidebar";
@@ -147,6 +148,24 @@ export default function InboxPage() {
       return next;
     });
   }, []);
+
+  // Painéis redimensionáveis via drag. Limites pensados pra não deixar
+  // a lista colapsar ao ponto de cortar nomes (min 240) nem dominar a
+  // tela em monitores 4K (max 500). CRM idem.
+  const { width: convListWidth, startResize: startResizeConvList } = useResizablePanel({
+    defaultWidth: 300,
+    min: 240,
+    max: 500,
+    storageKey: "inbox-conv-list-width",
+    direction: "right",
+  });
+  const { width: crmPanelWidth, startResize: startResizeCrmPanel } = useResizablePanel({
+    defaultWidth: 300,
+    min: 240,
+    max: 420,
+    storageKey: "inbox-crm-panel-width",
+    direction: "left",
+  });
 
   const inboxConversationSearchRef = React.useRef<{ open: () => void } | null>(null);
 
@@ -347,10 +366,13 @@ export default function InboxPage() {
           Sombra DIRECIONAL para a direita (10px 0 30px -15px navy 5%) cria
           a sensação de painel "sobre" a área de chat — Premium Core spec. */}
       <div
+        style={{ "--cl-w": `${convListWidth}px` } as React.CSSProperties}
         className={cn(
-          // Sidebar esquerda (lista de conversas) — largura fixa 300px em md+
-          // (libera área central; painel CRM direito permanece conforme layout).
-          "flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-[var(--color-bg-subtle)]/60 shadow-[12px_0_36px_-14px_rgba(13,27,62,0.10)] md:h-full md:w-[300px] md:shrink-0 md:grow-0 md:basis-[300px] xl:w-[300px] xl:basis-[300px] 2xl:w-[300px] 2xl:basis-[300px]",
+          // Sidebar esquerda (lista de conversas). Largura controlada via
+          // CSS variable `--cl-w` aplicada pelo hook `useResizablePanel`
+          // (só vale em md+; mobile usa w-full quando sem conversa
+          // selecionada). Usuário arrasta o divisor à direita pra ajustar.
+          "flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-[var(--color-bg-subtle)]/60 shadow-[12px_0_36px_-14px_rgba(13,27,62,0.10)] md:h-full md:w-[var(--cl-w)] md:shrink-0 md:grow-0 md:basis-[var(--cl-w)]",
           selected ? "hidden md:flex" : "w-full flex-1",
         )}
       >
@@ -422,6 +444,22 @@ export default function InboxPage() {
           />
         </div>
       </div>
+
+      {/* Handle de redimensionamento: lista ↔ chat. Visível só em md+
+          (mobile alterna entre lista e chat, sem split). Largura 4px com
+          área de hit estendida pra facilitar pegar. */}
+      {selected ? (
+        <div
+          onPointerDown={startResizeConvList}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Redimensionar lista de conversas"
+          className="group relative hidden md:flex w-1 shrink-0 cursor-col-resize items-center justify-center bg-transparent hover:bg-primary/20 active:bg-primary/40 transition-colors"
+        >
+          {/* Faixa visual fina que aparece no hover pra dar feedback */}
+          <span className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border group-hover:bg-primary/60" />
+        </div>
+      ) : null}
 
       {/* ═══════ DETAIL AREA ═══════ */}
       <div
@@ -522,20 +560,37 @@ export default function InboxPage() {
                 Container externo limita largura; rail colapsado 36px.
                 Em telas menores que lg continua sem render (sem DOM movel). */}
             {rightPanelOpen ? (
-              <div className="hidden lg:flex lg:w-[280px] xl:w-[300px] lg:shrink-0">
-                <ContactDealSidebar
-                  side="right"
-                  contactId={selected.contact.id}
-                  contactName={selected.contact.name}
-                  contactPhone={selected.contact.phone}
-                  lastInboundAt={selected.lastInboundAt}
-                  conversationId={selected.id}
-                  channel={selected.channel}
-                  onBack={() => setSelected(null)}
-                  onCreateDeal={() => setDealOpen(true)}
-                  onCollapse={toggleRightPanel}
-                />
-              </div>
+              <>
+                {/* Handle de redimensionamento: chat ↔ painel CRM. Mesma faixa
+                    visual sutil do handle da esquerda. Visível só em lg+
+                    (que é quando o painel CRM aparece). */}
+                <div
+                  onPointerDown={startResizeCrmPanel}
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Redimensionar painel CRM"
+                  className="group relative hidden lg:flex w-1 shrink-0 cursor-col-resize items-center justify-center bg-transparent hover:bg-primary/20 active:bg-primary/40 transition-colors"
+                >
+                  <span className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border group-hover:bg-primary/60" />
+                </div>
+                <div
+                  style={{ "--crm-w": `${crmPanelWidth}px` } as React.CSSProperties}
+                  className="hidden lg:flex lg:flex-col lg:w-[var(--crm-w)] lg:shrink-0"
+                >
+                  <ContactDealSidebar
+                    side="right"
+                    contactId={selected.contact.id}
+                    contactName={selected.contact.name}
+                    contactPhone={selected.contact.phone}
+                    lastInboundAt={selected.lastInboundAt}
+                    conversationId={selected.id}
+                    channel={selected.channel}
+                    onBack={() => setSelected(null)}
+                    onCreateDeal={() => setDealOpen(true)}
+                    onCollapse={toggleRightPanel}
+                  />
+                </div>
+              </>
             ) : (
               <div className="hidden w-9 shrink-0 flex-col items-center gap-2 border-l border-border bg-white py-3 lg:flex">
                 <TooltipHost label="Expandir painel CRM" side="left">

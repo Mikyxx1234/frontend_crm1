@@ -1,12 +1,9 @@
 "use client";
 
 import { ArrowRight, Bell, MessageSquare, Sparkles, Zap } from "lucide-react";
-import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-
-const STORAGE_KEY = "eduit:onboarding-v1:dismissed";
 
 type Step = {
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -42,44 +39,45 @@ const STEPS: Step[] = [
   },
 ];
 
+export interface OnboardingTourProps {
+  /**
+   * Quando true, abre o tour. Quando undefined, o componente opera no modo
+   * "fechado por padrão" — nunca abre sozinho. Use junto com `onOpenChange`
+   * para controle externo (ex.: botão "Ajuda" futuro).
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
 /**
- * Tour de onboarding leve — 4 passos overlay no primeiro acesso ao
- * dashboard. Persistido em `localStorage` para nunca repetir após dispensar.
+ * Tour de onboarding leve — 4 passos overlay com ícone, título, corpo, dots
+ * e CTA. Responsivo (sheet bottom em mobile, dialog centralizado em desktop).
  *
- * Não renderiza fora do dashboard (verifica pathname). Não bloqueia
- * uso — backdrop transparente clicável fecha. CSS-only, sem libs.
- *
- * Visual: card centralizado com ícone grande, título, corpo, dots e CTA.
- * Responsivo (sheet bottom em mobile, dialog centralizado em desktop).
+ * IMPORTANTE: não abre mais automaticamente. Para exibir, controle via prop
+ * `open` (ex.: a partir de um botão "Ajuda"). A persistência por localStorage
+ * foi removida pelo mesmo motivo — o pai decide quando reabrir.
  */
-export function OnboardingTour() {
-  const pathname = usePathname();
-  const [open, setOpen] = React.useState(false);
+export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourProps = {}) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
   const [step, setStep] = React.useState(0);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      if (!isControlled) setInternalOpen(next);
+      onOpenChange?.(next);
+    },
+    [isControlled, onOpenChange],
+  );
 
   React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!pathname || pathname.startsWith("/login") || pathname.startsWith("/register")) {
-      return;
-    }
-    // Só na home do app — evita overlay bloqueando Inbox/Pipeline logo após login (callbackUrl).
-    const isDashboardHome = pathname === "/" || pathname === "/dashboard";
-    if (!isDashboardHome) return;
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === "1") return;
-    } catch {
-      return;
-    }
-    const t = setTimeout(() => setOpen(true), 1200);
-    return () => clearTimeout(t);
-  }, [pathname]);
+    if (open) setStep(0);
+  }, [open]);
 
   const dismiss = React.useCallback(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, "1");
-    } catch {}
     setOpen(false);
-  }, []);
+  }, [setOpen]);
 
   const next = () => {
     if (step >= STEPS.length - 1) {

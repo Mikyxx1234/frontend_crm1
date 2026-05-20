@@ -493,7 +493,7 @@ export function KanbanBoard({
             >
               <div
                 data-minimap-bar
-                className="relative h-10 w-44 max-w-[200px] min-h-[40px] cursor-pointer overflow-hidden rounded-md bg-zinc-300 opacity-60 transition-all duration-200 group-hover:opacity-100 group-hover:shadow-[var(--shadow-md)] sm:w-48 sm:max-w-[220px]"
+                className="relative h-10 w-44 max-w-[200px] min-h-[40px] cursor-pointer overflow-hidden rounded-md bg-[var(--color-bg-muted)] opacity-60 transition-all duration-200 group-hover:opacity-100 group-hover:shadow-[var(--shadow-md)] sm:w-48 sm:max-w-[220px]"
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const pct = (e.clientX - rect.left) / rect.width;
@@ -503,12 +503,12 @@ export function KanbanBoard({
                 {filteredStages.map((_, i) => i > 0 && (
                   <div
                     key={i}
-                    className="absolute top-0 h-full w-px bg-white/60"
+                    className="absolute top-0 h-full w-px bg-[var(--color-border)]"
                     style={{ left: `${(i / filteredStages.length) * 100}%` }}
                   />
                 ))}
                 <div
-                  className="absolute inset-y-0 rounded-md bg-zinc-500 transition-[left,width] duration-75 group-hover:bg-primary"
+                  className="absolute inset-y-0 rounded-md bg-[var(--color-ink-muted)] transition-[left,width] duration-75 group-hover:bg-primary"
                   style={{
                     width: `${Math.max(8, (scrollState.client / scrollState.width) * 100)}%`,
                     left: `${scrollState.width > scrollState.client
@@ -549,7 +549,7 @@ export function KanbanBoard({
                   "flex w-full max-w-xl items-center justify-center gap-3 rounded-2xl border px-5 py-4 text-[13px] font-semibold transition-all sm:text-[14px]",
                   snapshot.isDraggingOver
                     ? "scale-105 border-rose-400 bg-rose-500 text-white shadow-[0_8px_24px_-8px_rgba(244,63,94,0.6)]"
-                    : "border-rose-200 bg-white/95 text-rose-600 shadow-[0_4px_16px_-4px_rgba(15,23,42,0.18)] backdrop-blur-sm",
+                    : "border-rose-200 bg-[var(--glass-bg-overlay)] text-rose-600 shadow-[0_4px_16px_-4px_rgba(15,23,42,0.18)] backdrop-blur-sm dark:border-rose-500/40 dark:text-rose-300",
                 )}
                 aria-label="Solte aqui para excluir o negócio"
               >

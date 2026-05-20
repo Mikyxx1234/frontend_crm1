@@ -9,6 +9,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   Copy,
   Star,
@@ -51,6 +52,35 @@ export function SavedFiltersMenu({
   anchorRef,
 }: Props) {
   const ref = React.useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = React.useState<{ top: number; right: number } | null>(
+    null,
+  );
+  const [isDark, setIsDark] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const update = () => setIsDark(document.documentElement.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    function compute() {
+      const rect = anchorRef?.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+    compute();
+    window.addEventListener("scroll", compute, true);
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute, true);
+      window.removeEventListener("resize", compute);
+    };
+  }, [open, anchorRef]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -71,21 +101,32 @@ export function SavedFiltersMenu({
     };
   }, [open, onOpenChange, anchorRef]);
 
-  if (!open) return null;
+  if (!open || !pos || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
+    // Portal no <body> + posição fixed + cor literal inline: blindagem
+    // total contra stacking/backdrop-filter de ancestrais.
     <div
       ref={ref}
-      className="absolute right-0 top-full z-40 mt-2 w-72 rounded-[18px] border border-white/55 bg-white/80 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+      style={{
+        position: "fixed",
+        top: pos.top,
+        right: pos.right,
+        width: 288,
+        zIndex: 9999,
+        backgroundColor: isDark ? "#1a2238" : "#ffffff",
+        isolation: "isolate",
+      }}
+      className="rounded-[18px] border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-slate-700"
     >
-      <div className="flex items-center justify-between border-b border-white/40 px-3 py-2">
+      <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">
         <span className="font-display text-[12px] font-bold text-foreground">Filtros salvos</span>
         {loading && <Loader2 className="size-3 animate-spin text-[var(--color-ink-muted)]" />}
       </div>
 
       <div className="max-h-80 overflow-y-auto py-1">
         {filters.length === 0 && !loading && (
-          <p className="px-3 py-4 text-center text-[11px] text-zinc-400">
+          <p className="px-3 py-4 text-center text-[11px] text-[var(--color-ink-muted)]">
             Nenhum filtro salvo ainda. Abra o painel, configure e clique em &ldquo;Salvar&rdquo;.
           </p>
         )}
@@ -94,7 +135,7 @@ export function SavedFiltersMenu({
           return (
             <div
               key={f.id}
-              className="group flex items-start gap-2 px-3 py-2 transition-colors hover:bg-white/45"
+              className="group flex items-start gap-2 px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
             >
               <button
                 type="button"
@@ -105,15 +146,15 @@ export function SavedFiltersMenu({
                 className="flex-1 text-left"
               >
                 <div className="flex items-center gap-1.5">
-                  <Bookmark className="size-3 text-blue-500" />
-                  <span className="truncate text-[12px] font-semibold text-zinc-800">
+                  <Bookmark className="size-3 text-blue-500 dark:text-blue-400" />
+                  <span className="truncate text-[12px] font-semibold text-foreground">
                     {f.name}
                   </span>
                   {f.isDefault && (
                     <Star className="size-3 fill-amber-400 text-amber-500" aria-label="Padrão" />
                   )}
                 </div>
-                <div className="mt-0.5 flex items-center gap-2 text-[10px] text-zinc-400">
+                <div className="mt-0.5 flex items-center gap-2 text-[10px] text-[var(--color-ink-muted)]">
                   {f.isShared ? (
                     <span className="inline-flex items-center gap-0.5">
                       <UsersIcon className="size-2.5" /> Compartilhado
@@ -132,7 +173,7 @@ export function SavedFiltersMenu({
                   onClick={() => onToggleDefault(f)}
                   title={f.isDefault ? "Remover padrão" : "Marcar como padrão"}
                   className={cn(
-                    "rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-amber-600",
+                    "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-amber-600 dark:hover:text-amber-400",
                     f.isDefault && "text-amber-500",
                   )}
                 >
@@ -142,7 +183,7 @@ export function SavedFiltersMenu({
                   type="button"
                   onClick={() => onDuplicate(f)}
                   title="Duplicar"
-                  className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                  className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground"
                 >
                   <Copy className="size-3" />
                 </button>
@@ -153,7 +194,7 @@ export function SavedFiltersMenu({
                       if (confirm(`Excluir filtro "${f.name}"?`)) onDelete(f);
                     }}
                     title="Excluir"
-                    className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-red-600"
+                    className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-red-600 dark:hover:text-red-400"
                   >
                     <Trash2 className="size-3" />
                   </button>
@@ -163,7 +204,8 @@ export function SavedFiltersMenu({
           );
         })}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -199,7 +241,7 @@ export function SaveFilterDialog({
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/30 p-4 backdrop-blur-md">
-      <div className="w-full max-w-sm rounded-[22px] border border-white/55 bg-white/80 p-5 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
+      <div className="w-full max-w-sm rounded-[22px] border border-[var(--glass-border)] bg-[var(--color-popover)] p-5 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
         <h2 className="font-display text-base font-bold text-foreground">Salvar filtro</h2>
         <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
           Reutilize esse conjunto de critérios depois.
@@ -219,17 +261,17 @@ export function SaveFilterDialog({
           className="mt-4 space-y-3"
         >
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-700">Nome</label>
+            <label className="block text-[11px] font-semibold text-[var(--color-ink-soft)]">Nome</label>
             <input
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex.: Meus leads de hoje"
-              className="mt-1 h-9 w-full rounded-md border border-zinc-200 px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="mt-1 h-9 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-sm text-foreground placeholder:text-[var(--color-ink-muted)] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
           {canShare && (
-            <label className="flex items-center gap-2 text-[12px] text-zinc-700">
+            <label className="flex items-center gap-2 text-[12px] text-[var(--color-ink-soft)]">
               <input
                 type="checkbox"
                 checked={isShared}
@@ -238,7 +280,7 @@ export function SaveFilterDialog({
               Compartilhar com a equipe
             </label>
           )}
-          <label className="flex items-center gap-2 text-[12px] text-zinc-700">
+          <label className="flex items-center gap-2 text-[12px] text-[var(--color-ink-soft)]">
             <input
               type="checkbox"
               checked={isDefault}

@@ -80,15 +80,11 @@ export function KanbanColumn({
   const remaining = Math.max(0, (stage.totalCount ?? visibleCount) - visibleCount);
   return (
     <div className="flex h-full min-h-0 w-[280px] shrink-0 flex-col self-stretch sm:w-[300px]">
-      <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[22px] border border-white/55 bg-white/30 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-        <header className="relative shrink-0 border-b border-white/40 bg-white/50 px-3 py-2.5 backdrop-blur">
-          {/* Barra de cor da etapa — 3px no topo */}
-          {stage.color ? (
-            <div
-              className="absolute inset-x-0 top-0 h-[3px] rounded-t-[22px]"
-              style={{ backgroundColor: stage.color }}
-            />
-          ) : null}
+      {/* Surface da coluna: tokens de glass do tema (substituem `bg-white/30`
+          que ficava esbranquiçado em dark). Listras laterais suavizadas com
+          borda única usando `--glass-border-subtle`. */}
+      <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[22px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        <header className="relative shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2.5 backdrop-blur">
           <div className="flex items-start justify-between gap-2">
             <h3 className="min-w-0 truncate font-display text-[13px] font-semibold leading-tight text-foreground">
               {stage.name}
@@ -96,23 +92,34 @@ export function KanbanColumn({
             <div className="flex shrink-0 items-center gap-1">
               {attentionInColumn > 0 ? (
                 <TooltipHost label={`${attentionInColumn} negócio(s) precisam de atenção`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center rounded-full border border-amber-300/40 bg-amber-100/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-amber-900">
+                  <span className="flex min-w-5 items-center justify-center rounded-full border border-amber-300/40 bg-amber-100/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-200">
                     {attentionInColumn}
                   </span>
                 </TooltipHost>
               ) : null}
               {unreadInColumn > 0 ? (
                 <TooltipHost label={`${unreadInColumn} mensagem(ns) não lida(s) nesta etapa`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-emerald-50/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-700">
+                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-emerald-50/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
                     <MessageCircle className="size-3" />
                     {unreadInColumn}
                   </span>
                 </TooltipHost>
               ) : null}
-              <span className="flex min-w-5 items-center justify-center rounded-full border border-white/55 bg-white/60 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-ink-soft)]">{count}</span>
+              <span className="flex min-w-5 items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-ink-soft)]">{count}</span>
             </div>
           </div>
-          <p className="mt-0.5 text-[11px] tabular-nums text-[var(--color-ink-muted)]">{formatCurrency(totalValue)}</p>
+          {/* Faixa de cor da etapa — agora ABAIXO do nome (era no topo
+              da coluna). Posicionada como underline do título, com cantos
+              arredondados próprios. Mantém opacidade reduzida em dark
+              mode pra não competir com o glass escuro. */}
+          {stage.color ? (
+            <div
+              className="mt-1.5 h-[2px] w-full rounded-full opacity-90 dark:opacity-60"
+              style={{ backgroundColor: stage.color }}
+              aria-hidden
+            />
+          ) : null}
+          <p className="mt-1.5 text-[11px] tabular-nums text-[var(--color-ink-muted)]">{formatCurrency(totalValue)}</p>
         </header>
 
         <Droppable droppableId={stage.id}>
@@ -125,7 +132,7 @@ export function KanbanColumn({
               {...droppableRest}
               className={cn(
                 "kanban-scroll flex min-h-[120px] flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden p-2",
-                snapshot.isDraggingOver && "bg-primary/10",
+                snapshot.isDraggingOver && "bg-primary/10 dark:bg-primary/15",
               )}
               style={{ ...ghostScrollStyle, ...droppableStyle }}
             >
@@ -176,7 +183,7 @@ export function KanbanColumn({
               <button
                 type="button"
                 onClick={() => onAddCard?.(stage.id)}
-                className="mt-0.5 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/55 py-2 text-xs font-medium text-[var(--color-ink-muted)] transition-colors hover:border-primary/40 hover:bg-white/40 hover:text-foreground"
+                className="mt-0.5 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--glass-border-subtle)] py-2 text-xs font-medium text-[var(--color-ink-muted)] transition-colors hover:border-primary/40 hover:bg-[var(--glass-bg-strong)] hover:text-foreground"
                 aria-label={`Adicionar negócio em ${stage.name}`}
               >
                 <Plus className="size-4" strokeWidth={2.5} />

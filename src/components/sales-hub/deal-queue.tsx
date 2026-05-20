@@ -981,8 +981,10 @@ function DealCard({
       className={cn(
         // NÃO usar `overflow-hidden`: o popover de responsável precisa
         // escapar do card. Ativo = rail azul + fundo blue-50 (WhatsApp refinado).
-        "group relative cursor-pointer select-none bg-white text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/40",
-        isActive ? "border-l-2 border-l-blue-500 bg-blue-50" : "hover:bg-slate-50",
+        "group relative cursor-pointer select-none bg-white text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:bg-slate-900",
+        isActive
+          ? "border-l-2 border-l-blue-500 bg-blue-50 dark:bg-blue-500/10"
+          : "hover:bg-slate-50 dark:hover:bg-slate-800/50",
         wasRecentlyMoved && "ring-2 ring-inset ring-cyan-400/45",
       )}
     >
@@ -1014,12 +1016,12 @@ function DealCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="truncate text-[13px] font-semibold text-slate-900">{headline}</p>
-            <span className="shrink-0 text-[10px] tabular-nums text-slate-400">{timeLabel}</span>
+            <p className="truncate text-[13px] font-semibold text-foreground">{headline}</p>
+            <span className="shrink-0 text-[10px] tabular-nums text-[var(--color-ink-muted)]">{timeLabel}</span>
           </div>
 
           {!expanded ? (
-            <p className="mt-0.5 truncate text-[12px] text-slate-400">
+            <p className="mt-0.5 truncate text-[12px] text-[var(--color-ink-muted)]">
               <PreviewLastMessage deal={deal} />
             </p>
           ) : null}
@@ -1036,7 +1038,7 @@ function DealCard({
                 </span>
               ))}
               {tagList.length > 3 ? (
-                <span className="text-[10px] text-slate-400">+{tagList.length - 3}</span>
+                <span className="text-[10px] text-[var(--color-ink-muted)]">+{tagList.length - 3}</span>
               ) : null}
             </div>
           ) : null}
@@ -1070,12 +1072,12 @@ function DealCard({
             className="overflow-hidden"
           >
             <div
-              className="border-t border-slate-100 bg-white"
+              className="border-t border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900"
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
             >
-              <div className="border-b border-slate-100 bg-slate-50 px-3 py-2">
+              <div className="border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/40">
                 <div className="flex items-center gap-2">
-                  <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-slate-200">
+                  <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                     <div
                       className="absolute inset-y-0 left-0 rounded-full transition-all"
                       style={{ width: `${stageProgressPct}%`, backgroundColor: stageBarColor }}

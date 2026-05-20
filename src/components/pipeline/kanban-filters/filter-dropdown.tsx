@@ -6,11 +6,17 @@
  *
  * Fecha ao clicar fora ou ESC. Click no proprio anchor nao fecha (deixa
  * o usuario digitar e abrir o painel ao mesmo tempo).
+ *
+ * RENDER: via `createPortal` em `document.body` — escapa de qualquer
+ * stacking context / `backdrop-filter` / overflow do pai que estava
+ * deixando o popover translúcido. Posição calculada a partir do
+ * `getBoundingClientRect()` do anchor + reposiciona em scroll/resize.
  */
 
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 
@@ -52,6 +58,39 @@ export function FilterDropdown({
   className,
 }: Props) {
   const ref = React.useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = React.useState<{ top: number; left: number } | null>(
+    null,
+  );
+  const [isDark, setIsDark] = React.useState(false);
+
+  // Detecta dark mode pelo `.dark` no <html> (next-themes attribute=class).
+  // Inline style precisa do valor literal pq `var(--dropdown-solid-bg)`
+  // pode falhar dependendo de onde o portal é montado.
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const update = () => setIsDark(document.documentElement.classList.contains("dark"));
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
+  // Posiciona o dropdown a partir do retângulo do anchor.
+  React.useEffect(() => {
+    if (!open) return;
+    function compute() {
+      const rect = anchorRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPos({ top: rect.bottom + 8, left: rect.left });
+    }
+    compute();
+    window.addEventListener("scroll", compute, true);
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute, true);
+      window.removeEventListener("resize", compute);
+    };
+  }, [open, anchorRef]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -72,15 +111,30 @@ export function FilterDropdown({
     };
   }, [open, onOpenChange, anchorRef]);
 
-  if (!open) return null;
+  if (!open || !pos || typeof document === "undefined") return null;
 
-  return (
+  // Portal direto no <body> escapa de qualquer stacking context,
+  // backdrop-filter ou overflow:hidden do pai que vinha causando o
+  // popover aparentar translúcido. Position fixed + coords absolutas
+  // do anchor. Cor de fundo via VALOR LITERAL inline (não var(--))
+  // pra ser 100% imune a escopo de CSS variables.
+  return createPortal(
     <div
       ref={ref}
-      style={{ width, maxHeight }}
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        width,
+        height: maxHeight,
+        maxHeight,
+        zIndex: 9999,
+        backgroundColor: isDark ? "#1a2238" : "#ffffff",
+        isolation: "isolate",
+      }}
       className={cn(
-        "absolute left-0 top-full z-50 mt-2 flex flex-col overflow-hidden",
-        "rounded-[22px] border border-white/55 bg-white/80 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
+        "flex flex-col overflow-hidden",
+        "rounded-[22px] border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-slate-700",
         className,
       )}
     >
@@ -95,6 +149,7 @@ export function FilterDropdown({
         onClose={() => onOpenChange(false)}
         withHeader
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

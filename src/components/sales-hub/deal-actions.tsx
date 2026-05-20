@@ -187,9 +187,9 @@ export function DealStageSelector({
         aria-haspopup="listbox"
         aria-expanded={stageOpen}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 text-left transition-all hover:border-slate-300",
+          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 text-left transition-all hover:border-slate-300 dark:bg-slate-800/50 dark:hover:border-slate-600",
           stageOpen &&
-            "border-blue-600 bg-white shadow-[0_0_0_3px_rgba(37,99,235,0.12)]",
+            "border-blue-600 bg-white shadow-[0_0_0_3px_rgba(37,99,235,0.12)] dark:bg-slate-800/80",
           moveMutation.isPending && "cursor-wait opacity-60",
         )}
       >
@@ -200,7 +200,7 @@ export function DealStageSelector({
         <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
           Etapa
         </span>
-        <span className="min-w-0 flex-1 truncate text-[12px] font-extrabold tracking-tight text-slate-900">
+        <span className="min-w-0 flex-1 truncate text-[12px] font-extrabold tracking-tight text-foreground">
           {currentStage?.name ?? "—"}
         </span>
         {showValue && deal.value != null && (
@@ -214,8 +214,8 @@ export function DealStageSelector({
             menos evidente. */}
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-slate-500 transition-transform",
-            stageOpen && "rotate-180 text-blue-600",
+            "size-4 shrink-0 text-slate-500 transition-transform dark:text-slate-400",
+            stageOpen && "rotate-180 text-blue-600 dark:text-blue-400",
           )}
           strokeWidth={2.5}
         />
@@ -233,10 +233,10 @@ export function DealStageSelector({
             // elemento abaixo. max-h calibrada pra caber ~7 etapas
             // sem precisar rolar; caso ultrapasse, o scroll custom
             // aparece só quando necessário.
-            className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
+            className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)] dark:bg-slate-800 dark:shadow-[0_20px_48px_-16px_rgba(0,0,0,0.6)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+            <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-700">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                 Mover para
               </span>
@@ -362,7 +362,7 @@ export function DealStageBar({
           className="size-2 shrink-0 rounded-full transition-colors"
           style={{ backgroundColor: shownColor }}
         />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-extrabold tracking-tight text-slate-900">
+        <span className="min-w-0 flex-1 truncate text-[13px] font-extrabold tracking-tight text-foreground">
           {shownName}
         </span>
         {moveMutation.isPending && (
@@ -380,7 +380,7 @@ export function DealStageBar({
         role="group"
         aria-label="Mover deal entre etapas"
       >
-        <div className="flex h-full w-full overflow-hidden rounded-full bg-slate-200">
+        <div className="flex h-full w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
           {stages.map((stage, idx) => {
             const isCurrent = stage.id === deal.stageId;
             const isPast = currentIdx >= 0 && idx < currentIdx;

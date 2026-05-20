@@ -72,18 +72,18 @@ function SalesHubChatEmptyState({
   title: string;
   subtitle: string;
 }) {
-  // DNA Chat: fundo branco, ícone neutro sem cartão, tipografia
-  // hierarquia 16/13. Sem borders/cards dentro do empty.
+  // Surface neutra usando tokens do tema — `bg-white` virava placa
+  // branca destoante em dark mode. Agora segue o background do app.
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-white p-8">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-white p-8 dark:bg-slate-900">
       <MessageSquareOff
-        className="size-7 text-slate-300"
+        className="size-7 text-slate-300 dark:text-slate-600"
         strokeWidth={1.5}
       />
-      <p className="text-[16px] font-semibold tracking-tight text-slate-800">
+      <p className="text-[16px] font-semibold tracking-tight text-foreground">
         {title}
       </p>
-      <p className="max-w-xs text-center text-[13px] text-slate-500">
+      <p className="max-w-xs text-center text-[13px] text-[var(--color-ink-muted)]">
         {subtitle}
       </p>
     </div>
@@ -542,12 +542,10 @@ export function SalesHubView({
   const hubChromeCompact = false;
 
   return (
-    // DNA Chat: root branco, sem fundo cinza nem cartões flutuando.
-    // Estrutura "split view" — sidebar | divisor 1px | chat — exatamente
-    // como o Inbox (lista de conversas | ChatWindow). Sem padding ao
-    // redor, sem gaps, sem shadows. Hierarquia vem de tipografia +
-    // divisores hairline (slate-100), não de cartões empilhados.
-    <div ref={rootRef} className="flex h-full flex-col bg-white" tabIndex={-1}>
+    // Root usa `bg-white dark:bg-slate-900` em vez de `bg-white` cravado —
+    // antes o Sales Hub continuava claro mesmo com tema dark ativo.
+    // Estrutura "split view" preservada (sidebar | chat).
+    <div ref={rootRef} className="flex h-full flex-col bg-white dark:bg-slate-900" tabIndex={-1}>
       <StageRibbon
         stages={funnelStages}
         selectedStageId={selectedStageId}
@@ -564,15 +562,18 @@ export function SalesHubView({
             : "flex",
         )}
       >
-        {/* Coluna 1 — Fila: grid com coluna fixa estreita quando há deal
-            ativo (mesma ideia do DealWorkspace: sidebar | chat flexível).
-            Mobile: fila 100% até selecionar deal. */}
+        {/* Coluna 1 — Fila.
+            • SEM deal ativo: ocupa 100% da largura (a fila vira a tela
+              inteira — não fica espremida 300px com o resto preto).
+            • COM deal ativo: vira coluna estreita (300/340px) à esquerda
+              do chat, igual ao DealWorkspace.
+            Mobile: idem em ambos os modos. */}
         <div
           className={cn(
-            "flex min-h-0 shrink-0 flex-col overflow-hidden border-r border-border bg-white",
+            "flex min-h-0 flex-col overflow-hidden bg-white dark:bg-slate-900",
             activeDeal
-              ? "hidden min-w-0 md:flex"
-              : "w-full md:w-[300px] md:shrink-0 xl:w-[340px]",
+              ? "hidden min-w-0 shrink-0 border-r border-border md:flex"
+              : "w-full",
           )}
         >
           <div className="shrink-0 border-b border-border px-3 py-2">
@@ -626,20 +627,16 @@ export function SalesHubView({
         </div>
 
         {/* Coluna 2 — Chat compacto (compactChrome) + barra mínima de ações.
-            Mobile: hidden quando nenhum deal está ativo — a fila ocupa
-            100% até o operador escolher um deal. */}
+            Sem deal ativo: a coluna inteira fica oculta (a fila ocupa
+            100%). Aparece só quando o operador escolhe um deal — aí
+            o grid acima vira [fila estreita | chat]. */}
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white",
-            !activeDeal && "hidden md:flex",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-slate-900",
+            !activeDeal && "hidden",
           )}
         >
-          {!activeDeal ? (
-            <SalesHubChatEmptyState
-              title="Selecione um deal"
-              subtitle="Escolha um card da fila ao lado para abrir a conversa do cliente."
-            />
-          ) : !activeContactId ? (
+          {!activeDeal ? null : !activeContactId ? (
             <SalesHubChatEmptyState
               title="Deal sem contato"
               subtitle="Este deal nao tem contato vinculado — atribua um contato para iniciar a conversa."

@@ -181,10 +181,10 @@ export function PipelineListView({
 
   // DNA Chat: ícones de sort em slate, ativo em blue (não cyan).
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="size-3 text-slate-300" strokeWidth={2} />;
+    if (sortField !== field) return <ArrowUpDown className="size-3 text-slate-300 dark:text-slate-600" strokeWidth={2} />;
     return sortDir === "asc"
-      ? <ArrowUp className="size-3 text-blue-600" strokeWidth={2} />
-      : <ArrowDown className="size-3 text-blue-600" strokeWidth={2} />;
+      ? <ArrowUp className="size-3 text-blue-600 dark:text-blue-400" strokeWidth={2} />
+      : <ArrowDown className="size-3 text-blue-600 dark:text-blue-400" strokeWidth={2} />;
   };
 
   const formatCurrency = (val: number | string) => {
@@ -201,9 +201,9 @@ export function PipelineListView({
   };
 
   return (
-    <div className="h-full overflow-auto bg-white">
+    <div className="h-full overflow-auto bg-white dark:bg-slate-900">
       <table className="w-full min-w-[900px] text-left text-[13px]">
-        <thead className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+        <thead className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
           <tr>
             <th className="w-10 px-4 py-3">
               <input
@@ -211,7 +211,7 @@ export function PipelineListView({
                 checked={allSelected}
                 ref={(el) => { if (el) el.indeterminate = !allSelected && someSelected; }}
                 onChange={toggleAll}
-                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30"
+                className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-800"
               />
             </th>
             {([
@@ -251,8 +251,8 @@ export function PipelineListView({
                 <tr
                   key={deal.id}
                   className={cn(
-                    "cursor-pointer border-b border-slate-100 transition-colors hover:bg-[var(--color-bg-subtle)]",
-                    selectedDeals.has(deal.id) && "bg-blue-50/50 hover:bg-blue-50/70",
+                    "cursor-pointer border-b border-slate-100 transition-colors hover:bg-[var(--color-bg-subtle)] dark:border-slate-800",
+                    selectedDeals.has(deal.id) && "bg-blue-50/50 hover:bg-blue-50/70 dark:bg-blue-500/10 dark:hover:bg-blue-500/15",
                   )}
                 >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -260,11 +260,11 @@ export function PipelineListView({
                       type="checkbox"
                       checked={selectedDeals.has(deal.id)}
                       onChange={() => toggleOne(deal.id)}
-                      className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30"
+                      className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-800"
                     />
                   </td>
                   <td
-                    className="max-w-[220px] truncate px-4 py-3 text-[13px] font-medium text-slate-900"
+                    className="max-w-[220px] truncate px-4 py-3 text-[13px] font-medium text-foreground"
                     onClick={() => onDealClick(deal.number?.toString() ?? deal.id)}
                   >
                     {deal.title || "Sem título"}
@@ -342,7 +342,7 @@ export function PipelineListView({
                     )}
                   </td>
                   <td
-                    className="px-4 py-3 text-[12px] tabular-nums text-slate-500"
+                    className="px-4 py-3 text-[12px] tabular-nums text-[var(--color-ink-muted)]"
                     onClick={() => onDealClick(deal.number?.toString() ?? deal.id)}
                   >
                     {formatDate(deal.createdAt)}

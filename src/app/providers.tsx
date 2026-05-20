@@ -36,13 +36,14 @@ export function Providers({
 
   return (
     <SessionProvider session={session}>
-      {/* CRM EduIT é light-only por design (ver ui-fidelity.mdc): cards brancos,
-          sidebar navy, sem toggle de tema. `enableSystem` ficou desligado e
-          `forcedTheme="light"` blinda contra `prefers-color-scheme: dark` do SO
-          do usuário — sem isso, o navegador em modo escuro injetava
-          `class="dark"` no <html> e o bloco `.dark` em globals.css (mantido só
-          por compatibilidade) sobrescrevia `--color-background` para preto. */}
-      <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} disableTransitionOnChange>
+      {/* Tema controlado pelo usuário via toggle (botão Sol/Lua no sidebar).
+          - `attribute="class"` aplica `.dark` no <html> quando ativo.
+          - `defaultTheme="light"` mantém light como padrão até o usuário escolher.
+          - `enableSystem={false}` ignora `prefers-color-scheme` do SO — só muda
+            quando o usuário clica no toggle (escolha explícita persiste em
+            localStorage via next-themes).
+          - Variáveis CSS para dark estão definidas em `globals.css` no bloco `.dark`. */}
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <ConfirmProvider>{children}</ConfirmProvider>

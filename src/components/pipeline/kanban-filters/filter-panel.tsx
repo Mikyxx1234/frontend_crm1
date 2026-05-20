@@ -48,7 +48,7 @@ export function FilterPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="max-w-md! flex flex-col gap-0 p-0">
         <SheetClose />
-        <SheetHeader className="border-b border-zinc-200 px-5 py-4 text-start">
+        <SheetHeader className="border-b border-[var(--color-border)] px-5 py-4 text-start">
           <SheetTitle className="text-base">Filtros avançados</SheetTitle>
           <SheetDescription>
             Combine critérios para refinar o Kanban. Aplique para atualizar a visão.

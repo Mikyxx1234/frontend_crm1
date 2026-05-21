@@ -91,6 +91,21 @@ type AutomationDetail = {
   }[];
 };
 
+type MetaWebhookEventLite = {
+  id: string;
+  receivedAt: string;
+  eventType: string;
+  objectType: string | null;
+  phoneNumberId: string | null;
+  waMessageId: string | null;
+  fromPhone: string | null;
+  signatureValid: boolean;
+  processed: boolean;
+  processingError: string | null;
+  headers: Record<string, unknown> | null;
+  rawBody: Record<string, unknown> | null;
+};
+
 type LogRow = {
   id: string;
   status: string;
@@ -99,6 +114,7 @@ type LogRow = {
   dealId: string | null;
   executedAt: string;
   payload?: Record<string, unknown> | null;
+  metaWebhookEvent?: MetaWebhookEventLite | null;
 };
 
 type LogsResponse = {
@@ -171,13 +187,14 @@ function LogsTableView({
       <TableBody>
         {rows.map((row) => {
           const hasPayload = row.payload && Object.keys(row.payload).length > 0;
+          const hasMetaWebhook = !!row.metaWebhookEvent;
           const msg = row.message ?? "";
           // Uma msg "longa" (>60 chars) também deve poder ser expandida
           // mesmo sem payload — é o caso típico de erro "send_whatsapp_message:
           // content obrigatório (mensagem vazia)" que antes ficava truncado
           // sem jeito de o operador ler o texto completo.
           const isLongMessage = msg.length > 60;
-          const isExpandable = hasPayload || isLongMessage;
+          const isExpandable = hasPayload || isLongMessage || hasMetaWebhook;
           const isExpanded = expandedId === row.id;
           return (
             <TableRow
@@ -208,9 +225,54 @@ function LogsTableView({
                   {row.message ?? "—"}
                 </div>
                 {isExpanded && hasPayload && (
-                  <pre className="mt-2 max-h-[200px] overflow-auto rounded border border-border bg-muted/50 p-2 text-[11px] leading-relaxed text-foreground">
-                    {JSON.stringify(row.payload, null, 2)}
-                  </pre>
+                  <div className="mt-2">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Resumo do trigger
+                    </div>
+                    <pre className="max-h-[200px] overflow-auto rounded border border-border bg-muted/50 p-2 text-[11px] leading-relaxed text-foreground">
+                      {JSON.stringify(row.payload, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {isExpanded && hasMetaWebhook && row.metaWebhookEvent && (
+                  <div className="mt-3">
+                    <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <span>Webhook Meta (payload bruto)</span>
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[9px] normal-case tracking-normal text-foreground/70">
+                        {row.metaWebhookEvent.eventType}
+                      </span>
+                      {row.metaWebhookEvent.signatureValid ? (
+                        <span className="text-[9px] font-medium normal-case text-emerald-600">assinatura ok</span>
+                      ) : (
+                        <span className="text-[9px] font-medium normal-case text-amber-600">assinatura não verificada</span>
+                      )}
+                    </div>
+                    <div className="mb-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground sm:grid-cols-4">
+                      {row.metaWebhookEvent.waMessageId && (
+                        <div><span className="font-mono">waMessageId:</span> {row.metaWebhookEvent.waMessageId}</div>
+                      )}
+                      {row.metaWebhookEvent.fromPhone && (
+                        <div><span className="font-mono">from:</span> {row.metaWebhookEvent.fromPhone}</div>
+                      )}
+                      {row.metaWebhookEvent.phoneNumberId && (
+                        <div><span className="font-mono">phoneNumberId:</span> {row.metaWebhookEvent.phoneNumberId}</div>
+                      )}
+                      <div><span className="font-mono">recebido:</span> {formatDateTime(row.metaWebhookEvent.receivedAt)}</div>
+                    </div>
+                    <pre className="max-h-[400px] overflow-auto rounded border border-border bg-muted/50 p-2 text-[11px] leading-relaxed text-foreground">
+                      {JSON.stringify(row.metaWebhookEvent.rawBody, null, 2)}
+                    </pre>
+                    {row.metaWebhookEvent.headers && Object.keys(row.metaWebhookEvent.headers).length > 0 && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-[10px] text-muted-foreground hover:text-foreground">
+                          Headers
+                        </summary>
+                        <pre className="mt-1 max-h-[150px] overflow-auto rounded border border-border bg-muted/30 p-2 text-[10px] leading-relaxed text-foreground/80">
+                          {JSON.stringify(row.metaWebhookEvent.headers, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
                 )}
               </TableCell>
             </TableRow>

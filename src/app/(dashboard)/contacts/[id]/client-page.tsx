@@ -45,6 +45,19 @@ type ContactDetail = {
   notes: NoteRow[];
   conversations: { id: string }[];
   createdAt: string; updatedAt: string;
+  adSourceId?: string | null;
+  adSourceType?: string | null;
+  adCtwaClid?: string | null;
+  adHeadline?: string | null;
+  adResolvedId?: string | null;
+  adResolvedName?: string | null;
+  adResolvedAdsetId?: string | null;
+  adResolvedAdsetName?: string | null;
+  adResolvedCampaignId?: string | null;
+  adResolvedCampaignName?: string | null;
+  adResolvedAt?: string | null;
+  adResolveStatus?: string | null;
+  adResolveError?: string | null;
 };
 
 type NoteRow = {
@@ -359,6 +372,60 @@ function ProfileSection({ contact, onUpdate, isUpdating }: {
             <InfoField label="Fase do ciclo" value={LIFECYCLE_OPTIONS.find((o) => o.value === contact.lifecycleStage)?.label ?? contact.lifecycleStage} />
             <InfoField label="Criado em" value={formatDateTime(contact.createdAt)} />
           </div>
+        )}
+        <AdOriginCard contact={contact} />
+      </div>
+    </div>
+  );
+}
+
+function AdOriginCard({ contact }: { contact: ContactDetail }) {
+  const hasAnything =
+    contact.adSourceId ||
+    contact.adResolvedId ||
+    contact.adHeadline ||
+    contact.adCtwaClid ||
+    contact.adResolveStatus;
+  if (!hasAnything) return null;
+
+  return (
+    <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Origem — Anúncio
+        </span>
+        {contact.adSourceType && (
+          <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground/70">
+            {contact.adSourceType}
+          </span>
+        )}
+      </div>
+      <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+        {contact.adHeadline && <InfoField label="Título" value={contact.adHeadline} />}
+        {contact.adResolvedId ? (
+          <InfoField label="Ad ID" value={contact.adResolvedId} />
+        ) : contact.adResolveStatus ? (
+          <InfoField
+            label="Ad ID"
+            value={`(${contact.adResolveStatus}${contact.adResolveError ? `: ${contact.adResolveError}` : ""})`}
+          />
+        ) : null}
+        {contact.adResolvedName && <InfoField label="Anúncio" value={contact.adResolvedName} />}
+        {contact.adResolvedCampaignName && (
+          <InfoField label="Campanha" value={contact.adResolvedCampaignName} />
+        )}
+        {contact.adResolvedAdsetName && (
+          <InfoField label="Conjunto" value={contact.adResolvedAdsetName} />
+        )}
+        {contact.adSourceId && (
+          <InfoField
+            label={contact.adSourceType === "ad" ? "Ad ID (source)" : "Post ID (source)"}
+            value={contact.adSourceId}
+          />
+        )}
+        {contact.adCtwaClid && <InfoField label="CTWA Click ID" value={contact.adCtwaClid} />}
+        {contact.adResolvedAt && (
+          <InfoField label="Resolvido em" value={formatDateTime(contact.adResolvedAt)} />
         )}
       </div>
     </div>

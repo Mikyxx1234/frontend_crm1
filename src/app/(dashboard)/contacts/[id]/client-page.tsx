@@ -58,6 +58,11 @@ type ContactDetail = {
   adResolvedAt?: string | null;
   adResolveStatus?: string | null;
   adResolveError?: string | null;
+  adUtmSource?: string | null;
+  adUtmMedium?: string | null;
+  adUtmCampaign?: string | null;
+  adUtmContent?: string | null;
+  adUtmTerm?: string | null;
 };
 
 type NoteRow = {
@@ -385,7 +390,9 @@ function AdOriginCard({ contact }: { contact: ContactDetail }) {
     contact.adResolvedId ||
     contact.adHeadline ||
     contact.adCtwaClid ||
-    contact.adResolveStatus;
+    contact.adResolveStatus ||
+    contact.adUtmSource ||
+    contact.adUtmCampaign;
   if (!hasAnything) return null;
 
   return (
@@ -428,6 +435,28 @@ function AdOriginCard({ contact }: { contact: ContactDetail }) {
           <InfoField label="Resolvido em" value={formatDateTime(contact.adResolvedAt)} />
         )}
       </div>
+      {(contact.adUtmSource ||
+        contact.adUtmMedium ||
+        contact.adUtmCampaign ||
+        contact.adUtmContent ||
+        contact.adUtmTerm) && (
+        <div className="mt-3 border-t border-border/60 pt-3">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            UTMs do anúncio
+          </div>
+          <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+            {contact.adUtmSource && <InfoField label="utm_source" value={contact.adUtmSource} />}
+            {contact.adUtmMedium && <InfoField label="utm_medium" value={contact.adUtmMedium} />}
+            {contact.adUtmCampaign && (
+              <InfoField label="utm_campaign" value={contact.adUtmCampaign} />
+            )}
+            {contact.adUtmContent && (
+              <InfoField label="utm_content" value={contact.adUtmContent} />
+            )}
+            {contact.adUtmTerm && <InfoField label="utm_term" value={contact.adUtmTerm} />}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

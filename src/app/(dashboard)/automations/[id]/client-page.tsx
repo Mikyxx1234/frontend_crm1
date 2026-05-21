@@ -121,6 +121,11 @@ type ContactAdTracking = {
   adResolvedAt: string | null;
   adResolveStatus: string | null;
   adResolveError: string | null;
+  adUtmSource: string | null;
+  adUtmMedium: string | null;
+  adUtmCampaign: string | null;
+  adUtmContent: string | null;
+  adUtmTerm: string | null;
 };
 
 type LogRow = {
@@ -323,6 +328,49 @@ function LogsTableView({
                         <div className="col-span-full">
                           <span className="text-muted-foreground">CTWA Click ID:</span>{" "}
                           <span className="font-mono">{adTracking.adCtwaClid}</span>
+                        </div>
+                      )}
+                      {(adTracking.adUtmSource ||
+                        adTracking.adUtmMedium ||
+                        adTracking.adUtmCampaign ||
+                        adTracking.adUtmContent ||
+                        adTracking.adUtmTerm) && (
+                        <div className="col-span-full mt-2 border-t border-border/60 pt-2">
+                          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            UTMs do anúncio
+                          </div>
+                          <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
+                            {adTracking.adUtmSource && (
+                              <div>
+                                <span className="text-muted-foreground">utm_source:</span>{" "}
+                                <span className="font-mono">{adTracking.adUtmSource}</span>
+                              </div>
+                            )}
+                            {adTracking.adUtmMedium && (
+                              <div>
+                                <span className="text-muted-foreground">utm_medium:</span>{" "}
+                                <span className="font-mono">{adTracking.adUtmMedium}</span>
+                              </div>
+                            )}
+                            {adTracking.adUtmCampaign && (
+                              <div>
+                                <span className="text-muted-foreground">utm_campaign:</span>{" "}
+                                <span className="font-mono">{adTracking.adUtmCampaign}</span>
+                              </div>
+                            )}
+                            {adTracking.adUtmContent && (
+                              <div>
+                                <span className="text-muted-foreground">utm_content:</span>{" "}
+                                <span className="font-mono">{adTracking.adUtmContent}</span>
+                              </div>
+                            )}
+                            {adTracking.adUtmTerm && (
+                              <div>
+                                <span className="text-muted-foreground">utm_term:</span>{" "}
+                                <span className="font-mono">{adTracking.adUtmTerm}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

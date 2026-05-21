@@ -106,6 +106,23 @@ type MetaWebhookEventLite = {
   rawBody: Record<string, unknown> | null;
 };
 
+type ContactAdTracking = {
+  id: string;
+  adSourceId: string | null;
+  adSourceType: string | null;
+  adCtwaClid: string | null;
+  adHeadline: string | null;
+  adResolvedId: string | null;
+  adResolvedName: string | null;
+  adResolvedAdsetId: string | null;
+  adResolvedAdsetName: string | null;
+  adResolvedCampaignId: string | null;
+  adResolvedCampaignName: string | null;
+  adResolvedAt: string | null;
+  adResolveStatus: string | null;
+  adResolveError: string | null;
+};
+
 type LogRow = {
   id: string;
   status: string;
@@ -115,6 +132,7 @@ type LogRow = {
   executedAt: string;
   payload?: Record<string, unknown> | null;
   metaWebhookEvent?: MetaWebhookEventLite | null;
+  contactAdTracking?: ContactAdTracking | null;
 };
 
 type LogsResponse = {
@@ -188,13 +206,19 @@ function LogsTableView({
         {rows.map((row) => {
           const hasPayload = row.payload && Object.keys(row.payload).length > 0;
           const hasMetaWebhook = !!row.metaWebhookEvent;
+          const adTracking = row.contactAdTracking;
+          const hasAdTracking =
+            !!adTracking &&
+            (!!adTracking.adSourceId ||
+              !!adTracking.adResolvedId ||
+              !!adTracking.adResolveStatus);
           const msg = row.message ?? "";
           // Uma msg "longa" (>60 chars) também deve poder ser expandida
           // mesmo sem payload — é o caso típico de erro "send_whatsapp_message:
           // content obrigatório (mensagem vazia)" que antes ficava truncado
           // sem jeito de o operador ler o texto completo.
           const isLongMessage = msg.length > 60;
-          const isExpandable = hasPayload || isLongMessage || hasMetaWebhook;
+          const isExpandable = hasPayload || isLongMessage || hasMetaWebhook || hasAdTracking;
           const isExpanded = expandedId === row.id;
           return (
             <TableRow
@@ -232,6 +256,76 @@ function LogsTableView({
                     <pre className="max-h-[200px] overflow-auto rounded border border-border bg-muted/50 p-2 text-[11px] leading-relaxed text-foreground">
                       {JSON.stringify(row.payload, null, 2)}
                     </pre>
+                  </div>
+                )}
+                {isExpanded && hasAdTracking && adTracking && (
+                  <div className="mt-3 rounded border border-border bg-muted/30 p-2">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Origem — Anúncio
+                    </div>
+                    <div className="grid grid-cols-1 gap-x-3 gap-y-0.5 text-[11px] text-foreground sm:grid-cols-2">
+                      {adTracking.adHeadline && (
+                        <div className="col-span-full">
+                          <span className="text-muted-foreground">Título:</span>{" "}
+                          <span className="font-medium">{adTracking.adHeadline}</span>
+                        </div>
+                      )}
+                      {adTracking.adSourceType && (
+                        <div>
+                          <span className="text-muted-foreground">Origem do clique:</span>{" "}
+                          <span className="font-mono">{adTracking.adSourceType}</span>
+                          {adTracking.adSourceId ? (
+                            <span className="text-muted-foreground"> · </span>
+                          ) : null}
+                          {adTracking.adSourceId && (
+                            <span className="font-mono">{adTracking.adSourceId}</span>
+                          )}
+                        </div>
+                      )}
+                      {adTracking.adResolvedId ? (
+                        <div>
+                          <span className="text-muted-foreground">Ad ID:</span>{" "}
+                          <span className="font-mono">{adTracking.adResolvedId}</span>
+                        </div>
+                      ) : adTracking.adResolveStatus ? (
+                        <div>
+                          <span className="text-muted-foreground">Ad ID:</span>{" "}
+                          <span className="font-mono text-amber-600">
+                            ({adTracking.adResolveStatus}
+                            {adTracking.adResolveError ? `: ${adTracking.adResolveError}` : ""})
+                          </span>
+                        </div>
+                      ) : null}
+                      {adTracking.adResolvedName && (
+                        <div>
+                          <span className="text-muted-foreground">Anúncio:</span>{" "}
+                          <span>{adTracking.adResolvedName}</span>
+                        </div>
+                      )}
+                      {adTracking.adResolvedCampaignName && (
+                        <div>
+                          <span className="text-muted-foreground">Campanha:</span>{" "}
+                          <span>{adTracking.adResolvedCampaignName}</span>
+                          {adTracking.adResolvedCampaignId && (
+                            <span className="ml-1 font-mono text-muted-foreground">
+                              ({adTracking.adResolvedCampaignId})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {adTracking.adResolvedAdsetName && (
+                        <div>
+                          <span className="text-muted-foreground">Conjunto:</span>{" "}
+                          <span>{adTracking.adResolvedAdsetName}</span>
+                        </div>
+                      )}
+                      {adTracking.adCtwaClid && (
+                        <div className="col-span-full">
+                          <span className="text-muted-foreground">CTWA Click ID:</span>{" "}
+                          <span className="font-mono">{adTracking.adCtwaClid}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
                 {isExpanded && hasMetaWebhook && row.metaWebhookEvent && (

@@ -1122,7 +1122,7 @@ export default function PipelinePage({ initialView }: PipelinePageProps = {}) {
               <TooltipHost label="Kanban" side="bottom">
                 <button
                   type="button"
-                  onClick={() => { setSelectedDeals(new Set()); setViewMode("kanban"); }}
+                  onClick={() => setViewMode("kanban")}
                   className={cn(
                     "flex size-6 items-center justify-center rounded transition",
                     viewMode === "kanban"
@@ -1497,6 +1497,8 @@ export default function PipelinePage({ initialView }: PipelinePageProps = {}) {
               filterStage={filterStage}
               filterMsg={filterMsg}
               filterOverdue={filterOverdue}
+              selectedDeals={selectedDeals}
+              onSelectionChange={setSelectedDeals}
             />
           )
         )}

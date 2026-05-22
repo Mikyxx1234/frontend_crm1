@@ -5,6 +5,79 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-05-22 — Seleção em massa no Kanban (compartilhada com a Lista)
+
+**Decisão.** A seleção múltipla de deals e a `BulkActionsBar` que antes
+existiam só na view Lista agora funcionam também no Kanban. O estado de
+seleção (`selectedDeals: Set<string>` no `client-page.tsx`) é o MESMO
+para ambas as views — seleções persistem ao alternar Lista ↔ Kanban. A
+`BulkActionsBar` flutuante já era montada globalmente; só falta UI de
+seleção no card do Kanban, que foi adicionada via checkbox `hover-only`
+no canto superior esquerdo.
+
+**Contexto.** Toda a infraestrutura assíncrona (BullMQ + `BulkOperation`
++ `BulkOperationProgressDialog`) já estava ligada à `BulkActionsBar` da
+Lista. Restringir bulk operations à Lista era artificial — o Kanban é a
+view mais usada do CRM e o usuário precisava trocar de view só pra
+mover/etiquetar 50+ deals de uma vez. Mantemos drag-and-drop individual
+intacto (uma das principais affordances do Kanban) e adicionamos
+seleção como camada **aditiva**, não substitutiva.
+
+**Como ficou estruturado.**
+
+- `src/components/pipeline/kanban-card.tsx` — recebe `isSelected` +
+  `onToggleSelect` opcionais. Adiciona `<input type="checkbox">` à
+  esquerda do grip de drag (ocupa largura fixa pra evitar layout shift
+  em hover). Visual: `opacity-0 group-hover:opacity-100` quando não
+  selecionado, `opacity-100` permanente quando selecionado. Card
+  selecionado ganha borda primary + ring sutil + bg `primary/5` (DNA
+  visual consistente). `stopPropagation` em `onMouseDown` + `onClick`
+  do checkbox/label garante que o evento não vaza pro card (abriria o
+  `DealWorkspace`) nem interfere no `@hello-pangea/dnd`.
+- `src/components/pipeline/kanban-column.tsx` — recebe `selectedDeals`
+  + `onSelectionChange`. Calcula `selectedInColumnCount` (intersecção
+  com os deals CARREGADOS na coluna). Header da coluna ganha um
+  botão-ícone discreto à esquerda do nome da etapa: `Square` quando
+  nenhum selecionado, `CheckSquare` quando todos da coluna marcados,
+  toggle "selecionar todos N visíveis ↔ limpar todos da etapa". Quando
+  há seleção parcial, um pill `primary/15` ao lado do contador total
+  mostra `N selecionados` — feedback claro sem invadir layout.
+- `src/components/pipeline/kanban-board.tsx` — passthrough de
+  `selectedDeals` + `onSelectionChange` pras colunas. Zero alteração
+  na lógica de DnD (drag individual + drag-to-delete intactos).
+- `src/app/(dashboard)/pipeline/client-page.tsx` — REMOVIDO o
+  `setSelectedDeals(new Set())` que limpava a seleção ao trocar pra
+  Kanban (era workaround pra view sem suporte). Mantido o reset ao
+  trocar pra Pipeline Ágil (saleshub), que é fila de atendimento e
+  não tem checkbox.
+
+**Alternativas descartadas.**
+
+- **Modo "seleção" toggle global (estilo Trello).** Botão na toolbar
+  ativa modo seleção; checkboxes aparecem em todos os cards; drag
+  desabilita. Mais explícito mas com 2 cliques a mais (ativar +
+  selecionar). Optei por `hover-only` (decisão do usuário) — mais
+  enxuto pra o caso comum.
+- **Shift+click pra range-select.** Recurso power-user clássico, mas
+  como o Kanban tem deals em colunas distintas, "range" entre colunas
+  ficaria ambíguo. Adiável.
+- **Drag em massa (arrastar vários cards juntos).** `@hello-pangea/dnd`
+  não suporta nativamente. Implementar exigiria custom drag preview +
+  bloqueio do `Draggable` original em "ghost". Fora de escopo:
+  bulk-move via `BulkActionsBar` cobre o mesmo caso de uso (mover N
+  deals pra outra etapa) com fluxo assíncrono já testado.
+- **Persistir seleção entre sessões (localStorage).** Inicialmente
+  considerei. Mas como a seleção é volátil por natureza (depende dos
+  deals visíveis no momento), persistir só geraria confusão com deals
+  apagados/movidos. Sessão > sessão é o padrão correto.
+
+**Impacto em outras telas.** Nenhum. A `BulkActionsBar` já estava
+montada globalmente no `client-page` e agora atende as duas views
+sem condicional adicional. O hook `useBulkOperation` e o
+`BulkOperationProgressDialog` continuam idênticos.
+
+---
+
 ### 2026-05-22 — UI de progresso de operações em massa (BulkOperation)
 
 **Decisão.** Quando o backend de `POST /api/deals/bulk` (ação

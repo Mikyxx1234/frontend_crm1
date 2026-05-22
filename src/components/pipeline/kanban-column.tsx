@@ -9,7 +9,7 @@ import {
   type DroppableProvided,
   type DroppableStateSnapshot,
 } from "@hello-pangea/dnd";
-import { MessageCircle, Plus } from "lucide-react";
+import { CheckSquare, MessageCircle, Plus, Square } from "lucide-react";
 
 import type { CardVisibleFields } from "@/components/pipeline/card-fields-config";
 import { KanbanCard } from "@/components/pipeline/kanban-card";
@@ -50,6 +50,14 @@ type KanbanColumnProps = {
   onMarkLost: (dealId: string, reason: string) => void;
   statusBusy: { dealId: string; kind: "won" | "lost" } | null;
   recentlyMovedId: string | null;
+  /**
+   * Seleção em massa (compartilhada com a view Lista via `client-page`).
+   * `selectedDeals` é o Set GLOBAL — o componente filtra os que pertencem
+   * a esta stage pra mostrar contador e ações de coluna. `onSelectionChange`
+   * substitui o Set inteiro (mantém compatibilidade com a Lista).
+   */
+  selectedDeals?: Set<string>;
+  onSelectionChange?: (next: Set<string>) => void;
 };
 
 const ghostScrollStyle: React.CSSProperties = {
@@ -70,6 +78,8 @@ export function KanbanColumn({
   onMarkLost,
   statusBusy,
   recentlyMovedId,
+  selectedDeals,
+  onSelectionChange,
 }: KanbanColumnProps) {
   const visibleCount = stage.deals.length;
   // `count` prefere o total do servidor (independente do limit). Cai pro
@@ -78,6 +88,41 @@ export function KanbanColumn({
   const unreadInColumn = stage.deals.reduce((a, d) => a + (d.unreadCount ?? 0), 0);
   const attentionInColumn = stage.deals.filter((d) => d.isRotting || d.priority === "HIGH").length;
   const remaining = Math.max(0, (stage.totalCount ?? visibleCount) - visibleCount);
+
+  // Quantos cards desta etapa estão selecionados (intersecção com o Set
+  // global). Só consideramos os cards JÁ CARREGADOS na coluna — se a
+  // stage tem 500 deals e só carregamos 100, "selecionar todos" marca os
+  // 100 visíveis. Pra marcar todos sem load-more, seria necessária outra
+  // round-trip — fora de escopo dessa rodada.
+  const dealsInColumn = stage.deals;
+  const selectedInColumnCount = selectedDeals
+    ? dealsInColumn.reduce((acc, d) => acc + (selectedDeals.has(d.id) ? 1 : 0), 0)
+    : 0;
+  const allInColumnSelected =
+    selectedDeals != null && dealsInColumn.length > 0 && selectedInColumnCount === dealsInColumn.length;
+  const someInColumnSelected = selectedInColumnCount > 0;
+
+  const handleToggleSelectAllInColumn = React.useCallback(() => {
+    if (!selectedDeals || !onSelectionChange) return;
+    const next = new Set(selectedDeals);
+    if (allInColumnSelected) {
+      for (const d of dealsInColumn) next.delete(d.id);
+    } else {
+      for (const d of dealsInColumn) next.add(d.id);
+    }
+    onSelectionChange(next);
+  }, [allInColumnSelected, dealsInColumn, onSelectionChange, selectedDeals]);
+
+  const handleToggleSelectCard = React.useCallback(
+    (dealId: string) => {
+      if (!selectedDeals || !onSelectionChange) return;
+      const next = new Set(selectedDeals);
+      if (next.has(dealId)) next.delete(dealId);
+      else next.add(dealId);
+      onSelectionChange(next);
+    },
+    [onSelectionChange, selectedDeals],
+  );
   return (
     <div className="flex h-full min-h-0 w-[280px] shrink-0 flex-col self-stretch sm:w-[300px]">
       {/* Surface da coluna: tokens de glass do tema (substituem `bg-white/30`
@@ -86,9 +131,50 @@ export function KanbanColumn({
       <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[22px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
         <header className="relative shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2.5 backdrop-blur">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="min-w-0 truncate font-display text-[13px] font-semibold leading-tight text-foreground">
-              {stage.name}
-            </h3>
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              {/* Bot\u00e3o "selecionar todos os N desta etapa". Sempre vis\u00edvel
+                  quando h\u00e1 deals na coluna. Quando todos j\u00e1 est\u00e3o
+                  selecionados, vira "Limpar". Cor primary quando algum
+                  selecionado pra dar feedback de estado ativo. */}
+              {onSelectionChange && selectedDeals && dealsInColumn.length > 0 ? (
+                <TooltipHost
+                  label={
+                    allInColumnSelected
+                      ? `Limpar sele\u00e7\u00e3o desta etapa (${selectedInColumnCount})`
+                      : someInColumnSelected
+                      ? `Selecionar todos os ${dealsInColumn.length} (j\u00e1 marcados: ${selectedInColumnCount})`
+                      : `Selecionar todos os ${dealsInColumn.length} desta etapa`
+                  }
+                  side="bottom"
+                >
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAllInColumn}
+                    className={cn(
+                      "inline-flex size-5 shrink-0 items-center justify-center rounded transition-colors",
+                      someInColumnSelected
+                        ? "text-primary hover:bg-primary/10"
+                        : "text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground",
+                    )}
+                    aria-label={
+                      allInColumnSelected
+                        ? "Limpar sele\u00e7\u00e3o desta etapa"
+                        : "Selecionar todos desta etapa"
+                    }
+                    aria-pressed={someInColumnSelected}
+                  >
+                    {allInColumnSelected ? (
+                      <CheckSquare className="size-4" strokeWidth={2} />
+                    ) : (
+                      <Square className="size-4" strokeWidth={2} />
+                    )}
+                  </button>
+                </TooltipHost>
+              ) : null}
+              <h3 className="min-w-0 truncate font-display text-[13px] font-semibold leading-tight text-foreground">
+                {stage.name}
+              </h3>
+            </div>
             <div className="flex shrink-0 items-center gap-1">
               {attentionInColumn > 0 ? (
                 <TooltipHost label={`${attentionInColumn} negócio(s) precisam de atenção`} side="bottom">
@@ -102,6 +188,13 @@ export function KanbanColumn({
                   <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-emerald-50/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
                     <MessageCircle className="size-3" />
                     {unreadInColumn}
+                  </span>
+                </TooltipHost>
+              ) : null}
+              {someInColumnSelected ? (
+                <TooltipHost label={`${selectedInColumnCount} selecionado(s) nesta etapa`} side="bottom">
+                  <span className="flex min-w-5 items-center justify-center rounded-full border border-primary/30 bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+                    {selectedInColumnCount}
                   </span>
                 </TooltipHost>
               ) : null}
@@ -162,6 +255,12 @@ export function KanbanColumn({
                         statusBusy={statusBusy?.dealId === deal.id ? statusBusy.kind : null}
                         isDragging={dragSnapshot.isDragging}
                         isHighlighted={recentlyMovedId === deal.id}
+                        isSelected={selectedDeals?.has(deal.id) ?? false}
+                        onToggleSelect={
+                          onSelectionChange
+                            ? () => handleToggleSelectCard(deal.id)
+                            : undefined
+                        }
                       />
                     </div>
                   )}

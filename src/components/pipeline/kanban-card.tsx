@@ -46,6 +46,15 @@ type KanbanCardProps = {
   visibleFields?: CardVisibleFields;
   onClick?: () => void;
   isHighlighted?: boolean;
+  /**
+   * Seleção em massa (compartilhada com a view Lista). Quando `isSelected`
+   * for true, o card ganha borda accent + ring sutil. O checkbox aparece
+   * em hover do card (top-left, opacity-0 → group-hover:opacity-100) ou
+   * fica sempre visível quando o card está selecionado, pra o usuário
+   * conseguir desmarcar sem precisar passar o mouse exatamente em cima.
+   */
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 };
 
 /** Prévia curta da última mensagem do cliente (entrada). */
@@ -119,6 +128,8 @@ export function KanbanCard({
   visibleFields,
   onClick,
   isHighlighted,
+  isSelected,
+  onToggleSelect,
 }: KanbanCardProps) {
   const queryClient = useQueryClient();
   const { data: sessionData } = useSession();
@@ -221,9 +232,44 @@ export function KanbanCard({
           "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
           isDragging && "rotate-1 border-primary/40 bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-lg)]",
           isHighlighted && "animate-[kanban-highlight_3s_ease]",
+          // Card selecionado em bulk-mode: borda accent + ring sutil. Override
+          // de hover bg pra distinguir mesmo com mouse em cima de outro card.
+          isSelected && "border-primary/60 bg-primary/5 ring-1 ring-primary/40 dark:bg-primary/10",
         )}
       >
         <div className="relative flex">
+          {/* Checkbox de seleção em massa — aparece em hover do card OU
+              fica permanentemente visível quando o card está selecionado.
+              Ocupa largura FIXA (mesmo invisível) pra evitar layout shift
+              quando o mouse entra. Fica à ESQUERDA do grip pra não competir
+              pela mesma área de click e não atrapalhar o drag.
+              `stopPropagation` em mouseDown/click previne que o click vaze
+              pro card (abriria o DealWorkspace) ou interfira no DnD. */}
+          {onToggleSelect ? (
+            <label
+              className={cn(
+                "flex shrink-0 cursor-pointer items-start justify-center pl-1 pr-0 pt-2 transition-opacity",
+                isSelected
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
+              )}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={isSelected ? "Desmarcar negócio" : "Marcar negócio"}
+            >
+              <input
+                type="checkbox"
+                checked={!!isSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onToggleSelect();
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="size-3.5 cursor-pointer accent-primary"
+              />
+            </label>
+          ) : null}
+
           <button
             type="button"
             className="flex shrink-0 cursor-grab touch-none items-start justify-center border-0 bg-transparent px-1.5 py-2 text-[var(--color-ink-subtle)] hover:text-[var(--color-ink-soft)] active:cursor-grabbing"

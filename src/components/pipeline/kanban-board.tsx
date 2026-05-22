@@ -118,6 +118,13 @@ type KanbanBoardProps = {
   filterStage?: string;
   filterMsg?: "all" | "unread" | "no-reply";
   filterOverdue?: boolean;
+  /**
+   * Seleção em massa compartilhada com a view Lista (gerenciada no
+   * `client-page`). Passar `undefined` desabilita totalmente o modo
+   * seleção no Kanban (não renderiza checkboxes nem botões na coluna).
+   */
+  selectedDeals?: Set<string>;
+  onSelectionChange?: (next: Set<string>) => void;
 };
 
 export function KanbanBoard({
@@ -126,6 +133,7 @@ export function KanbanBoard({
   filter, currentUserId,
   searchQuery = "", filterAgent = "all", filterStage = "all",
   filterMsg = "all", filterOverdue = false,
+  selectedDeals, onSelectionChange,
 }: KanbanBoardProps) {
   const queryClient = useQueryClient();
   const [statusBusy, setStatusBusy] = React.useState<{ dealId: string; kind: "won" | "lost" } | null>(null);
@@ -465,6 +473,8 @@ export function KanbanBoard({
                     onMarkLost={(dealId, reason) => statusMutation.mutate({ dealId, status: "LOST", lostReason: reason })}
                     statusBusy={statusBusy}
                     recentlyMovedId={recentlyMoved}
+                    selectedDeals={selectedDeals}
+                    onSelectionChange={onSelectionChange}
                   />
                 </div>
               );

@@ -5,6 +5,84 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-05-22 — UI de progresso de operações em massa (BulkOperation)
+
+**Decisão.** Quando o backend de `POST /api/deals/bulk` (ação
+`move_stage`) responde **202** com `{ operationId, total }`, o frontend
+abre um `BulkOperationProgressDialog` que faz polling em
+`GET /api/bulk-operations/[id]` via o hook `useBulkOperation` até o
+status terminal (COMPLETED/PARTIAL/FAILED/CANCELLED). Para 200 (sync)
+mantemos o toast original `"X negócios atualizados"`. Nenhum endpoint
+do backend mudou de URL; apenas observamos o `res.status` para
+discriminar `sync` vs `async`.
+
+**Contexto.** O backend introduziu um worker dedicado (`leads-worker`)
+que processa lotes grandes (>50 deals ou `async: true` explícito) em
+segundo plano com persistência de progresso em Postgres
+(`BulkOperation`). Sem UI, o usuário não tem retorno visual: o `fetch`
+retorna 202 quase imediatamente e o board não muda até o worker
+terminar (segundos a minutos). O polling no Postgres é mais simples
+que SSE/WebSocket pra esse caso porque já temos `react-query`
+configurado globalmente, a frequência (2s) é baixa, e o status fica
+disponível mesmo se o user fechar a aba e voltar.
+
+**Como ficou estruturado.**
+
+- `src/hooks/use-bulk-operation.ts` — hook único, polling 2s com
+  `refetchInterval` que se desliga automaticamente em status terminal.
+  Reaproveita cache do react-query por `operationId`. Exporta os types
+  canônicos (`BulkOperationStatus`, `BulkOperationStatusResponse`)
+  alinhados ao shape do backend (não importa Prisma client no frontend).
+- `src/components/pipeline/bulk-operation-progress-dialog.tsx` —
+  componente glass reutilizável (qualquer feature que enfileire
+  `BulkOperation` pode usá-lo). Recebe `operationId | null`, dispara
+  `onFinished(data)` UMA vez ao terminar, e gera toasts apropriados
+  (success/warning/error/info) conforme status final. Se o user fechar
+  antes de terminar, mostra toast `"continua em segundo plano"`.
+- `src/components/pipeline/bulk-actions-bar.tsx` — único ponto que
+  consome o dialog hoje. A função `bulkAction()` agora retorna um
+  union discriminado `{ kind: 'sync' | 'async' }` e o
+  `onSuccess` da mutation decide entre toast direto ou abrir o modal.
+  Caso 503 (Redis offline mas BulkOperation criada) também abre o
+  modal — o primeiro poll já vai mostrar FAILED + razão.
+
+**Alternativas descartadas.**
+
+- **SSE/WebSocket pra progresso.** Mais reativo, mas exige novo
+  endpoint no backend + tratamento de reconexão + `eventsource` lib.
+  Polling de 2s é "good enough" pro caso de uso (operações típicas
+  duram poucos segundos) e o React Query já cuida de pausar em
+  background tab, cache, retry e dedup.
+- **Componente "global" tipo `<BackgroundJobsProvider>` montado no
+  layout do dashboard com lista persistente de jobs.** Plano legítimo
+  pra fase 2 (centro de notificações, histórico de jobs), mas hoje só
+  temos UM consumidor (a `BulkActionsBar`) e MUITAS feature flags
+  ainda não decididas (mostra jobs de outros usuários? agrupar por
+  tipo? push notification?). Manter o dialog local evita over-engineering.
+- **Misturar progresso na `BulkActionsBar` existente (sem modal).**
+  Conflita com seleção (a barra some quando `selectedCount=0` —
+  isso acontece imediatamente no `onSuccess` async, então a barra
+  desapareceria carregando o progresso "no nada"). Modal separado é
+  mais limpo: a barra some, o user vê o modal acompanhando o trabalho.
+- **Forçar `async: true` em TODOS os bulks (uniformizar fluxo).**
+  Quebraria UX pra ações pequenas (3-5 deals) que hoje retornam em
+  <200ms — pra elas o roundtrip extra do polling é pior que o toast
+  direto. O threshold (>50 deals) do backend respeita isso.
+
+**Impacto.**
+
+- Zero mudança em `next.config.ts` (catch-all `/api/:path*` já cobre
+  `/api/bulk-operations/[id]` e `/api/deals/bulk/custom-fields`).
+- Zero mudança em `providers.tsx` (`QueryClient` global já existente
+  serve o hook).
+- O hook e o dialog estão prontos pra serem reusados quando a UI de
+  bulk de campos personalizados (`POST /api/deals/bulk/custom-fields`)
+  for implementada — basta `setProgressOperationId(resp.operationId)`.
+- Operações de move_stage com até 50 deals continuam síncronas (toast
+  imediato). Acima de 50, modal abre automaticamente.
+
+---
+
 ### 2026-05-19 — Visual refresh glassmorphism via remap de tokens
 
 **Decisão.** Reskin completo do CRM seguindo o design system

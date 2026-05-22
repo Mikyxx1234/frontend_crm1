@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRightLeft,
   CheckCircle2,
@@ -15,13 +15,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { BulkOperationProgressDialog } from "@/components/pipeline/bulk-operation-progress-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
 
 type StageOption = { id: string; name: string; color?: string };
 type UserOption = { id: string; name: string };
@@ -35,17 +35,67 @@ type BulkActionsBarProps = {
   users: UserOption[];
 };
 
-async function bulkAction(body: Record<string, unknown>) {
+/**
+ * Resposta unificada de `POST /api/deals/bulk`. Sync (200) devolve
+ * `{ affected, action }`. Async opt-in (202, hoje só `move_stage` com
+ * > 50 deals ou `async: true` explícito) devolve `{ operationId, total,
+ * action, message }`. Estreitamos via `status` pra que o caller decida
+ * abrir o modal de progresso ou apenas exibir o toast histórico.
+ */
+type SyncBulkResult = {
+  kind: "sync";
+  status: number;
+  affected: number;
+  action: string;
+};
+type AsyncBulkResult = {
+  kind: "async";
+  status: number;
+  operationId: string;
+  total: number;
+  action: string;
+};
+type BulkResult = SyncBulkResult | AsyncBulkResult;
+
+async function bulkAction(body: Record<string, unknown>): Promise<BulkResult> {
   const res = await fetch(apiUrl("/api/deals/bulk"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  const data = await res.json().catch(() => ({} as Record<string, unknown>));
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message ?? "Erro na ação em massa");
+    // Caso especial: backend criou a BulkOperation mas a fila caiu (503).
+    // Ainda assim retornamos o operationId pra que o frontend possa exibi-la
+    // no modal e o user veja FAILED ao invés de toast vazio.
+    if (res.status === 503 && typeof (data as { operationId?: unknown }).operationId === "string") {
+      return {
+        kind: "async",
+        status: res.status,
+        operationId: (data as { operationId: string }).operationId,
+        total: typeof (data as { total?: unknown }).total === "number" ? (data as { total: number }).total : 0,
+        action: typeof (data as { action?: unknown }).action === "string" ? (data as { action: string }).action : "",
+      };
+    }
+    throw new Error((data as { message?: string }).message ?? "Erro na ação em massa");
   }
-  return res.json();
+
+  if (res.status === 202 && typeof (data as { operationId?: unknown }).operationId === "string") {
+    return {
+      kind: "async",
+      status: res.status,
+      operationId: (data as { operationId: string }).operationId,
+      total: typeof (data as { total?: unknown }).total === "number" ? (data as { total: number }).total : 0,
+      action: typeof (data as { action?: unknown }).action === "string" ? (data as { action: string }).action : "",
+    };
+  }
+
+  return {
+    kind: "sync",
+    status: res.status,
+    affected: typeof (data as { affected?: unknown }).affected === "number" ? (data as { affected: number }).affected : 0,
+    action: typeof (data as { action?: unknown }).action === "string" ? (data as { action: string }).action : "",
+  };
 }
 
 export function BulkActionsBar({
@@ -62,14 +112,33 @@ export function BulkActionsBar({
   const [lostOpen, setLostOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
-  const invalidate = () => {
+  // ID e total da BulkOperation atualmente acompanhada. Quando setado,
+  // o `BulkOperationProgressDialog` abre e faz polling no backend.
+  const [progressOperationId, setProgressOperationId] = React.useState<string | null>(null);
+  const [progressTotal, setProgressTotal] = React.useState<number>(0);
+
+  const invalidate = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["pipeline-board", pipelineId] });
-  };
+  }, [queryClient, pipelineId]);
 
   const mutation = useMutation({
     mutationFn: bulkAction,
     onSuccess: (data) => {
-      toast.success(`${data.affected ?? 0} negócio(s) atualizados`);
+      if (data.kind === "async") {
+        // Caso 503 (Redis fora): backend já marcou a operação como FAILED,
+        // o modal vai ler isso no primeiro poll e exibir o erro. Toast extra
+        // só pra deixar claro pro usuário que algo deu errado de fila.
+        if (data.status === 503) {
+          toast.error("Fila de jobs indisponível — a operação foi marcada como falha.");
+        } else {
+          toast.success(`Operação enfileirada — ${data.total} negócio(s) em segundo plano.`);
+        }
+        setProgressTotal(data.total);
+        setProgressOperationId(data.operationId);
+        onClear();
+        return;
+      }
+      toast.success(`${data.affected} negócio(s) atualizados`);
       onClear();
       invalidate();
     },
@@ -254,6 +323,20 @@ export function BulkActionsBar({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Progresso de operação async (move_stage > 50 ou async: true) */}
+      <BulkOperationProgressDialog
+        operationId={progressOperationId}
+        optimisticTotal={progressTotal}
+        onOpenChange={(open) => {
+          if (!open) setProgressOperationId(null);
+        }}
+        onFinished={() => {
+          // Worker terminou — atualiza o board. O toast de status final
+          // já é exibido pelo próprio dialog.
+          invalidate();
+        }}
+      />
     </>
   );
 }

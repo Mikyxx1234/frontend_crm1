@@ -4,8 +4,10 @@ import * as React from "react";
 import {
   AlertCircle,
   CheckCircle2,
-  CircleDashed,
+  ChevronRight,
+  Inbox,
   Loader2,
+  Sparkles,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -55,20 +57,213 @@ const STATUS_BADGE_VARIANT: Record<
   CANCELLED: "muted",
 };
 
-function StatusIcon({ status }: { status: BulkOperationStatus | undefined }) {
-  if (!status || status === "PENDING") {
-    return <CircleDashed className="size-4 animate-pulse text-slate-400" />;
-  }
-  if (status === "PROCESSING") {
-    return <Loader2 className="size-4 animate-spin text-primary" />;
-  }
-  if (status === "COMPLETED") {
-    return <CheckCircle2 className="size-4 text-emerald-600" />;
-  }
-  if (status === "PARTIAL") {
-    return <AlertCircle className="size-4 text-amber-600" />;
-  }
-  return <XCircle className="size-4 text-rose-600" />;
+/**
+ * Hero — círculo glass grande exibindo o ícone do status atual com aura
+ * animada (pulse durante processamento, scale-in ao concluir). Substitui
+ * o ícone pequeno antigo no DialogTitle, dando a sensação de "operação
+ * importante em andamento" parecido com toasts de OS modernos (macOS Send
+ * Anywhere, GitHub Codespaces creating, etc).
+ */
+function HeroIcon({ status }: { status: BulkOperationStatus | undefined }) {
+  const tone = (() => {
+    if (!status || status === "PENDING") return "pending";
+    if (status === "PROCESSING") return "processing";
+    if (status === "COMPLETED") return "success";
+    if (status === "PARTIAL") return "warning";
+    if (status === "CANCELLED") return "muted";
+    return "danger";
+  })();
+
+  const ringClass = cn(
+    "relative flex size-16 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition-colors",
+    tone === "pending" &&
+      "border-slate-300/40 bg-slate-200/40 text-slate-500 dark:border-slate-500/30 dark:bg-slate-700/30 dark:text-slate-300",
+    tone === "processing" &&
+      "border-primary/40 bg-primary/15 text-primary",
+    tone === "success" &&
+      "border-emerald-300/50 bg-emerald-100/60 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-300",
+    tone === "warning" &&
+      "border-amber-300/50 bg-amber-100/60 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-300",
+    tone === "danger" &&
+      "border-rose-300/50 bg-rose-100/60 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/15 dark:text-rose-300",
+    tone === "muted" &&
+      "border-slate-300/40 bg-slate-200/40 text-slate-500 dark:border-slate-600/40 dark:bg-slate-800/40 dark:text-slate-400",
+  );
+
+  return (
+    <div className="relative flex size-16 shrink-0 items-center justify-center">
+      {/* Aura externa: pulsa enquanto processa, fica em loop sutil
+          enquanto pendente, reset zoom-in ao concluir */}
+      {(tone === "pending" || tone === "processing") && (
+        <span
+          className={cn(
+            "absolute inset-0 rounded-full",
+            tone === "pending"
+              ? "bg-slate-300/30 dark:bg-slate-600/20"
+              : "bg-primary/20",
+          )}
+          style={{
+            animation: "pulse-custom 2.4s ease-in-out infinite",
+          }}
+          aria-hidden
+        />
+      )}
+      <div
+        className={ringClass}
+        style={
+          tone === "success" || tone === "warning" || tone === "danger"
+            ? { animation: "scale-in 0.4s ease-out" }
+            : undefined
+        }
+      >
+        {tone === "pending" && <Inbox className="size-7" strokeWidth={2} />}
+        {tone === "processing" && (
+          <Loader2 className="size-7 animate-spin" strokeWidth={2} />
+        )}
+        {tone === "success" && <Sparkles className="size-7" strokeWidth={2} />}
+        {tone === "warning" && (
+          <AlertCircle className="size-7" strokeWidth={2} />
+        )}
+        {tone === "danger" && <XCircle className="size-7" strokeWidth={2} />}
+        {tone === "muted" && <XCircle className="size-7" strokeWidth={2} />}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Stepper horizontal com 3 fases: Enfileirado → Processando → Concluído.
+ * Visualmente parecido com o stepper de checkout/onboarding — dá uma
+ * sensação de progresso mesmo antes da barra acumular %, especialmente
+ * útil quando o worker ainda não pegou o job (status PENDING).
+ */
+function PhaseStepper({ status }: { status: BulkOperationStatus | undefined }) {
+  const phase = (() => {
+    if (!status || status === "PENDING") return 0;
+    if (status === "PROCESSING") return 1;
+    return 2;
+  })();
+
+  const phases = [
+    { label: "Enfileirado", idx: 0 },
+    { label: "Processando", idx: 1 },
+    { label: "Concluído", idx: 2 },
+  ];
+
+  return (
+    <ol className="flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wide">
+      {phases.map((p, i) => {
+        const isDone = phase > p.idx;
+        const isCurrent = phase === p.idx;
+        return (
+          <React.Fragment key={p.label}>
+            <li
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors",
+                isDone &&
+                  "border-emerald-300/50 bg-emerald-100/60 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-300",
+                isCurrent &&
+                  "border-primary/40 bg-primary/15 text-primary",
+                !isDone &&
+                  !isCurrent &&
+                  "border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] text-[var(--color-ink-muted)]",
+              )}
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  isDone && "bg-emerald-500",
+                  isCurrent && "bg-primary",
+                  !isDone &&
+                    !isCurrent &&
+                    "bg-slate-400 dark:bg-slate-600",
+                )}
+                style={
+                  isCurrent
+                    ? { animation: "pulse-dot 1.4s ease-in-out infinite" }
+                    : undefined
+                }
+              />
+              {p.label}
+            </li>
+            {i < phases.length - 1 && (
+              <ChevronRight
+                className="size-3 shrink-0 text-[var(--color-ink-subtle)]"
+                strokeWidth={2}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * Hook utilitário: estima o tempo restante baseado na taxa de processamento
+ * desde o primeiro `processed > 0`. Retorna null nas fases sem dados ou
+ * quando a estimativa é instável (poucos itens processados).
+ *
+ * Heurística simples (rate constante a partir do primeiro tick com >0):
+ *   - Memoriza o instante T0 quando viu `processed > 0` pela primeira vez.
+ *   - rate = processed / elapsedSinceT0
+ *   - etaSeconds = (total - processed) / rate
+ *
+ * Não tenta suavizar com média móvel — UI exibe valor "vivo" porque o
+ * polling é a 1.5s e o user prefere ver atualização imediata.
+ */
+function useEtaSeconds(
+  processed: number,
+  total: number,
+  isFinished: boolean,
+): number | null {
+  const t0Ref = React.useRef<{ at: number; processed: number } | null>(null);
+  const [tick, setTick] = React.useState(0);
+
+  // Tick a 1Hz pra fazer o ETA "decair" mesmo sem novo polling
+  React.useEffect(() => {
+    if (isFinished) return;
+    if (processed <= 0) return;
+    const i = window.setInterval(() => setTick((v) => v + 1), 1000);
+    return () => window.clearInterval(i);
+  }, [isFinished, processed]);
+
+  React.useEffect(() => {
+    if (isFinished) return;
+    if (processed > 0 && !t0Ref.current) {
+      t0Ref.current = { at: Date.now(), processed };
+    }
+    if (isFinished) {
+      t0Ref.current = null;
+    }
+  }, [processed, isFinished]);
+
+  if (isFinished) return null;
+  if (processed <= 0 || total <= 0) return null;
+  if (!t0Ref.current) return null;
+
+  const elapsedMs = Date.now() - t0Ref.current.at;
+  const processedSinceT0 = Math.max(0, processed - t0Ref.current.processed);
+  if (elapsedMs < 1500 || processedSinceT0 < 1) return null;
+
+  const rate = processedSinceT0 / (elapsedMs / 1000);
+  if (rate <= 0) return null;
+
+  const remaining = Math.max(0, total - processed);
+  const eta = remaining / rate;
+  if (!Number.isFinite(eta)) return null;
+  // Suprimir warning de unused (precisamos do tick pra forçar re-render):
+  void tick;
+  return Math.round(eta);
+}
+
+function formatEta(seconds: number): string {
+  if (seconds <= 0) return "concluindo…";
+  if (seconds < 60) return `~${seconds}s restantes`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m < 10) return `~${m}m ${String(s).padStart(2, "0")}s restantes`;
+  return `~${m} min restantes`;
 }
 
 export type BulkOperationProgressDialogProps = {
@@ -95,15 +290,19 @@ export type BulkOperationProgressDialogProps = {
 
 /**
  * Modal de acompanhamento de uma operação em massa (BulkOperation).
- * Faz polling via `useBulkOperation` e exibe barra de progresso + lista
- * de erros. Se o usuário fechar antes da operação terminar, mostra um
- * toast informativo — o job continua rodando no worker e o callback
- * `onFinished` ainda dispara quando o status terminal chegar (porque o
- * hook segue ativo enquanto operationId estiver presente).
  *
- * Padrões do projeto seguidos: Dialog/DialogContent glass (size="md"),
- * Badge para status, ícones lucide, toasts sonner. Não toca em query
- * keys de outras features — o invalidate fica a cargo do consumidor.
+ * UI: hero icon circular grande + stepper de fases + barra de progresso
+ * com gradiente animado (shimmer durante PROCESSING, listras
+ * indeterminate quando PENDING) + ETA estimado client-side + cards de
+ * contadores em glass + lista colapsável de erros. Tudo respeitando o
+ * tema do projeto (glass tokens light/dark).
+ *
+ * Comportamento:
+ *  - Polling via `useBulkOperation` enquanto o status não for terminal.
+ *  - Se o usuário fechar antes da operação terminar, mostra um toast
+ *    informativo — o job continua rodando no worker e o callback
+ *    `onFinished` ainda dispara quando o status terminal chegar.
+ *  - `onFinished` dispara UMA vez por operação (resistente a re-renders).
  */
 export function BulkOperationProgressDialog({
   operationId,
@@ -115,6 +314,16 @@ export function BulkOperationProgressDialog({
 }: BulkOperationProgressDialogProps) {
   const open = !!operationId;
   const { data, error, isLoading } = useBulkOperation(operationId);
+
+  const status = data?.status;
+  const isFinished = isBulkOperationFinished(status);
+  const total = data?.total ?? optimisticTotal ?? 0;
+  const processed = data?.processed ?? 0;
+  const progressPercent =
+    data?.progressPercent ??
+    (total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : 0);
+
+  const etaSeconds = useEtaSeconds(processed, total, isFinished);
 
   // Garante que `onFinished` e o toast terminal disparem UMA vez por
   // operação. Usamos ref de operationId concluído pra resistir a
@@ -155,14 +364,6 @@ export function BulkOperationProgressDialog({
     }
   }, [operationId]);
 
-  const status = data?.status;
-  const isFinished = isBulkOperationFinished(status);
-  const total = data?.total ?? optimisticTotal ?? 0;
-  const processed = data?.processed ?? 0;
-  const progressPercent =
-    data?.progressPercent ??
-    (total > 0 ? Math.min(100, Math.round((processed / total) * 100)) : 0);
-
   const handleOpenChange = (next: boolean) => {
     if (!next && !isFinished && operationId && data) {
       // Fechou no meio do processamento — UX-soft: o worker segue.
@@ -188,60 +389,123 @@ export function BulkOperationProgressDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent size="md" onClick={(e) => e.stopPropagation()}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <StatusIcon status={status} />
-            {resolvedTitle}
-          </DialogTitle>
-          <DialogDescription>{resolvedDescription}</DialogDescription>
+        {/* Header com hero icon centralizado — visual diferenciado dos
+            dialogs comuns do app porque é um "estado de execução em
+            andamento", não um form. */}
+        <DialogHeader className="items-center text-center sm:items-center sm:text-center">
+          <div className="mb-2 flex w-full justify-center">
+            <HeroIcon status={status} />
+          </div>
+          <DialogTitle className="text-center">{resolvedTitle}</DialogTitle>
+          <DialogDescription className="text-center">
+            {resolvedDescription}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Bar + porcentagem */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[12px] font-medium text-[var(--color-ink-soft)]">
+        <div className="space-y-5">
+          {/* Stepper de fases */}
+          <PhaseStepper status={status} />
+
+          {/* Bar + porcentagem + ETA */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2 text-[12px] font-medium">
               <span className="flex items-center gap-2">
                 {status && (
                   <Badge variant={STATUS_BADGE_VARIANT[status]}>
                     {STATUS_LABELS[status]}
                   </Badge>
                 )}
-                <span>
-                  {processed} de {total || "?"} processados
+                <span className="text-[var(--color-ink-soft)] tabular-nums">
+                  {processed} / {total || "?"}
                 </span>
               </span>
-              <span className="tabular-nums">{progressPercent}%</span>
+              <span className="font-display text-[14px] font-bold tabular-nums text-foreground">
+                {progressPercent}%
+              </span>
             </div>
+
+            {/* Track + fill com gradiente + shimmer overlay quando ativo */}
             <div
-              className="h-2 w-full overflow-hidden rounded-full bg-slate-200/70"
+              className="relative h-2.5 w-full overflow-hidden rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)]"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={progressPercent}
             >
-              <div
-                className={cn(
-                  "h-full rounded-full transition-[width] duration-500 ease-out",
-                  status === "FAILED" && "bg-rose-500",
-                  status === "PARTIAL" && "bg-amber-500",
-                  (status === "COMPLETED" || (!isFinished && status === "PROCESSING")) &&
-                    "bg-gradient-to-r from-primary to-[var(--color-lavender,#8b5cf6)]",
-                  (!status || status === "PENDING") && "bg-slate-400",
-                  status === "CANCELLED" && "bg-slate-500",
-                )}
-                style={{ width: `${progressPercent}%` }}
-              />
+              {/* Modo PENDING (worker ainda não pegou o job): listras
+                  animadas que se deslocam — feedback de "alguma coisa
+                  está acontecendo" mesmo com 0% real. */}
+              {(!status || status === "PENDING") ? (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(45deg, rgba(91,111,245,0.18) 0, rgba(91,111,245,0.18) 8px, transparent 8px, transparent 16px)",
+                    animation: "shimmer 1.6s linear infinite",
+                    backgroundSize: "32px 32px",
+                  }}
+                  aria-hidden
+                />
+              ) : (
+                <>
+                  {/* Fill principal com gradiente. Cor depende do status
+                      final pra dar feedback imediato (ex.: já pintou de
+                      vermelho se falhou no meio). */}
+                  <div
+                    className={cn(
+                      "absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-out",
+                      status === "FAILED" &&
+                        "bg-gradient-to-r from-rose-500 to-rose-600",
+                      status === "PARTIAL" &&
+                        "bg-gradient-to-r from-amber-500 to-amber-600",
+                      status === "COMPLETED" &&
+                        "bg-gradient-to-r from-emerald-500 via-emerald-500 to-teal-500",
+                      status === "PROCESSING" &&
+                        "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500",
+                      status === "CANCELLED" && "bg-slate-400 dark:bg-slate-600",
+                    )}
+                    style={{ width: `${Math.max(2, progressPercent)}%` }}
+                  />
+                  {/* Shimmer overlay enquanto está processando. Gradient
+                      que se move sobre o fill, criando efeito "liquid
+                      progress" parecido com Figma/Linear. */}
+                  {status === "PROCESSING" && progressPercent > 0 && (
+                    <div
+                      className="pointer-events-none absolute inset-y-0 left-0 rounded-full"
+                      style={{
+                        width: `${Math.max(2, progressPercent)}%`,
+                        backgroundImage:
+                          "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%)",
+                        backgroundSize: "200% 100%",
+                        animation: "shimmer 1.8s linear infinite",
+                        mixBlendMode: "overlay",
+                      }}
+                      aria-hidden
+                    />
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* ETA — só aparece com dados pra estimar */}
+            <div className="flex h-4 items-center justify-end text-[11px] tabular-nums text-[var(--color-ink-muted)]">
+              {!isFinished && etaSeconds !== null
+                ? formatEta(etaSeconds)
+                : !isFinished && status === "PROCESSING"
+                  ? "calculando…"
+                  : ""}
             </div>
           </div>
 
-          {/* Counters */}
+          {/* Counters glass — light/dark via tokens */}
           {data && (
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <Counter label="Total" value={data.total} />
+            <div className="grid grid-cols-3 gap-2">
+              <Counter label="Total" value={data.total} tone="default" />
               <Counter
                 label="Sucesso"
                 value={data.succeeded}
                 tone="success"
+                animateUp
               />
               <Counter
                 label="Falhas"
@@ -251,43 +515,96 @@ export function BulkOperationProgressDialog({
             </div>
           )}
 
-          {/* Loading inicial (antes do primeiro fetch retornar) */}
+          {/* Loading inicial com 3 dots */}
           {isLoading && !data && (
-            <p className="text-center text-xs text-[var(--color-ink-muted)]">
-              Carregando estado da operação…
-            </p>
+            <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-[var(--color-ink-muted)]">
+              <span>Conectando ao worker</span>
+              <span className="flex items-center gap-0.5">
+                <span
+                  className="size-1 rounded-full bg-current"
+                  style={{
+                    animation: "typing-dot 1.4s ease-in-out infinite",
+                  }}
+                />
+                <span
+                  className="size-1 rounded-full bg-current"
+                  style={{
+                    animation: "typing-dot 1.4s ease-in-out infinite 0.2s",
+                  }}
+                />
+                <span
+                  className="size-1 rounded-full bg-current"
+                  style={{
+                    animation: "typing-dot 1.4s ease-in-out infinite 0.4s",
+                  }}
+                />
+              </span>
+            </div>
           )}
 
           {/* Erro no fetch do status (não erro da operação em si) */}
           {error && (
-            <p className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs text-rose-700">
-              Não foi possível consultar o progresso: {(error as Error).message}
-            </p>
+            <div className="flex items-start gap-2 rounded-xl border border-rose-200/70 bg-rose-50/70 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={2} />
+              <span>
+                Não foi possível consultar o progresso:{" "}
+                {(error as Error).message}
+              </span>
+            </div>
           )}
 
-          {/* Lista de falhas por item */}
+          {/* Lista de falhas por item — colapsável */}
           {data && data.errors.length > 0 && (
-            <details className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-[var(--color-ink-soft)]">
-              <summary className="cursor-pointer font-semibold text-amber-800">
-                Ver {data.errors.length} {data.errors.length === 1 ? "erro" : "erros"}
-                {data.errorsTruncated && " (truncado)"}
+            <details className="group rounded-xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <AlertCircle className="size-3.5" strokeWidth={2} />
+                  Ver {data.errors.length}{" "}
+                  {data.errors.length === 1 ? "erro" : "erros"}
+                  {data.errorsTruncated && (
+                    <span className="text-[10px] font-normal opacity-70">
+                      (lista truncada)
+                    </span>
+                  )}
+                </span>
+                <ChevronRight
+                  className="size-3.5 transition-transform group-open:rotate-90"
+                  strokeWidth={2}
+                />
               </summary>
-              <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+              <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto pr-1">
                 {data.errors.map((err, i) => (
                   <li
                     key={`${err.itemId}-${i}`}
-                    className="rounded-md bg-white/70 px-2 py-1"
+                    className="rounded-md border border-amber-200/40 bg-[var(--glass-bg-strong)] px-2 py-1.5 text-[var(--color-ink-soft)] backdrop-blur-sm dark:border-amber-500/20"
                   >
-                    <span className="font-mono text-[10px] text-amber-700">
+                    <span className="font-mono text-[10px] text-amber-700 dark:text-amber-300">
                       {err.itemId}
                     </span>
-                    <span className="mx-1">·</span>
-                    <span>{err.message}</span>
+                    <span className="mx-1 opacity-50">·</span>
+                    <span className="break-words">{err.message}</span>
                   </li>
                 ))}
               </ul>
             </details>
           )}
+
+          {/* Estado COMPLETED sem erros — celebração discreta */}
+          {data &&
+            data.status === "COMPLETED" &&
+            data.errors.length === 0 &&
+            data.failed === 0 && (
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <CheckCircle2 className="size-4" strokeWidth={2} />
+                <span>
+                  Tudo certo — {data.succeeded}{" "}
+                  {data.succeeded === 1
+                    ? "item processado"
+                    : "itens processados"}{" "}
+                  sem falhas.
+                </span>
+              </div>
+            )}
         </div>
 
         <DialogFooter>
@@ -304,29 +621,57 @@ export function BulkOperationProgressDialog({
   );
 }
 
+/**
+ * Card individual de contador. Glass tokens, suporta light/dark via
+ * variáveis CSS. Tone aplica borda + cor do número; o label fica em
+ * uppercase muted.
+ */
 function Counter({
   label,
   value,
   tone = "default",
+  animateUp,
 }: {
   label: string;
   value: number;
   tone?: "default" | "success" | "danger" | "muted";
+  /**
+   * Quando true, anima o número subindo com transition leve. Hoje é
+   * apenas um destaque visual via key — o número renumera com efeito
+   * suave de scale-in. Útil pro contador de Sucesso ir "subindo" de
+   * forma orgânica.
+   */
+  animateUp?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "rounded-xl border bg-white/60 px-2 py-2 backdrop-blur-sm",
-        tone === "success" && "border-emerald-200/80 text-emerald-700",
-        tone === "danger" && "border-rose-200/80 text-rose-700",
-        tone === "muted" && "border-slate-200/80 text-slate-500",
-        tone === "default" && "border-slate-200/80 text-foreground",
+        "flex flex-col items-center gap-0.5 rounded-xl border bg-[var(--glass-bg-strong)] px-2 py-2.5 backdrop-blur-md transition-colors",
+        tone === "success" &&
+          "border-emerald-200/70 dark:border-emerald-400/30",
+        tone === "danger" && "border-rose-200/70 dark:border-rose-400/30",
+        tone === "muted" && "border-[var(--glass-border-subtle)]",
+        tone === "default" && "border-[var(--glass-border-subtle)]",
       )}
     >
-      <div className="text-[10px] font-semibold uppercase tracking-wide opacity-70">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
         {label}
       </div>
-      <div className="font-display text-lg font-bold tabular-nums">{value}</div>
+      <div
+        key={animateUp ? value : undefined}
+        className={cn(
+          "font-display text-2xl font-bold tabular-nums",
+          tone === "success" && "text-emerald-700 dark:text-emerald-300",
+          tone === "danger" && "text-rose-700 dark:text-rose-300",
+          tone === "muted" && "text-[var(--color-ink-muted)]",
+          tone === "default" && "text-foreground",
+        )}
+        style={
+          animateUp ? { animation: "scale-in 0.3s ease-out" } : undefined
+        }
+      >
+        {value}
+      </div>
     </div>
   );
 }

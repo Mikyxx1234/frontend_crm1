@@ -50,7 +50,7 @@ export function FunnelWidget() {
         const pct = (stage.dealCount / maxCount) * 100;
         const color = STAGE_COLORS[idx % STAGE_COLORS.length];
         return (
-          <div key={stage.stageName} className="group">
+          <div key={`${stage.stagePosition}-${idx}`} className="group">
             <div className="mb-1 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span

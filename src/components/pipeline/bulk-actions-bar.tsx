@@ -149,21 +149,33 @@ export function BulkActionsBar({
 
   const dealIds = React.useMemo(() => Array.from(selectedIds), [selectedIds]);
 
-  if (selectedCount === 0) return null;
+  // Mantém o componente montado enquanto:
+  //  - há seleção ativa (renderiza a barra)
+  //  - OU há operação async em curso (renderiza apenas o Dialog de progresso)
+  //
+  // Bug histórico: ao enfileirar uma op async chamávamos `onClear()` em
+  // seguida ao `setProgressOperationId(...)`. O re-render zerava o
+  // `selectedCount`, o componente retornava null, e o Dialog era
+  // desmontado antes mesmo de abrir — usuário só via o toast e nenhum
+  // progresso visual. A barra fica oculta quando `selectedCount === 0`
+  // mas os Dialogs (em particular o de progresso) seguem no DOM.
+  const showBar = selectedCount > 0;
+  if (!showBar && !progressOperationId && !lostOpen && !deleteOpen) return null;
 
   return (
     <>
+      {showBar && (
       <div className="fixed inset-x-0 bottom-6 z-50 flex items-center justify-center px-4 transition-all animate-in slide-in-from-bottom-4 fade-in">
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-white/95 px-5 py-3 shadow-2xl shadow-slate-500/15 backdrop-blur-lg">
+        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 px-5 py-3 text-card-foreground shadow-2xl shadow-black/20 backdrop-blur-lg dark:shadow-black/60">
           <div className="mr-2 flex items-center gap-2 border-r border-border pr-4">
-            <CheckCircle2 className="size-4 text-cyan-600" />
-            <span className="text-[13px] font-bold text-slate-800">
+            <CheckCircle2 className="size-4 text-cyan-600 dark:text-cyan-400" />
+            <span className="text-[13px] font-bold text-foreground">
               {selectedCount} selecionado{selectedCount !== 1 ? "s" : ""}
             </span>
             <button
               type="button"
               onClick={onClear}
-              className="ml-1 rounded-full p-1 text-[var(--color-ink-muted)] hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
+              className="ml-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="size-3.5" />
             </button>
@@ -184,12 +196,12 @@ export function BulkActionsBar({
               <ChevronDown className="size-3" />
             </Button>
             {moveOpen && (
-              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-border bg-white py-1 shadow-xl">
+              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-xl">
                 {stages.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-foreground hover:bg-[var(--color-bg-subtle)]"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
                       mutation.mutate({ dealIds, action: "move_stage", stageId: s.id });
                       setMoveOpen(false);
@@ -221,10 +233,10 @@ export function BulkActionsBar({
               <ChevronDown className="size-3" />
             </Button>
             {ownerOpen && (
-              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-border bg-white py-1 shadow-xl">
+              <div className="absolute bottom-full left-0 mb-2 min-w-[180px] rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-xl">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-subtle)]"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   onClick={() => {
                     mutation.mutate({ dealIds, action: "change_owner", ownerId: null });
                     setOwnerOpen(false);
@@ -236,7 +248,7 @@ export function BulkActionsBar({
                   <button
                     key={u.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-foreground hover:bg-[var(--color-bg-subtle)]"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
                       mutation.mutate({ dealIds, action: "change_owner", ownerId: u.id });
                       setOwnerOpen(false);
@@ -253,7 +265,7 @@ export function BulkActionsBar({
           <Button
             type="button"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-[12px] text-emerald-700 shadow-none hover:bg-emerald-100"
+            className="h-8 gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-[12px] text-emerald-700 shadow-none hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate({ dealIds, action: "mark_won" })}
           >
@@ -265,7 +277,7 @@ export function BulkActionsBar({
           <Button
             type="button"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl border border-rose-200 bg-rose-50 text-[12px] text-rose-700 shadow-none hover:bg-rose-100"
+            className="h-8 gap-1.5 rounded-xl border border-rose-200 bg-rose-50 text-[12px] text-rose-700 shadow-none hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
             disabled={mutation.isPending}
             onClick={() => setLostOpen(true)}
           >
@@ -278,7 +290,7 @@ export function BulkActionsBar({
             type="button"
             size="sm"
             variant="ghost"
-            className="h-8 gap-1.5 rounded-xl text-[12px] text-slate-500 hover:bg-red-50 hover:text-red-600"
+            className="h-8 gap-1.5 rounded-xl text-[12px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             disabled={mutation.isPending}
             onClick={() => setDeleteOpen(true)}
           >
@@ -287,6 +299,7 @@ export function BulkActionsBar({
           </Button>
         </div>
       </div>
+      )}
 
       {/* Lost dialog */}
       <LossReasonDialog

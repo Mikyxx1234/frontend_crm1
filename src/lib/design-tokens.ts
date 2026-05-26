@@ -10,14 +10,17 @@ export const dt = {
   },
 
   text: {
-    title: "text-[15px] font-semibold tracking-tight text-slate-900",
-    label: "text-[12px] text-slate-400",
-    value: "text-[13px] font-medium text-slate-700",
+    // Tokens semânticos do tema (globals.css → light + .dark). Sem
+    // `text-slate-*` hardcoded — em dark mode preto sobre navy fica
+    // ilegível, sintoma reportado nos cards do Kanban e nos badges.
+    title: "text-[15px] font-semibold tracking-tight text-foreground",
+    label: "text-[12px] text-[var(--color-ink-muted)]",
+    value: "text-[13px] font-medium text-[var(--color-ink-soft)]",
     link: "text-[13px] font-medium text-primary",
-    section: "text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted",
-    muted: "text-[11px] text-slate-400",
-    time: "text-[10px] tabular-nums text-ink-muted",
-    preview: "text-[13px] text-ink-muted",
+    section: "text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted)]",
+    muted: "text-[11px] text-[var(--color-ink-muted)]",
+    time: "text-[10px] tabular-nums text-[var(--color-ink-muted)]",
+    preview: "text-[13px] text-[var(--color-ink-muted)]",
   },
 
   card: {

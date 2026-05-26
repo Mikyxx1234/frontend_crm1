@@ -2,13 +2,17 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+} from "@hello-pangea/dnd";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import {
   ArrowLeft,
   Check,
-  ChevronDown,
-  ChevronUp,
   GitBranch,
   GripVertical,
   Loader2,
@@ -243,14 +247,52 @@ export default function PipelineSettingsPage() {
       if (!res.ok) throw new Error("Erro ao reordenar");
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["pipelines"] }); },
+    onError: () => { setOptimisticStageIds(null); },
   });
 
-  const moveStage = (idx: number, dir: -1 | 1) => {
-    const ids = stages.map((s) => s.id);
-    const target = idx + dir;
-    if (target < 0 || target >= ids.length) return;
-    [ids[idx], ids[target]] = [ids[target], ids[idx]];
-    reorderMutation.mutate(ids);
+  // Ordem otimista enquanto a mutation roda — evita "pulo" visual.
+  const [optimisticStageIds, setOptimisticStageIds] = React.useState<string[] | null>(null);
+
+  // Estágios visíveis: aplica ordem otimista se presente; ignora estágio "Entrada".
+  const visibleStages = React.useMemo(() => {
+    const filtered = stages.filter((s) => !s.isIncoming);
+    if (!optimisticStageIds) return filtered;
+    const byId = new Map(filtered.map((s) => [s.id, s] as const));
+    const ordered: StageRow[] = [];
+    for (const id of optimisticStageIds) {
+      const s = byId.get(id);
+      if (s) { ordered.push(s); byId.delete(id); }
+    }
+    for (const remaining of byId.values()) ordered.push(remaining);
+    return ordered;
+  }, [stages, optimisticStageIds]);
+
+  // Reset do estado otimista quando a query confirma a nova ordem do servidor.
+  React.useEffect(() => {
+    if (!optimisticStageIds) return;
+    const serverIds = stages.filter((s) => !s.isIncoming).map((s) => s.id);
+    const matches =
+      serverIds.length === optimisticStageIds.length &&
+      serverIds.every((id, i) => id === optimisticStageIds[i]);
+    if (matches) setOptimisticStageIds(null);
+  }, [stages, optimisticStageIds]);
+
+  const handleStageDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const from = result.source.index;
+    const to = result.destination.index;
+    if (from === to) return;
+    const ids = visibleStages.map((s) => s.id);
+    const [moved] = ids.splice(from, 1);
+    ids.splice(to, 0, moved);
+    setOptimisticStageIds(ids);
+    // Backend valida que TODOS os estágios do pipeline estejam no array,
+    // inclusive os `isIncoming` (estágio "Entrada"). Sem incluí-los, o
+    // endpoint devolve 400 INVALID_STAGE_ORDER e a reordenação não salva.
+    // O usuário não os arrasta (ficam ocultos do DnD), mas mandamos eles
+    // na frente para preservar a posição relativa.
+    const incomingIds = stages.filter((s) => s.isIncoming).map((s) => s.id);
+    reorderMutation.mutate([...incomingIds, ...ids]);
   };
 
   // Automation mutations
@@ -381,53 +423,82 @@ export default function PipelineSettingsPage() {
                   </Button>
                 </div>
 
-                {stages.length === 0 ? (
+                {visibleStages.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-border/80 py-12 text-center">
                     <p className="text-sm text-muted-foreground">Nenhum estágio configurado.</p>
                   </div>
                 ) : (
-                  <div className="space-y-1.5">
-                    {stages.filter((s) => !s.isIncoming).map((s, idx, filtered) => (
-                      <div key={s.id} className="flex items-center gap-2 rounded-lg border border-border/80 bg-card px-3 py-2.5 shadow-sm transition-colors hover:bg-muted/20">
-                        <div className="flex flex-col gap-0.5">
-                          <button type="button" onClick={() => moveStage(idx, -1)} disabled={idx === 0 || reorderMutation.isPending} className="rounded p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-30">
-                            <ChevronUp className="size-3" />
-                          </button>
-                          <button type="button" onClick={() => moveStage(idx, 1)} disabled={idx === filtered.length - 1 || reorderMutation.isPending} className="rounded p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-30">
-                            <ChevronDown className="size-3" />
-                          </button>
-                        </div>
+                  <DragDropContext onDragEnd={handleStageDragEnd}>
+                    <Droppable droppableId="pipeline-stages">
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={cn(
+                            "space-y-1.5 rounded-lg transition-colors",
+                            snapshot.isDraggingOver && "bg-indigo-500/5 ring-1 ring-inset ring-indigo-500/20",
+                          )}
+                        >
+                          {visibleStages.map((s, idx) => (
+                            <Draggable key={s.id} draggableId={s.id} index={idx}>
+                              {(dragProvided, dragSnapshot) => (
+                                <div
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  className={cn(
+                                    "flex items-center gap-2 rounded-lg border bg-card px-3 py-2.5 shadow-sm transition-colors",
+                                    dragSnapshot.isDragging
+                                      ? "border-indigo-500/50 bg-card shadow-lg ring-1 ring-indigo-500/30"
+                                      : "border-border/80 hover:bg-muted/20",
+                                  )}
+                                  style={dragProvided.draggableProps.style}
+                                >
+                                  <button
+                                    type="button"
+                                    {...dragProvided.dragHandleProps}
+                                    aria-label="Arrastar para reordenar"
+                                    title="Arraste para reordenar"
+                                    className="flex h-7 w-5 cursor-grab items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+                                  >
+                                    <GripVertical className="size-4" />
+                                  </button>
 
-                        <span className="size-4 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: s.color }} />
+                                  <span className="size-4 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: s.color }} />
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{s.name}</span>
-                            <span className="text-[10px] text-muted-foreground">Pos {s.position}</span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground">
-                            <span>Prob: {s.winProbability}%</span>
-                            <span>Apodrecimento: {s.rottingDays}d</span>
-                            <span>{s.dealCount} negócio{s.dealCount !== 1 ? "s" : ""}</span>
-                          </div>
-                        </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-sm">{s.name}</span>
+                                      <span className="text-[10px] text-muted-foreground">Pos {idx + 1}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground">
+                                      <span>Prob: {s.winProbability}%</span>
+                                      <span>Apodrecimento: {s.rottingDays}d</span>
+                                      <span>{s.dealCount} negócio{s.dealCount !== 1 ? "s" : ""}</span>
+                                    </div>
+                                  </div>
 
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button type="button" variant="ghost" size="icon" className="size-7" onClick={() => { setEditingStage(s); setStageFormOpen(true); }}>
-                            <Pencil className="size-3" />
-                          </Button>
-                          <Button
-                            type="button" variant="ghost" size="icon" className="size-7 text-destructive/70 hover:text-destructive"
-                            disabled={s.dealCount > 0 || deleteStageMutation.isPending}
-                            title={s.dealCount > 0 ? "Mova os negócios antes de excluir" : "Excluir estágio"}
-                            onClick={() => deleteStageMutation.mutate(s.id)}
-                          >
-                            <Trash2 className="size-3" />
-                          </Button>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Button type="button" variant="ghost" size="icon" className="size-7" onClick={() => { setEditingStage(s); setStageFormOpen(true); }}>
+                                      <Pencil className="size-3" />
+                                    </Button>
+                                    <Button
+                                      type="button" variant="ghost" size="icon" className="size-7 text-destructive/70 hover:text-destructive"
+                                      disabled={s.dealCount > 0 || deleteStageMutation.isPending}
+                                      title={s.dealCount > 0 ? "Mova os negócios antes de excluir" : "Excluir estágio"}
+                                      onClick={() => deleteStageMutation.mutate(s.id)}
+                                    >
+                                      <Trash2 className="size-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
                 )}
               </div>
 

@@ -64,6 +64,11 @@ interface ChatAreaProps {
    * ações da conversa (Resolver/Reabrir/etc.) com handlers reais.
    */
   headerActionsSlot?: React.ReactNode
+  /**
+   * Handler do botao "Usar Template" do SessionAlert. Quando
+   * provido, repassa direto pro `SessionAlert.onUseTemplate`.
+   */
+  onUseTemplate?: () => void
 }
 
 export function ChatArea({
@@ -85,6 +90,7 @@ export function ChatArea({
   inputDisabled,
   composerSlot,
   headerActionsSlot,
+  onUseTemplate,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
@@ -160,7 +166,7 @@ export function ChatArea({
           }
           return null
         })}
-        {showSessionAlert && <SessionAlert />}
+        {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
       </div>
 
       {composerSlot ?? (

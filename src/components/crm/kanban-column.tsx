@@ -55,7 +55,10 @@ export function KanbanColumn({
   return (
     <section
       aria-label={`Coluna ${title}`}
-      className="flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]"
+      // h-full + min-h-0 garantem que a coluna ocupe a altura total
+      // do flex parent (board) sem estourar — o overflow-y-auto interno
+      // do bloco de deals so funciona se aqui a altura for limitada.
+      className="flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-1 pb-2.5">

@@ -219,7 +219,10 @@ export default function KanbanV2ClientPage() {
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex flex-1 gap-3.5 overflow-x-auto pb-2">
+          {/* min-h-0 + min-w-0 são CRÍTICOS: sem isso o flex-1 nao
+              limita altura, as <section> filhas estouram e os cards
+              do final somem (cortados embaixo) em telas menores. */}
+          <div className="flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-2">
             {columns.map((col) => (
               <DroppableColumn
                 key={col.stageId}

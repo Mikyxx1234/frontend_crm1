@@ -84,23 +84,19 @@ export function DealDetailPanel({ isOpen, onClose, deal }: DealDetailPanelProps)
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className={`fixed inset-0 z-40 transition-opacity duration-300 ${
-          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        style={{ background: "rgba(30,42,59,0.18)", backdropFilter: "blur(2px)" }}
-        onClick={onClose}
-      />
-
-      {/* Panel — fullscreen slide-in com mesmo background do app */}
+      {/* Panel — fullscreen slide-in com o gradient da referência (ds-deal-aberto.html).
+          A REFERÊNCIA NÃO TEM BACKDROP SEMI-TRANSPARENTE: a página toma a tela inteira
+          com o gradient sólido. Mantemos esse comportamento aqui (sem backdrop).
+          Fallback hexa duplica os valores caso var(--bg-*) não resolva (Tailwind v4
+          às vezes não expõe tokens de @theme em inline styles). */}
       <div
         className={`fixed inset-0 z-50 transition-transform duration-300 ease-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{
           background:
-            "linear-gradient(135deg, var(--bg-base) 0%, var(--bg-mesh-1) 40%, var(--bg-mesh-2) 70%, var(--bg-base) 100%)",
+            "linear-gradient(135deg, var(--bg-base, #dde8f5) 0%, var(--bg-mesh-1, #b8cfec) 40%, var(--bg-mesh-2, #e8d5f0) 70%, var(--bg-base, #dde8f5) 100%)",
+          backgroundAttachment: "fixed",
         }}
       >
         <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">

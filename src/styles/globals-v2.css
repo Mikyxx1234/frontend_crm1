@@ -16,6 +16,7 @@
   --bg-base:                #dde8f5;
   --bg-mesh-1:              #b8cfec;
   --bg-mesh-2:              #e8d5f0;
+  --bg-mesh:                linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
 
   /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
   --color-online:           #10b981;
@@ -47,6 +48,20 @@
       e qualquer outro componente que aceite `color={...}` do v0.
       Coloca-se em @layer utilities para permitir composição com
       utilities Tailwind sem precisar de `!important`. ──────────── */
+/* ──────────────────────────────────────────────────────────────────
+   Espelho das variáveis @theme em :root.
+   Tailwind v4 expõe tokens de @theme automaticamente, mas em alguns
+   contextos (inline styles em componentes) o resolver falha e
+   `var(--bg-base)` vira string vazia → background transparente.
+   Declarar aqui DE NOVO garante a presença literal no documento.
+   ────────────────────────────────────────────────────────────────── */
+:root {
+  --bg-base: #dde8f5;
+  --bg-mesh-1: #b8cfec;
+  --bg-mesh-2: #e8d5f0;
+  --bg-mesh: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
+}
+
 @layer utilities {
   .av-green   { background: linear-gradient(220deg, #5DFF7B 46%, #356823 100%); }
   .av-blue    { background: linear-gradient(220deg, #5D90FF 46%, #275CA1 100%); }

@@ -199,6 +199,57 @@ export default function ContactsPage() {
     },
   });
 
+  // Bulk delete — paraleliza N requisições DELETE com concorrência
+  // limitada pra não estourar o pool de conexões do backend. Retorna
+  // resultado agregado (sucesso/falha por id) pra mostrar feedback
+  // diferenciado quando alguma exclusão falha.
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const CONCURRENCY = 5;
+      const queue = [...ids];
+      const results: { id: string; error?: string }[] = [];
+      async function worker() {
+        while (queue.length > 0) {
+          const id = queue.shift();
+          if (!id) break;
+          try {
+            const res = await fetch(apiUrl(`/api/contacts/${id}`), { method: "DELETE" });
+            if (!res.ok) {
+              results.push({ id, error: await readErrorMessage(res) });
+            } else {
+              results.push({ id });
+            }
+          } catch (err) {
+            results.push({ id, error: (err as Error).message });
+          }
+        }
+      }
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, ids.length) }, () => worker()),
+      );
+      return results;
+    },
+    onSuccess: (results) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
+      setSelected(new Set());
+      const ok = results.filter((r) => !r.error).length;
+      const fail = results.length - ok;
+      if (fail === 0) {
+        toast.success(`${ok} lead${ok !== 1 ? "s" : ""} excluído${ok !== 1 ? "s" : ""}.`);
+      } else if (ok === 0) {
+        toast.error(`Nenhum lead foi excluído. ${fail} falha${fail !== 1 ? "s" : ""}.`);
+      } else {
+        toast.warning(
+          `${ok} excluído${ok !== 1 ? "s" : ""}, ${fail} falha${fail !== 1 ? "s" : ""}.`,
+        );
+      }
+    },
+    onError: (err) => {
+      toast.error((err as Error).message);
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
       const res = await fetch(apiUrl("/api/contacts"), {
@@ -656,6 +707,59 @@ export default function ContactsPage() {
           </div>
         )}
       </div>
+
+      {/* Bulk actions bar — flutua no rodapé enquanto há leads
+          selecionados. Esconde quando `selected.size === 0`. */}
+      {selected.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4">
+          <div className="flex w-full max-w-2xl items-center justify-between gap-3 rounded-xl border border-border/80 bg-card/95 px-4 py-2.5 shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-indigo-600 px-2 text-xs font-semibold text-white">
+                {selected.size}
+              </span>
+              <span className="text-sm text-foreground">
+                lead{selected.size !== 1 ? "s" : ""} selecionado{selected.size !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2.5 text-sm"
+                onClick={() => setSelected(new Set())}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                Limpar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="h-8 gap-1.5 px-3 text-sm"
+                disabled={bulkDeleteMutation.isPending}
+                onClick={async () => {
+                  const ids = Array.from(selected);
+                  const ok = await confirm({
+                    title: `Excluir ${ids.length} lead${ids.length !== 1 ? "s" : ""}?`,
+                    description: `Todos os dados associados (conversas, notas, tarefas) serão removidos. Negócios vinculados permanecem no kanban, sem contato associado.`,
+                    confirmLabel: "Excluir todos",
+                    variant: "destructive",
+                  });
+                  if (ok) bulkDeleteMutation.mutate(ids);
+                }}
+              >
+                {bulkDeleteMutation.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

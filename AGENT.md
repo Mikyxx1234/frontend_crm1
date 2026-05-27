@@ -5,6 +5,43 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-05-27 — Exclusão em massa na lista de leads
+
+**Decisão.** Adicionada barra flutuante de ações em massa em
+`(dashboard)/contacts/client-page.tsx`. Quando `selected.size > 0`,
+aparece no rodapé com "N selecionado(s)" + botões "Limpar" e
+"Excluir". A mutation `bulkDeleteMutation` dispara DELETEs em
+paralelo com concorrência limitada (5 workers) e agrega
+sucesso/falha por id pra feedback diferenciado (`toast.success`
+quando todos OK, `toast.warning` quando parcial, `toast.error`
+quando nenhum saiu).
+
+**Contexto.** Operador relatou: "essa página de contacts precisa
+ter opção de excluir em massa, não tem essa opção". A
+infraestrutura de seleção múltipla (checkbox no header + linha,
+estado `selected: Set<string>`) já existia mas era usada só pra
+destaque visual — não tinha botão pra agir nos selecionados.
+
+**Alternativas descartadas.**
+
+- **Endpoint `DELETE /api/contacts?ids=...` em massa no backend.**
+  Mais eficiente (1 request, transação no banco), mas envolve
+  endpoint novo e mudança no service. Como o caso de uso é
+  pontual (operador limpando 10-50 leads de cada vez) e o DELETE
+  individual já funciona, paralelizar 5x no front é suficiente.
+- **Barra de ações no header em vez de flutuante.** Quebra menos
+  o layout mas força scroll-pra-cima quando o operador seleciona
+  itens da última página. Flutuante (`fixed bottom`) fica sempre
+  visível, padrão de UX comum em listas (Gmail, Notion, Linear).
+
+**Impacto.** Operador agora seleciona múltiplos leads e excluí
+de uma vez com 1 confirmação. O endpoint individual continua
+sendo a fonte da verdade — bulk delete só orquestra. Falhas
+parciais ficam visíveis no toast (com contagem). Backend não
+mudou.
+
+---
+
 ### 2026-05-27 — Exclusão de contato sem bloqueio por `dealCount`
 
 **Decisão.** Em `app/(dashboard)/contacts/client-page.tsx`, removido o

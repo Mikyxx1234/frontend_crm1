@@ -28,7 +28,7 @@ import {
   useMoveDeal,
   usePipelines,
 } from "@/features/pipeline-v2/hooks";
-import type { StatusFilter } from "@/features/pipeline-v2/api";
+import type { BoardDealDto, StatusFilter } from "@/features/pipeline-v2/api";
 import {
   AssigneePopover,
   DealActionsMenu,
@@ -77,6 +77,17 @@ export default function KanbanV2ClientPage() {
     () => toKanbanColumns(board),
     [board],
   );
+
+  // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
+  // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
+  // map evita ter que estender o tipo Deal só para isso.
+  const dealById = useMemo(() => {
+    const map = new Map<string, BoardDealDto>();
+    for (const stage of board) {
+      for (const d of stage.deals) map.set(d.id, d);
+    }
+    return map;
+  }, [board]);
 
   const { data: dealDetail } = useDealDetail(activeDealId);
 
@@ -141,6 +152,9 @@ export default function KanbanV2ClientPage() {
                 key={col.stageId}
                 column={col}
                 onDealClick={setActiveDealId}
+                dealById={dealById}
+                pipelineId={pipelineId}
+                statusFilter={status}
               />
             ))}
             {columns.length === 0 ? (
@@ -378,9 +392,15 @@ function formatDate(iso: string): string {
 function DroppableColumn({
   column,
   onDealClick,
+  dealById,
+  pipelineId,
+  statusFilter,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
+  dealById: Map<string, BoardDealDto>;
+  pipelineId: string | null;
+  statusFilter: StatusFilter;
 }) {
   return (
     <Droppable droppableId={column.stageId}>
@@ -407,23 +427,77 @@ function DroppableColumn({
               : undefined,
           }}
           placeholderSlot={provided.placeholder}
-          renderDeal={(deal, index) => (
-            <Draggable key={deal.id} draggableId={deal.id} index={index}>
-              {(dragProvided, dragSnapshot) => (
-                <div
-                  ref={dragProvided.innerRef}
-                  {...dragProvided.draggableProps}
-                  {...dragProvided.dragHandleProps}
-                  style={{
-                    ...dragProvided.draggableProps.style,
-                    opacity: dragSnapshot.isDragging ? 0.85 : 1,
-                  }}
-                >
-                  <DealCard deal={deal} onClick={() => onDealClick(deal.id)} />
-                </div>
-              )}
-            </Draggable>
-          )}
+          renderDeal={(deal, index) => {
+            const raw = dealById.get(deal.id);
+            return (
+              <Draggable key={deal.id} draggableId={deal.id} index={index}>
+                {(dragProvided, dragSnapshot) => (
+                  <div
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.draggableProps}
+                    {...dragProvided.dragHandleProps}
+                    style={{
+                      ...dragProvided.draggableProps.style,
+                      opacity: dragSnapshot.isDragging ? 0.85 : 1,
+                    }}
+                  >
+                    <DealCard
+                      deal={deal}
+                      onClick={() => onDealClick(deal.id)}
+                      tagsSlot={
+                        <>
+                          {(raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>)).map((t) => (
+                            <span
+                              key={t.id}
+                              className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide"
+                              style={{
+                                background: `${t.color || "#5b6ff5"}22`,
+                                color: t.color || "var(--brand-primary)",
+                                border: `1px solid ${t.color || "#5b6ff5"}44`,
+                              }}
+                            >
+                              {t.name}
+                            </span>
+                          ))}
+                          <TagsPopover
+                            dealId={deal.id}
+                            currentTags={raw?.tags ?? []}
+                            pipelineId={pipelineId}
+                            statusFilter={statusFilter}
+                            trigger={
+                              <span className="font-display text-[9.5px] font-semibold px-2 py-px rounded-full inline-flex items-center bg-transparent text-[var(--text-muted)] border border-dashed border-[rgba(163,163,163,0.4)] cursor-pointer hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors">
+                                +
+                              </span>
+                            }
+                          />
+                        </>
+                      }
+                      ownerSlot={
+                        <AssigneePopover
+                          dealId={deal.id}
+                          currentOwnerId={raw?.owner?.id ?? null}
+                          currentOwnerName={raw?.owner?.name ?? null}
+                          pipelineId={pipelineId}
+                          statusFilter={statusFilter}
+                          trigger={
+                            <span className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                              style={{
+                                background: "rgba(91,111,245,0.15)",
+                                color: "var(--brand-primary)",
+                                border: "1px solid rgba(91,111,245,0.2)",
+                              }}
+                            >
+                              {deal.owner.name}
+                            </span>
+                          }
+                        />
+                      }
+                    />
+                  </div>
+                )}
+              </Draggable>
+            );
+          }}
         />
       )}
     </Droppable>

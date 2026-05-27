@@ -2,7 +2,12 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import { differenceInMinutes } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -331,8 +336,22 @@ export function InboxListHeader({
   );
 }
 
-function buildUrl(tab: InboxTab, filters: InboxFilters, search: string): string {
-  const q = new URLSearchParams({ perPage: "60", tab });
+// Tamanho de cada "página" do infinite scroll. 60 é o mesmo que vinha
+// hardcoded antes — mantém o tempo da 1ª paint, e o resto é carregado
+// sob demanda quando o operador rola até o final da lista.
+const CONVERSATIONS_PAGE_SIZE = 60;
+
+function buildUrl(
+  tab: InboxTab,
+  filters: InboxFilters,
+  search: string,
+  page: number,
+): string {
+  const q = new URLSearchParams({
+    perPage: String(CONVERSATIONS_PAGE_SIZE),
+    page: String(page),
+    tab,
+  });
   if (filters.ownerId) q.set("ownerId", filters.ownerId);
   if (filters.channel) q.set("channel", filters.channel);
   if (filters.stageId) q.set("stageId", filters.stageId);
@@ -344,8 +363,13 @@ function buildUrl(tab: InboxTab, filters: InboxFilters, search: string): string 
   return `/api/conversations?${q.toString()}`;
 }
 
-async function fetchConversations(tab: InboxTab, filters: InboxFilters, search: string): Promise<ListResponse> {
-  const res = await fetch(buildUrl(tab, filters, search));
+async function fetchConversationsPage(
+  tab: InboxTab,
+  filters: InboxFilters,
+  search: string,
+  page: number,
+): Promise<ListResponse> {
+  const res = await fetch(buildUrl(tab, filters, search, page));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(typeof data?.message === "string" ? data.message : "Erro ao carregar conversas");
   return data as ListResponse;
@@ -710,9 +734,28 @@ export function ConversationList({
 }) {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, error } = useQuery({
+  // 27/mai/26 — Infinite scroll: o backend retorna até 60 conversas
+  // por página; ao chegar perto do fim da lista, uma sentinela
+  // (IntersectionObserver) dispara `fetchNextPage`. Antes pedíamos
+  // 60 hardcoded e o operador com 455+ conversas em "Entrada" via
+  // a rolagem "travar" — porque não havia paginação subsequente.
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["inbox-conversations", tab, filters, searchQuery],
-    queryFn: () => fetchConversations(tab, filters, searchQuery),
+    queryFn: ({ pageParam = 1 }) =>
+      fetchConversationsPage(tab, filters, searchQuery, pageParam as number),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const loaded = lastPage.page * lastPage.perPage;
+      return loaded < lastPage.total ? lastPage.page + 1 : undefined;
+    },
     refetchInterval: 20_000,
   });
 
@@ -779,8 +822,39 @@ export function ConversationList({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  /** Lista já filtrada no servidor (aba ou busca global). */
-  const filtered = data?.items ?? [];
+  /**
+   * Lista já filtrada no servidor (aba ou busca global). Em modo
+   * infinite scroll combinamos `pages[].items` numa única lista
+   * achatada — a ordem entre páginas vem do backend (sortBy /
+   * sortOrder) e não precisa ser re-ordenada aqui.
+   */
+  const filtered = React.useMemo(
+    () => (data?.pages ?? []).flatMap((p) => p.items),
+    [data?.pages],
+  );
+
+  // Sentinela do infinite scroll. Quando entra ≥ 1px na viewport
+  // (rootMargin generoso pra pré-carregar antes do operador
+  // efetivamente bater no fim), dispara `fetchNextPage`. O hook
+  // protege contra múltiplos disparos via `isFetchingNextPage` e
+  // `hasNextPage`.
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (!hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { root: null, rootMargin: "240px 0px", threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isLoading) {
     return (
@@ -889,6 +963,26 @@ export function ConversationList({
           />
         ))}
       </ul>
+
+      {hasNextPage ? (
+        <div
+          ref={sentinelRef}
+          className="flex items-center justify-center px-3 py-3 text-[11px] text-muted-foreground"
+        >
+          {isFetchingNextPage ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Loader2 className="size-3 animate-spin" />
+              Carregando mais conversas…
+            </span>
+          ) : (
+            <span className="opacity-60">Role para carregar mais</span>
+          )}
+        </div>
+      ) : filtered.length > 0 ? (
+        <div className="px-3 py-3 text-center text-[10px] uppercase tracking-wider text-muted-foreground/60">
+          Fim da lista · {filtered.length} conversa{filtered.length === 1 ? "" : "s"}
+        </div>
+      ) : null}
       </div>
     </div>
   );

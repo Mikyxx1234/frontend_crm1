@@ -1,7 +1,8 @@
 "use client"
 
-import { forwardRef, type HTMLAttributes, type ReactNode } from "react"
+import { cn } from "@/lib/utils"
 import { IconPlus } from "@tabler/icons-react"
+import type { HTMLAttributes, ReactNode } from "react"
 import { DealCard, type Deal } from "./deal-card"
 
 export type ColumnColor = "novo" | "quali" | "proposta" | "nego" | "fecha"
@@ -30,11 +31,11 @@ interface KanbanColumnProps {
 }
 
 const colorMap: Record<ColumnColor, string> = {
-  novo: "var(--col-novo)",
-  quali: "var(--col-quali)",
-  proposta: "var(--col-proposta)",
-  nego: "var(--col-nego)",
-  fecha: "var(--col-fecha)",
+  novo: "#5b6ff5",
+  quali: "#10b981",
+  proposta: "#f59e0b",
+  nego: "#a78bfa",
+  fecha: "#ef4444",
 }
 
 export function KanbanColumn({
@@ -52,41 +53,44 @@ export function KanbanColumn({
   placeholderSlot,
 }: KanbanColumnProps) {
   return (
-    <div className="flex-shrink-0 w-[290px] flex flex-col bg-[var(--glass-bg)] backdrop-blur-[16px] border border-[var(--glass-border-subtle)] rounded-[var(--radius-xl)] px-3 py-3.5 shadow-[var(--glass-shadow-sm)] max-h-full">
+    <section
+      aria-label={`Coluna ${title}`}
+      className="flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]"
+    >
+      {/* Header */}
       <div className="flex items-center justify-between px-1 pb-2.5">
-        <div className="flex items-center gap-2">
-          <span className="w-[3px] h-[18px] rounded-full" style={{ background: colorMap[color] }} />
-          <span className="font-display text-[13px] font-bold text-[var(--text-primary)] tracking-wide flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              className="w-3.5 h-3.5 border-[1.5px] border-[var(--text-muted)] rounded-[3px] bg-transparent cursor-pointer"
-            />
+        <div className="flex items-center gap-2.5">
+          <span
+            className="h-[18px] w-[3px] rounded-full"
+            style={{ background: colorMap[color] }}
+          />
+          <h3 className="font-display text-[15px] font-bold tracking-tight text-[var(--text-primary)]">
             {title}
+          </h3>
+          <span className="rounded-full border border-black/[0.06] bg-white px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
+            {count}
           </span>
         </div>
-        <span className="font-display text-[11px] font-bold text-[var(--text-muted)] bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] px-2.5 py-0.5 rounded-full">
-          {count}
-        </span>
+        <button
+          type="button"
+          onClick={onAddDeal}
+          title="Adicionar negócio"
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-black/[0.06] bg-white text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+        >
+          <IconPlus size={16} />
+        </button>
       </div>
 
-      <div className="font-display text-[12px] font-semibold text-[var(--text-secondary)] px-1 pb-2.5 border-b border-[var(--glass-border-subtle)] mb-2.5">
+      {/* Total */}
+      <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-1 pb-2.5 font-display text-xs font-semibold text-[var(--text-secondary)]">
         {total}
       </div>
 
-      {showAddButton && (
-        <button
-          onClick={onAddDeal}
-          className="w-full py-2.5 mb-2.5 bg-transparent border-[1.5px] border-dashed border-[rgba(163,163,163,0.35)] rounded-[var(--radius-lg)] font-display text-[12px] font-semibold text-[var(--text-muted)] cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] hover:bg-[var(--color-enterprise-bg)]"
-        >
-          <IconPlus size={14} />
-          Adicionar negócio
-        </button>
-      )}
-
+      {/* Deals — container respeita Droppable (ref + props do react-dnd) */}
       <div
         ref={dealsContainerRef}
         {...dealsContainerProps}
-        className="flex-1 overflow-y-auto flex flex-col gap-2.5 px-1 pb-1"
+        className="flex flex-1 flex-col gap-2.5 overflow-y-auto pr-1"
       >
         {deals.map((deal, index) =>
           renderDeal ? (
@@ -96,7 +100,21 @@ export function KanbanColumn({
           ),
         )}
         {placeholderSlot}
+
+        {showAddButton && (
+          <button
+            type="button"
+            onClick={onAddDeal}
+            className={cn(
+              "mt-1 flex cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border-[1.5px] border-dashed border-black/15 bg-transparent py-2.5 font-display text-xs font-semibold text-[var(--text-muted)] transition-all",
+              "hover:border-[var(--brand-primary)] hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]",
+            )}
+          >
+            <IconPlus size={14} />
+            Adicionar negócio
+          </button>
+        )}
       </div>
-    </div>
+    </section>
   )
 }

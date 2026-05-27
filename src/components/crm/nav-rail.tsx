@@ -40,7 +40,7 @@ export function NavRail({ className }: { className?: string }) {
     <nav
       aria-label="Navegação principal"
       className={cn(
-        "flex flex-col items-center gap-2 bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-xl)] px-3 py-4 shadow-[var(--glass-shadow)]",
+        "flex h-full flex-col items-center gap-2 bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-xl)] px-3 py-4 shadow-[var(--glass-shadow)]",
         className,
       )}
     >

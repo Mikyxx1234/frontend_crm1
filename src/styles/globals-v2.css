@@ -112,6 +112,25 @@
   --text-muted:          #64748b;
 }
 
+/* ──────────────────────────────────────────────────────────────────
+   Escala global das rotas v2 (zoom 0.88).
+   Motivo: o pacote v0 foi desenhado com paddings/fonts mais generosos
+   que ficam grandes demais em 100% de zoom em monitores comuns
+   (1080p / 1440p). Aplicamos `zoom` no wrapper da rota, o que escala
+   layout E tipografia uniformemente — px, rem, gaps, shadows etc.
+   `zoom` é suportado em todos os Chromium e Safari modernos, que
+   sao os browsers alvo deste CRM.
+   Popovers via createPortal (escapam o subtree do v2-root) continuam
+   no tamanho natural; isso e' desejado para nao distorcer dropdowns
+   ancorados a posicoes fixed calculadas em pixels reais da viewport.
+   Ajuste centralizado: mude o valor de `zoom` aqui se quiser uma
+   escala diferente (ex.: 0.9 para mais conservador, 0.85 para mais
+   denso). Nao mexa em px/font-size dos componentes individuais.
+   ────────────────────────────────────────────────────────────────── */
+.v2-root {
+  zoom: 0.88;
+}
+
 @layer utilities {
   .av-green   { background: linear-gradient(220deg, #5DFF7B 46%, #356823 100%); }
   .av-blue    { background: linear-gradient(220deg, #5D90FF 46%, #275CA1 100%); }

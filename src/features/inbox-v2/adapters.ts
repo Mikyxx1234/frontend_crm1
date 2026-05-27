@@ -105,10 +105,16 @@ function deriveOnline(lastInboundAt: string | null | undefined): "online" | "off
   return Date.now() - d.getTime() < 5 * 60_000 ? "online" : "offline";
 }
 
-/** Deriva o badge visual a partir das tags do contato / estado da conversa. */
-function deriveBadge(
-  row: ConversationListRow,
-): Conversation["badge"] | undefined {
+/**
+ * Deriva o "badge" semantico a partir das tags do contato / estado da
+ * conversa. A versao nova do `ConversationCard` (v0 ajustes-v3) NAO
+ * exibe mais o badge no card — mas o tipo continua sendo retornado
+ * porque o `ChatContactView` e o `toContactStatus` o usam para
+ * o header do chat (Enterprise / Lead / Cliente).
+ */
+export type ConversationBadge = "enterprise" | "lead" | "success";
+
+function deriveBadge(row: ConversationListRow): ConversationBadge | undefined {
   const tagNames = (row.tags ?? []).map((t) => (t.name ?? "").toLowerCase());
   if (tagNames.some((n) => n === "vip" || n.includes("enterprise"))) {
     return "enterprise";
@@ -135,11 +141,13 @@ export function toConversationCard(
     initials: avatarInitials(name),
     avatarColor: colorFromName(name),
     status: deriveOnline(row.lastInboundAt),
-    badge: deriveBadge(row),
     time: formatRelative(lastActivity),
     preview: row.lastMessage?.preview ?? "",
     assignee: row.assignedTo?.name,
-    unread: row.unreadCount && row.unreadCount > 0 ? row.unreadCount : undefined,
+    // O card novo nao tem mais contador. Mapeamos unread > 0 para o
+    // marcador visual `urgent` (relogio vermelho) — preserva o sinal
+    // de "atencao necessaria" sem badge numerico.
+    urgent: !!(row.unreadCount && row.unreadCount > 0),
     active: options?.active,
     inactive: row.status !== "OPEN",
   };
@@ -161,7 +169,6 @@ export function toMessageBubble(
     time: formatTime(dto.createdAt),
     type: isInbound ? "incoming" : "outgoing",
     senderInitials: isInbound ? avatarInitials(contactName) : undefined,
-    senderColor: isInbound ? colorFromName(contactName) : undefined,
   };
 }
 
@@ -171,7 +178,7 @@ export interface ChatContactView {
   initials: string;
   avatarColor: Conversation["avatarColor"];
   status: Conversation["status"];
-  badge?: Conversation["badge"];
+  badge?: ConversationBadge;
   phone: string;
   contactId: string;
 }

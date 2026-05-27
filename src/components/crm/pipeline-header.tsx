@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+import { cn } from "@/lib/utils"
 import {
   IconChevronRight,
   IconFilter,
@@ -15,7 +17,6 @@ import {
   IconCircleX,
   IconGridDots,
 } from "@tabler/icons-react"
-import { useState } from "react"
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos"
 type ViewType = "grid" | "kanban" | "list"
@@ -72,153 +73,133 @@ export function PipelineHeader({
   ]
 
   return (
-    <>
-      <header className="bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-xl)] px-5 py-3.5 flex items-center gap-4 shadow-[var(--glass-shadow)]">
-        <div className="flex items-center gap-2.5">
-          <span className="font-display text-[14px] text-[var(--text-muted)] font-medium cursor-pointer">Funil</span>
-          <IconChevronRight size={12} className="text-[var(--text-muted)]" />
-          {pipelineNameSlot ?? (
-            <span className="font-display text-[14px] text-[var(--text-primary)] font-semibold cursor-pointer">
-              Pipeline Principal
+    <div className="flex items-center gap-3.5 px-1">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 pr-2">
+        <span className="font-display text-sm font-medium text-[var(--text-muted)]">Funil</span>
+        <IconChevronRight size={12} className="text-[var(--text-muted)]" />
+        {pipelineNameSlot ?? (
+          <span className="font-display text-sm font-bold text-[var(--text-primary)]">
+            Pipeline Principal
+          </span>
+        )}
+      </div>
+
+      {/* Tabs underline */}
+      <div className="flex items-center gap-0.5 border-l border-black/[0.06] pl-3.5">
+        {tabs.map((t) => {
+          const isActive = tab === t.id
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => handleTabChange(t.id)}
+              className={cn(
+                "-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3.5 py-2 font-display text-[12px] font-bold tracking-[0.04em] transition-all",
+                isActive
+                  ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+              )}
+            >
+              {t.icon}
+              {t.label}
+              {t.count !== undefined && (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
+                    isActive
+                      ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                      : "bg-black/[0.06] text-[var(--text-muted)]",
+                  )}
+                >
+                  {t.count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          ref={filtersButtonRef}
+          type="button"
+          onClick={onFiltersClick}
+          className={cn(
+            "inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-black/[0.06] bg-white px-3 py-1.5 font-display text-xs font-bold text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)]",
+          )}
+          style={
+            activeFiltersCount > 0
+              ? {
+                  borderColor: "var(--brand-primary, #5b6ff5)",
+                  color: "var(--brand-primary, #5b6ff5)",
+                  background: "rgba(91,111,245,0.10)",
+                }
+              : undefined
+          }
+        >
+          <IconFilter size={14} /> Filtros
+          {activeFiltersCount > 0 && (
+            <span
+              className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums text-white"
+              style={{ background: "var(--brand-primary, #5b6ff5)" }}
+            >
+              {activeFiltersCount}
             </span>
           )}
-        </div>
+        </button>
+        <button
+          type="button"
+          className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-black/[0.06] bg-white px-3 py-1.5 font-display text-xs font-bold text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+        >
+          <IconBookmark size={14} /> Salvos
+        </button>
 
-        <div className="flex-1 max-w-[420px] relative">
-          <input
-            type="text"
-            placeholder="Buscar e filtrar..."
-            className="w-full font-body text-[13px] text-[var(--text-primary)] bg-[var(--glass-bg-overlay)] backdrop-blur-[8px] border border-[var(--glass-border)] rounded-full py-2 pl-[38px] pr-3.5 outline-none placeholder:text-[var(--text-muted)]"
-          />
-          <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
-          <button
-            ref={filtersButtonRef}
-            type="button"
-            onClick={onFiltersClick}
-            className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap"
-            style={
-              activeFiltersCount > 0
-                ? {
-                    borderColor: "var(--brand-primary, #5b6ff5)",
-                    color: "var(--brand-primary, #5b6ff5)",
-                    background: "rgba(91,111,245,0.10)",
-                  }
-                : undefined
-            }
-          >
-            <IconFilter size={14} /> Filtros
-            {activeFiltersCount > 0 && (
-              <span
-                className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums text-white"
-                style={{ background: "var(--brand-primary, #5b6ff5)" }}
-              >
-                {activeFiltersCount}
-              </span>
-            )}
-          </button>
-          <button className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
-            <IconBookmark size={14} /> Salvos
-          </button>
-
-          <div className="flex items-center gap-1 bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-md)] p-[3px]">
+        <div className="flex items-center gap-1 rounded-[var(--radius-md)] border border-black/[0.06] bg-white p-[3px] shadow-[var(--glass-shadow-sm)]">
+          {(
+            [
+              { id: "grid", icon: <IconLayoutGrid size={15} /> },
+              { id: "kanban", icon: <IconLayoutKanban size={15} /> },
+              { id: "list", icon: <IconList size={15} /> },
+            ] as const
+          ).map((v) => (
             <button
-              onClick={() => handleViewChange("grid")}
-              title="Grid"
-              className={`w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer transition-all ${
-                view === "grid"
+              key={v.id}
+              type="button"
+              onClick={() => handleViewChange(v.id as ViewType)}
+              title={v.id}
+              className={cn(
+                "flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] transition-all",
+                view === v.id
                   ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                  : "bg-transparent text-[var(--text-muted)]"
-              }`}
+                  : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+              )}
             >
-              <IconLayoutGrid size={15} />
+              {v.icon}
             </button>
-            <button
-              onClick={() => handleViewChange("kanban")}
-              title="Kanban"
-              className={`w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer transition-all ${
-                view === "kanban"
-                  ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                  : "bg-transparent text-[var(--text-muted)]"
-              }`}
-            >
-              <IconLayoutKanban size={15} />
-            </button>
-            <button
-              onClick={() => handleViewChange("list")}
-              title="Lista"
-              className={`w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer transition-all ${
-                view === "list"
-                  ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                  : "bg-transparent text-[var(--text-muted)]"
-              }`}
-            >
-              <IconList size={15} />
-            </button>
-          </div>
-
-          <button className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-transparent text-[var(--text-secondary)] border border-transparent hover:bg-[var(--glass-bg-strong)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
-            <IconUser size={14} /> Meus
-          </button>
-          <button
-            className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-transparent border border-transparent hover:bg-[var(--glass-bg-strong)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap"
-            style={{ color: "var(--color-warning-text)" }}
-          >
-            <IconAlertTriangle size={14} /> Urgentes
-          </button>
-          <button className="font-display text-[12px] font-semibold rounded-full px-4 py-[5px] cursor-pointer bg-[var(--brand-primary)] text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] hover:bg-[var(--brand-primary-dark)] hover:-translate-y-px transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
-            <IconPlus size={14} /> Novo
-          </button>
+          ))}
         </div>
-      </header>
 
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-1.5">
-          {tabs.map((t) => {
-            const isActive = tab === t.id
-            return (
-              <button
-                key={t.id}
-                onClick={() => handleTabChange(t.id)}
-                className={`font-display text-[13px] font-semibold py-2 px-[18px] rounded-full cursor-pointer transition-all inline-flex items-center gap-2 ${
-                  isActive
-                    ? "bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]"
-                    : "bg-transparent text-[var(--text-muted)] border border-transparent hover:text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]"
-                }`}
-              >
-                {t.icon}
-                {t.label}
-                {t.count !== undefined && (
-                  <span
-                    className={`text-[11px] font-bold px-[7px] py-px rounded-full ${
-                      isActive
-                        ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                        : "bg-[rgba(163,163,163,0.15)] text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {t.count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+        <button
+          type="button"
+          className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+        >
+          <IconUser size={14} /> Meus
+        </button>
+        <button
+          type="button"
+          className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 font-display text-xs font-semibold transition-colors hover:bg-[var(--glass-bg-strong)]"
+          style={{ color: "var(--color-warning-text)" }}
+        >
+          <IconAlertTriangle size={14} /> Urgentes
+        </button>
+        <button
+          type="button"
+          className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-1.5 font-display text-xs font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
+        >
+          <IconPlus size={14} /> Novo
+        </button>
       </div>
-    </>
+    </div>
   )
 }

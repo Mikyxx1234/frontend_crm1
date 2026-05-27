@@ -105,7 +105,14 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) 
       {tagsSlot ? (
         <div
           className="flex flex-wrap gap-1 mb-2"
+          // stopPropagation em todos os eventos de ponteiro/teclado
+          // que disparariam (a) onClick do card -> abrir deal ou
+          // (b) dragHandleProps do @hello-pangea/dnd -> iniciar drag
+          // visual antes do popover terminar de abrir.
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           {tagsSlot}
         </div>
@@ -131,6 +138,9 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) 
       <div
         className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-white/35"
         onClick={ownerSlot ? (e) => e.stopPropagation() : undefined}
+        onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
+        onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
+        onTouchStart={ownerSlot ? (e) => e.stopPropagation() : undefined}
       >
         {ownerSlot ?? (
           <Chip variant="brand" className="cursor-pointer hover:bg-[rgba(91,111,245,0.22)] transition-colors">

@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1517, initial-scale=1.0" />
+<title>Pipeline Kanban — CRM Messager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.31.0/fonts/tabler-icons.min.css" />
+<style>
+:root {
+  --color-bg-base: #dde8f5;
+  --color-bg-mesh-1: #b8cfec;
+  --color-bg-mesh-2: #e8d5f0;
+  --glass-bg: rgba(255,255,255,0.25);
+  --glass-bg-strong: rgba(255,255,255,0.40);
+  --glass-bg-subtle: rgba(255,255,255,0.12);
+  --glass-bg-overlay: rgba(255,255,255,0.60);
+  --glass-border: rgba(255,255,255,0.55);
+  --glass-border-subtle: rgba(255,255,255,0.30);
+  --glass-shadow: 0 8px 32px rgba(100,130,180,0.18);
+  --glass-shadow-sm: 0 4px 16px rgba(100,130,180,0.12);
+  --glass-blur: blur(16px);
+  --glass-blur-subtle: blur(8px);
+  --brand-primary: #5b6ff5;
+  --brand-primary-dark: #3d52e8;
+  --brand-secondary: #a78bfa;
+  --color-enterprise-bg: rgba(91,111,245,0.15);
+  --color-lead: #f59e0b;
+  --color-lead-bg: rgba(245,158,11,0.15);
+  --color-success: #10b981;
+  --color-success-bg: rgba(16,185,129,0.12);
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245,158,11,0.12);
+  --color-danger: #ef4444;
+  --color-danger-bg: rgba(239,68,68,0.12);
+  --color-success-text: #065f46;
+  --color-warning-text: #92600a;
+  --color-danger-text: #991b1b;
+  --color-online: #10b981;
+  --color-offline: #94a3b8;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --text-primary: #1e2a3b;
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+  --transition-fast: 150ms cubic-bezier(0.4,0,0.2,1);
+  --transition-base: 250ms cubic-bezier(0.4,0,0.2,1);
+  --border-glass: 1px solid var(--glass-border);
+  --border-glass-subtle: 1px solid var(--glass-border-subtle);
+
+  /* Cores de coluna do kanban (sutis) */
+  --col-novo:      #6b7280;
+  --col-quali:     #5b6ff5;
+  --col-proposta:  #a78bfa;
+  --col-nego:      #f59e0b;
+  --col-fecha:     #10b981;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  font-family:var(--font-body);color:var(--text-primary);
+  background:linear-gradient(135deg,var(--color-bg-base) 0%,var(--color-bg-mesh-1) 40%,var(--color-bg-mesh-2) 70%,var(--color-bg-base) 100%);
+  background-attachment:fixed;min-height:100vh;line-height:1.55;-webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(100,120,180,0.30);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:rgba(100,120,180,0.45)}
+
+/* ════════ LAYOUT ════════ */
+.app{display:grid;grid-template-columns:72px 1fr;height:100vh;gap:16px;padding:16px}
+
+/* ── NAV RAIL ── */
+.nav-rail{
+  background:var(--glass-bg-strong);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:var(--border-glass);border-radius:var(--radius-xl);
+  padding:16px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  box-shadow:var(--glass-shadow);
+}
+.brand-mark{
+  width:44px;height:44px;border-radius:var(--radius-md);
+  background:linear-gradient(135deg,var(--brand-primary),var(--brand-secondary));
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  font-family:var(--font-display);font-weight:700;font-size:16px;
+  box-shadow:0 6px 16px rgba(91,111,245,0.4);margin-bottom:8px;
+}
+.nav-item{
+  width:44px;height:44px;border-radius:var(--radius-md);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all var(--transition-fast);
+  color:var(--text-muted);background:transparent;border:none;font-size:20px;
+  position:relative;
+}
+.nav-item:hover{background:var(--glass-bg-strong);color:var(--brand-primary)}
+.nav-item.active{background:var(--brand-primary);color:#fff;box-shadow:0 4px 12px rgba(91,111,245,0.35)}
+.nav-spacer{flex:1}
+
+/* ── MAIN ── */
+.main{display:flex;flex-direction:column;gap:14px;overflow:hidden}
+
+/* ── HEADER ── */
+.page-header{
+  background:var(--glass-bg-strong);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:var(--border-glass);border-radius:var(--radius-xl);
+  padding:14px 20px;
+  display:flex;align-items:center;gap:16px;
+  box-shadow:var(--glass-shadow);
+}
+.breadcrumb{display:flex;align-items:center;gap:10px}
+.breadcrumb-item{
+  font-family:var(--font-display);font-size:14px;
+  color:var(--text-muted);font-weight:500;cursor:pointer;
+}
+.breadcrumb-item.active{color:var(--text-primary);font-weight:600}
+.breadcrumb-sep{color:var(--text-muted);font-size:12px}
+
+.search-input{
+  flex:1;max-width:420px;
+  font-family:var(--font-body);font-size:13px;color:var(--text-primary);
+  background:var(--glass-bg-overlay);
+  backdrop-filter:var(--glass-blur-subtle);-webkit-backdrop-filter:var(--glass-blur-subtle);
+  border:var(--border-glass);
+  border-radius:var(--radius-full);
+  padding:8px 14px 8px 38px;outline:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:14px center;
+}
+.search-input::placeholder{color:var(--text-muted)}
+
+.header-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+
+/* ── BUTTONS ── */
+.btn{
+  font-family:var(--font-display);font-size:13px;font-weight:600;
+  border-radius:var(--radius-full);padding:7px 16px;cursor:pointer;
+  transition:all var(--transition-fast);
+  display:inline-flex;align-items:center;gap:6px;
+  border:none;outline:none;white-space:nowrap;
+}
+.btn-primary{background:var(--brand-primary);color:#fff;box-shadow:0 4px 14px rgba(91,111,245,0.35)}
+.btn-primary:hover{background:var(--brand-primary-dark);transform:translateY(-1px)}
+.btn-glass{
+  background:var(--glass-bg-strong);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:var(--border-glass);color:var(--text-primary);box-shadow:var(--glass-shadow-sm);
+}
+.btn-glass:hover{background:var(--glass-bg-overlay)}
+.btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid transparent}
+.btn-ghost:hover{background:var(--glass-bg-strong)}
+.btn-icon{width:36px;height:36px;padding:0;justify-content:center;border-radius:var(--radius-md);font-size:16px}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* ── TABS ── */
+.tabs-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 4px;
+}
+.tabs{display:flex;align-items:center;gap:6px}
+.tab{
+  font-family:var(--font-display);font-size:13px;font-weight:600;
+  padding:9px 18px;border-radius:var(--radius-full);
+  cursor:pointer;transition:all var(--transition-fast);
+  color:var(--text-muted);border:none;background:transparent;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.tab:hover{color:var(--text-secondary);background:var(--glass-bg-strong)}
+.tab.active{
+  background:var(--glass-bg-overlay);color:var(--brand-primary);
+  border:var(--border-glass);box-shadow:var(--glass-shadow-sm);
+}
+.tab-count{
+  font-size:11px;font-weight:700;padding:1px 7px;
+  background:var(--color-enterprise-bg);color:var(--brand-primary);
+  border-radius:var(--radius-full);
+}
+.tab:not(.active) .tab-count{background:rgba(163,163,163,0.15);color:var(--text-muted)}
+
+.view-switcher{
+  display:flex;align-items:center;gap:4px;
+  background:var(--glass-bg-strong);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:var(--border-glass);
+  border-radius:var(--radius-md);padding:3px;
+}
+.view-btn{
+  width:32px;height:32px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all var(--transition-fast);
+  color:var(--text-muted);background:transparent;border:none;font-size:15px;
+}
+.view-btn.active{background:var(--brand-primary);color:#fff;box-shadow:0 2px 8px rgba(91,111,245,0.35)}
+
+/* ════════ KANBAN ════════ */
+.kanban{
+  flex:1;overflow-x:auto;overflow-y:hidden;
+  display:flex;gap:14px;padding:2px 4px 14px;
+}
+.column{
+  flex:0 0 290px;display:flex;flex-direction:column;
+  background:var(--glass-bg);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:var(--border-glass-subtle);
+  border-radius:var(--radius-xl);
+  padding:14px 12px;
+  box-shadow:var(--glass-shadow-sm);
+  max-height:100%;
+}
+
+/* Header da coluna com cor de etapa */
+.column-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 4px 10px;
+}
+.column-title-wrap{display:flex;align-items:center;gap:8px}
+.column-color-bar{
+  width:3px;height:18px;border-radius:99px;
+}
+.column-title{
+  font-family:var(--font-display);font-size:13px;font-weight:700;
+  color:var(--text-primary);letter-spacing:0.02em;
+  display:flex;align-items:center;gap:6px;
+}
+.column-checkbox{
+  width:14px;height:14px;
+  border:1.5px solid var(--text-muted);
+  border-radius:3px;background:transparent;cursor:pointer;
+}
+.column-count{
+  font-family:var(--font-display);font-size:11px;font-weight:700;
+  color:var(--text-muted);
+  background:var(--glass-bg-strong);
+  border:var(--border-glass);
+  padding:2px 9px;border-radius:var(--radius-full);
+}
+.column-total{
+  font-family:var(--font-display);font-size:12px;font-weight:600;
+  color:var(--text-secondary);
+  padding:0 4px 10px;
+  border-bottom:var(--border-glass-subtle);
+  margin-bottom:10px;
+}
+
+.column-body{
+  flex:1;overflow-y:auto;
+  display:flex;flex-direction:column;gap:10px;
+  padding:0 4px 4px;
+}
+
+/* ════════ DEAL CARD ════════ */
+.deal-card{
+  background:var(--glass-bg-strong);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:var(--border-glass);
+  border-radius:var(--radius-lg);
+  padding:12px 14px;
+  cursor:grab;transition:all var(--transition-base);
+  box-shadow:var(--glass-shadow-sm);
+  position:relative;
+}
+.deal-card:hover{
+  background:var(--glass-bg-overlay);
+  transform:translateY(-2px);
+  box-shadow:var(--glass-shadow);
+}
+.deal-card:active{cursor:grabbing}
+
+.deal-card-top{
+  display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;
+}
+.drag-handle{
+  color:var(--text-muted);opacity:0.5;
+  font-size:14px;cursor:grab;
+  align-self:center;
+}
+
+.deal-avatar{flex-shrink:0}
+.deal-card-info{flex:1;min-width:0}
+.deal-card-name{
+  font-family:var(--font-display);
+  font-size:13px;font-weight:700;
+  color:var(--text-primary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.deal-card-sub{
+  font-size:11px;color:var(--text-muted);
+  margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.deal-card-meta{
+  display:flex;align-items:center;gap:6px;flex-shrink:0;
+}
+.deal-id{
+  font-family:var(--font-display);font-size:10px;font-weight:700;
+  color:var(--brand-primary);background:var(--color-enterprise-bg);
+  padding:1px 6px;border-radius:var(--radius-sm);
+}
+.deal-date{font-size:10px;color:var(--text-muted)}
+
+.deal-card-message{
+  font-size:11.5px;color:var(--text-secondary);
+  font-style:italic;line-height:1.45;
+  padding:6px 0 8px;
+  display:flex;align-items:flex-start;gap:5px;
+}
+.deal-card-message i{color:var(--text-muted);font-size:11px;margin-top:2px}
+.deal-card-message-text{
+  flex:1;overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+
+.deal-card-time{
+  font-size:10px;color:var(--text-muted);
+  display:inline-flex;align-items:center;gap:3px;
+  margin-bottom:6px;
+}
+
+/* Tags coloridas */
+.deal-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.tag{
+  font-family:var(--font-display);font-size:9.5px;font-weight:700;
+  padding:1px 8px;border-radius:var(--radius-full);
+  display:inline-flex;align-items:center;
+  letter-spacing:0.03em;
+}
+.tag-hot{background:var(--color-danger-bg);color:var(--color-danger-text);border:1px solid rgba(239,68,68,0.2)}
+.tag-warm{background:var(--color-lead-bg);color:var(--color-warning-text);border:1px solid rgba(245,158,11,0.2)}
+.tag-cold{background:rgba(91,111,245,0.10);color:var(--brand-primary);border:1px solid rgba(91,111,245,0.2)}
+.tag-vip{background:rgba(167,139,250,0.15);color:#6d28d9;border:1px solid rgba(167,139,250,0.25)}
+.tag-partner{background:var(--color-success-bg);color:var(--color-success-text);border:1px solid rgba(16,185,129,0.2)}
+.tag-ref{background:rgba(244,114,182,0.12);color:#be185d;border:1px solid rgba(244,114,182,0.25)}
+.tag-add{
+  background:transparent;color:var(--text-muted);
+  border:1px dashed rgba(163,163,163,0.4);
+  cursor:pointer;font-weight:600;
+}
+.tag-add:hover{color:var(--brand-primary);border-color:var(--brand-primary)}
+
+/* Footer da deal card (responsável) — padrão do Inbox */
+.deal-card-footer{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding-top:8px;
+  border-top:1px solid rgba(255,255,255,0.35);
+}
+/* Chip do owner (padrão Inbox: .chip-brand) */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;
+  border-radius:var(--radius-sm);
+  font-family:var(--font-display);
+  font-size:10px;font-weight:600;
+  border:1px solid rgba(91,111,245,0.25);
+  cursor:pointer;transition:all var(--transition-fast);
+}
+.chip-brand{background:var(--color-enterprise-bg);color:var(--brand-primary)}
+.chip-brand:hover{background:rgba(91,111,245,0.22)}
+.chip-ghost{
+  background:rgba(163,163,163,0.10);color:var(--text-muted);
+  border-color:rgba(163,163,163,0.20);border-style:dashed;
+}
+.chip-ghost:hover{color:var(--brand-primary);border-color:var(--brand-primary)}
+
+/* Botão "Adicionar negócio" */
+.add-deal-btn{
+  width:100%;padding:10px;
+  background:transparent;border:1.5px dashed rgba(163,163,163,0.35);
+  border-radius:var(--radius-lg);
+  font-family:var(--font-display);font-size:12px;font-weight:600;
+  color:var(--text-muted);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all var(--transition-fast);
+  margin-top:4px;
+}
+.add-deal-btn:hover{
+  color:var(--brand-primary);
+  border-color:var(--brand-primary);
+  background:var(--color-enterprise-bg);
+}
+
+/* ════════ AVATAR ════════ */
+.avatar{
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:700;
+  border:2px solid #fff;
+  position:relative;overflow:hidden;flex-shrink:0;
+  color:#fff;
+}
+.avatar-sm{width:30px;height:30px;font-size:10px}
+.avatar-xs{width:22px;height:22px;font-size:9px;border-width:1.5px}
+.avatar-online::after{
+  content:'';position:absolute;bottom:0;right:0;
+  width:9px;height:9px;border-radius:50%;
+  background:var(--color-online);border:1.5px solid #fff;
+}
+.avatar-offline::after{
+  content:'';position:absolute;bottom:0;right:0;
+  width:9px;height:9px;border-radius:50%;
+  background:var(--color-offline);border:1.5px solid #fff;
+}
+.av-green   { background: linear-gradient(220deg, #5DFF7B 46%, #356823 100%); }
+.av-blue    { background: linear-gradient(220deg, #5D90FF 46%, #275CA1 100%); }
+.av-orange  { background: linear-gradient(220deg, #FAFF5D 46%, #FF6C37 100%); }
+.av-purple  { background: linear-gradient(220deg, #D15DFF 46%, #AF37FF 100%); }
+.av-pink    { background: linear-gradient(220deg, #FF5DFC 46%, #3752FF 100%); }
+.av-coral   { background: linear-gradient(220deg, #FF5D6D 46%, #FFC037 100%); }
+.av-teal    { background: linear-gradient(220deg, #10D8D8 46%, #275CA1 100%); }
+.av-mint    { background: linear-gradient(220deg, #5DFF5D 46%, #25B38B 100%); }
+.av-gray    { background: linear-gradient(220deg, #cbd5e1 46%, #64748b 100%); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══ NAV RAIL ═══ -->
+  <nav class="nav-rail" aria-label="Navegação principal">
+    <div class="brand-mark">EL</div>
+    <button class="nav-item" title="Dashboard"><i class="ti ti-layout-dashboard"></i></button>
+    <button class="nav-item active" title="Pipeline"><i class="ti ti-filter"></i></button>
+    <button class="nav-item" title="Contatos"><i class="ti ti-users"></i></button>
+    <button class="nav-item" title="Empresas"><i class="ti ti-building"></i></button>
+    <button class="nav-item" title="Inbox"><i class="ti ti-message-circle"></i></button>
+    <button class="nav-item" title="Atividades"><i class="ti ti-checklist"></i></button>
+    <button class="nav-item" title="Automações"><i class="ti ti-bolt"></i></button>
+    <button class="nav-item" title="Relatórios"><i class="ti ti-chart-bar"></i></button>
+    <div class="nav-spacer"></div>
+    <button class="nav-item" title="Notificações"><i class="ti ti-bell"></i></button>
+    <button class="nav-item" title="Configurações"><i class="ti ti-settings"></i></button>
+    <div class="avatar avatar-sm av-pink avatar-online" title="Você">AL</div>
+  </nav>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main">
+
+    <!-- ─── HEADER ─── -->
+    <header class="page-header">
+      <div class="breadcrumb">
+        <span class="breadcrumb-item">Funil</span>
+        <i class="ti ti-chevron-right breadcrumb-sep"></i>
+        <span class="breadcrumb-item active">Pipeline Principal</span>
+      </div>
+
+      <input type="text" class="search-input" placeholder="Buscar e filtrar..." />
+
+      <div class="header-actions">
+        <button class="btn btn-glass btn-sm">
+          <i class="ti ti-filter"></i> Filtros
+        </button>
+        <button class="btn btn-glass btn-sm">
+          <i class="ti ti-bookmark"></i> Salvos
+        </button>
+        <div class="view-switcher">
+          <button class="view-btn" title="Grid"><i class="ti ti-layout-grid"></i></button>
+          <button class="view-btn active" title="Kanban"><i class="ti ti-layout-kanban"></i></button>
+          <button class="view-btn" title="Lista"><i class="ti ti-list"></i></button>
+        </div>
+        <button class="btn btn-ghost btn-sm">
+          <i class="ti ti-user"></i> Meus
+        </button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--color-warning-text)">
+          <i class="ti ti-alert-triangle"></i> Urgentes
+        </button>
+        <button class="btn btn-primary btn-sm">
+          <i class="ti ti-plus"></i> Novo
+        </button>
+      </div>
+    </header>
+
+    <!-- ─── TABS ─── -->
+    <div class="tabs-bar">
+      <div class="tabs">
+        <button class="tab active">
+          <i class="ti ti-clock"></i> Abertos <span class="tab-count">14</span>
+        </button>
+        <button class="tab">
+          <i class="ti ti-circle-check"></i> Ganhos
+        </button>
+        <button class="tab">
+          <i class="ti ti-circle-x"></i> Perdidos
+        </button>
+        <button class="tab">
+          <i class="ti ti-grid-dots"></i> Todos
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── KANBAN ─── -->
+    <section class="kanban" aria-label="Pipeline kanban">
+
+      <!-- ░░░ NOVO ░░░ -->
+      <div class="column">
+        <div class="column-header">
+          <div class="column-title-wrap">
+            <span class="column-color-bar" style="background:var(--col-novo)"></span>
+            <span class="column-title">
+              <input type="checkbox" class="column-checkbox" />
+              Novo
+            </span>
+          </div>
+          <span class="column-count">5</span>
+        </div>
+        <div class="column-total">R$ 11.380,00</div>
+
+        <div class="column-body">
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-green deal-avatar avatar-online">MA</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Marcilio</div>
+                <div class="deal-card-sub">Negócio — M...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#1</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 24h</div>
+            <div class="deal-tags">
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-green deal-avatar avatar-online">DA</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Diego Alv...</div>
+                <div class="deal-card-sub">Curso de IA ...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#2</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-message">
+              <i class="ti ti-message"></i>
+              <span class="deal-card-message-text">O curso é online? Qual o valor?</span>
+              <span style="font-size:10px;color:var(--text-muted);flex-shrink:0">24h</span>
+            </div>
+            <div class="deal-tags">
+              <span class="tag tag-cold">Frio</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Sofia Lima</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-green deal-avatar avatar-online">KT</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Karina Tei...</div>
+                <div class="deal-card-sub">Mentoria VI...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#3</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-message">
+              <i class="ti ti-message"></i>
+              <span class="deal-card-message-text">Bom dia! Gostaria de entender a...</span>
+              <span style="font-size:10px;color:var(--text-muted);flex-shrink:0">26h</span>
+            </div>
+            <div class="deal-tags">
+              <span class="tag tag-cold">Frio</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-green deal-avatar avatar-online">HL</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Henrique ...</div>
+                <div class="deal-card-sub">Escalabilida...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#4</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 25h</div>
+            <div class="deal-tags">
+              <span class="tag tag-cold">Frio</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-ghost">+ Responsável</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-coral deal-avatar avatar-online">RF</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Renata Fi...</div>
+                <div class="deal-card-sub">Workshop ...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#16</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 24h</div>
+            <div class="deal-tags">
+              <span class="tag tag-ref">Indicação</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- ░░░ QUALIFICADO ░░░ -->
+      <div class="column">
+        <div class="column-header">
+          <div class="column-title-wrap">
+            <span class="column-color-bar" style="background:var(--col-quali)"></span>
+            <span class="column-title">
+              <input type="checkbox" class="column-checkbox" />
+              Qualificado
+            </span>
+          </div>
+          <span class="column-count">3</span>
+        </div>
+        <div class="column-total">R$ 19.380,00</div>
+
+        <div class="column-body">
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-mint deal-avatar avatar-online">AB</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Ana Beatriz...</div>
+                <div class="deal-card-sub">Curso de IA +...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#5</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-message">
+              <i class="ti ti-message"></i>
+              <span class="deal-card-message-text">Perfeito, me manda a proposta det...</span>
+              <span style="font-size:10px;color:var(--text-muted);flex-shrink:0">24h</span>
+            </div>
+            <div class="deal-tags">
+              <span class="tag tag-warm">Quente</span>
+              <span class="tag tag-vip">VIP</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-mint deal-avatar avatar-online">CP</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Carla Pereira</div>
+                <div class="deal-card-sub">Curso de Gro...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#6</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-message">
+              <i class="ti ti-message"></i>
+              <span class="deal-card-message-text">Show, obrigada pelas infos. Vou con...</span>
+              <span style="font-size:10px;color:var(--text-muted);flex-shrink:0">27h</span>
+            </div>
+            <div class="deal-tags">
+              <span class="tag tag-warm">Quente</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Sofia Lima</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-coral deal-avatar avatar-online">JP</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">João Pedro...</div>
+                <div class="deal-card-sub">Workshop In-...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#7</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 24h</div>
+            <div class="deal-tags">
+              <span class="tag tag-warm">Quente</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+          <button class="add-deal-btn">
+            <i class="ti ti-plus"></i> Adicionar negócio
+          </button>
+        </div>
+      </div>
+
+      <!-- ░░░ PROPOSTA ░░░ -->
+      <div class="column">
+        <div class="column-header">
+          <div class="column-title-wrap">
+            <span class="column-color-bar" style="background:var(--col-proposta)"></span>
+            <span class="column-title">
+              <input type="checkbox" class="column-checkbox" />
+              Proposta
+            </span>
+          </div>
+          <span class="column-count">2</span>
+        </div>
+        <div class="column-total">R$ 26.700,00</div>
+
+        <div class="column-body">
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-mint deal-avatar avatar-online">EN</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Érika Nunes</div>
+                <div class="deal-card-sub">Consultoria E...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#8</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 3d</div>
+            <div class="deal-tags">
+              <span class="tag tag-vip">VIP</span>
+              <span class="tag tag-warm">Quente</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-mint deal-avatar avatar-online">GS</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Gabriela S...</div>
+                <div class="deal-card-sub">Programa de ...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#9</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-message">
+              <i class="ti ti-message"></i>
+              <span class="deal-card-message-text">Recebi, vou analisar com o RH e volto.</span>
+              <span style="font-size:10px;color:var(--text-muted);flex-shrink:0">4d</span>
+            </div>
+            <div class="deal-tags">
+              <span class="tag tag-warm">Quente</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Sofia Lima</span>
+            </div>
+          </article>
+
+          <button class="add-deal-btn">
+            <i class="ti ti-plus"></i> Adicionar negócio
+          </button>
+        </div>
+      </div>
+
+      <!-- ░░░ NEGOCIAÇÃO ░░░ -->
+      <div class="column">
+        <div class="column-header">
+          <div class="column-title-wrap">
+            <span class="column-color-bar" style="background:var(--col-nego)"></span>
+            <span class="column-title">
+              <input type="checkbox" class="column-checkbox" />
+              Negociação
+            </span>
+          </div>
+          <span class="column-count">2</span>
+        </div>
+        <div class="column-total">R$ 27.490,00</div>
+
+        <div class="column-body">
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-orange deal-avatar avatar-online">FR</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Fábio Ribe...</div>
+                <div class="deal-card-sub">Parceria de R...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#10</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 28h</div>
+            <div class="deal-tags">
+              <span class="tag tag-partner">Parceiro</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-orange deal-avatar avatar-online">LE</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Leonardo ...</div>
+                <div class="deal-card-sub">Bootcamp de...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#11</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 25h</div>
+            <div class="deal-tags">
+              <span class="tag tag-partner">Parceiro</span>
+              <span class="tag tag-warm">Quente</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+          <button class="add-deal-btn">
+            <i class="ti ti-plus"></i> Adicionar negócio
+          </button>
+        </div>
+      </div>
+
+      <!-- ░░░ FECHAMENTO ░░░ -->
+      <div class="column">
+        <div class="column-header">
+          <div class="column-title-wrap">
+            <span class="column-color-bar" style="background:var(--col-fecha)"></span>
+            <span class="column-title">
+              <input type="checkbox" class="column-checkbox" />
+              Fechamento
+            </span>
+          </div>
+          <span class="column-count">2</span>
+        </div>
+        <div class="column-total">R$ 47.988,00</div>
+
+        <div class="column-body">
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-coral deal-avatar avatar-online">IM</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Isabela Ma...</div>
+                <div class="deal-card-sub">Licença Ente...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#12</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 24h</div>
+            <div class="deal-tags">
+              <span class="tag tag-vip">VIP</span>
+              <span class="tag tag-ref">Indicação</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Sofia Lima</span>
+            </div>
+          </article>
+
+          <article class="deal-card">
+            <div class="deal-card-top">
+              <i class="ti ti-grip-vertical drag-handle"></i>
+              <div class="avatar avatar-sm av-gray deal-avatar">BC</div>
+              <div class="deal-card-info">
+                <div class="deal-card-name">Bruno Costa</div>
+                <div class="deal-card-sub">Plano Anual P...</div>
+              </div>
+              <div class="deal-card-meta">
+                <span class="deal-id">#13</span>
+                <span class="deal-date">25/05/2026</span>
+              </div>
+            </div>
+            <div class="deal-card-time"><i class="ti ti-clock"></i> 25h</div>
+            <div class="deal-tags">
+              <span class="tag tag-ref">Indicação</span>
+              <span class="tag tag-add">+</span>
+            </div>
+            <div class="deal-card-footer">
+              <span class="chip chip-brand">Manuel Nunes</span>
+            </div>
+          </article>
+
+          <button class="add-deal-btn">
+            <i class="ti ti-plus"></i> Adicionar negócio
+          </button>
+        </div>
+      </div>
+
+    </section>
+  </main>
+</div>
+
+</body>
+</html>

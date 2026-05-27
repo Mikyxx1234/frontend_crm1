@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design System — Pipeline Agile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+
+/* ============================================
+   DESIGN SYSTEM — PIPELINE AGILE
+   Baseado no CRM Messager Design System v1.0
+   ============================================ */
+
+:root {
+  /* === CORES PRIMÁRIAS (herdado do CRM DS) === */
+  --color-bg-base: #dde8f5;
+  --color-bg-mid: #c8d9ef;
+  --color-bg-mesh-1: #b8cfec;
+  --color-bg-mesh-2: #e8d5f0;
+
+  /* === GLASSMORPHISM TOKENS (herdado) === */
+  --glass-bg: rgba(255, 255, 255, 0.25);
+  --glass-bg-strong: rgba(255, 255, 255, 0.40);
+  --glass-bg-subtle: rgba(255, 255, 255, 0.12);
+  --glass-bg-overlay: rgba(255, 255, 255, 0.60);
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass-border-subtle: rgba(255, 255, 255, 0.30);
+  --glass-shadow: 0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg: 0 16px 48px rgba(100, 130, 180, 0.24);
+  --glass-shadow-sm: 0 4px 16px rgba(100, 130, 180, 0.12);
+  --glass-blur: blur(16px);
+  --glass-blur-strong: blur(24px);
+  --glass-blur-subtle: blur(8px);
+
+  /* === PALETA BRAND (herdado) === */
+  --brand-primary: #5b6ff5;
+  --brand-primary-light: #7b8df7;
+  --brand-primary-dark: #3d52e8;
+  --brand-secondary: #a78bfa;
+  --brand-accent: #f472b6;
+
+  /* === CORES SEMÂNTICAS (herdado) === */
+  --color-enterprise: #5b6ff5;
+  --color-enterprise-bg: rgba(91, 111, 245, 0.15);
+  --color-lead: #f59e0b;
+  --color-lead-bg: rgba(245, 158, 11, 0.15);
+  --color-success: #10b981;
+  --color-success-bg: rgba(16, 185, 129, 0.12);
+  --color-danger: #ef4444;
+  --color-danger-bg: rgba(239, 68, 68, 0.12);
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-offline: #94a3b8;
+  --color-online: #10b981;
+
+  /* === TIPOGRAFIA (herdado) === */
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  /* === TEXTOS (herdado) === */
+  --text-primary: #1e2a3b;
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
+  --text-on-glass: #2d3748;
+  --text-on-dark: #ffffff;
+
+  /* === ESPAÇAMENTOS (herdado) === */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* === BORDER RADIUS (herdado) === */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* === TRANSIÇÕES (herdado) === */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* === BORDA GLASS (herdado) === */
+  --border-glass: 1px solid var(--glass-border);
+  --border-glass-subtle: 1px solid var(--glass-border-subtle);
+
+  /* ==========================================
+     TOKENS ESPECÍFICOS — PIPELINE AGILE
+     ========================================== */
+
+  /* Estágios do pipeline */
+  --stage-lead-color: #FB923C;
+  --stage-lead-bg: rgba(255, 153, 47, 0.20);
+  --stage-lead-border: rgba(255, 183, 133, 0.20);
+  --stage-lead-text: #A62D0E;
+
+  --stage-novo-color: #818CF8;
+  --stage-novo-bg: #EEF2FF;
+  --stage-novo-text: #4338CA;
+
+  --stage-qualificado-color: #C084FC;
+  --stage-qualificado-bg: #FAF5FF;
+  --stage-qualificado-text: #7E22CE;
+
+  --stage-proposta-color: #F472B6;
+  --stage-proposta-bg: #FDF2F8;
+  --stage-proposta-text: #9D174D;
+
+  --stage-negociacao-color: #FDBA74;
+  --stage-negociacao-bg: #FFF7ED;
+  --stage-negociacao-text: #C2410C;
+
+  --stage-fechamento-color: #34D399;
+  --stage-fechamento-bg: #ECFDF5;
+  --stage-fechamento-text: #065F46;
+
+  /* Avatar gradientes do pipeline */
+  --avatar-grad-1: linear-gradient(220deg, #FAFF5D 46%, #FF6C37 100%);
+  --avatar-grad-2: linear-gradient(218deg, #0D2894 0%, #338881 100%);
+  --avatar-grad-3: linear-gradient(218deg, #940D0F 0%, #CA307A 100%);
+  --avatar-grad-4: linear-gradient(218deg, #0D9488 0%, #042E2A 100%);
+
+  /* Consultor badge */
+  --badge-consultor-bg: rgba(64, 89, 170, 0.10);
+  --badge-consultor-border: rgba(64, 89, 170, 0.20);
+  --badge-consultor-text: #4059AA;
+
+  /* Progress bar */
+  --progress-track: #E5E7EB;
+  --progress-fill: #FB923C;
+}
+
+/* === RESET & BASE (herdado) === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--color-bg-base) 0%, var(--color-bg-mesh-1) 40%, var(--color-bg-mesh-2) 70%, #dce8f5 100%);
+  min-height: 100vh;
+  padding: 48px 40px;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(100,120,180,0.25); border-radius: 99px; }
+
+/* === LAYOUT DO DESIGN SYSTEM === */
+.ds-page { max-width: 1100px; margin: 0 auto; }
+.ds-section { margin-bottom: 64px; }
+
+.ds-section-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ds-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(100,130,180,0.2);
+}
+
+.ds-title-hero {
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.15;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+.ds-subtitle-hero {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 400;
+}
+.ds-badge-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  color: var(--brand-primary);
+  background: var(--color-enterprise-bg);
+  border: 1px solid rgba(91,111,245,0.2);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  margin-bottom: 40px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ============================================
+   GLASS CARDS (herdado)
+   ============================================ */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--border-glass);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+}
+.glass-strong {
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border: var(--border-glass);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow-lg);
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.wrap { flex-wrap: wrap; }
+
+/* ============================================
+   TIPOGRAFIA HERDADA
+   ============================================ */
+.t-hero { font-family: var(--font-display); font-size: 40px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1.1; }
+.t-h1   { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.015em; }
+.t-h2   { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--text-primary); }
+.t-h3   { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--text-primary); }
+.t-h4   { font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.t-body  { font-family: var(--font-body); font-size: 14px; font-weight: 400; color: var(--text-secondary); line-height: 1.6; }
+.t-small { font-family: var(--font-body); font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.t-label { font-family: var(--font-body); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+
+/* ============================================
+   COMPONENTE: DEAL CARD (Card do Pipeline)
+   ============================================ */
+.deal-card {
+  width: 304px;
+  padding: var(--space-4);
+  background: var(--glass-bg-overlay);
+  border-radius: var(--radius-lg);
+  border-bottom: 1px solid #F3F4F6;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+.deal-card:hover {
+  background: rgba(255,255,255,0.72);
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Header do deal card: avatar + nome + tempo + progress */
+.deal-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Avatar do contato com gradiente */
+.deal-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.deal-avatar-online::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 12px; height: 12px;
+  background: #22C55E;
+  border-radius: var(--radius-full);
+  border: 2px solid #F2F4F6;
+}
+
+.deal-info { flex: 1; display: flex; flex-direction: column; gap: var(--space-2); }
+
+.deal-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.deal-name {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  color: #1F2937;
+  line-height: 20px;
+}
+.deal-name-bold {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  color: #191C1E;
+  line-height: 20px;
+}
+.deal-time {
+  font-size: 10px;
+  color: #9CA3AF;
+  line-height: 15px;
+}
+.deal-time-urgent {
+  font-size: 10px;
+  font-weight: 500;
+  color: #BA1A1A;
+  line-height: 15px;
+}
+
+/* Progress bar dentro do deal card */
+.deal-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 15px;
+  position: relative;
+}
+.deal-progress-track {
+  width: 125px;
+  height: 4px;
+  background: var(--progress-track);
+  border-radius: var(--radius-full);
+  position: relative;
+  flex-shrink: 0;
+}
+.deal-progress-fill {
+  height: 4px;
+  background: var(--progress-fill);
+  border-radius: var(--radius-full);
+  position: relative;
+}
+.deal-progress-thumb {
+  width: 11px; height: 12px;
+  background: var(--progress-fill);
+  border-radius: var(--radius-full);
+  border: 2px white solid;
+  position: absolute;
+  top: -4px;
+  right: -5px;
+}
+
+/* Meta rows dentro do deal card (produto, responsável, contato) */
+.deal-meta-list { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.deal-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 16.5px;
+}
+.deal-meta-icon {
+  width: 14px; height: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9CA3AF;
+}
+.deal-meta-label {
+  font-size: 11px;
+  color: #6B7280;
+  line-height: 16.5px;
+}
+.deal-meta-value-link {
+  font-size: 11px;
+  color: #6366F1;
+  line-height: 16.5px;
+  margin-left: auto;
+}
+
+/* Preview de mensagem no deal */
+.deal-preview {
+  font-size: 12px;
+  color: #444651;
+  line-height: 16px;
+  padding-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================
+   COMPONENTE: STAGE BADGE (badge de estágio)
+   Usado dentro do deal card e como filtro
+   ============================================ */
+.stage-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 2px;
+  font-family: var(--font-display);
+  font-size: 7px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.stage-badge-lead        { background: var(--stage-lead-bg); border: 1px solid var(--stage-lead-border); color: var(--stage-lead-text); }
+.stage-badge-novo        { background: rgba(47, 62, 158, 0.20); border: 1px solid rgba(47, 62, 158, 0.20); color: #2F3E9E; }
+.stage-badge-qualificado { background: rgba(172, 47, 255, 0.20); border: 1px solid rgba(172, 47, 255, 0.20); color: #520EA6; }
+.stage-badge-proposta    { background: rgba(255, 47, 179, 0.20); border: 1px solid rgba(255, 47, 179, 0.20); color: #FF30B3; }
+.stage-badge-negociacao  { background: rgba(255, 110, 47, 0.20); border: 1px solid rgba(255, 110, 47, 0.20); color: #FF6E30; }
+.stage-badge-fechamento  { background: rgba(47, 255, 54, 0.20); border: 1px solid rgba(69, 139, 59, 0.20); color: #326725; }
+
+/* ============================================
+   COMPONENTE: CONSULTOR BADGE
+   ============================================ */
+.badge-consultor {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--badge-consultor-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--badge-consultor-border);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--badge-consultor-text);
+  font-family: var(--font-body);
+  line-height: 15px;
+  white-space: nowrap;
+}
+.badge-consultor-empty {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: rgba(163, 163, 163, 0.10);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(64, 89, 170, 0.20);
+  font-size: 10px;
+  font-weight: 500;
+  color: #9D9D9D;
+  font-family: var(--font-body);
+  line-height: 15px;
+}
+
+/* ============================================
+   COMPONENTE: FILTRO DE ESTÁGIO (barra inferior)
+   ============================================ */
+.stage-filter-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 12px 24px;
+  background: transparent;
+}
+
+.stage-filter-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 4px 16px;
+  height: 39px;
+  cursor: pointer;
+  border: none;
+  gap: 1px;
+  transition: all var(--transition-fast);
+}
+
+.stage-filter-btn:hover { filter: brightness(0.95); }
+
+.stage-filter-btn .sfb-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 15px;
+  text-align: center;
+}
+.stage-filter-btn .sfb-count {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* Variantes do filtro */
+.sfb-todos        { background: #4F46E5; border-radius: 2px 0 0 2px; }
+.sfb-todos .sfb-label, .sfb-todos .sfb-count { color: white; }
+
+.sfb-lead         { background: #FFEDD5; }
+.sfb-lead .sfb-label, .sfb-lead .sfb-count { color: #FB923C; }
+
+.sfb-novo         { background: var(--stage-novo-bg); }
+.sfb-novo .sfb-label, .sfb-novo .sfb-count { color: var(--stage-novo-color); }
+
+.sfb-qualificado  { background: var(--stage-qualificado-bg); }
+.sfb-qualificado .sfb-label, .sfb-qualificado .sfb-count { color: var(--stage-qualificado-color); }
+
+.sfb-proposta     { background: var(--stage-proposta-bg); }
+.sfb-proposta .sfb-label, .sfb-proposta .sfb-count { color: var(--stage-proposta-color); }
+
+.sfb-negociacao   { background: var(--stage-negociacao-bg); }
+.sfb-negociacao .sfb-label, .sfb-negociacao .sfb-count { color: var(--stage-negociacao-color); }
+
+.sfb-fechamento   { background: var(--stage-fechamento-bg); }
+.sfb-fechamento .sfb-label, .sfb-fechamento .sfb-count { color: var(--stage-fechamento-color); }
+
+/* ============================================
+   COMPONENTE: COLUNA DO KANBAN
+   ============================================ */
+.pipeline-column {
+  width: 320px;
+  min-width: 320px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: 23px;
+  border: var(--border-glass);
+  box-shadow: var(--glass-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pipeline-column-header {
+  padding: var(--space-4);
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+}
+
+/* Search dentro da coluna */
+.pipeline-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pipeline-search-input {
+  width: 100%;
+  padding: 10px 40px 9px 40px;
+  background: #F9FAFB;
+  border-radius: var(--radius-sm);
+  border: 1px solid #F3F4F6;
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: #6B7280;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+.pipeline-search-input:focus {
+  background: white;
+  border-color: var(--brand-primary-light);
+  box-shadow: 0 0 0 3px rgba(91,111,245,0.1);
+}
+.pipeline-search-icon {
+  position: absolute;
+  left: 12px;
+  color: #9CA3AF;
+}
+.pipeline-search-filter {
+  position: absolute;
+  right: 12px;
+  color: #9CA3AF;
+}
+
+.pipeline-column-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+}
+
+/* ============================================
+   COMPONENTE: DEAL CARD COMPACTO (lista)
+   (usado dentro da coluna kanban, sem o detalhe de meta)
+   ============================================ */
+.deal-card-compact {
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.deal-card-compact:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* ============================================
+   COMPONENTE: SESSION ALERT (Chat expirado)
+   ============================================ */
+.session-alert {
+  margin: 0 8px;
+  padding: 10px 14px;
+  background: rgba(254, 242, 242, 0.8);
+  backdrop-filter: var(--glass-blur-subtle);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.session-alert-text {
+  flex: 1;
+  font-size: 12px;
+  color: #991b1b;
+  font-family: var(--font-body);
+}
+.btn-template {
+  padding: 4px 12px;
+  background: white;
+  border: 1px solid #ef4444;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  color: #ef4444;
+  cursor: pointer;
+  font-family: var(--font-display);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.btn-template:hover { background: #fef2f2; }
+
+/* ============================================
+   TOKEN SWATCHES — ESTÁGIOS
+   ============================================ */
+.token-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.token-swatch {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: var(--border-glass-subtle);
+  box-shadow: var(--glass-shadow-sm);
+}
+.token-fill {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.token-info {
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur-subtle);
+  padding: 10px 12px;
+}
+.token-name {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.token-var {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ============================================
+   CODE BLOCK
+   ============================================ */
+.code-block {
+  background: rgba(30, 42, 59, 0.88);
+  backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  overflow-x: auto;
+  box-shadow: var(--glass-shadow);
+}
+.code-block code {
+  font-family: 'Courier New', 'Fira Code', monospace;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: #e2e8f0;
+  white-space: pre;
+  display: block;
+}
+.code-key     { color: #93c5fd; }
+.code-value   { color: #86efac; }
+.code-string  { color: #fde68a; }
+.code-comment { color: #64748b; }
+
+</style>
+</head>
+<body>
+<div class="ds-page">
+
+  <!-- HERO -->
+  <div class="ds-section">
+    <div class="ds-title-hero">Pipeline Agile</div>
+    <div class="ds-subtitle-hero">Design System — Componentes do CRM Pipeline</div>
+    <div class="ds-badge-ref">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Extends CRM Messager Design System v1.0
+    </div>
+  </div>
+
+  <!-- TOKENS DE ESTÁGIO -->
+  <div class="ds-section">
+    <div class="ds-section-title">Tokens de Estágio — Stage Tokens</div>
+    <div class="token-grid">
+      <!-- Lead de Entrada -->
+      <div class="token-swatch">
+        <div class="token-fill" style="background: var(--stage-lead-bg); border: 1px solid var(--stage-lead-border);">
+          <span class="stage-badge stage-badge-lead">LEAD DE ENTRADA</span>
+        </div>
+        <div class="token-info">
+          <div class="token-name">Lead de Entrada</div>
+          <div class="token-var">--stage-lead-*</div>
+        </div>
+      </div>
+      <!-- Novo -->
+      <div class="token-swatch">
+        <div class="token-fill" style="background: var(--stage-novo-bg);">
+          <span class="stage-badge stage-badge-novo">NOVO</span>
+        </div>
+        <div class="token-info">
+          <div class="token-name">Novo</div>
+          <div class="token-var">--stage-novo-*</div>
+        </div>
+      </div>
+      <!-- Qualificado -->
+      <div class="token-swatch">
+        <div class="token-fill" style="background: var(--stage-qualificado-bg);">
+          <span class="stage-badge stage-badge-qualificado">QUALIFICADO</span>
+        </div>
+        <div class="token-info">
+          <div class="token-name">Qualificado</div>
+          <div class="token-var">--stage-qualificado-*</div>
+        </div>
+      </div>
+      <!-- Proposta -->
+      <div class="token-swatch">
+        <div class="token-fill" style="background: var(--stage-proposta-bg);">
+          <span class="stage-badge stage-badge-proposta">PROPOSTA</span>
+        </div>
+        <div class="token-info">
+          <div class="token-name">Proposta</div>
+          <div class="token-var">--stage-proposta-*</div>
+        </div>
+      </div>
+      <!-- Negociação -->
+      <div class="token-swatch">
+        <div class="token-fill" style="background: var(--stage-negociacao-bg);">
+          <span class="stage-badge stage-badge-negociacao">NEGOCIAÇÃO</span>
+        </div>
+        <div class="token-info">
+          <div class="token-name">Negociação</div>
+          <div class="token-var">--stage-negociacao-*</div>
+        </div>
+      </div>
+      <!-- Fechamento -->
+      <div class="token-swatch">
+        <div class="token-fill" style="background: var(--stage-fechamento-bg);">
+          <span class="stage-badge stage-badge-fechamento">FECHAMENTO</span>
+        </div>
+        <div class="token-info">
+          <div class="token-name">Fechamento</div>
+          <div class="token-var">--stage-fechamento-*</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEAL CARD DETALHADO -->
+  <div class="ds-section">
+    <div class="ds-section-title">Deal Card — Detalhado (com meta fields)</div>
+    <div class="flex gap-4 wrap">
+      <!-- Card completo com progresso e metas -->
+      <div class="deal-card">
+        <div class="deal-card-header">
+          <!-- Avatar gradiente amarelo-laranja -->
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-1);"></div>
+          <div class="deal-info">
+            <div class="deal-name-row">
+              <span class="deal-name">Daniel Silva</span>
+              <span class="deal-time">há 1 sem</span>
+            </div>
+            <!-- Progress com badge de estágio -->
+            <div class="deal-progress-row">
+              <div class="deal-progress-track">
+                <div class="deal-progress-fill" style="width: 25%;">
+                  <div class="deal-progress-thumb"></div>
+                </div>
+              </div>
+              <span class="stage-badge stage-badge-lead" style="position: absolute; left: 138px;">LEAD DE ENTRADA</span>
+            </div>
+          </div>
+        </div>
+        <!-- Meta fields -->
+        <div class="deal-meta-list">
+          <div class="deal-meta-row">
+            <div class="deal-meta-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            </div>
+            <span class="deal-meta-label">Produto</span>
+            <span class="deal-meta-value-link">+ Adicionar produto</span>
+          </div>
+          <div class="deal-meta-row">
+            <div class="deal-meta-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </div>
+            <span class="deal-meta-label">Responsável</span>
+            <span class="badge-consultor" style="margin-left: auto;">Manuel Nunes</span>
+          </div>
+          <div class="deal-meta-row">
+            <div class="deal-meta-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="2" width="14" height="20" rx="2"/></svg>
+            </div>
+            <span class="deal-meta-label">Contato</span>
+            <span class="deal-meta-label" style="color:#9CA3AF; margin-left: auto;">+551198935684</span>
+          </div>
+          <div class="deal-meta-row">
+            <div class="deal-meta-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+            </div>
+            <span class="deal-meta-label">Layout</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card com avatar azul-teal, sem responsável -->
+      <div class="deal-card">
+        <div class="deal-card-header">
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-2);"></div>
+          <div class="deal-info">
+            <div class="deal-name-row">
+              <span class="deal-name-bold">Denis Moreira</span>
+              <div class="flex items-center gap-2">
+                <span class="deal-time-urgent">2sem</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#BA1A1A"><rect x="2" y="2" width="20" height="20"/></svg>
+              </div>
+            </div>
+            <div class="deal-preview">Sou aluno de Pos EAD c...</div>
+            <span class="badge-consultor-empty">+Responsável</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card com avatar vermelho-rosa, sem responsável -->
+      <div class="deal-card">
+        <div class="deal-card-header">
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-3);"></div>
+          <div class="deal-info">
+            <div class="deal-name-row">
+              <span class="deal-name-bold">Vitoria Amorim</span>
+              <div class="flex items-center gap-2">
+                <span class="deal-time-urgent">2sem</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#BA1A1A"><rect x="2" y="2" width="20" height="20"/></svg>
+              </div>
+            </div>
+            <div class="deal-preview">Sou aluno de Pos EAD c...</div>
+            <span class="badge-consultor-empty">+Responsável</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card com consultor atribuído -->
+      <div class="deal-card">
+        <div class="deal-card-header">
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-4);"></div>
+          <div class="deal-info">
+            <div class="deal-name-row">
+              <span class="deal-name-bold">Luis Henrique</span>
+              <div class="flex items-center gap-2">
+                <span class="deal-time-urgent">2sem</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#BA1A1A"><rect x="2" y="2" width="20" height="20"/></svg>
+              </div>
+            </div>
+            <div class="deal-preview">Sou aluno de Pos EAD c...</div>
+            <span class="badge-consultor">Julia</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE BADGES (todos os estados) -->
+  <div class="ds-section">
+    <div class="ds-section-title">Stage Badges — Estados do Pipeline</div>
+    <div style="padding: 24px; background: #F5F7FB; border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 16px;">
+      <div class="flex gap-3 wrap items-center">
+        <span class="stage-badge stage-badge-lead">LEAD DE ENTRADA</span>
+        <span class="stage-badge stage-badge-novo">NOVO</span>
+        <span class="stage-badge stage-badge-qualificado">QUALIFICADO</span>
+        <span class="stage-badge stage-badge-proposta">PROPOSTA</span>
+        <span class="stage-badge stage-badge-negociacao">NEGOCIAÇÃO</span>
+        <span class="stage-badge stage-badge-fechamento">FECHAMENTO</span>
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-body);">
+        Fonte: Plus Jakarta Sans 7px / 700 / uppercase — border-radius: 2px
+      </div>
+    </div>
+  </div>
+
+  <!-- BADGES DE CONSULTOR -->
+  <div class="ds-section">
+    <div class="ds-section-title">Badges de Consultor — Responsável pelo Deal</div>
+    <div style="padding: 24px; background: #F5F7FB; border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 16px;">
+      <div class="flex gap-3 wrap items-center">
+        <span class="badge-consultor">Manuel Nunes</span>
+        <span class="badge-consultor">Julia</span>
+        <span class="badge-consultor">Ana Costa</span>
+        <span class="badge-consultor-empty">+Responsável</span>
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-body);">
+        Atribuído: bg rgba(64,89,170,0.10) / cor #4059AA — Vazio: bg rgba(163,163,163,0.10) / cor #9D9D9D
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS BAR DO PIPELINE -->
+  <div class="ds-section">
+    <div class="ds-section-title">Progress Bar — Progresso do Lead</div>
+    <div class="glass" style="padding: 28px; display: flex; flex-direction: column; gap: 20px;">
+      <!-- 25% (Lead) -->
+      <div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-family: var(--font-body);">Lead de Entrada — 25%</div>
+        <div class="deal-progress-track">
+          <div class="deal-progress-fill" style="width: 25%;">
+            <div class="deal-progress-thumb"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 50% (Proposta) -->
+      <div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-family: var(--font-body);">Proposta — 50%</div>
+        <div class="deal-progress-track">
+          <div class="deal-progress-fill" style="width: 50%;">
+            <div class="deal-progress-thumb"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 80% (Negociação) -->
+      <div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-family: var(--font-body);">Negociação — 80%</div>
+        <div class="deal-progress-track">
+          <div class="deal-progress-fill" style="width: 80%;">
+            <div class="deal-progress-thumb"></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-body);">
+        Track: #E5E7EB (4px height) — Fill: #FB923C — Thumb: 11×12px com border 2px white
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSION ALERT -->
+  <div class="ds-section">
+    <div class="ds-section-title">Session Alert — Sessão de Chat Expirada</div>
+    <div style="max-width: 480px;">
+      <div class="session-alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="session-alert-text">Sessão expirada. Envie um template para retomar o contato.</span>
+        <button class="btn-template">Usar Template</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTRO DE ESTÁGIO (barra) -->
+  <div class="ds-section">
+    <div class="ds-section-title">Filtro de Estágio — Stage Filter Bar</div>
+    <div class="glass" style="border-radius: var(--radius-lg); overflow: hidden;">
+      <div class="stage-filter-bar">
+        <button class="stage-filter-btn sfb-todos">
+          <span class="sfb-label">TODOS</span>
+          <span class="sfb-count">105</span>
+        </button>
+        <button class="stage-filter-btn sfb-lead">
+          <span class="sfb-label">LEAD DE ENTRADA</span>
+          <span class="sfb-count">100</span>
+        </button>
+        <button class="stage-filter-btn sfb-novo">
+          <span class="sfb-label">NOVO</span>
+          <span class="sfb-count">1</span>
+        </button>
+        <button class="stage-filter-btn sfb-qualificado">
+          <span class="sfb-label">QUALIFICADO</span>
+          <span class="sfb-count">1</span>
+        </button>
+        <button class="stage-filter-btn sfb-proposta">
+          <span class="sfb-label">PROPOSTA</span>
+          <span class="sfb-count">2</span>
+        </button>
+        <button class="stage-filter-btn sfb-negociacao">
+          <span class="sfb-label">NEGOCIAÇÃO</span>
+          <span class="sfb-count">1</span>
+        </button>
+        <button class="stage-filter-btn sfb-fechamento">
+          <span class="sfb-label">FECHAMENTO</span>
+          <span class="sfb-count">0</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUNA KANBAN -->
+  <div class="ds-section">
+    <div class="ds-section-title">Pipeline Column — Coluna Kanban</div>
+    <div class="pipeline-column" style="max-height: 520px;">
+      <!-- Header com search -->
+      <div class="pipeline-column-header">
+        <div class="pipeline-search">
+          <svg class="pipeline-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="pipeline-search-input" type="text" placeholder="Buscar deal...">
+          <svg class="pipeline-search-filter" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        </div>
+      </div>
+      <!-- Cards compactos -->
+      <div class="pipeline-column-body">
+        <!-- Card 1 -->
+        <div class="deal-card-compact">
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-1); width: 38px; height: 38px; flex-shrink: 0;"></div>
+          <div class="deal-info">
+            <div class="deal-name-row">
+              <span class="deal-name">Daniel Silva</span>
+              <span class="deal-time">há 1 sem</span>
+            </div>
+            <div class="deal-progress-row">
+              <div class="deal-progress-track" style="width: 125px;">
+                <div class="deal-progress-fill" style="width: 25%;"><div class="deal-progress-thumb"></div></div>
+              </div>
+              <span class="stage-badge stage-badge-lead" style="position:absolute;left:138px;">LEAD DE ENTRADA</span>
+            </div>
+          </div>
+        </div>
+        <!-- Session Alert inline -->
+        <div class="session-alert" style="margin: 4px 12px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          <span class="session-alert-text" style="font-size:11px;">Sessão expirada. Envie um template...</span>
+          <button class="btn-template" style="font-size:10px; padding: 3px 8px;">Usar Template</button>
+        </div>
+        <!-- Card 2 -->
+        <div class="deal-card-compact">
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-2); width: 38px; height: 38px; flex-shrink: 0;"></div>
+          <div class="deal-info">
+            <div class="deal-name-row">
+              <span class="deal-name-bold">Denis Moreira</span>
+              <div class="flex items-center gap-2">
+                <span class="deal-time-urgent">2sem</span>
+              </div>
+            </div>
+            <div class="deal-preview">Sou aluno de Pos EAD c...</div>
+            <span class="badge-consultor-empty">+Responsável</span>
+          </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="deal-card-compact">
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-3); width: 38px; height: 38px; flex-shrink: 0;"></div>
+          <div class="deal-info">
+            <div class="deal-name-row">
+              <span class="deal-name-bold">Vitoria Amorim</span>
+              <div class="flex items-center gap-2">
+                <span class="deal-time-urgent">2sem</span>
+              </div>
+            </div>
+            <div class="deal-preview">Sou aluno de Pos EAD c...</div>
+            <span class="badge-consultor">Julia</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AVATARES COM GRADIENTES DO PIPELINE -->
+  <div class="ds-section">
+    <div class="ds-section-title">Avatar Gradients — Variantes do Pipeline</div>
+    <div class="glass" style="padding: 28px;">
+      <div class="flex gap-4 wrap items-center">
+        <div>
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-1); width: 48px; height: 48px; margin-bottom: 8px;"></div>
+          <div class="token-var" style="font-size:10px; text-align:center;">grad-1<br>#FAFF5D → #FF6C37</div>
+        </div>
+        <div>
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-2); width: 48px; height: 48px; margin-bottom: 8px;"></div>
+          <div class="token-var" style="font-size:10px; text-align:center;">grad-2<br>#0D2894 → #338881</div>
+        </div>
+        <div>
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-3); width: 48px; height: 48px; margin-bottom: 8px;"></div>
+          <div class="token-var" style="font-size:10px; text-align:center;">grad-3<br>#940D0F → #CA307A</div>
+        </div>
+        <div>
+          <div class="deal-avatar deal-avatar-online" style="background: var(--avatar-grad-4); width: 48px; height: 48px; margin-bottom: 8px;"></div>
+          <div class="token-var" style="font-size:10px; text-align:center;">grad-4<br>#0D9488 → #042E2A</div>
+        </div>
+        <div style="margin-left: 16px; font-size: 12px; color: var(--text-muted); line-height: 1.8; font-family: var(--font-body);">
+          Tamanho: 38×38px (card) / 40×40px (lista)<br>
+          Border-radius: --radius-full (9999px)<br>
+          Status dot: 12×12px, bg #22C55E, border 2px #F2F4F6
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SNIPPET CSS -->
+  <div class="ds-section">
+    <div class="ds-section-title">Variáveis CSS — Tokens do Pipeline Agile</div>
+    <div class="code-block">
+      <code>
+<span class="code-comment">/* === PIPELINE AGILE — Tokens adicionais ao CRM DS === */</span>
+
+:root {
+  <span class="code-comment">/* Estágios */</span>
+  <span class="code-key">--stage-lead-color</span>:        <span class="code-value">#FB923C</span>;
+  <span class="code-key">--stage-lead-bg</span>:           <span class="code-value">rgba(255, 153, 47, 0.20)</span>;
+  <span class="code-key">--stage-lead-text</span>:         <span class="code-value">#A62D0E</span>;
+
+  <span class="code-key">--stage-novo-color</span>:        <span class="code-value">#818CF8</span>;
+  <span class="code-key">--stage-novo-bg</span>:           <span class="code-value">#EEF2FF</span>;
+  <span class="code-key">--stage-novo-text</span>:         <span class="code-value">#4338CA</span>;
+
+  <span class="code-key">--stage-qualificado-color</span>: <span class="code-value">#C084FC</span>;
+  <span class="code-key">--stage-qualificado-bg</span>:   <span class="code-value">#FAF5FF</span>;
+  <span class="code-key">--stage-qualificado-text</span>: <span class="code-value">#7E22CE</span>;
+
+  <span class="code-key">--stage-proposta-color</span>:   <span class="code-value">#F472B6</span>;
+  <span class="code-key">--stage-proposta-bg</span>:     <span class="code-value">#FDF2F8</span>;
+  <span class="code-key">--stage-proposta-text</span>:   <span class="code-value">#9D174D</span>;
+
+  <span class="code-key">--stage-negociacao-color</span>: <span class="code-value">#FDBA74</span>;
+  <span class="code-key">--stage-negociacao-bg</span>:   <span class="code-value">#FFF7ED</span>;
+  <span class="code-key">--stage-negociacao-text</span>: <span class="code-value">#C2410C</span>;
+
+  <span class="code-key">--stage-fechamento-color</span>: <span class="code-value">#34D399</span>;
+  <span class="code-key">--stage-fechamento-bg</span>:   <span class="code-value">#ECFDF5</span>;
+  <span class="code-key">--stage-fechamento-text</span>: <span class="code-value">#065F46</span>;
+
+  <span class="code-comment">/* Consultor Badge */</span>
+  <span class="code-key">--badge-consultor-bg</span>:     <span class="code-value">rgba(64, 89, 170, 0.10)</span>;
+  <span class="code-key">--badge-consultor-border</span>: <span class="code-value">rgba(64, 89, 170, 0.20)</span>;
+  <span class="code-key">--badge-consultor-text</span>:   <span class="code-value">#4059AA</span>;
+
+  <span class="code-comment">/* Progress Bar */</span>
+  <span class="code-key">--progress-track</span>: <span class="code-value">#E5E7EB</span>;
+  <span class="code-key">--progress-fill</span>:  <span class="code-value">#FB923C</span>;
+
+  <span class="code-comment">/* Avatar Gradients */</span>
+  <span class="code-key">--avatar-grad-1</span>: <span class="code-value">linear-gradient(220deg, #FAFF5D 46%, #FF6C37 100%)</span>;
+  <span class="code-key">--avatar-grad-2</span>: <span class="code-value">linear-gradient(218deg, #0D2894 0%, #338881 100%)</span>;
+  <span class="code-key">--avatar-grad-3</span>: <span class="code-value">linear-gradient(218deg, #940D0F 0%, #CA307A 100%)</span>;
+  <span class="code-key">--avatar-grad-4</span>: <span class="code-value">linear-gradient(218deg, #0D9488 0%, #042E2A 100%)</span>;
+}
+      </code>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

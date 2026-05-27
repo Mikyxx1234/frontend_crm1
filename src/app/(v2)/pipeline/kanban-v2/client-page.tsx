@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
   DragDropContext,
@@ -36,12 +36,16 @@ import {
   DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
+  EMPTY_FILTERS,
+  FiltersPopover,
   InlineEditText,
   PipelineSwitcher,
   StagePicker,
   TagsPopover,
   WinButton,
+  countActiveFilters,
   useDealChatBinding,
+  type KanbanFilters,
 } from "@/features/pipeline-v2/extras";
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos";
@@ -62,6 +66,9 @@ export default function KanbanV2ClientPage() {
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
   );
+  const [filters, setFilters] = useState<KanbanFilters>(EMPTY_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersBtnRef = useRef<HTMLButtonElement>(null);
 
   const status = TAB_TO_STATUS[activeTab];
   const { data: pipelines } = usePipelines(isAuthenticated);
@@ -82,14 +89,38 @@ export default function KanbanV2ClientPage() {
 
   const moveDeal = useMoveDeal(pipelineId, status);
 
+  // Aplica filtros client-side ANTES de virar colunas. Mantemos o
+  // total real (totalCount) para o badge de "todos no estagio" — mas
+  // contamos visualmente apenas os filtrados em `count`.
+  const filteredBoard = useMemo(() => {
+    const hasOwner = filters.ownerIds.length > 0;
+    const hasTag = filters.tagIds.length > 0;
+    if (!hasOwner && !hasTag) return board;
+    return board.map((stage) => ({
+      ...stage,
+      deals: stage.deals.filter((d) => {
+        if (hasOwner && (!d.owner?.id || !filters.ownerIds.includes(d.owner.id))) {
+          return false;
+        }
+        if (hasTag) {
+          const ids = (d.tags ?? []).map((t) => t.id);
+          if (!filters.tagIds.some((id) => ids.includes(id))) return false;
+        }
+        return true;
+      }),
+    }));
+  }, [board, filters]);
+
   const columns: KanbanColumnView[] = useMemo(
-    () => toKanbanColumns(board),
-    [board],
+    () => toKanbanColumns(filteredBoard),
+    [filteredBoard],
   );
 
   // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
   // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
-  // map evita ter que estender o tipo Deal só para isso.
+  // map evita ter que estender o tipo Deal só para isso. Usa o board
+  // ORIGINAL pra nao perder lookup de cards filtrados (caso slot
+  // precise consultar mesmo escondido).
   const dealById = useMemo(() => {
     const map = new Map<string, BoardDealDto>();
     for (const stage of board) {
@@ -175,6 +206,16 @@ export default function KanbanV2ClientPage() {
               onChange={(id) => setPipelineId(id)}
             />
           }
+          filtersButtonRef={filtersBtnRef}
+          onFiltersClick={() => setFiltersOpen((v) => !v)}
+          activeFiltersCount={countActiveFilters(filters)}
+        />
+        <FiltersPopover
+          open={filtersOpen}
+          anchorRef={filtersBtnRef}
+          onClose={() => setFiltersOpen(false)}
+          filters={filters}
+          onChange={setFilters}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>

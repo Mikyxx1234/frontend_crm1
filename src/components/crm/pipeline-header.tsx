@@ -32,6 +32,12 @@ interface PipelineHeaderProps {
   pipelineNameSlot?: React.ReactNode
   /** Counts dinamicos por aba. Quando undefined, mantem o "14" mock do v0. */
   tabCounts?: Partial<Record<TabId, number>>
+  /** Ref no botao Filtros para ancorar popovers. */
+  filtersButtonRef?: React.Ref<HTMLButtonElement>
+  /** Handler do botao Filtros. Quando ausente, botao fica decorativo. */
+  onFiltersClick?: () => void
+  /** Numero de filtros ativos — exibe badge ao lado do icone. */
+  activeFiltersCount?: number
 }
 
 export function PipelineHeader({
@@ -41,6 +47,9 @@ export function PipelineHeader({
   onViewChange,
   pipelineNameSlot,
   tabCounts,
+  filtersButtonRef,
+  onFiltersClick,
+  activeFiltersCount = 0,
 }: PipelineHeaderProps) {
   const [tab, setTab] = useState<TabId>(activeTab)
   const [view, setView] = useState<ViewType>(activeView)
@@ -98,8 +107,30 @@ export function PipelineHeader({
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <button className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
+          <button
+            ref={filtersButtonRef}
+            type="button"
+            onClick={onFiltersClick}
+            className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap"
+            style={
+              activeFiltersCount > 0
+                ? {
+                    borderColor: "var(--brand-primary, #5b6ff5)",
+                    color: "var(--brand-primary, #5b6ff5)",
+                    background: "rgba(91,111,245,0.10)",
+                  }
+                : undefined
+            }
+          >
             <IconFilter size={14} /> Filtros
+            {activeFiltersCount > 0 && (
+              <span
+                className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums text-white"
+                style={{ background: "var(--brand-primary, #5b6ff5)" }}
+              >
+                {activeFiltersCount}
+              </span>
+            )}
           </button>
           <button className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
             <IconBookmark size={14} /> Salvos

@@ -9,3 +9,9 @@ export { useDealChatBinding } from "./deal-chat-binding";
 export { DealNotesTab } from "./deal-notes-tab";
 export { DealTimelineTab } from "./deal-timeline-tab";
 export { DealActivitiesTab } from "./deal-activities-tab";
+export {
+  FiltersPopover,
+  EMPTY_FILTERS,
+  countActiveFilters,
+  type KanbanFilters,
+} from "./filters-popover";

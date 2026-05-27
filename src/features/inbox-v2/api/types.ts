@@ -28,7 +28,15 @@ export type Channel =
   | "telegram"
   | string;
 
-export type MessageDirection = "INBOUND" | "OUTBOUND";
+/**
+ * Direção da mensagem conforme retornado pelo backend.
+ *
+ * Backend (`src/app/api/conversations/[id]/messages/route.ts`) serializa
+ * em minúsculas: `"in" | "out" | "system"`. Esses valores são o
+ * contrato real — qualquer adapter deve comparar contra `"in"` /
+ * `"out"`, NUNCA contra `"INBOUND" / "OUTBOUND"` (não existe na resposta).
+ */
+export type MessageDirection = "in" | "out" | "system";
 
 export type MessageStatus =
   | "PENDING"

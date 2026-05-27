@@ -150,7 +150,11 @@ export function toMessageBubble(
   dto: InboxMessageDto,
   contactName: string,
 ): Message {
-  const isInbound = dto.direction === "INBOUND";
+  // Backend serializa direction em minúsculas ("in" / "out" / "system").
+  // Aceitamos também as variantes UPPER por defesa (caso outro endpoint
+  // ou SSE futuro mude o casing — nunca regredir o lado dos balões).
+  const dir = String(dto.direction ?? "").toLowerCase();
+  const isInbound = dir === "in" || dir === "inbound";
   return {
     id: dto.id,
     content: dto.content ?? "",

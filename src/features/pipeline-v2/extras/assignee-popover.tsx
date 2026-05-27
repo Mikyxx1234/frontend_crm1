@@ -91,11 +91,19 @@ export function AssigneePopover({
 
       {open && (
         <div
-          className="absolute left-0 top-full z-30 mt-1 w-64 rounded-[var(--radius-lg)] border p-2 backdrop-blur-md"
+          className="absolute left-0 top-full z-50 mt-1 w-64 rounded-[var(--radius-lg)] border p-2"
           style={{
-            background: "var(--glass-bg-strong)",
-            borderColor: "var(--glass-border)",
-            boxShadow: "var(--glass-shadow)",
+            // Fundo OPACO (98% branco) — diferente do interior do
+            // DealDetailPanel onde glass-bg-strong funciona bem. Dentro
+            // de um DealCard pequeno sobre outros cards e mesh, qualquer
+            // transparencia deixa o popover ilegivel.
+            background: "rgba(255, 255, 255, 0.98)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            borderColor: "rgba(255, 255, 255, 0.7)",
+            boxShadow:
+              "0 12px 40px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08)",
+            isolation: "isolate",
           }}
         >
           <input

@@ -49,6 +49,16 @@ interface DealDetailPanelProps {
   isOpen: boolean
   onClose: () => void
   deal?: DealDetail | null
+  // Slots opcionais — quando ausentes, mantém o visual default do v0.
+  // Permite que o wrapper de /pipeline/kanban-v2 injete popovers e
+  // mutations sem reescrever o componente.
+  stageRibbonSlot?: React.ReactNode
+  winButtonSlot?: React.ReactNode
+  moreActionsSlot?: React.ReactNode
+  ownerSlot?: React.ReactNode
+  sourceSlot?: React.ReactNode
+  forecastSlot?: React.ReactNode
+  tagsSlot?: React.ReactNode
 }
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
@@ -73,7 +83,18 @@ const FIELD_GROUPS = [
   "Nome Completo",
 ]
 
-export function DealDetailPanel({ isOpen, onClose, deal }: DealDetailPanelProps) {
+export function DealDetailPanel({
+  isOpen,
+  onClose,
+  deal,
+  stageRibbonSlot,
+  winButtonSlot,
+  moreActionsSlot,
+  ownerSlot,
+  sourceSlot,
+  forecastSlot,
+  tagsSlot,
+}: DealDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
   const [openFieldGroup, setOpenFieldGroup] = useState<string | null>("Idade")
 
@@ -150,6 +171,9 @@ export function DealDetailPanel({ isOpen, onClose, deal }: DealDetailPanelProps)
             </div>
 
             {/* Pipeline progress */}
+            {stageRibbonSlot ? (
+              <div className="mx-6 flex-1" aria-label="Etapa do pipeline">{stageRibbonSlot}</div>
+            ) : (
             <div className="mx-6 flex flex-1 items-center gap-1" aria-label="Etapa do pipeline">
               {STAGES.map((stage, idx) => {
                 const done = idx < currentStageIndex
@@ -184,6 +208,7 @@ export function DealDetailPanel({ isOpen, onClose, deal }: DealDetailPanelProps)
                 )
               })}
             </div>
+            )}
 
             {/* Ações */}
             <div className="flex items-center gap-2">
@@ -199,16 +224,18 @@ export function DealDetailPanel({ isOpen, onClose, deal }: DealDetailPanelProps)
                 Ligar
                 <IconChevronDown size={12} className="opacity-70" />
               </button>
-              <button
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
-                style={{
-                  background: "var(--color-success)",
-                  boxShadow: "0 4px 14px rgba(16,185,129,0.30)",
-                }}
-              >
-                <IconTrophy size={14} />
-                Ganhar
-              </button>
+              {winButtonSlot ?? (
+                <button
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
+                  style={{
+                    background: "var(--color-success)",
+                    boxShadow: "0 4px 14px rgba(16,185,129,0.30)",
+                  }}
+                >
+                  <IconTrophy size={14} />
+                  Ganhar
+                </button>
+              )}
               <button
                 className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
                 style={{
@@ -220,17 +247,19 @@ export function DealDetailPanel({ isOpen, onClose, deal }: DealDetailPanelProps)
               >
                 <IconSearch size={16} />
               </button>
-              <button
-                className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
-                style={{
-                  background: "var(--glass-bg-strong)",
-                  borderColor: "var(--glass-border)",
-                  boxShadow: "var(--glass-shadow-sm)",
-                }}
-                title="Mais"
-              >
-                <IconDotsVertical size={16} />
-              </button>
+              {moreActionsSlot ?? (
+                <button
+                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
+                  style={{
+                    background: "var(--glass-bg-strong)",
+                    borderColor: "var(--glass-border)",
+                    boxShadow: "var(--glass-shadow-sm)",
+                  }}
+                  title="Mais"
+                >
+                  <IconDotsVertical size={16} />
+                </button>
+              )}
             </div>
           </header>
 
@@ -306,25 +335,33 @@ export function DealDetailPanel({ isOpen, onClose, deal }: DealDetailPanelProps)
                 }
               >
                 <DetailRow label="Responsável">
-                  <span className="inline-flex cursor-pointer items-center gap-1.5 italic text-[var(--text-muted)]">
-                    {deal.owner?.name || "Sem responsável"}
-                    <IconChevronDown size={12} />
-                  </span>
+                  {ownerSlot ?? (
+                    <span className="inline-flex cursor-pointer items-center gap-1.5 italic text-[var(--text-muted)]">
+                      {deal.owner?.name || "Sem responsável"}
+                      <IconChevronDown size={12} />
+                    </span>
+                  )}
                 </DetailRow>
                 <DetailRow label="Origem">
-                  <span className="inline-flex cursor-pointer items-center gap-1.5 font-display font-semibold text-[var(--text-primary)]">
-                    Whatsapp-Dina-7367
-                    <IconPencil size={12} className="opacity-50" />
-                  </span>
+                  {sourceSlot ?? (
+                    <span className="inline-flex cursor-pointer items-center gap-1.5 font-display font-semibold text-[var(--text-primary)]">
+                      Whatsapp-Dina-7367
+                      <IconPencil size={12} className="opacity-50" />
+                    </span>
+                  )}
                 </DetailRow>
                 <DetailRow label="Previsão">
-                  <span className="cursor-pointer italic text-[var(--text-muted)]">Indefinida</span>
+                  {forecastSlot ?? (
+                    <span className="cursor-pointer italic text-[var(--text-muted)]">Indefinida</span>
+                  )}
                 </DetailRow>
                 <DetailRow label="Tags" noBorder>
-                  <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
-                    <IconPlus size={10} />
-                    Adicionar
-                  </span>
+                  {tagsSlot ?? (
+                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                      <IconPlus size={10} />
+                      Adicionar
+                    </span>
+                  )}
                 </DetailRow>
               </SidebarSection>
 

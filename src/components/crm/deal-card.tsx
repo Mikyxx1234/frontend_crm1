@@ -31,6 +31,17 @@ export interface Deal {
 interface DealCardProps {
   deal: Deal
   onClick?: () => void
+  /**
+   * Slot opcional que substitui INTEIRAMENTE a linha de tags do card.
+   * Quando provido, deve incluir as próprias tags + botão de adicionar.
+   * O wrapper aplica stopPropagation para não disparar `onClick` do card.
+   */
+  tagsSlot?: React.ReactNode
+  /**
+   * Slot opcional que substitui o footer com o chip do responsável.
+   * Mesmo tratamento de stopPropagation que `tagsSlot`.
+   */
+  ownerSlot?: React.ReactNode
 }
 
 const tagStyles: Record<TagType, string> = {
@@ -42,7 +53,7 @@ const tagStyles: Record<TagType, string> = {
   ref: "bg-[rgba(244,114,182,0.12)] text-[#be185d] border border-[rgba(244,114,182,0.25)]",
 }
 
-export function DealCard({ deal, onClick }: DealCardProps) {
+export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) {
   return (
     <article
       onClick={onClick}
@@ -91,27 +102,51 @@ export function DealCard({ deal, onClick }: DealCardProps) {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-1 mb-2">
-        {deal.tags?.map((tag, i) => (
-          <span
-            key={i}
-            className={`font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide ${tagStyles[tag.type]}`}
-          >
-            {tag.label}
-          </span>
-        ))}
-        <button
+      {tagsSlot ? (
+        <div
+          className="flex flex-wrap gap-1 mb-2"
+          // stopPropagation em todos os eventos de ponteiro/teclado
+          // que disparariam (a) onClick do card -> abrir deal ou
+          // (b) dragHandleProps do @hello-pangea/dnd -> iniciar drag
+          // visual antes do popover terminar de abrir.
           onClick={(e) => e.stopPropagation()}
-          className="font-display text-[9.5px] font-semibold px-2 py-px rounded-full inline-flex items-center bg-transparent text-[var(--text-muted)] border border-dashed border-[rgba(163,163,163,0.4)] cursor-pointer hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors"
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
-          +
-        </button>
-      </div>
+          {tagsSlot}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {deal.tags?.map((tag, i) => (
+            <span
+              key={i}
+              className={`font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide ${tagStyles[tag.type]}`}
+            >
+              {tag.label}
+            </span>
+          ))}
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="font-display text-[9.5px] font-semibold px-2 py-px rounded-full inline-flex items-center bg-transparent text-[var(--text-muted)] border border-dashed border-[rgba(163,163,163,0.4)] cursor-pointer hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors"
+          >
+            +
+          </button>
+        </div>
+      )}
 
-      <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-white/35">
-        <Chip variant="brand" className="cursor-pointer hover:bg-[rgba(91,111,245,0.22)] transition-colors">
-          {deal.owner.name}
-        </Chip>
+      <div
+        className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-white/35"
+        onClick={ownerSlot ? (e) => e.stopPropagation() : undefined}
+        onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
+        onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
+        onTouchStart={ownerSlot ? (e) => e.stopPropagation() : undefined}
+      >
+        {ownerSlot ?? (
+          <Chip variant="brand" className="cursor-pointer hover:bg-[rgba(91,111,245,0.22)] transition-colors">
+            {deal.owner.name}
+          </Chip>
+        )}
       </div>
     </article>
   )

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
@@ -29,7 +29,7 @@ import {
   ConversationActionsMenu,
   TagsPopover,
 } from "@/features/inbox-v2/extras";
-import type { InboxFilters, InboxTab } from "@/features/inbox-v2/api";
+import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
 
 const DEFAULT_TAB: InboxTab = "entrada";
 const DEFAULT_FILTERS: InboxFilters = {};
@@ -54,10 +54,27 @@ export default function InboxV2ClientPage() {
   });
   const rows = listData?.items ?? [];
 
-  const activeRow = useMemo(
-    () => (activeId ? rows.find((r) => r.id === activeId) ?? null : null),
-    [activeId, rows],
-  );
+  // ── Sticky activeRow ────────────────────────────────────────────
+  // A `rows` reflete o filtro da aba atual (ex.: "entrada"). Se o
+  // agente envia uma mensagem outbound, a conversa pode deixar de
+  // pertencer ao filtro (move pra "respondidas") e sumir de `rows`.
+  // Sem snapshot, `rows.find` devolve undefined e a janela do chat
+  // fecha sozinha. Mantemos a ultima row vista enquanto o user nao
+  // trocar de conversa explicitamente.
+  const [stickyRow, setStickyRow] = useState<ConversationListRow | null>(null);
+
+  useEffect(() => {
+    if (!activeId) {
+      setStickyRow(null);
+      return;
+    }
+    const found = rows.find((r) => r.id === activeId);
+    if (found) setStickyRow(found);
+    // Se nao encontrou (saiu do filtro da aba), preserva o snapshot
+    // anterior — NAO sobrescreve com null.
+  }, [activeId, rows]);
+
+  const activeRow = stickyRow;
   const activeContactId = activeRow?.contact?.id ?? null;
 
   const { data: messagesData } = useMessages(activeId);

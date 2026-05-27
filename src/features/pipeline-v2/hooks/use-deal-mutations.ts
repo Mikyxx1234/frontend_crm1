@@ -1,10 +1,26 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { moveDeal, type BoardDealDto, type BoardStageDto, type StatusFilter } from "../api";
+import {
+  addDealTag,
+  listTags,
+  listTeamUsers,
+  moveDeal,
+  removeDealTag,
+  setDealStatus,
+  updateDeal,
+  type BoardDealDto,
+  type BoardStageDto,
+  type DealStatus,
+  type DealTag,
+  type StatusFilter,
+  type TeamUser,
+  type UpdateDealPayload,
+} from "../api";
 import { boardKey } from "./use-board";
+import { dealDetailKey } from "./use-deal-detail";
 
 interface MoveVars {
   dealId: string;
@@ -49,5 +65,117 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
     onSettled: () => {
       qc.invalidateQueries({ queryKey: key });
     },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// updateDeal — usado pelo AssigneePopover (ownerId), inline-edit de
+// Origem/Previsão/Notas e qualquer outro campo escalar do deal.
+// ─────────────────────────────────────────────────────────────────
+
+interface UpdateDealVars {
+  dealId: string;
+  payload: UpdateDealPayload;
+}
+
+export function useUpdateDeal(pipelineId: string | null, status: StatusFilter = "OPEN") {
+  const qc = useQueryClient();
+  const key = boardKey(pipelineId, status);
+
+  return useMutation<{ deal: BoardDealDto }, Error, UpdateDealVars>({
+    mutationFn: ({ dealId, payload }) => updateDeal(dealId, payload),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: key });
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+    },
+    onError: (err) => toast.error(err.message || "Falha ao atualizar negocio"),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// status do deal — botões Ganhar / Perder / Reabrir
+// ─────────────────────────────────────────────────────────────────
+
+interface SetStatusVars {
+  dealId: string;
+  status: DealStatus;
+  lostReason?: string;
+}
+
+export function useSetDealStatus(pipelineId: string | null, status: StatusFilter = "OPEN") {
+  const qc = useQueryClient();
+  const key = boardKey(pipelineId, status);
+
+  return useMutation<{ deal: BoardDealDto }, Error, SetStatusVars>({
+    mutationFn: (vars) =>
+      setDealStatus(vars.dealId, { status: vars.status, lostReason: vars.lostReason }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: key });
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+      const label =
+        vars.status === "WON" ? "Negocio marcado como ganho" :
+        vars.status === "LOST" ? "Negocio marcado como perdido" :
+        "Negocio reaberto";
+      toast.success(label);
+    },
+    onError: (err) => toast.error(err.message || "Falha ao alterar status"),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// tags do deal
+// ─────────────────────────────────────────────────────────────────
+
+export function useDealTags() {
+  return useQuery<DealTag[]>({
+    queryKey: ["deal-tags-v2"],
+    queryFn: listTags,
+    staleTime: 60_000,
+  });
+}
+
+export function useAddDealTag(pipelineId: string | null, status: StatusFilter = "OPEN") {
+  const qc = useQueryClient();
+  const boardK = boardKey(pipelineId, status);
+
+  return useMutation<
+    { ok: true },
+    Error,
+    { dealId: string; tagId?: string; tagName?: string; color?: string }
+  >({
+    mutationFn: ({ dealId, ...payload }) => addDealTag(dealId, payload),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["deal-tags-v2"] });
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+      qc.invalidateQueries({ queryKey: boardK });
+    },
+    onError: (err) => toast.error(err.message || "Falha ao adicionar tag"),
+  });
+}
+
+export function useRemoveDealTag(pipelineId: string | null, status: StatusFilter = "OPEN") {
+  const qc = useQueryClient();
+  const boardK = boardKey(pipelineId, status);
+
+  return useMutation<{ ok: true }, Error, { dealId: string; tagId: string }>({
+    mutationFn: ({ dealId, tagId }) => removeDealTag(dealId, tagId),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+      qc.invalidateQueries({ queryKey: boardK });
+    },
+    onError: (err) => toast.error(err.message || "Falha ao remover tag"),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// usuários (team picker)
+// ─────────────────────────────────────────────────────────────────
+
+export function useTeamUsers(enabled: boolean = true) {
+  return useQuery<TeamUser[]>({
+    queryKey: ["team-users-v2"],
+    queryFn: listTeamUsers,
+    enabled,
+    staleTime: 60_000,
   });
 }

@@ -9,6 +9,8 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 
+import { IconChevronDown, IconDotsVertical, IconPencil, IconPlus, IconTrophy } from "@tabler/icons-react";
+
 import { NavRail } from "@/components/crm/nav-rail";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { KanbanColumn } from "@/components/crm/kanban-column";
@@ -26,7 +28,15 @@ import {
   useMoveDeal,
   usePipelines,
 } from "@/features/pipeline-v2/hooks";
-import type { StatusFilter } from "@/features/pipeline-v2/api";
+import type { BoardDealDto, StatusFilter } from "@/features/pipeline-v2/api";
+import {
+  AssigneePopover,
+  DealActionsMenu,
+  InlineEditText,
+  StagePicker,
+  TagsPopover,
+  WinButton,
+} from "@/features/pipeline-v2/extras";
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos";
 
@@ -68,14 +78,26 @@ export default function KanbanV2ClientPage() {
     [board],
   );
 
+  // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
+  // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
+  // map evita ter que estender o tipo Deal só para isso.
+  const dealById = useMemo(() => {
+    const map = new Map<string, BoardDealDto>();
+    for (const stage of board) {
+      for (const d of stage.deals) map.set(d.id, d);
+    }
+    return map;
+  }, [board]);
+
   const { data: dealDetail } = useDealDetail(activeDealId);
 
   // Encontra o stage corrente do deal aberto pra alimentar o header de pills.
-  const activeDealStageName = useMemo(() => {
+  const activeDealStage = useMemo(() => {
     if (!activeDealId) return undefined;
-    const stage = board.find((s) => s.deals.some((d) => d.id === activeDealId));
-    return stage?.name;
+    return board.find((s) => s.deals.some((d) => d.id === activeDealId));
   }, [activeDealId, board]);
+  const activeDealStageName = activeDealStage?.name;
+  const activeDealStageId = activeDealStage?.id ?? null;
 
   const dealDetailVm: DealDetail | null = useMemo(() => {
     if (!dealDetail) return null;
@@ -130,6 +152,9 @@ export default function KanbanV2ClientPage() {
                 key={col.stageId}
                 column={col}
                 onDealClick={setActiveDealId}
+                dealById={dealById}
+                pipelineId={pipelineId}
+                statusFilter={status}
               />
             ))}
             {columns.length === 0 ? (
@@ -143,9 +168,220 @@ export default function KanbanV2ClientPage() {
         isOpen={!!activeDealId}
         onClose={() => setActiveDealId(null)}
         deal={dealDetailVm ?? undefined}
+        stageRibbonSlot={
+          activeDealId && activeDealStageId ? (
+            <StagePicker
+              dealId={activeDealId}
+              currentStageId={activeDealStageId}
+              pipelineId={pipelineId}
+              statusFilter={status}
+            >
+              {({ onSelectStage, isPending }) => (
+                <div className="flex items-center gap-1">
+                  {board.map((s, idx) => {
+                    const currentIdx = board.findIndex(
+                      (b) => b.id === activeDealStageId,
+                    );
+                    const done = idx < currentIdx;
+                    const active = s.id === activeDealStageId;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => onSelectStage(s.id)}
+                        className="flex-1 truncate rounded-full border px-2 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.06em] transition-colors"
+                        style={
+                          active
+                            ? {
+                                background: "var(--brand-primary)",
+                                color: "#fff",
+                                borderColor: "var(--brand-primary-dark)",
+                                boxShadow: "0 4px 12px rgba(91,111,245,0.35)",
+                              }
+                            : done
+                              ? {
+                                  background: "var(--color-success-bg)",
+                                  color: "var(--color-success-text)",
+                                  borderColor: "rgba(16,185,129,0.25)",
+                                }
+                              : {
+                                  background: "var(--glass-bg)",
+                                  color: "var(--text-muted)",
+                                  borderColor: "var(--glass-border)",
+                                }
+                        }
+                      >
+                        {s.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </StagePicker>
+          ) : undefined
+        }
+        winButtonSlot={
+          activeDealId ? (
+            <WinButton
+              dealId={activeDealId}
+              currentStatus={dealDetail?.status ?? "OPEN"}
+              pipelineId={pipelineId}
+              statusFilter={status}
+              trigger={
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
+                  style={{
+                    background:
+                      dealDetail?.status === "WON"
+                        ? "var(--text-muted)"
+                        : "var(--color-success)",
+                    boxShadow: "0 4px 14px rgba(16,185,129,0.30)",
+                  }}
+                >
+                  <IconTrophy size={14} />
+                  {dealDetail?.status === "WON" ? "Reabrir" : "Ganhar"}
+                </span>
+              }
+            />
+          ) : undefined
+        }
+        moreActionsSlot={
+          activeDealId ? (
+            <DealActionsMenu
+              dealId={activeDealId}
+              currentStatus={dealDetail?.status ?? "OPEN"}
+              pipelineId={pipelineId}
+              statusFilter={status}
+              trigger={
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
+                  style={{
+                    background: "var(--glass-bg-strong)",
+                    borderColor: "var(--glass-border)",
+                    boxShadow: "var(--glass-shadow-sm)",
+                  }}
+                  title="Mais"
+                >
+                  <IconDotsVertical size={16} />
+                </span>
+              }
+            />
+          ) : undefined
+        }
+        ownerSlot={
+          activeDealId ? (
+            <AssigneePopover
+              dealId={activeDealId}
+              currentOwnerId={dealDetail?.owner?.id ?? null}
+              currentOwnerName={dealDetail?.owner?.name ?? null}
+              pipelineId={pipelineId}
+              statusFilter={status}
+              trigger={
+                <span
+                  className={`inline-flex cursor-pointer items-center gap-1.5 ${
+                    dealDetail?.owner?.name
+                      ? "font-display font-semibold text-[var(--text-primary)]"
+                      : "italic text-[var(--text-muted)]"
+                  }`}
+                >
+                  {dealDetail?.owner?.name || "Sem responsavel"}
+                  <IconChevronDown size={12} />
+                </span>
+              }
+            />
+          ) : undefined
+        }
+        sourceSlot={
+          activeDealId ? (
+            <InlineEditText
+              dealId={activeDealId}
+              field="source"
+              value={dealDetail?.source ?? null}
+              placeholder="Adicionar origem"
+              pipelineId={pipelineId}
+              statusFilter={status}
+              display={(v) => (
+                <span className="inline-flex items-center gap-1.5 font-display font-semibold text-[var(--text-primary)]">
+                  {v && v.trim() ? v : <span className="italic text-[var(--text-muted)]">Adicionar</span>}
+                  <IconPencil size={12} className="opacity-50" />
+                </span>
+              )}
+            />
+          ) : undefined
+        }
+        forecastSlot={
+          activeDealId ? (
+            <InlineEditText
+              dealId={activeDealId}
+              field="expectedCloseAt"
+              type="date"
+              value={
+                dealDetail?.expectedClose
+                  ? dealDetail.expectedClose.slice(0, 10)
+                  : null
+              }
+              placeholder="Indefinida"
+              pipelineId={pipelineId}
+              statusFilter={status}
+              display={(v) =>
+                v && v.trim() ? (
+                  <span className="cursor-pointer font-display font-semibold text-[var(--text-primary)]">
+                    {formatDate(v)}
+                  </span>
+                ) : (
+                  <span className="cursor-pointer italic text-[var(--text-muted)]">
+                    Indefinida
+                  </span>
+                )
+              }
+            />
+          ) : undefined
+        }
+        tagsSlot={
+          activeDealId ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(dealDetail?.tags ?? []).map((t) => (
+                <span
+                  key={t.id}
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                  style={{
+                    background: `${t.color ?? "#5b6ff5"}22`,
+                    color: t.color ?? "var(--brand-primary)",
+                    border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                  }}
+                >
+                  {t.name}
+                </span>
+              ))}
+              <TagsPopover
+                dealId={activeDealId}
+                currentTags={dealDetail?.tags ?? []}
+                pipelineId={pipelineId}
+                statusFilter={status}
+                trigger={
+                  <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                    <IconPlus size={10} />
+                    Adicionar
+                  </span>
+                }
+              />
+            </div>
+          ) : undefined
+        }
       />
     </div>
   );
+}
+
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("pt-BR");
+  } catch {
+    return iso;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -156,9 +392,15 @@ export default function KanbanV2ClientPage() {
 function DroppableColumn({
   column,
   onDealClick,
+  dealById,
+  pipelineId,
+  statusFilter,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
+  dealById: Map<string, BoardDealDto>;
+  pipelineId: string | null;
+  statusFilter: StatusFilter;
 }) {
   return (
     <Droppable droppableId={column.stageId}>
@@ -185,23 +427,77 @@ function DroppableColumn({
               : undefined,
           }}
           placeholderSlot={provided.placeholder}
-          renderDeal={(deal, index) => (
-            <Draggable key={deal.id} draggableId={deal.id} index={index}>
-              {(dragProvided, dragSnapshot) => (
-                <div
-                  ref={dragProvided.innerRef}
-                  {...dragProvided.draggableProps}
-                  {...dragProvided.dragHandleProps}
-                  style={{
-                    ...dragProvided.draggableProps.style,
-                    opacity: dragSnapshot.isDragging ? 0.85 : 1,
-                  }}
-                >
-                  <DealCard deal={deal} onClick={() => onDealClick(deal.id)} />
-                </div>
-              )}
-            </Draggable>
-          )}
+          renderDeal={(deal, index) => {
+            const raw = dealById.get(deal.id);
+            return (
+              <Draggable key={deal.id} draggableId={deal.id} index={index}>
+                {(dragProvided, dragSnapshot) => (
+                  <div
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.draggableProps}
+                    {...dragProvided.dragHandleProps}
+                    style={{
+                      ...dragProvided.draggableProps.style,
+                      opacity: dragSnapshot.isDragging ? 0.85 : 1,
+                    }}
+                  >
+                    <DealCard
+                      deal={deal}
+                      onClick={() => onDealClick(deal.id)}
+                      tagsSlot={
+                        <>
+                          {(raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>)).map((t) => (
+                            <span
+                              key={t.id}
+                              className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide"
+                              style={{
+                                background: `${t.color || "#5b6ff5"}22`,
+                                color: t.color || "var(--brand-primary)",
+                                border: `1px solid ${t.color || "#5b6ff5"}44`,
+                              }}
+                            >
+                              {t.name}
+                            </span>
+                          ))}
+                          <TagsPopover
+                            dealId={deal.id}
+                            currentTags={raw?.tags ?? []}
+                            pipelineId={pipelineId}
+                            statusFilter={statusFilter}
+                            trigger={
+                              <span className="font-display text-[9.5px] font-semibold px-2 py-px rounded-full inline-flex items-center bg-transparent text-[var(--text-muted)] border border-dashed border-[rgba(163,163,163,0.4)] cursor-pointer hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors">
+                                +
+                              </span>
+                            }
+                          />
+                        </>
+                      }
+                      ownerSlot={
+                        <AssigneePopover
+                          dealId={deal.id}
+                          currentOwnerId={raw?.owner?.id ?? null}
+                          currentOwnerName={raw?.owner?.name ?? null}
+                          pipelineId={pipelineId}
+                          statusFilter={statusFilter}
+                          trigger={
+                            <span className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                              style={{
+                                background: "rgba(91,111,245,0.15)",
+                                color: "var(--brand-primary)",
+                                border: "1px solid rgba(91,111,245,0.2)",
+                              }}
+                            >
+                              {deal.owner.name}
+                            </span>
+                          }
+                        />
+                      }
+                    />
+                  </div>
+                )}
+              </Draggable>
+            );
+          }}
         />
       )}
     </Droppable>

@@ -544,13 +544,15 @@ export function DealDetailPanel({
                   </div>
                 </div>
 
-                {/* Outgoing */}
+                {/* Outgoing — fallback hex garante o gradiente mesmo se
+                    Tailwind v4 não resolver `var(--brand-primary*)` no
+                    inline style (ex.: pré-hidratação). */}
                 <div className="flex flex-row-reverse items-end gap-2.5">
                   <div
                     className="max-w-[70%] rounded-[var(--radius-lg)] px-[15px] py-2.5 text-[13.5px] leading-[1.55] text-white"
                     style={{
                       background:
-                        "linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%)",
+                        "linear-gradient(135deg, var(--brand-primary, #5b6ff5) 0%, var(--brand-primary-dark, #3d52e8) 100%)",
                       borderBottomRightRadius: "var(--radius-sm)",
                       boxShadow: "0 4px 16px rgba(91,111,245,0.35)",
                     }}

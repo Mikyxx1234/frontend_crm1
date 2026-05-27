@@ -25,8 +25,31 @@
   --color-lead-bg:          rgba(245, 158, 11, 0.15);
   --color-success-bg:       rgba(16, 185, 129, 0.12);
 
-  /* ── Marca: secundária (lavender) — usada em gradients do v0 ──── */
+  /* ── Marca: primária / secundária ──────────────────────────────
+     IMPORTANTE: globals.css principal NÃO define --brand-primary
+     (legado usa shadcn --primary). O pacote v0 (components/crm/*)
+     usa --brand-primary direto em inline styles (ex.: gradiente do
+     bubble outgoing do chat, botões Ganhar, NavRail). Sem isso o
+     gradient resolve para "transparent" e o balão fica invisível.
+     Valores idênticos ao ds base (ds-deal-aberto.html). */
+  --brand-primary:          #5b6ff5;
+  --brand-primary-light:    #7b8df7;
+  --brand-primary-dark:     #3d52e8;
   --brand-secondary:        #a78bfa;
+  --brand-accent:           #f472b6;
+
+  /* ── Cores semânticas adicionais usadas em inline styles do v0 ── */
+  --color-success:          #10b981;
+  --color-success-text:     #047857;
+  --color-danger:           #ef4444;
+  --color-danger-text:      #b91c1c;
+  --color-warning:          #f59e0b;
+  --color-info:             #3b82f6;
+
+  /* ── Tokens de texto (espelhar globals.css principal) ─────────── */
+  --text-primary:           #0f172a;
+  --text-secondary:         #475569;
+  --text-muted:             #64748b;
 
   /* ── Cores das colunas do Kanban (KanbanColumn.color) ─────────── */
   --col-novo:      #94a3b8;    /* slate — estágio inicial neutro */
@@ -56,10 +79,37 @@
    Declarar aqui DE NOVO garante a presença literal no documento.
    ────────────────────────────────────────────────────────────────── */
 :root {
+  /* Background mesh */
   --bg-base: #dde8f5;
   --bg-mesh-1: #b8cfec;
   --bg-mesh-2: #e8d5f0;
   --bg-mesh: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
+
+  /* Marca — duplicado em :root para garantir que inline styles
+     resolvam mesmo quando o resolver do Tailwind v4 falha. */
+  --brand-primary:       #5b6ff5;
+  --brand-primary-light: #7b8df7;
+  --brand-primary-dark:  #3d52e8;
+  --brand-secondary:     #a78bfa;
+  --brand-accent:        #f472b6;
+
+  /* Cores semânticas */
+  --color-success:       #10b981;
+  --color-success-text:  #047857;
+  --color-success-bg:    rgba(16, 185, 129, 0.12);
+  --color-danger:        #ef4444;
+  --color-danger-text:   #b91c1c;
+  --color-warning:       #f59e0b;
+  --color-info:          #3b82f6;
+  --color-online:        #10b981;
+  --color-enterprise-bg: rgba(91, 111, 245, 0.15);
+  --color-lead:          #f59e0b;
+  --color-lead-bg:       rgba(245, 158, 11, 0.15);
+
+  /* Texto */
+  --text-primary:        #0f172a;
+  --text-secondary:      #475569;
+  --text-muted:          #64748b;
 }
 
 @layer utilities {

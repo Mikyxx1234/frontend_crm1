@@ -14,7 +14,6 @@ import {
   toContactAside,
   toConversationCard,
   toMessageBubble,
-  isSessionExpired,
 } from "@/features/inbox-v2/adapters";
 import {
   useConversations,
@@ -24,7 +23,12 @@ import {
   useMessages,
   useSendMessage,
 } from "@/features/inbox-v2/hooks";
-import { Composer } from "@/features/inbox-v2/extras";
+import {
+  AssigneePopover,
+  Composer,
+  ConversationActionsMenu,
+  TagsPopover,
+} from "@/features/inbox-v2/extras";
 import type { InboxFilters, InboxTab } from "@/features/inbox-v2/api";
 
 const DEFAULT_TAB: InboxTab = "entrada";
@@ -93,9 +97,11 @@ export default function InboxV2ClientPage() {
     [messages, contactName],
   );
   const chatContact = activeRow ? toChatContact(activeRow) : null;
-  const sessionExpired = activeRow
-    ? sessionInfo?.active === false || isSessionExpired(activeRow.lastInboundAt)
-    : false;
+  // Espelha exatamente o legado (chat-window.tsx): se o backend não
+  // enviou o objeto session, assume janela ATIVA (?? true). Nunca usar
+  // heurística client-side de lastInboundAt — backend é o source of truth.
+  const sessionActive = sessionInfo?.active ?? true;
+  const sessionExpired = activeRow ? !sessionActive : false;
   const contactAsideView = activeRow ? toContactAside(contactDetail, activeRow) : null;
 
   // ── Stage pills no header do chat — placeholder até integrar com pipeline real
@@ -113,12 +119,18 @@ export default function InboxV2ClientPage() {
         onSelectConversation={handleSelect}
       />
 
-      {chatContact ? (
+      {chatContact && activeRow ? (
         <ChatArea
           contact={chatContact}
           messages={messageBubbles}
           stages={stagePillsView}
           showSessionAlert={sessionExpired}
+          headerActionsSlot={
+            <ConversationActionsMenu
+              conversationId={activeId}
+              isResolved={activeRow.status === "RESOLVED"}
+            />
+          }
           composerSlot={
             <Composer
               conversationId={activeId}
@@ -134,8 +146,23 @@ export default function InboxV2ClientPage() {
         <EmptyChatArea />
       )}
 
-      {contactAsideView ? (
-        <ContactAside contact={contactAsideView} />
+      {contactAsideView && activeRow ? (
+        <ContactAside
+          contact={contactAsideView}
+          headerActionsNode={
+            <>
+              <AssigneePopover
+                conversationId={activeId}
+                currentAssigneeName={activeRow.assignedTo?.name}
+                currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              />
+              <TagsPopover
+                conversationId={activeId}
+                currentTags={activeRow.tags ?? []}
+              />
+            </>
+          }
+        />
       ) : (
         <EmptyAside />
       )}

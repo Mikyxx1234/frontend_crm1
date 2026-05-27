@@ -4,3 +4,6 @@ export { QuickReplyList } from "./quick-reply-popover";
 export { TemplatePickerList } from "./template-picker-popover";
 export { ComposerMenu } from "./composer-menu";
 export { Composer } from "./composer";
+export { AssigneePopover } from "./assignee-popover";
+export { TagsPopover } from "./tags-popover";
+export { ConversationActionsMenu } from "./conversation-actions-menu";

@@ -30,9 +30,11 @@ import {
 } from "@/features/pipeline-v2/hooks";
 import type { BoardDealDto, StatusFilter } from "@/features/pipeline-v2/api";
 import {
+  AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
   InlineEditText,
+  PipelineSwitcher,
   StagePicker,
   TagsPopover,
   WinButton,
@@ -53,6 +55,9 @@ export default function KanbanV2ClientPage() {
 
   const [activeTab, setActiveTab] = useState<TabId>("abertos");
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
+    null,
+  );
 
   const status = TAB_TO_STATUS[activeTab];
   const { data: pipelines } = usePipelines(isAuthenticated);
@@ -143,6 +148,12 @@ export default function KanbanV2ClientPage() {
         <PipelineHeader
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t)}
+          pipelineNameSlot={
+            <PipelineSwitcher
+              selectedId={pipelineId}
+              onChange={(id) => setPipelineId(id)}
+            />
+          }
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -155,6 +166,9 @@ export default function KanbanV2ClientPage() {
                 dealById={dealById}
                 pipelineId={pipelineId}
                 statusFilter={status}
+                onAddDeal={() =>
+                  setAddStage({ id: col.stageId, name: col.title })
+                }
               />
             ))}
             {columns.length === 0 ? (
@@ -253,6 +267,7 @@ export default function KanbanV2ClientPage() {
               currentStatus={dealDetail?.status ?? "OPEN"}
               pipelineId={pipelineId}
               statusFilter={status}
+              onDeleted={() => setActiveDealId(null)}
               trigger={
                 <span
                   className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
@@ -370,6 +385,17 @@ export default function KanbanV2ClientPage() {
           ) : undefined
         }
       />
+
+      <AddDealDialog
+        open={!!addStage}
+        onOpenChange={(o) => {
+          if (!o) setAddStage(null);
+        }}
+        stageId={addStage?.id ?? ""}
+        stageName={addStage?.name}
+        pipelineId={pipelineId}
+        statusFilter={status}
+      />
     </div>
   );
 }
@@ -395,12 +421,14 @@ function DroppableColumn({
   dealById,
   pipelineId,
   statusFilter,
+  onAddDeal,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
   dealById: Map<string, BoardDealDto>;
   pipelineId: string | null;
   statusFilter: StatusFilter;
+  onAddDeal?: () => void;
 }) {
   return (
     <Droppable droppableId={column.stageId}>
@@ -412,9 +440,7 @@ function DroppableColumn({
           total={column.total}
           deals={column.deals}
           onDealClick={onDealClick}
-          onAddDeal={() => {
-            /* TODO: abrir dialog de novo deal (Fase 11) */
-          }}
+          onAddDeal={onAddDeal}
           dealsContainerRef={provided.innerRef}
           dealsContainerProps={{
             ...provided.droppableProps,

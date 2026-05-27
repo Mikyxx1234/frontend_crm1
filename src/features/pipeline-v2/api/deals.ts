@@ -81,6 +81,50 @@ export async function updateDeal(
   return data as { deal: BoardDealDto };
 }
 
+/**
+ * POST /api/deals — cria um novo deal. Mantemos a forma minima
+ * (title + stageId obrigatorios) e expomos o que o backend ja
+ * aceita opcionalmente.
+ */
+export interface CreateDealPayload {
+  title: string;
+  stageId: string;
+  value?: number;
+  ownerId?: string | null;
+  contactId?: string | null;
+  expectedClose?: string | null;
+}
+
+export async function createDeal(
+  payload: CreateDealPayload,
+): Promise<{ deal: BoardDealDto }> {
+  const res = await fetch(apiUrl(`/api/deals`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao criar negocio",
+    );
+  }
+  return data as { deal: BoardDealDto };
+}
+
+/** DELETE /api/deals/:id — remove o deal permanentemente. */
+export async function deleteDeal(dealId: string): Promise<void> {
+  const res = await fetch(apiUrl(`/api/deals/${dealId}`), {
+    method: "DELETE",
+  });
+  if (!res.ok && res.status !== 204) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao excluir negocio",
+    );
+  }
+}
+
 /** PUT /api/deals/:id/status — marcar WON / LOST / reabrir OPEN. */
 export type DealStatus = "WON" | "LOST" | "OPEN";
 

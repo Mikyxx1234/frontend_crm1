@@ -25,6 +25,13 @@ interface PipelineHeaderProps {
   onTabChange?: (tab: TabId) => void
   activeView?: ViewType
   onViewChange?: (view: ViewType) => void
+  /**
+   * Slot opcional que substitui o nome "Pipeline Principal" hardcoded
+   * — use para plugar um seletor real (ex.: PipelineSwitcher).
+   */
+  pipelineNameSlot?: React.ReactNode
+  /** Counts dinamicos por aba. Quando undefined, mantem o "14" mock do v0. */
+  tabCounts?: Partial<Record<TabId, number>>
 }
 
 export function PipelineHeader({
@@ -32,6 +39,8 @@ export function PipelineHeader({
   onTabChange,
   activeView = "kanban",
   onViewChange,
+  pipelineNameSlot,
+  tabCounts,
 }: PipelineHeaderProps) {
   const [tab, setTab] = useState<TabId>(activeTab)
   const [view, setView] = useState<ViewType>(activeView)
@@ -47,10 +56,10 @@ export function PipelineHeader({
   }
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode; count?: number }[] = [
-    { id: "abertos", label: "Abertos", icon: <IconClock size={14} />, count: 14 },
-    { id: "ganhos", label: "Ganhos", icon: <IconCircleCheck size={14} /> },
-    { id: "perdidos", label: "Perdidos", icon: <IconCircleX size={14} /> },
-    { id: "todos", label: "Todos", icon: <IconGridDots size={14} /> },
+    { id: "abertos", label: "Abertos", icon: <IconClock size={14} />, count: tabCounts?.abertos ?? 14 },
+    { id: "ganhos", label: "Ganhos", icon: <IconCircleCheck size={14} />, count: tabCounts?.ganhos },
+    { id: "perdidos", label: "Perdidos", icon: <IconCircleX size={14} />, count: tabCounts?.perdidos },
+    { id: "todos", label: "Todos", icon: <IconGridDots size={14} />, count: tabCounts?.todos },
   ]
 
   return (
@@ -59,9 +68,11 @@ export function PipelineHeader({
         <div className="flex items-center gap-2.5">
           <span className="font-display text-[14px] text-[var(--text-muted)] font-medium cursor-pointer">Funil</span>
           <IconChevronRight size={12} className="text-[var(--text-muted)]" />
-          <span className="font-display text-[14px] text-[var(--text-primary)] font-semibold cursor-pointer">
-            Pipeline Principal
-          </span>
+          {pipelineNameSlot ?? (
+            <span className="font-display text-[14px] text-[var(--text-primary)] font-semibold cursor-pointer">
+              Pipeline Principal
+            </span>
+          )}
         </div>
 
         <div className="flex-1 max-w-[420px] relative">

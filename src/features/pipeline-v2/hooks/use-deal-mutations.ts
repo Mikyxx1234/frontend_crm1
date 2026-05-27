@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import {
   addDealTag,
+  createDeal,
+  deleteDeal,
   listTags,
   listTeamUsers,
   moveDeal,
@@ -13,6 +15,7 @@ import {
   updateDeal,
   type BoardDealDto,
   type BoardStageDto,
+  type CreateDealPayload,
   type DealStatus,
   type DealTag,
   type StatusFilter,
@@ -170,6 +173,37 @@ export function useRemoveDealTag(pipelineId: string | null, status: StatusFilter
 // ─────────────────────────────────────────────────────────────────
 // usuários (team picker)
 // ─────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────
+// create / delete deal
+// ─────────────────────────────────────────────────────────────────
+
+export function useCreateDeal(pipelineId: string | null, status: StatusFilter = "OPEN") {
+  const qc = useQueryClient();
+  const key = boardKey(pipelineId, status);
+  return useMutation<{ deal: BoardDealDto }, Error, CreateDealPayload>({
+    mutationFn: (payload) => createDeal(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Negocio criado");
+    },
+    onError: (err) => toast.error(err.message || "Falha ao criar negocio"),
+  });
+}
+
+export function useDeleteDeal(pipelineId: string | null, status: StatusFilter = "OPEN") {
+  const qc = useQueryClient();
+  const key = boardKey(pipelineId, status);
+  return useMutation<void, Error, { dealId: string }>({
+    mutationFn: ({ dealId }) => deleteDeal(dealId),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: key });
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
+      toast.success("Negocio excluido");
+    },
+    onError: (err) => toast.error(err.message || "Falha ao excluir negocio"),
+  });
+}
 
 export function useTeamUsers(enabled: boolean = true) {
   return useQuery<TeamUser[]>({

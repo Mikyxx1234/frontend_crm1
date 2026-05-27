@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, type ChangeEvent } from "react"
+import { useEffect, useRef, useState, type ChangeEvent } from "react"
+import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
-import { IconClock, IconPlus, IconChevronDown } from "@tabler/icons-react"
+import { IconClock, IconPlus, IconChevronDown, IconCheck } from "@tabler/icons-react"
 import { InputGlass } from "./input-glass"
 import { TabsGlass, type TabItem } from "./tabs-glass"
 import { ConversationCard, type Conversation } from "./conversation-card"
@@ -12,18 +13,26 @@ interface ConversationColumnProps {
   activeConversationId?: string
   onSelectConversation?: (id: string) => void
   className?: string
-  /**
-   * Props CONTROLADOS — quando fornecidos, o componente usa o
-   * estado externo no lugar do filtro local. Mantém o comportamento
-   * legado (filtro client-side "Todas / Não lidas / Atribuídas")
-   * quando nenhuma das props abaixo é passada.
-   */
+  // ── Props CONTROLADOS ───────────────────────────────────────────
   searchValue?: string
   onSearchChange?: (value: string) => void
+  /**
+   * Tabs do backend. Quando fornecido, controla a UI por completo
+   * (sem filtro local). Quando ausente, usamos as 3 tabs do v0
+   * (Todas/Não lidas/Atribuídas).
+   */
   tabsOverride?: ReadonlyArray<TabItem>
   activeTabIndex?: number
   onTabChange?: (index: number) => void
+  /**
+   * Quando true, esconde a faixa de `<TabsGlass>` e usa SOMENTE o
+   * dropdown do banner "Aguardando resposta" como seletor de status.
+   * Util quando a UX prefere uma unica entrada de selecao.
+   */
+  hideTabs?: boolean
+  /** Label exibido no banner do dropdown (default "Aguardando resposta"). */
   awaitingLabel?: string
+  /** Numero exibido no badge do banner. Quando undefined, usa `conversations.length`. */
   awaitingCount?: number | null
   /** Badge de urgencia (relogio vermelho) no header. */
   urgencyCount?: number
@@ -47,7 +56,8 @@ export function ConversationColumn({
   tabsOverride,
   activeTabIndex,
   onTabChange,
-  awaitingLabel = "Aguardando resposta",
+  hideTabs,
+  awaitingLabel,
   awaitingCount,
   urgencyCount,
   onNewConversation,
@@ -77,13 +87,45 @@ export function ConversationColumn({
         return true
       })
 
-  const urgency =
-    urgencyCount ?? conversations.filter((c) => c.urgent).length
+  const urgency = urgencyCount ?? conversations.filter((c) => c.urgent).length
 
-  const awaiting =
+  const currentTabLabel =
+    awaitingLabel ?? (tabs[activeTab]?.label || "Aguardando resposta")
+  const currentTabCount =
     awaitingCount !== undefined && awaitingCount !== null
       ? awaitingCount
-      : conversations.length
+      : (tabs[activeTab]?.count ?? conversations.length)
+
+  // ── Dropdown do banner ─────────────────────────────────────────
+  const dropdownBtnRef = useRef<HTMLButtonElement>(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number
+    left: number
+    width: number
+  } | null>(null)
+
+  useEffect(() => {
+    if (!dropdownOpen) return
+    const el = dropdownBtnRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    setDropdownPos({ top: r.bottom + 6, left: r.left, width: r.width })
+    function onDocClick(e: MouseEvent) {
+      const target = e.target as Node
+      if (el && el.contains(target)) return
+      setDropdownOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDropdownOpen(false)
+    }
+    document.addEventListener("mousedown", onDocClick)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDocClick)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [dropdownOpen])
 
   return (
     <section
@@ -125,30 +167,96 @@ export function ConversationColumn({
         onChange={handleSearchChange}
       />
 
-      {/* Tabs */}
-      <TabsGlass
-        tabs={tabs}
-        activeTab={activeTab}
-        onChange={handleTabChange}
-        className="mb-3"
-      />
+      {/* Tabs — opcionais */}
+      {!hideTabs && (
+        <TabsGlass
+          tabs={tabs}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+          className="mb-3"
+        />
+      )}
 
-      {/* Aguardando resposta — banner colapsavel */}
+      {/* Banner / Dropdown de status */}
       <button
+        ref={dropdownBtnRef}
         type="button"
+        onClick={() => setDropdownOpen((v) => !v)}
         className="mb-3 flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 text-left backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)]"
       >
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-lead)]">
           <IconClock size={15} />
         </span>
-        <span className="flex-1 font-display text-[13px] font-semibold text-[var(--text-primary)]">
-          {awaitingLabel}
+        <span className="flex-1 truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+          {currentTabLabel}
         </span>
         <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 font-display text-[11px] font-bold text-white">
-          {awaiting}
+          {currentTabCount}
         </span>
-        <IconChevronDown size={16} className="text-[var(--text-muted)]" />
+        <IconChevronDown
+          size={16}
+          className={cn(
+            "text-[var(--text-muted)] transition-transform",
+            dropdownOpen && "rotate-180",
+          )}
+        />
       </button>
+
+      {dropdownOpen &&
+        dropdownPos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="menu"
+            className="fixed z-[100] flex flex-col gap-0.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+            style={{
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              width: dropdownPos.width,
+              isolation: "isolate",
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {tabs.map((tab, idx) => {
+              const isActive = activeTab === idx
+              return (
+                <button
+                  key={`${tab.label}-${idx}`}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    handleTabChange(idx)
+                    setDropdownOpen(false)
+                  }}
+                  className={cn(
+                    "flex items-center justify-between gap-2 rounded-[var(--radius-md)] px-2.5 py-2 text-left font-display text-[13px] font-semibold transition-colors",
+                    isActive
+                      ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)]",
+                  )}
+                >
+                  <span className="flex flex-1 items-center gap-2">
+                    {isActive && <IconCheck size={14} />}
+                    <span className={cn(!isActive && "pl-[18px]")}>{tab.label}</span>
+                  </span>
+                  {tab.count !== undefined && tab.count !== null && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-px text-[10.5px] font-bold tabular-nums",
+                        isActive
+                          ? "bg-[var(--brand-primary)] text-white"
+                          : "bg-black/[0.06] text-[var(--text-muted)]",
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>,
+          document.body,
+        )}
 
       {/* Lista */}
       <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto pr-1">

@@ -166,8 +166,10 @@ export default function InboxV2ClientPage() {
           const next = TABS[idx]?.id;
           if (next) setTab(next);
         }}
-        awaitingLabel="Aguardando resposta"
-        awaitingCount={tabCounts?.esperando ?? null}
+        // Tabs ocultadas — dropdown do banner abaixo concentra a
+        // selecao de status (UX pedida pelo time: uma unica entrada).
+        hideTabs
+        awaitingCount={tabCounts?.[tab] ?? null}
       />
 
       {chatContact && activeRow ? (

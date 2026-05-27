@@ -1,10 +1,33 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { IconClock } from "@tabler/icons-react"
+import {
+  IconClock,
+  IconPaperclip,
+  IconPhoto,
+  IconMicrophone,
+  IconVideo,
+  IconFile,
+  IconMapPin,
+  IconUser,
+  IconTemplate,
+  IconCheck,
+} from "@tabler/icons-react"
 import { Chip } from "./chip"
 
 export type ConversationAvatarColor = "sunset" | "forest" | "ocean" | "dusk"
+
+export type LastMessageType =
+  | "text"
+  | "image"
+  | "audio"
+  | "video"
+  | "document"
+  | "file"
+  | "template"
+  | "note"
+  | "location"
+  | "contact"
 
 export interface Conversation {
   id: string
@@ -18,6 +41,21 @@ export interface Conversation {
   active?: boolean
   inactive?: boolean
   urgent?: boolean
+
+  /** Primeira tag do contato — exibida ao lado do nome. */
+  tag?: string | null
+  /**
+   * Tempo restante da janela de 24h da Meta/WhatsApp.
+   * - Texto pre-formatado (ex.: "2h 45min", "8min", "Expirada").
+   * - `null` ou `undefined` esconde o badge.
+   */
+  sessionExpiresIn?: string | null
+  /** Define a cor do badge de sessao (vermelho se true, ambar/cinza senao). */
+  sessionExpired?: boolean
+  /** Tipo da ultima mensagem — define o icone exibido antes do preview. */
+  lastMessageType?: LastMessageType
+  /** Direcao da ultima mensagem — quando "out", prefixa "Você:". */
+  lastMessageDirection?: "in" | "out"
 }
 
 interface ConversationCardProps {
@@ -26,12 +64,10 @@ interface ConversationCardProps {
 }
 
 const avatarGradients: Record<string, string> = {
-  // Showcase gradients
   sunset: "linear-gradient(135deg, #FFD580 0%, #FF8FA3 50%, #FF6B9D 100%)",
   forest: "linear-gradient(135deg, #5CC7A9 0%, #2C8A6B 60%, #1F5D49 100%)",
   ocean: "linear-gradient(135deg, #6FA8DC 0%, #3D5A80 60%, #293f5d 100%)",
   dusk: "linear-gradient(135deg, #9F8FDF 0%, #5b6ff5 60%, #3d52e8 100%)",
-  // Aliases
   blue: "linear-gradient(135deg, #6FA8DC 0%, #3D5A80 60%, #293f5d 100%)",
   teal: "linear-gradient(135deg, #5CC7A9 0%, #2C8A6B 60%, #1F5D49 100%)",
   orange: "linear-gradient(135deg, #FFD580 0%, #FF8FA3 50%, #FF6B9D 100%)",
@@ -40,7 +76,43 @@ const avatarGradients: Record<string, string> = {
   pink: "linear-gradient(135deg, #FFB1D6 0%, #FF6B9D 60%, #C13F73 100%)",
 }
 
+const typeIconMap: Record<LastMessageType, React.ComponentType<{ size?: number; stroke?: number; className?: string }>> = {
+  text: IconPaperclip, // nao usado — text nao renderiza icone
+  image: IconPhoto,
+  audio: IconMicrophone,
+  video: IconVideo,
+  document: IconFile,
+  file: IconPaperclip,
+  template: IconTemplate,
+  note: IconPaperclip,
+  location: IconMapPin,
+  contact: IconUser,
+}
+
+const typeLabelMap: Record<LastMessageType, string | null> = {
+  text: null,
+  image: "Imagem",
+  audio: "Áudio",
+  video: "Vídeo",
+  document: "Documento",
+  file: "Arquivo",
+  template: "Template",
+  note: "Nota interna",
+  location: "Localização",
+  contact: "Contato",
+}
+
 export function ConversationCard({ conversation, onClick }: ConversationCardProps) {
+  const TypeIcon =
+    conversation.lastMessageType && conversation.lastMessageType !== "text"
+      ? typeIconMap[conversation.lastMessageType]
+      : null
+  const typeLabel =
+    conversation.lastMessageType && conversation.lastMessageType !== "text"
+      ? typeLabelMap[conversation.lastMessageType]
+      : null
+  const isOutgoing = conversation.lastMessageDirection === "out"
+
   return (
     <article
       onClick={onClick}
@@ -52,6 +124,7 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
         conversation.inactive && "opacity-70",
       )}
     >
+      {/* Linha 1: avatar + nome (+ tag) + tempo */}
       <div className="flex items-center gap-3">
         <div className="relative shrink-0">
           <div
@@ -73,8 +146,15 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="font-display text-sm font-bold text-[var(--text-primary)]">
-            {conversation.name}
+          <div className="flex items-center gap-1.5">
+            <span className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
+              {conversation.name}
+            </span>
+            {conversation.tag && (
+              <span className="shrink-0 truncate rounded-full border border-[rgba(91,111,245,0.20)] bg-[var(--color-enterprise-bg)] px-1.5 py-px font-display text-[9.5px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+                {conversation.tag}
+              </span>
+            )}
           </div>
         </div>
 
@@ -88,15 +168,48 @@ export function ConversationCard({ conversation, onClick }: ConversationCardProp
         </div>
       </div>
 
-      <p className="mb-2 ml-[60px] mt-1 truncate text-[12.5px] text-[var(--text-muted)]">
-        {conversation.preview}
+      {/* Linha 2: preview (com icone de tipo) */}
+      <p className="mb-2 ml-[60px] mt-1 flex items-center gap-1.5 truncate text-[12.5px] text-[var(--text-muted)]">
+        {isOutgoing && (
+          <IconCheck
+            size={12}
+            className="shrink-0 text-[var(--color-success)]"
+            aria-label="Você"
+          />
+        )}
+        {TypeIcon && (
+          <TypeIcon size={12} className="shrink-0 text-[var(--brand-primary)]" />
+        )}
+        <span className="truncate">
+          {typeLabel && !conversation.preview ? typeLabel : conversation.preview}
+        </span>
       </p>
 
-      <div className="pl-[60px]">
+      {/* Linha 3: assignee + sessao */}
+      <div className="ml-[60px] flex items-center justify-between gap-2">
         {conversation.assignee ? (
           <Chip variant="brand">{conversation.assignee}</Chip>
         ) : (
           <Chip variant="ghost">+Responsável</Chip>
+        )}
+
+        {conversation.sessionExpiresIn && (
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-[1px] font-display text-[10px] font-bold",
+              conversation.sessionExpired
+                ? "border-[var(--color-danger)]/25 bg-[var(--color-danger)]/[0.10] text-[var(--color-danger-text)]"
+                : "border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-warning-text)]",
+            )}
+            title={
+              conversation.sessionExpired
+                ? "Sessão de 24h da Meta expirada"
+                : "Tempo até expirar a sessão de 24h"
+            }
+          >
+            <IconClock size={10} />
+            {conversation.sessionExpiresIn}
+          </span>
         )}
       </div>
     </article>

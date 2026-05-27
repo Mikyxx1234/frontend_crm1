@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, getInitials } from "@/lib/utils";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
+import { RunAutomationButton } from "@/components/automations/run-automation-button";
 
 import { ContactDetail, DealDetailData } from "./shared";
 
@@ -108,6 +109,8 @@ export function DealHeader({
                 onReopen={onReopen}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                dealId={deal.id}
+                contactId={contact?.id ?? null}
               />
             </div>
 
@@ -137,6 +140,8 @@ function HeaderActionCluster({
   onReopen,
   onEdit,
   onDelete,
+  dealId,
+  contactId,
 }: {
   dealStatus: DealDetailData["status"];
   statusBusy: boolean;
@@ -145,9 +150,21 @@ function HeaderActionCluster({
   onReopen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  dealId: string;
+  contactId: string | null;
 }) {
   return (
     <div className="flex shrink-0 items-center gap-2 pr-12">
+      {/* "Rodar automação" — so aparece quando ha contato vinculado.
+          Deals sem contato nao tem onde aplicar a automacao (steps
+          dependem de contactId pra add tag, enviar mensagem, etc). */}
+      {contactId ? (
+        <RunAutomationButton
+          variant="inline"
+          contactId={contactId}
+          dealId={dealId}
+        />
+      ) : null}
       <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-border bg-[var(--color-bg-subtle)] p-1.5">
         {dealStatus === "OPEN" ? (
           <>

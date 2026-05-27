@@ -389,6 +389,19 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
           </div>
         </div>
       );
+    case "manual":
+      return (
+        <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 text-sm text-foreground">
+          <p className="font-semibold">Esta automação é disparada manualmente.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Não há filtro automático — ela aparece como opção no botão{" "}
+            <span className="font-medium text-foreground">&quot;Rodar automação&quot;</span> dentro
+            das conversas do inbox e do detalhe de cada negócio no kanban. Use
+            para fluxos sob demanda (ex.: enviar resumo, abrir cobrança,
+            transferir para outro setor) que o operador decide quando executar.
+          </p>
+        </div>
+      );
     case "lifecycle_changed":
       return (
         <div className="grid gap-4 sm:grid-cols-2">

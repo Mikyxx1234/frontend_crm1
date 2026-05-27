@@ -24,6 +24,7 @@ import { ContactDealSidebar } from "@/components/inbox/contact-deal-sidebar";
 import { RemindButton } from "@/components/inbox/remind-button";
 import { TransferControl } from "@/components/inbox/transfer-control";
 import { WhatsappCallChip } from "@/components/inbox/whatsapp-call-chip";
+import { RunAutomationButton } from "@/components/automations/run-automation-button";
 import { DealForm } from "@/components/pipeline/deal-form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TooltipHost } from "@/components/ui/tooltip";
@@ -507,6 +508,10 @@ export default function InboxPage() {
                     <RemindButton
                       contactId={selected.contact.id}
                       contactName={selected.contact.name}
+                      conversationId={selected.id}
+                    />
+                    <RunAutomationButton
+                      contactId={selected.contact.id}
                       conversationId={selected.id}
                     />
                   </>

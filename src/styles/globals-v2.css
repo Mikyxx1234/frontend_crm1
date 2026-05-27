@@ -1,0 +1,62 @@
+/* ══════════════════════════════════════════════════════════════════
+   GLASS DESIGN SYSTEM v2 — OVERLAY (importado apenas por rotas v2)
+   ══════════════════════════════════════════════════════════════════
+   Este arquivo NÃO substitui o globals.css principal. Ele apenas
+   ADICIONA tokens e classes que o pacote v0 (components/crm/*) usa
+   e que ainda não estavam no design system atual. Importado por:
+     - app/(dashboard)/inbox-v2/layout.tsx
+     - app/(dashboard)/pipeline/kanban-v2/layout.tsx
+
+   Estratégia: complementação aditiva. Zero risco de regressão em
+   páginas legadas que continuam usando apenas globals.css.
+   ══════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Background do mesh (DealDetailPanel fullscreen + v2 layout) ── */
+  --bg-base:                #dde8f5;
+  --bg-mesh-1:              #b8cfec;
+  --bg-mesh-2:              #e8d5f0;
+
+  /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
+  --color-online:           #10b981;
+  --color-enterprise-bg:    rgba(91, 111, 245, 0.15);
+  --color-lead:             #f59e0b;
+  --color-lead-bg:          rgba(245, 158, 11, 0.15);
+  --color-success-bg:       rgba(16, 185, 129, 0.12);
+
+  /* ── Marca: secundária (lavender) — usada em gradients do v0 ──── */
+  --brand-secondary:        #a78bfa;
+
+  /* ── Cores das colunas do Kanban (KanbanColumn.color) ─────────── */
+  --col-novo:      #94a3b8;    /* slate — estágio inicial neutro */
+  --col-quali:     #5b6ff5;    /* indigo brand */
+  --col-proposta:  #a78bfa;    /* lavender */
+  --col-nego:      #f59e0b;    /* amber */
+  --col-fecha:     #10b981;    /* emerald — fechamento/sucesso */
+
+  /* ── Raio extra usado em alguns wrappers do v0 ────────────────── */
+  --radius-2xl: 2rem;       /* 32px — wrappers da NavRail / DealDetailPanel */
+  --radius-full: 9999px;
+
+  /* ── Transições padrão do v0 ──────────────────────────────────── */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Gradientes de avatar usados em DealCard, AvatarGlass, NavRail
+      e qualquer outro componente que aceite `color={...}` do v0.
+      Coloca-se em @layer utilities para permitir composição com
+      utilities Tailwind sem precisar de `!important`. ──────────── */
+@layer utilities {
+  .av-green   { background: linear-gradient(220deg, #5DFF7B 46%, #356823 100%); }
+  .av-blue    { background: linear-gradient(220deg, #5D90FF 46%, #275CA1 100%); }
+  .av-orange  { background: linear-gradient(220deg, #FAFF5D 46%, #FF6C37 100%); }
+  .av-purple  { background: linear-gradient(220deg, #D15DFF 46%, #AF37FF 100%); }
+  .av-pink    { background: linear-gradient(220deg, #FF5DFC 46%, #3752FF 100%); }
+  .av-coral   { background: linear-gradient(220deg, #FF5D6D 46%, #FFC037 100%); }
+  .av-teal    { background: linear-gradient(220deg, #10D8D8 46%, #275CA1 100%); }
+  .av-mint    { background: linear-gradient(220deg, #5DFF5D 46%, #25B38B 100%); }
+  .av-gray    { background: linear-gradient(220deg, #cbd5e1 46%, #64748b 100%); }
+  .av-yellow  { background: linear-gradient(220deg, #FAFF5D 46%, #B89500 100%); }
+  .av-red     { background: linear-gradient(220deg, #FF5D6D 46%, #B81530 100%); }
+}

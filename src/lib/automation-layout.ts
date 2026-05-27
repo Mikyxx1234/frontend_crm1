@@ -3,8 +3,15 @@ import type { AutomationStep } from "@/lib/automation-workflow";
 const NONE = "__none__";
 const START_X = 200;
 const GAP_X = 300;
-const START_Y = 140;
-const GAP_Y = 170;
+// 27/mai/26 — START_Y agora bate com `NODE_Y` em `workflow-canvas.tsx`
+// (=300). Antes era 140, o que jogava todo o fluxo 160px acima do nó
+// do gatilho (que fica fixo em y=300). Visualmente parecia que o
+// auto-align "subia" o canvas todo.
+const START_Y = 300;
+// Espaçamento entre lanes — bumpado pra acomodar nodes altos
+// (condition multi-branch, interactive com muitos botões) sem
+// sobreposição.
+const GAP_Y = 220;
 
 function isRealTarget(target: unknown, stepIds: Set<string>): target is string {
   return typeof target === "string" && target !== "" && target !== NONE && stepIds.has(target);
@@ -45,16 +52,23 @@ function outgoingTargets(step: AutomationStep, stepIds: Set<string>): string[] {
 }
 
 /**
- * Auto-organiza o fluxo preservando a lógica das conexões:
- * - X por profundidade (distância dos nós raiz)
- * - Y por ordem estável de descoberta (evita sobreposição)
+ * Auto-organiza o fluxo preservando a lógica das conexões.
+ *
+ * Coordenadas:
+ * - `X` por profundidade (distância máxima do nó raiz). Usar o
+ *   caminho mais longo é importante em fluxos convergentes (diamond
+ *   pattern A→B→D, A→C→D): o `D` precisa estar na coluna após o
+ *   ramo mais longo, senão a edge volta pra trás.
+ * - `Y` por lane: filhos herdam a lane do pai (linear vira linha
+ *   horizontal), mas ramificações alocam lanes novas pras saídas
+ *   adicionais. Orphans (steps desconectados) vão pra lanes próprias
+ *   abaixo, na coluna após o `maxDepth`.
  */
 export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[] {
   if (steps.length <= 1) return steps;
 
   const idsInOrder = steps.map((s) => s.id);
   const stepIds = new Set(idsInOrder);
-  const indexById = new Map(idsInOrder.map((id, i) => [id, i]));
 
   const outgoing = new Map<string, string[]>();
   const indegree = new Map<string, number>();
@@ -66,45 +80,80 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
     for (const tgt of out) indegree.set(tgt, (indegree.get(tgt) ?? 0) + 1);
   }
 
+  // Roots: primeiro step (entrada vinda do gatilho) + qualquer step
+  // sem incoming. Em fluxos sãos só o primeiro é root; orphans (steps
+  // criados via drop que nunca foram conectados) entram aqui também.
   const roots = idsInOrder.filter((id, i) => i === 0 || (indegree.get(id) ?? 0) === 0);
-  const queue: string[] = [...roots];
-  const depth = new Map<string, number>(roots.map((id) => [id, 0]));
-  const seen = new Set(queue);
 
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    const d = depth.get(id) ?? 0;
-    const out = outgoing.get(id) ?? [];
-    for (const tgt of out) {
-      const prev = depth.get(tgt);
-      if (prev == null || d + 1 < prev) depth.set(tgt, d + 1);
-      if (!seen.has(tgt)) {
-        seen.add(tgt);
-        queue.push(tgt);
+  // Depth via LONGEST path. Iteramos até estabilizar. Limite =
+  // steps.length+1 pra evitar loop infinito em ciclos (raros, mas
+  // possíveis via `goto`).
+  const depth = new Map<string, number>();
+  for (const r of roots) depth.set(r, 0);
+  for (let iter = 0; iter < steps.length + 1; iter++) {
+    let changed = false;
+    for (const step of steps) {
+      const d = depth.get(step.id);
+      if (d == null) continue;
+      const out = outgoing.get(step.id) ?? [];
+      for (const tgt of out) {
+        const cur = depth.get(tgt);
+        if (cur == null || d + 1 > cur) {
+          depth.set(tgt, d + 1);
+          changed = true;
+        }
       }
+    }
+    if (!changed) break;
+  }
+
+  // Orphans não alcançáveis a partir dos roots — colocamos na coluna
+  // após o `maxDepth` (todos juntos, cada um numa lane diferente).
+  const reachedMax = Math.max(0, ...Array.from(depth.values()));
+  const orphans: string[] = [];
+  for (const id of idsInOrder) {
+    if (!depth.has(id)) {
+      depth.set(id, reachedMax + 1);
+      orphans.push(id);
     }
   }
 
-  const maxDepth = Math.max(0, ...depth.values());
-  for (const id of idsInOrder) {
-    if (!depth.has(id)) depth.set(id, maxDepth + 1 + (indexById.get(id) ?? 0));
-  }
+  // Atribuição de lanes: filho herda lane do pai (cadeia linear =
+  // linha horizontal), ramificações alocam lanes novas. Uma branch
+  // que converge num nó já posicionado não realoca — fica com a
+  // lane atribuída no primeiro alcance.
+  const laneById = new Map<string, number>();
+  let nextLane = 0;
 
-  const laneOrder: string[] = [];
-  const laneSeen = new Set<string>();
-  const dfs = (id: string) => {
-    if (laneSeen.has(id)) return;
-    laneSeen.add(id);
-    laneOrder.push(id);
+  const assignLanes = (id: string, currentLane: number): void => {
+    if (laneById.has(id)) return;
+    laneById.set(id, currentLane);
     const out = outgoing.get(id) ?? [];
-    for (const tgt of out) dfs(tgt);
+    if (out.length === 0) return;
+    assignLanes(out[0], currentLane);
+    for (let i = 1; i < out.length; i++) {
+      nextLane++;
+      assignLanes(out[i], nextLane);
+    }
   };
-  for (const root of roots) dfs(root);
-  for (const id of idsInOrder) {
-    if (!laneSeen.has(id)) laneOrder.push(id);
+
+  for (const root of roots) {
+    if (!laneById.has(root)) {
+      assignLanes(root, nextLane);
+      nextLane++;
+    }
   }
 
-  const laneById = new Map(laneOrder.map((id, i) => [id, i]));
+  // Orphans isolados (sem children) podem ter caído fora do
+  // `assignLanes` acima quando o root deles é eles mesmos — já
+  // tratados. Mas se algum step não tiver lane por bug de grafo,
+  // garante uma.
+  for (const id of idsInOrder) {
+    if (!laneById.has(id)) {
+      laneById.set(id, nextLane);
+      nextLane++;
+    }
+  }
 
   return steps.map((step) => {
     const cfg = (step.config ?? {}) as Record<string, unknown>;
@@ -116,4 +165,3 @@ export function autoAlignWorkflowSteps(steps: AutomationStep[]): AutomationStep[
     return { ...step, config: nextCfg };
   });
 }
-

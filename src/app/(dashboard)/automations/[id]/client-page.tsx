@@ -449,6 +449,10 @@ export default function AutomationDetailPage() {
   const [logsOpen, setLogsOpen] = useState(false);
   const [stepLogsId, setStepLogsId] = useState<string | null>(null);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  // 27/mai/26 — Contador pra trigger `fitView` no canvas após o
+  // auto-alinhar. Incrementa a cada click; canvas observa via
+  // `autoAlignVersion` prop.
+  const [autoAlignVersion, setAutoAlignVersion] = useState(0);
 
   const detailQuery = useQuery({
     queryKey: ["automation", id],
@@ -613,7 +617,18 @@ export default function AutomationDetailPage() {
 
   const handleAutoAlign = useCallback(() => {
     setSteps((prev) => autoAlignWorkflowSteps(prev));
+    // 27/mai/26 — Auto-align também reseta a posição do nó do gatilho.
+    // Como o trigger agora é arrastável e a posição é salva em
+    // `triggerConfig.__rfPos`, sem este reset um trigger arrastado pro
+    // canto continuaria lá após o auto-align — quebrando a aparência
+    // de "fluxo organizado" que o botão promete.
+    setTriggerConfig((tc) => {
+      const next = { ...tc };
+      delete next.__rfPos;
+      return next;
+    });
     setDirty(true);
+    setAutoAlignVersion((v) => v + 1);
   }, []);
 
   const handleExportJson = useCallback(() => {
@@ -846,6 +861,12 @@ export default function AutomationDetailPage() {
               triggerConfig={triggerConfig}
               stats={statsQuery.data}
               onStepLogsOpen={handleStepLogsOpen}
+              onTriggerClick={() => setConfigOpen(true)}
+              onTriggerConfigChange={(next) => {
+                setTriggerConfig(next);
+                setDirty(true);
+              }}
+              autoAlignVersion={autoAlignVersion}
               className="h-full"
             />
           ) : (

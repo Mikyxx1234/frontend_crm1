@@ -1510,7 +1510,33 @@ const CONDITION_OP_OPTIONS: { value: ConditionOp; label: string }[] = [
   { value: "lte", label: "Menor ou igual" },
   { value: "empty", label: "Está vazio" },
   { value: "not_empty", label: "Não está vazio" },
+  { value: "has_tag", label: "Tem a tag" },
+  { value: "not_has_tag", label: "Não tem a tag" },
 ];
+
+// Campos cuja semântica natural é "checagem de tag" — quando o usuário
+// escolhe um desses, restringimos os ops disponíveis pros relevantes pra
+// evitar configurações sem sentido (ex.: "tags eq 5" não faz nada).
+const TAG_FIELDS = new Set<string>([
+  "contact.tags",
+  "deal.tags",
+]);
+
+function opsForField(field: string): { value: ConditionOp; label: string }[] {
+  if (TAG_FIELDS.has(field)) {
+    return [
+      { value: "has_tag", label: "Tem a tag" },
+      { value: "not_has_tag", label: "Não tem a tag" },
+      { value: "empty", label: "Sem tags" },
+      { value: "not_empty", label: "Tem alguma tag" },
+    ];
+  }
+  // Para outros campos, escondemos os ops específicos de tag (que não
+  // têm sentido fora do contexto de tags).
+  return CONDITION_OP_OPTIONS.filter(
+    (o) => o.value !== "has_tag" && o.value !== "not_has_tag",
+  );
+}
 
 // Catálogo de campos disponíveis para avaliação em condições, alinhado com
 // `evalRoot` no `automation-executor.ts` (contact / deal / data / event /
@@ -1528,6 +1554,11 @@ const CONDITION_FIELD_GROUPS: FieldGroup[] = [
       { value: "contact.leadScore", label: "Lead score", hint: "numérico" },
       { value: "contact.lifecycleStage", label: "Etapa do ciclo" },
       { value: "contact.source", label: "Origem" },
+      // 27/mai/26 — Campo de tags. Junto com os ops `has_tag` /
+      // `not_has_tag`, permite criar branches do tipo "se o contato
+      // tem a tag X". O picker de valor mostra um dropdown puxando
+      // `/api/tags`.
+      { value: "contact.tags", label: "Tags do contato", hint: "tem / não tem" },
       { value: "contact.whatsappJid", label: "WhatsApp JID" },
       { value: "contact.companyId", label: "ID da empresa" },
       { value: "contact.assignedToId", label: "ID do responsável" },
@@ -1544,6 +1575,7 @@ const CONDITION_FIELD_GROUPS: FieldGroup[] = [
       // precisa.
       { value: "deal.stageName", label: "Etapa (nome)" },
       { value: "deal.pipelineName", label: "Pipeline (nome)" },
+      { value: "deal.tags", label: "Tags do negócio", hint: "tem / não tem" },
       { value: "deal.lostReason", label: "Motivo da perda" },
     ],
   },
@@ -1744,6 +1776,9 @@ function ConditionValueInput({
 }) {
   const str = value === null || value === undefined ? "" : String(value);
 
+  if (field === "contact.tags" || field === "deal.tags") {
+    return <TagPickerValue value={str} onChange={onChange} />;
+  }
   if (field === "deal.stageId") {
     return <StagePickerValue value={str} onChange={onChange} />;
   }
@@ -1939,6 +1974,79 @@ function PipelinePickerValue({
           {p.name}
         </option>
       ))}
+    </SelectNative>
+  );
+}
+
+/**
+ * Picker de valor para `contact.tags` / `deal.tags`. Lista todas as
+ * tags da org (via `/api/tags`) e salva o NOME — o executor compara
+ * case-insensitive contra `contact.tags` (array de nomes) ou
+ * `contact.tagIds` (array de IDs), então salvar o nome funciona pra
+ * ambos os arrays. Se a tag for renomeada depois, basta o operador
+ * atualizar a condição (a opção de salvar id é mais resiliente, mas
+ * usuário comum prefere ver nome).
+ */
+function TagPickerValue({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  type TagRow = { id: string; name: string; color?: string };
+  const { data: tags = [], isLoading } = useQuery({
+    queryKey: ["tags-for-condition"],
+    queryFn: async (): Promise<TagRow[]> => {
+      const res = await fetch(apiUrl("/api/tags"));
+      if (!res.ok) return [];
+      return (await res.json()) as TagRow[];
+    },
+    staleTime: 60_000,
+  });
+
+  const allNames = useMemo(
+    () => new Set(tags.map((t) => t.name)),
+    [tags],
+  );
+  const isCustom = value.length > 0 && !allNames.has(value);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
+        Carregando tags…
+      </div>
+    );
+  }
+
+  if (tags.length === 0) {
+    return (
+      <Input
+        placeholder="Nome da tag"
+        className="h-9 text-[12px]"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+
+  return (
+    <SelectNative
+      className="h-9 text-[12px]"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">Selecione uma tag…</option>
+      {tags.map((t) => (
+        <option key={t.id} value={t.name}>
+          {t.name}
+        </option>
+      ))}
+      {isCustom && (
+        <option value={value}>
+          {value} (valor personalizado)
+        </option>
+      )}
     </SelectNative>
   );
 }
@@ -2310,30 +2418,55 @@ function ConditionStepConfig({
           </div>
 
           <div className="space-y-2">
-            {branch.rules.map((rule, rIdx) => (
+            {branch.rules.map((rule, rIdx) => {
+              // Ops válidos pro campo atual. Pra campos de tag fica
+              // restrito a {has_tag, not_has_tag, empty, not_empty};
+              // pros demais escondemos os ops de tag. Quando o op
+              // salvo não está mais na lista (trocou de campo), cai
+              // pro primeiro da lista no render — o salvo não muda
+              // até o usuário escolher.
+              const availableOps = opsForField(rule.field);
+              const opStillValid = availableOps.some((o) => o.value === rule.op);
+              const effectiveOp = opStillValid ? rule.op : availableOps[0]?.value ?? rule.op;
+              return (
               <div
                 key={rIdx}
                 className="grid grid-cols-[minmax(0,1fr)_130px_minmax(0,1fr)_auto] items-start gap-2"
               >
                 <ConditionFieldPicker
                   value={rule.field}
-                  onChange={(next) => updateRule(bIdx, rIdx, { field: next })}
+                  onChange={(next) => {
+                    // Quando o campo muda, garante que o op continua válido.
+                    // Pra campos de tag, força `has_tag` como default; pra
+                    // demais, mantém o op atual se ainda for válido, senão
+                    // cai pra `eq`.
+                    const nextOps = opsForField(next);
+                    const opValid = nextOps.some((o) => o.value === rule.op);
+                    const patch: Partial<ConditionRule> = { field: next };
+                    if (!opValid) {
+                      patch.op = nextOps[0]?.value ?? "eq";
+                      // Limpa o value pra evitar arrastar lixo do tipo
+                      // anterior (ex.: número quando passou pra tag).
+                      patch.value = "";
+                    }
+                    updateRule(bIdx, rIdx, patch);
+                  }}
                   declaredVariables={declaredVariables}
                 />
                 <SelectNative
                   className="h-9 text-[12px]"
-                  value={rule.op}
+                  value={effectiveOp}
                   onChange={(e) =>
                     updateRule(bIdx, rIdx, { op: e.target.value as ConditionOp })
                   }
                 >
-                  {CONDITION_OP_OPTIONS.map((o) => (
+                  {availableOps.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
                 </SelectNative>
-                {rule.op === "empty" || rule.op === "not_empty" ? (
+                {effectiveOp === "empty" || effectiveOp === "not_empty" ? (
                   <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
                     (sem valor)
                   </div>
@@ -2361,7 +2494,8 @@ function ConditionStepConfig({
                   </span>
                 )}
               </div>
-            ))}
+              );
+            })}
             <Button
               type="button"
               variant="outline"

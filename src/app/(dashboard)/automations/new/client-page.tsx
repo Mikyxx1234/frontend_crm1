@@ -75,6 +75,7 @@ export default function NewAutomationPage() {
   const [steps, setSteps] = useState<AutomationStep[]>([]);
   const [appliedTemplateId, setAppliedTemplateId] = useState<string | null>(null);
   const [appliedTemplateName, setAppliedTemplateName] = useState<string | null>(null);
+  const [autoAlignVersion, setAutoAlignVersion] = useState(0);
 
   const onTriggerTypeChange = useCallback((t: string) => {
     setTriggerType(t);
@@ -133,6 +134,12 @@ export default function NewAutomationPage() {
   const canNext1 = name.trim().length > 0;
   const handleAutoAlign = useCallback(() => {
     setSteps((prev) => autoAlignWorkflowSteps(prev));
+    setTriggerConfig((tc) => {
+      const next = { ...tc };
+      delete next.__rfPos;
+      return next;
+    });
+    setAutoAlignVersion((v) => v + 1);
   }, []);
   const handleExportJson = useCallback(() => {
     const payload = {
@@ -336,6 +343,9 @@ export default function NewAutomationPage() {
               onStepsChange={setSteps}
               triggerType={triggerType}
               triggerConfig={triggerConfig}
+              onTriggerClick={() => setWizard(2)}
+              onTriggerConfigChange={(next) => setTriggerConfig(next)}
+              autoAlignVersion={autoAlignVersion}
             />
           </CardContent>
         </Card>

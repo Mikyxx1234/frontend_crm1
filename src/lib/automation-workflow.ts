@@ -156,10 +156,30 @@ export function summarizeTriggerConfig(
       return `Mín.: ${c.threshold ?? c.minScore ?? "—"}`;
     case "deal_created":
     case "deal_won":
-    case "deal_lost":
-      return c.pipelineId ? `Pipeline: ${String(c.pipelineId)}` : "Qualquer pipeline";
-    case "contact_created":
-      return "Novo contato";
+    case "deal_lost": {
+      const parts: string[] = [];
+      if (c.pipelineId) {
+        const id = String(c.pipelineId);
+        parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
+      }
+      if (c.stageId) {
+        const id = String(c.stageId);
+        parts.push(`Estágio: ${lookup?.[id] ?? id}`);
+      }
+      return parts.length ? parts.join(" · ") : "Qualquer pipeline";
+    }
+    case "contact_created": {
+      const parts: string[] = [];
+      if (c.pipelineId) {
+        const id = String(c.pipelineId);
+        parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
+      }
+      if (c.stageId) {
+        const id = String(c.stageId);
+        parts.push(`Estágio: ${lookup?.[id] ?? id}`);
+      }
+      return parts.length ? parts.join(" · ") : "Novo contato";
+    }
     case "conversation_created":
       return c.channel ? `Canal: ${String(c.channel)}` : "Qualquer canal";
     case "lifecycle_changed": {
@@ -175,8 +195,17 @@ export function summarizeTriggerConfig(
     }
     case "message_received":
     case "message_sent": {
-      const ch = c.channel;
-      return ch ? `Canal: ${String(ch)}` : "Qualquer canal";
+      const parts: string[] = [];
+      if (c.channel) parts.push(`Canal: ${String(c.channel)}`);
+      if (c.pipelineId) {
+        const id = String(c.pipelineId);
+        parts.push(`Pipeline: ${lookup?.[id] ?? id}`);
+      }
+      if (c.stageId) {
+        const id = String(c.stageId);
+        parts.push(`Estágio: ${lookup?.[id] ?? id}`);
+      }
+      return parts.length ? parts.join(" · ") : "Qualquer canal";
     }
     default:
       return "—";
@@ -559,9 +588,9 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
     case "deal_created":
     case "deal_won":
     case "deal_lost":
-      return { pipelineId: "" };
+      return { pipelineId: "", stageId: "" };
     case "contact_created":
-      return {};
+      return { pipelineId: "", stageId: "" };
     case "conversation_created":
       return { channel: "" };
     case "lifecycle_changed":
@@ -570,7 +599,7 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
       return { toAgentId: "" };
     case "message_received":
     case "message_sent":
-      return { channel: "" };
+      return { channel: "", pipelineId: "", stageId: "" };
     default:
       return {};
   }

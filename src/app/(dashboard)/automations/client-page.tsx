@@ -19,6 +19,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn, formatDateTime } from "@/lib/utils";
 import { triggerTypeLabel } from "@/lib/automation-workflow";
 
@@ -250,9 +258,9 @@ export default function AutomationsPage() {
       </div>
 
       {listQuery.isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
+            <Skeleton key={i} className="h-12 rounded-md" />
           ))}
         </div>
       ) : listQuery.isError ? (
@@ -285,60 +293,92 @@ export default function AutomationsPage() {
         </Card>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {rows.map((row) => (
-              <Card
-                key={row.id}
-                role="link"
-                tabIndex={0}
-                className={cn(
-                  "cursor-pointer border-border/60 shadow-sm transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-l-4",
-                  row.active
-                    ? "border-l-emerald-500"
-                    : "border-l-muted-foreground/20",
-                )}
-                onClick={() => router.push(`/automations/${row.id}`)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    router.push(`/automations/${row.id}`);
-                  }
-                }}
-              >
-                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
-                  <div className="min-w-0 space-y-0.5">
-                    <CardTitle className="line-clamp-1 text-sm font-semibold">
-                      {row.name}
-                    </CardTitle>
-                    {row.description ? (
-                      <CardDescription className="line-clamp-1 text-xs">
-                        {row.description}
-                      </CardDescription>
-                    ) : null}
-                  </div>
-                  <ActiveSwitch
-                    active={row.active}
-                    disabled={toggleMutation.isPending}
-                    onToggle={() => toggleMutation.mutate(row.id)}
-                  />
-                </CardHeader>
-                <CardContent className="flex items-center gap-2 pt-0 text-xs">
-                  <Badge
-                    variant="secondary"
-                    className="font-normal text-[11px] px-1.5 py-0"
+          {/* 27/mai/26 — Lista substituiu o grid de cards a pedido do
+              operador: a tabela escala melhor pra muitas automações,
+              ocupa menos vertical scroll e fica visualmente alinhada
+              ao resto do CRM (Inbox, Contatos, etc. já usam tabela).
+              A coluna "Status" preserva o `ActiveSwitch` de toggle
+              in-place; nada de fluxo precisa abrir o detalhe pra
+              ativar/desativar. */}
+          <div className="overflow-hidden rounded-lg border border-border/60 bg-card shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Automação</TableHead>
+                  <TableHead className="w-[180px]">Gatilho</TableHead>
+                  <TableHead className="w-[110px] text-center">Passos</TableHead>
+                  <TableHead className="w-[170px]">Atualizada</TableHead>
+                  <TableHead className="w-[110px] text-end">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => router.push(`/automations/${row.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/automations/${row.id}`);
+                      }
+                    }}
+                    className={cn(
+                      "cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:bg-muted/40",
+                      !row.active && "opacity-70",
+                    )}
                   >
-                    {triggerTypeLabel(row.triggerType)}
-                  </Badge>
-                  <span className="text-muted-foreground">·</span>
-                  <span className="text-muted-foreground">
-                    {stepCountOf(row)} passo{stepCountOf(row) === 1 ? "" : "s"}
-                  </span>
-                  <span className="ms-auto text-muted-foreground">
-                    {formatDateTime(row.updatedAt)}
-                  </span>
-                </CardContent>
-              </Card>
-            ))}
+                    <TableCell className="py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        {/* Pílula colorida indicando estado ativo, alinhada
+                            ao padrão antigo do card (verde quando ativa). */}
+                        <span
+                          className={cn(
+                            "h-2 w-2 shrink-0 rounded-full",
+                            row.active ? "bg-emerald-500" : "bg-muted-foreground/40",
+                          )}
+                          aria-hidden
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {row.name}
+                          </p>
+                          {row.description ? (
+                            <p className="truncate text-xs text-muted-foreground">
+                              {row.description}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-2.5">
+                      <Badge
+                        variant="secondary"
+                        className="font-normal text-[11px] px-1.5 py-0"
+                      >
+                        {triggerTypeLabel(row.triggerType)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-2.5 text-center text-xs tabular-nums text-muted-foreground">
+                      {stepCountOf(row)}
+                    </TableCell>
+                    <TableCell className="py-2.5 text-xs text-muted-foreground">
+                      {formatDateTime(row.updatedAt)}
+                    </TableCell>
+                    <TableCell className="py-2.5 text-end">
+                      <div className="flex items-center justify-end">
+                        <ActiveSwitch
+                          active={row.active}
+                          disabled={toggleMutation.isPending}
+                          onToggle={() => toggleMutation.mutate(row.id)}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
 
           {totalPages > 1 ? (

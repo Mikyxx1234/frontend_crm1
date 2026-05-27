@@ -45,6 +45,8 @@ export interface DealDetail {
   owner?: DealOwner
 }
 
+type TabId = "conversa" | "atividades" | "notas" | "timeline"
+
 interface DealDetailPanelProps {
   isOpen: boolean
   onClose: () => void
@@ -59,11 +61,24 @@ interface DealDetailPanelProps {
   sourceSlot?: React.ReactNode
   forecastSlot?: React.ReactNode
   tagsSlot?: React.ReactNode
+  /**
+   * Slots para conteudo dinamico do painel de chat. Quando passados,
+   * substituem o bloco hardcoded ("Currículo Renato.pdf" etc.) e
+   * permitem plugar mensagens reais via useMessages, composer real
+   * via Composer e alerta de sessao via SessionAlert.
+   */
+  messagesSlot?: React.ReactNode
+  composerSlot?: React.ReactNode
+  sessionAlertSlot?: React.ReactNode
+  /**
+   * Override por tab. Quando definido para a tab atual, substitui o
+   * painel <main> inteiro pelo node. Util para Atividades/Notas/
+   * Timeline conectarem em endpoints reais sem reescrever o panel.
+   */
+  tabContentOverride?: Partial<Record<TabId, React.ReactNode>>
 }
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
-
-type TabId = "conversa" | "atividades" | "notas" | "timeline"
 
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: number }>; count?: number }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
@@ -94,6 +109,10 @@ export function DealDetailPanel({
   sourceSlot,
   forecastSlot,
   tagsSlot,
+  messagesSlot,
+  composerSlot,
+  sessionAlertSlot,
+  tabContentOverride,
 }: DealDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
   const [openFieldGroup, setOpenFieldGroup] = useState<string | null>("Idade")
@@ -434,7 +453,22 @@ export function DealDetailPanel({
               </SidebarSection>
             </aside>
 
-            {/* CHAT */}
+            {/* PAINEL DIREITO — quando ha override para a tab atual,
+                substitui o <main> inteiro pelo node injetado. */}
+            {tabContentOverride?.[activeTab] ? (
+              <main
+                className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border"
+                style={{
+                  background: "var(--glass-bg)",
+                  backdropFilter: "blur(16px)",
+                  borderColor: "var(--glass-border)",
+                  boxShadow: "var(--glass-shadow)",
+                }}
+                aria-label={activeTab}
+              >
+                {tabContentOverride[activeTab]}
+              </main>
+            ) : (
             <main
               className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border"
               style={{
@@ -481,7 +515,12 @@ export function DealDetailPanel({
                 </div>
               </div>
 
-              {/* Mensagens */}
+              {/* Mensagens — quando ha messagesSlot, usa ele. Senao, fallback v0. */}
+              {messagesSlot ? (
+                <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-[22px]">
+                  {messagesSlot}
+                </div>
+              ) : (
               <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-[22px]">
                 <div
                   className="self-center rounded-full border px-3.5 py-1 font-display text-[11px] font-bold"
@@ -585,8 +624,10 @@ export function DealDetailPanel({
                   </div>
                 </div>
               </div>
+              )}
 
-              {/* Sessão alerta */}
+              {/* Sessão alerta — substitui pelo slot externo se houver. */}
+              {sessionAlertSlot !== undefined ? sessionAlertSlot : (
               <div
                 className="mx-[22px] mb-3 flex items-center gap-3.5 rounded-[var(--radius-lg)] border px-[18px] py-3.5"
                 style={{
@@ -624,8 +665,12 @@ export function DealDetailPanel({
                   Usar Template
                 </button>
               </div>
+              )}
 
-              {/* Input */}
+              {/* Input — substitui pelo composer real quando provido. */}
+              {composerSlot ? (
+                <div className="mx-[22px] mb-[22px]">{composerSlot}</div>
+              ) : (
               <div
                 className="mx-[22px] mb-[22px] flex items-center gap-2 rounded-[var(--radius-2xl)] border py-2 pl-4 pr-2 opacity-60"
                 style={{
@@ -661,7 +706,9 @@ export function DealDetailPanel({
                   <IconSend size={17} />
                 </button>
               </div>
+              )}
             </main>
+            )}
           </div>
         </div>
       </div>

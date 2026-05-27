@@ -26,6 +26,25 @@ export async function moveDeal(
   return data as { deal: BoardDealDto };
 }
 
+export interface DealContactConversation {
+  id: string;
+  externalId?: string | null;
+  channel?: string | null;
+  status?: string | null;
+  inboxName?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface DealContactWithConversations {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  conversations?: DealContactConversation[];
+}
+
 /** GET /api/deals/:id — detail panel */
 export async function getDeal(dealId: string): Promise<BoardDealDto & {
   notes?: string | null;
@@ -35,6 +54,7 @@ export async function getDeal(dealId: string): Promise<BoardDealDto & {
   tags?: { id: string; name: string; color: string | null }[];
   expectedCloseAt?: string | null;
   customFields?: Record<string, unknown> | null;
+  contact?: DealContactWithConversations | null;
 }> {
   const res = await fetch(apiUrl(`/api/deals/${dealId}`));
   const data = await res.json().catch(() => ({}));
@@ -110,6 +130,31 @@ export async function createDeal(
     );
   }
   return data as { deal: BoardDealDto };
+}
+
+export interface DealTimelineEvent {
+  id: string;
+  type: string;
+  createdAt: string;
+  user?: { id?: string; name?: string | null; avatarUrl?: string | null } | null;
+  meta?: Record<string, unknown> | null;
+}
+
+/** GET /api/deals/:id/timeline — eventos historicos do deal. */
+export async function getDealTimeline(
+  dealId: string,
+): Promise<DealTimelineEvent[]> {
+  const res = await fetch(apiUrl(`/api/deals/${dealId}/timeline`));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar timeline",
+    );
+  }
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.events)) return data.events;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
 }
 
 /** DELETE /api/deals/:id — remove o deal permanentemente. */

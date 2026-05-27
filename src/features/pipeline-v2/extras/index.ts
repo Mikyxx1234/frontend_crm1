@@ -5,3 +5,7 @@ export { InlineEditText } from "./inline-edit";
 export { DealActionsMenu, WinButton } from "./actions-menu";
 export { AddDealDialog } from "./add-deal-dialog";
 export { PipelineSwitcher } from "./pipeline-switcher";
+export { useDealChatBinding } from "./deal-chat-binding";
+export { DealNotesTab } from "./deal-notes-tab";
+export { DealTimelineTab } from "./deal-timeline-tab";
+export { DealActivitiesTab } from "./deal-activities-tab";

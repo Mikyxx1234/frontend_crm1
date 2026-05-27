@@ -33,11 +33,15 @@ import {
   AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
+  DealActivitiesTab,
+  DealNotesTab,
+  DealTimelineTab,
   InlineEditText,
   PipelineSwitcher,
   StagePicker,
   TagsPopover,
   WinButton,
+  useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos";
@@ -123,6 +127,23 @@ export default function KanbanV2ClientPage() {
       },
     };
   }, [dealDetail, activeDealStageName]);
+
+  // ── Conversa real ligada ao deal ────────────────────────────────
+  // Pega a conversa mais recente do contato (o backend ja ordena por
+  // updatedAt desc em getDealById). Quando o deal nao tem contato
+  // vinculado ou nao ha conversa, o binding retorna nodes de "vazio".
+  const dealConversationId =
+    (dealDetail?.contact as { conversations?: { id: string }[] } | null | undefined)
+      ?.conversations?.[0]?.id ?? null;
+  const dealContactName =
+    dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
+  const { messagesNode, composerNode, sessionAlertNode, templateModal } =
+    useDealChatBinding({
+      conversationId: dealConversationId,
+      contactName: dealContactName,
+      // Por ora nao temos sinal de "sessionExpired" no get-deal; mantemos false.
+      sessionExpired: false,
+    });
 
   function handleDragEnd(result: DropResult) {
     const { source, destination, draggableId } = result;
@@ -353,6 +374,25 @@ export default function KanbanV2ClientPage() {
             />
           ) : undefined
         }
+        messagesSlot={messagesNode}
+        composerSlot={composerNode}
+        sessionAlertSlot={sessionAlertNode ?? null}
+        tabContentOverride={
+          activeDealId
+            ? {
+                notas: (
+                  <DealNotesTab
+                    dealId={activeDealId}
+                    notes={dealDetail?.notes ?? null}
+                    pipelineId={pipelineId}
+                    statusFilter={status}
+                  />
+                ),
+                timeline: <DealTimelineTab dealId={activeDealId} />,
+                atividades: <DealActivitiesTab />,
+              }
+            : undefined
+        }
         tagsSlot={
           activeDealId ? (
             <div className="flex flex-wrap items-center gap-1.5">
@@ -396,6 +436,8 @@ export default function KanbanV2ClientPage() {
         pipelineId={pipelineId}
         statusFilter={status}
       />
+
+      {templateModal}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   addDealTag,
   createDeal,
   deleteDeal,
+  getDealTimeline,
   listTags,
   listTeamUsers,
   moveDeal,
@@ -18,6 +19,7 @@ import {
   type CreateDealPayload,
   type DealStatus,
   type DealTag,
+  type DealTimelineEvent,
   type StatusFilter,
   type TeamUser,
   type UpdateDealPayload,
@@ -211,5 +213,18 @@ export function useTeamUsers(enabled: boolean = true) {
     queryFn: listTeamUsers,
     enabled,
     staleTime: 60_000,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// timeline do deal (tab Timeline do DealDetailPanel)
+// ─────────────────────────────────────────────────────────────────
+
+export function useDealTimeline(dealId: string | null) {
+  return useQuery<DealTimelineEvent[]>({
+    queryKey: ["deal-timeline-v2", dealId],
+    queryFn: () => getDealTimeline(dealId as string),
+    enabled: !!dealId,
+    staleTime: 15_000,
   });
 }

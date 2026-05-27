@@ -5,6 +5,35 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-05-27 — Exclusão de contato sem bloqueio por `dealCount`
+
+**Decisão.** Em `app/(dashboard)/contacts/client-page.tsx`, removido o
+early-return com `toast.warning` quando `c.dealCount > 0`. O confirm
+dialog agora avisa explicitamente que "os N negócios vinculados
+permanecerão no kanban, porém sem contato associado" — operador segue
+confirmando uma vez e a exclusão prossegue.
+
+**Contexto.** Operador pediu: "quero excluir o lead independente se
+tem lead ou não". Backend foi ajustado em paralelo (ver AGENT.md
+backend). O bloqueio era frontal — frontend não chegava nem a chamar
+o DELETE, mostrava warning amarelo. UX ficava confusa: operador via
+"tem N negócios" mas não tinha caminho pra resolver na própria tela
+de contatos.
+
+**Alternativas descartadas.**
+
+- Botão "Excluir + transferir negócios pra outro contato": resolve mas
+  exige fluxo de seleção. Operador não pediu isso.
+- Confirmar duas vezes (1ª: aviso, 2ª: confirma): atrito sem benefício
+  prático — a confirmação já está sendo destrutiva ("Excluir" em
+  vermelho).
+
+**Impacto.** Operador consegue limpar leads imediatamente. Quem clica
+"Excluir" no confirm agora vê os deals sumirem do contato (mas
+permanecerem no kanban como "contato removido").
+
+---
+
 ### 2026-05-27 — Condição "Tem a tag" + lista de automações em tabela
 
 **Decisão.** Dois ajustes coordenados em automações:

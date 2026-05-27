@@ -591,13 +591,13 @@ export default function ContactsPage() {
                     aria-label="Excluir"
                     disabled={deleteMutation.isPending}
                     onClick={async () => {
-                      if (c.dealCount > 0) {
-                        toast.warning(`Não é possível excluir "${c.name}": possui ${c.dealCount} negócio${c.dealCount !== 1 ? "s" : ""} vinculado${c.dealCount !== 1 ? "s" : ""}. Remova ou transfira os negócios antes.`);
-                        return;
-                      }
+                      const dealsNote =
+                        c.dealCount > 0
+                          ? ` Os ${c.dealCount} negócio${c.dealCount !== 1 ? "s" : ""} vinculado${c.dealCount !== 1 ? "s" : ""} permanecerão no kanban, porém sem contato associado.`
+                          : "";
                       const ok = await confirm({
                         title: "Excluir contato",
-                        description: `Excluir "${c.name}" e todos os seus dados?`,
+                        description: `Excluir "${c.name}" e todos os seus dados (conversas, notas, tarefas)?${dealsNote}`,
                         confirmLabel: "Excluir",
                         variant: "destructive",
                       });

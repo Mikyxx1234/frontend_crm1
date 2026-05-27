@@ -111,6 +111,7 @@ export default function ContactsPage() {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(50);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [lifecycleStage, setLifecycleStage] = useState("");
@@ -157,7 +158,7 @@ export default function ContactsPage() {
   const listQuery = useQuery({
     queryKey: [
       "contacts",
-      { debouncedSearch, lifecycleStage, tagId, page, perPage: 20 },
+      { debouncedSearch, lifecycleStage, tagId, page, perPage },
     ],
     queryFn: async (): Promise<ContactsListResponse> => {
       const qs = new URLSearchParams();
@@ -165,7 +166,7 @@ export default function ContactsPage() {
       if (lifecycleStage) qs.set("lifecycleStage", lifecycleStage);
       if (tagId) qs.set("tagIds", tagId);
       qs.set("page", String(page));
-      qs.set("perPage", "20");
+      qs.set("perPage", String(perPage));
       const res = await fetch(apiUrl(`/api/contacts?${qs.toString()}`));
       if (!res.ok) throw new Error(await readErrorMessage(res));
       return res.json();
@@ -670,7 +671,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">
           {total.toLocaleString("pt-BR")} lead{total !== 1 ? "s" : ""}
           {totalPages > 1 && (
@@ -679,33 +680,51 @@ export default function ContactsPage() {
             </span>
           )}
         </span>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              disabled={page <= 1 || listQuery.isLoading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span>Por página:</span>
+            <select
+              value={perPage}
+              onChange={(e) => {
+                setPerPage(Number(e.target.value));
+                setPage(1);
+              }}
+              className="h-7 rounded-md border border-border bg-card px-1.5 text-xs"
             >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="flex h-7 min-w-7 items-center justify-center rounded bg-indigo-600 px-2 text-xs font-medium text-white">
-              {page}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              disabled={page >= totalPages || listQuery.isLoading}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        )}
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </label>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                disabled={page <= 1 || listQuery.isLoading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="flex h-7 min-w-7 items-center justify-center rounded bg-indigo-600 px-2 text-xs font-medium text-white">
+                {page}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                disabled={page >= totalPages || listQuery.isLoading}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bulk actions bar — flutua no rodapé enquanto há leads

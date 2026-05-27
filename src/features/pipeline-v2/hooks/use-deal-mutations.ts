@@ -43,8 +43,25 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
   const key = boardKey(pipelineId, status);
 
   return useMutation<{ deal: BoardDealDto }, Error, MoveVars, { prev?: BoardStageDto[] }>({
-    mutationFn: (vars) =>
-      moveDeal(vars.dealId, { stageId: vars.toStageId, position: vars.toIndex }),
+    mutationFn: (vars) => {
+      // Backend exige `position` (inteiro >= 0). Quando o caller nao
+      // sabe a posicao (ex.: StagePicker do detail panel), calculamos
+      // o "fim da coluna destino" a partir do cache atual.
+      let pos = vars.toIndex;
+      if (pos == null) {
+        const board = qc.getQueryData<BoardStageDto[]>(key);
+        const target = board?.find((s) => s.id === vars.toStageId);
+        // Se a posicao for igual a `length`, o deal vai pro fim. Se a
+        // coluna destino contiver o proprio deal (drag dentro da
+        // mesma coluna), o length ja conta com ele — usa length-1.
+        const hasSelf = target?.deals.some((d) => d.id === vars.dealId);
+        pos = Math.max(
+          0,
+          (target?.deals.length ?? 0) - (hasSelf ? 1 : 0),
+        );
+      }
+      return moveDeal(vars.dealId, { stageId: vars.toStageId, position: pos });
+    },
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: key });
       const prev = qc.getQueryData<BoardStageDto[]>(key);

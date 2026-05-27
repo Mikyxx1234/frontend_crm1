@@ -205,6 +205,20 @@ export function summarizeTriggerConfig(
         const id = String(c.stageId);
         parts.push(`Estágio: ${lookup?.[id] ?? id}`);
       }
+      if (c.dealStatus) {
+        const raw = String(c.dealStatus).toUpperCase();
+        // Mapa intencionalmente simples; combinacoes ainda nao expostas
+        // na UI caem no fallback (raw) — assim importacoes futuras de
+        // bots tipo Kommo nao quebram a UI.
+        const statusLabels: Record<string, string> = {
+          OPEN: "Status: Em aberto",
+          WON: "Status: Ganho",
+          LOST: "Status: Perdido",
+          "WON,LOST": "Status: Ganho ou Perdido",
+          "LOST,WON": "Status: Ganho ou Perdido",
+        };
+        parts.push(statusLabels[raw] ?? `Status: ${raw}`);
+      }
       return parts.length ? parts.join(" · ") : "Qualquer canal";
     }
     default:
@@ -599,7 +613,7 @@ export function defaultTriggerConfig(triggerType: string): Record<string, unknow
       return { toAgentId: "" };
     case "message_received":
     case "message_sent":
-      return { channel: "", pipelineId: "", stageId: "" };
+      return { channel: "", pipelineId: "", stageId: "", dealStatus: "" };
     default:
       return {};
   }

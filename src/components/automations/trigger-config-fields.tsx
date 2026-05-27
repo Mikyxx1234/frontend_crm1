@@ -360,6 +360,33 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
               }
             />
           </div>
+          {/*
+            27/mai/26 — Filtro por status do negocio. Usamos um select
+            simples (em vez de multi-select) com 4 opcoes + uma composta
+            "Ganho ou Perdido" — esse e o caso pratico que o operador
+            mencionou (retencao pos-venda e reengajamento de perdidos
+            no mesmo gatilho). Valor armazenado e CSV ("WON,LOST"),
+            interpretado no backend como "any of".
+          */}
+          <div className="space-y-2">
+            <Label htmlFor="tc-msg-status">Status do negócio (opcional)</Label>
+            <SelectNative
+              id="tc-msg-status"
+              value={String(value.dealStatus ?? "")}
+              onChange={(e) => set("dealStatus", e.target.value)}
+            >
+              <option value="">Qualquer status</option>
+              <option value="OPEN">Em aberto</option>
+              <option value="WON">Ganho</option>
+              <option value="LOST">Perdido</option>
+              <option value="WON,LOST">Ganho ou Perdido</option>
+            </SelectNative>
+            <p className="text-xs text-muted-foreground">
+              {triggerType === "message_received"
+                ? "Dispara só quando o contato que enviou a mensagem tem negócio neste status. Use \"Ganho ou Perdido\" para pós-venda e reengajamento."
+                : "Dispara só quando a mensagem é enviada para um contato com negócio neste status."}
+            </p>
+          </div>
         </div>
       );
     case "lifecycle_changed":

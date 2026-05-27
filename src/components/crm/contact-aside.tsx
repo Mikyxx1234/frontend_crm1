@@ -41,9 +41,15 @@ interface ContactDetails {
 interface ContactAsideProps {
   contact: ContactDetails
   className?: string
+  /**
+   * Slot opcional que substitui INTEIRAMENTE a linha de chips
+   * (responsável + tag) abaixo do nome. Quando ausente, mantém
+   * o comportamento padrão visual (chips estáticos sem ação).
+   */
+  headerActionsNode?: React.ReactNode
 }
 
-export function ContactAside({ contact, className }: ContactAsideProps) {
+export function ContactAside({ contact, className, headerActionsNode }: ContactAsideProps) {
   const [activeTab, setActiveTab] = useState(0)
   const tabs = ["Perfil", "Informações", "Dados", "Notas"]
 
@@ -67,9 +73,13 @@ export function ContactAside({ contact, className }: ContactAsideProps) {
             </div>
             <div className="text-[11px] text-[var(--text-muted)]">#{contact.contactId}</div>
           </div>
-          <div className="mt-1.5 flex items-center gap-1.5">
-            {contact.assignee && <Chip variant="brand">{contact.assignee}</Chip>}
-            <Chip variant="ghost">+Responsável</Chip>
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
+            {headerActionsNode ?? (
+              <>
+                {contact.assignee && <Chip variant="brand">{contact.assignee}</Chip>}
+                <Chip variant="ghost">+Responsável</Chip>
+              </>
+            )}
           </div>
         </div>
 

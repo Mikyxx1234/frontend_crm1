@@ -58,6 +58,12 @@ interface ChatAreaProps {
    * camada de `features/inbox-v2/extras` com attach menu + audio.
    */
   composerSlot?: React.ReactNode
+  /**
+   * Slot opcional que substitui os botões fixos (Phone + Mais) do
+   * canto superior direito do header. Use para plugar o menu de
+   * ações da conversa (Resolver/Reabrir/etc.) com handlers reais.
+   */
+  headerActionsSlot?: React.ReactNode
 }
 
 export function ChatArea({
@@ -78,6 +84,7 @@ export function ChatArea({
   inputPlaceholder,
   inputDisabled,
   composerSlot,
+  headerActionsSlot,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
@@ -129,12 +136,16 @@ export function ChatArea({
           </div>
         </div>
         <div className="flex gap-1.5">
-          <ButtonGlass variant="glass" size="icon" title="Chamada" onClick={onPhoneClick}>
-            <IconPhone size={18} />
-          </ButtonGlass>
-          <ButtonGlass variant="glass" size="icon" title="Mais" onClick={onMoreClick}>
-            <IconDotsVertical size={18} />
-          </ButtonGlass>
+          {headerActionsSlot ?? (
+            <>
+              <ButtonGlass variant="glass" size="icon" title="Chamada" onClick={onPhoneClick}>
+                <IconPhone size={18} />
+              </ButtonGlass>
+              <ButtonGlass variant="glass" size="icon" title="Mais" onClick={onMoreClick}>
+                <IconDotsVertical size={18} />
+              </ButtonGlass>
+            </>
+          )}
         </div>
       </header>
 

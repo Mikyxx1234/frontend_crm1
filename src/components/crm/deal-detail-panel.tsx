@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   IconArrowLeft,
   IconBrandWhatsapp,
@@ -116,6 +116,29 @@ export function DealDetailPanel({
 }: DealDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
   const [openFieldGroup, setOpenFieldGroup] = useState<string | null>("Idade")
+
+  // ESC fecha o painel quando esta aberto. Ignora se algum input/
+  // textarea/contenteditable estiver focado para nao atrapalhar
+  // edicao (composer, notas, inline edits).
+  useEffect(() => {
+    if (!isOpen) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return
+      const t = e.target as HTMLElement | null
+      const tag = t?.tagName
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        t?.isContentEditable
+      ) {
+        return
+      }
+      onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [isOpen, onClose])
 
   if (!deal) return null
 

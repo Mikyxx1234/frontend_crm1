@@ -89,11 +89,15 @@ export function KanbanColumn({
         {total}
       </div>
 
-      {/* Deals — container respeita Droppable (ref + props do react-dnd) */}
+      {/* Deals — container respeita Droppable (ref + props do react-dnd).
+          min-h-0 e' OBRIGATORIO: este e' o no onde o scroll-Y precisa
+          ativar. Sem min-h-0, flex-1 em flex-col calcula min-content
+          (= soma dos filhos) e estoura. Com min-h-0, ele respeita o
+          espaco restante e o overflow-y-auto passa a funcionar. */}
       <div
         ref={dealsContainerRef}
         {...dealsContainerProps}
-        className="flex flex-1 flex-col gap-2.5 overflow-y-auto pr-1"
+        className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1"
       >
         {deals.map((deal, index) =>
           renderDeal ? (

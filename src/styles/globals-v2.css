@@ -128,7 +128,20 @@
    denso). Nao mexa em px/font-size dos componentes individuais.
    ────────────────────────────────────────────────────────────────── */
 .v2-root {
-  zoom: 0.88;
+  --v2-scale: 0.88;
+  zoom: var(--v2-scale);
+}
+
+/* Utility para alturas que devem ocupar 100% da viewport REAL apesar
+   do zoom. Sem isso, `h-dvh` (que e' 100% da viewport REAL) e' encolhido
+   pelo zoom e o conteudo cobre apenas 88% da tela, sobrando faixa
+   vazia embaixo. Com --v2-scale, `calc(100dvh / 0.88)` ≈ 113.64dvh
+   antes do zoom — apos o zoom encolher, fica exatamente 100dvh. */
+.v2-screen {
+  height: calc(100dvh / var(--v2-scale, 1));
+}
+.v2-min-screen {
+  min-height: calc(100dvh / var(--v2-scale, 1));
 }
 
 @layer utilities {

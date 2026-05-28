@@ -194,7 +194,7 @@ export default function KanbanV2ClientPage() {
   }
 
   return (
-    <div className="grid h-dvh grid-cols-[72px_1fr] gap-4 p-4">
+    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4">
       <NavRail />
       <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
         <PipelineHeader

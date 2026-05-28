@@ -149,7 +149,7 @@ export default function InboxV2ClientPage() {
   >(() => [], []);
 
   return (
-    <div className="grid h-dvh grid-cols-[72px_320px_1fr_340px] gap-4 p-4">
+    <div className="v2-screen grid grid-cols-[72px_320px_1fr_340px] gap-4 p-4">
       <NavRail />
       <ConversationColumn
         conversations={conversationCards}

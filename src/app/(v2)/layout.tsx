@@ -18,7 +18,7 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
       // Pintura de fundo do mesh translucido (mesma paleta do v0).
       // Cobre TODA a tela do route group, sem depender de nenhum
       // wrapper externo.
-      className="v2-root min-h-dvh bg-[var(--color-background)]"
+      className="v2-root v2-min-screen bg-[var(--color-background)]"
       style={{
         backgroundImage:
           "radial-gradient(at 20% 10%, var(--bg-mesh-1, #b8cfec) 0px, transparent 50%), radial-gradient(at 80% 90%, var(--bg-mesh-2, #e8d5f0) 0px, transparent 50%)",

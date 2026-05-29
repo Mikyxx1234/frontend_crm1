@@ -16,6 +16,7 @@ import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
+import { Chip } from "@/components/crm/chip";
 
 import {
   toKanbanColumns,
@@ -149,6 +150,8 @@ export default function KanbanV2ClientPage() {
       initials: avatarInitials(contactName),
       avatarColor: avatarColorSlugFromName(contactName),
       phone: dealDetail.contact?.phone ?? undefined,
+      email: dealDetail.contact?.email ?? null,
+      value: dealDetail.value ?? null,
       online: undefined,
       stage: activeDealStageName,
       owner: {
@@ -577,7 +580,8 @@ function DroppableColumn({
                             pipelineId={pipelineId}
                             statusFilter={statusFilter}
                             trigger={
-                              <span className="font-display text-[9.5px] font-semibold px-2 py-px rounded-full inline-flex items-center bg-transparent text-[var(--text-muted)] border border-dashed border-[rgba(163,163,163,0.4)] cursor-pointer hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors">
+                              // Botão "+" circular igual ao do inbox (triggerVariant="icon").
+                              <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
                                 +
                               </span>
                             }
@@ -592,15 +596,24 @@ function DroppableColumn({
                           pipelineId={pipelineId}
                           statusFilter={statusFilter}
                           trigger={
-                            <span className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold transition-colors hover:bg-[rgba(91,111,245,0.22)]"
-                              style={{
-                                background: "rgba(91,111,245,0.15)",
-                                color: "var(--brand-primary)",
-                                border: "1px solid rgba(91,111,245,0.2)",
-                              }}
-                            >
-                              {deal.owner.name}
-                            </span>
+                            // Mesmo padrão visual do inbox: Chip brand quando
+                            // há responsável, Chip ghost "+Responsável" quando
+                            // não há (em vez de pintar "Sem responsavel" de azul).
+                            raw?.owner?.name ? (
+                              <Chip
+                                variant="brand"
+                                className="max-w-full cursor-pointer truncate whitespace-nowrap transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                              >
+                                {raw.owner.name}
+                              </Chip>
+                            ) : (
+                              <Chip
+                                variant="ghost"
+                                className="cursor-pointer whitespace-nowrap transition-colors hover:text-[var(--brand-primary)]"
+                              >
+                                +Responsável
+                              </Chip>
+                            )
                           }
                         />
                       }

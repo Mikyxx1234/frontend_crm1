@@ -65,6 +65,17 @@ export interface ConversationListRow {
     direction: MessageDirection;
     status?: MessageStatus;
   } | null;
+  /**
+   * Forma atual retornada pelo backend (services/conversations.ts).
+   * Mantemos `lastMessage` acima como fallback semântico (caso o
+   * backend padronize no futuro), e tratamos ambos no adapter.
+   */
+  lastMessagePreview?: {
+    content: string;
+    messageType: string;
+    mediaUrl: string | null;
+    direction: string;
+  } | null;
   unreadCount?: number;
   tags?: { id: string; name: string; color: string | null }[];
   hasError?: boolean;

@@ -108,7 +108,11 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) 
       {/* Message preview */}
       {deal.message && (
         <div className="mt-2 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-white/50 px-2.5 py-2 text-[11.5px] italic leading-[1.45] text-[var(--text-secondary)]">
-          <IconMessage size={11} className="mt-0.5 shrink-0 text-[var(--text-muted)]" />
+          {/* Ícone de conversa com borda azul — mesmo do card de
+              conversa do inbox, para padronizar a leitura visual. */}
+          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+            <IconMessage size={9} />
+          </span>
           <span className="line-clamp-2 flex-1 overflow-hidden">{deal.message.text}</span>
           <span className="shrink-0 text-[10px] not-italic text-[var(--text-muted)]">
             {deal.message.time}

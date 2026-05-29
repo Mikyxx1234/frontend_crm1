@@ -214,11 +214,21 @@ export function toConversationCard(
   const firstTagName = (row.tags ?? [])
     .map((t) => (t.name ?? "").trim())
     .find((n) => n.length > 0);
-  // Tipo da ultima mensagem — DTO atual nao envia messageType na lista,
-  // entao inferimos do preview. Quando backend evoluir, basta enviar.
-  const previewText = row.lastMessage?.preview ?? "";
-  const lastMessageType = inferLastMessageType(previewText, null);
-  const dir = String(row.lastMessage?.direction ?? "").toLowerCase();
+  // O backend pode enviar tanto `lastMessage` (forma futura, com
+  // `preview`) quanto `lastMessagePreview` (forma atual, com `content`
+  // + `messageType`). Preferimos o que tiver dado real; se nenhum
+  // tiver, cai pra string vazia (mostra apenas o tipo, se conhecido).
+  const previewText =
+    row.lastMessage?.preview ??
+    row.lastMessagePreview?.content ??
+    "";
+  const lastMessageType = inferLastMessageType(
+    previewText,
+    row.lastMessagePreview?.messageType ?? null,
+  );
+  const dir = String(
+    row.lastMessage?.direction ?? row.lastMessagePreview?.direction ?? "",
+  ).toLowerCase();
   const lastMessageDirection: "in" | "out" | undefined =
     dir === "out" || dir === "outbound"
       ? "out"
@@ -243,10 +253,20 @@ export function toConversationCard(
     inactive: row.status !== "OPEN",
     // ── Novos campos visuais ──────────────────────────────────────
     tag: firstTagName ?? null,
+    // Lista completa de tags com id/cor — usada pelo cluster de chips
+    // do card (até 2 + indicador "+N") e pelo TagsPopover injetado
+    // via slot. Filtra entradas sem nome (defesa).
+    tags: (row.tags ?? [])
+      .filter((t) => (t.name ?? "").trim().length > 0)
+      .map((t) => ({ id: t.id, name: t.name, color: t.color ?? null })),
+    assigneeId: row.assignedTo?.id ?? null,
     sessionExpiresIn: sess.label,
     sessionExpired: sess.expired,
     lastMessageType,
     lastMessageDirection,
+    // Canal de origem — substitui o status dot pelo logo da plataforma
+    // no canto inferior direito do avatar.
+    channel: row.channel ?? null,
   };
 }
 

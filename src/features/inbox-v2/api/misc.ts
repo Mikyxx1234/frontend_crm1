@@ -233,17 +233,61 @@ export async function createTag(payload: {
   return data as Tag;
 }
 
-/** POST /api/conversations/:id/tags */
-export async function setConversationTags(
+/**
+ * Resposta do endpoint de tags da conversa. O backend aplica a tag nas
+ * DUAS pontas (contato + deal OPEN do contato), então o retorno informa
+ * onde a tag foi aplicada — útil para invalidar as queries do Kanban.
+ */
+export interface ConversationTagResult {
+  ok: true;
+  action: "add" | "remove";
+  appliedToContact: boolean;
+  appliedToDeal: string | null;
+}
+
+/**
+ * POST /api/conversations/:id/tags — adiciona UMA tag à conversa.
+ *
+ * O contrato do backend é por tag (`{ tagId, action }`), não um array.
+ * Como não existe `TagOnConversation`, o backend grava em `TagOnContact`
+ * e replica no `TagOnDeal` do deal OPEN — por isso a tag aparece tanto
+ * no inbox quanto no Kanban (sincronização nativa).
+ */
+export async function addConversationTag(
   conversationId: string,
-  tagIds: string[],
-): Promise<void> {
+  tagId: string,
+): Promise<ConversationTagResult> {
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/tags`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tagIds }),
+    body: JSON.stringify({ tagId, action: "add" }),
   });
-  if (!res.ok) throw new Error("Erro ao atualizar tags");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao adicionar tag",
+    );
+  }
+  return data as ConversationTagResult;
+}
+
+/** DELETE /api/conversations/:id/tags — remove UMA tag (contato + deal). */
+export async function removeConversationTag(
+  conversationId: string,
+  tagId: string,
+): Promise<ConversationTagResult> {
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/tags`), {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tagId }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao remover tag",
+    );
+  }
+  return data as ConversationTagResult;
 }
 
 // ─────────────────────────────────────────────────────────────────

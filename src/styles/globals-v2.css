@@ -144,6 +144,44 @@
   min-height: calc(100dvh / var(--v2-scale, 1));
 }
 
+/* ──────────────────────────────────────────────────────────────────
+   Scrollbars sutis para todas as rotas v2.
+   - WebKit (Chromium/Safari): track invisível, thumb fino (6px) com
+     opacidade baixa que sobe levemente no hover. Sem setas.
+   - Firefox: scrollbar-width thin + cor matching.
+   - IE/Edge legado ignoram, mantendo o padrão.
+   Aplicado para qualquer elemento dentro de .v2-root, cobrindo as
+   colunas (Conversas, Kanban) e quaisquer áreas de overflow internas.
+   ────────────────────────────────────────────────────────────────── */
+.v2-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.v2-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.v2-root ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.12);
+  border-radius: 9999px;
+  transition: background 150ms ease;
+}
+.v2-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.28);
+}
+.v2-root ::-webkit-scrollbar-button {
+  display: none; /* remove setas no topo e base */
+  height: 0;
+  width: 0;
+}
+.v2-root ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Firefox */
+.v2-root * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
+}
+
 @layer utilities {
   .av-green   { background: linear-gradient(220deg, #5DFF7B 46%, #356823 100%); }
   .av-blue    { background: linear-gradient(220deg, #5D90FF 46%, #275CA1 100%); }

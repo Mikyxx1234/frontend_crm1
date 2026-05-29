@@ -11,13 +11,10 @@ import {
   IconSearch,
   IconTrophy,
   IconPencil,
-  IconLayoutGrid,
   IconMessageCircle,
   IconChecklist,
   IconNote,
   IconClock,
-  IconAlertTriangle,
-  IconTemplate,
   IconPaperclip,
   IconMoodSmile,
   IconMicrophone,
@@ -39,6 +36,9 @@ export interface DealDetail {
   initials: string
   avatarColor: string
   phone?: string
+  email?: string | null
+  /** Valor do negócio (campo "Venda" no painel Kommo). */
+  value?: number | string | null
   online?: boolean
   stage?: string
   owner?: DealOwner
@@ -77,6 +77,9 @@ interface DealDetailPanelProps {
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
 
+// Paleta do funil segmentado (estilo Kommo) — uma cor por etapa.
+const FUNNEL_PALETTE = ["#94a3b8", "#5b6ff5", "#a78bfa", "#f59e0b", "#ec4899", "#10b981"]
+
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: number }>; count?: number }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
   { id: "atividades", label: "Atividades", icon: IconChecklist, count: 3 },
@@ -112,7 +115,6 @@ export function DealDetailPanel({
   tabContentOverride,
 }: DealDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
-  const [openFieldGroup, setOpenFieldGroup] = useState<string | null>("Idade")
 
   // ESC fecha o painel quando esta aberto. Ignora se algum input/
   // textarea/contenteditable estiver focado para nao atrapalhar
@@ -306,116 +308,106 @@ export function DealDetailPanel({
 
         {/* 2 COLS: SIDEBAR + CONTENT */}
         <div className="grid min-h-0 flex-1 grid-cols-[340px_1fr] gap-4 overflow-hidden">
-          {/* SIDEBAR */}
-          <aside className="flex flex-col gap-[18px] overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-[22px] shadow-[var(--glass-shadow)] backdrop-blur-md">
-            {/* NEGÓCIO */}
-            <SidebarSection
-              title="Negócio"
-              action={
-                <button
-                  type="button"
-                  className="inline-flex cursor-pointer items-center gap-1 font-display text-[11px] font-bold text-[var(--brand-primary)] hover:underline"
-                >
-                  <IconLayoutGrid size={13} />
-                  Layout personalizado
-                </button>
-              }
-            >
-              <Row label="Responsável">
-                {ownerSlot ?? (
-                  <span className="inline-flex cursor-pointer items-center gap-1.5 italic text-[var(--text-muted)]">
-                    {deal.owner?.name || "Sem responsável"}
-                    <IconChevronDown size={12} />
-                  </span>
-                )}
-              </Row>
-              <Row label="Origem">
-                {sourceSlot ?? (
-                  <span className="inline-flex cursor-pointer items-center gap-1.5 font-display font-bold text-[var(--text-primary)]">
-                    Whatsapp-Dina-7367
-                    <IconPencil size={12} className="opacity-50" />
-                  </span>
-                )}
-              </Row>
-              <Row label="Previsão">
-                {forecastSlot ?? (
-                  <span className="cursor-pointer italic text-[var(--text-muted)]">Indefinida</span>
-                )}
-              </Row>
-              <Row label="Tags" isLast>
-                {tagsSlot ?? (
-                  <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-black/20 px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
-                    <IconPlus size={10} />
-                    Adicionar
-                  </span>
-                )}
-              </Row>
-            </SidebarSection>
+          {/* SIDEBAR — painel funcional estilo Kommo (DS glass) */}
+          <aside
+            aria-label="Detalhes do negócio"
+            className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md"
+          >
+            {/* Cabeçalho fixo: identificador + funil de vendas segmentado */}
+            <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-[22px] pb-4 pt-[18px]">
+              <h2 className="truncate font-display text-[16px] font-bold tracking-tight text-[var(--text-primary)]">
+                Lead #{deal.id.slice(-6).toUpperCase()}
+              </h2>
 
-            {/* CONTATO */}
-            <SidebarSection
-              title="Contato"
-              action={
-                <SectionActionBtn title="Editar">
-                  <IconPencil size={14} />
-                </SectionActionBtn>
-              }
-            >
-              <Row label="Telefone">
-                <span
-                  className="cursor-pointer font-display font-bold"
-                  style={{ color: "var(--brand-primary)" }}
-                >
-                  {deal.phone || "+5511987023902"}
-                </span>
-              </Row>
-              <Row label="Email" isLast>
-                <span className="cursor-pointer italic text-[var(--text-muted)]">Adicionar</span>
-              </Row>
-            </SidebarSection>
-
-            {/* CAMPOS DO NEGÓCIO */}
-            <SidebarSection
-              title="Campos do negócio"
-              action={
-                <SectionActionBtn title="Editar campos">
-                  <IconPencil size={14} />
-                </SectionActionBtn>
-              }
-            >
-              <div className="flex flex-col">
-                {FIELD_GROUPS.map((field) => {
-                  const open = openFieldGroup === field
-                  return (
-                    <div key={field} className="border-b border-black/[0.05] pb-1">
-                      <button
-                        type="button"
-                        onClick={() => setOpenFieldGroup(open ? null : field)}
-                        className="flex w-full cursor-pointer items-center justify-between bg-transparent py-2 font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
-                      >
-                        <span>{field}</span>
-                        <IconPlus
-                          size={14}
-                          className={cn(
-                            "transition-transform",
-                            open ? "rotate-45 text-[var(--brand-primary)]" : "text-[var(--text-muted)]",
-                          )}
-                        />
-                      </button>
-                      {open && (
-                        <div className="flex flex-col gap-1.5 pb-1.5 pt-0.5">
-                          <Row label="Valor" isLast>
-                            <span className="font-display font-bold text-[var(--text-primary)]">
-                              28 anos
-                            </span>
-                          </Row>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+              <div className="mt-3.5">
+                <div className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  Funil de vendas
+                </div>
+                <div className="mt-1 font-display text-[15px] font-bold text-[var(--text-primary)]">
+                  {deal.stage ?? "Em processo"}
+                </div>
+                <div className="mt-2.5 flex gap-1">
+                  {STAGES.map((s, i) => (
+                    <span
+                      key={s}
+                      className="h-[6px] flex-1 rounded-full transition-opacity"
+                      style={{
+                        background: FUNNEL_PALETTE[i % FUNNEL_PALETTE.length],
+                        opacity: i <= currentStageIndex ? 1 : 0.18,
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
-            </SidebarSection>
+            </div>
+
+            {/* Conteúdo rolável: lista densa de campos */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-[22px] py-4">
+              <div className="flex flex-col gap-5">
+                {/* Principal */}
+                <FieldCard>
+                  <FieldRow
+                    label="Responsável"
+                    valueNode={
+                      ownerSlot ?? (
+                        <span className="inline-flex cursor-pointer items-center gap-1.5 font-display text-[13px] font-bold italic text-[var(--text-muted)]">
+                          {deal.owner?.name || "Sem responsável"}
+                          <IconChevronDown size={12} />
+                        </span>
+                      )
+                    }
+                  />
+                  <FieldRow label="Venda" value={formatMoney(deal.value)} money />
+                  <FieldRow
+                    label="Origem"
+                    valueNode={sourceSlot ?? <PlaceholderValue text="Adicionar" />}
+                  />
+                  <FieldRow
+                    label="Previsão"
+                    valueNode={forecastSlot ?? <PlaceholderValue text="Indefinida" />}
+                  />
+                  <FieldRow
+                    label="Tags"
+                    isLast
+                    valueNode={
+                      tagsSlot ?? (
+                        <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-black/20 px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                          <IconPlus size={10} />
+                          Adicionar
+                        </span>
+                      )
+                    }
+                  />
+                </FieldCard>
+
+                {/* Dados de Contato */}
+                <FieldCard title="Dados de Contato">
+                  <FieldRow
+                    label="Telefone"
+                    valueNode={
+                      <a
+                        href={deal.phone ? `tel:${deal.phone}` : undefined}
+                        className="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                      >
+                        {deal.phone || "—"}
+                      </a>
+                    }
+                  />
+                  <FieldRow label="Email" value={deal.email ?? undefined} isLast />
+                </FieldCard>
+
+                {/* Campos do negócio (placeholders editáveis) */}
+                <FieldCard title="Campos do negócio">
+                  {FIELD_GROUPS.map((field, i) => (
+                    <FieldRow
+                      key={field}
+                      label={field}
+                      isLast={i === FIELD_GROUPS.length - 1}
+                    />
+                  ))}
+                </FieldCard>
+              </div>
+            </div>
           </aside>
 
           {/* CONTENT */}
@@ -491,66 +483,101 @@ function PanelIconBtn({
   )
 }
 
-function SidebarSection({
-  title,
-  action,
-  children,
-}: {
-  title: string
-  action?: React.ReactNode
-  children: React.ReactNode
-}) {
+/** Rótulo de seção (uppercase tracking) acima de cada cartão de campos. */
+function SubLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="mb-1 flex items-center justify-between border-b border-black/[0.05] pb-1.5">
-        <span className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-          {title}
-        </span>
-        {action}
-      </div>
+    <div className="mb-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
       {children}
     </div>
   )
 }
 
-function Row({
-  label,
+/** Cartão branco que agrupa uma lista densa de FieldRow (estilo Kommo). */
+function FieldCard({
+  title,
   children,
+}: {
+  title?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section>
+      {title && <SubLabel>{title}</SubLabel>}
+      <div className="rounded-[var(--radius-lg)] border border-black/[0.04] bg-white px-4">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+/** Valor placeholder (italic muted) usado quando não há slot/dado real. */
+function PlaceholderValue({ text }: { text: string }) {
+  return (
+    <span className="font-display text-[13px] italic text-[var(--text-muted)]">
+      {text}
+    </span>
+  )
+}
+
+/**
+ * Linha densa de campo: rótulo à esquerda, valor à direita. Quando
+ * `valueNode` é fornecido (ex.: ownerSlot/tagsSlot/InlineEditText),
+ * ele substitui o texto e fica responsável pela interação. Caso
+ * contrário renderiza `value` (ou "—") com lápis de edição no hover.
+ */
+function FieldRow({
+  label,
+  value,
+  valueNode,
   isLast,
+  money,
 }: {
   label: string
-  children: React.ReactNode
+  value?: string | null
+  valueNode?: React.ReactNode
   isLast?: boolean
+  money?: boolean
 }) {
+  const empty = !value
   return (
     <div
       className={cn(
-        "flex min-h-8 items-center justify-between gap-2.5 py-2 text-[13px]",
+        "flex items-center justify-between gap-3 py-2.5",
         !isLast && "border-b border-black/[0.05]",
       )}
     >
-      <span className="font-medium text-[var(--text-muted)]">{label}</span>
-      <span className="text-right">{children}</span>
+      <span className="shrink-0 text-[12.5px] font-medium text-[var(--text-muted)]">
+        {label}
+      </span>
+      {valueNode ? (
+        <div className="ml-auto flex min-w-0 max-w-[64%] flex-wrap items-center justify-end gap-1.5 text-right">
+          {valueNode}
+        </div>
+      ) : (
+        <span
+          className={cn(
+            "group flex max-w-[64%] items-center justify-end gap-1.5 text-right font-display text-[13px] font-bold",
+            empty ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
+            money && !empty && "text-[var(--color-success-text)]",
+          )}
+        >
+          <span className="truncate">{value || "—"}</span>
+          <IconPencil
+            size={13}
+            className="shrink-0 text-[var(--text-muted)] opacity-0 transition-opacity group-hover:opacity-100"
+          />
+        </span>
+      )}
     </div>
   )
 }
 
-function SectionActionBtn({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] bg-transparent text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-    >
-      {children}
-    </button>
-  )
+/** Formata o valor do negócio em BRL; retorna undefined quando vazio. */
+function formatMoney(v: number | string | null | undefined): string | undefined {
+  if (v === null || v === undefined || v === "") return undefined
+  const n = typeof v === "string" ? Number(v) : v
+  if (Number.isNaN(n)) return undefined
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
 /** Composer fallback (disabled) usado apenas quando sessao expirou e

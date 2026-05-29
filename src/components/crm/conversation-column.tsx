@@ -3,9 +3,19 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
-import { IconClock, IconPlus, IconChevronDown, IconCheck } from "@tabler/icons-react"
+import {
+  IconClock,
+  IconPlus,
+  IconChevronDown,
+  IconCheck,
+  IconMessages,
+  IconInbox,
+  IconCornerUpLeft,
+  IconCircleCheck,
+  type Icon as TablerIcon,
+} from "@tabler/icons-react"
 import { InputGlass } from "./input-glass"
-import { TabsGlass, type TabItem } from "./tabs-glass"
+import { type TabItem } from "./tabs-glass"
 import { ConversationCard, type Conversation } from "./conversation-card"
 
 interface ConversationColumnProps {
@@ -24,20 +34,32 @@ interface ConversationColumnProps {
   tabsOverride?: ReadonlyArray<TabItem>
   activeTabIndex?: number
   onTabChange?: (index: number) => void
-  /**
-   * Quando true, esconde a faixa de `<TabsGlass>` e usa SOMENTE o
-   * dropdown do banner "Aguardando resposta" como seletor de status.
-   * Util quando a UX prefere uma unica entrada de selecao.
-   */
-  hideTabs?: boolean
-  /** Label exibido no banner do dropdown (default "Aguardando resposta"). */
-  awaitingLabel?: string
-  /** Numero exibido no badge do banner. Quando undefined, usa `conversations.length`. */
-  awaitingCount?: number | null
   /** Badge de urgencia (relogio vermelho) no header. */
   urgencyCount?: number
   /** Acao do botao "+" no header (criar nova conversa). */
   onNewConversation?: () => void
+  /**
+   * Slot opcional para um handle de redimensionamento (`ColumnResizer`).
+   * O componente é renderizado dentro de um wrapper `position: relative`,
+   * então um handle com `position: absolute right: -6px` se ancora bem.
+   */
+  resizerSlot?: React.ReactNode
+  /**
+   * Visual do header. Por default (`minimal`) só o título "Conversas".
+   * Use `full` para exibir o badge de urgência e o botão "+" (legado v0).
+   */
+  headerVariant?: "minimal" | "full"
+  /**
+   * Renderiza slots específicos por card (tags / assignee popovers).
+   * O callback recebe a conversation e devolve os nodes que serão
+   * injetados em `tagsSlot` e `assigneeSlot` do `ConversationCard`.
+   * Mantido fora dos dados pra evitar incluir JSX no objeto serializável
+   * que sai do adapter.
+   */
+  renderCardSlots?: (conversation: Conversation) => {
+    tagsSlot?: React.ReactNode
+    assigneeSlot?: React.ReactNode
+  }
 }
 
 const DEFAULT_TABS: TabItem[] = [
@@ -45,6 +67,46 @@ const DEFAULT_TABS: TabItem[] = [
   { label: "Não lidas" },
   { label: "Atribuídas" },
 ]
+
+/**
+ * Mapeia o label do status (normalizado) para ícone + cores do
+ * "selo" da pílula. Permite que o ícone reflita a escolha atual em
+ * vez de um relógio fixo. Cai num default neutro quando não casa.
+ */
+function statusVisual(label: string | undefined): {
+  Icon: TablerIcon
+  bg: string
+  fg: string
+} {
+  const l = (label ?? "").toLowerCase()
+  if (l.includes("todas") || l.includes("todos"))
+    return {
+      Icon: IconMessages,
+      bg: "var(--color-enterprise-bg)",
+      fg: "var(--brand-primary)",
+    }
+  if (l.includes("aguard") || l.includes("esperando"))
+    return { Icon: IconClock, bg: "var(--color-lead-bg)", fg: "var(--color-lead)" }
+  if (l.includes("entrada"))
+    return {
+      Icon: IconInbox,
+      bg: "rgba(59,130,246,0.14)",
+      fg: "var(--color-info)",
+    }
+  if (l.includes("respond"))
+    return {
+      Icon: IconCornerUpLeft,
+      bg: "var(--color-enterprise-bg)",
+      fg: "var(--brand-primary)",
+    }
+  if (l.includes("resolv") || l.includes("finaliz"))
+    return {
+      Icon: IconCircleCheck,
+      bg: "var(--color-success-bg)",
+      fg: "var(--color-success)",
+    }
+  return { Icon: IconClock, bg: "var(--color-lead-bg)", fg: "var(--color-lead)" }
+}
 
 export function ConversationColumn({
   conversations,
@@ -56,11 +118,11 @@ export function ConversationColumn({
   tabsOverride,
   activeTabIndex,
   onTabChange,
-  hideTabs,
-  awaitingLabel,
-  awaitingCount,
   urgencyCount,
   onNewConversation,
+  resizerSlot,
+  headerVariant = "minimal",
+  renderCardSlots,
 }: ConversationColumnProps) {
   const [internalTab, setInternalTab] = useState(0)
   const isControlledTabs = tabsOverride !== undefined
@@ -89,14 +151,11 @@ export function ConversationColumn({
 
   const urgency = urgencyCount ?? conversations.filter((c) => c.urgent).length
 
-  const currentTabLabel =
-    awaitingLabel ?? (tabs[activeTab]?.label || "Aguardando resposta")
-  const currentTabCount =
-    awaitingCount !== undefined && awaitingCount !== null
-      ? awaitingCount
-      : (tabs[activeTab]?.count ?? conversations.length)
+  const currentTabLabel = tabs[activeTab]?.label ?? "Todas"
+  const currentTabCount = tabs[activeTab]?.count ?? conversations.length
+  const currentVisual = statusVisual(currentTabLabel)
 
-  // ── Dropdown do banner ─────────────────────────────────────────
+  // ── Dropdown de status ──────────────────────────────────────────
   const dropdownBtnRef = useRef<HTMLButtonElement>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<{
@@ -131,31 +190,35 @@ export function ConversationColumn({
     <section
       aria-label="Lista de conversas"
       className={cn(
-        "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 pb-4 pt-[22px] backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 pb-4 pt-[22px] backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
-      {/* Header */}
+      {resizerSlot}
+      {/* Header — variante minimal (default) só com o título. A `full`
+          mantém o badge de urgência e o botão "+" do design v0 antigo. */}
       <div className="flex items-center justify-between px-1 pb-3.5">
         <div className="flex items-center gap-2.5">
           <h2 className="font-display text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
             Conversas
           </h2>
-          {urgency > 0 && (
+          {headerVariant === "full" && urgency > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/12 px-2.5 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
               <IconClock size={12} />
               {urgency}
             </span>
           )}
         </div>
-        <button
-          type="button"
-          title="Nova conversa"
-          onClick={onNewConversation}
-          className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
-        >
-          <IconPlus size={18} />
-        </button>
+        {headerVariant === "full" && (
+          <button
+            type="button"
+            title="Nova conversa"
+            onClick={onNewConversation}
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+          >
+            <IconPlus size={18} />
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -167,36 +230,34 @@ export function ConversationColumn({
         onChange={handleSearchChange}
       />
 
-      {/* Tabs — opcionais */}
-      {!hideTabs && (
-        <TabsGlass
-          tabs={tabs}
-          activeTab={activeTab}
-          onChange={handleTabChange}
-          className="mb-3"
-        />
-      )}
-
-      {/* Banner / Dropdown de status */}
+      {/* Seletor de status — pílula única (ícone + label + count + chevron)
+          que abre um dropdown com todos os status. Visual do screenshot:
+          fundo branco arredondado, ícone de relógio em círculo âmbar,
+          badge azul com a contagem. */}
       <button
         ref={dropdownBtnRef}
         type="button"
         onClick={() => setDropdownOpen((v) => !v)}
-        className="mb-3 flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 text-left backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+        aria-haspopup="listbox"
+        aria-expanded={dropdownOpen}
+        className="mb-3 flex items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-white px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
       >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-lead)]">
-          <IconClock size={15} />
+        <span
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+          style={{ background: currentVisual.bg, color: currentVisual.fg }}
+        >
+          <currentVisual.Icon size={15} stroke={2.2} />
         </span>
         <span className="flex-1 truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
           {currentTabLabel}
         </span>
-        <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 font-display text-[11px] font-bold text-white">
+        <span className="rounded-full bg-[var(--brand-primary)] px-2.5 py-0.5 font-display text-[11px] font-bold text-white tabular-nums">
           {currentTabCount}
         </span>
         <IconChevronDown
-          size={16}
+          size={15}
           className={cn(
-            "text-[var(--text-muted)] transition-transform",
+            "shrink-0 text-[var(--text-muted)] transition-transform",
             dropdownOpen && "rotate-180",
           )}
         />
@@ -207,7 +268,7 @@ export function ConversationColumn({
         typeof document !== "undefined" &&
         createPortal(
           <div
-            role="menu"
+            role="listbox"
             className="fixed z-[100] flex flex-col gap-0.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
             style={{
               top: dropdownPos.top,
@@ -219,11 +280,13 @@ export function ConversationColumn({
           >
             {tabs.map((tab, idx) => {
               const isActive = activeTab === idx
+              const v = statusVisual(tab.label)
               return (
                 <button
                   key={`${tab.label}-${idx}`}
                   type="button"
-                  role="menuitem"
+                  role="option"
+                  aria-selected={isActive}
                   onClick={() => {
                     handleTabChange(idx)
                     setDropdownOpen(false)
@@ -236,21 +299,31 @@ export function ConversationColumn({
                   )}
                 >
                   <span className="flex flex-1 items-center gap-2">
-                    {isActive && <IconCheck size={14} />}
-                    <span className={cn(!isActive && "pl-[18px]")}>{tab.label}</span>
-                  </span>
-                  {tab.count !== undefined && tab.count !== null && (
                     <span
-                      className={cn(
-                        "rounded-full px-1.5 py-px text-[10.5px] font-bold tabular-nums",
-                        isActive
-                          ? "bg-[var(--brand-primary)] text-white"
-                          : "bg-black/[0.06] text-[var(--text-muted)]",
-                      )}
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: v.bg, color: v.fg }}
                     >
-                      {tab.count}
+                      <v.Icon size={12} stroke={2.2} />
                     </span>
-                  )}
+                    <span>{tab.label}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    {isActive && (
+                      <IconCheck size={14} className="text-[var(--brand-primary)]" />
+                    )}
+                    {tab.count !== undefined && tab.count !== null && (
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-px text-[10.5px] font-bold tabular-nums",
+                          isActive
+                            ? "bg-[var(--brand-primary)] text-white"
+                            : "bg-black/[0.06] text-[var(--text-muted)]",
+                        )}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </span>
                 </button>
               )
             })}
@@ -260,16 +333,21 @@ export function ConversationColumn({
 
       {/* Lista */}
       <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
-        {displayed.map((conversation) => (
-          <ConversationCard
-            key={conversation.id}
-            conversation={{
-              ...conversation,
-              active: conversation.id === activeConversationId,
-            }}
-            onClick={() => onSelectConversation?.(conversation.id)}
-          />
-        ))}
+        {displayed.map((conversation) => {
+          const slots = renderCardSlots?.(conversation)
+          return (
+            <ConversationCard
+              key={conversation.id}
+              conversation={{
+                ...conversation,
+                active: conversation.id === activeConversationId,
+              }}
+              onClick={() => onSelectConversation?.(conversation.id)}
+              tagsSlot={slots?.tagsSlot}
+              assigneeSlot={slots?.assigneeSlot}
+            />
+          )
+        })}
         {displayed.length === 0 && (
           <div className="px-2 py-6 text-center text-[12px] text-[var(--text-muted)]">
             Nenhuma conversa encontrada.

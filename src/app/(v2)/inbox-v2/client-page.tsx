@@ -8,6 +8,10 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
 import { ContactAside } from "@/components/crm/contact-aside";
+import {
+  ColumnResizer,
+  usePersistentWidth,
+} from "@/components/crm/column-resizer";
 
 import {
   toChatContact,
@@ -50,8 +54,16 @@ export default function InboxV2ClientPage() {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
+  // ── Largura da coluna de conversas (persistida) ────────────────
+  const [convWidth, setConvWidth] = usePersistentWidth(
+    "inbox-v2:conv-width",
+    320,
+  );
+
   // ── Estado de UI local ─────────────────────────────────────────
-  const [tab, setTab] = useState<InboxTab>("esperando");
+  // Default "todos": ao abrir/atualizar a página, todas as conversas
+  // ficam selecionadas (pedido do usuário).
+  const [tab, setTab] = useState<InboxTab>("todos");
   const [filters] = useState<InboxFilters>(DEFAULT_FILTERS);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -149,7 +161,13 @@ export default function InboxV2ClientPage() {
   >(() => [], []);
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_320px_1fr_340px] gap-4 p-4">
+    <div
+      className="v2-screen grid gap-4 p-4"
+      style={{
+        // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 fixa.
+        gridTemplateColumns: `72px ${convWidth}px 1fr 340px`,
+      }}
+    >
       <NavRail />
       <ConversationColumn
         conversations={conversationCards}
@@ -166,10 +184,29 @@ export default function InboxV2ClientPage() {
           const next = TABS[idx]?.id;
           if (next) setTab(next);
         }}
-        // Tabs ocultadas — dropdown do banner abaixo concentra a
-        // selecao de status (UX pedida pelo time: uma unica entrada).
-        hideTabs
-        awaitingCount={tabCounts?.[tab] ?? null}
+        resizerSlot={
+          <ColumnResizer value={convWidth} onChange={setConvWidth} />
+        }
+        renderCardSlots={(c) => ({
+          tagsSlot: (
+            <TagsPopover
+              conversationId={c.id}
+              currentTags={(c.tags ?? []).map((t) => ({
+                id: t.id,
+                name: t.name,
+                color: t.color ?? null,
+              }))}
+              triggerVariant="icon"
+            />
+          ),
+          assigneeSlot: (
+            <AssigneePopover
+              conversationId={c.id}
+              currentAssigneeName={c.assignee}
+              currentAssigneeId={c.assigneeId ?? null}
+            />
+          ),
+        })}
       />
 
       {chatContact && activeRow ? (

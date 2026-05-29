@@ -214,9 +214,11 @@ export function RunAutomationButton({
               <DropdownMenuItem
                 key={a.id}
                 disabled={!!runningId}
-                onSelect={(e) => {
-                  // Evita o menu fechar antes do request resolver (UX:
-                  // mostra spinner inline no item enquanto roda).
+                onClick={(e) => {
+                  // O DropdownMenuItem deste projeto é um <button> que dispara
+                  // via onClick (não onSelect/Radix). `preventDefault` mantém o
+                  // menu aberto enquanto roda (o item checa !defaultPrevented
+                  // antes de fechar) → mostra o spinner inline.
                   e.preventDefault();
                   void handleRun(a);
                 }}

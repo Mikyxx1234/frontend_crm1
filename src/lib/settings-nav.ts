@@ -23,7 +23,6 @@ import {
   ThumbsDown,
   Upload,
   Users,
-  Zap,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
@@ -113,14 +112,6 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         icon: LayoutList,
         href: "/settings/message-models",
         allowedRoles: GESTAO,
-      },
-      {
-        id: "quick-replies",
-        label: "Respostas rápidas",
-        description: "Atalhos de texto do atendimento",
-        icon: Zap,
-        href: "/settings/quick-replies",
-        requiredPermission: "template:view",
       },
       {
         id: "notifications",

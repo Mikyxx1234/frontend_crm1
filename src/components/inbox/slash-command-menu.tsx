@@ -4,7 +4,6 @@
  * Slash Command Menu — quando o operador digita "/" no composer do
  * inbox, este menu aparece listando atalhos de mensagem prontos:
  *
- *   - Respostas rápidas (`/api/quick-replies`) — texto curto inserido direto.
  *   - Modelos internos (`/api/templates`) — texto livre + variáveis dotted-path
  *     (`{{contato.nome}}`, `{{negocio.titulo}}`...) interpoladas client-side.
  *   - Templates WhatsApp (Meta WABA, `/api/whatsapp-template-configs/agent-enabled`)
@@ -29,7 +28,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Loader2, MessageSquareQuote, Zap } from "lucide-react";
+import { FileText, Loader2, MessageSquareQuote } from "lucide-react";
 
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -43,15 +42,9 @@ import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template
 // Types
 // ─────────────────────────────────────────────────────────────────
 
-export type SlashItemKind = "quick-reply" | "internal-template" | "meta-template";
+export type SlashItemKind = "internal-template" | "meta-template";
 
 export type SlashItem =
-  | {
-      kind: "quick-reply";
-      id: string;
-      title: string;
-      content: string;
-    }
   | {
       kind: "internal-template";
       id: string;
@@ -128,7 +121,6 @@ export function detectSlashTokenAt(
 // Fetchers
 // ─────────────────────────────────────────────────────────────────
 
-type QuickReplyRow = { id: string; title?: string; shortcut?: string; content: string };
 type InternalRow = {
   id: string;
   name: string;
@@ -154,13 +146,6 @@ type MetaRow = {
   flowId?: string | null;
   operatorVariables?: OperatorVariableMeta[] | null;
 };
-
-async function fetchQuickReplies(): Promise<QuickReplyRow[]> {
-  const r = await fetch(apiUrl("/api/quick-replies"));
-  if (!r.ok) return [];
-  const data = await r.json().catch(() => []);
-  return Array.isArray(data) ? data : [];
-}
 
 async function fetchInternalTemplates(): Promise<InternalRow[]> {
   const r = await fetch(apiUrl("/api/templates"));
@@ -217,12 +202,6 @@ export function useSlashMenu({
 
   const queriesEnabled = open && !disabled;
 
-  const quickRepliesQ = useQuery({
-    queryKey: ["slash-quick-replies"],
-    queryFn: fetchQuickReplies,
-    enabled: queriesEnabled,
-    staleTime: 60_000,
-  });
   const internalsQ = useQuery({
     queryKey: ["slash-internal-templates"],
     queryFn: fetchInternalTemplates,
@@ -237,26 +216,13 @@ export function useSlashMenu({
   });
 
   const isLoading =
-    queriesEnabled &&
-    (quickRepliesQ.isLoading || internalsQ.isLoading || metasQ.isLoading);
+    queriesEnabled && (internalsQ.isLoading || metasQ.isLoading);
 
   const items = React.useMemo<SlashItem[]>(() => {
     const q = (token?.query ?? "").trim().toLowerCase();
     const matches = (s: string) => (q === "" ? true : s.toLowerCase().includes(q));
 
     const out: SlashItem[] = [];
-
-    for (const r of quickRepliesQ.data ?? []) {
-      const title = r.title?.trim() || r.shortcut?.trim() || r.content.slice(0, 40);
-      if (matches(title) || matches(r.content)) {
-        out.push({
-          kind: "quick-reply",
-          id: r.id,
-          title,
-          content: r.content,
-        });
-      }
-    }
 
     for (const t of internalsQ.data ?? []) {
       if (matches(t.name) || matches(t.content) || matches(t.category ?? "")) {
@@ -295,7 +261,7 @@ export function useSlashMenu({
     }
 
     return out;
-  }, [quickRepliesQ.data, internalsQ.data, metasQ.data, token]);
+  }, [internalsQ.data, metasQ.data, token]);
 
   // Reset activeIndex sempre que a query muda — sem isso o índice
   // pode cair fora do range da nova lista.
@@ -348,10 +314,7 @@ export function useSlashMenu({
         return;
       }
 
-      const replacement =
-        item.kind === "internal-template"
-          ? interpolateInternalTemplate(item.content, templateContext ?? {})
-          : item.content;
+      const replacement = interpolateInternalTemplate(item.content, templateContext ?? {});
 
       const before = draft.slice(0, token.start);
       const after = draft.slice(token.end);
@@ -442,28 +405,24 @@ export function useSlashMenu({
 // Componente visual
 // ─────────────────────────────────────────────────────────────────
 
-const KIND_ORDER: SlashItemKind[] = ["quick-reply", "internal-template", "meta-template"];
+const KIND_ORDER: SlashItemKind[] = ["internal-template", "meta-template"];
 
 const KIND_GROUP_LABEL: Record<SlashItemKind, string> = {
-  "quick-reply": "Respostas rápidas",
   "internal-template": "Modelos internos do CRM",
   "meta-template": "Templates WhatsApp (Meta)",
 };
 
 const KIND_GROUP_HINT: Record<SlashItemKind, string> = {
-  "quick-reply": "Texto curto inserido direto na conversa",
   "internal-template": "Mensagem do CRM com variáveis preenchidas no envio",
   "meta-template": "Modelo aprovado na Meta — abre painel para confirmar envio",
 };
 
 const KIND_ICON: Record<SlashItemKind, React.ComponentType<{ className?: string }>> = {
-  "quick-reply": Zap,
   "internal-template": FileText,
   "meta-template": MessageSquareQuote,
 };
 
 const KIND_ICON_COLOR: Record<SlashItemKind, string> = {
-  "quick-reply": "text-amber-500",
   "internal-template": "text-primary",
   "meta-template": "text-emerald-600",
 };
@@ -488,7 +447,6 @@ export function SlashCommandMenu({
   // cabeçalhos de seção).
   type IndexedItem = { item: SlashItem; globalIndex: number };
   const byKind: Record<SlashItemKind, IndexedItem[]> = {
-    "quick-reply": [],
     "internal-template": [],
     "meta-template": [],
   };
@@ -559,23 +517,14 @@ export function SlashCommandMenu({
                   {group.map(({ item, globalIndex }) => {
                     const active = globalIndex === state.activeIndex;
                     const title =
-                      item.kind === "quick-reply"
-                        ? item.title
-                        : item.kind === "internal-template"
-                          ? item.name
-                          : item.label || item.name;
+                      item.kind === "internal-template"
+                        ? item.name
+                        : item.label || item.name;
                     const preview =
-                      item.kind === "quick-reply"
+                      item.kind === "internal-template"
                         ? item.content
-                        : item.kind === "internal-template"
-                          ? item.content
-                          : item.bodyPreview;
-                    const tag =
-                      item.kind === "quick-reply"
-                        ? null
-                        : item.kind === "internal-template"
-                          ? item.category ?? null
-                          : item.category ?? null;
+                        : item.bodyPreview;
+                    const tag = item.category ?? null;
                     return (
                       <li key={`${item.kind}-${item.id}`}>
                         <button

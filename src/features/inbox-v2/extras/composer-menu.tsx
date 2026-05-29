@@ -3,32 +3,28 @@
 import { useEffect, useRef, useState } from "react";
 import {
   IconPaperclip,
-  IconBolt,
   IconFileText,
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 
 import { FilePickerButton } from "./file-picker-button";
-import { QuickReplyList } from "./quick-reply-popover";
 import { TemplatePickerList } from "./template-picker-popover";
 
 /**
  * Menu unificado de anexos / ações secundárias do composer.
  * Substitui o botão "Anexar" do ChatArea: ao clicar abre um popover
- * com 3 opções rápidas (arquivo, resposta rapida, template).
+ * com 2 opções rápidas (arquivo, template WhatsApp).
  */
 export function ComposerMenu({
   conversationId,
-  onInsertText,
   className,
 }: {
   conversationId: string | null;
-  onInsertText: (text: string) => void;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"root" | "quick" | "template">("root");
+  const [view, setView] = useState<"root" | "template">("root");
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,27 +87,12 @@ export function ComposerMenu({
               </FilePickerButton>
               <button
                 type="button"
-                onClick={() => setView("quick")}
-                className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)]"
-              >
-                <IconBolt size={14} /> Respostas rápidas
-              </button>
-              <button
-                type="button"
                 onClick={() => setView("template")}
                 className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)]"
               >
                 <IconFileText size={14} /> Templates WhatsApp
               </button>
             </div>
-          ) : view === "quick" ? (
-            <QuickReplyList
-              onInsert={onInsertText}
-              onClose={() => {
-                setOpen(false);
-                setView("root");
-              }}
-            />
           ) : (
             <TemplatePickerList
               conversationId={conversationId}

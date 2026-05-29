@@ -46,7 +46,6 @@ import {
   Volume2,
   Wrench,
   X,
-  Zap,
 } from "lucide-react";
 import { AIDraftCard } from "@/components/inbox/ai-draft-card";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
@@ -54,7 +53,6 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { AudioRecorder } from "@/components/inbox/audio-recorder";
 import { EmojiPicker } from "@/components/inbox/emoji-picker";
-import { QuickReplies } from "@/components/inbox/quick-replies";
 import { TemplatePicker } from "@/components/inbox/template-picker";
 import {
   SlashCommandMenu,
@@ -271,7 +269,6 @@ async function postForward(
 
 type ActivePanel =
   | "none"
-  | "quick-replies"
   | "emoji"
   | "templates"
   | "task"
@@ -324,7 +321,6 @@ function HighlightedText({
 
 type AttachPopoverProps = {
   onFile: () => void;
-  onQuickReply: () => void;
   onTemplate: () => void;
   onTask: () => void;
   onSchedule: () => void;
@@ -341,7 +337,6 @@ type AttachPopoverProps = {
 
 function AttachPopover({
   onFile,
-  onQuickReply,
   onTemplate,
   onTask,
   onSchedule,
@@ -370,13 +365,6 @@ function AttachPopover({
         >
           <Paperclip className="size-3.5 shrink-0" />
           Anexar arquivo
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
-          onClick={onQuickReply}
-        >
-          <Zap className="size-3.5 shrink-0" />
-          Respostas rápidas
         </DropdownMenuItem>
         {!isBaileysChannel ? (
           <DropdownMenuItem
@@ -2941,14 +2929,6 @@ export function ChatWindow({
         {/* Mobile: px-3 (composer encosta nas bordas pra ganhar largura
             de digitação). Desktop: px-6 preserva o respiro premium. */}
         <div className={cn(rowMax, "px-3 sm:px-6")}>
-          <QuickReplies
-            open={activePanel === "quick-replies"}
-            onPick={(t) => {
-              setDraft(t);
-              setActivePanel("none");
-              textareaRef.current?.focus();
-            }}
-          />
           <EmojiPicker open={activePanel === "emoji"} onPick={insertEmoji} />
           <TemplatePicker
             open={activePanel === "templates"}
@@ -3560,7 +3540,6 @@ export function ChatWindow({
             >
               <AttachPopover
                 onFile={() => fileInputRef.current?.click()}
-                onQuickReply={() => togglePanel("quick-replies")}
                 onTemplate={() => togglePanel("templates")}
                 onTask={() => togglePanel("task")}
                 onSchedule={() => togglePanel("schedule")}
@@ -3759,7 +3738,6 @@ export function ChatWindow({
               >
                 <AttachPopover
                   onFile={() => fileInputRef.current?.click()}
-                  onQuickReply={() => togglePanel("quick-replies")}
                   onTemplate={() => togglePanel("templates")}
                   onTask={() => togglePanel("task")}
                   onSchedule={() => togglePanel("schedule")}

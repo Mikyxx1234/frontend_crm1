@@ -476,6 +476,9 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
     if (step.type === "finish_conversation") {
       config = {};
     }
+    if (step.type === "consume_stock") {
+      config = {};
+    }
     if (step.type === "business_hours") {
       config = {
         schedule: Array.isArray(config.schedule) ? config.schedule : [],
@@ -1337,6 +1340,23 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             <p className="text-sm text-muted-foreground">
               Encerra todas as conversas abertas do contato, marcando-as como resolvidas.
             </p>
+          )}
+
+          {step.type === "consume_stock" && (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+              <p>
+                Reduz o estoque dos produtos vinculados ao negócio, pela quantidade de cada item.
+                Só age em produtos com <strong className="text-foreground">controle de estoque</strong> ativado.
+              </p>
+              <p>
+                Use este passo com um gatilho como <strong className="text-foreground">Negócio ganho</strong>{" "}
+                ou entrada em um estágio. Sem este passo, nenhum estoque é baixado.
+              </p>
+              <p>
+                Se algum produto não tiver saldo suficiente, o passo é{" "}
+                <strong className="text-foreground">bloqueado</strong> (nada é baixado, sem estoque negativo).
+              </p>
+            </div>
           )}
 
           {step.type === "business_hours" && (() => {

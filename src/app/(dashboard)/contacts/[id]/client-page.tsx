@@ -463,9 +463,9 @@ function AdOriginCard({ contact }: { contact: ContactDetail }) {
 
 function InfoField({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-sm text-foreground">
+      <p className="mt-0.5 text-sm text-foreground wrap-anywhere">
         {value || <span className="text-muted-foreground/40">—</span>}
       </p>
     </div>

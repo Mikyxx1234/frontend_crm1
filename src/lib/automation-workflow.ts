@@ -69,6 +69,7 @@ export const ACTION_STEP_TYPES = [
   "business_hours",
   "ask_ai_agent",
   "transfer_to_ai_agent",
+  "consume_stock",
 ] as const;
 
 export type ActionStepType = (typeof ACTION_STEP_TYPES)[number];
@@ -121,6 +122,7 @@ export function stepTypeLabel(t: string): string {
     business_hours: "Horário comercial",
     ask_ai_agent: "Perguntar ao agente IA",
     transfer_to_ai_agent: "Transferir para agente IA",
+    consume_stock: "Baixar estoque",
   };
   return map[t] ?? t;
 }
@@ -322,6 +324,8 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
     }
     case "finish_conversation":
       return "Resolver conversas abertas";
+    case "consume_stock":
+      return "Baixar estoque dos produtos do negócio";
     case "business_hours": {
       const tz = c.timezone ? String(c.timezone) : "America/Sao_Paulo";
       return `Fuso: ${tz}`;

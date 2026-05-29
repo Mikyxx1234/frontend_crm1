@@ -7,15 +7,18 @@ import {
   ArrowLeft,
   Briefcase,
   Check,
+  Download,
   Loader2,
   Package,
   Pencil,
   Plus,
   Search,
   Settings2,
+  Upload,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +46,8 @@ type ProductDto = {
   unit: string;
   type: "PRODUCT" | "SERVICE";
   isActive: boolean;
+  trackStock: boolean;
+  stock: number | string;
   createdAt: string;
 };
 
@@ -91,9 +96,63 @@ type FormData = {
   price: string;
   unit: string;
   type: "PRODUCT" | "SERVICE";
+  trackStock: boolean;
+  stock: string;
 };
 
-const emptyForm: FormData = { name: "", description: "", sku: "", price: "", unit: "un", type: "PRODUCT" };
+const emptyForm: FormData = {
+  name: "",
+  description: "",
+  sku: "",
+  price: "",
+  unit: "un",
+  type: "PRODUCT",
+  trackStock: false,
+  stock: "",
+};
+
+/** Baixa CSV de endpoint autenticado (cookie viaja via fetch). */
+async function downloadFromApi(url: string, fallbackName: string): Promise<void> {
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) {
+    let msg = "Falha na exportação";
+    try {
+      const j = (await res.json()) as { message?: string };
+      if (typeof j?.message === "string") msg = j.message;
+    } catch {
+      /* corpo não-JSON */
+    }
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const cd = res.headers.get("Content-Disposition") ?? "";
+  const m = /filename="?([^";]+)"?/.exec(cd);
+  const name = m?.[1] ?? fallbackName;
+  const objUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objUrl;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(objUrl);
+}
+
+type ImportResult = {
+  created: number;
+  updated: number;
+  failed: { row: number; message: string }[];
+  totalRows: number;
+};
+
+async function uploadProductsCsv(file: File): Promise<ImportResult> {
+  const fd = new FormData();
+  fd.set("file", file);
+  const res = await fetch(apiUrl("/api/products/import"), { method: "POST", body: fd });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(typeof data?.message === "string" ? data.message : "Falha na importação");
+  }
+  return data as ImportResult;
+}
 
 export default function ProductsSettingsPage() {
   const queryClient = useQueryClient();
@@ -118,6 +177,7 @@ export default function ProductsSettingsPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const trackStock = form.type === "PRODUCT" && form.trackStock;
       const body = {
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -125,6 +185,8 @@ export default function ProductsSettingsPage() {
         price: parseFloat(form.price) || 0,
         unit: form.type === "SERVICE" ? "serviço" : (form.unit.trim() || "un"),
         type: form.type,
+        trackStock,
+        stock: trackStock ? Math.max(0, parseFloat(form.stock) || 0) : 0,
       };
       const url = editingId ? `/api/products/${editingId}` : "/api/products";
       const method = editingId ? "PUT" : "POST";
@@ -175,6 +237,42 @@ export default function ProductsSettingsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
   });
 
+  const importRef = React.useRef<HTMLInputElement>(null);
+  const [ioBusy, setIoBusy] = React.useState<null | "import" | "export">(null);
+
+  const runExport = async () => {
+    setIoBusy("export");
+    try {
+      const qs = typeFilter ? `?type=${encodeURIComponent(typeFilter)}` : "";
+      await downloadFromApi(apiUrl(`/api/products/export${qs}`), "produtos.csv");
+      toast.success("Exportação concluída. Verifique seus downloads.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao exportar");
+    } finally {
+      setIoBusy(null);
+    }
+  };
+
+  const runImport = async (file: File) => {
+    setIoBusy("import");
+    try {
+      const r = await uploadProductsCsv(file);
+      toast.success(
+        `Importação: ${r.created} criados, ${r.updated} atualizados` +
+          (r.failed.length ? `, ${r.failed.length} com erro.` : "."),
+      );
+      if (r.failed.length) {
+        const first = r.failed.slice(0, 3).map((f) => `linha ${f.row}: ${f.message}`).join(" · ");
+        toast.error(`Erros: ${first}${r.failed.length > 3 ? "…" : ""}`);
+      }
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao importar");
+    } finally {
+      setIoBusy(null);
+    }
+  };
+
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
@@ -191,6 +289,8 @@ export default function ProductsSettingsPage() {
       price: String(Number(p.price)),
       unit: p.unit,
       type: p.type,
+      trackStock: !!p.trackStock,
+      stock: p.trackStock ? String(Number(p.stock)) : "",
     });
     const vals = await fetchProductCfValues(p.id);
     const map: Record<string, string> = {};
@@ -215,6 +315,37 @@ export default function ProductsSettingsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            ref={importRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) void runImport(f);
+            }}
+          />
+          <Button
+            variant="outline"
+            className="gap-1.5"
+            disabled={ioBusy !== null}
+            onClick={() => importRef.current?.click()}
+            title="Importar CSV (atualiza por id ou SKU, cria os novos)"
+          >
+            <Upload className="size-4" />
+            <span className="hidden sm:inline">{ioBusy === "import" ? "Importando…" : "Importar"}</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1.5"
+            disabled={ioBusy !== null}
+            onClick={() => void runExport()}
+            title="Exportar catálogo em CSV (respeita o filtro de tipo)"
+          >
+            <Download className="size-4" />
+            <span className="hidden sm:inline">{ioBusy === "export" ? "Exportando…" : "Exportar"}</span>
+          </Button>
           <Button asChild variant="outline" className="gap-1.5" title="Criar/editar campos personalizados para esta entidade">
             <Link href="/settings/custom-fields?entity=product">
               <Settings2 className="size-4" />
@@ -289,6 +420,7 @@ export default function ProductsSettingsPage() {
                 <th className="px-4 py-3">SKU</th>
                 <th className="px-4 py-3 text-right">Preço</th>
                 <th className="px-4 py-3">Unidade</th>
+                <th className="px-4 py-3 text-right">Estoque</th>
                 <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
@@ -337,6 +469,20 @@ export default function ProductsSettingsPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {p.type === "SERVICE" ? "—" : p.unit}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {p.type === "SERVICE" || !p.trackStock ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <span
+                        className={cn(
+                          "font-medium",
+                          Number(p.stock) <= 0 ? "text-destructive" : "text-foreground",
+                        )}
+                      >
+                        {Number(p.stock)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <Badge
@@ -467,6 +613,40 @@ export default function ProductsSettingsPage() {
                 />
               </div>
             </div>
+
+            {form.type === "PRODUCT" && (
+              <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={form.trackStock}
+                    onChange={(e) => setForm((f) => ({ ...f, trackStock: e.target.checked }))}
+                    className="size-4 rounded border-border accent-primary"
+                  />
+                  Controlar estoque (limite)
+                </label>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                  Quando ativo, a automação com o passo{" "}
+                  <strong className="font-medium text-foreground">&quot;Baixar estoque&quot;</strong>{" "}
+                  (ex.: no gatilho de negócio ganho) reduz a quantidade disponível. Sem saldo, o
+                  passo é bloqueado.
+                </p>
+                {form.trackStock && (
+                  <div className="mt-3 max-w-48">
+                    <Label>Quantidade em estoque</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={form.stock}
+                      onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+                      placeholder="0"
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Campos personalizados por tenant. Com `size="lg"` (max-w-2xl)
                 temos espaço pra grid de 2 colunas, que acomoda melhor

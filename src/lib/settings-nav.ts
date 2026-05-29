@@ -159,7 +159,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       },
       {
         id: "import",
-        label: "Importar base",
+        label: "Importar / Exportar",
         description: "CSV de contatos e negocios",
         icon: Upload,
         href: "/settings/import",

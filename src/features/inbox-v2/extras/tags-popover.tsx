@@ -1,33 +1,53 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+/*
+ * TagsPopover (Inbox v2) — versão portal.
+ *
+ * Histórico: a versão anterior usava `position: absolute` no popover,
+ * que ficava cortado quando o trigger estava dentro de containers
+ * com `overflow: hidden/auto` — caso dos cards na lista de conversas.
+ * Agora usa createPortal + posição calculada a partir do rect do
+ * trigger (mesma estratégia dos popovers do pipeline-v2).
+ */
+
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Chip } from "@/components/crm/chip";
 import {
+  addConversationTag,
   createTag,
   listTags,
-  setConversationTags,
+  removeConversationTag,
   type Tag,
 } from "@/features/inbox-v2/api";
+
+import {
+  computePopoverPosition,
+  usePortalPopover,
+} from "@/features/pipeline-v2/extras/use-portal-popover";
 
 interface TagsPopoverProps {
   conversationId: string | null;
   currentTags: Tag[];
   disabled?: boolean;
+  /** Aparência do trigger. `chip` = "+Tag" ghost. `icon` = botão "+" minimalista. */
+  triggerVariant?: "chip" | "icon";
 }
 
 export function TagsPopover({
   conversationId,
   currentTags,
   disabled,
+  triggerVariant = "chip",
 }: TagsPopoverProps) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const { open, rect, triggerRef, popoverRef, toggle, close } =
+    usePortalPopover();
   const [filter, setFilter] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const tagsQuery = useQuery<Tag[]>({
     queryKey: ["inbox-v2-tags"],
@@ -41,16 +61,30 @@ export function TagsPopover({
     [currentTags],
   );
 
+  // Invalida tanto o inbox quanto o Kanban/pipeline: como o backend
+  // replica a tag no deal OPEN do contato, a mudança precisa refletir
+  // nas duas telas imediatamente.
+  function invalidateAfterTagChange() {
+    qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+    qc.invalidateQueries({ queryKey: ["contact-detail"] });
+    // Pipeline v2 — match por prefixo: board é
+    // ["pipeline-board", pipelineId, status] e o detalhe é
+    // ["deal-detail-v2", dealId]. Ambos refletem a tag replicada no deal.
+    qc.invalidateQueries({ queryKey: ["pipeline-board"] });
+    qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+    qc.invalidateQueries({ queryKey: ["deal-tags-v2"] });
+  }
+
   const setTagsMutation = useMutation<
-    void,
+    unknown,
     Error,
-    { conversationId: string; tagIds: string[] }
+    { conversationId: string; tagId: string; action: "add" | "remove" }
   >({
-    mutationFn: (vars) => setConversationTags(vars.conversationId, vars.tagIds),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
-      qc.invalidateQueries({ queryKey: ["contact-detail"] });
-    },
+    mutationFn: (vars) =>
+      vars.action === "add"
+        ? addConversationTag(vars.conversationId, vars.tagId)
+        : removeConversationTag(vars.conversationId, vars.tagId),
+    onSuccess: invalidateAfterTagChange,
     onError: (err) => toast.error(err.message || "Falha ao salvar tag"),
   });
 
@@ -60,36 +94,23 @@ export function TagsPopover({
       qc.setQueryData<Tag[]>(["inbox-v2-tags"], (old) =>
         old ? [...old, newTag] : [newTag],
       );
+      // Tag recém-criada já entra aplicada na conversa (add).
       if (conversationId) {
-        const next = Array.from(selectedIds);
-        next.push(newTag.id);
-        setTagsMutation.mutate({ conversationId, tagIds: next });
+        setTagsMutation.mutate({
+          conversationId,
+          tagId: newTag.id,
+          action: "add",
+        });
       }
       setFilter("");
     },
     onError: (err) => toast.error(err.message || "Falha ao criar tag"),
   });
 
-  useEffect(() => {
-    if (!open) return;
-    function onClickOutside(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
-
   function toggleTag(tagId: string) {
     if (!conversationId) return;
-    const next = new Set(selectedIds);
-    if (next.has(tagId)) next.delete(tagId);
-    else next.add(tagId);
-    setTagsMutation.mutate({ conversationId, tagIds: Array.from(next) });
+    const action = selectedIds.has(tagId) ? "remove" : "add";
+    setTagsMutation.mutate({ conversationId, tagId, action });
   }
 
   const allTags = tagsQuery.data ?? [];
@@ -102,96 +123,132 @@ export function TagsPopover({
       (t) => t.name.trim().toLowerCase() === filter.trim().toLowerCase(),
     );
 
+  const pos = computePopoverPosition(rect, 280, 256);
+
   return (
-    <div ref={containerRef} className="relative inline-flex">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled || !conversationId}
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggle();
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
         className="inline-flex"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <Chip variant="ghost">+Tag</Chip>
+        {triggerVariant === "icon" ? (
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
+            +
+          </span>
+        ) : (
+          <Chip variant="ghost">+Tag</Chip>
+        )}
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-64 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-2 backdrop-blur-md shadow-[var(--glass-shadow)]">
-          <input
-            autoFocus
-            type="text"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Buscar ou criar…"
-            onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                canCreate &&
-                !createTagMutation.isPending
-              ) {
-                e.preventDefault();
-                createTagMutation.mutate(filter.trim());
-              }
-            }}
-            className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
-          />
-          <ul role="listbox" className="max-h-56 overflow-y-auto">
-            {tagsQuery.isLoading && (
-              <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                Carregando…
-              </li>
-            )}
-            {!tagsQuery.isLoading && filtered.length === 0 && !canCreate && (
-              <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
-                Nenhuma tag.
-              </li>
-            )}
-            {filtered.map((t) => {
-              const checked = selectedIds.has(t.id);
-              return (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    disabled={setTagsMutation.isPending}
-                    onClick={() => toggleTag(t.id)}
-                    className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] hover:bg-white/10 ${
-                      checked
-                        ? "bg-white/10 text-[var(--brand-primary)]"
-                        : "text-[var(--text-primary)]"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2 truncate">
-                      <span
-                        aria-hidden
-                        className="inline-block h-2 w-2 shrink-0 rounded-full"
-                        style={{
-                          background:
-                            t.color ?? "var(--brand-primary)",
-                        }}
-                      />
-                      {t.name}
-                    </span>
-                    {checked && <span aria-hidden>✓</span>}
-                  </button>
-                </li>
-              );
-            })}
-            {canCreate && (
-              <li>
-                <button
-                  type="button"
-                  disabled={createTagMutation.isPending}
-                  onClick={() => createTagMutation.mutate(filter.trim())}
-                  className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--brand-primary)] hover:bg-white/10"
-                >
-                  <span>Criar &ldquo;{filter.trim()}&rdquo;</span>
-                  <span aria-hidden>+</span>
-                </button>
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
-    </div>
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={popoverRef}
+              role="listbox"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "fixed",
+                top: pos.top,
+                left: pos.left,
+                width: 256,
+                isolation: "isolate",
+              }}
+              className="z-[10000] rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+            >
+              <input
+                autoFocus
+                type="text"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Buscar ou criar…"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    close();
+                    return;
+                  }
+                  if (
+                    e.key === "Enter" &&
+                    canCreate &&
+                    !createTagMutation.isPending
+                  ) {
+                    e.preventDefault();
+                    createTagMutation.mutate(filter.trim());
+                  }
+                }}
+                className="mb-1.5 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]/40"
+              />
+              <ul className="max-h-56 overflow-y-auto">
+                {tagsQuery.isLoading && (
+                  <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
+                    Carregando…
+                  </li>
+                )}
+                {!tagsQuery.isLoading && filtered.length === 0 && !canCreate && (
+                  <li className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
+                    Nenhuma tag.
+                  </li>
+                )}
+                {filtered.map((t) => {
+                  const checked = selectedIds.has(t.id);
+                  return (
+                    <li key={t.id}>
+                      <button
+                        type="button"
+                        disabled={setTagsMutation.isPending}
+                        onClick={() => toggleTag(t.id)}
+                        className={`flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] transition-colors hover:bg-[var(--glass-bg-strong)] ${
+                          checked
+                            ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)] font-semibold"
+                            : "text-[var(--text-primary)]"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <span
+                            aria-hidden
+                            className="inline-block h-2 w-2 shrink-0 rounded-full"
+                            style={{
+                              background: t.color ?? "var(--brand-primary)",
+                            }}
+                          />
+                          {t.name}
+                        </span>
+                        {checked && (
+                          <span aria-hidden className="text-[var(--brand-primary)]">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+                {canCreate && (
+                  <li>
+                    <button
+                      type="button"
+                      disabled={createTagMutation.isPending}
+                      onClick={() => createTagMutation.mutate(filter.trim())}
+                      className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[12.5px] text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-enterprise-bg)]"
+                    >
+                      <span>Criar &ldquo;{filter.trim()}&rdquo;</span>
+                      <span aria-hidden>+</span>
+                    </button>
+                  </li>
+                )}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }

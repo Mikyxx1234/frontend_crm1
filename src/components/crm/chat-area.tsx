@@ -2,44 +2,45 @@
 
 import { useRef, type FormEvent } from "react"
 import { cn } from "@/lib/utils"
-import { AvatarGlass } from "./avatar-glass"
 import { BadgeGlass } from "./badge-glass"
-import { StatusPill } from "./status-pill"
-import { ButtonGlass } from "./button-glass"
-import { StagePills } from "./stage-pills"
-import { MessageBubble, type Message } from "./message-bubble"
+import { MessageBubble, DaySeparator, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
-import { 
-  IconBrandWhatsapp, 
-  IconPhone, 
+import {
+  IconPhone,
+  IconVideo,
   IconDotsVertical,
   IconPaperclip,
   IconMoodSmile,
-  IconMicrophone,
-  IconSend
+  IconSend,
 } from "@tabler/icons-react"
 
+/**
+ * Tipo legado mantido para retro-compatibilidade com `toChatContact`
+ * em `features/inbox-v2/adapters.ts`. O novo header usa SOMENTE `name`
+ * + `badge` + (opcional) `badgeLabel`; demais campos sao ignorados
+ * visualmente mas continuam aceitos sem quebrar o consumidor.
+ */
 interface ChatContact {
   name: string
-  initials: string
-  avatarColor: 'blue' | 'teal' | 'orange' | 'purple' | 'pink' | 'coral'
-  status: 'online' | 'offline' | 'none'
-  badge?: 'enterprise' | 'lead' | 'success'
-  phone: string
-  contactId: string
+  badge?: "enterprise" | "lead" | "success"
+  badgeLabel?: string
+  initials?: string
+  avatarColor?: string
+  status?: string
+  phone?: string
+  contactId?: string
 }
 
 interface ChatAreaProps {
   contact: ChatContact
   messages: Message[]
-  stages: { label: string; status: 'done' | 'active' | 'pending' }[]
+  /** Mantido por compat — nao mais renderizado entre header e mensagens. */
+  stages?: { label: string; status: "done" | "active" | "pending" }[]
+  daySeparator?: string
   showSessionAlert?: boolean
   className?: string
-  /**
-   * Handlers e estado opcionais — quando providos, transformam o
-   * footer estático do v0 num composer funcional. Sem providers, o
-   * componente continua se comportando como uma mock UI.
-   */
+
+  // ── Composer controlado (opcional) ──────────────────────────────
   inputValue?: string
   onInputChange?: (value: string) => void
   onSendMessage?: (value: string) => void
@@ -48,28 +49,26 @@ interface ChatAreaProps {
   onEmojiClick?: () => void
   onRecordClick?: () => void
   onPhoneClick?: () => void
+  onVideoClick?: () => void
   onMoreClick?: () => void
   inputPlaceholder?: string
   inputDisabled?: boolean
+
   /**
    * Slot opcional que substitui INTEIRAMENTE o footer (input bar).
-   * Quando provido, ignora todos os outros props do composer
-   * (inputValue, sending, onSendMessage, etc.). Use para plugar a
-   * camada de `features/inbox-v2/extras` com attach menu + audio.
+   * Quando provido, ignora todos os outros props do composer.
    */
   composerSlot?: React.ReactNode
-  /**
-   * Slot opcional que substitui os botões fixos (Phone + Mais) do
-   * canto superior direito do header. Use para plugar o menu de
-   * ações da conversa (Resolver/Reabrir/etc.) com handlers reais.
-   */
+  /** Slot opcional que substitui os botoes do canto direito do header. */
   headerActionsSlot?: React.ReactNode
+  /** Handler do botao "Usar Template" do SessionAlert. */
+  onUseTemplate?: () => void
 }
 
 export function ChatArea({
   contact,
   messages,
-  stages,
+  daySeparator,
   showSessionAlert = false,
   className,
   inputValue,
@@ -80,16 +79,19 @@ export function ChatArea({
   onEmojiClick,
   onRecordClick,
   onPhoneClick,
+  onVideoClick,
   onMoreClick,
   inputPlaceholder,
   inputDisabled,
   composerSlot,
   headerActionsSlot,
+  onUseTemplate,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!onSendMessage) return
@@ -97,108 +99,135 @@ export function ChatArea({
     if (!trimmed || sending || effectiveDisabled) return
     onSendMessage(trimmed)
   }
+
   return (
     <main
       aria-label={`Conversa com ${contact.name}`}
       className={cn(
-        "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-md shadow-[var(--glass-shadow)]",
-        className
+        "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+        className,
       )}
     >
-      {/* Header */}
-      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-[22px] py-3.5 backdrop-blur-md">
-        <AvatarGlass
-          initials={contact.initials}
-          size="lg"
-          color={contact.avatarColor}
-          status={contact.status}
-        />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 font-display text-base font-bold text-[var(--text-primary)]">
+      {/* HEADER — minimalista */}
+      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-[18px]">
+        <div className="flex flex-1 items-center gap-2.5">
+          <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
             {contact.name}
-            {contact.badge && (
-              <BadgeGlass variant={contact.badge}>
-                {contact.badge === 'enterprise' ? 'ENTERPRISE' : contact.badge === 'lead' ? 'LEAD' : 'CLIENTE'}
-              </BadgeGlass>
-            )}
-          </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-muted)]">
-            <span className="flex items-center gap-1">
-              <IconBrandWhatsapp size={14} className="text-[var(--color-success)]" />
-              {contact.phone}
-            </span>
-            <span>·</span>
-            <span>#{contact.contactId}</span>
-            <span>·</span>
-            <StatusPill variant="success" className="px-2 py-0.5 text-[10px]">
-              Online
-            </StatusPill>
-          </div>
+          </h2>
+          {contact.badge && (
+            <BadgeGlass variant={contact.badge}>
+              {contact.badgeLabel ??
+                (contact.badge === "enterprise"
+                  ? "ENTERPRISE"
+                  : contact.badge === "lead"
+                    ? "LEAD"
+                    : "CLIENTE")}
+            </BadgeGlass>
+          )}
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1">
           {headerActionsSlot ?? (
             <>
-              <ButtonGlass variant="glass" size="icon" title="Chamada" onClick={onPhoneClick}>
+              <IconBtn title="Ligar" onClick={onPhoneClick}>
                 <IconPhone size={18} />
-              </ButtonGlass>
-              <ButtonGlass variant="glass" size="icon" title="Mais" onClick={onMoreClick}>
+              </IconBtn>
+              <IconBtn title="Vídeo chamada" onClick={onVideoClick}>
+                <IconVideo size={18} />
+              </IconBtn>
+              <IconBtn title="Mais opções" onClick={onMoreClick}>
                 <IconDotsVertical size={18} />
-              </ButtonGlass>
+              </IconBtn>
             </>
           )}
         </div>
       </header>
 
-      {/* Stage Pills */}
-      <StagePills stages={stages} />
-
-      {/* Messages */}
-      <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-[22px]">
+      {/* MESSAGES */}
+      <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-7 py-6">
+        {daySeparator && <DaySeparator date={daySeparator} />}
         {messages.map((message, index) => {
-          if (message.type === 'incoming' || message.type === 'outgoing') {
+          if (message.type === "incoming" || message.type === "outgoing") {
             return <MessageBubble key={message.id || index} message={message} />
           }
           return null
         })}
-        {showSessionAlert && <SessionAlert />}
       </div>
 
+      {/* SESSION ALERT */}
+      {showSessionAlert && <SessionAlert onUseTemplate={onUseTemplate} />}
+
+      {/* INPUT BAR */}
       {composerSlot ?? (
-      /* Input Bar (fallback estático ou controlado via props) */
-      <form
-        ref={formRef}
-        onSubmit={handleSubmit}
-        className="mx-[22px] mb-[22px] flex items-center gap-2 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-[18px] py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)]"
-      >
-        <ButtonGlass type="button" variant="icon" size="icon" title="Anexar" className="h-9 w-9" onClick={onAttachClick}>
-          <IconPaperclip size={20} />
-        </ButtonGlass>
-        <ButtonGlass type="button" variant="icon" size="icon" title="Emoji" className="h-9 w-9" onClick={onEmojiClick}>
-          <IconMoodSmile size={20} />
-        </ButtonGlass>
-        <input
-          type="text"
-          placeholder={inputPlaceholder ?? "Escreva sua mensagem..."}
-          disabled={effectiveDisabled || sending}
-          value={isControlled ? value : undefined}
-          onChange={isControlled ? (e) => onInputChange?.(e.target.value) : undefined}
-          className="flex-1 border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <ButtonGlass type="button" variant="icon" size="icon" title="Áudio" className="h-9 w-9" onClick={onRecordClick}>
-          <IconMicrophone size={20} />
-        </ButtonGlass>
-        <ButtonGlass
-          type={isControlled ? "submit" : "button"}
-          variant="primary"
-          size="icon"
-          title="Enviar"
-          className="h-9 w-9"
-          disabled={isControlled && (!value.trim() || sending || effectiveDisabled)}
+        <form
+          ref={formRef}
+          onSubmit={handleSubmit}
+          className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-black/[0.06] bg-white py-2 pl-[18px] pr-2 shadow-[var(--glass-shadow-sm)]"
         >
-          <IconSend size={18} />
-        </ButtonGlass>
-      </form>
+          <button
+            type="button"
+            title="Anexar"
+            onClick={onAttachClick}
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+          >
+            <IconPaperclip size={18} />
+          </button>
+          <input
+            type="text"
+            placeholder={inputPlaceholder ?? "Escreva sua mensagem..."}
+            disabled={effectiveDisabled || sending}
+            value={isControlled ? value : undefined}
+            onChange={isControlled ? (e) => onInputChange?.(e.target.value) : undefined}
+            className="flex-1 border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          <button
+            type="button"
+            title="Emoji"
+            onClick={onEmojiClick}
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+          >
+            <IconMoodSmile size={18} />
+          </button>
+          {onRecordClick && (
+            <button
+              type="button"
+              title="Áudio"
+              onClick={onRecordClick}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+            >
+              <IconMoodSmile size={18} />
+            </button>
+          )}
+          <button
+            type={isControlled ? "submit" : "button"}
+            title="Enviar"
+            disabled={isControlled && (!value.trim() || sending || effectiveDisabled)}
+            className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-all hover:scale-105 hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+          >
+            <IconSend size={16} />
+          </button>
+        </form>
       )}
     </main>
+  )
+}
+
+function IconBtn({
+  children,
+  title,
+  onClick,
+}: {
+  children: React.ReactNode
+  title?: string
+  onClick?: () => void
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+    >
+      {children}
+    </button>
   )
 }

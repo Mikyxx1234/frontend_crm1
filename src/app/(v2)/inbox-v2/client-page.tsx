@@ -8,6 +8,10 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
 import { ContactAside } from "@/components/crm/contact-aside";
+import {
+  ColumnResizer,
+  usePersistentWidth,
+} from "@/components/crm/column-resizer";
 
 import {
   toChatContact,
@@ -22,37 +26,66 @@ import {
   useMarkConversationRead,
   useMessages,
   useSendMessage,
+  useTabCounts,
 } from "@/features/inbox-v2/hooks";
 import {
   AssigneePopover,
   Composer,
   ConversationActionsMenu,
   TagsPopover,
+  TemplatePickerList,
 } from "@/features/inbox-v2/extras";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
 
-const DEFAULT_TAB: InboxTab = "entrada";
 const DEFAULT_FILTERS: InboxFilters = {};
+
+// Ordem das tabs alinhada ao legado (`conversation-list.tsx`
+// TAB_ORDER). MVP expõe 5 — automacao/erro voltam depois se houver
+// demanda real.
+const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
+  { id: "todos", label: "Todas" },
+  { id: "esperando", label: "Aguardando" },
+  { id: "entrada", label: "Entrada" },
+  { id: "respondidas", label: "Respondidas" },
+  { id: "finalizados", label: "Resolvidas" },
+];
 
 export default function InboxV2ClientPage() {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
+  // ── Largura da coluna de conversas (persistida) ────────────────
+  const [convWidth, setConvWidth] = usePersistentWidth(
+    "inbox-v2:conv-width",
+    320,
+  );
+
   // ── Estado de UI local ─────────────────────────────────────────
-  const [tab] = useState<InboxTab>(DEFAULT_TAB);
+  // Default "todos": ao abrir/atualizar a página, todas as conversas
+  // ficam selecionadas (pedido do usuário).
+  const [tab, setTab] = useState<InboxTab>("todos");
   const [filters] = useState<InboxFilters>(DEFAULT_FILTERS);
-  const [search] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [templateOpen, setTemplateOpen] = useState(false);
+
+  // Debounce do search (300ms). Evita refetch a cada tecla.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // ── Dados ───────────────────────────────────────────────────────
   const { data: listData } = useConversations({
     tab,
     filters,
-    search,
+    search: debouncedSearch,
     enabled: isAuthenticated,
   });
   const rows = listData?.items ?? [];
+  const { data: tabCounts } = useTabCounts(isAuthenticated);
 
   // ── Sticky activeRow ────────────────────────────────────────────
   // A `rows` reflete o filtro da aba atual (ex.: "entrada"). Se o
@@ -128,12 +161,52 @@ export default function InboxV2ClientPage() {
   >(() => [], []);
 
   return (
-    <div className="grid h-dvh grid-cols-[72px_320px_1fr_340px] gap-4 p-4">
+    <div
+      className="v2-screen grid gap-4 p-4"
+      style={{
+        // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 fixa.
+        gridTemplateColumns: `72px ${convWidth}px 1fr 340px`,
+      }}
+    >
       <NavRail />
       <ConversationColumn
         conversations={conversationCards}
         activeConversationId={activeId ?? undefined}
         onSelectConversation={handleSelect}
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        tabsOverride={TABS.map((t) => ({
+          label: t.label,
+          count: tabCounts?.[t.id] ?? null,
+        }))}
+        activeTabIndex={TABS.findIndex((t) => t.id === tab)}
+        onTabChange={(idx) => {
+          const next = TABS[idx]?.id;
+          if (next) setTab(next);
+        }}
+        resizerSlot={
+          <ColumnResizer value={convWidth} onChange={setConvWidth} />
+        }
+        renderCardSlots={(c) => ({
+          tagsSlot: (
+            <TagsPopover
+              conversationId={c.id}
+              currentTags={(c.tags ?? []).map((t) => ({
+                id: t.id,
+                name: t.name,
+                color: t.color ?? null,
+              }))}
+              triggerVariant="icon"
+            />
+          ),
+          assigneeSlot: (
+            <AssigneePopover
+              conversationId={c.id}
+              currentAssigneeName={c.assignee}
+              currentAssigneeId={c.assigneeId ?? null}
+            />
+          ),
+        })}
       />
 
       {chatContact && activeRow ? (
@@ -142,6 +215,7 @@ export default function InboxV2ClientPage() {
           messages={messageBubbles}
           stages={stagePillsView}
           showSessionAlert={sessionExpired}
+          onUseTemplate={() => setTemplateOpen(true)}
           headerActionsSlot={
             <ConversationActionsMenu
               conversationId={activeId}
@@ -183,6 +257,20 @@ export default function InboxV2ClientPage() {
       ) : (
         <EmptyAside />
       )}
+
+      {templateOpen && activeId ? (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setTemplateOpen(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <TemplatePickerList
+              conversationId={activeId}
+              onClose={() => setTemplateOpen(false)}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
   DragDropContext,
@@ -16,6 +16,7 @@ import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
+import { Chip } from "@/components/crm/chip";
 
 import {
   toKanbanColumns,
@@ -30,12 +31,22 @@ import {
 } from "@/features/pipeline-v2/hooks";
 import type { BoardDealDto, StatusFilter } from "@/features/pipeline-v2/api";
 import {
+  AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
+  DealActivitiesTab,
+  DealNotesTab,
+  DealTimelineTab,
+  EMPTY_FILTERS,
+  FiltersPopover,
   InlineEditText,
+  PipelineSwitcher,
   StagePicker,
   TagsPopover,
   WinButton,
+  countActiveFilters,
+  useDealChatBinding,
+  type KanbanFilters,
 } from "@/features/pipeline-v2/extras";
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos";
@@ -53,6 +64,12 @@ export default function KanbanV2ClientPage() {
 
   const [activeTab, setActiveTab] = useState<TabId>("abertos");
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
+    null,
+  );
+  const [filters, setFilters] = useState<KanbanFilters>(EMPTY_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersBtnRef = useRef<HTMLButtonElement>(null);
 
   const status = TAB_TO_STATUS[activeTab];
   const { data: pipelines } = usePipelines(isAuthenticated);
@@ -73,14 +90,38 @@ export default function KanbanV2ClientPage() {
 
   const moveDeal = useMoveDeal(pipelineId, status);
 
+  // Aplica filtros client-side ANTES de virar colunas. Mantemos o
+  // total real (totalCount) para o badge de "todos no estagio" — mas
+  // contamos visualmente apenas os filtrados em `count`.
+  const filteredBoard = useMemo(() => {
+    const hasOwner = filters.ownerIds.length > 0;
+    const hasTag = filters.tagIds.length > 0;
+    if (!hasOwner && !hasTag) return board;
+    return board.map((stage) => ({
+      ...stage,
+      deals: stage.deals.filter((d) => {
+        if (hasOwner && (!d.owner?.id || !filters.ownerIds.includes(d.owner.id))) {
+          return false;
+        }
+        if (hasTag) {
+          const ids = (d.tags ?? []).map((t) => t.id);
+          if (!filters.tagIds.some((id) => ids.includes(id))) return false;
+        }
+        return true;
+      }),
+    }));
+  }, [board, filters]);
+
   const columns: KanbanColumnView[] = useMemo(
-    () => toKanbanColumns(board),
-    [board],
+    () => toKanbanColumns(filteredBoard),
+    [filteredBoard],
   );
 
   // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
   // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
-  // map evita ter que estender o tipo Deal só para isso.
+  // map evita ter que estender o tipo Deal só para isso. Usa o board
+  // ORIGINAL pra nao perder lookup de cards filtrados (caso slot
+  // precise consultar mesmo escondido).
   const dealById = useMemo(() => {
     const map = new Map<string, BoardDealDto>();
     for (const stage of board) {
@@ -109,6 +150,8 @@ export default function KanbanV2ClientPage() {
       initials: avatarInitials(contactName),
       avatarColor: avatarColorSlugFromName(contactName),
       phone: dealDetail.contact?.phone ?? undefined,
+      email: dealDetail.contact?.email ?? null,
+      value: dealDetail.value ?? null,
       online: undefined,
       stage: activeDealStageName,
       owner: {
@@ -118,6 +161,23 @@ export default function KanbanV2ClientPage() {
       },
     };
   }, [dealDetail, activeDealStageName]);
+
+  // ── Conversa real ligada ao deal ────────────────────────────────
+  // Pega a conversa mais recente do contato (o backend ja ordena por
+  // updatedAt desc em getDealById). Quando o deal nao tem contato
+  // vinculado ou nao ha conversa, o binding retorna nodes de "vazio".
+  const dealConversationId =
+    (dealDetail?.contact as { conversations?: { id: string }[] } | null | undefined)
+      ?.conversations?.[0]?.id ?? null;
+  const dealContactName =
+    dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
+  const { messagesNode, composerNode, sessionAlertNode, templateModal } =
+    useDealChatBinding({
+      conversationId: dealConversationId,
+      contactName: dealContactName,
+      // Por ora nao temos sinal de "sessionExpired" no get-deal; mantemos false.
+      sessionExpired: false,
+    });
 
   function handleDragEnd(result: DropResult) {
     const { source, destination, draggableId } = result;
@@ -137,16 +197,35 @@ export default function KanbanV2ClientPage() {
   }
 
   return (
-    <div className="grid h-dvh grid-cols-[72px_1fr] gap-4 p-4">
+    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4">
       <NavRail />
       <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
         <PipelineHeader
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t)}
+          pipelineNameSlot={
+            <PipelineSwitcher
+              selectedId={pipelineId}
+              onChange={(id) => setPipelineId(id)}
+            />
+          }
+          filtersButtonRef={filtersBtnRef}
+          onFiltersClick={() => setFiltersOpen((v) => !v)}
+          activeFiltersCount={countActiveFilters(filters)}
+        />
+        <FiltersPopover
+          open={filtersOpen}
+          anchorRef={filtersBtnRef}
+          onClose={() => setFiltersOpen(false)}
+          filters={filters}
+          onChange={setFilters}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex flex-1 gap-3.5 overflow-x-auto pb-2">
+          {/* min-h-0 + min-w-0 são CRÍTICOS: sem isso o flex-1 nao
+              limita altura, as <section> filhas estouram e os cards
+              do final somem (cortados embaixo) em telas menores. */}
+          <div className="flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-2">
             {columns.map((col) => (
               <DroppableColumn
                 key={col.stageId}
@@ -155,6 +234,9 @@ export default function KanbanV2ClientPage() {
                 dealById={dealById}
                 pipelineId={pipelineId}
                 statusFilter={status}
+                onAddDeal={() =>
+                  setAddStage({ id: col.stageId, name: col.title })
+                }
               />
             ))}
             {columns.length === 0 ? (
@@ -253,6 +335,7 @@ export default function KanbanV2ClientPage() {
               currentStatus={dealDetail?.status ?? "OPEN"}
               pipelineId={pipelineId}
               statusFilter={status}
+              onDeleted={() => setActiveDealId(null)}
               trigger={
                 <span
                   className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
@@ -338,6 +421,25 @@ export default function KanbanV2ClientPage() {
             />
           ) : undefined
         }
+        messagesSlot={messagesNode}
+        composerSlot={composerNode}
+        sessionAlertSlot={sessionAlertNode ?? null}
+        tabContentOverride={
+          activeDealId
+            ? {
+                notas: (
+                  <DealNotesTab
+                    dealId={activeDealId}
+                    notes={dealDetail?.notes ?? null}
+                    pipelineId={pipelineId}
+                    statusFilter={status}
+                  />
+                ),
+                timeline: <DealTimelineTab dealId={activeDealId} />,
+                atividades: <DealActivitiesTab />,
+              }
+            : undefined
+        }
         tagsSlot={
           activeDealId ? (
             <div className="flex flex-wrap items-center gap-1.5">
@@ -370,6 +472,19 @@ export default function KanbanV2ClientPage() {
           ) : undefined
         }
       />
+
+      <AddDealDialog
+        open={!!addStage}
+        onOpenChange={(o) => {
+          if (!o) setAddStage(null);
+        }}
+        stageId={addStage?.id ?? ""}
+        stageName={addStage?.name}
+        pipelineId={pipelineId}
+        statusFilter={status}
+      />
+
+      {templateModal}
     </div>
   );
 }
@@ -395,12 +510,14 @@ function DroppableColumn({
   dealById,
   pipelineId,
   statusFilter,
+  onAddDeal,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
   dealById: Map<string, BoardDealDto>;
   pipelineId: string | null;
   statusFilter: StatusFilter;
+  onAddDeal?: () => void;
 }) {
   return (
     <Droppable droppableId={column.stageId}>
@@ -412,9 +529,7 @@ function DroppableColumn({
           total={column.total}
           deals={column.deals}
           onDealClick={onDealClick}
-          onAddDeal={() => {
-            /* TODO: abrir dialog de novo deal (Fase 11) */
-          }}
+          onAddDeal={onAddDeal}
           dealsContainerRef={provided.innerRef}
           dealsContainerProps={{
             ...provided.droppableProps,
@@ -465,7 +580,8 @@ function DroppableColumn({
                             pipelineId={pipelineId}
                             statusFilter={statusFilter}
                             trigger={
-                              <span className="font-display text-[9.5px] font-semibold px-2 py-px rounded-full inline-flex items-center bg-transparent text-[var(--text-muted)] border border-dashed border-[rgba(163,163,163,0.4)] cursor-pointer hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors">
+                              // Botão "+" circular igual ao do inbox (triggerVariant="icon").
+                              <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
                                 +
                               </span>
                             }
@@ -480,15 +596,24 @@ function DroppableColumn({
                           pipelineId={pipelineId}
                           statusFilter={statusFilter}
                           trigger={
-                            <span className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold transition-colors hover:bg-[rgba(91,111,245,0.22)]"
-                              style={{
-                                background: "rgba(91,111,245,0.15)",
-                                color: "var(--brand-primary)",
-                                border: "1px solid rgba(91,111,245,0.2)",
-                              }}
-                            >
-                              {deal.owner.name}
-                            </span>
+                            // Mesmo padrão visual do inbox: Chip brand quando
+                            // há responsável, Chip ghost "+Responsável" quando
+                            // não há (em vez de pintar "Sem responsavel" de azul).
+                            raw?.owner?.name ? (
+                              <Chip
+                                variant="brand"
+                                className="max-w-full cursor-pointer truncate whitespace-nowrap transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                              >
+                                {raw.owner.name}
+                              </Chip>
+                            ) : (
+                              <Chip
+                                variant="ghost"
+                                className="cursor-pointer whitespace-nowrap transition-colors hover:text-[var(--brand-primary)]"
+                              >
+                                +Responsável
+                              </Chip>
+                            )
                           }
                         />
                       }

@@ -9,7 +9,7 @@
  * correspondente, sem espalhar mapping pelo código.
  */
 
-import type { Conversation } from "@/components/crm/conversation-card";
+import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
 import type { Message } from "@/components/crm/message-bubble";
 
 import type {
@@ -105,10 +105,88 @@ function deriveOnline(lastInboundAt: string | null | undefined): "online" | "off
   return Date.now() - d.getTime() < 5 * 60_000 ? "online" : "offline";
 }
 
-/** Deriva o badge visual a partir das tags do contato / estado da conversa. */
-function deriveBadge(
-  row: ConversationListRow,
-): Conversation["badge"] | undefined {
+/**
+ * Deriva o "badge" semantico a partir das tags do contato / estado da
+ * conversa. A versao nova do `ConversationCard` (v0 ajustes-v3) NAO
+ * exibe mais o badge no card — mas o tipo continua sendo retornado
+ * porque o `ChatContactView` e o `toContactStatus` o usam para
+ * o header do chat (Enterprise / Lead / Cliente).
+ */
+export type ConversationBadge = "enterprise" | "lead" | "success";
+
+/**
+ * Tempo restante ate a janela de 24h da Meta/WhatsApp expirar.
+ * Espelha a logica do legado (chat-window): backend e' source of truth,
+ * mas para o CARD da lista nao temos `session.active` por conversa —
+ * computamos a partir de `lastInboundAt`. Aceitamos divergencia de
+ * minutos com o ChatArea (a Meta tem alguma folga).
+ */
+export function sessionRemainingFromInbound(
+  lastInboundAt: string | null | undefined,
+  windowHours = 24,
+): { label: string | null; expired: boolean } {
+  if (!lastInboundAt) return { label: null, expired: true };
+  const d = new Date(lastInboundAt);
+  if (Number.isNaN(d.getTime())) return { label: null, expired: true };
+  const deadline = d.getTime() + windowHours * 3600_000;
+  const ms = deadline - Date.now();
+  if (ms <= 0) return { label: "Expirada", expired: true };
+  const totalMin = Math.floor(ms / 60_000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h >= 1) return { label: `${h}h ${m}min`, expired: false };
+  return { label: `${m}min`, expired: false };
+}
+
+/**
+ * Infere o tipo da ultima mensagem a partir do preview ou de pistas
+ * comuns que o backend coloca em listagens (ex.: "[Áudio]", "📎 Doc.pdf").
+ * Quando o backend evoluir e enviar `lastMessage.messageType`, usamos
+ * direto. Por enquanto, regex resiliente — fallback "text".
+ */
+export function inferLastMessageType(
+  preview: string | null | undefined,
+  explicitType?: string | null,
+): LastMessageType {
+  if (explicitType) {
+    const t = explicitType.toLowerCase();
+    if (t === "image") return "image";
+    if (t === "audio" || t === "voice") return "audio";
+    if (t === "video") return "video";
+    if (t === "document") return "document";
+    if (t === "file") return "file";
+    if (t === "template") return "template";
+    if (t === "note") return "note";
+    if (t === "location") return "location";
+    if (t === "contact" || t === "contacts") return "contact";
+  }
+  const p = (preview ?? "").trim().toLowerCase();
+  if (!p) return "text";
+  if (/^\[?(áudio|audio|voz|voice)\]?/.test(p) || p.startsWith("🎵") || p.startsWith("🎤")) {
+    return "audio";
+  }
+  if (/^\[?(imagem|foto|image|photo)\]?/.test(p) || p.startsWith("📷") || p.startsWith("🖼")) {
+    return "image";
+  }
+  if (/^\[?(vídeo|video)\]?/.test(p) || p.startsWith("🎥") || p.startsWith("🎬")) {
+    return "video";
+  }
+  if (
+    /^\[?(documento|document|arquivo|pdf)\]?/.test(p) ||
+    p.startsWith("📎") ||
+    p.startsWith("📄")
+  ) {
+    return "document";
+  }
+  if (/^\[?(template|modelo)\]?/.test(p)) return "template";
+  if (/^\[?(localiza|location|mapa)\]?/.test(p) || p.startsWith("📍")) {
+    return "location";
+  }
+  if (/^\[?(contato|contact|vcard)\]?/.test(p)) return "contact";
+  return "text";
+}
+
+function deriveBadge(row: ConversationListRow): ConversationBadge | undefined {
   const tagNames = (row.tags ?? []).map((t) => (t.name ?? "").toLowerCase());
   if (tagNames.some((n) => n === "vip" || n.includes("enterprise"))) {
     return "enterprise";
@@ -129,19 +207,66 @@ export function toConversationCard(
 ): Conversation {
   const name = row.contact?.name?.trim() || "Sem nome";
   const lastActivity = row.lastMessageAt ?? row.lastInboundAt ?? null;
+  // Sessao da Meta (24h da ultima mensagem inbound do cliente).
+  const sess = sessionRemainingFromInbound(row.lastInboundAt);
+  // Primeira tag do contato — mostrada como pill ao lado do nome.
+  // Filtra strings vazias/whitespace por defesa.
+  const firstTagName = (row.tags ?? [])
+    .map((t) => (t.name ?? "").trim())
+    .find((n) => n.length > 0);
+  // O backend pode enviar tanto `lastMessage` (forma futura, com
+  // `preview`) quanto `lastMessagePreview` (forma atual, com `content`
+  // + `messageType`). Preferimos o que tiver dado real; se nenhum
+  // tiver, cai pra string vazia (mostra apenas o tipo, se conhecido).
+  const previewText =
+    row.lastMessage?.preview ??
+    row.lastMessagePreview?.content ??
+    "";
+  const lastMessageType = inferLastMessageType(
+    previewText,
+    row.lastMessagePreview?.messageType ?? null,
+  );
+  const dir = String(
+    row.lastMessage?.direction ?? row.lastMessagePreview?.direction ?? "",
+  ).toLowerCase();
+  const lastMessageDirection: "in" | "out" | undefined =
+    dir === "out" || dir === "outbound"
+      ? "out"
+      : dir === "in" || dir === "inbound"
+        ? "in"
+        : undefined;
+
   return {
     id: row.id,
     name,
     initials: avatarInitials(name),
     avatarColor: colorFromName(name),
     status: deriveOnline(row.lastInboundAt),
-    badge: deriveBadge(row),
     time: formatRelative(lastActivity),
-    preview: row.lastMessage?.preview ?? "",
+    preview: previewText,
     assignee: row.assignedTo?.name,
-    unread: row.unreadCount && row.unreadCount > 0 ? row.unreadCount : undefined,
+    // O card novo nao tem mais contador. Mapeamos unread > 0 para o
+    // marcador visual `urgent` (relogio vermelho) — preserva o sinal
+    // de "atencao necessaria" sem badge numerico.
+    urgent: !!(row.unreadCount && row.unreadCount > 0),
     active: options?.active,
     inactive: row.status !== "OPEN",
+    // ── Novos campos visuais ──────────────────────────────────────
+    tag: firstTagName ?? null,
+    // Lista completa de tags com id/cor — usada pelo cluster de chips
+    // do card (até 2 + indicador "+N") e pelo TagsPopover injetado
+    // via slot. Filtra entradas sem nome (defesa).
+    tags: (row.tags ?? [])
+      .filter((t) => (t.name ?? "").trim().length > 0)
+      .map((t) => ({ id: t.id, name: t.name, color: t.color ?? null })),
+    assigneeId: row.assignedTo?.id ?? null,
+    sessionExpiresIn: sess.label,
+    sessionExpired: sess.expired,
+    lastMessageType,
+    lastMessageDirection,
+    // Canal de origem — substitui o status dot pelo logo da plataforma
+    // no canto inferior direito do avatar.
+    channel: row.channel ?? null,
   };
 }
 
@@ -161,7 +286,6 @@ export function toMessageBubble(
     time: formatTime(dto.createdAt),
     type: isInbound ? "incoming" : "outgoing",
     senderInitials: isInbound ? avatarInitials(contactName) : undefined,
-    senderColor: isInbound ? colorFromName(contactName) : undefined,
   };
 }
 
@@ -171,7 +295,7 @@ export interface ChatContactView {
   initials: string;
   avatarColor: Conversation["avatarColor"];
   status: Conversation["status"];
-  badge?: Conversation["badge"];
+  badge?: ConversationBadge;
   phone: string;
   contactId: string;
 }

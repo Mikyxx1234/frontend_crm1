@@ -1,9 +1,19 @@
 "use client"
 
-import { IconGripVertical, IconClock, IconMessage } from "@tabler/icons-react"
+import { cn } from "@/lib/utils"
+import { IconClock, IconMessage } from "@tabler/icons-react"
 import { Chip } from "./chip"
 
-export type AvatarColor = "green" | "blue" | "orange" | "purple" | "pink" | "coral" | "teal" | "mint" | "gray"
+export type AvatarColor =
+  | "green"
+  | "blue"
+  | "orange"
+  | "purple"
+  | "pink"
+  | "coral"
+  | "teal"
+  | "mint"
+  | "gray"
 export type TagType = "hot" | "warm" | "cold" | "vip" | "partner" | "ref"
 
 export interface Deal {
@@ -32,118 +42,136 @@ interface DealCardProps {
   deal: Deal
   onClick?: () => void
   /**
-   * Slot opcional que substitui INTEIRAMENTE a linha de tags do card.
-   * Quando provido, deve incluir as próprias tags + botão de adicionar.
-   * O wrapper aplica stopPropagation para não disparar `onClick` do card.
+   * Slot opcional que substitui o bloco padrao de tags
+   * (tags estaticas + botao "+"). Usado pelo
+   * `/pipeline/kanban-v2` para injetar o `TagsPopover` real.
    */
   tagsSlot?: React.ReactNode
   /**
-   * Slot opcional que substitui o footer com o chip do responsável.
-   * Mesmo tratamento de stopPropagation que `tagsSlot`.
+   * Slot opcional que substitui o Chip do responsavel no rodape
+   * do card — permite plugar o `AssigneePopover` no kanban-v2.
    */
   ownerSlot?: React.ReactNode
 }
 
 const tagStyles: Record<TagType, string> = {
-  hot: "bg-[rgba(239,68,68,0.12)] text-[#991b1b] border border-[rgba(239,68,68,0.2)]",
-  warm: "bg-[rgba(245,158,11,0.15)] text-[#92600a] border border-[rgba(245,158,11,0.2)]",
-  cold: "bg-[rgba(91,111,245,0.10)] text-[#5b6ff5] border border-[rgba(91,111,245,0.2)]",
-  vip: "bg-[rgba(167,139,250,0.15)] text-[#6d28d9] border border-[rgba(167,139,250,0.25)]",
-  partner: "bg-[rgba(16,185,129,0.12)] text-[#065f46] border border-[rgba(16,185,129,0.2)]",
-  ref: "bg-[rgba(244,114,182,0.12)] text-[#be185d] border border-[rgba(244,114,182,0.25)]",
+  hot: "bg-[rgba(239,68,68,0.12)] text-[#991b1b] border-[rgba(239,68,68,0.20)]",
+  warm: "bg-[var(--color-lead-bg)] text-[var(--color-warning-text)] border-[rgba(245,158,11,0.25)]",
+  cold: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)] border-[rgba(91,111,245,0.25)]",
+  vip: "bg-[rgba(167,139,250,0.15)] text-[#6d28d9] border-[rgba(167,139,250,0.25)]",
+  partner: "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[rgba(16,185,129,0.25)]",
+  ref: "bg-[rgba(244,114,182,0.12)] text-[#be185d] border-[rgba(244,114,182,0.25)]",
 }
 
 export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) {
   return (
     <article
       onClick={onClick}
-      className="bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-lg)] px-3.5 py-3 cursor-pointer transition-all duration-[250ms] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)] hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)] active:cursor-grabbing"
+      className={cn(
+        "cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all",
+        "hover:-translate-y-0.5 hover:bg-white/85 hover:shadow-[var(--glass-shadow)]",
+        "active:cursor-grabbing",
+      )}
     >
-      <div className="flex items-start gap-2.5 mb-2">
-        <IconGripVertical
-          size={14}
-          className="text-[var(--text-muted)] opacity-50 cursor-grab self-center flex-shrink-0"
-        />
+      {/* Top row: avatar + name + dealNumber/date */}
+      <div className="flex items-center gap-2.5">
         <div
-          className={`av-${deal.avatarColor} flex-shrink-0 w-[30px] h-[30px] rounded-full flex items-center justify-center font-display font-bold text-[10px] text-white border-2 border-white relative`}
+          className={cn(
+            `av-${deal.avatarColor}`,
+            "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white font-display text-[11px] font-bold text-white",
+          )}
         >
           {deal.initials}
           {deal.online !== undefined && (
             <span
-              className="absolute bottom-0 right-0 w-[9px] h-[9px] rounded-full border-[1.5px] border-white"
+              className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-[1.5px] border-white"
               style={{ background: deal.online ? "var(--color-online)" : "var(--color-offline)" }}
             />
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-display text-[13px] font-bold text-[var(--text-primary)] truncate">{deal.name}</div>
-          <div className="text-[11px] text-[var(--text-muted)] truncate mt-px">{deal.subtitle}</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+            {deal.name}
+          </div>
+          <div className="mt-px truncate text-[11px] text-[var(--text-muted)]">
+            {deal.subtitle}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span className="font-display text-[10px] font-bold text-[var(--brand-primary)] bg-[var(--color-enterprise-bg)] px-1.5 py-px rounded-[var(--radius-sm)]">
+        <div className="flex shrink-0 flex-col items-end gap-0.5">
+          <span className="rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] px-1.5 py-px font-display text-[10px] font-bold text-[var(--brand-primary)]">
             {deal.dealNumber}
           </span>
           <span className="text-[10px] text-[var(--text-muted)]">{deal.date}</span>
         </div>
       </div>
 
+      {/* Message preview */}
       {deal.message && (
-        <div className="text-[11.5px] text-[var(--text-secondary)] italic leading-[1.45] py-1.5 pb-2 flex items-start gap-1.5">
-          <IconMessage size={11} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
-          <span className="flex-1 overflow-hidden line-clamp-2">{deal.message.text}</span>
-          <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0">{deal.message.time}</span>
+        <div className="mt-2 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-white/50 px-2.5 py-2 text-[11.5px] italic leading-[1.45] text-[var(--text-secondary)]">
+          {/* Ícone de conversa com borda azul — mesmo do card de
+              conversa do inbox, para padronizar a leitura visual. */}
+          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+            <IconMessage size={9} />
+          </span>
+          <span className="line-clamp-2 flex-1 overflow-hidden">{deal.message.text}</span>
+          <span className="shrink-0 text-[10px] not-italic text-[var(--text-muted)]">
+            {deal.message.time}
+          </span>
         </div>
       )}
 
       {!deal.message && deal.timeAgo && (
-        <div className="text-[10px] text-[var(--text-muted)] inline-flex items-center gap-1 mb-1.5">
+        <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
           <IconClock size={11} />
           {deal.timeAgo}
         </div>
       )}
 
-      {tagsSlot ? (
-        <div
-          className="flex flex-wrap gap-1 mb-2"
-          // stopPropagation em todos os eventos de ponteiro/teclado
-          // que disparariam (a) onClick do card -> abrir deal ou
-          // (b) dragHandleProps do @hello-pangea/dnd -> iniciar drag
-          // visual antes do popover terminar de abrir.
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-        >
-          {tagsSlot}
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {deal.tags?.map((tag, i) => (
-            <span
-              key={i}
-              className={`font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide ${tagStyles[tag.type]}`}
-            >
-              {tag.label}
-            </span>
-          ))}
-          <button
-            onClick={(e) => e.stopPropagation()}
-            className="font-display text-[9.5px] font-semibold px-2 py-px rounded-full inline-flex items-center bg-transparent text-[var(--text-muted)] border border-dashed border-[rgba(163,163,163,0.4)] cursor-pointer hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)] transition-colors"
-          >
-            +
-          </button>
-        </div>
-      )}
-
+      {/* Tags — slot tem prioridade. Sem slot, mantemos fallback v0
+          (tags estaticas + botao "+" decorativo).
+          stopPropagation em multiplos eventos para nao abrir o deal
+          ou iniciar drag ao interagir com popovers injetados. */}
       <div
-        className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-white/35"
+        className="mb-2 mt-2 flex flex-wrap items-center gap-1"
+        onClick={tagsSlot ? (e) => e.stopPropagation() : undefined}
+        onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
+        onPointerDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
+        onTouchStart={tagsSlot ? (e) => e.stopPropagation() : undefined}
+      >
+        {tagsSlot ?? (
+          <>
+            {deal.tags?.map((tag, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-px font-display text-[9.5px] font-bold tracking-wide",
+                  tagStyles[tag.type],
+                )}
+              >
+                {tag.label}
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex cursor-pointer items-center rounded-full border border-dashed border-black/20 bg-transparent px-2 py-px font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+            >
+              +
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Owner — slot tem prioridade. */}
+      <div
+        className="flex items-center gap-1.5 border-t border-black/[0.06] pt-2"
         onClick={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onTouchStart={ownerSlot ? (e) => e.stopPropagation() : undefined}
       >
         {ownerSlot ?? (
-          <Chip variant="brand" className="cursor-pointer hover:bg-[rgba(91,111,245,0.22)] transition-colors">
+          <Chip variant="brand" className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]">
             {deal.owner.name}
           </Chip>
         )}

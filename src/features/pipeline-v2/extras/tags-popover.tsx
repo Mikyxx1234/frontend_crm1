@@ -75,7 +75,7 @@ export function TagsPopover({
     );
   }
 
-  const position = computePopoverPosition(rect, 320);
+  const position = computePopoverPosition(rect, 320, 288);
 
   return (
     <>

@@ -404,7 +404,7 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
     case "send_whatsapp_interactive":
       return { body: "", buttons: [], header: "", footer: "", elseGotoStepId: "", saveToVariable: "" };
     case "webhook":
-      return { url: "", method: "POST" };
+      return { url: "", method: "POST", headers: [], body: "" };
     case "delay":
       return { ms: 60_000 };
     case "condition": {

@@ -5,6 +5,366 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-05-29 — Hotfix: hooks do slash command antes do early return
+
+**Bug.** Versão inicial colocou `useQuery(contactDetail)`, `useMemo`,
+`useCallback`, `useSlashMenu` **depois** do
+`if (!conversationId) return null;` no `ChatWindow`. Resultado:
+quando o operador selecionava uma conversa (transição
+`conversationId: null → string`), o número de hooks chamados aumentava
+entre renders e o React quebrava com:
+
+> Rendered more hooks than during the previous render.
+
+A tela de erro substituía o inbox inteiro.
+
+**Fix.** Movido todo o bloco (incluindo `composeDisabled`) para ANTES
+do early return. Adicionado comentário no código avisando do risco.
+Regras das Hooks: **nenhum hook pode ficar depois de qualquer return
+condicional**.
+
+---
+
+### 2026-05-29 — Atalho "/" no composer do inbox (slash command)
+
+**Decisão.** Composer do inbox (`src/components/inbox/chat-window.tsx`)
+agora abre um **menu de comandos** ao detectar `/` no início do draft
+ou após whitespace. O menu lista, em uma única visão filtrável, três
+fontes de mensagem pronta:
+
+  1. **Respostas rápidas** (`/api/quick-replies`) — texto curto inserido
+     direto no draft.
+  2. **Modelos internos** (`/api/templates`) — texto livre + variáveis
+     dotted-path interpoladas client-side via
+     `interpolateInternalTemplate` (catálogo de
+     `src/lib/internal-template-variables.ts`).
+  3. **Templates WhatsApp Meta** (`/api/whatsapp-template-configs/agent-enabled`) —
+     reusam o `pendingTemplate` flow já existente (preview + variáveis
+     Meta + envio via Cloud API), porque o canal exige modelo aprovado.
+
+Implementação isolada em `src/components/inbox/slash-command-menu.tsx`
+(componente visual + hook `useSlashMenu` + função
+`detectSlashTokenAt`). O hook é o ponto único de orquestração:
+
+  - **Detecção** do token "/" via scan da string em torno do cursor
+    (whitespace ou início como delimitadores). Reabre/fecha
+    automaticamente conforme o usuário digita/apaga.
+  - **Lazy fetch**: só dispara as 3 queries quando o menu abre
+    (`enabled: open`), com `staleTime` de 60s — evita N requests
+    paralelos enquanto o operador apenas digita.
+  - **Teclado**: expõe `onKeyDown(event)` que retorna `true` quando
+    consumiu Up/Down/Enter/Esc/Tab. O composer chama isso ANTES dos
+    handlers de envio, garantindo que o Enter no menu seleciona em vez
+    de mandar mensagem.
+  - **Aplicação**: substitui exatamente o range `/...query` no draft
+    pelo conteúdo (interpolado quando interno) e move o cursor para o
+    fim. Pra Meta templates, apaga o `/...` e dispara
+    `setPendingTemplate(...)` (reuso 100%).
+
+Contexto de interpolação (`InternalTemplateContext`) montado a partir
+de:
+  - `getContact(contactId)` cacheado por 5 min — traz nome/telefone/
+    email/CPF/tags/deals do contato.
+  - Primeiro deal aberto (`contactDetail.deals[0]`) — title/value/
+    stageName/productName.
+  - `session.user` — atendente logado.
+
+**Por que unificar quick-replies + internos + Meta numa lista só?**
+O operador raramente sabe (e não devia se importar) qual é a fonte de
+um atalho na hora do envio. Um único `/` reduz cliques e elimina o
+"qual menu eu abro?". As fontes são distintas pelo ícone/badge no
+item, mas o disparo é idempotente do ponto de vista da UX.
+
+**Por que não reabrir o `TemplatePicker` antigo no `/`?** Esse picker
+faz fetch de `/api/whatsapp-template-configs/agent-enabled` mas não
+inclui internos nem quick-replies. O novo menu o complementa sem
+substituir — o `TemplatePicker` continua acessível pelo botão
+"Templates" do `AttachPopover` (operador que quer só templates Meta
+ainda tem o caminho dedicado).
+
+**Compat retroativa.**
+  - `pendingTemplate` flow (templates Meta com botões/variáveis) **não
+    foi tocado**. Slash menu apenas dispara `setPendingTemplate` —
+    todo o resto (preview, painel de vars, envio) é o caminho atual.
+  - Quick replies, emoji, file attach, schedule, tasks, signature
+    toggle, nota interna, mode `compactChrome` (DealWorkspace) — todos
+    intactos.
+  - Slash menu é **desligado automaticamente** em modo nota, com
+    anexo pendente (`pendingFile`), ou quando o composer está
+    desabilitado por sessão expirada (Meta 24h).
+  - Detecção exige `/` no início ou após whitespace — `https://`,
+    `path/to/file`, `xx/yy` no meio do texto não disparam o menu.
+
+**Achados da revisão de "executar automação".**
+
+  - `/api/automations/[id]/run` (backend) valida tudo certo:
+    `triggerType === "manual"`, `active === true`, contato pertence à
+    org, deal (se passado) pertence ao contato. Erros viram 400/404/
+    409/502 com mensagens claras.
+  - `RunAutomationButton` (frontend) lista por
+    `triggerType=manual&active=true&perPage=100`, mostra spinner
+    inline durante o disparo, toast de sucesso/erro. Cache de 30s.
+  - Está montado em 2 lugares: header da conversa selecionada
+    (`/inbox`) e header do deal-detail (`/pipeline/.../deal/...`).
+  - **Pequena inconsistência** (não bug): no inbox NÃO passa o
+    `dealId` mesmo quando a conversa tem deal aberto associado.
+    O backend tolera (worker resolve via `enrichContext`), mas se a
+    conversa tem mais de um deal aberto, pode pegar o "errado".
+    Pendente: enriquecer a UI com o deal ativo e repassar
+    `dealId={selected.activeDealId}`.
+  - **Sem mudanças neste turno.** Reportado para acompanhamento.
+
+---
+
+### 2026-05-29 — Templates internos: variáveis dinâmicas (catálogo + picker + interpolador)
+
+**Decisão.** O form de templates internos passou a oferecer um **picker
+de variáveis** (mesmo padrão visual do step Webhook) com tokens
+`{{contato.*}}`, `{{negocio.*}}`, `{{atendente.*}}`, `{{data}}` e
+`{{hora}}`. Catálogo único em `src/lib/internal-template-variables.ts`
+exportando `INTERNAL_TEMPLATE_VARIABLE_OPTIONS`,
+`INTERNAL_TEMPLATE_VARIABLE_GROUPS`, `interpolateInternalTemplate(content, ctx)`.
+
+Componente do picker isolado em
+`src/components/templates/internal-template-variable-picker.tsx` —
+recebe `onSelect(token)` e chama o handler do form que insere na
+posição corrente do cursor da textarea (uses `selectionStart/End` +
+`requestAnimationFrame` pra restaurar foco).
+
+**Por que dotted-path em vez de chaves planas (`{{nome}}`)?**
+A entidade `Negócio` (deal) tem vários campos do mesmo "domínio" que o
+contato, então `{{negocio.titulo}}` evita colisão com `{{titulo}}` do
+contato e fica auto-explicativo. Mesma estratégia já adotada pelo
+webhook (`automation-webhook-template.ts`) — mantém consistência de UX.
+
+**Por que helper no frontend (e não no backend)?**
+Os "templates internos" hoje são **só CRUD** (`/api/templates`) — o
+backend não interpola nada porque ninguém consome o `content` em
+runtime. Quando o composer do inbox passar a oferecer estes templates
+como atalho, a interpolação acontece **client-side** antes de injetar
+o texto no input (com dados já em mão: contato selecionado + deal
+ativo + sessão do atendente). Isso evita rota nova no backend e dá
+controle total de UX (operador pode editar o texto interpolado antes
+de enviar).
+
+**Compat retroativa.** Tokens desconhecidos (ex.: `{{1}}`,
+`{{nome_cliente}}` legados) são **preservados como-está** no texto
+após a interpolação — operador pode preenchê-los manualmente como
+sempre fez. Adicionar variáveis ao catálogo no futuro nunca quebra
+templates já salvos.
+
+**Pendências (próximo passo).**
+- Plugar `interpolateInternalTemplate` no composer do `chat-window.tsx`
+  (atalho "Modelos internos" no menu) carregando `/api/templates` +
+  injetando texto interpolado no input.
+
+---
+
+### 2026-05-29 — Templates internos: UI desacoplada da Meta
+
+**Decisão.** O formulário em `/settings/message-models?tab=internal`
+(arquivo `src/app/(dashboard)/settings/templates/client-page.tsx`) foi
+limpo para tratar o registro como **mensagem interna do CRM** —
+atalho de resposta usado nas conversas — e não como espelho de um
+template aprovado na Meta/WABA.
+
+Mudanças visuais:
+- Header: "Modelos internos de mensagem" + descrição focada em
+  variáveis dinâmicas (sem menção a "aprovado na Meta").
+- Banner amarelo de aviso sobre `META_*` env vars **removido**
+  (era ruído nessa seção; permanece relevante na aba "WhatsApp (Meta)").
+- Listagem: badges de `PENDING_APPROVAL`/`APPROVED`/`REJECTED` (estados
+  de Cloud API) **removidos**. Em seu lugar mostramos canal e categoria.
+- Form: label do nome trocado de "Nome (igual ao template na Meta)"
+  para "Nome do modelo"; placeholder/hint reescritos para reforçar uso
+  interno; campo "Idioma" oculto da UI (mantido em estado fixo
+  `pt_BR`/valor original do registro pra não quebrar o backend que
+  exige `language`).
+- Coluna "Estado / idioma" do overview substituída por "Detalhes"
+  (categoria · canal) só na linha dos internos. Na linha dos Meta a
+  semântica de status/idioma original foi mantida.
+
+**Alternativa descartada.** Mudar o schema Prisma (drop dos campos
+`status`/`language`/`category` de `MessageTemplate`) — invasivo, exige
+migração no backend e quebra o reuso da mesma tabela pra templates
+sincronizados com Meta no futuro. UI-only é suficiente: o frontend
+continua mandando `language: "pt_BR"` por default e `status` é
+preenchido pelo backend (`DRAFT`).
+
+**Compat retroativa.** Templates antigos com `status` ou `language`
+diferentes ainda renderizam (apenas omitem o badge de status na lista)
+e ao salvar mantêm o `language` original (lido de `initial?.language`
+no form).
+
+### 2026-05-29 — Webhook step com headers/body customizados e picker de variáveis dotted-path
+
+**Decisão.** O step "Webhook" das automações ganhou 3 campos novos
+além de URL/Method: lista de **headers** (key/value), **body** (textarea)
+e um **picker de variáveis** que insere tokens `{{caminho.aninhado}}` no
+campo focado. Os tokens são resolvidos no backend pelo executor —
+suportam dotted-path (`{{contact.adCtwaClid}}`,
+`{{contact.adResolvedCampaignName}}`, `{{deal.stageName}}`,
+`{{data.referral.headline}}`, etc.) sem mexer no `interpolateVariables`
+legado dos templates de mensagem WhatsApp.
+
+Catálogo único do frontend em
+`src/lib/automation-webhook-variables.ts`:
+- `WEBHOOK_VARIABLE_OPTIONS` agrupado por **Contato**, **Origem do
+  anúncio (Meta CTWA)**, **Negócio**, **Conversa**, **Tags**, **Evento**.
+- `DEFAULT_WEBHOOK_BODY_TEMPLATE` com snippet pronto pra n8n/Make.
+
+Componente isolado em
+`src/components/automations/webhook-step-config.tsx`
+(`WebhookStepConfig`) — substitui o JSX inline antigo do
+`step-config-panel.tsx` (24 linhas). Encapsula:
+- Refs pra URL/body/header-values + estado `focusTarget` que rastreia
+  qual campo recebe o próximo token clicado no picker.
+- Conversão automática de headers do shape legado (objeto plano) pra
+  o novo (`Array<{ key, value }>`) — config salvo antes desta entrega
+  abre normalmente.
+- Botão "Modelo padrão" que injeta o template padrão.
+
+**Alternativas descartadas.**
+
+- **Estender `VariableShortcutTextarea` (atalho `[`) com lista
+  hierárquica.** Funcionaria só pro body, não pra URL/header
+  (que usam `Input`, não `Textarea`). Picker dedicado abaixo dos campos
+  é uniforme — qualquer um deles aceita inserção.
+- **Editor JSON estruturado (key-value pairs em vez de textarea livre).**
+  Mais "à prova de erro" mas inflexível pra n8n/Make que esperam
+  shapes específicos. Textarea + interpolação de string preserva
+  controle total pro operador (incluindo quem precisa enviar XML, form
+  data, ou JSON com objetos aninhados que o key-value não modela).
+- **Enviar templates como AST/JSON e renderizar no backend (`{ field:
+  "{{contact.name}}" }`).** Evita parse de string mas exige UI mais
+  complexa e perde a flexibilidade acima.
+- **Mudar `interpolateVariables` legado pra aceitar dotted-paths.**
+  Tem efeito colateral em todos os steps de mensagem (que
+  intencionalmente só aceitam chaves planas via `__variables`). Helper
+  novo `interpolateWebhookTemplate` é escopado ao webhook e isolado.
+
+**Compat retroativa.** Configs antigas (só URL + Method, sem
+`body`/`headers`) continuam funcionando: o backend cai no payload
+legado (`{ event, contactId, dealId, data }`) quando `cfg.body` é
+vazio/whitespace. Headers no shape de objeto plano também são aceitos
+pelo `normalizeAndInterpolateHeaders`.
+
+**Impacto.**
+
+- Backend: novo arquivo `src/lib/automation-webhook-template.ts` no
+  `backend_crm1` (`buildWebhookTemplateRoot`, `resolveDottedPath`,
+  `interpolateWebhookTemplate`, `normalizeAndInterpolateHeaders`).
+  `case "webhook"` em `automation-executor.ts` reescrito.
+- Frontend: novo arquivo `src/lib/automation-webhook-variables.ts` +
+  componente `WebhookStepConfig`. `step-config-panel.tsx` perdeu 24
+  linhas inline e ganhou 1 linha de import.
+- Default config do step webhook (em `automation-workflow.ts`) agora
+  inclui `headers: []` e `body: ""` — não quebra steps antigos
+  porque os campos extras são ignorados quando vazios.
+- Sem mudança em rotas, schema Prisma, ou outras integrações.
+
+---
+
+### 2026-05-29 — Permissões CRM por usuário (override em `scopeGrants.crm.<action>.users[userId]`)
+
+**Decisão.** Override **por usuário individual** em
+`scopeGrants.crm.<action>.users[userId]: boolean` — não por papel.
+Granularidade fina sem mexer no schema do banco nem no backend (PUT
+`/api/settings/permissions` já aceita `scopeGrants` como JSON
+arbitrário). 3 ações cobertas: `editLeads`, `runAutomations`,
+`assignOwner`. ADMIN ignora a checagem (sempre `true`). Default `true`
+quando ausente, pra preservar compat com instâncias que ainda não
+configuraram nada.
+
+Helper canônico em `src/lib/permissions.ts`:
+- `canPerformCrmAction(action, userId, role, scopeGrants)` — gate de
+  UI. ADMIN bypass; senão consulta `users[userId]` e cai no default.
+- `readCrmActionGrantForUser(action, userId, scopeGrants)` — só lê o
+  override (sem checar role). Usado pra renderizar o estado dos
+  toggles na tela de permissões.
+- `setCrmActionGrantForUser(scopeGrants, action, userId, enabled)` —
+  merge imutável que preserva outros namespaces (`sidebar`, `inbox`,
+  etc.) e outros usuários.
+- `setCrmActionGrantsForUser(scopeGrants, userId, grants)` — variante
+  pra aplicar várias ações ao mesmo usuário num único merge (usado no
+  fluxo "Convidar membro").
+
+Página `/settings/permissions` reorganizada em 3 seções:
+1. **Ações por usuário** (novo) — tabela com 1 linha por usuário e 1
+   coluna por ação (3 colunas), toggle por célula. Busca no topo
+   filtra por nome ou email. Linhas de ADMIN ficam visíveis mas
+   read-only (badge "Administrador" na coluna do nome).
+2. **Visibilidade por papel** (legado preservado: `all` / `own`).
+3. **Auto-atribuição** (legado preservado: botão "Atribuir para mim"
+   da inbox).
+
+Removido: textarea cru de `scopeGrants` JSON. A UI estruturada cobre
+o caso comum (3 ações × N usuários); namespaces avançados
+(`sidebar.routes`, `inbox.tabs`) seguem editáveis via API direta se
+necessário.
+
+`/settings/team` (dialog "Convidar membro") também ganhou as 3
+toggles. Quando o admin marca/desmarca antes de criar, o fluxo é:
+POST `/api/users` → pega `created.id` → GET grants atuais → PUT
+`/api/settings/permissions` com merge dos novos overrides. Pula o
+PUT quando todos os toggles estão `true` (default) ou quando o role é
+ADMIN, pra não criar entradas redundantes. Falha do PUT mostra
+toast de aviso mas **não** falha a criação do usuário.
+
+**Contexto.** Operador pediu textualmente: "quero que seja por
+usuário cadastrado na org, não geral igual está, então na tela de
+permissões, é necessário aparecer os users do CRM". Versão anterior
+desta decisão (toggles por papel MANAGER/MEMBER) foi descartada na
+mesma sessão antes de chegar em produção.
+
+**Alternativas descartadas.**
+
+- **Custom Roles via tabela `Role` + `UserRoleAssignment`** (RBAC do
+  backend já existe, ver `src/lib/authz/permissions.ts` no
+  `backend_crm1`). Mais correto em termos de modelagem, mas exige
+  endpoints novos no backend (`POST /api/roles`, `POST
+  /api/users/:id/roles`), refactor do frontend pra "matriz user × role
+  × permission", e migração de `User.role` enum. Operador pediu
+  explicitamente "não precisa mudar a estrutura, por qual motivo está
+  fazendo essa volta para adicionar só uma coisa nova?" — manter
+  override em `scopeGrants` é minimalista e suficiente pras 3 ações.
+- **Tabela nova `UserPermissionOverride(userId, key, allow)`.** Mesmo
+  ônus de migration sem benefício imediato. Quando a matriz ficar
+  densa o suficiente pra justificar índice próprio (~50 ações × 100
+  usuários), volta-se nessa decisão.
+- **Mover visibility/selfAssign também pra ser por usuário.** Operador
+  disse "não precisa mudar a estrutura" — visibility/selfAssign
+  continuam por papel (legado). Só as 3 ações novas são por usuário.
+- **Default `false` (negar por padrão).** Quebraria o comportamento
+  atual em qualquer instância que ligue este build sem migrar o JSON
+  do backend. Default `true` mantém compat retroativa.
+
+**Impacto.**
+
+- Frontend: helper pronto (`canPerformCrmAction`) — **falta consumir
+  nos componentes**. Próximo passo: trocar
+  `canManageAssignee = role === "ADMIN" || role === "MANAGER"`
+  hardcoded por `canPerformCrmAction("assignOwner", userId, role,
+  scopeGrants)` em `inbox/client-page.tsx`,
+  `pipeline/sales-hub-view.tsx`, `pipeline/deal-workspace/index.tsx`,
+  `inbox/transfer-control.tsx`; e adicionar gates equivalentes nos
+  botões de mover estágio (kanban) e "executar automação" (lista de
+  automações). **Não fizemos isso ainda nesta entrega**.
+- Backend: precisa **enforçar** as flags. Endpoint atual
+  `/api/settings/permissions` já aceita o shape novo (`scopeGrants`
+  arbitrário). Mas as rotas de mutação (`PATCH /api/deals/:id`,
+  `PATCH /api/contacts/:id`, `POST /api/automations/:id/run`, `PATCH
+  /api/conversations/:id` com `assignedToId`) ainda usam
+  `requireAdminOrManager` ou checks similares. Refatorar pra ler
+  `scopeGrants.crm.<action>.users[userId]` antes de cair no role.
+- Sem mudança em `next.config.ts`, schema Prisma, ou contrato do
+  endpoint de permissões.
+- Sem mudança em `/api/users` POST: o invite continua aceitando
+  `{ name, email, password, role }`; os toggles do dialog viram um
+  PUT separado em `/api/settings/permissions` após o user ter id.
+
+---
+
 ### 2026-05-27 — Exclusão em massa na lista de leads
 
 **Decisão.** Adicionada barra flutuante de ações em massa em

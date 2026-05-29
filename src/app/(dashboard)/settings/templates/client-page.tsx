@@ -14,7 +14,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InternalTemplateVariablePicker } from "@/components/templates/internal-template-variable-picker";
 
 type TemplateRow = {
   id: string;
@@ -40,18 +40,11 @@ type TemplateRow = {
   channelType: string | null;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Rascunho",
-  PENDING_APPROVAL: "Pendente",
-  APPROVED: "Aprovado",
-  REJECTED: "Rejeitado",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "secondary",
-  PENDING_APPROVAL: "warning",
-  APPROVED: "success",
-  REJECTED: "destructive",
+const CHANNEL_LABELS: Record<string, string> = {
+  WHATSAPP: "WhatsApp",
+  INSTAGRAM: "Instagram",
+  FACEBOOK: "Facebook",
+  EMAIL: "E-mail",
 };
 
 async function fetchTemplates(): Promise<TemplateRow[]> {
@@ -140,35 +133,21 @@ export default function TemplatesSettingsPage() {
       </Link>
 
       <PageHeader
-        title="Templates no CRM (catálogo interno)"
+        title="Modelos internos de mensagem"
         icon={<FileText />}
         description={
           <>
-            Rascunhos e referência de texto. O campo <strong className="font-medium text-foreground">nome</strong> deve ser
-            idêntico ao nome do template <strong className="font-medium text-foreground">aprovado na Meta</strong> — é esse
-            valor que o WhatsApp usa no envio.
+            Mensagens prontas guardadas no CRM, usadas como atalho de resposta nas conversas. Use{" "}
+            <code className="rounded bg-muted px-1 text-xs">{"{{variável}}"}</code> para campos dinâmicos
+            (ex.: <code className="rounded bg-muted px-1 text-xs">{"{{nome}}"}</code>).
           </>
         }
         actions={
           <Button onClick={() => { setEditing(null); setFormOpen(true); }} className={`gap-2 ${pageHeaderPrimaryCtaClass}`}>
-            <Plus className="size-4" /> Novo Template
+            <Plus className="size-4" /> Novo modelo
           </Button>
         }
       />
-
-      <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
-        <p>
-          <strong>Duas coisas diferentes:</strong> esta lista fica só no banco do CRM (atalho na conversa). Já a{" "}
-          <Link href="/settings/message-models?tab=whatsapp" className="font-medium text-amber-950 underline underline-offset-2 hover:no-underline dark:text-amber-100">
-            Templates Meta (WABA)
-          </Link>{" "}
-          lista e cria modelos direto na conta comercial.
-        </p>
-        <p className="mt-2">
-          O envio pelo inbox só funciona com <code className="rounded bg-amber-100/80 px-1 text-xs dark:bg-amber-900/50">META_WHATSAPP_ACCESS_TOKEN</code> e{" "}
-          <code className="rounded bg-amber-100/80 px-1 text-xs dark:bg-amber-900/50">META_WHATSAPP_PHONE_NUMBER_ID</code> configurados.
-        </p>
-      </div>
 
       {isLoading ? (
         <div className="space-y-3">
@@ -177,9 +156,9 @@ export default function TemplatesSettingsPage() {
       ) : templates.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/80 py-16 text-center">
           <FileText className="mx-auto mb-3 size-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">Nenhum template cadastrado.</p>
+          <p className="text-sm text-muted-foreground">Nenhum modelo cadastrado.</p>
           <Button onClick={() => { setEditing(null); setFormOpen(true); }} variant="outline" className="mt-4 gap-2">
-            <Plus className="size-4" /> Criar primeiro template
+            <Plus className="size-4" /> Criar primeiro modelo
           </Button>
         </div>
       ) : (
@@ -191,17 +170,18 @@ export default function TemplatesSettingsPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold">{t.name}</span>
-                    <Badge variant={(STATUS_COLORS[t.status] ?? "secondary") as "default"}>
-                      {STATUS_LABELS[t.status] ?? t.status}
-                    </Badge>
+                    {t.channelType && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                        {CHANNEL_LABELS[t.channelType] ?? t.channelType}
+                      </span>
+                    )}
                     {t.category && (
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
                         {t.category}
                       </span>
                     )}
-                    <span className="text-[10px] text-muted-foreground">{t.language}</span>
                   </div>
                   <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground line-clamp-3">
                     {t.content}
@@ -266,8 +246,9 @@ function TemplateForm({
   const [name, setName] = React.useState(initial?.name ?? "");
   const [content, setContent] = React.useState(initial?.content ?? "");
   const [category, setCategory] = React.useState(initial?.category ?? "");
-  const [language, setLanguage] = React.useState(initial?.language ?? "pt_BR");
   const [channelType, setChannelType] = React.useState(initial?.channelType ?? "");
+  const language = initial?.language ?? "pt_BR";
+  const contentRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,63 +257,85 @@ function TemplateForm({
       name: name.trim(),
       content: content.trim(),
       category: category.trim() || undefined,
-      language: language.trim() || undefined,
+      language,
       channelType: channelType || undefined,
+    });
+  };
+
+  // Insere o token na posição do cursor da textarea — preserva o que
+  // já foi digitado e move o cursor pro fim do token inserido.
+  const insertToken = (token: string) => {
+    const el = contentRef.current;
+    const start = el?.selectionStart ?? content.length;
+    const end = el?.selectionEnd ?? content.length;
+    const next = content.slice(0, start) + token + content.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      el?.focus();
+      const pos = start + token.length;
+      el?.setSelectionRange(pos, pos);
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-2">
-        <Label htmlFor="tpl-name">Nome (igual ao template na Meta)</Label>
+        <Label htmlFor="tpl-name">Nome do modelo</Label>
         <Input
           id="tpl-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="ex.: call_permission_request_1"
+          placeholder="ex.: Boas-vindas, Pedido de orçamento, Pós-venda"
           required
-          className="font-mono text-sm"
         />
         <p className="text-xs text-muted-foreground">
-          snake_case, como no Gerenciador da Meta. O inbox envia este nome, não o texto abaixo.
+          Nome curto e descritivo para encontrar rápido na hora de responder.
         </p>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="tpl-content">Texto de referência (só no CRM)</Label>
+        <Label htmlFor="tpl-content">Mensagem</Label>
         <textarea
           id="tpl-content"
+          ref={contentRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Olá {{nome}}, bem-vindo(a)!"
-          rows={5}
+          placeholder="Olá {{contato.primeiroNome}}, tudo bem? Vi seu interesse no negócio {{negocio.titulo}}..."
+          rows={6}
           required
           className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-indigo-500/40"
         />
-        <p className="text-xs text-muted-foreground">Use {"{{variável}}"} para variáveis dinâmicas.</p>
+        <p className="text-xs text-muted-foreground">
+          Clique em uma variável abaixo para inseri-la na posição do cursor. Na hora de
+          enviar, o CRM substitui automaticamente pelo valor real do contato e do negócio.
+        </p>
       </div>
+
+      <InternalTemplateVariablePicker onSelect={insertToken} />
+
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="tpl-category">Categoria</Label>
-          <Input id="tpl-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Marketing, Utilidade…" />
+          <Label htmlFor="tpl-category">Categoria (opcional)</Label>
+          <Input
+            id="tpl-category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="Vendas, Suporte, Pós-venda…"
+          />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="tpl-language">Idioma</Label>
-          <SelectNative id="tpl-language" value={language} onChange={(e) => setLanguage(e.target.value)}>
-            <option value="pt_BR">Português (BR)</option>
-            <option value="en_US">English (US)</option>
-            <option value="es">Español</option>
+          <Label htmlFor="tpl-channel">Canal (opcional)</Label>
+          <SelectNative
+            id="tpl-channel"
+            value={channelType}
+            onChange={(e) => setChannelType(e.target.value)}
+          >
+            <option value="">Todos os canais</option>
+            <option value="WHATSAPP">WhatsApp</option>
+            <option value="INSTAGRAM">Instagram</option>
+            <option value="FACEBOOK">Facebook</option>
+            <option value="EMAIL">E-mail</option>
           </SelectNative>
         </div>
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="tpl-channel">Canal (opcional)</Label>
-        <SelectNative id="tpl-channel" value={channelType} onChange={(e) => setChannelType(e.target.value)}>
-          <option value="">Todos</option>
-          <option value="WHATSAPP">WhatsApp</option>
-          <option value="INSTAGRAM">Instagram</option>
-          <option value="FACEBOOK">Facebook</option>
-          <option value="EMAIL">E-mail</option>
-        </SelectNative>
       </div>
       <DialogFooter className="gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>

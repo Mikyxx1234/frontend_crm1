@@ -11,7 +11,7 @@ import { ComposerMenu } from "./composer-menu";
 /**
  * Composer completo para o ChatArea. Substitui o footer estático
  * do v0 via prop `composerSlot`. Reúne:
- *  - ComposerMenu (anexo / quick reply / template)
+ *  - ComposerMenu (anexo / template WhatsApp)
  *  - input controlado
  *  - AudioRecorderButton
  *  - botão de envio
@@ -40,10 +40,6 @@ export function Composer({
     onSend(trimmed);
   }
 
-  function insertText(snippet: string) {
-    onChange(value ? `${value}\n${snippet}` : snippet);
-  }
-
   return (
     <form
       onSubmit={handleSubmit}
@@ -51,7 +47,6 @@ export function Composer({
     >
       <ComposerMenu
         conversationId={conversationId}
-        onInsertText={insertText}
         className="h-9 w-9"
       />
       <ButtonGlass

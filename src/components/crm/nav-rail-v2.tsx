@@ -4,10 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import {
-  IconBell,
   IconBolt,
   IconBuilding,
-  IconChartBar,
   IconChecklist,
   IconFilter,
   IconLayoutDashboard,
@@ -45,7 +43,9 @@ const items: NavItem[] = [
   { icon: <IconMessageCircle size={20} />, title: "Inbox", href: "/v2/inbox" },
   { icon: <IconChecklist size={20} />, title: "Atividades", href: "/v2/activities" },
   { icon: <IconBolt size={20} />, title: "Automações", href: "/v2/automations" },
-  { icon: <IconChartBar size={20} />, title: "Relatórios", href: "/v2/reports" },
+  // "Relatórios" removido: a página /v2/reports ainda não existe e o
+  // prefetch do Link gerava um 404 recorrente em toda tela /v2. Reintroduzir
+  // quando o /v2/reports for construído.
 ];
 
 function isActiveFor(pathname: string, item: NavItem): boolean {
@@ -94,23 +94,18 @@ export function NavRailV2({ className }: { className?: string }) {
 
       <div className="flex-1" />
 
-      <button
-        type="button"
-        title="Notificações"
-        aria-label="Notificações"
-        className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center cursor-pointer transition-all duration-150 bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-      >
-        <IconBell size={20} />
-      </button>
+      {/* Sino de notificações removido: não há superfície de notificações
+          no segmento /v2 ainda (era um botão sem ação). Reintroduzir quando
+          existir o destino/painel. */}
 
-      <button
-        type="button"
+      <Link
+        href="/settings"
         title="Configurações"
         aria-label="Configurações"
         className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center cursor-pointer transition-all duration-150 bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
       >
         <IconSettings size={20} />
-      </button>
+      </Link>
 
       <div className="av-pink relative w-[30px] h-[30px] rounded-full flex items-center justify-center font-display font-bold text-[10px] text-white border-2 border-white">
         AL

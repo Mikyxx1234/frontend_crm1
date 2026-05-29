@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   DragDropContext,
@@ -58,7 +59,27 @@ const TAB_TO_STATUS: Record<TabId, StatusFilter> = {
   todos: "ALL",
 };
 
-export default function KanbanV2ClientPage() {
+/**
+ * Props opcionais — usadas para reaproveitar o Kanban dentro do
+ * segmento `/v2/*` (injeta o NavRailV2 com hrefs novos). Sem nada
+ * passado, mantém o `<NavRail />` legado.
+ */
+interface KanbanV2ClientPageProps {
+  navRail?: React.ReactNode;
+  /**
+   * Quando informado, o toggle de visão (Pipeline/Lista) do header
+   * navega para esta rota ao selecionar "Lista". Usado pelo segmento
+   * `/v2/pipeline` (-> `/v2/pipeline/list`). Sem isso, o toggle de
+   * lista fica inerte (legado `(v2)/pipeline/kanban-v2`).
+   */
+  listHref?: string;
+}
+
+export default function KanbanV2ClientPage({
+  navRail,
+  listHref,
+}: KanbanV2ClientPageProps = {}) {
+  const router = useRouter();
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
@@ -198,11 +219,15 @@ export default function KanbanV2ClientPage() {
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4">
-      <NavRail />
+      {navRail ?? <NavRail />}
       <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
         <PipelineHeader
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t)}
+          activeView="kanban"
+          onViewChange={(view) => {
+            if (view === "list" && listHref) router.push(listHref);
+          }}
           pipelineNameSlot={
             <PipelineSwitcher
               selectedId={pipelineId}

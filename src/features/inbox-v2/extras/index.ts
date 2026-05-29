@@ -6,3 +6,4 @@ export { Composer } from "./composer";
 export { AssigneePopover } from "./assignee-popover";
 export { TagsPopover } from "./tags-popover";
 export { ConversationActionsMenu } from "./conversation-actions-menu";
+export { InboxFilterButton } from "./filter-panel";

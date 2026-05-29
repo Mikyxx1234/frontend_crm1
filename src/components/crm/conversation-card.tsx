@@ -342,7 +342,7 @@ export function ConversationCard({
           O slot é renderizado no canto direito da linha. */}
       {(conversation.tags?.length ?? 0) > 0 && (
         <div
-          className="ml-[60px] mt-2.5 flex min-w-0 items-center gap-1.5"
+          className="mt-2.5 flex min-w-0 items-center gap-1.5"
           onClick={(e) => {
             // Quando o slot existe, evita propagar para o onClick do card.
             if (tagsSlot) e.stopPropagation()
@@ -384,25 +384,25 @@ export function ConversationCard({
       {/* Linha 3: assignee + sessao — flex-nowrap evita quebrar em 2 linhas
           quando o nome do responsavel + chip de sessao somam mais largura
           do que a coluna. O chip do assignee trunca com ellipsis. */}
-      <div className="ml-[60px] mt-2.5 flex min-w-0 flex-nowrap items-center justify-between gap-2">
+      <div className="mt-2.5 flex min-w-0 flex-nowrap items-center gap-2">
         {/* Quando há `assigneeSlot` (popover injetado), ele substitui o
-            chip estático. O wrapper bloqueia propagação para não abrir
-            a conversa ao clicar no popover. */}
-        {assigneeSlot ? (
-          <span
-            className="min-w-0 max-w-[60%] truncate whitespace-nowrap"
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            {assigneeSlot}
-          </span>
-        ) : conversation.assignee ? (
-          <Chip variant="brand" className="min-w-0 max-w-[60%] truncate whitespace-nowrap">
-            {conversation.assignee}
-          </Chip>
-        ) : (
-          <Chip variant="ghost" className="shrink-0 whitespace-nowrap">+Responsável</Chip>
-        )}
+            chip estático. O slot ocupa o espaço restante da linha
+            (`flex-1`) em vez de um teto fixo de 60% — assim o nome do
+            agente e o placeholder "+Responsável" não são cortados quando
+            a coluna é estreita. O badge de sessão permanece `shrink-0`.
+            O próprio botão do popover já faz stopPropagation. */}
+        <span className="flex min-w-0 flex-1 items-center">
+          {assigneeSlot ??
+            (conversation.assignee ? (
+              <Chip variant="brand" className="max-w-full truncate whitespace-nowrap">
+                {conversation.assignee}
+              </Chip>
+            ) : (
+              <Chip variant="ghost" className="max-w-full truncate whitespace-nowrap">
+                +Responsável
+              </Chip>
+            ))}
+        </span>
 
         {/* Linha sem tags (acima): também precisamos de uma forma rápida
             de abrir o popover de tags quando não há nenhuma. Renderiza

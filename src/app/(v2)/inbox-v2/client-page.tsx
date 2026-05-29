@@ -14,6 +14,7 @@ import {
 } from "@/components/crm/column-resizer";
 
 import {
+  isSessionExpired,
   toChatContact,
   toContactAside,
   toConversationCard,
@@ -32,6 +33,7 @@ import {
   AssigneePopover,
   Composer,
   ConversationActionsMenu,
+  InboxFilterButton,
   TagsPopover,
   TemplatePickerList,
 } from "@/features/inbox-v2/extras";
@@ -50,7 +52,27 @@ const TABS: ReadonlyArray<{ id: InboxTab; label: string }> = [
   { id: "finalizados", label: "Resolvidas" },
 ];
 
-export default function InboxV2ClientPage() {
+/**
+ * Props opcionais — usadas para reaproveitar o chat dentro de um shell
+ * diferente (ex.: segmento real `/v2/inbox` que injeta o `<NavRailV2 />`
+ * com hrefs novos). Sem nada passado, o componente mantém o comportamento
+ * legado: renderiza o `<NavRail />` antigo internamente.
+ */
+interface InboxV2ClientPageProps {
+  /** Override do trilho de navegação (1ª coluna). */
+  navRail?: React.ReactNode;
+  /**
+   * Cabeçalho de página opcional renderizado ACIMA das colunas (estilo
+   * "Caixa de entrada" do DS de referência). Quando ausente, mantém o
+   * layout legado de linha única (sem topo) — usado por `(v2)/inbox-v2`.
+   */
+  pageHeader?: React.ReactNode;
+}
+
+export default function InboxV2ClientPage({
+  navRail,
+  pageHeader,
+}: InboxV2ClientPageProps = {}) {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
@@ -64,7 +86,7 @@ export default function InboxV2ClientPage() {
   // Default "todos": ao abrir/atualizar a página, todas as conversas
   // ficam selecionadas (pedido do usuário).
   const [tab, setTab] = useState<InboxTab>("todos");
-  const [filters] = useState<InboxFilters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<InboxFilters>(DEFAULT_FILTERS);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -78,13 +100,41 @@ export default function InboxV2ClientPage() {
   }, [searchInput]);
 
   // ── Dados ───────────────────────────────────────────────────────
+  // Ordem e janela são CLIENT-SIDE — não vão ao servidor (evita refetch
+  // ao mudar ordenação e a limitação do `sortBy` do backend).
+  const { sortBy, sortOrder, windowState, ...serverFilters } = filters;
+
   const { data: listData } = useConversations({
     tab,
-    filters,
+    filters: serverFilters,
     search: debouncedSearch,
     enabled: isAuthenticated,
   });
-  const rows = listData?.items ?? [];
+  const rawRows = listData?.items ?? [];
+
+  // Ordena (default: última mensagem RECEBIDA primeiro) e filtra a janela
+  // de 24h. Ordenar por `lastInboundAt` (em vez de `updatedAt`) mantém a
+  // posição ESTÁVEL ao marcar como lida — que só toca `updatedAt` — então
+  // o card não "pula" ao ser clicado.
+  const rows = useMemo(() => {
+    let list = rawRows;
+    if (windowState === "open") {
+      list = list.filter((r) => !isSessionExpired(r.lastInboundAt));
+    } else if (windowState === "closed") {
+      list = list.filter((r) => isSessionExpired(r.lastInboundAt));
+    }
+    const by = sortBy ?? "lastInboundAt";
+    const sign = (sortOrder ?? "desc") === "asc" ? 1 : -1;
+    const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
+    return [...list].sort((a, b) => {
+      if (by === "unreadCount") {
+        const d = (b.unreadCount ?? 0) - (a.unreadCount ?? 0);
+        return d !== 0 ? d : ts(b.lastInboundAt) - ts(a.lastInboundAt);
+      }
+      return sign * (ts(a.lastInboundAt) - ts(b.lastInboundAt));
+    });
+  }, [rawRows, windowState, sortBy, sortOrder]);
+
   const { data: tabCounts } = useTabCounts(isAuthenticated);
 
   // ── Sticky activeRow ────────────────────────────────────────────
@@ -160,6 +210,142 @@ export default function InboxV2ClientPage() {
     { label: string; status: "done" | "active" | "pending" }[]
   >(() => [], []);
 
+  const navRailNode = navRail ?? <NavRail />;
+
+  const conversationColumnNode = (
+    <ConversationColumn
+      conversations={conversationCards}
+      activeConversationId={activeId ?? undefined}
+      onSelectConversation={handleSelect}
+      searchValue={searchInput}
+      onSearchChange={setSearchInput}
+      filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
+      tabsOverride={TABS.map((t) => ({
+        label: t.label,
+        count: tabCounts?.[t.id] ?? null,
+      }))}
+      activeTabIndex={TABS.findIndex((t) => t.id === tab)}
+      onTabChange={(idx) => {
+        const next = TABS[idx]?.id;
+        if (next) setTab(next);
+      }}
+      resizerSlot={<ColumnResizer value={convWidth} onChange={setConvWidth} />}
+      renderCardSlots={(c) => ({
+        tagsSlot: (
+          <TagsPopover
+            conversationId={c.id}
+            currentTags={(c.tags ?? []).map((t) => ({
+              id: t.id,
+              name: t.name,
+              color: t.color ?? null,
+            }))}
+            triggerVariant="icon"
+          />
+        ),
+        assigneeSlot: (
+          <AssigneePopover
+            conversationId={c.id}
+            currentAssigneeName={c.assignee}
+            currentAssigneeId={c.assigneeId ?? null}
+          />
+        ),
+      })}
+    />
+  );
+
+  const chatNode =
+    chatContact && activeRow ? (
+      <ChatArea
+        contact={chatContact}
+        messages={messageBubbles}
+        stages={stagePillsView}
+        showSessionAlert={sessionExpired}
+        onUseTemplate={() => setTemplateOpen(true)}
+        headerActionsSlot={
+          <ConversationActionsMenu
+            conversationId={activeId}
+            isResolved={activeRow.status === "RESOLVED"}
+          />
+        }
+        composerSlot={
+          <Composer
+            conversationId={activeId}
+            value={draft}
+            onChange={setDraft}
+            onSend={handleSend}
+            sending={sendMessage.isPending}
+            disabled={sessionExpired}
+          />
+        }
+      />
+    ) : (
+      <EmptyChatArea />
+    );
+
+  const asideNode =
+    contactAsideView && activeRow ? (
+      <ContactAside
+        contact={contactAsideView}
+        headerActionsNode={
+          <>
+            <AssigneePopover
+              conversationId={activeId}
+              currentAssigneeName={activeRow.assignedTo?.name}
+              currentAssigneeId={activeRow.assignedTo?.id ?? null}
+            />
+            <TagsPopover
+              conversationId={activeId}
+              currentTags={activeRow.tags ?? []}
+            />
+          </>
+        }
+      />
+    ) : (
+      <EmptyAside />
+    );
+
+  const templateModalNode =
+    templateOpen && activeId ? (
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        onClick={() => setTemplateOpen(false)}
+      >
+        <div onClick={(e) => e.stopPropagation()}>
+          <TemplatePickerList
+            conversationId={activeId}
+            onClose={() => setTemplateOpen(false)}
+          />
+        </div>
+      </div>
+    ) : null;
+
+  // Layout COM cabeçalho de página (estilo "Caixa de entrada" da
+  // referência): NavRail fixo à esquerda; à direita o header no topo e
+  // as 3 colunas (lista/chat/contato) numa grade abaixo.
+  if (pageHeader) {
+    return (
+      <div
+        className="v2-screen grid gap-4 p-4"
+        style={{ gridTemplateColumns: "72px minmax(0, 1fr)" }}
+      >
+        {navRailNode}
+        <div className="flex min-w-0 flex-col gap-4 overflow-hidden">
+          {pageHeader}
+          <div
+            className="grid min-h-0 flex-1 gap-4"
+            style={{ gridTemplateColumns: `${convWidth}px 1fr 340px` }}
+          >
+            {conversationColumnNode}
+            {chatNode}
+            {asideNode}
+          </div>
+        </div>
+        {templateModalNode}
+      </div>
+    );
+  }
+
+  // Layout legado (linha única, sem topo) — usado por `(v2)/inbox-v2`.
   return (
     <div
       className="v2-screen grid gap-4 p-4"
@@ -168,109 +354,11 @@ export default function InboxV2ClientPage() {
         gridTemplateColumns: `72px ${convWidth}px 1fr 340px`,
       }}
     >
-      <NavRail />
-      <ConversationColumn
-        conversations={conversationCards}
-        activeConversationId={activeId ?? undefined}
-        onSelectConversation={handleSelect}
-        searchValue={searchInput}
-        onSearchChange={setSearchInput}
-        tabsOverride={TABS.map((t) => ({
-          label: t.label,
-          count: tabCounts?.[t.id] ?? null,
-        }))}
-        activeTabIndex={TABS.findIndex((t) => t.id === tab)}
-        onTabChange={(idx) => {
-          const next = TABS[idx]?.id;
-          if (next) setTab(next);
-        }}
-        resizerSlot={
-          <ColumnResizer value={convWidth} onChange={setConvWidth} />
-        }
-        renderCardSlots={(c) => ({
-          tagsSlot: (
-            <TagsPopover
-              conversationId={c.id}
-              currentTags={(c.tags ?? []).map((t) => ({
-                id: t.id,
-                name: t.name,
-                color: t.color ?? null,
-              }))}
-              triggerVariant="icon"
-            />
-          ),
-          assigneeSlot: (
-            <AssigneePopover
-              conversationId={c.id}
-              currentAssigneeName={c.assignee}
-              currentAssigneeId={c.assigneeId ?? null}
-            />
-          ),
-        })}
-      />
-
-      {chatContact && activeRow ? (
-        <ChatArea
-          contact={chatContact}
-          messages={messageBubbles}
-          stages={stagePillsView}
-          showSessionAlert={sessionExpired}
-          onUseTemplate={() => setTemplateOpen(true)}
-          headerActionsSlot={
-            <ConversationActionsMenu
-              conversationId={activeId}
-              isResolved={activeRow.status === "RESOLVED"}
-            />
-          }
-          composerSlot={
-            <Composer
-              conversationId={activeId}
-              value={draft}
-              onChange={setDraft}
-              onSend={handleSend}
-              sending={sendMessage.isPending}
-              disabled={sessionExpired}
-            />
-          }
-        />
-      ) : (
-        <EmptyChatArea />
-      )}
-
-      {contactAsideView && activeRow ? (
-        <ContactAside
-          contact={contactAsideView}
-          headerActionsNode={
-            <>
-              <AssigneePopover
-                conversationId={activeId}
-                currentAssigneeName={activeRow.assignedTo?.name}
-                currentAssigneeId={activeRow.assignedTo?.id ?? null}
-              />
-              <TagsPopover
-                conversationId={activeId}
-                currentTags={activeRow.tags ?? []}
-              />
-            </>
-          }
-        />
-      ) : (
-        <EmptyAside />
-      )}
-
-      {templateOpen && activeId ? (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setTemplateOpen(false)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <TemplatePickerList
-              conversationId={activeId}
-              onClose={() => setTemplateOpen(false)}
-            />
-          </div>
-        </div>
-      ) : null}
+      {navRailNode}
+      {conversationColumnNode}
+      {chatNode}
+      {asideNode}
+      {templateModalNode}
     </div>
   );
 }

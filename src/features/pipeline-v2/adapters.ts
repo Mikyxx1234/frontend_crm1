@@ -6,8 +6,12 @@
 
 import type { ColumnColor } from "@/components/crm/kanban-column";
 import type { AvatarColor, Deal, TagType } from "@/components/crm/deal-card";
+import type {
+  DealListRow,
+  DealListStatus,
+} from "@/components/crm/deal-list-table";
 
-import type { BoardDealDto, BoardStageDto } from "./api";
+import type { BoardDealDto, BoardStageDto, DealListItemDto } from "./api";
 import {
   avatarInitials,
   formatRelative,
@@ -171,4 +175,34 @@ export function toKanbanColumns(stages: BoardStageDto[]): KanbanColumnView[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
     .map(toKanbanColumn);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Visão "Lista" — DealListItemDto → DealListRow
+// ─────────────────────────────────────────────────────────────────
+
+const DEAL_STATUS_TO_LIST: Record<string, DealListStatus> = {
+  OPEN: "OPEN",
+  WON: "WON",
+  LOST: "LOST",
+};
+
+/** DealListItemDto (payload de `/api/deals`) → DealListRow (tabela DS). */
+export function toDealListRow(deal: DealListItemDto): DealListRow {
+  const contactName = deal.contact?.name?.trim() || deal.title || "Sem nome";
+  const ownerName = deal.owner?.name?.trim() || null;
+  return {
+    id: deal.id,
+    dealTitle: deal.title || `Negócio #${deal.number ?? deal.id.slice(0, 4)}`,
+    contactName,
+    contactInitials: avatarInitials(contactName),
+    avatarColor: `av-${colorFromName(contactName)}`,
+    channel: deal.contact?.phone ? "whatsapp" : null,
+    value: formatCurrencyBR(dealValueNumber(deal.value)),
+    stageName: deal.stage.name,
+    stageColor: deal.stage.color,
+    ownerName,
+    createdAt: formatDateBr(deal.createdAt),
+    status: DEAL_STATUS_TO_LIST[deal.status] ?? "OPEN",
+  };
 }

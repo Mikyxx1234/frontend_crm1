@@ -111,6 +111,7 @@ export default function ContactsPage() {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(50);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [lifecycleStage, setLifecycleStage] = useState("");
@@ -157,7 +158,7 @@ export default function ContactsPage() {
   const listQuery = useQuery({
     queryKey: [
       "contacts",
-      { debouncedSearch, lifecycleStage, tagId, page, perPage: 20 },
+      { debouncedSearch, lifecycleStage, tagId, page, perPage },
     ],
     queryFn: async (): Promise<ContactsListResponse> => {
       const qs = new URLSearchParams();
@@ -165,7 +166,7 @@ export default function ContactsPage() {
       if (lifecycleStage) qs.set("lifecycleStage", lifecycleStage);
       if (tagId) qs.set("tagIds", tagId);
       qs.set("page", String(page));
-      qs.set("perPage", "20");
+      qs.set("perPage", String(perPage));
       const res = await fetch(apiUrl(`/api/contacts?${qs.toString()}`));
       if (!res.ok) throw new Error(await readErrorMessage(res));
       return res.json();
@@ -193,6 +194,57 @@ export default function ContactsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
+    },
+    onError: (err) => {
+      toast.error((err as Error).message);
+    },
+  });
+
+  // Bulk delete — paraleliza N requisições DELETE com concorrência
+  // limitada pra não estourar o pool de conexões do backend. Retorna
+  // resultado agregado (sucesso/falha por id) pra mostrar feedback
+  // diferenciado quando alguma exclusão falha.
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const CONCURRENCY = 5;
+      const queue = [...ids];
+      const results: { id: string; error?: string }[] = [];
+      async function worker() {
+        while (queue.length > 0) {
+          const id = queue.shift();
+          if (!id) break;
+          try {
+            const res = await fetch(apiUrl(`/api/contacts/${id}`), { method: "DELETE" });
+            if (!res.ok) {
+              results.push({ id, error: await readErrorMessage(res) });
+            } else {
+              results.push({ id });
+            }
+          } catch (err) {
+            results.push({ id, error: (err as Error).message });
+          }
+        }
+      }
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, ids.length) }, () => worker()),
+      );
+      return results;
+    },
+    onSuccess: (results) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
+      setSelected(new Set());
+      const ok = results.filter((r) => !r.error).length;
+      const fail = results.length - ok;
+      if (fail === 0) {
+        toast.success(`${ok} lead${ok !== 1 ? "s" : ""} excluído${ok !== 1 ? "s" : ""}.`);
+      } else if (ok === 0) {
+        toast.error(`Nenhum lead foi excluído. ${fail} falha${fail !== 1 ? "s" : ""}.`);
+      } else {
+        toast.warning(
+          `${ok} excluído${ok !== 1 ? "s" : ""}, ${fail} falha${fail !== 1 ? "s" : ""}.`,
+        );
+      }
     },
     onError: (err) => {
       toast.error((err as Error).message);
@@ -591,13 +643,13 @@ export default function ContactsPage() {
                     aria-label="Excluir"
                     disabled={deleteMutation.isPending}
                     onClick={async () => {
-                      if (c.dealCount > 0) {
-                        toast.warning(`Não é possível excluir "${c.name}": possui ${c.dealCount} negócio${c.dealCount !== 1 ? "s" : ""} vinculado${c.dealCount !== 1 ? "s" : ""}. Remova ou transfira os negócios antes.`);
-                        return;
-                      }
+                      const dealsNote =
+                        c.dealCount > 0
+                          ? ` Os ${c.dealCount} negócio${c.dealCount !== 1 ? "s" : ""} vinculado${c.dealCount !== 1 ? "s" : ""} permanecerão no kanban, porém sem contato associado.`
+                          : "";
                       const ok = await confirm({
                         title: "Excluir contato",
-                        description: `Excluir "${c.name}" e todos os seus dados?`,
+                        description: `Excluir "${c.name}" e todos os seus dados (conversas, notas, tarefas)?${dealsNote}`,
                         confirmLabel: "Excluir",
                         variant: "destructive",
                       });
@@ -619,7 +671,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">
           {total.toLocaleString("pt-BR")} lead{total !== 1 ? "s" : ""}
           {totalPages > 1 && (
@@ -628,34 +680,105 @@ export default function ContactsPage() {
             </span>
           )}
         </span>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              disabled={page <= 1 || listQuery.isLoading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span>Por página:</span>
+            <select
+              value={perPage}
+              onChange={(e) => {
+                setPerPage(Number(e.target.value));
+                setPage(1);
+              }}
+              className="h-7 rounded-md border border-border bg-card px-1.5 text-xs"
             >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="flex h-7 min-w-7 items-center justify-center rounded bg-indigo-600 px-2 text-xs font-medium text-white">
-              {page}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              disabled={page >= totalPages || listQuery.isLoading}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        )}
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </label>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                disabled={page <= 1 || listQuery.isLoading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="flex h-7 min-w-7 items-center justify-center rounded bg-indigo-600 px-2 text-xs font-medium text-white">
+                {page}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                disabled={page >= totalPages || listQuery.isLoading}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Bulk actions bar — flutua no rodapé enquanto há leads
+          selecionados. Esconde quando `selected.size === 0`. */}
+      {selected.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4">
+          <div className="flex w-full max-w-2xl items-center justify-between gap-3 rounded-xl border border-border/80 bg-card/95 px-4 py-2.5 shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-indigo-600 px-2 text-xs font-semibold text-white">
+                {selected.size}
+              </span>
+              <span className="text-sm text-foreground">
+                lead{selected.size !== 1 ? "s" : ""} selecionado{selected.size !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2.5 text-sm"
+                onClick={() => setSelected(new Set())}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                Limpar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="h-8 gap-1.5 px-3 text-sm"
+                disabled={bulkDeleteMutation.isPending}
+                onClick={async () => {
+                  const ids = Array.from(selected);
+                  const ok = await confirm({
+                    title: `Excluir ${ids.length} lead${ids.length !== 1 ? "s" : ""}?`,
+                    description: `Todos os dados associados (conversas, notas, tarefas) serão removidos. Negócios vinculados permanecem no kanban, sem contato associado.`,
+                    confirmLabel: "Excluir todos",
+                    variant: "destructive",
+                  });
+                  if (ok) bulkDeleteMutation.mutate(ids);
+                }}
+              >
+                {bulkDeleteMutation.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

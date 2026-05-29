@@ -66,12 +66,9 @@ export function buildOutboundTemplateMessageContent(
   }
 
   if (bodyPreview) {
-    return [
-      `📋 *${safe}*`,
-      catLabel ? `_${catLabel}_` : null,
-      "",
-      bodyPreview,
-    ].filter(Boolean).join("\n");
+    // Mostra apenas o conteúdo da mensagem: nome/categoria são exibidos
+    // pelo TemplateBadge na bolha, então duplicar fica visualmente ruim.
+    return bodyPreview;
   }
 
   return [
@@ -113,6 +110,34 @@ export function prettifyLegacyInteractivePlaceholder(content: string): string {
   return content;
 }
 
+/**
+ * Remove o cabeçalho visual de templates outbound (`📋 *nome*` + `_categoria_`)
+ * de mensagens já gravadas no banco. O nome/categoria do template já é exibido
+ * pelo `TemplateBadge` na bolha — manter no corpo polui o chat.
+ *
+ * Casos suportados (no início da string):
+ *   "📋 *nome_template*\n_categoria_\n\ncorpo…"
+ *   "📋 *nome_template*\n\ncorpo…"
+ *   "📋 *nome_template*\ncorpo…"
+ */
+export function stripOutboundTemplateHeader(content: string): string {
+  const t = content;
+  // Cabeçalho deve estar no início para evitar engolir asteriscos do corpo.
+  if (!t.startsWith("📋")) return content;
+  // 1) `📋 *nome*` na primeira linha
+  const m = t.match(/^📋\s*\*[^*\n]+\*\s*\n/);
+  if (!m) return content;
+  let rest = t.slice(m[0].length);
+  // 2) `_categoria_` opcional na linha seguinte
+  const cat = rest.match(/^_[^_\n]+_\s*\n/);
+  if (cat) rest = rest.slice(cat[0].length);
+  // 3) Linha em branco de separação
+  rest = rest.replace(/^\s*\n+/, "");
+  return rest.length > 0 ? rest : content;
+}
+
 export function prettifyChatMessageBody(content: string): string {
-  return prettifyLegacyInteractivePlaceholder(prettifyLegacyBracketTemplateContent(content));
+  return stripOutboundTemplateHeader(
+    prettifyLegacyInteractivePlaceholder(prettifyLegacyBracketTemplateContent(content)),
+  );
 }

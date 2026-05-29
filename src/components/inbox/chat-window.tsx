@@ -3915,11 +3915,16 @@ function TemplateBadge({ content }: { content: string }) {
       : isAuth
         ? "Autenticação"
         : "Template";
+  // Variantes claras + dark explícito. Antes o caso "Template" (default)
+  // usava `--color-primary-soft` + `text-primary` — ambos azul-violeta,
+  // sem override em dark mode. Sobre bolha de chat azul-escura ficava
+  // praticamente ilegível. Marketing/Utility também só tinham variante
+  // clara, então em dark mode amber-50/sky-50 sumiam.
   const colors = isMkt
-    ? "border-amber-300/50 bg-amber-50/70 text-amber-700"
+    ? "border-amber-300/60 bg-amber-50 text-amber-800 dark:border-amber-400/50 dark:bg-amber-400/20 dark:text-amber-100"
     : isUtility
-      ? "border-sky-300/50 bg-sky-50/70 text-sky-700"
-      : "border-primary/25 bg-[var(--color-primary-soft)] text-primary";
+      ? "border-sky-300/60 bg-sky-50 text-sky-800 dark:border-sky-400/50 dark:bg-sky-400/20 dark:text-sky-100"
+      : "border-indigo-300/60 bg-indigo-50 text-indigo-800 dark:border-indigo-400/50 dark:bg-indigo-400/25 dark:text-indigo-50";
 
   return (
     <div className="group/tpl relative mb-1.5">

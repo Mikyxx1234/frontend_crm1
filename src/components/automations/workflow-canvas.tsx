@@ -395,6 +395,22 @@ type InnerProps = {
   triggerConfig: unknown;
   stats?: AutomationStats | null;
   onStepLogsOpen?: (stepId: string) => void;
+  // 27/mai/26 — Callback opcional disparado quando o operador clica no nó
+  // do gatilho no canvas. As pages (/new wizard, /[id] detail) usam pra
+  // abrir o diálogo de configuração do trigger — antes o nó era inerte
+  // e os usuários não descobriam que dava pra editar.
+  onTriggerClick?: () => void;
+  // 27/mai/26 — Patch parcial do triggerConfig (usado pelo canvas pra
+  // persistir a posição do nó do gatilho após arrastar). A page é
+  // responsável por aplicar o `__rfPos` no estado do triggerConfig
+  // e setar `dirty`. Sem este callback, drag continua funcionando
+  // visualmente mas a posição não persiste entre saves.
+  onTriggerConfigChange?: (next: Record<string, unknown>) => void;
+  // 27/mai/26 — Contador incremental: cada vez que muda, o canvas
+  // executa `fitView` pra recentrar o viewport. Usado depois do
+  // auto-alinhar, senão o operador clica o botão e o canvas continua
+  // mostrando a área antiga (que pode ter ficado vazia).
+  autoAlignVersion?: number;
   className?: string;
 };
 
@@ -405,9 +421,12 @@ function WorkflowCanvasInner({
   triggerConfig,
   stats,
   onStepLogsOpen,
+  onTriggerClick,
+  onTriggerConfigChange,
+  autoAlignVersion,
   className,
 }: InnerProps) {
-  const { screenToFlowPosition, getNodes } = useReactFlow();
+  const { screenToFlowPosition, getNodes, fitView } = useReactFlow();
   const [configOpen, setConfigOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<AutomationStep | null>(null);
   const stepsRef = useRef(steps);
@@ -456,9 +475,17 @@ function WorkflowCanvasInner({
     queryFn: async () => {
       const res = await fetch(apiUrl("/api/pipelines"));
       if (!res.ok) return {} as Record<string, string>;
-      const pipelines = (await res.json()) as { stages: { id: string; name: string }[] }[];
+      const pipelines = (await res.json()) as {
+        id: string;
+        name: string;
+        stages: { id: string; name: string }[];
+      }[];
       const map: Record<string, string> = {};
       for (const p of pipelines) {
+        // Incluímos o pipeline também — o resumo do gatilho (ex.: deal_created
+        // filtrado por pipeline + estágio) usa o mesmo `lookup` pra
+        // converter id→nome de qualquer um dos dois.
+        map[p.id] = p.name;
         for (const s of p.stages) {
           map[s.id] = s.name;
         }
@@ -483,10 +510,17 @@ function WorkflowCanvasInner({
         stageNameLookup,
       );
       const ts = stats?.trigger ?? {};
+      // 27/mai/26 — Posição do nó do gatilho agora vem de
+      // `triggerConfig.__rfPos` (se setado). Mesmo padrão dos passos —
+      // antes era hard-coded em `{ x: 32, y: NODE_Y }` e o nó ficava
+      // travado pra arrastar. Agora `draggable: true` + persist da
+      // posição via `onNodeDragStop` (canvas avisa a page por
+      // `onTriggerConfigChange`).
+      const triggerSavedPos = readRfPos(triggerConfig);
       const triggerNode: Node = {
         id: TRIGGER_ID,
         type: "trigger",
-        position: { x: 32, y: NODE_Y },
+        position: triggerSavedPos ?? { x: 32, y: NODE_Y },
         data: {
           label: triggerTypeLabel(triggerType),
           summary: triggerSummary,
@@ -497,7 +531,7 @@ function WorkflowCanvasInner({
           },
           onStatsClick: () => onStepLogsOpenRef.current?.("trigger"),
         },
-        draggable: false,
+        draggable: true,
       };
 
       const stepIndexById = new Map<string, number>();
@@ -728,6 +762,21 @@ function WorkflowCanvasInner({
   useEffect(() => {
     setNodes(buildNodes(steps, removeStep, addStepAfter));
   }, [steps, buildNodes, removeStep, addStepAfter, setNodes]);
+
+  // 27/mai/26 — Recentraliza o viewport quando o operador clica em
+  // "Auto alinhar". O `autoAlignVersion` é um contador; quando muda,
+  // chamamos `fitView` pra enquadrar todos os nodes na tela.
+  // Esperamos uns ticks porque `setNodes` acima é assíncrono — sem o
+  // setTimeout o fitView calcula bounds usando os nodes antigos.
+  // `autoAlignVersion === 0` é o estado inicial, pulamos pra não
+  // mexer no zoom inicial do operador.
+  useEffect(() => {
+    if (!autoAlignVersion) return;
+    const timer = setTimeout(() => {
+      fitView({ duration: 400, padding: 0.2 });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [autoAlignVersion, fitView]);
 
   const edges = useMemo(() => buildEdges(steps), [steps]);
 
@@ -986,9 +1035,27 @@ function WorkflowCanvasInner({
     [pendingConn, onStepsChange]
   );
 
+  const onTriggerConfigChangeRef = useRef(onTriggerConfigChange);
+  onTriggerConfigChangeRef.current = onTriggerConfigChange;
+
   const onNodeDragStop = useCallback(
     (_: unknown, node: Node) => {
-      if (node.id === TRIGGER_ID || isAddStepNodeId(node.id)) return;
+      if (isAddStepNodeId(node.id)) return;
+      if (node.id === TRIGGER_ID) {
+        // Persist da nova posição do trigger no próprio triggerConfig
+        // (mesmo lugar onde já guardamos channel/pipelineId/stageId).
+        // Sem o callback configurado, drag continua funcionando
+        // visualmente mas não persiste — modo "view-only" pra usos
+        // futuros do canvas em contextos read-only.
+        const cb = onTriggerConfigChangeRef.current;
+        if (!cb) return;
+        const cur = typeof triggerConfig === "object" && triggerConfig !== null
+          ? { ...(triggerConfig as Record<string, unknown>) }
+          : {} as Record<string, unknown>;
+        cur.__rfPos = { x: node.position.x, y: node.position.y };
+        cb(cur);
+        return;
+      }
       const cur = stepsRef.current;
       const updated = cur.map((s) => {
         if (s.id !== node.id) return s;
@@ -1000,11 +1067,18 @@ function WorkflowCanvasInner({
       });
       onStepsChange(updated);
     },
-    [onStepsChange]
+    [onStepsChange, triggerConfig]
   );
 
+  const onTriggerClickRef = useRef(onTriggerClick);
+  onTriggerClickRef.current = onTriggerClick;
+
   const onNodeClick = useCallback((_e: unknown, node: Node) => {
-    if (node.id === TRIGGER_ID || isAddStepNodeId(node.id)) return;
+    if (isAddStepNodeId(node.id)) return;
+    if (node.id === TRIGGER_ID) {
+      onTriggerClickRef.current?.();
+      return;
+    }
     const st = stepsRef.current.find((s) => s.id === node.id);
     if (st) {
       setSelectedStep(st);

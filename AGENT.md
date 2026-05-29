@@ -5,6 +5,184 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-05-27 — Exclusão em massa na lista de leads
+
+**Decisão.** Adicionada barra flutuante de ações em massa em
+`(dashboard)/contacts/client-page.tsx`. Quando `selected.size > 0`,
+aparece no rodapé com "N selecionado(s)" + botões "Limpar" e
+"Excluir". A mutation `bulkDeleteMutation` dispara DELETEs em
+paralelo com concorrência limitada (5 workers) e agrega
+sucesso/falha por id pra feedback diferenciado (`toast.success`
+quando todos OK, `toast.warning` quando parcial, `toast.error`
+quando nenhum saiu).
+
+**Contexto.** Operador relatou: "essa página de contacts precisa
+ter opção de excluir em massa, não tem essa opção". A
+infraestrutura de seleção múltipla (checkbox no header + linha,
+estado `selected: Set<string>`) já existia mas era usada só pra
+destaque visual — não tinha botão pra agir nos selecionados.
+
+**Alternativas descartadas.**
+
+- **Endpoint `DELETE /api/contacts?ids=...` em massa no backend.**
+  Mais eficiente (1 request, transação no banco), mas envolve
+  endpoint novo e mudança no service. Como o caso de uso é
+  pontual (operador limpando 10-50 leads de cada vez) e o DELETE
+  individual já funciona, paralelizar 5x no front é suficiente.
+- **Barra de ações no header em vez de flutuante.** Quebra menos
+  o layout mas força scroll-pra-cima quando o operador seleciona
+  itens da última página. Flutuante (`fixed bottom`) fica sempre
+  visível, padrão de UX comum em listas (Gmail, Notion, Linear).
+
+**Impacto.** Operador agora seleciona múltiplos leads e excluí
+de uma vez com 1 confirmação. O endpoint individual continua
+sendo a fonte da verdade — bulk delete só orquestra. Falhas
+parciais ficam visíveis no toast (com contagem). Backend não
+mudou.
+
+---
+
+### 2026-05-27 — Exclusão de contato sem bloqueio por `dealCount`
+
+**Decisão.** Em `app/(dashboard)/contacts/client-page.tsx`, removido o
+early-return com `toast.warning` quando `c.dealCount > 0`. O confirm
+dialog agora avisa explicitamente que "os N negócios vinculados
+permanecerão no kanban, porém sem contato associado" — operador segue
+confirmando uma vez e a exclusão prossegue.
+
+**Contexto.** Operador pediu: "quero excluir o lead independente se
+tem lead ou não". Backend foi ajustado em paralelo (ver AGENT.md
+backend). O bloqueio era frontal — frontend não chegava nem a chamar
+o DELETE, mostrava warning amarelo. UX ficava confusa: operador via
+"tem N negócios" mas não tinha caminho pra resolver na própria tela
+de contatos.
+
+**Alternativas descartadas.**
+
+- Botão "Excluir + transferir negócios pra outro contato": resolve mas
+  exige fluxo de seleção. Operador não pediu isso.
+- Confirmar duas vezes (1ª: aviso, 2ª: confirma): atrito sem benefício
+  prático — a confirmação já está sendo destrutiva ("Excluir" em
+  vermelho).
+
+**Impacto.** Operador consegue limpar leads imediatamente. Quem clica
+"Excluir" no confirm agora vê os deals sumirem do contato (mas
+permanecerem no kanban como "contato removido").
+
+---
+
+### 2026-05-27 — Condição "Tem a tag" + lista de automações em tabela
+
+**Decisão.** Dois ajustes coordenados em automações:
+
+1. **Condição de tag.** `automation-condition.ts` ganhou os ops
+   `has_tag` / `not_has_tag` (espelhados do backend). Em
+   `step-config-panel.tsx`: novos campos `contact.tags` / `deal.tags`
+   nos `CONDITION_FIELD_GROUPS`, helper `opsForField` que filtra os
+   operadores válidos pro campo selecionado (campos de tag → só
+   `has_tag` / `not_has_tag` / `empty` / `not_empty`; demais campos
+   escondem os ops de tag), e `TagPickerValue` puxando `/api/tags` pra
+   listar as tags da org num dropdown. Trocar de campo dentro de uma
+   rule reseta o op e o value se o op anterior não for válido pro
+   novo campo (evita configs inválidas tipo "tags eq 5"). O resumo
+   do nó (`summarizeConditionConfig`) ganhou formatação amigável pros
+   ops de tag — "tem tag X" em vez de "contact.tags has_tag X".
+2. **Lista de automações em tabela.** `automations/client-page.tsx`
+   trocou o grid de Cards (2 colunas) por uma `Table` com colunas
+   Automação / Gatilho / Passos / Atualizada / Status. O
+   `ActiveSwitch` ficou na coluna Status pra toggle in-place sem
+   abrir o detalhe — comportamento idêntico ao card anterior. Indicador
+   de estado virou uma "bolinha" colorida ao lado do nome (verde =
+   ativa, cinza = inativa).
+
+**Contexto.** O operador pediu textualmente duas coisas:
+- "Se tem TAG x adicionada ou não" como condição.
+- "As automações ficarem em lista, estão em cards" (cards são pouco
+  densos quando passam de ~6 automações).
+
+**Alternativas descartadas.**
+
+- **Filtragem por tag dentro do ConditionFieldPicker em vez de
+  `opsForField`.** Manteria os 11 ops genéricos visíveis sempre e o
+  usuário tentaria coisas como `tags = "VIP"` que silenciosamente não
+  funcionariam (o evaluator espera array no left). Filtrar os ops no
+  select é proteção UX direta.
+- **Salvar o array completo de tags como rule.value.** Permitiria "tem
+  qualquer uma destas tags" (OR), mas adiciona complexidade tanto no
+  picker (multi-select) quanto no evaluator. Mantemos 1 tag por rule;
+  pra "OU" o operador adiciona outra branch (o engine já suporta
+  multi-branch nativamente).
+- **DataTable virtualizada (TanStack Table) em vez da `Table`
+  semântica.** Overkill — 100 automações por org no caso de uso real;
+  paginação no servidor (já existente, `perPage=12`) resolve.
+
+**Impacto.** Configurações de condition antigas funcionam intactas; o
+novo op `has_tag` aparece nas opções, mas só dispara filtragem ativa
+quando o campo selecionado é `contact.tags` ou `deal.tags`. A lista
+em tabela é puramente cosmética — mesmas queries, mesmos endpoints.
+
+---
+
+### 2026-05-27 — Gatilhos de automação editáveis + filtros de pipeline/estágio
+
+**Decisão.** Três mudanças coordenadas na parte de automações
+(`src/components/automations/`):
+
+1. **`trigger-config-fields.tsx` reescrito** com dropdowns reais de
+   pipeline/estágio (puxando `/api/pipelines` via react-query) ao invés
+   dos inputs de texto livre antigos. Os dropdowns são compartilhados
+   por `stage_changed`, `deal_created`/`won`/`lost`, `contact_created` e
+   `message_received`/`message_sent`. Quando o operador escolhe um
+   estágio, o `pipelineId` correspondente é preenchido automaticamente
+   pra manter os filtros consistentes.
+2. **Nó do gatilho clicável** no canvas (`workflow-canvas.tsx` +
+   `trigger-node.tsx`). Antes o `onNodeClick` filtrava o
+   `TRIGGER_ID` e ficava inerte — o operador não descobria que dava pra
+   editar. Agora dispara `onTriggerClick` (callback prop): no
+   `/automations/new` volta pro passo 2 do wizard, no
+   `/automations/[id]` abre o Config dialog (que já existia mas só era
+   acessível via ícone de engrenagem). Pílula "Editar" visível no
+   hover reforça a descoberta.
+3. **`automation-workflow.ts`**: `defaultTriggerConfig` agora inclui
+   `stageId` nos gatilhos suportados e `summarizeTriggerConfig` mostra
+   o nome do estágio/pipeline (via lookup) no resumo do nó.
+   `workflow-canvas.tsx` foi ajustado pra incluir nomes de pipelines
+   no `stageNameLookup` (antes só tinha nomes de estágios).
+
+**Contexto.** O operador relatou:
+- "Não consigo editar depois de colocar o fluxo." Era falsa percepção:
+  o `[id]` page já tinha um Config dialog (gear icon), mas o nó do
+  gatilho no canvas era inerte, induzindo a achar que estava bloqueado.
+- "Precisava ter gatilho de mensagem recebida em X estágio, quando lead
+  e/ou contato for criado em X estágio." O backend já enriquecia o
+  contexto, mas a UI só expunha um campo de canal. Os inputs de
+  estágio existentes (em `stage_changed`) eram free-text — o operador
+  precisava copiar UUIDs do banco.
+
+**Alternativas descartadas.**
+
+- **Página dedicada `/automations/[id]/edit` separada do detail.** Mais
+  consistente com o resto do app mas exige duplicar o canvas + form +
+  toda a lógica de save. O Config dialog atual já cobre os campos e
+  evita esse retrabalho — só faltava torná-lo descobrível.
+- **Inputs de UUID em todos os triggers (sem dropdown).** Mantém
+  consistência com a UX antiga mas é hostil — UUIDs não são
+  memorizáveis. Reutilizamos o padrão de dropdown que já existe no
+  `step-config-panel.tsx` pra `move_stage`/`create_deal` (mesma query
+  key `pipelines-for-trigger` pra aproveitar o cache do react-query).
+- **Fetch de pipelines no parent e drilldown via prop.** Mais
+  performático em teoria, mas o overhead extra é mínimo (cache de 60s)
+  e o componente fica auto-contido — qualquer page nova que use
+  `TriggerConfigFields` funciona sem setup adicional.
+
+**Impacto.** Automações antigas continuam funcionando: os campos
+`pipelineId`/`stageId` em `contact_created` e `message_*` são
+opcionais (default `""` = não filtra). O canvas continua usando o
+`stageNameLookup` legado pros nodes existentes (`move_stage`, etc.) —
+só ganhou pipelines no mapa.
+
+---
+
 ### 2026-05-22 — Seleção em massa no Kanban (compartilhada com a Lista)
 
 **Decisão.** A seleção múltipla de deals e a `BulkActionsBar` que antes

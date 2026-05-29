@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { AlertTriangle, CheckCircle2, Zap } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Pencil, Zap } from "lucide-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -26,12 +26,21 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
   return (
     <div
       className={cn(
-        "min-w-[230px] max-w-[280px] overflow-hidden rounded-2xl border bg-white transition-all duration-200",
+        // `cursor-pointer` + grupo `group/trigger` pra revelar a pílula
+        // "Editar" no hover. O click handler real fica no canvas
+        // (onNodeClick), que chama `onTriggerClick` da page.
+        "group/trigger relative min-w-[230px] max-w-[280px] cursor-pointer overflow-hidden rounded-2xl border bg-white transition-all duration-200",
         selected
           ? "border-primary/50 shadow-[var(--shadow-indigo-glow)] ring-2 ring-primary/30"
           : "border-white/60 shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[var(--shadow-indigo-glow)]"
       )}
     >
+      {/* Pílula "Editar" — aparece no hover, indica que o nó é clicável.
+          pointer-events-none pra não interceptar o click do canvas. */}
+      <span className="pointer-events-none absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold tracking-tight text-primary opacity-0 shadow-sm ring-1 ring-primary/20 backdrop-blur-sm transition-opacity duration-150 group-hover/trigger:opacity-100">
+        <Pencil className="size-3" strokeWidth={2.4} />
+        Editar
+      </span>
       {/* Header com gradient brand */}
       <div className="relative overflow-hidden bg-linear-to-br from-primary via-[#5a87ff] to-[#7b9bff] px-4 py-3 text-white">
         {/* Brilho neon sutil no topo */}

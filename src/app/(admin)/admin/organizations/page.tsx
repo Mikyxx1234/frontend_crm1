@@ -26,8 +26,12 @@ type OrganizationRow = {
 };
 
 export default async function AdminOrganizationsPage() {
-  const organizations =
-    (await apiServerGet<OrganizationRow[]>("/api/admin/organizations")) ?? [];
+  // O backend responde { organizations: [...] }. Antes líamos como array
+  // direto, então `organizations.map` quebrava o Server Component (500).
+  const data = await apiServerGet<{ organizations: OrganizationRow[] }>(
+    "/api/admin/organizations",
+  );
+  const organizations = data?.organizations ?? [];
 
   return (
     <div className="flex flex-col gap-6">

@@ -32,6 +32,9 @@ import {
 } from "@/lib/onboarding-templates";
 
 type Props = {
+  // Pode chegar `null`: a página SSR não consulta o banco e o wizard
+  // hidrata os dados da org client-side. Sem aceitar null, ler
+  // `initialOrganization.name` no SSR quebrava a página (500).
   initialOrganization: {
     id: string;
     name: string;
@@ -41,7 +44,7 @@ type Props = {
     phone: string | null;
     logoUrl: string | null;
     primaryColor: string | null;
-  };
+  } | null;
 };
 
 type Step = {
@@ -66,14 +69,14 @@ export default function OnboardingWizard({ initialOrganization }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [orgName, setOrgName] = useState(initialOrganization.name);
-  const [industry, setIndustry] = useState(initialOrganization.industry ?? "");
-  const [size, setSize] = useState(initialOrganization.size ?? "");
-  const [phone, setPhone] = useState(initialOrganization.phone ?? "");
+  const [orgName, setOrgName] = useState(initialOrganization?.name ?? "");
+  const [industry, setIndustry] = useState(initialOrganization?.industry ?? "");
+  const [size, setSize] = useState(initialOrganization?.size ?? "");
+  const [phone, setPhone] = useState(initialOrganization?.phone ?? "");
 
-  const [logoUrl, setLogoUrl] = useState(initialOrganization.logoUrl ?? "");
+  const [logoUrl, setLogoUrl] = useState(initialOrganization?.logoUrl ?? "");
   const [primaryColor, setPrimaryColor] = useState(
-    initialOrganization.primaryColor ?? "#1e3a8a",
+    initialOrganization?.primaryColor ?? "#1e3a8a",
   );
 
   const [templateId, setTemplateId] =
@@ -193,7 +196,7 @@ export default function OnboardingWizard({ initialOrganization }: Props) {
             Onboarding
           </div>
           <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight">
-            {orgName || initialOrganization.name}
+            {orgName || initialOrganization?.name || "Sua empresa"}
           </h1>
         </div>
 

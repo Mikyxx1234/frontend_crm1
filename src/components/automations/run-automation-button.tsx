@@ -23,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TooltipHost } from "@/components/ui/tooltip";
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -105,14 +104,22 @@ export function RunAutomationButton({
   const [open, setOpen] = React.useState(false);
   const [runningId, setRunningId] = React.useState<string | null>(null);
 
-  // Carrega so quando o dropdown abre — evita N fetches paralelos quando o
-  // operador percorre rapidamente entre conversas. Cache de 30s e
-  // suficiente: a lista de automacoes manuais muda devagar.
+  // Carrega só quando o dropdown abre — evita N fetches paralelos quando o
+  // operador percorre rapidamente entre conversas.
+  //
+  // Bug 29/mai/26: `staleTime: 30_000` causava UX confusa — o operador abria
+  // o dropdown (lista vazia, fechava), criava uma automação manual em
+  // /automations, voltava ao inbox e abria o dropdown DENTRO de 30s →
+  // continuava vazio porque o React Query servia cache stale. Removido o
+  // staleTime e forçado refetch a cada abertura para que o operador veja
+  // sempre a lista mais recente. Custo: um fetch ~600ms quando abre, mas
+  // é um endpoint leve e só dispara on-demand.
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["manual-automations"],
     queryFn: fetchManualAutomations,
     enabled: open,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const items = data ?? [];
@@ -144,12 +151,27 @@ export function RunAutomationButton({
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <TooltipHost label={label} side="bottom">
-        <DropdownMenuTrigger className={triggerClass} aria-label={label}>
-          <Workflow className={cn("shrink-0", variant === "toolbar" ? "size-4" : "size-3.5")} strokeWidth={1.8} />
-          {variant === "inline" ? <span>Rodar automação</span> : null}
-        </DropdownMenuTrigger>
-      </TooltipHost>
+      {/* Bug 29/mai/26: o DropdownMenu deste projeto é custom (NÃO Radix —
+          ver src/components/ui/dropdown-menu.tsx), e o Trigger é um <button>
+          que captura onClick e chama setOpen. Em /run-automation-button
+          envolvíamos isso num TooltipHost — que aplica TooltipTrigger asChild
+          em um <span> wrapper. O <span> ficava ENTRE o triggerRef do dropdown
+          e o root do componente, e o `pointerdown` listener global do
+          DropdownMenu (linha 59 do componente) usa
+          `containerRef.current?.contains(target)` pra decidir se fecha o
+          menu. Como o pointerdown também era capturado pelo span do Tooltip,
+          o close-on-outside-click disparava ANTES do open-on-click do
+          trigger conseguir efetivar a abertura. Resultado: tooltip abria,
+          fetch rodava, mas o menu não permanecia aberto.
+          Solução: tooltip apenas via atributo `title` nativo. Mantém UX
+          (hover mostra texto) sem interferir no event flow do DropdownMenu. */}
+      <DropdownMenuTrigger className={triggerClass} aria-label={label} title={label}>
+        <Workflow
+          className={cn("shrink-0", variant === "toolbar" ? "size-4" : "size-3.5")}
+          strokeWidth={1.8}
+        />
+        {variant === "inline" ? <span>Rodar automação</span> : null}
+      </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         className="w-[min(340px,calc(100vw-2rem))] max-h-[60vh] overflow-y-auto"

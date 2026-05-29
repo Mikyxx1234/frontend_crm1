@@ -122,6 +122,17 @@ export function computeHiddenSidebarRoutesFromAllowList(
   trackedHrefs: readonly string[],
   sidebarAllowList: string[] | undefined,
 ): string[] {
-  if (!Array.isArray(sidebarAllowList) || sidebarAllowList.includes("*")) return [];
+  // Lista vazia = SEM restrição (mostra tudo), alinhado à semântica do
+  // backend em `roleRuleAllows` (`ids.length === 0 → return true`). Sem
+  // este guard, um `parseScopeGrants` que normaliza rotas ausentes para
+  // `[]` esconderia TODAS as rotas — inclusive para admin, já que o
+  // filtro de hiddenRoutes roda antes do bypass de admin.
+  if (
+    !Array.isArray(sidebarAllowList) ||
+    sidebarAllowList.length === 0 ||
+    sidebarAllowList.includes("*")
+  ) {
+    return [];
+  }
   return trackedHrefs.filter((href) => !sidebarAllowList.includes(href));
 }

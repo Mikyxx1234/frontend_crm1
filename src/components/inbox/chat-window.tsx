@@ -56,7 +56,14 @@ import { AudioRecorder } from "@/components/inbox/audio-recorder";
 import { EmojiPicker } from "@/components/inbox/emoji-picker";
 import { QuickReplies } from "@/components/inbox/quick-replies";
 import { TemplatePicker } from "@/components/inbox/template-picker";
+import {
+  SlashCommandMenu,
+  useSlashMenu,
+  type SlashItem,
+} from "@/components/inbox/slash-command-menu";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
+import { getContact } from "@/features/inbox-v2/api/misc";
+import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1302,6 +1309,12 @@ export function ChatWindow({
     effectiveSignature,
   ]);
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // CRÍTICO: dar prioridade ao slash menu — quando ele está aberto,
+    // Up/Down/Enter/Esc/Tab DEVEM controlá-lo, e não disparar envio.
+    // O hook retorna `true` quando consumiu o evento.
+    if (slash.onKeyDown(e)) {
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (pendingFile) sendFile();
@@ -1477,6 +1490,78 @@ export function ChatWindow({
   );
   const isBusy = sendMutation.isPending || attachMutation.isPending;
   const isResolved = conversationStatus === "RESOLVED";
+
+  /** Composer Meta sem sessão ativa (textarea desabilitado) — mesmo critério do `disabled` do textarea. */
+  const composeDisabled =
+    !isBaileysChannel && !sessionActive && sessionInfo != null && !noteMode;
+
+  // ─── Slash command (mensagens prontas via "/") ───────────────────
+  // CRÍTICO: estes hooks PRECISAM ficar antes do `if (!conversationId)
+  // return null` abaixo. Caso contrário, ao alternar entre "nenhuma
+  // conversa selecionada" e "conversa aberta", a quantidade de hooks
+  // muda entre renders → React quebra com "Rendered more hooks than
+  // during the previous render".
+  const contactDetailQuery = useQuery({
+    queryKey: ["chat-contact-detail", contactId],
+    queryFn: () => getContact(contactId!),
+    enabled: !!contactId,
+    staleTime: 5 * 60_000,
+  });
+  const slashTemplateContext = React.useMemo<InternalTemplateContext>(() => {
+    const c = contactDetailQuery.data;
+    const firstDeal = c?.deals?.[0];
+    return {
+      contact: c
+        ? {
+            name: c.name,
+            phone: c.phone ?? null,
+            email: c.email ?? null,
+            cpf: c.cpf ?? null,
+            tags: c.tags ?? null,
+          }
+        : null,
+      deal: firstDeal
+        ? {
+            id: firstDeal.id,
+            title: firstDeal.title,
+            value: firstDeal.value,
+            stageName: firstDeal.stageName ?? null,
+            productName: firstDeal.productName ?? null,
+          }
+        : null,
+      agent: {
+        name: session?.user?.name ?? null,
+        email: session?.user?.email ?? null,
+      },
+    };
+  }, [contactDetailQuery.data, session]);
+
+  const handlePickMetaTemplate = React.useCallback(
+    (item: Extract<SlashItem, { kind: "meta-template" }>) => {
+      // Reusa o pendingTemplate flow já existente — abre o painel de
+      // preview/variáveis e o operador confirma o envio.
+      if (!conversationId) return;
+      setPendingTemplate({
+        name: item.name,
+        label: item.label || undefined,
+        content: item.bodyPreview,
+        metaTemplateId: item.id,
+        operatorVariables: item.operatorVariables ?? null,
+      });
+    },
+    [conversationId],
+  );
+
+  const slash = useSlashMenu({
+    draft,
+    setDraft,
+    textareaRef,
+    templateContext: slashTemplateContext,
+    onPickMetaTemplate: handlePickMetaTemplate,
+    // Em modo nota ou com anexo pendente, atalho fica "à toa" — usuário
+    // raramente quer template numa nota interna ou junto com mídia.
+    disabled: noteMode || !!pendingFile || composeDisabled,
+  });
 
   if (!conversationId) return null;
   if (isLoading)
@@ -1769,10 +1854,6 @@ export function ChatWindow({
       return null;
     return c;
   };
-
-  /** Composer Meta sem sessão ativa (textarea desabilitado) — mesmo critério do `disabled` do textarea. */
-  const composeDisabled =
-    !isBaileysChannel && !sessionActive && sessionInfo != null && !noteMode;
 
   return (
     <div
@@ -3446,7 +3527,13 @@ export function ChatWindow({
 
         {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
         {compactChrome ? (
-          <footer className="shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+          <footer className="relative shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+            <SlashCommandMenu
+              state={slash.state}
+              onSelectItem={slash.onSelectItem}
+              onHover={slash.setActiveIndex}
+              className="absolute bottom-full left-2 mb-2"
+            />
             {noteMode ? (
               <div
                 className={cn(
@@ -3529,7 +3616,9 @@ export function ChatWindow({
                       ? "Nota interna…"
                       : composeDisabled
                         ? "Sessão expirada. Envie um template…"
-                        : "Mensagem"
+                        : isMobile
+                          ? "Mensagem ou /"
+                          : "Mensagem ou / para respostas rápidas"
                 }
                 rows={1}
                 disabled={composeDisabled}
@@ -3593,7 +3682,13 @@ export function ChatWindow({
             </div>
           </footer>
         ) : (
-          <footer className="border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-white/5">
+          <footer className="relative border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-white/5">
+            <SlashCommandMenu
+              state={slash.state}
+              onSelectItem={slash.onSelectItem}
+              onHover={slash.setActiveIndex}
+              className="absolute bottom-full left-3 mb-2 sm:left-6"
+            />
             <div className="rounded-[22px] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-white/10 dark:bg-white/8">
               <div className="flex items-center border-b border-white/40 px-5 py-3">
                 <div className="flex min-w-0 items-center gap-2.5">

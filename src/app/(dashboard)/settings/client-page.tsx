@@ -53,7 +53,9 @@ export default function SettingsClientPage() {
     ? permissionsPanel?.scopeGrants?.sidebar?.settingsItems?.[role]
     : undefined;
   const hiddenSettingsItemIds =
-    Array.isArray(settingsAllowList) && !settingsAllowList.includes("*")
+    Array.isArray(settingsAllowList) &&
+    settingsAllowList.length > 0 &&
+    !settingsAllowList.includes("*")
       ? SETTINGS_NAV.flatMap((g) => g.items.map((i) => i.id)).filter((id) => {
           if (settingsAllowList.includes(id)) return false;
           if (

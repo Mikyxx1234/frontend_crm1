@@ -290,7 +290,7 @@ export default function MessageModelsHubPage() {
                   <tr>
                     <th className="px-3 py-2 font-medium">Tipo</th>
                     <th className="px-3 py-2 font-medium">Nome</th>
-                    <th className="px-3 py-2 font-medium">Estado / idioma</th>
+                    <th className="px-3 py-2 font-medium">Detalhes</th>
                     <th className="px-3 py-2 font-medium w-[100px]">Ação</th>
                   </tr>
                 </thead>
@@ -302,10 +302,10 @@ export default function MessageModelsHubPage() {
                       </td>
                       <td className="px-3 py-2 font-medium">{t.name}</td>
                       <td className="px-3 py-2 text-muted-foreground">
-                        {INTERNAL_STATUS[t.status] ?? t.status} · {t.language}
+                        {[t.category, t.channelType].filter(Boolean).join(" · ") || "—"}
                       </td>
                       <td className="px-3 py-2">
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setTab("internal", { new: "1" })}>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setTab("internal")}>
                           Abrir
                         </Button>
                       </td>

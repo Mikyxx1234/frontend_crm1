@@ -34,10 +34,24 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import {
+  CRM_ACTION_KEYS,
+  CRM_ACTION_LABELS,
+  type CrmActionKey,
+  setCrmActionGrantsForUser,
+} from "@/lib/permissions";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
 
 type UserRow = { id: string; name: string; email: string; role: UserRole };
+
+type CrmPermissionDraft = Record<CrmActionKey, boolean>;
+
+const DEFAULT_INVITE_PERMISSIONS: CrmPermissionDraft = {
+  editLeads: true,
+  runAutomations: true,
+  assignOwner: true,
+};
 
 const ROLE_PT: Record<UserRole, string> = {
   ADMIN: "Administrador",
@@ -73,6 +87,9 @@ export default function TeamSettingsPage() {
   const [inviteEmail, setInviteEmail] = React.useState("");
   const [invitePassword, setInvitePassword] = React.useState("");
   const [inviteRole, setInviteRole] = React.useState<UserRole>("MEMBER");
+  const [invitePermissions, setInvitePermissions] = React.useState<CrmPermissionDraft>(
+    DEFAULT_INVITE_PERMISSIONS,
+  );
 
   // Dialog de troca de senha administrativa. Guardamos o usuário-alvo
   // pra poder exibir nome/e-mail no título e desambiguar do convite
@@ -172,15 +189,48 @@ export default function TeamSettingsPage() {
         }),
       });
       if (!res.ok) await parseJsonError(res, "Erro ao convidar membro.");
-      return res.json();
+      const created = (await res.json()) as { id?: string } & UserRow;
+
+      // Persistir os toggles de permissão do dialog. Se algum estiver
+      // desligado, faz PUT em /api/settings/permissions com o
+      // `scopeGrants` mesclado pra o novo userId. Pulamos o request quando
+      // todos estão `true` (default), pra não criar entradas redundantes.
+      const allTrue = CRM_ACTION_KEYS.every((k) => invitePermissions[k] === true);
+      if (created?.id && !allTrue && inviteRole !== "ADMIN") {
+        try {
+          const cur = await fetch(apiUrl("/api/settings/permissions"));
+          const curData = (await cur.json().catch(() => ({}))) as {
+            scopeGrants?: Record<string, unknown>;
+          };
+          const nextGrants = setCrmActionGrantsForUser(
+            curData?.scopeGrants ?? {},
+            created.id,
+            invitePermissions,
+          );
+          await fetch(apiUrl("/api/settings/permissions"), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scopeGrants: nextGrants }),
+          });
+        } catch (err) {
+          // Não falha o convite por causa disso — só avisa.
+          toast.warning(
+            "Usuário criado, mas as permissões customizadas não foram salvas. Ajuste em Configurações → Permissões.",
+          );
+          throw err;
+        }
+      }
+      return created;
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["users-list"] });
+      void qc.invalidateQueries({ queryKey: ["visibility-settings"] });
       setInviteOpen(false);
       setInviteName("");
       setInviteEmail("");
       setInvitePassword("");
       setInviteRole("MEMBER");
+      setInvitePermissions(DEFAULT_INVITE_PERMISSIONS);
     },
   });
 
@@ -373,6 +423,62 @@ export default function TeamSettingsPage() {
                   </option>
                 ))}
               </SelectNative>
+            </div>
+            <div className="grid gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Permissões iniciais</span>
+                {inviteRole === "ADMIN" ? (
+                  <span className="text-[11px] font-semibold uppercase text-amber-600">
+                    Admin · tudo liberado
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground">
+                    Editáveis depois em Configurações → Permissões
+                  </span>
+                )}
+              </div>
+              <div className="grid gap-1.5">
+                {CRM_ACTION_KEYS.map((action) => {
+                  const checked = inviteRole === "ADMIN" ? true : invitePermissions[action];
+                  return (
+                    <label
+                      key={action}
+                      className={cn(
+                        "flex items-center justify-between gap-3 rounded-lg border border-transparent bg-background/60 px-3 py-2 text-sm transition-colors",
+                        inviteRole !== "ADMIN" && "hover:border-border",
+                      )}
+                    >
+                      <span className="min-w-0 truncate text-foreground">
+                        {CRM_ACTION_LABELS[action]}
+                      </span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={checked}
+                        disabled={inviteRole === "ADMIN"}
+                        onClick={() =>
+                          setInvitePermissions((prev) => ({
+                            ...prev,
+                            [action]: !prev[action],
+                          }))
+                        }
+                        className={cn(
+                          "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+                          checked ? "bg-primary" : "bg-muted-foreground/30",
+                          inviteRole === "ADMIN" && "cursor-not-allowed opacity-70",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "inline-block size-4 rounded-full bg-white shadow-sm transition-transform",
+                            checked ? "translate-x-4" : "translate-x-0.5",
+                          )}
+                        />
+                      </button>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
           {invite.isError && invite.error instanceof Error ? (

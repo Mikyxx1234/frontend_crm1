@@ -29,6 +29,7 @@ import {
   type ConditionOp,
   type ConditionRule,
 } from "@/lib/automation-condition";
+import { WebhookStepConfig } from "@/components/automations/webhook-step-config";
 
 type PipelineStage = { id: string; name: string };
 type Pipeline = { id: string; name: string; stages: PipelineStage[] };
@@ -915,29 +916,7 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
           })()}
 
           {step.type === "webhook" && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="sc-wh-url">URL</Label>
-                <Input
-                  id="sc-wh-url"
-                  value={String(draft.url ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sc-wh-method">Método</Label>
-                <SelectNative
-                  id="sc-wh-method"
-                  value={String(draft.method ?? "POST")}
-                  onChange={(e) => setDraft((d) => ({ ...d, method: e.target.value }))}
-                >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="PATCH">PATCH</option>
-                </SelectNative>
-              </div>
-            </>
+            <WebhookStepConfig draft={draft} setDraft={setDraft} />
           )}
 
           {step.type === "delay" && (() => {

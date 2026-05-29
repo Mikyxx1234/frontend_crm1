@@ -39,6 +39,11 @@ interface ConversationColumnProps {
   /** Acao do botao "+" no header (criar nova conversa). */
   onNewConversation?: () => void
   /**
+   * Slot opcional renderizado no canto direito do header (ao lado do
+   * título "Conversas"). Usado para o botão de filtros do inbox-v2.
+   */
+  filterSlot?: React.ReactNode
+  /**
    * Slot opcional para um handle de redimensionamento (`ColumnResizer`).
    * O componente é renderizado dentro de um wrapper `position: relative`,
    * então um handle com `position: absolute right: -6px` se ancora bem.
@@ -123,6 +128,7 @@ export function ConversationColumn({
   resizerSlot,
   headerVariant = "minimal",
   renderCardSlots,
+  filterSlot,
 }: ConversationColumnProps) {
   const [internalTab, setInternalTab] = useState(0)
   const isControlledTabs = tabsOverride !== undefined
@@ -190,45 +196,39 @@ export function ConversationColumn({
     <section
       aria-label="Lista de conversas"
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 pb-4 pt-[22px] backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 pb-4 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
       {resizerSlot}
-      {/* Header — variante minimal (default) só com o título. A `full`
-          mantém o badge de urgência e o botão "+" do design v0 antigo. */}
-      <div className="flex items-center justify-between px-1 pb-3.5">
-        <div className="flex items-center gap-2.5">
-          <h2 className="font-display text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
-            Conversas
-          </h2>
-          {headerVariant === "full" && urgency > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/12 px-2.5 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
-              <IconClock size={12} />
-              {urgency}
-            </span>
-          )}
-        </div>
+      {/* Busca + filtros inline (título "Conversas" removido). A variante
+          `full` mantém o badge de urgência e o botão "+" do design v0. */}
+      <div className="mb-3 flex items-center gap-2">
+        <InputGlass
+          withSearch
+          placeholder="Buscar conversa..."
+          className="flex-1"
+          value={searchVal}
+          onChange={handleSearchChange}
+        />
+        {headerVariant === "full" && urgency > 0 && (
+          <span className="inline-flex h-9 items-center gap-1 rounded-full border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/12 px-2.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
+            <IconClock size={12} />
+            {urgency}
+          </span>
+        )}
+        {filterSlot}
         {headerVariant === "full" && (
           <button
             type="button"
             title="Nova conversa"
             onClick={onNewConversation}
-            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
           >
             <IconPlus size={18} />
           </button>
         )}
       </div>
-
-      {/* Search */}
-      <InputGlass
-        withSearch
-        placeholder="Buscar conversa..."
-        className="mb-3"
-        value={searchVal}
-        onChange={handleSearchChange}
-      />
 
       {/* Seletor de status — pílula única (ícone + label + count + chevron)
           que abre um dropdown com todos os status. Visual do screenshot:

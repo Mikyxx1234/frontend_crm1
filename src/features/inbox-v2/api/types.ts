@@ -104,8 +104,14 @@ export interface InboxFilters {
   channel?: string;
   stageId?: string;
   tagIds?: string[];
+  /**
+   * Ordenação e janela são aplicadas CLIENT-SIDE no /inbox-v2 (não vão
+   * para o backend). `sortBy` aceita "lastInboundAt" (padrão) ou
+   * "unreadCount"; `windowState` filtra a janela de 24h da Meta/WhatsApp.
+   */
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  windowState?: "open" | "closed";
 }
 
 export interface ReactionDto {

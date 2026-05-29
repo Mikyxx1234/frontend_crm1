@@ -45,6 +45,11 @@
   --color-danger-text:      #b91c1c;
   --color-warning:          #f59e0b;
   --color-info:             #3b82f6;
+  --color-teal:             #10D8D8;
+
+  /* ── Tooltip (charts/heatmap do Dashboard v2) ─────────────────── */
+  --tooltip-bg:             #0f172a;
+  --tooltip-text:           #f8fafc;
 
   /* ── Tokens de texto (espelhar globals.css principal) ─────────── */
   --text-primary:           #0f172a;
@@ -105,6 +110,11 @@
   --color-enterprise-bg: rgba(91, 111, 245, 0.15);
   --color-lead:          #f59e0b;
   --color-lead-bg:       rgba(245, 158, 11, 0.15);
+  --color-teal:          #10D8D8;
+
+  /* Tooltip (charts/heatmap do Dashboard v2) */
+  --tooltip-bg:          #0f172a;
+  --tooltip-text:        #f8fafc;
 
   /* Texto */
   --text-primary:        #0f172a;

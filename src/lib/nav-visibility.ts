@@ -122,6 +122,17 @@ export function computeHiddenSidebarRoutesFromAllowList(
   trackedHrefs: readonly string[],
   sidebarAllowList: string[] | undefined,
 ): string[] {
-  if (!Array.isArray(sidebarAllowList) || sidebarAllowList.includes("*")) return [];
+  // Allow list ausente, vazia ou com "*" = SEM restrição (não esconde nada).
+  // Alinha com a semântica do backend (`canSeeSidebarRoute`/`roleRuleAllows`),
+  // onde um array vazio significa "permitir tudo" — e não "permitir nada".
+  // Sem isso, o `parseScopeGrants` do backend (que normaliza sidebar.routes
+  // para `[]` por papel) zeraria a sidebar inteira, inclusive rotas públicas.
+  if (
+    !Array.isArray(sidebarAllowList) ||
+    sidebarAllowList.length === 0 ||
+    sidebarAllowList.includes("*")
+  ) {
+    return [];
+  }
   return trackedHrefs.filter((href) => !sidebarAllowList.includes(href));
 }

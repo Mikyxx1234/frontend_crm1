@@ -1,0 +1,68 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+
+import { fetchDealsList, type DealListPage, type DealListStatusDto } from "../api/list";
+
+export function dealsListKey(params: {
+  pipelineId?: string;
+  status?: DealListStatusDto;
+  ownerId?: string;
+  search?: string;
+  page: number;
+  perPage: number;
+}) {
+  return [
+    "deals-list",
+    params.pipelineId ?? "__all__",
+    params.status ?? "__any__",
+    params.ownerId ?? "__any__",
+    params.search ?? "",
+    params.page,
+    params.perPage,
+  ] as const;
+}
+
+/**
+ * Lista paginada de negócios — feed da aba "Lista" do /v2/pipeline.
+ *
+ * O backend (`/api/deals`) já filtra por pipeline/stage/status/ownerId
+ * e devolve `contact`/`stage`/`owner` selecionados (ver `listInclude`
+ * em backend/src/services/deals.ts), então o cliente só monta os
+ * params de query e paga apenas uma chamada por página.
+ */
+export function useDealsList(params: {
+  pipelineId?: string;
+  status?: DealListStatusDto;
+  ownerId?: string;
+  search?: string;
+  page?: number;
+  perPage?: number;
+  enabled?: boolean;
+}) {
+  const page = params.page ?? 1;
+  const perPage = params.perPage ?? 30;
+  return useQuery<DealListPage>({
+    queryKey: dealsListKey({
+      pipelineId: params.pipelineId,
+      status: params.status,
+      ownerId: params.ownerId,
+      search: params.search,
+      page,
+      perPage,
+    }),
+    queryFn: () =>
+      fetchDealsList({
+        pipelineId: params.pipelineId,
+        status: params.status,
+        ownerId: params.ownerId,
+        search: params.search,
+        page,
+        perPage,
+      }),
+    enabled: params.enabled ?? true,
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
+  });
+}

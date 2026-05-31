@@ -111,7 +111,7 @@ export function Composer({
 
       <form
         onSubmit={handleSubmit}
-        className={`flex items-end gap-2 rounded-[var(--radius-2xl)] border px-[18px] py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)] ${
+        className={`flex items-center gap-2 rounded-[var(--radius-2xl)] border px-[18px] py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)] ${
           noteMode
             ? "border-amber-400/60 bg-amber-400/10"
             : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]"
@@ -119,7 +119,7 @@ export function Composer({
       >
         <ComposerMenu
           conversationId={conversationId}
-          className="h-9 w-9 shrink-0 self-end"
+          className="h-9 w-9 shrink-0"
           noteMode={noteMode}
           onToggleNote={onSendNote ? () => setNoteMode((v) => !v) : undefined}
           isResolved={isResolved}
@@ -130,15 +130,15 @@ export function Composer({
           variant="icon"
           size="icon"
           title="Emoji"
-          className="h-9 w-9 shrink-0 self-end"
+          className="h-9 w-9 shrink-0"
           disabled
         >
           <IconMoodSmile size={20} />
         </ButtonGlass>
 
-        <div className="flex flex-1 flex-col gap-1 py-1">
+        <div className="flex flex-1 flex-col justify-center">
           {noteMode ? (
-            <span className="inline-flex items-center gap-1 self-start rounded-full bg-amber-400/20 px-2 py-0.5 font-display text-[11px] font-semibold text-amber-600">
+            <span className="mb-0.5 inline-flex items-center gap-1 self-start rounded-full bg-amber-400/20 px-2 py-0.5 font-display text-[11px] font-semibold text-amber-600">
               <IconLock size={12} /> Nota
             </span>
           ) : null}
@@ -148,7 +148,6 @@ export function Composer({
             value={value}
             onChange={(e) => {
               onChange(e.target.value);
-              // Auto-grow
               e.target.style.height = "auto";
               e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
             }}
@@ -156,27 +155,23 @@ export function Composer({
             placeholder={
               noteMode
                 ? "Nota interna (não enviada ao cliente)..."
-                : placeholder ?? (
-                  slash.state.open
-                    ? `Buscar modelo…`
-                    : "Escreva uma mensagem ou / para modelos…"
-                )
+                : placeholder ?? "Escreva uma mensagem ou / para modelos..."
             }
             disabled={disabled || sending}
             className="w-full resize-none overflow-hidden border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ minHeight: "36px", lineHeight: "1.5" }}
+            style={{ minHeight: "24px", maxHeight: "120px", lineHeight: "1.5" }}
           />
         </div>
 
         {!noteMode ? (
-          <AudioRecorderButton conversationId={conversationId} className="h-9 w-9 shrink-0 self-end" />
+          <AudioRecorderButton conversationId={conversationId} className="h-9 w-9 shrink-0" />
         ) : null}
         <ButtonGlass
           type="submit"
           variant="primary"
           size="icon"
           title={noteMode ? "Salvar nota" : "Enviar"}
-          className="h-9 w-9 shrink-0 self-end"
+          className="h-9 w-9 shrink-0"
           disabled={!value.trim() || sending || disabled}
         >
           <IconSend size={18} />

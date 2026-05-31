@@ -113,7 +113,7 @@ export function KanbanColumn({
             type="button"
             onClick={onAddDeal}
             className={cn(
-              "mt-1 flex cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border-[1.5px] border-dashed border-black/15 bg-transparent py-2.5 font-display text-xs font-semibold text-[var(--text-muted)] transition-all",
+              "mt-1 flex cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border-[1.5px] border-dashed border-[var(--glass-border)] bg-transparent py-2.5 font-display text-xs font-semibold text-[var(--text-muted)] transition-all",
               "hover:border-[var(--brand-primary)] hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]",
             )}
           >

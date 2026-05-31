@@ -307,13 +307,14 @@
   --tooltip-bg:   #1e2d45;
   --tooltip-text: #e2e8f0;
 
-  /* Chat bubbles */
-  --chat-bubble-received-bg:     rgba(30, 41, 59, 0.90);
-  --chat-bubble-received-border: rgba(99, 120, 180, 0.25);
+  /* Chat bubbles — balao recebido usa slate-700 opaco para
+     contrastar com o fundo do chat (#0f1623 / #141d2e) */
+  --chat-bubble-received-bg:     #334155;
+  --chat-bubble-received-border: rgba(99, 120, 180, 0.30);
   --chat-bubble-received-text:   #e2e8f0;
-  --chat-bubble-received-time:   #64748b;
-  --chat-bubble-note-bg:         rgba(30, 41, 59, 0.70);
-  --chat-bubble-note-border:     rgba(99, 120, 180, 0.30);
+  --chat-bubble-received-time:   #94a3b8;
+  --chat-bubble-note-bg:         #1e3a5f;
+  --chat-bubble-note-border:     rgba(99, 120, 180, 0.35);
 
   /* Scrollbar no dark */
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;

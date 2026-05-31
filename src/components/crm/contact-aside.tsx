@@ -59,13 +59,18 @@ interface ContactAsideProps {
    * no header — use para plugar o `AssigneePopover` real.
    */
   headerActionsNode?: React.ReactNode
+  /**
+   * Slot opcional para exibir tags + popover de gerenciamento
+   * em uma linha separada "Tags".
+   */
+  tagsNode?: React.ReactNode
 }
 
 const PLACEHOLDER = "—"
 const isFilled = (v: string | undefined | null): v is string =>
   !!v && v !== PLACEHOLDER
 
-export function ContactAside({ contact, className, headerActionsNode }: ContactAsideProps) {
+export function ContactAside({ contact, className, headerActionsNode, tagsNode }: ContactAsideProps) {
   const [activeView, setActiveView] = useState<"produto" | "perfil">("perfil")
   const [activeTab, setActiveTab] = useState<"informacoes" | "dados">("informacoes")
 
@@ -108,6 +113,13 @@ export function ContactAside({ contact, className, headerActionsNode }: ContactA
             )
           )}
         </Row>
+
+        {/* Tags */}
+        {tagsNode && (
+          <Row label="Tags">
+            {tagsNode}
+          </Row>
+        )}
 
         {/* Status */}
         {badge && (

@@ -88,7 +88,7 @@ export function ComposerMenu({
   }
 
   const itemClass =
-    "flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-muted/60 transition-colors";
+    "flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-primary/8 hover:text-primary transition-colors [&>svg]:transition-colors hover:[&>svg]:text-primary";
 
   return (
     <div className="relative">
@@ -120,7 +120,7 @@ export function ComposerMenu({
             >
               <FilePickerButton
                 conversationId={conversationId}
-                className="w-full justify-start px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)] rounded-[var(--radius-sm)]"
+                className="w-full justify-start rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-primary/8 hover:text-primary [&>svg]:transition-colors hover:[&>svg]:text-primary"
               >
                 <span className="inline-flex items-center gap-2.5">
                   <IconPaperclip size={15} /> Anexar arquivo

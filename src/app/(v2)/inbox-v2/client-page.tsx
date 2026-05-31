@@ -244,11 +244,7 @@ export default function InboxV2ClientPage({
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       hideSearch={searchInHeader}
-      filterSlot={
-        searchInHeader ? undefined : (
-          <InboxFilterButton value={filters} onChange={setFilters} />
-        )
-      }
+      filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
         count: tabCounts?.[t.id] ?? null,
@@ -366,7 +362,6 @@ export default function InboxV2ClientPage({
             icon={pageHeader.icon}
             title={pageHeader.title}
             description={pageHeader.description}
-            center={<InboxFilterButton value={filters} onChange={setFilters} />}
             actions={
               <SearchInput
                 value={searchInput}

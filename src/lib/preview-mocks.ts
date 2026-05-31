@@ -627,6 +627,82 @@ const QUICK_REPLIES = [
   { id: "qr-5", shortcut: "/horarios", content: "Tenho disponibilidade:\n• Quinta às 14h\n• Sexta às 10h\n• Sexta às 16h\nQual te atende melhor?" },
 ];
 
+/* ── Templates Internos do CRM ── */
+const INTERNAL_TEMPLATES = [
+  {
+    id: "it-1",
+    name: "Boas-vindas ao lead",
+    content: "Olá, {{contato.nome}}! Tudo bem? 😊 Sou o {{agente.nome}}, do time {{organizacao.nome}}. Vi que você demonstrou interesse e estou aqui para ajudar. Como posso te auxiliar?",
+    category: "Vendas",
+    channelType: null,
+    language: "pt_BR",
+    status: "ACTIVE",
+  },
+  {
+    id: "it-2",
+    name: "Apresentação do produto",
+    content: "Olá, {{contato.nome}}! Obrigado pelo seu interesse. Nossa solução foi desenvolvida especialmente para empresas como a sua. Posso te apresentar as principais funcionalidades em uma chamada rápida de 15 minutos?",
+    category: "Vendas",
+    channelType: null,
+    language: "pt_BR",
+    status: "ACTIVE",
+  },
+  {
+    id: "it-3",
+    name: "Follow-up pós-reunião",
+    content: "Olá, {{contato.nome}}! Foi um prazer conversar com você hoje. Conforme combinamos, segue o resumo dos próximos passos:\n\n1. Envio da proposta até {{data}}\n2. Reunião de alinhamento técnico\n3. Aprovação e assinatura\n\nQualquer dúvida, estou à disposição!",
+    category: "Vendas",
+    channelType: null,
+    language: "pt_BR",
+    status: "ACTIVE",
+  },
+  {
+    id: "it-4",
+    name: "Envio de proposta",
+    content: "Olá, {{contato.nome}}! Conforme combinado, segue a proposta comercial referente ao negócio \"{{negocio.titulo}}\". Valor: R$ {{negocio.valor}}. Caso tenha alguma dúvida ou queira ajustar algo, é só falar. Estamos aqui para encontrar a melhor solução para você!",
+    category: "Vendas",
+    channelType: null,
+    language: "pt_BR",
+    status: "ACTIVE",
+  },
+  {
+    id: "it-5",
+    name: "Reativação de lead frio",
+    content: "Oi, {{contato.nome}}! Faz algum tempo que não conversamos e queria saber como você está. Temos novidades e melhorias que podem fazer toda a diferença para o seu negócio. Posso te contar mais?",
+    category: "Vendas",
+    channelType: null,
+    language: "pt_BR",
+    status: "ACTIVE",
+  },
+  {
+    id: "it-6",
+    name: "Suporte - Abertura de chamado",
+    content: "Olá, {{contato.nome}}! Recebi sua solicitação e já estou analisando. Em breve retorno com uma solução. Número de protocolo: #{{data}}. Obrigado pela paciência!",
+    category: "Suporte",
+    channelType: null,
+    language: "pt_BR",
+    status: "ACTIVE",
+  },
+  {
+    id: "it-7",
+    name: "Suporte - Resolução",
+    content: "Olá, {{contato.nome}}! Sua solicitação foi resolvida com sucesso. Caso precise de mais alguma coisa, é só entrar em contato. Ficamos à disposição!",
+    category: "Suporte",
+    channelType: null,
+    language: "pt_BR",
+    status: "ACTIVE",
+  },
+  {
+    id: "it-8",
+    name: "Confirmação de reunião",
+    content: "Oi, {{contato.nome}}! Passando para confirmar nossa reunião amanhã. Qualquer imprevisto, pode me avisar com antecedência. Até lá! 🗓️",
+    category: "Agenda",
+    channelType: null,
+    language: "pt_BR",
+    status: "ACTIVE",
+  },
+];
+
 /* ── Templates WhatsApp ── */
 const WA_TEMPLATES = [
   { id: "tpl-1", name: "boas_vindas",    category: "MARKETING",  language: "pt_BR", body: "Olá {{1}}, seja bem-vindo(a) ao EduIT CRM! Como posso ajudar?" },
@@ -987,6 +1063,10 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
   {
     test: (u) => u.pathname === "/api/quick-replies",
     handler: () => ({ items: QUICK_REPLIES, total: QUICK_REPLIES.length }),
+  },
+  {
+    test: (u) => u.pathname === "/api/templates",
+    handler: () => INTERNAL_TEMPLATES,
   },
   {
     test: (u) => u.pathname === "/api/whatsapp-template-configs/agent-enabled",

@@ -10,13 +10,14 @@ import {
   IconCheckbox,
   IconCircleCheck,
   IconRotateClockwise,
+  IconMessageCode,
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
 
 import { FilePickerButton } from "./file-picker-button";
-import { TemplatePickerList } from "./template-picker-popover";
+import { TemplatePickerList, InternalTemplatePickerList } from "./template-picker-popover";
 import { ScheduleDialog } from "./schedule-dialog";
 import { TaskDialog } from "./task-dialog";
 
@@ -46,7 +47,7 @@ export function ComposerMenu({
   contactId?: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"root" | "template">("root");
+  const [view, setView] = useState<"root" | "template" | "internal">("root");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -87,7 +88,7 @@ export function ComposerMenu({
   }
 
   const itemClass =
-    "flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)]";
+    "flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-muted/60 transition-colors";
 
   return (
     <div className="relative">
@@ -113,15 +114,26 @@ export function ComposerMenu({
           role="menu"
         >
           {view === "root" ? (
-            <div className="flex w-60 flex-col gap-0.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+            <div
+              style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
+              className="flex w-56 flex-col gap-px rounded-[var(--radius-lg)] border border-border p-1.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
+            >
               <FilePickerButton
                 conversationId={conversationId}
-                className="w-full justify-start px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)]"
+                className="w-full justify-start px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)] rounded-[var(--radius-sm)]"
               >
-                <span className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-2.5">
                   <IconPaperclip size={15} /> Anexar arquivo
                 </span>
               </FilePickerButton>
+
+              <button
+                type="button"
+                onClick={() => setView("internal")}
+                className={itemClass}
+              >
+                <IconMessageCode size={15} /> Modelos internos
+              </button>
 
               <button
                 type="button"
@@ -132,17 +144,20 @@ export function ComposerMenu({
               </button>
 
               {onToggleNote ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onToggleNote();
-                    closeMenu();
-                  }}
-                  className={itemClass}
-                >
-                  <IconLock size={15} />
-                  {noteMode ? "Sair do modo nota" : "Nota interna"}
-                </button>
+                <>
+                  <div className="my-1 h-px bg-border/60" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleNote();
+                      closeMenu();
+                    }}
+                    className={itemClass}
+                  >
+                    <IconLock size={15} />
+                    {noteMode ? "Sair do modo nota" : "Nota interna"}
+                  </button>
+                </>
               ) : null}
 
               <button
@@ -169,7 +184,7 @@ export function ComposerMenu({
 
               {isResolved !== undefined ? (
                 <>
-                  <div className="my-1 h-px bg-[var(--glass-border)]" />
+                  <div className="my-1 h-px bg-border/60" />
                   <button
                     type="button"
                     disabled={toggleResolve.isPending}
@@ -189,6 +204,11 @@ export function ComposerMenu({
                 </>
               ) : null}
             </div>
+          ) : view === "internal" ? (
+            <InternalTemplatePickerList
+              conversationId={conversationId}
+              onClose={closeMenu}
+            />
           ) : (
             <TemplatePickerList
               conversationId={conversationId}

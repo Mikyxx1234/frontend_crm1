@@ -11,7 +11,6 @@ import { IconMessageCircle } from "@tabler/icons-react";
 
 import InboxV2ClientPage from "@/app/(v2)/inbox-v2/client-page";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import { PageHeader } from "@/components/crm/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -19,13 +18,11 @@ export default function V2InboxPage() {
   return (
     <InboxV2ClientPage
       navRail={<NavRailV2 />}
-      pageHeader={
-        <PageHeader
-          icon={<IconMessageCircle size={22} />}
-          title="Caixa de entrada"
-          description="Atenda e acompanhe as conversas com seus leads."
-        />
-      }
+      pageHeader={{
+        icon: <IconMessageCircle size={22} />,
+        title: "Caixa de entrada",
+        description: "Atenda e acompanhe as conversas com seus leads.",
+      }}
     />
   );
 }

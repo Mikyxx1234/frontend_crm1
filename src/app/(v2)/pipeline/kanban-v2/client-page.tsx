@@ -90,6 +90,7 @@ export default function KanbanV2ClientPage({
   );
   const [filters, setFilters] = useState<KanbanFilters>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const filtersBtnRef = useRef<HTMLButtonElement>(null);
 
   const status = TAB_TO_STATUS[activeTab];
@@ -117,7 +118,9 @@ export default function KanbanV2ClientPage({
   const filteredBoard = useMemo(() => {
     const hasOwner = filters.ownerIds.length > 0;
     const hasTag = filters.tagIds.length > 0;
-    if (!hasOwner && !hasTag) return board;
+    const q = search.trim().toLowerCase();
+    const hasSearch = q.length > 0;
+    if (!hasOwner && !hasTag && !hasSearch) return board;
     return board.map((stage) => ({
       ...stage,
       deals: stage.deals.filter((d) => {
@@ -128,10 +131,17 @@ export default function KanbanV2ClientPage({
           const ids = (d.tags ?? []).map((t) => t.id);
           if (!filters.tagIds.some((id) => ids.includes(id))) return false;
         }
+        if (hasSearch) {
+          const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
         return true;
       }),
     }));
-  }, [board, filters]);
+  }, [board, filters, search]);
 
   const columns: KanbanColumnView[] = useMemo(
     () => toKanbanColumns(filteredBoard),
@@ -237,6 +247,8 @@ export default function KanbanV2ClientPage({
           filtersButtonRef={filtersBtnRef}
           onFiltersClick={() => setFiltersOpen((v) => !v)}
           activeFiltersCount={countActiveFilters(filters)}
+          search={search}
+          onSearchChange={setSearch}
         />
         <FiltersPopover
           open={filtersOpen}

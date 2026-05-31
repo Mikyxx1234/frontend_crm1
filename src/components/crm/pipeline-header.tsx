@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/crm/page-header"
+import { SearchInput } from "@/components/crm/search-input"
 import {
   IconFilter,
   IconBookmark,
@@ -38,6 +39,12 @@ interface PipelineHeaderProps {
   onFiltersClick?: () => void
   /** Numero de filtros ativos — exibe badge ao lado do icone. */
   activeFiltersCount?: number
+  /** Valor da busca. Quando `onSearchChange` existe, exibe a barra padrao. */
+  search?: string
+  /** Handler da busca. Sem ele, a barra de busca nao e renderizada. */
+  onSearchChange?: (value: string) => void
+  /** Placeholder da busca. */
+  searchPlaceholder?: string
 }
 
 export function PipelineHeader({
@@ -50,6 +57,9 @@ export function PipelineHeader({
   filtersButtonRef,
   onFiltersClick,
   activeFiltersCount = 0,
+  search,
+  onSearchChange,
+  searchPlaceholder = "Buscar por título, contato...",
 }: PipelineHeaderProps) {
   const [tab, setTab] = useState<TabId>(activeTab)
   const [view, setView] = useState<ViewType>(activeView)
@@ -78,6 +88,15 @@ export function PipelineHeader({
         title="Pipeline"
         description="Acompanhe e mova seus negócios pelas etapas do funil."
         actions={
+          onSearchChange ? (
+            <SearchInput
+              value={search ?? ""}
+              onChange={onSearchChange}
+              placeholder={searchPlaceholder}
+            />
+          ) : undefined
+        }
+        center={
           <>
             <button
               ref={filtersButtonRef}

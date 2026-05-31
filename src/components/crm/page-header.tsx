@@ -4,11 +4,18 @@ interface PageHeaderProps {
   icon: React.ReactNode
   title: string
   description?: string
+  /**
+   * Filtros e operações do header. Renderizados na ZONA CENTRAL (entre
+   * o título e as `actions`). Padrão dos headers /v2: busca à direita,
+   * filtros/ações ao centro.
+   */
+  center?: React.ReactNode
+  /** Slot da direita — tipicamente a busca padronizada (`SearchInput`). */
   actions?: React.ReactNode
   className?: string
 }
 
-export function PageHeader({ icon, title, description, actions, className }: PageHeaderProps) {
+export function PageHeader({ icon, title, description, center, actions, className }: PageHeaderProps) {
   return (
     <div className={cn("flex items-center gap-4 px-1", className)}>
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]">
@@ -22,7 +29,12 @@ export function PageHeader({ icon, title, description, actions, className }: Pag
           <p className="truncate font-body text-[13px] text-[var(--text-muted)]">{description}</p>
         )}
       </div>
-      {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+      {center && (
+        <div className="flex flex-1 flex-wrap items-center justify-center gap-2">{center}</div>
+      )}
+      {actions && (
+        <div className={cn("flex items-center gap-2", !center && "ml-auto")}>{actions}</div>
+      )}
     </div>
   )
 }

@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+import { isPreviewMode } from "@/lib/preview-mode";
+
 /**
  * Middleware do FRONTEND separado.
  *
@@ -95,6 +97,13 @@ const PWA_PUBLIC_PATHS = new Set([
 export async function middleware(req: NextRequest) {
   try {
     const { pathname } = req.nextUrl;
+
+    // PREVIEW MODE: libera todas as rotas sem checar cookie. Usado pelo
+    // sandbox do v0.dev onde cookies cross-origin são bloqueados pelo browser.
+    // NUNCA deve estar ativo em produção (qualquer um navega tudo sem login).
+    if (isPreviewMode()) {
+      return withSecurityHeaders(NextResponse.next());
+    }
 
     // Rotas de auth + assets do Next + webhooks + uploads não passam por auth.
     // O rewrite pro backend acontece em next.config.ts.

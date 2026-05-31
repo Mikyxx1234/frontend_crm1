@@ -33,9 +33,10 @@ interface DealChatBindingResult {
 export function useDealChatBinding(params: {
   conversationId: string | null;
   contactName: string;
+  contactId?: string | null;
   sessionExpired?: boolean;
 }): DealChatBindingResult {
-  const { conversationId, contactName, sessionExpired } = params;
+  const { conversationId, contactName, contactId, sessionExpired } = params;
 
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
@@ -59,6 +60,18 @@ export function useDealChatBinding(params: {
       {
         onSuccess: () => setDraft(""),
         onError: (e: Error) => toast.error(e.message || "Falha ao enviar"),
+      },
+    );
+  }
+
+  function handleSendNote() {
+    const t = draft.trim();
+    if (!t || !conversationId) return;
+    sendMutation.mutate(
+      { content: t, asNote: true },
+      {
+        onSuccess: () => setDraft(""),
+        onError: (e: Error) => toast.error(e.message || "Falha ao salvar nota"),
       },
     );
   }
@@ -95,8 +108,10 @@ export function useDealChatBinding(params: {
       value={draft}
       onChange={setDraft}
       onSend={handleSend}
+      onSendNote={handleSendNote}
       sending={sendMutation.isPending}
       disabled={!!sessionExpired}
+      contactId={contactId}
     />
   ) : null;
 

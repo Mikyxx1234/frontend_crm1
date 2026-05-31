@@ -55,6 +55,13 @@ interface ConversationColumnProps {
    */
   headerVariant?: "minimal" | "full"
   /**
+   * Esconde a linha de busca + filtro do topo da coluna. Usado quando
+   * esses controles foram elevados para o header da página (layout
+   * `/v2/inbox`), evitando duplicidade. O seletor de status (dropdown)
+   * permanece como primeiro elemento.
+   */
+  hideSearch?: boolean
+  /**
    * Renderiza slots específicos por card (tags / assignee popovers).
    * O callback recebe a conversation e devolve os nodes que serão
    * injetados em `tagsSlot` e `assigneeSlot` do `ConversationCard`.
@@ -129,6 +136,7 @@ export function ConversationColumn({
   headerVariant = "minimal",
   renderCardSlots,
   filterSlot,
+  hideSearch = false,
 }: ConversationColumnProps) {
   const [internalTab, setInternalTab] = useState(0)
   const isControlledTabs = tabsOverride !== undefined
@@ -202,33 +210,36 @@ export function ConversationColumn({
     >
       {resizerSlot}
       {/* Busca + filtros inline (título "Conversas" removido). A variante
-          `full` mantém o badge de urgência e o botão "+" do design v0. */}
-      <div className="mb-3 flex items-center gap-2">
-        <InputGlass
-          withSearch
-          placeholder="Buscar conversa..."
-          className="flex-1"
-          value={searchVal}
-          onChange={handleSearchChange}
-        />
-        {headerVariant === "full" && urgency > 0 && (
-          <span className="inline-flex h-9 items-center gap-1 rounded-full border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/12 px-2.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
-            <IconClock size={12} />
-            {urgency}
-          </span>
-        )}
-        {filterSlot}
-        {headerVariant === "full" && (
-          <button
-            type="button"
-            title="Nova conversa"
-            onClick={onNewConversation}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
-          >
-            <IconPlus size={18} />
-          </button>
-        )}
-      </div>
+          `full` mantém o badge de urgência e o botão "+" do design v0.
+          Quando `hideSearch`, esses controles vivem no header da página. */}
+      {!hideSearch && (
+        <div className="mb-3 flex items-center gap-2">
+          <InputGlass
+            withSearch
+            placeholder="Buscar conversa..."
+            className="flex-1"
+            value={searchVal}
+            onChange={handleSearchChange}
+          />
+          {headerVariant === "full" && urgency > 0 && (
+            <span className="inline-flex h-9 items-center gap-1 rounded-full border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/12 px-2.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
+              <IconClock size={12} />
+              {urgency}
+            </span>
+          )}
+          {filterSlot}
+          {headerVariant === "full" && (
+            <button
+              type="button"
+              title="Nova conversa"
+              onClick={onNewConversation}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+            >
+              <IconPlus size={18} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Seletor de status — pílula única (ícone + label + count + chevron)
           que abre um dropdown com todos os status. Visual do screenshot:

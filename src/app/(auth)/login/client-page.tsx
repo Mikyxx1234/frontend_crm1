@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Check, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { isPreviewMode } from "@/lib/preview-mode";
 
 function LoginShellFallback() {
   return (
@@ -227,6 +228,20 @@ function LoginForm() {
               </>
             )}
           </button>
+
+          {isPreviewMode() ? (
+            <button
+              type="button"
+              onClick={() => {
+                window.location.assign(`${window.location.origin}${callbackUrl}`);
+              }}
+              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full border border-amber-400/60 bg-amber-50/80 text-[13px] font-medium text-amber-900 backdrop-blur transition-all hover:bg-amber-100/90 active:scale-[0.98]"
+              title="Disponível apenas em ambientes de preview (v0.dev). Pula a autenticação."
+            >
+              <Eye className="size-4" />
+              Entrar (preview)
+            </button>
+          ) : null}
 
           <p className="mt-4 text-center text-[13px] text-[var(--color-ink-soft)]">
             Não tem uma conta?{" "}

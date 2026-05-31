@@ -8,6 +8,8 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
 import { ContactAside } from "@/components/crm/contact-aside";
+import { PageHeader } from "@/components/crm/page-header";
+import { SearchInput } from "@/components/crm/search-input";
 import {
   ColumnResizer,
   usePersistentWidth,
@@ -62,11 +64,18 @@ interface InboxV2ClientPageProps {
   /** Override do trilho de navegação (1ª coluna). */
   navRail?: React.ReactNode;
   /**
-   * Cabeçalho de página opcional renderizado ACIMA das colunas (estilo
-   * "Caixa de entrada" do DS de referência). Quando ausente, mantém o
-   * layout legado de linha única (sem topo) — usado por `(v2)/inbox-v2`.
+   * Metadados do cabeçalho de página opcional, renderizado ACIMA das
+   * colunas (estilo "Caixa de entrada" do DS de referência). Quando
+   * presente, a busca e o filtro sobem para este header (busca à
+   * direita, filtro ao centro) e somem da coluna de conversas. Quando
+   * ausente, mantém o layout legado de linha única (busca/filtro na
+   * própria coluna) — usado por `(v2)/inbox-v2`.
    */
-  pageHeader?: React.ReactNode;
+  pageHeader?: {
+    icon: React.ReactNode;
+    title: string;
+    description?: string;
+  };
 }
 
 export default function InboxV2ClientPage({
@@ -189,6 +198,17 @@ export default function InboxV2ClientPage({
     );
   }
 
+  function handleSendNote(value: string) {
+    if (!activeId) return;
+    sendMessage.mutate(
+      { content: value, asNote: true },
+      {
+        onSuccess: () => setDraft(""),
+        onError: (err) => toast.error(err.message || "Falha ao salvar nota"),
+      },
+    );
+  }
+
   // ── Adapters → tipos do v0 ─────────────────────────────────────
   const conversationCards = useMemo(() => rows.map((r) => toConversationCard(r, { active: r.id === activeId })), [rows, activeId]);
   const contactName = activeRow?.contact?.name ?? "";
@@ -212,6 +232,10 @@ export default function InboxV2ClientPage({
 
   const navRailNode = navRail ?? <NavRail />;
 
+  // Quando há header de página, busca + filtro vivem nele (direita/centro),
+  // então a coluna de conversas esconde sua linha de busca/filtro.
+  const searchInHeader = !!pageHeader;
+
   const conversationColumnNode = (
     <ConversationColumn
       conversations={conversationCards}
@@ -219,7 +243,12 @@ export default function InboxV2ClientPage({
       onSelectConversation={handleSelect}
       searchValue={searchInput}
       onSearchChange={setSearchInput}
-      filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
+      hideSearch={searchInHeader}
+      filterSlot={
+        searchInHeader ? undefined : (
+          <InboxFilterButton value={filters} onChange={setFilters} />
+        )
+      }
       tabsOverride={TABS.map((t) => ({
         label: t.label,
         count: tabCounts?.[t.id] ?? null,
@@ -273,8 +302,11 @@ export default function InboxV2ClientPage({
             value={draft}
             onChange={setDraft}
             onSend={handleSend}
+            onSendNote={handleSendNote}
             sending={sendMessage.isPending}
             disabled={sessionExpired}
+            isResolved={activeRow.status === "RESOLVED"}
+            contactId={activeContactId}
           />
         }
       />
@@ -330,7 +362,19 @@ export default function InboxV2ClientPage({
       >
         {navRailNode}
         <div className="flex min-w-0 flex-col gap-4 overflow-hidden">
-          {pageHeader}
+          <PageHeader
+            icon={pageHeader.icon}
+            title={pageHeader.title}
+            description={pageHeader.description}
+            center={<InboxFilterButton value={filters} onChange={setFilters} />}
+            actions={
+              <SearchInput
+                value={searchInput}
+                onChange={setSearchInput}
+                placeholder="Buscar conversa, contato, telefone..."
+              />
+            }
+          />
           <div
             className="grid min-h-0 flex-1 gap-4"
             style={{ gridTemplateColumns: `${convWidth}px 1fr 340px` }}

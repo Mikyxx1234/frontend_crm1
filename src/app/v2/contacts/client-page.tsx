@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
-import { IconSearch, IconUsers } from "@tabler/icons-react";
+import { IconUsers } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
+import { SearchInput } from "@/components/crm/search-input";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 
@@ -58,19 +59,11 @@ export default function V2ContactsClientPage() {
           title="Contatos"
           description="Diretório de contatos vinculados ao CRM"
           actions={
-            <div className="relative w-64">
-              <IconSearch
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-              />
-              <input
-                type="search"
-                placeholder="Buscar por nome, e-mail..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-3 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
-              />
-            </div>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar por nome, e-mail..."
+            />
           }
         />
 

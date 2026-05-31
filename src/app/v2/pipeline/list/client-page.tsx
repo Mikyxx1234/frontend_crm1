@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
-import { IconFilter, IconLayoutKanban, IconList, IconSearch } from "@tabler/icons-react";
+import { IconFilter, IconLayoutKanban, IconList } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
+import { SearchInput } from "@/components/crm/search-input";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { DealListTable } from "@/components/crm/deal-list-table";
@@ -86,51 +87,40 @@ export default function V2PipelineListClientPage() {
           icon={<IconList size={22} />}
           title="Pipeline"
           description="Lista completa de negócios — alterne entre Kanban e Lista"
-          actions={
-            <div className="flex items-center gap-2">
+          center={
+            <>
+              {/* Filtro de pipeline (nativo, simples). */}
+              <label className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]">
+                <IconFilter size={14} className="text-[var(--text-muted)]" />
+                <span className="font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                  Pipeline
+                </span>
+                <select
+                  className="cursor-pointer border-0 bg-transparent font-display text-[13px] font-semibold text-[var(--text-primary)] outline-none"
+                  value={pipelineId ?? ""}
+                  onChange={(e) => {
+                    setPipelineId(e.target.value || undefined);
+                    setPage(1);
+                  }}
+                >
+                  {pipelines.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <ViewSwitcher current="list" />
-            </div>
+            </>
+          }
+          actions={
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar por título, e-mail..."
+            />
           }
         />
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Filtro de pipeline (nativo, simples). */}
-          <label className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]">
-            <IconFilter size={14} className="text-[var(--text-muted)]" />
-            <span className="font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-              Pipeline
-            </span>
-            <select
-              className="cursor-pointer border-0 bg-transparent font-display text-[13px] font-semibold text-[var(--text-primary)] outline-none"
-              value={pipelineId ?? ""}
-              onChange={(e) => {
-                setPipelineId(e.target.value || undefined);
-                setPage(1);
-              }}
-            >
-              {pipelines.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {/* Busca. */}
-          <div className="relative ml-auto w-64">
-            <IconSearch
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-            />
-            <input
-              type="search"
-              placeholder="Buscar por título, e-mail..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-3 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
-            />
-          </div>
-        </div>
 
         {dealsQuery.isLoading && rows.length === 0 ? (
           <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />

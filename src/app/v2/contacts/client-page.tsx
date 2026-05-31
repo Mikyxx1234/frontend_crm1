@@ -122,21 +122,21 @@ export default function V2ContactsClientPage() {
                       <Td muted>{c.company?.name ?? "—"}</Td>
                       <Td>
                         <div className="flex flex-wrap gap-1">
-                          {c.tags.slice(0, 3).map((t) => (
+                          {(c.tags ?? []).slice(0, 3).map((t) => (
                             <span
-                              key={t.tag.id}
+                              key={t.id}
                               className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold"
                               style={{
-                                color: t.tag.color ?? "var(--text-muted)",
-                                borderColor: `${t.tag.color ?? "var(--glass-border)"}33`,
+                                color: t.color ?? "var(--text-muted)",
+                                borderColor: `${t.color ?? "var(--glass-border)"}33`,
                               }}
                             >
-                              {t.tag.name}
+                              {t.name}
                             </span>
                           ))}
-                          {c.tags.length > 3 && (
+                          {(c.tags?.length ?? 0) > 3 && (
                             <span className="font-display text-[10px] text-[var(--text-muted)]">
-                              +{c.tags.length - 3}
+                              +{(c.tags?.length ?? 0) - 3}
                             </span>
                           )}
                         </div>

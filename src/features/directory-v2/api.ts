@@ -50,7 +50,9 @@ export interface ContactListItemDto {
   lifecycleStage: string | null;
   createdAt: string;
   company: { id: string; name: string; domain: string | null } | null;
-  tags: { tag: { id: string; name: string; color: string | null } }[];
+  // O backend (getContacts) ja achata as tags: `tags: c.tags.map((t) => t.tag)`,
+  // entao a resposta vem como [{ id, name, color }], NAO [{ tag: {...} }].
+  tags: { id: string; name: string; color: string | null }[];
 }
 
 export interface ContactListPage {

@@ -140,7 +140,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
               key={i}
               className={cn(
                 "h-[5px] flex-1 rounded-full",
-                i <= activeIdx ? "bg-[var(--color-lead)]" : "bg-black/[0.12]",
+                i <= activeIdx ? "bg-[var(--color-lead)]" : "bg-[var(--glass-border)]",
               )}
             />
           ))}
@@ -157,7 +157,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
                 "cursor-pointer rounded-full border px-4 py-2.5 font-display text-[13px] font-bold transition-all",
                 activeView === view
                   ? "border-[var(--brand-primary-dark)] bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.30)]"
-                  : "border-black/[0.06] bg-white text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)]",
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)]",
               )}
             >
               {view === "produto" ? "Produto" : "Perfil"}
@@ -166,7 +166,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
         </div>
 
         {/* Tabs underline */}
-        <div className="mb-3.5 mt-4 flex gap-1.5 border-b border-black/[0.06]">
+        <div className="mb-3.5 mt-4 flex gap-1.5 border-b border-[var(--glass-border-subtle)]">
           {(["informacoes", "dados"] as const).map((tab) => (
             <button
               key={tab}
@@ -219,7 +219,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
 
         {/* Detalhes de Contato */}
         <SubLabel>Detalhes de Contato</SubLabel>
-        <div className="rounded-[var(--radius-lg)] border border-black/[0.04] bg-white px-[18px] py-3.5">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[18px] py-3.5">
           <Row label="Nome" value={contact.name} />
           {isFilled(contact.phone) && (
             <Row label="Telefone" valueStyle={{ color: "var(--brand-primary)" }} value={contact.phone} />
@@ -298,7 +298,7 @@ function DealCard({
             key={i}
             className={cn(
               "h-[4px] flex-1 rounded-full transition-colors",
-              i <= stageIdx ? "bg-[var(--brand-primary)]" : "bg-black/[0.10]",
+              i <= stageIdx ? "bg-[var(--brand-primary)]" : "bg-[var(--glass-border)]",
             )}
           />
         ))}
@@ -318,13 +318,13 @@ function DealCard({
       {fields.length > 0 && (
         <div className="px-5 pb-4">
           <SectionLabel>Campos do negocio</SectionLabel>
-          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-white">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
             {visibleFields.map((f, i) => (
               <div
                 key={f.fieldId}
                 className={cn(
                   "flex items-center justify-between gap-3 px-[14px] py-2.5 text-[12.5px]",
-                  i < visibleFields.length - 1 && "border-b border-black/[0.05]",
+                  i < visibleFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
                 )}
               >
                 <span className="shrink-0 font-medium text-[var(--text-muted)]">{f.label}</span>
@@ -392,7 +392,7 @@ function Row({
     <div
       className={cn(
         "flex items-center justify-between py-2.5 text-[13px]",
-        !isLast && "border-b border-black/[0.05]",
+        !isLast && "border-b border-[var(--glass-border-subtle)]",
         className,
       )}
     >

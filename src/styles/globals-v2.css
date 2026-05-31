@@ -299,6 +299,14 @@
   --tooltip-bg:   #1e2d45;
   --tooltip-text: #e2e8f0;
 
+  /* Chat bubbles */
+  --chat-bubble-received-bg:     rgba(30, 41, 59, 0.90);
+  --chat-bubble-received-border: rgba(99, 120, 180, 0.25);
+  --chat-bubble-received-text:   #e2e8f0;
+  --chat-bubble-received-time:   #64748b;
+  --chat-bubble-note-bg:         rgba(30, 41, 59, 0.70);
+  --chat-bubble-note-border:     rgba(99, 120, 180, 0.30);
+
   /* Scrollbar no dark */
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }

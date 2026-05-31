@@ -10,7 +10,7 @@
  */
 
 import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
-import type { Message } from "@/components/crm/message-bubble";
+import type { Message, FormField } from "@/components/crm/message-bubble";
 
 import type {
   ContactDetail,
@@ -270,6 +270,39 @@ export function toConversationCard(
   };
 }
 
+/**
+ * Detecta e parseia respostas de formulário Meta Flow.
+ *
+ * O backend envia o conteúdo no formato:
+ *   *Resposta do formulário* — _flow_name_
+ *   *Campo Um* ↳ Valor um
+ *   *Campo Dois* ↳ Valor dois
+ *
+ * Retorna null se o conteúdo não corresponder ao padrão.
+ */
+function parseFormResponse(content: string): { title: string; fields: FormField[] } | null {
+  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return null;
+
+  // Primeira linha: *Resposta do formulário* — _flow_name_ (ou variações)
+  const headerMatch = lines[0].match(/[*_]?resposta\s+do\s+formul[aá]rio[*_]?\s*[—–-]\s*[_*]?(.+?)[_*]?$/i);
+  if (!headerMatch) return null;
+
+  const title = headerMatch[1].replace(/[_*]/g, "").trim();
+  const fields: FormField[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    // Formato: *Label* ↳ Valor  (aceita ↓ ou L como alternativa ao ↳)
+    const fieldMatch = lines[i].match(/[*_](.+?)[*_]\s*[↳↓L]\s*(.+)/);
+    if (fieldMatch) {
+      fields.push({ label: fieldMatch[1].trim(), value: fieldMatch[2].trim() });
+    }
+  }
+
+  if (!fields.length) return null;
+  return { title, fields };
+}
+
 /** InboxMessageDto → Message (bolha do chat). */
 export function toMessageBubble(
   dto: InboxMessageDto,
@@ -280,12 +313,20 @@ export function toMessageBubble(
   // ou SSE futuro mude o casing — nunca regredir o lado dos balões).
   const dir = String(dto.direction ?? "").toLowerCase();
   const isInbound = dir === "in" || dir === "inbound";
+  const isBot = dto.sender?.kind === "BOT";
+
+  // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
+  const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
+
   return {
     id: dto.id,
-    content: dto.content ?? "",
+    content: formParsed ? "" : (dto.content ?? ""),
     time: formatTime(dto.createdAt),
     type: isInbound ? "incoming" : "outgoing",
     senderInitials: isInbound ? avatarInitials(contactName) : undefined,
+    isBot: isBot || undefined,
+    formFields: formParsed?.fields,
+    formTitle: formParsed?.title,
   };
 }
 

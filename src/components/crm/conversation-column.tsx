@@ -204,7 +204,7 @@ export function ConversationColumn({
     <section
       aria-label="Lista de conversas"
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 pb-4 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-4 pb-4 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >

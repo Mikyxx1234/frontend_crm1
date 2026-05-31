@@ -9,6 +9,12 @@ import {
   type AutomationListPage,
 } from "./api";
 
+import { isPreviewMode } from "@/lib/preview-mode";
+
+function resolveEnabled(enabled: boolean | undefined): boolean {
+  return isPreviewMode() ? true : (enabled ?? true);
+}
+
 export function useAutomations(params: {
   active?: boolean;
   search?: string;
@@ -33,7 +39,7 @@ export function useAutomations(params: {
         page,
         perPage,
       }),
-    enabled: params.enabled ?? true,
+    enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
     placeholderData: (prev) => prev,
   });
@@ -43,7 +49,7 @@ export function useAutomation(id: string | null) {
   return useQuery<AutomationDetailDto>({
     queryKey: ["v2-automation", id ?? "__none__"],
     queryFn: () => fetchAutomation(id as string),
-    enabled: !!id,
+    enabled: isPreviewMode() ? !!id : !!id,
     staleTime: 10_000,
   });
 }

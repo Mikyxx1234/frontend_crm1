@@ -12,6 +12,13 @@ import {
   type ContactListPage,
 } from "./api";
 
+import { isPreviewMode } from "@/lib/preview-mode";
+
+/** Em preview mode, ignora o guard de sessão e sempre dispara a query. */
+function resolveEnabled(enabled: boolean | undefined): boolean {
+  return isPreviewMode() ? true : (enabled ?? true);
+}
+
 export function useContacts(params: {
   search?: string;
   page?: number;
@@ -23,7 +30,7 @@ export function useContacts(params: {
   return useQuery<ContactListPage>({
     queryKey: ["v2-contacts", params.search ?? "", page, perPage],
     queryFn: () => fetchContacts({ search: params.search, page, perPage }),
-    enabled: params.enabled ?? true,
+    enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
     placeholderData: (prev) => prev,
   });
@@ -40,7 +47,7 @@ export function useCompanies(params: {
   return useQuery<CompanyListPage>({
     queryKey: ["v2-companies", params.search ?? "", page, perPage],
     queryFn: () => fetchCompanies({ search: params.search, page, perPage }),
-    enabled: params.enabled ?? true,
+    enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
     placeholderData: (prev) => prev,
   });
@@ -70,7 +77,7 @@ export function useActivities(params: {
         page,
         perPage,
       }),
-    enabled: params.enabled ?? true,
+    enabled: resolveEnabled(params.enabled),
     staleTime: 10_000,
     placeholderData: (prev) => prev,
   });

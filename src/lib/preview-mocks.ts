@@ -106,6 +106,86 @@ const CONVERSATIONS = [
   { id: "cv-8", contact: CONTACTS[7], lastMessage: { content: "Olá!",                                                  sentAt: "2026-05-31T17:00:00Z", direction: "INBOUND", status: "DELIVERED" }, unreadCount: 1, status: "OPEN",       channel: CHANNELS[0], assignedTo: null,                            updatedAt: "2026-05-31T17:00:00Z", tags: [] },
 ];
 
+const AUTOMATIONS = [
+  {
+    id: "au-1",
+    name: "Boas-vindas ao lead",
+    description: "Envia mensagem de boas-vindas 5 minutos após o primeiro contato via WhatsApp.",
+    triggerType: "CONVERSATION_CREATED",
+    triggerConfig: { channel: "WHATSAPP_META" },
+    active: true,
+    createdAt: "2026-04-10T08:00:00Z",
+    updatedAt: "2026-05-28T14:00:00Z",
+    stepCount: 3,
+    steps: [
+      { id: "as-1a", automationId: "au-1", type: "WAIT", config: { delay: 300, unit: "seconds" }, position: 1 },
+      { id: "as-1b", automationId: "au-1", type: "SEND_MESSAGE", config: { templateId: "tpl-welcome", channel: "WHATSAPP_META" }, position: 2 },
+      { id: "as-1c", automationId: "au-1", type: "ADD_TAG", config: { tagId: "tag-3" }, position: 3 },
+    ],
+  },
+  {
+    id: "au-2",
+    name: "Follow-up em 48h",
+    description: "Reenvia proposta se o lead não respondeu em 48 horas.",
+    triggerType: "DEAL_STAGE_CHANGED",
+    triggerConfig: { fromStage: "st-2", toStage: "st-3" },
+    active: true,
+    createdAt: "2026-04-20T10:00:00Z",
+    updatedAt: "2026-05-30T09:00:00Z",
+    stepCount: 2,
+    steps: [
+      { id: "as-2a", automationId: "au-2", type: "WAIT", config: { delay: 48, unit: "hours" }, position: 1 },
+      { id: "as-2b", automationId: "au-2", type: "SEND_MESSAGE", config: { templateId: "tpl-followup", channel: "WHATSAPP_META" }, position: 2 },
+    ],
+  },
+  {
+    id: "au-3",
+    name: "Notificação de deal ganho",
+    description: "Alerta o time no Slack quando um negócio é marcado como Ganho.",
+    triggerType: "DEAL_WON",
+    triggerConfig: {},
+    active: true,
+    createdAt: "2026-03-15T09:00:00Z",
+    updatedAt: "2026-05-01T12:00:00Z",
+    stepCount: 1,
+    steps: [
+      { id: "as-3a", automationId: "au-3", type: "WEBHOOK", config: { url: "https://hooks.slack.com/...", method: "POST" }, position: 1 },
+    ],
+  },
+  {
+    id: "au-4",
+    name: "Reativação de leads frios",
+    description: "Envia campanha de reativação para leads sem atividade há 30 dias.",
+    triggerType: "CONTACT_IDLE",
+    triggerConfig: { idleDays: 30 },
+    active: false,
+    createdAt: "2026-05-01T11:00:00Z",
+    updatedAt: "2026-05-25T08:00:00Z",
+    stepCount: 4,
+    steps: [
+      { id: "as-4a", automationId: "au-4", type: "FILTER", config: { lifecycleStage: "LEAD" }, position: 1 },
+      { id: "as-4b", automationId: "au-4", type: "ADD_TAG", config: { tagId: "tag-4" }, position: 2 },
+      { id: "as-4c", automationId: "au-4", type: "SEND_MESSAGE", config: { templateId: "tpl-reactivate" }, position: 3 },
+      { id: "as-4d", automationId: "au-4", type: "CREATE_ACTIVITY", config: { type: "TASK", title: "Acompanhar reativação" }, position: 4 },
+    ],
+  },
+  {
+    id: "au-5",
+    name: "Criação de tarefa pós-reunião",
+    description: "Cria automaticamente uma tarefa de follow-up após reunião concluída.",
+    triggerType: "ACTIVITY_COMPLETED",
+    triggerConfig: { activityType: "MEETING" },
+    active: false,
+    createdAt: "2026-05-10T14:00:00Z",
+    updatedAt: "2026-05-10T14:00:00Z",
+    stepCount: 2,
+    steps: [
+      { id: "as-5a", automationId: "au-5", type: "WAIT", config: { delay: 1, unit: "hours" }, position: 1 },
+      { id: "as-5b", automationId: "au-5", type: "CREATE_ACTIVITY", config: { type: "TASK", title: "Follow-up pós-reunião", daysUntilDue: 1 }, position: 2 },
+    ],
+  },
+];
+
 const ACTIVITIES = [
   { id: "ac-1", type: "CALL",    title: "Follow-up Acme",            description: "Ligar pra Ana Beatriz após envio da proposta", completed: false, scheduledAt: "2026-06-02T15:00:00Z", completedAt: null,                  createdAt: "2026-05-31T10:00:00Z", user: { id: USER.id, name: USER.name, email: USER.email, avatarUrl: null }, contact: { id: "ct-1", name: CONTACTS[0].name, email: CONTACTS[0].email }, deal: { id: "dl-1", title: DEALS[0].title, stageId: "st-3" } },
   { id: "ac-2", type: "MEETING", title: "Reunião kickoff Globex",     description: "Apresentação do time + cronograma",            completed: false, scheduledAt: "2026-06-03T10:00:00Z", completedAt: null,                  createdAt: "2026-05-30T12:00:00Z", user: { id: USER.id, name: USER.name, email: USER.email, avatarUrl: null }, contact: { id: "ct-2", name: CONTACTS[1].name, email: CONTACTS[1].email }, deal: { id: "dl-2", title: DEALS[1].title, stageId: "st-4" } },
@@ -234,11 +314,60 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
   { test: (u) => /^\/api\/companies\/[^/]+$/.test(u.pathname), handler: (u) => COMPANIES.find((c) => c.id === u.pathname.split("/")[3]) ?? COMPANIES[0] },
   { test: (u) => u.pathname === "/api/activities", handler: () => ({ items: ACTIVITIES, total: ACTIVITIES.length, page: 1, perPage: 50 }) },
 
+  // Automations
+  { test: (u) => u.pathname === "/api/automations", handler: () => ({ items: AUTOMATIONS.map(({ steps: _steps, ...a }) => a), total: AUTOMATIONS.length, page: 1, perPage: 50 }) },
+  { test: (u) => /^\/api\/automations\/[^/]+$/.test(u.pathname), handler: (u) => AUTOMATIONS.find((a) => a.id === u.pathname.split("/")[3]) ?? AUTOMATIONS[0] },
+
   // Pipeline / deals
   { test: (u) => u.pathname === "/api/pipelines", handler: () => PIPELINES },
   { test: (u) => /^\/api\/pipelines\/[^/]+\/stages$/.test(u.pathname) || u.pathname === "/api/stages", handler: () => STAGES },
-  { test: (u) => u.pathname === "/api/deals", handler: () => ({ items: DEALS, total: DEALS.length, page: 1, perPage: 50 }) },
+  { test: (u) => u.pathname === "/api/deals", handler: () => {
+      const enriched = DEALS.map((d) => {
+        const stage = STAGES.find((s) => s.id === d.stageId) ?? STAGES[0];
+        const contact = CONTACTS.find((c) => c.id === d.contactId) ?? null;
+        return {
+          ...d,
+          status: stage.id === "st-5" ? "WON" : stage.id === "st-6" ? "LOST" : "OPEN",
+          number: Number(d.id.replace("dl-", "")),
+          position: 0,
+          ownerId: USER.id,
+          contactId: d.contactId,
+          stage: { id: stage.id, name: stage.name, position: stage.order, color: stage.color, pipelineId: "pl-1" },
+          contact: contact ? { id: contact.id, name: contact.name, email: contact.email, phone: contact.phone, avatarUrl: null } : null,
+          owner: { id: USER.id, name: USER.name, email: USER.email, avatarUrl: null },
+        };
+      });
+      return { items: enriched, total: enriched.length, page: 1, perPage: 50 };
+    }
+  },
+  { test: (u) => /^\/api\/deals\/[^/]+$/.test(u.pathname), handler: (u) => {
+      const id = u.pathname.split("/")[3];
+      const deal = DEALS.find((d) => d.id === id) ?? DEALS[0];
+      const stage = STAGES.find((s) => s.id === deal.stageId) ?? STAGES[0];
+      const contact = CONTACTS.find((c) => c.id === deal.contactId) ?? CONTACTS[0];
+      return { ...deal, status: "OPEN", number: Number(deal.id.replace("dl-", "")), stage: { ...stage, pipelineId: "pl-1" }, contact, owner: USER, customFields: {} };
+    }
+  },
   { test: (u) => u.pathname === "/api/deal-tags" || u.pathname === "/api/tags", handler: () => ({ items: TAGS, total: TAGS.length }) },
+  { test: (u) => /^\/api\/pipelines\/[^/]+\/board/.test(u.pathname), handler: () => ({
+      stages: STAGES.map((s) => ({
+        ...s,
+        position: s.order,
+        winProbability: s.order >= 4 ? 80 : s.order * 15,
+        rottingDays: 7,
+        pipelineId: "pl-1",
+        deals: DEALS.filter((d) => d.stageId === s.id).map((d) => ({
+          ...d,
+          status: s.id === "st-5" ? "WON" : s.id === "st-6" ? "LOST" : "OPEN",
+          number: Number(d.id.replace("dl-", "")),
+          isRotting: false,
+          contact: CONTACTS.find((c) => c.id === d.contactId) ?? null,
+          owner: USER,
+          lastMessage: null,
+        })),
+      })),
+    })
+  },
   { test: (u) => /^\/api\/(deals|board)/.test(u.pathname), handler: () => ({ items: DEALS, deals: DEALS, stages: STAGES, total: DEALS.length }) },
 
   // Analytics / Dashboard v2

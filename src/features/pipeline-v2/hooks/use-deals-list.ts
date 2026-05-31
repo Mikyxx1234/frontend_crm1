@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchDealsList, type DealListPage, type DealListStatusDto } from "../api/list";
+import { isPreviewMode } from "@/lib/preview-mode";
 
 export function dealsListKey(params: {
   pipelineId?: string;
@@ -60,7 +61,7 @@ export function useDealsList(params: {
         page,
         perPage,
       }),
-    enabled: params.enabled ?? true,
+    enabled: isPreviewMode() ? true : (params.enabled ?? true),
     staleTime: 10_000,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,

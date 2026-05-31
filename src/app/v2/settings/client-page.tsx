@@ -20,10 +20,10 @@ export default function SettingsClientPageV2() {
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
-      <div className="flex flex-1 flex-col overflow-auto px-8 py-8">
-        <div className="mb-6">
+      <main className="flex flex-col gap-6 overflow-auto px-4 py-2">
+        <div>
           <PageHeader
             title="Configurações"
             description="Organize canais, equipe, pipeline e integrações do seu workspace."
@@ -78,7 +78,7 @@ export default function SettingsClientPageV2() {
             );
           })}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

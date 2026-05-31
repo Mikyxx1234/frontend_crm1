@@ -1,0 +1,176 @@
+import {
+  IconBolt,
+  IconMail,
+  IconArrowsExchange2,
+  IconUserPlus,
+  IconTag,
+  IconTagOff,
+  IconPencil,
+  IconCalendarPlus,
+  IconTrendingUp,
+  IconClock,
+  IconArrowsSplit2,
+  IconMessage,
+  IconFileText,
+  IconPhoto,
+  IconClick,
+  IconWorld,
+  IconHelpCircle,
+  IconPlayerPause,
+  IconVariable,
+  IconCornerDownRight,
+  IconTransfer,
+  IconCircleCheck,
+  IconSquareRounded,
+  IconRobot,
+  IconFlag,
+  type IconProps,
+} from "@tabler/icons-react"
+import type { ComponentType, CSSProperties } from "react"
+
+type TablerIcon = ComponentType<IconProps>
+
+/** Cores nomeadas usadas como acento por bloco (color-coding funcional do builder) */
+export type BlockColor =
+  | "indigo"
+  | "blue"
+  | "teal"
+  | "green"
+  | "red"
+  | "amber"
+  | "violet"
+  | "pink"
+  | "orange"
+  | "slate"
+
+export type BlockCategory = "trigger" | "action" | "logic" | "whatsapp" | "integration" | "salesbot" | "ai" | "final"
+
+interface BlockMeta {
+  label: string
+  Icon: TablerIcon
+  color: BlockColor
+  category: BlockCategory
+  /** Tom legado (trigger | action | salesbot | final) para componentes existentes */
+  tone: "trigger" | "action" | "salesbot" | "final"
+}
+
+/** Paleta de acentos: cor sólida do ícone + fundo suave do chip */
+export const blockPalette: Record<BlockColor, { fg: string; bg: string }> = {
+  indigo: { fg: "#5b6ff5", bg: "rgba(91,111,245,0.12)" },
+  blue: { fg: "#2f6df6", bg: "rgba(47,109,246,0.12)" },
+  teal: { fg: "#0d9488", bg: "rgba(13,148,136,0.12)" },
+  green: { fg: "#16a34a", bg: "rgba(22,163,74,0.12)" },
+  red: { fg: "#ef4444", bg: "rgba(239,68,68,0.12)" },
+  amber: { fg: "#d97706", bg: "rgba(217,119,6,0.14)" },
+  violet: { fg: "#7c3aed", bg: "rgba(124,58,237,0.12)" },
+  pink: { fg: "#db2777", bg: "rgba(219,39,119,0.12)" },
+  orange: { fg: "#f97316", bg: "rgba(249,115,22,0.13)" },
+  slate: { fg: "#475569", bg: "rgba(71,85,105,0.12)" },
+}
+
+const categoryTone: Record<BlockCategory, BlockMeta["tone"]> = {
+  trigger: "trigger",
+  final: "final",
+  salesbot: "salesbot",
+  ai: "salesbot",
+  action: "action",
+  logic: "action",
+  whatsapp: "action",
+  integration: "action",
+}
+
+function def(label: string, Icon: TablerIcon, color: BlockColor, category: BlockCategory): BlockMeta {
+  return { label, Icon, color, category, tone: categoryTone[category] }
+}
+
+export const blockMeta: Record<string, BlockMeta> = {
+  trigger: def("Gatilho", IconBolt, "indigo", "trigger"),
+  final: def("Finalizar fluxo", IconFlag, "red", "final"),
+
+  // Ações
+  "send-email": def("Enviar e-mail", IconMail, "blue", "action"),
+  "move-stage": def("Mover estágio", IconArrowsExchange2, "indigo", "action"),
+  assign: def("Atribuir responsável", IconUserPlus, "teal", "action"),
+  "add-tag": def("Adicionar tag", IconTag, "green", "action"),
+  "remove-tag": def("Remover tag", IconTagOff, "red", "action"),
+  "update-field": def("Atualizar campo", IconPencil, "amber", "action"),
+  "create-activity": def("Criar atividade", IconCalendarPlus, "violet", "action"),
+  "lead-score": def("Atualizar lead score", IconTrendingUp, "pink", "action"),
+
+  // Lógica
+  delay: def("Atraso", IconClock, "orange", "logic"),
+  condition: def("Condição", IconArrowsSplit2, "indigo", "logic"),
+
+  // WhatsApp
+  "wa-message": def("Mensagem WhatsApp", IconMessage, "green", "whatsapp"),
+  "wa-template": def("Template WhatsApp", IconFileText, "green", "whatsapp"),
+  "wa-media": def("Mídia WhatsApp", IconPhoto, "green", "whatsapp"),
+  "wa-buttons": def("Botões WhatsApp", IconClick, "violet", "whatsapp"),
+
+  // Integrações
+  webhook: def("Webhook", IconWorld, "slate", "integration"),
+
+  // Salesbot
+  "ask-lead": def("Pergunta ao lead", IconHelpCircle, "blue", "salesbot"),
+  "wait-reply": def("Aguardar resposta", IconPlayerPause, "orange", "salesbot"),
+  "set-variable": def("Definir variável", IconVariable, "pink", "salesbot"),
+  goto: def("Ir para (Goto)", IconCornerDownRight, "blue", "salesbot"),
+  "transfer-automation": def("Transferir automação", IconTransfer, "indigo", "salesbot"),
+  "end-conversation": def("Encerrar conversa", IconCircleCheck, "green", "salesbot"),
+  "finish-flow": def("Finalizar fluxo", IconSquareRounded, "red", "salesbot"),
+
+  // IA
+  "ai-agent": def("Transferir para agente IA", IconRobot, "violet", "ai"),
+  "ai-ask": def("Perguntar ao agente IA", IconRobot, "violet", "ai"),
+}
+
+export function getBlockMeta(type: string): BlockMeta {
+  return blockMeta[type] ?? def(type, IconBolt, "indigo", "action")
+}
+
+/** Estilo inline do chip de ícone por bloco (fundo suave + cor sólida) */
+export function blockChipStyle(type: string): CSSProperties {
+  const { color } = getBlockMeta(type)
+  const p = blockPalette[color]
+  return { color: p.fg, backgroundColor: p.bg }
+}
+
+/** Apenas a cor sólida do bloco (para barras de acento, traços, etc.) */
+export function blockAccent(type: string): string {
+  return blockPalette[getBlockMeta(type).color].fg
+}
+
+/** Catálogo agrupado para a paleta lateral (ordem fiel ao produto) */
+export const blockCategories: { id: BlockCategory; label: string; types: string[] }[] = [
+  {
+    id: "action",
+    label: "Ações",
+    types: [
+      "send-email",
+      "move-stage",
+      "assign",
+      "add-tag",
+      "remove-tag",
+      "update-field",
+      "create-activity",
+      "lead-score",
+    ],
+  },
+  { id: "logic", label: "Lógica", types: ["delay", "condition"] },
+  { id: "whatsapp", label: "WhatsApp", types: ["wa-message", "wa-template", "wa-media", "wa-buttons"] },
+  { id: "integration", label: "Integrações", types: ["webhook"] },
+  {
+    id: "salesbot",
+    label: "Salesbot",
+    types: ["ask-lead", "wait-reply", "set-variable", "goto", "transfer-automation", "end-conversation", "finish-flow"],
+  },
+  { id: "ai", label: "IA", types: ["ai-agent", "ai-ask"] },
+]
+
+/** Classes do "chip" de ícone por tom — mantido para componentes legados (mini-flow, etc.) */
+export const toneIconClasses: Record<BlockMeta["tone"], string> = {
+  trigger: "bg-white/25 text-white",
+  action: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+  salesbot: "bg-[rgba(167,139,250,0.18)] text-[var(--brand-secondary)]",
+  final: "bg-[rgba(239,68,68,0.14)] text-[var(--color-danger)]",
+}

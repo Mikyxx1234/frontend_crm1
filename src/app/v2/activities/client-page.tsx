@@ -1,256 +1,273 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
-
+import { useMemo, useState } from "react"
+import { NavRailV2 } from "@/components/crm/nav-rail-v2"
+import { PageHeader } from "@/components/crm/page-header"
+import { GlassCard } from "@/components/crm/glass-card"
+import { ButtonGlass } from "@/components/crm/button-glass"
+import { EmptyState } from "@/components/crm/empty-state"
+import { ActivityCalendar } from "@/components/crm/activities/activity-calendar"
+import { ActivityRow } from "@/components/crm/activities/activity-row"
+import { ActivityComposer } from "@/components/crm/activities/activity-composer"
 import {
-  IconBriefcase,
-  IconChecklist,
-  IconCircleCheck,
-  IconClock,
-  IconMail,
-  IconPhone,
-  IconUsers,
-} from "@tabler/icons-react";
+  activities as seedActivities,
+  ACTIVITY_KINDS,
+  ACTIVITY_KIND_ORDER,
+  activityDateKey,
+  dateKey,
+  isSameDay,
+  longDateLabel,
+  type Activity,
+  type ActivityKind,
+} from "@/lib/activities-data"
+import { cn } from "@/lib/utils"
+import { IconChecklist, IconPlus, IconCalendarEvent } from "@tabler/icons-react"
 
-import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import { PageHeader } from "@/components/crm/page-header";
-import { PaginationGlass } from "@/components/crm/pagination-glass";
-import { EmptyState } from "@/components/crm/empty-state";
+type StatusFilter = "todas" | "pendentes" | "concluidas" | "atrasadas"
 
-import {
-  useActivities,
-} from "@/features/directory-v2/hooks";
-import type { ActivityTypeDto } from "@/features/directory-v2/api";
+const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: "todas", label: "Todas" },
+  { key: "pendentes", label: "Pendentes" },
+  { key: "concluidas", label: "Concluídas" },
+  { key: "atrasadas", label: "Atrasadas" },
+]
 
-import { cn } from "@/lib/utils";
-
-const PER_PAGE = 30;
-
-const TYPE_META: Record<
-  ActivityTypeDto,
-  { label: string; icon: React.ReactNode; tone: string }
-> = {
-  CALL: { label: "Ligação", icon: <IconPhone size={14} />, tone: "text-[var(--brand-primary)]" },
-  MEETING: {
-    label: "Reunião",
-    icon: <IconUsers size={14} />,
-    tone: "text-[var(--brand-secondary)]",
-  },
-  EMAIL: { label: "E-mail", icon: <IconMail size={14} />, tone: "text-[var(--color-info)]" },
-  TASK: {
-    label: "Tarefa",
-    icon: <IconBriefcase size={14} />,
-    tone: "text-[var(--text-secondary)]",
-  },
-  OTHER: {
-    label: "Outro",
-    icon: <IconChecklist size={14} />,
-    tone: "text-[var(--text-muted)]",
-  },
-};
-
-const STATUS_FILTERS: { id: "pending" | "done" | "all"; label: string; icon: React.ReactNode }[] = [
-  { id: "pending", label: "Pendentes", icon: <IconClock size={14} /> },
-  { id: "done", label: "Concluídas", icon: <IconCircleCheck size={14} /> },
-  { id: "all", label: "Todas", icon: <IconChecklist size={14} /> },
-];
-
-function fmtDateTimeBR(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-}
+const isOverdue = (a: Activity) => a.status === "pendente" && new Date(a.start).getTime() < Date.now()
 
 export default function V2ActivitiesClientPage() {
-  const { status } = useSession();
-  const isAuthenticated = status === "authenticated";
+  const [items, setItems] = useState<Activity[]>(seedActivities)
+  const [viewDate, setViewDate] = useState(() => new Date())
+  const [selectedDate, setSelectedDate] = useState(() => new Date())
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("todas")
+  const [kindFilter, setKindFilter] = useState<ActivityKind | "all">("all")
+  const [composerOpen, setComposerOpen] = useState(false)
 
-  const [statusFilter, setStatusFilter] = useState<"pending" | "done" | "all">("pending");
-  const [typeFilter, setTypeFilter] = useState<ActivityTypeDto | "ALL">("ALL");
-  const [page, setPage] = useState(1);
+  // Atividades visíveis no calendário (após filtro de tipo)
+  const calendarItems = useMemo(
+    () => (kindFilter === "all" ? items : items.filter((a) => a.kind === kindFilter)),
+    [items, kindFilter],
+  )
 
-  const completed =
-    statusFilter === "pending" ? false : statusFilter === "done" ? true : undefined;
+  // Atividades do dia selecionado, aplicando status + tipo
+  const dayItems = useMemo(() => {
+    const key = dateKey(selectedDate)
+    return calendarItems
+      .filter((a) => activityDateKey(a) === key)
+      .filter((a) => {
+        if (statusFilter === "pendentes") return a.status === "pendente"
+        if (statusFilter === "concluidas") return a.status === "concluida"
+        if (statusFilter === "atrasadas") return isOverdue(a)
+        return true
+      })
+      .sort((a, b) => a.start.localeCompare(b.start))
+  }, [calendarItems, selectedDate, statusFilter])
 
-  const query = useActivities({
-    type: typeFilter === "ALL" ? undefined : typeFilter,
-    completed,
-    page,
-    perPage: PER_PAGE,
-    enabled: isAuthenticated,
-  });
+  // Resumo por tipo no mês exibido
+  const monthSummary = useMemo(() => {
+    const m = viewDate.getMonth()
+    const y = viewDate.getFullYear()
+    const counts = {} as Record<ActivityKind, number>
+    for (const k of ACTIVITY_KIND_ORDER) counts[k] = 0
+    for (const a of items) {
+      const d = new Date(a.start)
+      if (d.getMonth() === m && d.getFullYear() === y) counts[a.kind]++
+    }
+    return counts
+  }, [items, viewDate])
 
-  const items = query.data?.items ?? [];
-  const total = query.data?.total ?? 0;
-  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  const toggle = (id: string) =>
+    setItems((prev) =>
+      prev.map((a) =>
+        a.id === id ? { ...a, status: a.status === "concluida" ? "pendente" : "concluida" } : a,
+      ),
+    )
+
+  const remove = (id: string) => setItems((prev) => prev.filter((a) => a.id !== id))
+
+  const create = (a: Activity) => {
+    setItems((prev) => [...prev, a])
+    setSelectedDate(new Date(a.start))
+    setViewDate(new Date(a.start))
+  }
+
+  const isToday = isSameDay(selectedDate, new Date())
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
-      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
+      <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         <PageHeader
           icon={<IconChecklist size={22} />}
           title="Atividades"
-          description="Tarefas, ligações, reuniões e e-mails da operação"
+          description="Agende e acompanhe tarefas, reuniões, ligações e eventos."
+          actions={
+            <ButtonGlass variant="primary" onClick={() => setComposerOpen(true)}>
+              <IconPlus size={16} /> Nova atividade
+            </ButtonGlass>
+          }
         />
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Status tabs */}
-          <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
-            {STATUS_FILTERS.map((f) => {
-              const active = statusFilter === f.id;
-              return (
+        {/* Layout de 2 colunas: calendário + lista */}
+        <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr] gap-3.5 overflow-hidden">
+          {/* Coluna esquerda: calendário + resumo por tipo */}
+          <div className="flex min-h-0 flex-col gap-3.5 overflow-auto">
+            <GlassCard className="p-4">
+              <ActivityCalendar
+                viewDate={viewDate}
+                selectedDate={selectedDate}
+                activities={calendarItems}
+                onSelectDate={setSelectedDate}
+                onChangeMonth={setViewDate}
+              />
+            </GlassCard>
+
+            {/* Resumo por tipo no mês */}
+            <GlassCard className="p-4">
+              <p className="mb-3 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+                Este mês
+              </p>
+              <div className="flex flex-col gap-2">
+                {/* Botão "Todos" */}
                 <button
-                  key={f.id}
                   type="button"
-                  onClick={() => {
-                    setStatusFilter(f.id);
-                    setPage(1);
-                  }}
+                  onClick={() => setKindFilter("all")}
                   className={cn(
-                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-[12px] font-bold transition-colors",
-                    active
-                      ? "bg-[var(--brand-primary)] text-white"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    "flex items-center justify-between rounded-[var(--radius-md)] px-2 py-1.5 transition-colors",
+                    kindFilter === "all"
+                      ? "bg-[var(--glass-bg-overlay)]"
+                      : "hover:bg-[var(--glass-bg-subtle)]",
                   )}
                 >
-                  {f.icon}
-                  {f.label}
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)]"
+                      style={{
+                        backgroundColor: "rgba(91,111,245,0.12)",
+                        color: "var(--brand-primary)",
+                      }}
+                    >
+                      <IconCalendarEvent size={13} />
+                    </span>
+                    <span className="font-display text-[12px] font-semibold text-[var(--text-secondary)]">
+                      Todas
+                    </span>
+                  </span>
+                  <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">
+                    {items.filter((a) => {
+                      const d = new Date(a.start)
+                      return d.getMonth() === viewDate.getMonth() && d.getFullYear() === viewDate.getFullYear()
+                    }).length}
+                  </span>
                 </button>
-              );
-            })}
+
+                {ACTIVITY_KIND_ORDER.map((kind) => {
+                  const meta = ACTIVITY_KINDS[kind]
+                  const Icon = meta.icon
+                  const active = kindFilter === kind
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => setKindFilter(active ? "all" : kind)}
+                      className={cn(
+                        "flex items-center justify-between rounded-[var(--radius-md)] px-2 py-1.5 transition-colors",
+                        active
+                          ? "bg-[var(--glass-bg-overlay)]"
+                          : "hover:bg-[var(--glass-bg-subtle)]",
+                      )}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)]"
+                          style={{ backgroundColor: meta.softBg, color: meta.color }}
+                        >
+                          <Icon size={13} />
+                        </span>
+                        <span className="font-display text-[12px] font-semibold text-[var(--text-secondary)]">
+                          {meta.plural}
+                        </span>
+                      </span>
+                      <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">
+                        {monthSummary[kind]}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </GlassCard>
           </div>
 
-          {/* Type filter */}
-          <label className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]">
-            <span className="font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-              Tipo
-            </span>
-            <select
-              className="cursor-pointer border-0 bg-transparent font-display text-[13px] font-semibold text-[var(--text-primary)] outline-none"
-              value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value as ActivityTypeDto | "ALL");
-                setPage(1);
-              }}
-            >
-              <option value="ALL">Todos</option>
-              <option value="TASK">Tarefa</option>
-              <option value="CALL">Ligação</option>
-              <option value="MEETING">Reunião</option>
-              <option value="EMAIL">E-mail</option>
-              <option value="OTHER">Outro</option>
-            </select>
-          </label>
-        </div>
+          {/* Coluna direita: lista de atividades do dia */}
+          <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+            {/* Cabeçalho do dia + filtros de status */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-display text-[15px] font-bold capitalize text-[var(--text-primary)]">
+                  {longDateLabel(selectedDate)}
+                  {isToday && (
+                    <span className="ml-2 rounded-full bg-[var(--brand-primary)] px-2 py-0.5 font-display text-[10px] font-bold text-white">
+                      Hoje
+                    </span>
+                  )}
+                </p>
+                <p className="font-body text-[12px] text-[var(--text-muted)]">
+                  {dayItems.length} {dayItems.length === 1 ? "atividade" : "atividades"}
+                </p>
+              </div>
 
-        {query.isLoading && items.length === 0 ? (
-          <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
-        ) : query.error ? (
-          <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
-            {query.error instanceof Error ? query.error.message : "Erro ao carregar."}
-          </div>
-        ) : items.length === 0 ? (
-          <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-            <EmptyState
-              icon={<IconChecklist size={28} />}
-              title="Nenhuma atividade"
-              description="Crie tarefas, reuniões e ligações para acompanhar a operação."
-            />
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-            <div className="min-h-0 flex-1 overflow-auto">
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
-                  <tr className="border-b border-[var(--glass-border-subtle)]">
-                    <Th>Tipo</Th>
-                    <Th>Título</Th>
-                    <Th>Contato</Th>
-                    <Th>Negócio</Th>
-                    <Th>Responsável</Th>
-                    <Th>Agendada</Th>
-                    <Th>Status</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((a) => {
-                    const meta = TYPE_META[a.type] ?? TYPE_META.OTHER;
-                    return (
-                      <tr
-                        key={a.id}
-                        className="border-b border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-overlay)]"
-                      >
-                        <Td>
-                          <span className={cn("inline-flex items-center gap-1.5", meta.tone)}>
-                            {meta.icon}
-                            <span className="font-display text-[12px] font-bold">
-                              {meta.label}
-                            </span>
-                          </span>
-                        </Td>
-                        <Td>
-                          <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-                            {a.title}
-                          </span>
-                        </Td>
-                        <Td muted>{a.contact?.name ?? "—"}</Td>
-                        <Td muted>{a.deal?.title ?? "—"}</Td>
-                        <Td muted>{a.user?.name ?? "—"}</Td>
-                        <Td muted>{fmtDateTimeBR(a.scheduledAt)}</Td>
-                        <Td>
-                          {a.completed ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-success)]/20 bg-[var(--color-success-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-success-text)]">
-                              <IconCircleCheck size={12} /> Concluída
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-primary)]/20 bg-[var(--color-enterprise-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--brand-primary)]">
-                              <IconClock size={12} /> Pendente
-                            </span>
-                          )}
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              {/* Status filter pills */}
+              <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5 shadow-[var(--glass-shadow-sm)]">
+                {STATUS_FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setStatusFilter(f.key)}
+                    className={cn(
+                      "cursor-pointer rounded-full px-3 py-1 font-display text-[11px] font-bold transition-colors",
+                      statusFilter === f.key
+                        ? "bg-[var(--brand-primary)] text-white"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Lista de atividades */}
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto pb-2">
+              {dayItems.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md">
+                  <EmptyState
+                    icon={<IconCalendarEvent size={28} />}
+                    title="Nenhuma atividade neste dia"
+                    description="Clique em + Nova atividade para agendar algo."
+                  />
+                </div>
+              ) : (
+                dayItems.map((a) => (
+                  <ActivityRow
+                    key={a.id}
+                    activity={a}
+                    overdue={isOverdue(a)}
+                    onToggle={toggle}
+                    onDelete={remove}
+                  />
+                ))
+              )}
             </div>
           </div>
-        )}
-
-        <PaginationGlass
-          label={`${total.toLocaleString("pt-BR")} atividades — página ${page} de ${lastPage}`}
-          canPrev={page > 1}
-          canNext={page < lastPage}
-          onPrev={() => setPage((p) => Math.max(1, p - 1))}
-          onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
-        />
+        </div>
       </main>
+
+      <ActivityComposer
+        open={composerOpen}
+        defaultDate={selectedDate}
+        onOpenChange={setComposerOpen}
+        onCreate={create}
+      />
     </div>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-      {children}
-    </th>
-  );
-}
-
-function Td({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
-  return (
-    <td className="px-3 py-3">
-      <span
-        className={`font-display text-[13px] ${
-          muted ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]"
-        }`}
-      >
-        {children}
-      </span>
-    </td>
-  );
+  )
 }

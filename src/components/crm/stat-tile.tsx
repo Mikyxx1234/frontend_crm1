@@ -1,15 +1,14 @@
-import type { ReactNode } from "react";
-
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
+import type { ReactNode } from "react"
 
 interface StatTileProps {
-  label: string;
-  value: ReactNode;
-  icon?: ReactNode;
-  /** Texto auxiliar (ex.: "+12 hoje"). */
-  hint?: ReactNode;
-  tone?: "brand" | "success" | "neutral" | "violet";
-  className?: string;
+  label: string
+  value: ReactNode
+  icon?: ReactNode
+  /** Texto auxiliar (ex.: "+12 hoje") */
+  hint?: ReactNode
+  tone?: "brand" | "success" | "neutral" | "violet"
+  className?: string
 }
 
 const toneClasses: Record<NonNullable<StatTileProps["tone"]>, string> = {
@@ -17,7 +16,7 @@ const toneClasses: Record<NonNullable<StatTileProps["tone"]>, string> = {
   success: "bg-[var(--color-success-bg)] text-[var(--color-success)]",
   violet: "bg-[rgba(167,139,250,0.18)] text-[var(--brand-secondary)]",
   neutral: "bg-[rgba(113,128,150,0.12)] text-[var(--text-secondary)]",
-};
+}
 
 /**
  * Tile de métrica compacto em vidro — ícone à esquerda, rótulo + valor.
@@ -53,5 +52,5 @@ export function StatTile({ label, value, icon, hint, tone = "brand", className }
         </div>
       </div>
     </div>
-  );
+  )
 }

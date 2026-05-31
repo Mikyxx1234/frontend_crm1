@@ -182,7 +182,7 @@ export default function V2ActivitiesClientPage() {
                     return (
                       <tr
                         key={a.id}
-                        className="border-b border-[var(--glass-border-subtle)] hover:bg-white/40"
+                        className="border-b border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-overlay)]"
                       >
                         <Td>
                           <span className={cn("inline-flex items-center gap-1.5", meta.tone)}>

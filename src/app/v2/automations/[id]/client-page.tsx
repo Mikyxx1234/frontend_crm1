@@ -62,7 +62,7 @@ export default function V2AutomationDetailClientPage({
             <button
               type="button"
               onClick={() => router.push("/v2/automations")}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-[12px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-white"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-[12px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)]"
             >
               <IconArrowLeft size={14} />
               Voltar
@@ -96,7 +96,7 @@ export default function V2AutomationDetailClientPage({
                   <IconCircleCheck size={12} /> Ativa
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white/60 px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
+                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
                   <IconCircleOff size={12} /> Pausada
                 </span>
               )}
@@ -122,7 +122,7 @@ export default function V2AutomationDetailClientPage({
               />
 
               {data.steps.length === 0 ? (
-                <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-white/40 px-6 py-4 font-display text-[12px] text-[var(--text-muted)]">
+                <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-6 py-4 font-display text-[12px] text-[var(--text-muted)]">
                   Esta automação ainda não tem passos.
                 </div>
               ) : (
@@ -150,7 +150,7 @@ export default function V2AutomationDetailClientPage({
               <summary className="cursor-pointer font-display text-[12px] font-bold text-[var(--text-secondary)]">
                 Configuração bruta dos passos (JSON)
               </summary>
-              <pre className="mt-3 max-h-[300px] overflow-auto rounded-[var(--radius-md)] border border-black/[0.06] bg-white p-3 font-mono text-[11px] leading-relaxed text-[var(--text-secondary)]">
+              <pre className="mt-3 max-h-[300px] overflow-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3 font-mono text-[11px] leading-relaxed text-[var(--text-secondary)]">
                 {JSON.stringify(data.steps, null, 2)}
               </pre>
             </details>
@@ -178,7 +178,7 @@ function FlowCard({
       className={
         isTrigger
           ? "flex w-full max-w-[460px] items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/30 bg-[var(--color-enterprise-bg)] px-4 py-3 shadow-[var(--glass-shadow)]"
-          : "flex w-full max-w-[460px] items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white/80 px-4 py-3 shadow-[var(--glass-shadow-sm)]"
+          : "flex w-full max-w-[460px] items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-3 shadow-[var(--glass-shadow-sm)]"
       }
     >
       <span

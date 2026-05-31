@@ -126,7 +126,7 @@ export default function V2AutomationsClientPage() {
                 key={a.id}
                 type="button"
                 onClick={() => router.push(`/v2/automations/${a.id}`)}
-                className="flex cursor-pointer flex-col items-stretch gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 text-left shadow-[var(--glass-shadow)] backdrop-blur-md transition-transform hover:-translate-y-0.5 hover:bg-white/60"
+                className="flex cursor-pointer flex-col items-stretch gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 text-left shadow-[var(--glass-shadow)] backdrop-blur-md transition-transform hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
@@ -138,7 +138,7 @@ export default function V2AutomationsClientPage() {
                       Ativa
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white/60 px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
                       <IconCircleOff size={12} />
                       Pausada
                     </span>

@@ -189,12 +189,12 @@ export function DealDetailPanel({
             <div
               className={cn(
                 avatarClass,
-                "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-white font-display text-[15px] font-bold text-white",
+                "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[var(--glass-bg-overlay)] font-display text-[15px] font-bold text-white",
               )}
             >
               {deal.initials}
               {deal.online && (
-                <span className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-white bg-[var(--color-online)]" />
+                <span className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
               )}
             </div>
             <div>
@@ -230,7 +230,7 @@ export function DealDetailPanel({
                         "border-[rgba(16,185,129,0.25)] bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
                       !active &&
                         !done &&
-                        "border-black/[0.06] bg-white text-[var(--text-muted)]",
+                        "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
                     )}
                   >
                     {stage}
@@ -271,7 +271,7 @@ export function DealDetailPanel({
         </header>
 
         {/* TABS */}
-        <div className="flex items-center gap-3.5 border-b border-black/[0.06] px-2">
+        <div className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-2">
           {TABS.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
@@ -295,7 +295,7 @@ export function DealDetailPanel({
                       "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
                       isActive
                         ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                        : "bg-black/[0.06] text-[var(--text-muted)]",
+                        : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
                     )}
                   >
                     {tab.count}
@@ -371,7 +371,7 @@ export function DealDetailPanel({
                     isLast
                     valueNode={
                       tagsSlot ?? (
-                        <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-black/20 px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                        <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[var(--glass-border)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
                           <IconPlus size={10} />
                           Adicionar
                         </span>
@@ -503,7 +503,7 @@ function FieldCard({
   return (
     <section>
       {title && <SubLabel>{title}</SubLabel>}
-      <div className="rounded-[var(--radius-lg)] border border-black/[0.04] bg-white px-4">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4">
         {children}
       </div>
     </section>
@@ -543,7 +543,7 @@ function FieldRow({
     <div
       className={cn(
         "flex items-center justify-between gap-3 py-2.5",
-        !isLast && "border-b border-black/[0.05]",
+        !isLast && "border-b border-[var(--glass-border-subtle)]",
       )}
     >
       <span className="shrink-0 text-[12.5px] font-medium text-[var(--text-muted)]">
@@ -585,7 +585,7 @@ function formatMoney(v: number | string | null | undefined): string | undefined 
 function FallbackComposer() {
   return (
     <div
-      className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-black/[0.06] bg-white py-2 pl-[18px] pr-2 opacity-60 shadow-[var(--glass-shadow-sm)]"
+      className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-[18px] pr-2 opacity-60 shadow-[var(--glass-shadow-sm)]"
     >
       <button
         type="button"

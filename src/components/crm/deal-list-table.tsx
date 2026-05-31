@@ -168,7 +168,7 @@ export function DealListTable({ deals, onRowClick, className }: DealListTablePro
                     "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
                     isActive
                       ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                      : "bg-black/[0.06] text-[var(--text-muted)]",
+                      : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
                   )}
                 >
                   {t.count}
@@ -252,7 +252,7 @@ export function DealListTable({ deals, onRowClick, className }: DealListTablePro
                   onClick={() => onRowClick?.(d.id)}
                   className={cn(
                     "cursor-pointer border-b border-[var(--glass-border-subtle)] transition-colors",
-                    isChecked ? "bg-[var(--color-enterprise-bg)]" : "hover:bg-white/40",
+                    isChecked ? "bg-[var(--color-enterprise-bg)]" : "hover:bg-[var(--glass-bg-overlay)]",
                   )}
                 >
                   <td className="px-4 py-3">
@@ -273,13 +273,13 @@ export function DealListTable({ deals, onRowClick, className }: DealListTablePro
                         <div
                           className={cn(
                             d.avatarColor,
-                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white font-display text-[10px] font-bold text-white",
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--glass-bg-strong)] font-display text-[10px] font-bold text-white",
                           )}
                         >
                           {d.contactInitials}
                         </div>
                         {d.channel === "whatsapp" && (
-                          <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-[1.5px] border-white bg-[#25D366]">
+                          <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[#25D366]">
                             <IconBrandWhatsapp size={8} className="text-white" />
                           </span>
                         )}

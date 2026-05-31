@@ -86,7 +86,7 @@ export function DealDetailsPanel({
                 type="button"
                 aria-label="Voltar ao pipeline"
                 onClick={onBack}
-                className="-ml-1.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-white hover:text-[var(--brand-primary)]"
+                className="-ml-1.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
               >
                 <IconChevronLeft size={18} />
               </button>
@@ -99,7 +99,7 @@ export function DealDetailsPanel({
             <button
               type="button"
               aria-label="Mais ações"
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-white hover:text-[var(--text-primary)]"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
             >
               <IconDotsVertical size={18} />
             </button>
@@ -179,7 +179,7 @@ export function DealDetailsPanel({
             {record.groups.map((group, gi) => (
               <section key={gi}>
                 {group.title && <SubLabel>{group.title}</SubLabel>}
-                <div className="rounded-[var(--radius-lg)] border border-black/[0.04] bg-white px-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4">
                   {group.fields.map((field, fi) => (
                     <FieldRow
                       key={field.label}
@@ -216,7 +216,7 @@ function FieldRow({ field, isLast }: { field: DealField; isLast?: boolean }) {
     <div
       className={cn(
         "flex items-center justify-between gap-3 py-3",
-        !isLast && "border-b border-black/[0.05]",
+        !isLast && "border-b border-[var(--glass-border-subtle)]",
       )}
     >
       <span className="shrink-0 font-medium text-[12.5px] text-[var(--text-muted)]">

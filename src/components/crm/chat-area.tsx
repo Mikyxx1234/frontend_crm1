@@ -161,7 +161,7 @@ export function ChatArea({
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-black/[0.06] bg-white py-2 pl-[18px] pr-2 shadow-[var(--glass-shadow-sm)]"
+          className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-[18px] pr-2 shadow-[var(--glass-shadow-sm)]"
         >
           <button
             type="button"

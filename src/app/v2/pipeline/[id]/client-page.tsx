@@ -232,7 +232,7 @@ function ChatPlaceholder({ dealTitle }: { dealTitle: string }) {
       </p>
       <Link
         href="/v2/inbox"
-        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-white/70 px-4 py-2 font-display text-sm font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-white"
+        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-sm font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)]"
       >
         <IconMessageCircle size={16} />
         Abrir Inbox

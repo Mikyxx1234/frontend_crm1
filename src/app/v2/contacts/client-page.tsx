@@ -103,7 +103,7 @@ export default function V2ContactsClientPage() {
                   {items.map((c) => (
                     <tr
                       key={c.id}
-                      className="border-b border-[var(--glass-border-subtle)] hover:bg-white/40"
+                      className="border-b border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-overlay)]"
                     >
                       <Td>
                         <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">

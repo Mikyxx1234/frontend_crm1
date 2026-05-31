@@ -160,7 +160,15 @@ export interface ContactDetail {
     stageId: string;
     stageName?: string | null;
     productName?: string | null;
+    /** Campos personalizados do negocio: array de pares label → valor */
+    customFields?: { fieldId: string; label: string; value: string | null }[];
+    /** Numero de estagios no pipeline (para progress bar) */
+    stageCount?: number;
+    /** Indice 0-based do estagio atual no pipeline */
+    stageIndex?: number;
   }[];
+  /** Campos personalizados do contato */
+  customFields?: { fieldId: string; label: string; value: string | null }[];
   activities?: {
     id: string;
     type: string;
@@ -198,7 +206,7 @@ export async function updateContact(
 
 // ─────────────────────────────────────────────────────────────────
 // Tags
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────��───────────────────────────────
 
 export interface Tag {
   id: string;

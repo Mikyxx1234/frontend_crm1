@@ -4,12 +4,11 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Chip } from "./chip"
 import { BadgeGlass } from "./badge-glass"
-import { IconChevronDown } from "@tabler/icons-react"
+import { IconChevronDown, IconBriefcase, IconTag, IconCurrencyDollar } from "@tabler/icons-react"
 
 /**
- * Shape estendido — combina os campos exibidos no NOVO design (zip v2)
- * com os campos legados produzidos pelo `toContactAside` do
- * `inbox-v2/adapters.ts` para garantir retrocompat sem perder dados.
+ * Shape estendido — combina os campos do design v2 com os campos
+ * legados produzidos pelo `toContactAside` do `inbox-v2/adapters.ts`.
  */
 export interface ContactDetails {
   name: string
@@ -23,7 +22,7 @@ export interface ContactDetails {
   stageSegments?: number
   stageActiveIndex?: number
 
-  // Novos campos visuais
+  // Campos de contato
   course?: string
   formation?: string
   entry?: string
@@ -36,15 +35,26 @@ export interface ContactDetails {
   birthDate?: string
   note?: string
 
-  // Campos legados aceitos para retrocompat (toContactAside).
-  // Quando `statusBadge` nao for fornecido, derivamos de financialStatus.
+  /** Negocios vinculados ao contato */
+  deals?: {
+    id: string
+    title: string
+    value: number
+    stageName?: string | null
+    productName?: string | null
+    stageCount?: number
+    stageIndex?: number
+    /** Campos personalizados do negocio */
+    customFields?: { fieldId: string; label: string; value: string | null }[]
+  }[]
+
+  // Campos legados — retrocompat com toContactAside
   financialStatus?: "success" | "lead" | "enterprise"
   financialLabel?: string
   product?: string
   origin?: string
   createdAt?: string
   tag?: string
-  // Campos visuais antigos — ignorados pelo render novo
   initials?: string
   avatarColor?: string
   status?: string
@@ -54,21 +64,20 @@ export interface ContactDetails {
 interface ContactAsideProps {
   contact: ContactDetails
   className?: string
-  /**
-   * Slot opcional que substitui INTEIRAMENTE a linha "Responsável"
-   * no header — use para plugar o `AssigneePopover` real.
-   */
+  /** Slot para o AssigneePopover — substitui a linha "Responsavel" */
   headerActionsNode?: React.ReactNode
-  /**
-   * Slot opcional para exibir tags + popover de gerenciamento
-   * em uma linha separada "Tags".
-   */
+  /** Slot para chips de tags + TagsPopover */
   tagsNode?: React.ReactNode
 }
 
 const PLACEHOLDER = "—"
+const MAX_DEAL_FIELDS_VISIBLE = 4
+
 const isFilled = (v: string | undefined | null): v is string =>
   !!v && v !== PLACEHOLDER
+
+const formatCurrency = (v: number) =>
+  v ? `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : PLACEHOLDER
 
 export function ContactAside({ contact, className, headerActionsNode, tagsNode }: ContactAsideProps) {
   const [activeView, setActiveView] = useState<"produto" | "perfil">("perfil")
@@ -77,8 +86,6 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
   const segs = contact.stageSegments ?? 5
   const activeIdx = contact.stageActiveIndex ?? 0
 
-  // Deriva o badge a partir do shape legado quando o novo nao foi
-  // explicitamente fornecido.
   const badge =
     contact.statusBadge ??
     (contact.financialStatus && contact.financialLabel
@@ -86,12 +93,14 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
       : undefined)
 
   const course = contact.course ?? contact.product
+  const deals = contact.deals ?? []
 
   return (
     <aside
       aria-label="Detalhes do contato"
       className={cn("flex flex-col gap-3.5 overflow-y-auto pr-0.5", className)}
     >
+      {/* ── Cartao principal ──────────────────────────────────────── */}
       <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-[22px] backdrop-blur-md shadow-[var(--glass-shadow)]">
         {/* Nome + ID */}
         <div>
@@ -103,23 +112,19 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
           </div>
         </div>
 
-        {/* Responsável */}
-        <Row label="Responsável" className="mt-3.5">
+        {/* Responsavel */}
+        <Row label="Responsavel" className="mt-3.5">
           {headerActionsNode ?? (
             contact.assignee ? (
               <Chip variant="brand">{contact.assignee}</Chip>
             ) : (
-              <Chip variant="ghost">+Responsável</Chip>
+              <Chip variant="ghost">+Responsavel</Chip>
             )
           )}
         </Row>
 
         {/* Tags */}
-        {tagsNode && (
-          <Row label="Tags">
-            {tagsNode}
-          </Row>
-        )}
+        {tagsNode && <Row label="Tags">{tagsNode}</Row>}
 
         {/* Status */}
         {badge && (
@@ -128,7 +133,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
           </Row>
         )}
 
-        {/* Stage progress bar laranja */}
+        {/* Stage progress bar */}
         <div className="mt-3 flex gap-1">
           {Array.from({ length: segs }).map((_, i) => (
             <span
@@ -174,7 +179,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
                   : "border-transparent text-[var(--text-muted)]",
               )}
             >
-              {tab === "informacoes" ? "INFORMAÇÕES" : "DADOS"}
+              {tab === "informacoes" ? "INFORMACOES" : "DADOS"}
             </button>
           ))}
         </div>
@@ -197,7 +202,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
           <>
             <SubLabel>Detalhes Curso</SubLabel>
             {isFilled(course) && <Row label="Curso" value={course} />}
-            {isFilled(contact.formation) && <Row label="Formação" value={contact.formation} />}
+            {isFilled(contact.formation) && <Row label="Formacao" value={contact.formation} />}
             {isFilled(contact.entry) && (
               <Row label="Entrada">
                 <button
@@ -230,20 +235,139 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
           {isFilled(contact.rg) && <Row label="RG" value={contact.rg} />}
           {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} />}
           {isFilled(contact.addressNumber) && (
-            <Row label="N° Residência" value={contact.addressNumber} />
+            <Row label="N Residencia" value={contact.addressNumber} />
           )}
           {isFilled(contact.birthDate) && (
             <Row label="Data de Nascimento" value={contact.birthDate} isLast />
           )}
         </div>
       </div>
+
+      {/* ── Negocios vinculados ───────────────────────────────────── */}
+      {deals.length > 0 && deals.map((deal) => (
+        <DealCard key={deal.id} deal={deal} />
+      ))}
     </aside>
   )
 }
 
+// ─────────────────────────────────────────────────────────────────
+// DealCard — negocio com estagio, produto, valor e campos custom
+// ─────────────────────────────────────────────────────────────────
+
+function DealCard({
+  deal,
+}: {
+  deal: NonNullable<ContactDetails["deals"]>[number]
+}) {
+  const [showAll, setShowAll] = useState(false)
+  const fields = deal.customFields ?? []
+  const visibleFields = showAll ? fields : fields.slice(0, MAX_DEAL_FIELDS_VISIBLE)
+  const hasMore = fields.length > MAX_DEAL_FIELDS_VISIBLE
+
+  const stageSegs = deal.stageCount ?? 5
+  const stageIdx = deal.stageIndex ?? 0
+
+  return (
+    <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      {/* Header do negocio */}
+      <div className="flex items-start gap-3 border-b border-[var(--glass-border-subtle)] px-5 py-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)]">
+          <IconBriefcase size={16} className="text-[var(--brand-primary)]" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+            {deal.title}
+          </p>
+          <p className="mt-0.5 font-display text-[11px] text-[var(--text-muted)]">
+            {deal.stageName ?? "Sem estagio"}
+          </p>
+        </div>
+        {deal.value > 0 && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-success-bg,rgba(16,185,129,0.10))] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--color-success,#059669)]">
+            <IconCurrencyDollar size={12} />
+            {deal.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          </span>
+        )}
+      </div>
+
+      {/* Progresso do estagio */}
+      <div className="flex gap-1 px-5 pt-3">
+        {Array.from({ length: stageSegs }).map((_, i) => (
+          <span
+            key={i}
+            className={cn(
+              "h-[4px] flex-1 rounded-full transition-colors",
+              i <= stageIdx ? "bg-[var(--brand-primary)]" : "bg-black/[0.10]",
+            )}
+          />
+        ))}
+      </div>
+
+      {/* Produto */}
+      {deal.productName && (
+        <div className="flex items-center gap-2 px-5 py-3">
+          <IconTag size={13} className="shrink-0 text-[var(--text-muted)]" />
+          <span className="font-display text-[12px] text-[var(--text-secondary)]">
+            {deal.productName}
+          </span>
+        </div>
+      )}
+
+      {/* Campos personalizados do negocio */}
+      {fields.length > 0 && (
+        <div className="px-5 pb-4">
+          <SectionLabel>Campos do negocio</SectionLabel>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-white">
+            {visibleFields.map((f, i) => (
+              <div
+                key={f.fieldId}
+                className={cn(
+                  "flex items-center justify-between gap-3 px-[14px] py-2.5 text-[12.5px]",
+                  i < visibleFields.length - 1 && "border-b border-black/[0.05]",
+                )}
+              >
+                <span className="shrink-0 font-medium text-[var(--text-muted)]">{f.label}</span>
+                <span className="min-w-0 truncate text-right font-display font-bold text-[var(--text-primary)]">
+                  {f.value ?? PLACEHOLDER}
+                </span>
+              </div>
+            ))}
+          </div>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="mt-2 flex w-full items-center justify-center gap-1 font-display text-[11.5px] font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-70"
+            >
+              {showAll ? "Mostrar menos" : `Mostrar mais (${fields.length - MAX_DEAL_FIELDS_VISIBLE})`}
+              <IconChevronDown
+                size={13}
+                className={cn("transition-transform", showAll && "rotate-180")}
+              />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers de layout
+// ─────────────────────────────────────────────────────────────────
+
 function SubLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-2 mt-5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      {children}
+    </div>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-2 mt-0 pb-1.5 pt-0 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
       {children}
     </div>
   )

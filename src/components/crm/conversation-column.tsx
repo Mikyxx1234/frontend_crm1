@@ -227,7 +227,6 @@ export function ConversationColumn({
               {urgency}
             </span>
           )}
-          {filterSlot}
           {headerVariant === "full" && (
             <button
               type="button"
@@ -241,17 +240,15 @@ export function ConversationColumn({
         </div>
       )}
 
-      {/* Seletor de status — pílula única (ícone + label + count + chevron)
-          que abre um dropdown com todos os status. Visual do screenshot:
-          fundo branco arredondado, ícone de relógio em círculo âmbar,
-          badge azul com a contagem. */}
+      {/* Seletor de status + toggle de filtro na mesma linha */}
+      <div className="mb-3 flex items-center gap-2">
       <button
         ref={dropdownBtnRef}
         type="button"
         onClick={() => setDropdownOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={dropdownOpen}
-        className="mb-3 flex items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-white px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
+        className="flex flex-1 items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-white px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
       >
         <span
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
@@ -273,6 +270,8 @@ export function ConversationColumn({
           )}
         />
       </button>
+      {filterSlot}
+      </div>
 
       {dropdownOpen &&
         dropdownPos &&

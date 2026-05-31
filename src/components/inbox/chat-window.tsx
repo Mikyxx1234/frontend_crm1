@@ -2210,20 +2210,28 @@ export function ChatWindow({
                         "relative",
                         isNote &&
                           cn(
-                            "w-full border-l-2 border-l-slate-200 bg-[#f8fafc]",
-                            isPinned &&
-                              "border-l-primary bg-[var(--color-primary-soft)]/35",
+                            "w-full border-l-2",
+                            isPinned
+                              ? "border-l-primary bg-[var(--color-primary-soft)]/35"
+                              : "border-l-[var(--chat-bubble-note-border)]",
                           ),
                         !isNote &&
                           (out ? dt.chat.bubble.sent : dt.chat.bubble.received),
                       )}
                       style={
-                        !isNote && out
-                          ? {
-                              background: "var(--chat-bubble-sent-bg)",
-                              color: "var(--chat-bubble-sent-text)",
-                            }
-                          : undefined
+                        isNote && !isPinned
+                          ? { background: "var(--chat-bubble-note-bg)" }
+                          : !isNote && out
+                            ? {
+                                background: "var(--chat-bubble-sent-bg)",
+                                color: "var(--chat-bubble-sent-text)",
+                              }
+                            : !isNote && !out
+                              ? {
+                                  background: "var(--chat-bubble-received-bg)",
+                                  borderColor: "var(--chat-bubble-received-border)",
+                                }
+                              : undefined
                       }
                     >
                       {!isNote && (
@@ -2676,10 +2684,10 @@ export function ChatWindow({
                                   )}
                                   style={
                                     out && !isNote
-                                      ? {
-                                          color: "var(--chat-bubble-sent-text)",
-                                        }
-                                      : undefined
+                                      ? { color: "var(--chat-bubble-sent-text)" }
+                                      : !out && !isNote
+                                        ? { color: "var(--chat-bubble-received-text)" }
+                                        : undefined
                                   }
                                 >
                                   {textBody}

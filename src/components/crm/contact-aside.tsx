@@ -186,7 +186,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
 
         {/* Nota */}
         {contact.note && (
-          <div className="rounded-[var(--radius-lg)] border border-black/[0.04] bg-[var(--glass-bg-overlay)] p-4">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-4">
             <div className="mb-2.5 flex items-center gap-1.5 font-display text-[10px] font-bold tracking-[0.12em] text-[var(--brand-primary)]">
               <span className="h-[7px] w-[7px] rounded-full bg-[var(--brand-primary)]" />
               NOTAS

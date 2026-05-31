@@ -176,6 +176,14 @@
   --input-placeholder:  #64748b;
   --input-radius:       0.75rem;
   --input-height:       2.5rem;
+
+  /* Chat bubbles — light mode */
+  --chat-bubble-received-bg:     #ffffff;
+  --chat-bubble-received-border: rgba(203, 213, 225, 0.80);
+  --chat-bubble-received-text:   #0f172a;
+  --chat-bubble-received-time:   #94a3b8;
+  --chat-bubble-note-bg:         #f8fafc;
+  --chat-bubble-note-border:     #e2e8f0;
 }
 
 /* ──────────────────────────────────────────────────────────────────

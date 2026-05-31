@@ -34,7 +34,7 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
   if (hasForm) {
     return (
       <div className={cn("flex max-w-[80%] flex-col gap-1", className)}>
-        <div className="rounded-[var(--radius-lg)] rounded-bl-[4px] border border-[var(--glass-border)] bg-white shadow-[0_2px_12px_rgba(100,130,180,0.10)]">
+        <div className="rounded-[var(--radius-lg)] rounded-bl-[4px] border border-[var(--glass-border)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]" style={{ background: "var(--chat-bubble-received-bg)" }}>
           {/* Header do formulário */}
           <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-4 py-2.5">
             <IconClipboardList size={14} className="shrink-0 text-[var(--brand-primary)]" />
@@ -95,8 +95,9 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
             ? isBot
               ? "rounded-br-[4px] bg-[#1e293b] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
               : "rounded-br-[4px] bg-[var(--brand-primary)] text-white shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
-            : "rounded-bl-[4px] bg-white text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
+            : "rounded-bl-[4px] text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
         )}
+        style={!isOutgoing ? { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" } : undefined}
       >
         {/* Badge AUTOMAÇÃO */}
         {isBot && (

@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { auth } from "@/lib/auth-public";
 import "@/lib/auth-types";
 
+import { PreviewMocksInstaller } from "@/components/preview-mocks-installer";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -91,6 +92,7 @@ export default async function RootLayout({
       style={{ fontFamily: "var(--font-sans)" }}
     >
       <body className="min-h-dvh font-sans antialiased">
+        <PreviewMocksInstaller />
         <Providers session={session}>{children}</Providers>
         <Toaster
           position="bottom-right"

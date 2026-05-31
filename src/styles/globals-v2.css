@@ -64,9 +64,10 @@
   --col-fecha:     #10b981;    /* emerald — fechamento/sucesso */
 
   /* ── Glass — superfícies, bordas e sombras ────────────────────── */
-  --glass-bg-base:          rgba(255, 255, 255, 0.55);   /* card/coluna base */
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.72);   /* inputs, popovers */
-  --glass-bg-strong:        rgba(255, 255, 255, 0.96);   /* modais — quase opaco */
+  --glass-bg-base:          rgba(255, 255, 255, 0.42);   /* card base — glass leve */
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);   /* inputs, popovers */
+  --glass-bg-strong:        rgba(255, 255, 255, 0.72);   /* nav-rail, coluna — glass medio */
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais/dialogs — opaco */
   --glass-border:           rgba(180, 200, 230, 0.55);   /* borda padrão */
   --glass-border-subtle:    rgba(180, 200, 230, 0.30);   /* borda sutil */
   --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
@@ -146,9 +147,10 @@
   --text-muted:          #64748b;
 
   /* Glass — superfícies, bordas e sombras */
-  --glass-bg-base:          rgba(255, 255, 255, 0.55);
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.72);
-  --glass-bg-strong:        rgba(255, 255, 255, 0.96);
+  --glass-bg-base:          rgba(255, 255, 255, 0.42);
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);
+  --glass-bg-strong:        rgba(255, 255, 255, 0.72);
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);
   --glass-border:           rgba(180, 200, 230, 0.55);
   --glass-border-subtle:    rgba(180, 200, 230, 0.30);
   --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);

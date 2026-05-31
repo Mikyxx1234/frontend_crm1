@@ -248,7 +248,7 @@ export function ConversationColumn({
         onClick={() => setDropdownOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={dropdownOpen}
-        className="flex flex-1 items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-white px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
+        className="flex flex-1 items-center gap-2.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-1.5 pr-3 text-left shadow-[0_2px_10px_rgba(100,130,180,0.12)] backdrop-blur-sm transition-shadow hover:shadow-[0_3px_14px_rgba(100,130,180,0.20)]"
       >
         <span
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
@@ -279,7 +279,7 @@ export function ConversationColumn({
         createPortal(
           <div
             role="listbox"
-            className="fixed z-[100] flex flex-col gap-0.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+            className="fixed z-[100] flex flex-col gap-0.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-xl"
             style={{
               top: dropdownPos.top,
               left: dropdownPos.left,

@@ -79,7 +79,7 @@ export function TaskDialog({
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[var(--glass-shadow)] backdrop-blur-xl"
+        className="w-full max-w-sm rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-6 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
       >
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">

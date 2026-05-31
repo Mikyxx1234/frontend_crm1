@@ -70,29 +70,6 @@
   /* ── Transições padrão do v0 ──────────────────────────────────── */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* ── Chat: bolha de Nota Interna ──────────────────────────────── */
-  --chat-note-bg:           rgba(245, 158, 11, 0.10);
-  --chat-note-border:       rgba(245, 158, 11, 0.30);
-  --chat-note-text:         #92400e;
-  --chat-note-time:         #b45309;
-  --chat-note-icon:         #d97706;
-
-  /* ── Chat: mensagem de sistema (evento/atividade) ─────────────── */
-  --chat-system-bg:         rgba(100, 116, 139, 0.08);
-  --chat-system-border:     rgba(100, 116, 139, 0.20);
-  --chat-system-text:       #64748b;
-
-  /* ── Chat: bolha de mídia (áudio, imagem, vídeo, documento) ───── */
-  --chat-media-icon-bg:     rgba(91, 111, 245, 0.12);
-  --chat-media-icon-color:  #5b6ff5;
-
-  /* ── Slash command menu ────────────────────────────────────────── */
-  --slash-menu-bg:          rgba(255, 255, 255, 0.96);
-  --slash-menu-border:      rgba(255, 255, 255, 0.65);
-  --slash-menu-shadow:      0 16px 48px rgba(100, 130, 180, 0.22), 0 2px 8px rgba(91,111,245,0.10);
-  --slash-menu-item-hover:  rgba(91, 111, 245, 0.07);
-  --slash-menu-item-active: rgba(91, 111, 245, 0.12);
 }
 
 /* ── Gradientes de avatar usados em DealCard, AvatarGlass, NavRail
@@ -143,29 +120,6 @@
   --text-primary:        #0f172a;
   --text-secondary:      #475569;
   --text-muted:          #64748b;
-
-  /* Chat: nota interna */
-  --chat-note-bg:           rgba(245, 158, 11, 0.10);
-  --chat-note-border:       rgba(245, 158, 11, 0.30);
-  --chat-note-text:         #92400e;
-  --chat-note-time:         #b45309;
-  --chat-note-icon:         #d97706;
-
-  /* Chat: mensagem de sistema */
-  --chat-system-bg:         rgba(100, 116, 139, 0.08);
-  --chat-system-border:     rgba(100, 116, 139, 0.20);
-  --chat-system-text:       #64748b;
-
-  /* Chat: mídia */
-  --chat-media-icon-bg:     rgba(91, 111, 245, 0.12);
-  --chat-media-icon-color:  #5b6ff5;
-
-  /* Slash command menu */
-  --slash-menu-bg:          rgba(255, 255, 255, 0.96);
-  --slash-menu-border:      rgba(255, 255, 255, 0.65);
-  --slash-menu-shadow:      0 16px 48px rgba(100, 130, 180, 0.22), 0 2px 8px rgba(91,111,245,0.10);
-  --slash-menu-item-hover:  rgba(91, 111, 245, 0.07);
-  --slash-menu-item-active: rgba(91, 111, 245, 0.12);
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -236,30 +190,6 @@
 .v2-root * {
   scrollbar-width: thin;
   scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
-}
-
-/* ──────────────────────────────────────────────────────────────────
-   DARK MODE — overrides dos novos tokens de chat e slash menu
-   ────────────────────────────────────────────────────────────────── */
-.dark {
-  --chat-note-bg:           rgba(245, 158, 11, 0.08);
-  --chat-note-border:       rgba(245, 158, 11, 0.22);
-  --chat-note-text:         #fcd34d;
-  --chat-note-time:         #fbbf24;
-  --chat-note-icon:         #f59e0b;
-
-  --chat-system-bg:         rgba(255, 255, 255, 0.05);
-  --chat-system-border:     rgba(255, 255, 255, 0.10);
-  --chat-system-text:       #94a3b8;
-
-  --chat-media-icon-bg:     rgba(91, 111, 245, 0.18);
-  --chat-media-icon-color:  #818cf8;
-
-  --slash-menu-bg:          #1a2238;
-  --slash-menu-border:      rgba(255, 255, 255, 0.10);
-  --slash-menu-shadow:      0 16px 48px rgba(0, 0, 0, 0.45);
-  --slash-menu-item-hover:  rgba(255, 255, 255, 0.06);
-  --slash-menu-item-active: rgba(91, 111, 245, 0.20);
 }
 
 @layer utilities {

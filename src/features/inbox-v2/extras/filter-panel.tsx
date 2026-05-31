@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { IconChevronDown, IconFilter, IconX } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { useTeamUsers } from "@/features/inbox-v2/hooks";
 import {
   getPipelineBoard,
@@ -97,8 +98,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-const controlClass =
-  "w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white px-2.5 py-2 font-display text-[13px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--brand-primary)]/40";
+
 
 export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
   const { open, rect, triggerRef, popoverRef, toggle, close } =
@@ -243,89 +243,63 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 {/* Atendentes */}
                 <div>
                   <FieldLabel>Atendentes</FieldLabel>
-                  <select
-                    className={controlClass}
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={draft.ownerId ?? ""}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        ownerId: e.target.value || undefined,
-                      }))
+                    onValueChange={(v) =>
+                      setDraft((d) => ({ ...d, ownerId: v || undefined }))
                     }
-                  >
-                    <option value="">Todos</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name || u.email}
-                      </option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: "", label: "Todos" },
+                      ...users.map((u) => ({ value: u.id, label: u.name || u.email })),
+                    ]}
+                  />
                 </div>
 
                 {/* Canal / Instância */}
                 <div>
                   <FieldLabel>Canal</FieldLabel>
-                  <select
-                    className={controlClass}
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={draft.channel ?? ""}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        channel: e.target.value || undefined,
-                      }))
+                    onValueChange={(v) =>
+                      setDraft((d) => ({ ...d, channel: v || undefined }))
                     }
-                  >
-                    {channelOptions.map((o) => (
-                      <option key={o.value || "all"} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={channelOptions.map((o) => ({ value: o.value, label: o.label }))}
+                  />
                 </div>
 
                 {/* Negócio na etapa */}
                 <div>
                   <FieldLabel>Negócio na etapa</FieldLabel>
-                  <select
-                    className={controlClass}
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={draft.stageId ?? ""}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        stageId: e.target.value || undefined,
-                      }))
+                    onValueChange={(v) =>
+                      setDraft((d) => ({ ...d, stageId: v || undefined }))
                     }
                     disabled={stages.length === 0}
-                  >
-                    <option value="">Nenhum selecionado</option>
-                    {stages.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: "", label: "Nenhum selecionado" },
+                      ...stages.map((s) => ({ value: s.id, label: s.name })),
+                    ]}
+                  />
                 </div>
 
                 {/* Janela em atendimento (24h) */}
                 <div>
                   <FieldLabel>Janela de conversa</FieldLabel>
-                  <select
-                    className={controlClass}
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={draft.windowState ?? ""}
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setDraft((d) => ({
                         ...d,
-                        windowState:
-                          (e.target.value as "open" | "closed") || undefined,
+                        windowState: (v as "open" | "closed") || undefined,
                       }))
                     }
-                  >
-                    {WINDOW_OPTIONS.map((o) => (
-                      <option key={o.value || "all"} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={WINDOW_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                  />
                 </div>
 
                 {/* Tags — dropdown com checklist multi-seleção */}
@@ -335,7 +309,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                     type="button"
                     onClick={() => setTagsOpen((v) => !v)}
                     aria-expanded={tagsOpen}
-                    className={cn(controlClass, "flex items-center justify-between gap-2 text-left")}
+                    className="group inline-flex h-10 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 font-display text-[13px] font-semibold shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors hover:bg-[var(--glass-bg-strong)] data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40"
                   >
                     <span
                       className={cn(
@@ -402,26 +376,19 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 {/* Ordem */}
                 <div>
                   <FieldLabel>Ordem</FieldLabel>
-                  <select
-                    className={controlClass}
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={sortIdFromFilters(draft)}
-                    onChange={(e) => {
-                      const opt = SORT_OPTIONS.find(
-                        (o) => o.id === e.target.value,
-                      );
+                    onValueChange={(v) => {
+                      const opt = SORT_OPTIONS.find((o) => o.id === v);
                       setDraft((d) => ({
                         ...d,
                         sortBy: opt?.sortBy,
                         sortOrder: opt?.sortOrder,
                       }));
                     }}
-                  >
-                    {SORT_OPTIONS.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={SORT_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}
+                  />
                 </div>
               </div>
 

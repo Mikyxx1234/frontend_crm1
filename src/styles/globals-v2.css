@@ -53,8 +53,8 @@
 
   /* ── Tokens de texto (espelhar globals.css principal) ─────────── */
   --text-primary:           #0f172a;
-  --text-secondary:         #475569;
-  --text-muted:             #64748b;
+  --text-secondary:         #374151;   /* era #475569 — escurecido para ratio 7.2:1 */
+  --text-muted:             #4b5563;   /* era #64748b — escurecido para ratio 6.1:1 */
 
   /* ── Cores das colunas do Kanban (KanbanColumn.color) ─────────── */
   --col-novo:      #94a3b8;    /* slate — estágio inicial neutro */
@@ -144,8 +144,8 @@
 
   /* Texto */
   --text-primary:        #0f172a;
-  --text-secondary:      #475569;
-  --text-muted:          #64748b;
+  --text-secondary:      #374151;
+  --text-muted:          #4b5563;
 
   /* Glass — superfícies, bordas e sombras */
   --glass-bg-base:          rgba(255, 255, 255, 0.82);

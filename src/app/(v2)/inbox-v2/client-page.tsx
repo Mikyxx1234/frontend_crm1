@@ -310,22 +310,62 @@ export default function InboxV2ClientPage({
       <EmptyChatArea />
     );
 
+  // Tags da conversa ativa — até 2 chips + "+N" para o restante.
+  const activeTags = activeRow?.tags ?? [];
+  const MAX_ASIDE_TAGS = 2;
+
   const asideNode =
     contactAsideView && activeRow ? (
       <ContactAside
         contact={contactAsideView}
         headerActionsNode={
-          <>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Responsável atual */}
             <AssigneePopover
               conversationId={activeId}
               currentAssigneeName={activeRow.assignedTo?.name}
               currentAssigneeId={activeRow.assignedTo?.id ?? null}
             />
+
+            {/* Tags atuais: até 2 chips + "+N" */}
+            {activeTags.slice(0, MAX_ASIDE_TAGS).map((t) => {
+              const hex = t.color ?? null;
+              const clean = (hex ?? "").replace("#", "");
+              const r = parseInt(clean.slice(0, 2), 16);
+              const g = parseInt(clean.slice(2, 4), 16);
+              const b = parseInt(clean.slice(4, 6), 16);
+              const valid = hex && ![r, g, b].some(Number.isNaN);
+              const bg = valid ? `rgba(${r},${g},${b},0.14)` : "var(--color-enterprise-bg)";
+              const fg = valid
+                ? `rgb(${Math.max(0, r - 30)},${Math.max(0, g - 30)},${Math.max(0, b - 30)})`
+                : "var(--brand-primary)";
+              const border = valid ? `rgba(${r},${g},${b},0.30)` : "rgba(91,111,245,0.25)";
+              return (
+                <span
+                  key={t.id}
+                  title={t.name}
+                  className="inline-flex max-w-[100px] shrink-0 items-center gap-1 truncate rounded-full border px-2 py-px font-display text-[10.5px] font-semibold"
+                  style={{ background: bg, color: fg, borderColor: border }}
+                >
+                  <span className="truncate">{t.name}</span>
+                </span>
+              );
+            })}
+            {activeTags.length > MAX_ASIDE_TAGS && (
+              <span
+                className="inline-flex shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10.5px] font-bold text-[var(--text-secondary)]"
+                title={activeTags.slice(MAX_ASIDE_TAGS).map((t) => t.name).join(", ")}
+              >
+                +{activeTags.length - MAX_ASIDE_TAGS}
+              </span>
+            )}
+
+            {/* Popover de gerenciamento de tags */}
             <TagsPopover
               conversationId={activeId}
-              currentTags={activeRow.tags ?? []}
+              currentTags={activeTags}
             />
-          </>
+          </div>
         }
       />
     ) : (

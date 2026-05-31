@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { IconX, IconCheckbox } from "@tabler/icons-react";
@@ -70,7 +71,7 @@ export function TaskDialog({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
       onClick={onClose}
@@ -152,6 +153,7 @@ export function TaskDialog({
           </ButtonGlass>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

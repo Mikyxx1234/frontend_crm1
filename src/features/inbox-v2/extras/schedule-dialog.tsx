@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { IconX, IconClock } from "@tabler/icons-react";
@@ -65,7 +66,7 @@ export function ScheduleDialog({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
       onClick={onClose}
@@ -131,6 +132,7 @@ export function ScheduleDialog({
           </ButtonGlass>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

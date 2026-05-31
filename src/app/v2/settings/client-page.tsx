@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Settings2 } from "lucide-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader } from "@/components/crm/page-header";
 import { cn } from "@/lib/utils";
 import { SETTINGS_NAV, SETTINGS_PERSONAL, type SettingsNavIcon, type SettingsNavItem } from "@/lib/settings-nav";
 
@@ -22,17 +22,16 @@ export default function SettingsClientPageV2() {
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
-      <main className="flex flex-col gap-6 overflow-auto px-4 py-2">
-        <div>
-          <PageHeader
-            title="Configurações"
-            description="Organize canais, equipe, pipeline e integrações do seu workspace."
-            icon={<Settings2 />}
-          />
-        </div>
+      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
+        <PageHeader
+          title="Configurações"
+          description="Organize canais, equipe, pipeline e integrações do seu workspace."
+          icon={<Settings2 size={22} />}
+        />
 
+        <div className="flex flex-col gap-6 overflow-auto px-4 pb-6">
         {/* Atalhos pessoais */}
-        <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {SETTINGS_PERSONAL.map((item) => (
             <PersonalShortcut key={item.id} item={item} pathname={pathname} />
           ))}
@@ -77,6 +76,7 @@ export default function SettingsClientPageV2() {
               </section>
             );
           })}
+        </div>
         </div>
       </main>
     </div>

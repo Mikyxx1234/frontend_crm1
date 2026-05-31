@@ -64,10 +64,10 @@
   --col-fecha:     #10b981;    /* emerald — fechamento/sucesso */
 
   /* ── Glass — superfícies, bordas e sombras ────────────────────── */
-  --glass-bg-base:          rgba(255, 255, 255, 0.42);   /* card base — glass leve */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de negócio/conversa — legíveis */
   --glass-bg-overlay:       rgba(255, 255, 255, 0.58);   /* inputs, popovers */
-  --glass-bg-panel:         rgba(255, 255, 255, 0.46);   /* nav-rail, coluna — glass translucido */
-  --glass-bg-strong:        rgba(255, 255, 255, 0.68);   /* hover states, wrappers internos */
+  --glass-bg-panel:         rgba(255, 255, 255, 0.32);   /* nav-rail, colunas — translúcido real */
+  --glass-bg-strong:        rgba(255, 255, 255, 0.32);   /* kanban columns — mesmo nível do panel */
   --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais/dialogs — opaco */
   --glass-border:           rgba(180, 200, 230, 0.55);   /* borda padrão */
   --glass-border-subtle:    rgba(180, 200, 230, 0.30);   /* borda sutil */
@@ -148,10 +148,10 @@
   --text-muted:          #64748b;
 
   /* Glass — superfícies, bordas e sombras */
-  --glass-bg-base:          rgba(255, 255, 255, 0.42);
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);
   --glass-bg-overlay:       rgba(255, 255, 255, 0.58);
-  --glass-bg-panel:         rgba(255, 255, 255, 0.46);
-  --glass-bg-strong:        rgba(255, 255, 255, 0.68);
+  --glass-bg-panel:         rgba(255, 255, 255, 0.32);
+  --glass-bg-strong:        rgba(255, 255, 255, 0.32);
   --glass-bg-modal:         rgba(255, 255, 255, 0.97);
   --glass-border:           rgba(180, 200, 230, 0.55);
   --glass-border-subtle:    rgba(180, 200, 230, 0.30);

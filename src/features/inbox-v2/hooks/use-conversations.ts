@@ -11,6 +11,8 @@ import {
   type TabCounts,
 } from "../api";
 
+import { isPreviewMode } from "@/lib/preview-mode";
+
 /**
  * Lista paginada de conversas da aba ativa.
  * QueryKey mantém o prefixo `inbox-conversations` da Fase 1 para
@@ -30,7 +32,7 @@ export function useConversations(params: {
         ...params.filters,
         search: params.search,
       }),
-    enabled: params.enabled ?? true,
+    enabled: isPreviewMode() ? true : (params.enabled ?? true),
     refetchInterval: 20_000,
     staleTime: 5_000,
   });
@@ -42,6 +44,6 @@ export function useTabCounts(enabled = true) {
     queryKey: ["conversations", "tab-counts"],
     queryFn: fetchTabCounts,
     refetchInterval: 15_000,
-    enabled,
+    enabled: isPreviewMode() ? true : enabled,
   });
 }

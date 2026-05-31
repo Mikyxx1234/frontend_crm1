@@ -248,6 +248,74 @@
   scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   DARK MODE v2 — ativado pela classe .v2-dark no <html>
+   ══════════════════════════════════════════════════════════════════ */
+.v2-dark {
+  /* Background mesh escuro — azul-marinho profundo com toque roxo */
+  --bg-base:    #0f1623;
+  --bg-mesh-1:  #141d2e;
+  --bg-mesh-2:  #1a1030;
+  --bg-mesh:    linear-gradient(135deg, #0f1623 0%, #141d2e 40%, #1a1030 70%, #0f1623 100%);
+
+  /* Marca — mantém as mesmas cores de destaque, levemente mais claras */
+  --brand-primary:       #7b8df7;
+  --brand-primary-light: #a0aefa;
+  --brand-primary-dark:  #5b6ff5;
+  --brand-secondary:     #c4b5fd;
+  --brand-accent:        #f9a8d4;
+
+  /* Texto */
+  --text-primary:   #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+
+  /* Glass — escuro com blur */
+  --glass-bg-base:     rgba(30, 41, 59, 0.85);
+  --glass-bg-overlay:  rgba(30, 41, 59, 0.65);
+  --glass-bg-panel:    rgba(15, 23, 42, 0.55);
+  --glass-bg-strong:   rgba(15, 23, 42, 0.55);
+  --glass-bg-modal:    rgba(15, 23, 42, 0.98);
+  --glass-border:      rgba(99, 120, 180, 0.30);
+  --glass-border-subtle: rgba(99, 120, 180, 0.18);
+  --glass-shadow-sm:   0 1px 6px rgba(0, 0, 0, 0.35);
+  --glass-shadow:      0 4px 24px rgba(0, 0, 0, 0.50);
+  --glass-shadow-lg:   0 8px 40px rgba(0, 0, 0, 0.60);
+
+  /* Inputs */
+  --input-bg:           rgba(30, 41, 59, 0.65);
+  --input-border:       rgba(99, 120, 180, 0.30);
+  --input-border-focus: rgba(123, 141, 247, 0.60);
+  --input-ring-focus:   rgba(123, 141, 247, 0.25);
+  --input-text:         #e2e8f0;
+  --input-placeholder:  #64748b;
+
+  /* Cores semânticas */
+  --color-enterprise-bg: rgba(123, 141, 247, 0.20);
+  --color-lead-bg:       rgba(245, 158, 11, 0.20);
+  --color-success-bg:    rgba(16, 185, 129, 0.18);
+
+  /* Tooltip */
+  --tooltip-bg:   #1e2d45;
+  --tooltip-text: #e2e8f0;
+
+  /* Scrollbar no dark */
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+/* Scrollbars dark */
+.v2-dark .v2-root ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+}
+.v2-dark .v2-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Background do layout dark */
+.v2-dark .bg-\[var\(--bg-base\)\] {
+  background-color: var(--bg-base);
+}
+
 @layer utilities {
   .av-green   { background: linear-gradient(220deg, #5DFF7B 46%, #356823 100%); }
   .av-blue    { background: linear-gradient(220deg, #5D90FF 46%, #275CA1 100%); }

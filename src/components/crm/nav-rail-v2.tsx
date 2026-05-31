@@ -13,9 +13,13 @@ import {
   IconFilter,
   IconLayoutDashboard,
   IconMessageCircle,
+  IconMoon,
   IconSettings,
+  IconSun,
   IconUsers,
 } from "@tabler/icons-react";
+
+import { useThemeV2 } from "@/hooks/use-theme-v2";
 
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
@@ -171,6 +175,7 @@ export function NavRailV2({ className }: { className?: string }) {
   const pathname = usePathname() ?? "";
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const { theme, toggle } = useThemeV2();
 
   const preview = isPreviewMode();
   const displayName = preview ? PREVIEW_USER.name : "Usuário";
@@ -233,6 +238,21 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <IconSettings size={20} />
         </Link>
+
+        {/* Tema: lua / sol */}
+        <button
+          type="button"
+          onClick={toggle}
+          title={theme === "light" ? "Modo escuro" : "Modo claro"}
+          aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}
+          className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-all duration-150 hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+        >
+          {theme === "light" ? (
+            <IconMoon size={20} />
+          ) : (
+            <IconSun size={20} />
+          )}
+        </button>
 
         {/* Avatar — abre popover com opções de conta */}
         <button

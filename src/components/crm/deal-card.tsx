@@ -69,7 +69,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) 
       onClick={onClick}
       className={cn(
         "cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all",
-        "hover:-translate-y-0.5 hover:bg-white/85 hover:shadow-[var(--glass-shadow)]",
+        "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-base)] hover:shadow-[var(--glass-shadow)]",
         "active:cursor-grabbing",
       )}
     >
@@ -107,7 +107,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) 
 
       {/* Message preview */}
       {deal.message && (
-        <div className="mt-2 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-white/50 px-2.5 py-2 text-[11.5px] italic leading-[1.45] text-[var(--text-secondary)]">
+        <div className="mt-2 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-2.5 py-2 text-[11.5px] italic leading-[1.45] text-[var(--text-secondary)]">
           {/* Ícone de conversa com borda azul — mesmo do card de
               conversa do inbox, para padronizar a leitura visual. */}
           <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
@@ -154,7 +154,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) 
             <button
               type="button"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex cursor-pointer items-center rounded-full border border-dashed border-black/20 bg-transparent px-2 py-px font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+              className="inline-flex cursor-pointer items-center rounded-full border border-dashed border-[var(--glass-border)] bg-transparent px-2 py-px font-display text-[9.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
             >
               +
             </button>
@@ -164,7 +164,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) 
 
       {/* Owner — slot tem prioridade. */}
       <div
-        className="flex items-center gap-1.5 border-t border-black/[0.06] pt-2"
+        className="flex items-center gap-1.5 border-t border-[var(--glass-border-subtle)] pt-2"
         onClick={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}

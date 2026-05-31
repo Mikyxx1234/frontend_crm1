@@ -70,7 +70,7 @@ export function KanbanColumn({
           <h3 className="font-display text-[15px] font-bold tracking-tight text-[var(--text-primary)]">
             {title}
           </h3>
-          <span className="rounded-full border border-black/[0.06] bg-white px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
+          <span className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
             {count}
           </span>
         </div>
@@ -78,7 +78,7 @@ export function KanbanColumn({
           type="button"
           onClick={onAddDeal}
           title="Adicionar negócio"
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-black/[0.06] bg-white text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
         >
           <IconPlus size={16} />
         </button>

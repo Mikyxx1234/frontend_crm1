@@ -236,9 +236,9 @@ export function ConversationCard({
         // alinha com a referência v0 que tem cards "flutuando" sem
         // contorno explícito.
         "cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all duration-200",
-        "hover:bg-white/75",
+        "hover:bg-[var(--glass-bg-base)]",
         conversation.active &&
-          "border-[var(--brand-primary)]/40 bg-white/85 shadow-[0_6px_20px_rgba(91,111,245,0.18)]",
+          "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]",
         conversation.inactive && "opacity-70",
       )}
     >

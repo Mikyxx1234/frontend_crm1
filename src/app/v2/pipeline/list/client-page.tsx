@@ -88,6 +88,13 @@ export default function V2PipelineListClientPage() {
           title="Pipeline"
           description="Lista completa de negócios — alterne entre Kanban e Lista"
           center={
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar por título, e-mail..."
+            />
+          }
+          actions={
             <>
               {/* Filtro de pipeline (nativo, simples). */}
               <label className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]">
@@ -112,13 +119,6 @@ export default function V2PipelineListClientPage() {
               </label>
               <ViewSwitcher current="list" />
             </>
-          }
-          actions={
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Buscar por título, e-mail..."
-            />
           }
         />
 

@@ -58,7 +58,7 @@ export default function V2ContactsClientPage() {
           icon={<IconUsers size={22} />}
           title="Contatos"
           description="Diretório de contatos vinculados ao CRM"
-          actions={
+          center={
             <SearchInput
               value={search}
               onChange={setSearch}

@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
-import { IconBolt, IconCircleCheck, IconCircleOff, IconSearch } from "@tabler/icons-react";
+import { IconBolt, IconCircleCheck, IconCircleOff } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
+import { SearchInput } from "@/components/crm/search-input";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 
@@ -66,51 +67,43 @@ export default function V2AutomationsClientPage() {
           icon={<IconBolt size={22} />}
           title="Automações"
           description="Fluxos disparados por eventos do CRM"
-        />
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
-            {([
-              { id: "all" as const, label: "Todas" },
-              { id: "on" as const, label: "Ativas" },
-              { id: "off" as const, label: "Pausadas" },
-            ]).map((f) => {
-              const isOn = activeFilter === f.id;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveFilter(f.id);
-                    setPage(1);
-                  }}
-                  className={cn(
-                    "cursor-pointer rounded-full px-3 py-1 font-display text-[12px] font-bold transition-colors",
-                    isOn
-                      ? "bg-[var(--brand-primary)] text-white"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                  )}
-                >
-                  {f.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="relative ml-auto w-64">
-            <IconSearch
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-            />
-            <input
-              type="search"
-              placeholder="Buscar por nome..."
+          center={
+            <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-3 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+              onChange={setSearch}
+              placeholder="Buscar por nome..."
             />
-          </div>
-        </div>
+          }
+          actions={
+            <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
+              {([
+                { id: "all" as const, label: "Todas" },
+                { id: "on" as const, label: "Ativas" },
+                { id: "off" as const, label: "Pausadas" },
+              ]).map((f) => {
+                const isOn = activeFilter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveFilter(f.id);
+                      setPage(1);
+                    }}
+                    className={cn(
+                      "cursor-pointer rounded-full px-3 py-1 font-display text-[12px] font-bold transition-colors",
+                      isOn
+                        ? "bg-[var(--brand-primary)] text-white"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
+        />
 
         {query.isLoading && items.length === 0 ? (
           <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />

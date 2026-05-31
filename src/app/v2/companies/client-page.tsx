@@ -51,7 +51,7 @@ export default function V2CompaniesClientPage() {
           icon={<IconBuilding size={22} />}
           title="Empresas"
           description="Empresas cadastradas no CRM"
-          actions={
+          center={
             <SearchInput
               value={search}
               onChange={setSearch}

@@ -402,7 +402,7 @@ export default function InboxV2ClientPage({
             icon={pageHeader.icon}
             title={pageHeader.title}
             description={pageHeader.description}
-            actions={
+            center={
               <SearchInput
                 value={searchInput}
                 onChange={setSearchInput}

@@ -87,7 +87,7 @@ export function PipelineHeader({
         icon={<IconLayoutKanban size={22} />}
         title="Pipeline"
         description="Acompanhe e mova seus negócios pelas etapas do funil."
-        actions={
+        center={
           onSearchChange ? (
             <SearchInput
               value={search ?? ""}
@@ -96,8 +96,8 @@ export function PipelineHeader({
             />
           ) : undefined
         }
-        center={
-          <>
+        actions={
+          <div className="flex items-center gap-2">
             <button
               ref={filtersButtonRef}
               type="button"
@@ -159,7 +159,7 @@ export function PipelineHeader({
             >
               <IconPlus size={16} /> Novo
             </button>
-          </>
+          </div>
         }
       />
 

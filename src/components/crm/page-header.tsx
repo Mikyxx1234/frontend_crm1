@@ -19,9 +19,9 @@ interface PageHeaderProps {
 
 export function PageHeader({ icon, title, description, center, actions, className }: PageHeaderProps) {
   return (
-    <div className={cn("relative flex items-center gap-4 px-1", className)}>
+    <div className={cn("grid items-center gap-4 px-1", actions || center ? "grid-cols-[auto_1fr_auto]" : "grid-cols-[auto_1fr]", className)}>
       {/* Esquerda: ícone + título */}
-      <div className="flex shrink-0 items-center gap-4">
+      <div className="flex min-w-0 shrink-0 items-center gap-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]">
           {icon}
         </div>
@@ -35,18 +35,19 @@ export function PageHeader({ icon, title, description, center, actions, classNam
         </div>
       </div>
 
-      {/* Centro absoluto: busca */}
-      {center && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="pointer-events-auto flex items-center gap-2">
-            {center}
-          </div>
+      {/* Centro: busca — ocupa o espaço restante entre esquerda e direita */}
+      {center ? (
+        <div className="flex items-center justify-start pl-6">
+          {center}
         </div>
+      ) : (
+        /* Spacer quando não há center mas há actions */
+        <div />
       )}
 
       {/* Direita: outros controles */}
       {actions && (
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {actions}
         </div>
       )}

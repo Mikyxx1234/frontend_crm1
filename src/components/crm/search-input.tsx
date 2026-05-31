@@ -8,7 +8,7 @@ interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  /** Largura do container. Default `w-64` (padrão de contatos/empresas). */
+  /** Largura do container. Default `w-80` (padrão de contatos/empresas). */
   className?: string;
 }
 
@@ -24,17 +24,17 @@ export function SearchInput({
   className,
 }: SearchInputProps) {
   return (
-    <div className={cn("relative w-64", className)}>
+    <div className={cn("relative w-80", className)}>
       <IconSearch
-        size={14}
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+        size={15}
+        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
       />
       <input
         type="search"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-3 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+        className="h-10 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-9 pr-4 font-body text-[13px] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] outline-none placeholder:text-[var(--text-muted)] transition-colors focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--input-ring-focus)]"
       />
     </div>
   );

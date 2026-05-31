@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Settings2 } from "lucide-react";
 
+import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 import { SETTINGS_NAV, SETTINGS_PERSONAL, type SettingsNavIcon, type SettingsNavItem } from "@/lib/settings-nav";
@@ -19,61 +20,64 @@ export default function SettingsClientPageV2() {
   const pathname = usePathname();
 
   return (
-    <div className="w-full">
-      <div className="mb-6">
-        <PageHeader
-          title="Configurações"
-          description="Organize canais, equipe, pipeline e integrações do seu workspace."
-          icon={<Settings2 />}
-        />
-      </div>
+    <div className="flex min-h-screen w-full">
+      <NavRailV2 />
+      <div className="flex flex-1 flex-col overflow-auto px-8 py-8">
+        <div className="mb-6">
+          <PageHeader
+            title="Configurações"
+            description="Organize canais, equipe, pipeline e integrações do seu workspace."
+            icon={<Settings2 />}
+          />
+        </div>
 
-      {/* Atalhos pessoais */}
-      <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {SETTINGS_PERSONAL.map((item) => (
-          <PersonalShortcut key={item.id} item={item} pathname={pathname} />
-        ))}
-      </section>
+        {/* Atalhos pessoais */}
+        <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {SETTINGS_PERSONAL.map((item) => (
+            <PersonalShortcut key={item.id} item={item} pathname={pathname} />
+          ))}
+        </section>
 
-      {/* Grupos — todos visíveis (admin bypass) */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {SETTINGS_NAV.map((group) => {
-          const GroupIcon = group.icon;
-          return (
-            <section
-              key={group.id}
-              className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm"
-              aria-labelledby={`group-v2-${group.id}`}
-            >
-              <header className="flex items-start gap-3 border-b border-border/60 bg-muted/30 px-4 py-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <GroupIcon className="size-4.5" />
-                </span>
-                <div className="min-w-0">
-                  <h2
-                    id={`group-v2-${group.id}`}
-                    className="text-sm font-semibold leading-tight text-foreground"
-                  >
-                    {group.label}
-                  </h2>
-                  {group.description ? (
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {group.description}
-                    </p>
-                  ) : null}
-                </div>
-              </header>
+        {/* Grupos — todos visíveis (admin bypass) */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {SETTINGS_NAV.map((group) => {
+            const GroupIcon = group.icon;
+            return (
+              <section
+                key={group.id}
+                className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm"
+                aria-labelledby={`group-v2-${group.id}`}
+              >
+                <header className="flex items-start gap-3 border-b border-border/60 bg-muted/30 px-4 py-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <GroupIcon className="size-4.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <h2
+                      id={`group-v2-${group.id}`}
+                      className="text-sm font-semibold leading-tight text-foreground"
+                    >
+                      {group.label}
+                    </h2>
+                    {group.description ? (
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {group.description}
+                      </p>
+                    ) : null}
+                  </div>
+                </header>
 
-              <ul className="divide-y divide-border/50">
-                {group.items.map((item) => (
-                  <li key={item.id}>
-                    <SettingsRow item={item} pathname={pathname} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
+                <ul className="divide-y divide-border/50">
+                  {group.items.map((item) => (
+                    <li key={item.id}>
+                      <SettingsRow item={item} pathname={pathname} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

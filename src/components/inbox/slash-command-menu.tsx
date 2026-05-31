@@ -458,15 +458,13 @@ export function SlashCommandMenu({
     <div
       role="listbox"
       aria-label="Mensagens prontas"
-      // Bug 29/mai/26: `bg-card` aqui ficava translúcido (40% opaco) porque
-      // este design system define card como "glass" via
-      // `--color-card: rgba(255,255,255,0.40)`. As mensagens do chat
-      // atrás vazavam pelo menu. O sistema já tem token sólido
-      // `--dropdown-solid-bg` (white em light, navy em dark) com esse
-      // exato propósito — documentado em globals.css linhas 81–85.
-      style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
+      style={{
+        backgroundColor: "var(--slash-menu-bg, var(--dropdown-solid-bg))",
+        borderColor: "var(--slash-menu-border, var(--color-border))",
+        boxShadow: "var(--slash-menu-shadow, 0 16px 48px rgba(100,130,180,0.22))",
+      }}
       className={cn(
-        "z-50 max-h-[360px] w-[min(440px,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-border p-1.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10",
+        "z-50 max-h-[360px] w-[min(440px,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border p-1.5 backdrop-blur-md",
         className,
       )}
     >
@@ -533,14 +531,30 @@ export function SlashCommandMenu({
                           aria-selected={active}
                           // Evita perder foco do textarea (o input de envio).
                           onMouseDown={(e) => e.preventDefault()}
-                          onMouseEnter={() => onHover?.(globalIndex)}
                           onClick={() => onSelectItem(item)}
+                          style={
+                            active
+                              ? { backgroundColor: "var(--slash-menu-item-active, rgba(91,111,245,0.12))" }
+                              : undefined
+                          }
                           className={cn(
                             "flex w-full items-start gap-2 rounded-xl px-2.5 py-2 text-left transition-colors",
                             active
-                              ? "bg-primary/10 text-foreground ring-1 ring-primary/30"
-                              : "text-foreground hover:bg-muted/70",
+                              ? "text-foreground ring-1 ring-primary/25"
+                              : "text-foreground",
                           )}
+                          onMouseEnter={(e) => {
+                            if (!active) {
+                              (e.currentTarget as HTMLElement).style.backgroundColor =
+                                "var(--slash-menu-item-hover, rgba(91,111,245,0.07))";
+                            }
+                            onHover?.(globalIndex);
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!active) {
+                              (e.currentTarget as HTMLElement).style.backgroundColor = "";
+                            }
+                          }}
                         >
                           <Icon
                             className={cn("mt-0.5 size-4 shrink-0", KIND_ICON_COLOR[item.kind])}

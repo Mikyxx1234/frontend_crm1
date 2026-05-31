@@ -10,7 +10,7 @@
  */
 
 import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
-import type { Message } from "@/components/crm/message-bubble";
+import type { Message, MessageType } from "@/components/crm/message-bubble";
 
 import type {
   ContactDetail,
@@ -270,6 +270,23 @@ export function toConversationCard(
   };
 }
 
+/** Mapeia messageType do DTO para o tipo visual da bolha. */
+function toMessageType(
+  dto: InboxMessageDto,
+): MessageType {
+  const raw = (dto.messageType ?? "text").toLowerCase();
+  if (raw === "note") return "note";
+  if (raw === "audio" || raw === "voice") return "audio";
+  if (raw === "image" || raw === "photo") return "image";
+  if (raw === "video") return "video";
+  if (raw === "file" || raw === "document") return "file";
+  if (raw === "template") return "template";
+  // direction "system" também vira sistema
+  const dir = String(dto.direction ?? "").toLowerCase();
+  if (dir === "system") return "system";
+  return "text";
+}
+
 /** InboxMessageDto → Message (bolha do chat). */
 export function toMessageBubble(
   dto: InboxMessageDto,
@@ -279,13 +296,26 @@ export function toMessageBubble(
   // Aceitamos também as variantes UPPER por defesa (caso outro endpoint
   // ou SSE futuro mude o casing — nunca regredir o lado dos balões).
   const dir = String(dto.direction ?? "").toLowerCase();
+  const isSystem = dir === "system";
   const isInbound = dir === "in" || dir === "inbound";
+  const isNote = !!dto.private || dto.messageType === "note";
+  const msgType = toMessageType(dto);
+
   return {
     id: dto.id,
     content: dto.content ?? "",
     time: formatTime(dto.createdAt),
-    type: isInbound ? "incoming" : "outgoing",
-    senderInitials: isInbound ? avatarInitials(contactName) : undefined,
+    type: isSystem ? "incoming" : isInbound ? "incoming" : "outgoing",
+    messageType: msgType,
+    isNote,
+    isSystem,
+    senderInitials: isInbound && !isSystem ? avatarInitials(contactName) : undefined,
+    senderName: dto.sender?.name ?? undefined,
+    // Mídia
+    mediaUrl: dto.media?.url ?? undefined,
+    mediaFileName: dto.media?.fileName ?? undefined,
+    mediaMimeType: dto.media?.mimeType ?? undefined,
+    mediaDuration: dto.media?.duration ?? undefined,
   };
 }
 

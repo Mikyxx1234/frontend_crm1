@@ -37,7 +37,9 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  // Detectado após hidratação para evitar mismatch SSR/client
+  // Botão de preview: resolvido só no client (após mount) para cobrir o caso
+  // do v0.dev onde a env var NEXT_PUBLIC_PREVIEW_MODE não foi inlinada no build.
+  // Em SSR fica `false` → sem hydration mismatch.
   const [previewAllowed, setPreviewAllowed] = useState(false);
 
   useEffect(() => {

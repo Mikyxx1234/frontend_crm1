@@ -101,9 +101,12 @@ export async function middleware(req: NextRequest) {
     // PREVIEW MODE: libera todas as rotas sem checar cookie. Usado pelo
     // sandbox do v0.dev onde cookies cross-origin são bloqueados pelo browser.
     // NUNCA deve estar ativo em produção (qualquer um navega tudo sem login).
-    // isPreviewMode() checa a env var (build time); isV0Host() checa o header
-    // "host" em runtime para cobrir o sandbox onde a env var não está disponível.
-    const requestHost = req.headers.get("host") ?? "";
+    //
+    // `isPreviewMode()` no edge não vê `window`, então cobrimos o host do v0
+    // lendo o header `host` em RUNTIME (a env var NEXT_PUBLIC_* costuma não
+    // estar disponível no build do sandbox). Só casa domínios de preview do v0
+    // — nunca localhost nem o domínio de produção (Easypanel).
+    const requestHost = (req.headers.get("host") ?? "").toLowerCase();
     const isV0Host =
       requestHost.endsWith(".vusercontent.net") ||
       requestHost.endsWith(".v0.dev") ||

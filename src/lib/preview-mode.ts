@@ -15,17 +15,32 @@
  */
 
 export function isPreviewMode(): boolean {
-  // SOMENTE via env var explícita. NÃO ligar por NODE_ENV: localhost (`next dev`)
-  // tambem e "development" e precisa bater no backend real de producao. O sandbox
-  // do v0 deve setar NEXT_PUBLIC_PREVIEW_MODE=true no env do build.
-  return (process.env.NEXT_PUBLIC_PREVIEW_MODE ?? "").trim().toLowerCase() === "true";
+  // 1) Via env var explícita (build/runtime). NÃO ligar por NODE_ENV: localhost
+  //    (`next dev`) também é "development" e precisa bater no backend real.
+  //    `.trim()`: o painel do v0 às vezes salva "true\n", o que furava o match.
+  if ((process.env.NEXT_PUBLIC_PREVIEW_MODE ?? "").trim().toLowerCase() === "true") {
+    return true;
+  }
+  // 2) Fallback CLIENT por hostname do v0. CRÍTICO: sem isto, TODO o app
+  //    (mocks, sessão fake, hooks v2) ficaria desligado no preview do v0 quando
+  //    a env var não é inlinada no build — aí você "entra" mas é tratado como
+  //    deslogado e volta pro login. NUNCA casa localhost nem produção.
+  return isV0PreviewHost();
 }
 
 /**
- * Detecta se estamos rodando no sandbox do v0 pelo hostname.
- * NEXT_PUBLIC_* é inlinado em BUILD TIME — no sandbox do v0 a variável não está
- * disponível durante o build, então isPreviewMode() retorna false no client.
- * Esta função usa window.location em RUNTIME para contornar isso.
+ * Fallback CLIENT-ONLY: detecta os domínios de preview do v0.dev pelo hostname.
+ *
+ * Por quê: `NEXT_PUBLIC_PREVIEW_MODE` é inlinado em BUILD time. O sandbox do v0
+ * às vezes injeta a var só no runtime, então o bundle do client fica com
+ * `undefined` mesmo a variável "estando lá" — o middleware (que lê em runtime)
+ * libera as rotas, mas o botão "Entrar (preview)" não renderiza.
+ *
+ * Esta checagem NUNCA casa `localhost`/`127.0.0.1` nem o domínio de produção
+ * (Easypanel), então é seguro: só liga o botão dentro do próprio v0.dev.
+ *
+ * IMPORTANTE: usar apenas no client, dentro de `useEffect`/após mount, para não
+ * gerar hydration mismatch (no SSR `window` é undefined).
  */
 export function isV0PreviewHost(): boolean {
   if (typeof window === "undefined") return false;

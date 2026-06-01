@@ -59,6 +59,12 @@ export interface ContactDetails {
   avatarColor?: string
   status?: string
   activities?: { text: string; time: string; color?: string }[]
+  /**
+   * Campos personalizados mesclados (contato + deal ativo),
+   * produzidos por toContactAside a partir de inboxLeadPanelFields e
+   * dealInboxPanelFields.
+   */
+  panelFields?: { fieldId: string; label: string; value: string; type: string }[]
 }
 
 interface ContactAsideProps {
@@ -82,6 +88,7 @@ const formatCurrency = (v: number) =>
 export function ContactAside({ contact, className, headerActionsNode, tagsNode }: ContactAsideProps) {
   const [activeView, setActiveView] = useState<"produto" | "perfil">("perfil")
   const [activeTab, setActiveTab] = useState<"informacoes" | "dados">("informacoes")
+  const [showAllPanelFields, setShowAllPanelFields] = useState(false)
 
   const segs = contact.stageSegments ?? 5
   const activeIdx = contact.stageActiveIndex ?? 0
@@ -94,6 +101,10 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
 
   const course = contact.course ?? contact.product
   const deals = contact.deals ?? []
+
+  const panelFields = contact.panelFields ?? []
+  const visiblePanelFields = showAllPanelFields ? panelFields : panelFields.slice(0, MAX_DEAL_FIELDS_VISIBLE)
+  const hasMorPanelFields = panelFields.length > MAX_DEAL_FIELDS_VISIBLE
 
   return (
     <aside
@@ -241,6 +252,45 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
             <Row label="Data de Nascimento" value={contact.birthDate} isLast />
           )}
         </div>
+        {/* Campos personalizados (inboxLeadPanelFields + dealInboxPanelFields) */}
+        {panelFields.length > 0 && (
+          <div className="mt-4">
+            <SubLabel>Campos personalizados</SubLabel>
+            <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
+              {visiblePanelFields.map((f, i) => (
+                <div
+                  key={f.fieldId}
+                  className={cn(
+                    "px-[14px] py-2.5",
+                    i < visiblePanelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+                  )}
+                >
+                  <p className="font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    {f.label}
+                  </p>
+                  <p className="mt-0.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                    {f.value || PLACEHOLDER}
+                  </p>
+                </div>
+              ))}
+            </div>
+            {hasMorPanelFields && (
+              <button
+                type="button"
+                onClick={() => setShowAllPanelFields((v) => !v)}
+                className="mt-2 flex w-full items-center justify-center gap-1 font-display text-[11.5px] font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-70"
+              >
+                {showAllPanelFields
+                  ? "Mostrar menos"
+                  : `Mostrar mais (${panelFields.length - MAX_DEAL_FIELDS_VISIBLE})`}
+                <IconChevronDown
+                  size={13}
+                  className={cn("transition-transform", showAllPanelFields && "rotate-180")}
+                />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Negocios vinculados ───────────────────────────────────── */}

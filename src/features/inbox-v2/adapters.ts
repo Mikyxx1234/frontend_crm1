@@ -426,6 +426,14 @@ export function deriveStagePills(
 // Sidebar direito — ContactAside.contact
 // ─────────────────────────────────────────────────────────────────
 
+/** Shape normalizado de um campo do painel — usado em ContactAsideView. */
+export interface PanelField {
+  fieldId: string;
+  label: string;
+  value: string;
+  type: string;
+}
+
 export interface ContactAsideView {
   name: string;
   initials: string;
@@ -450,6 +458,12 @@ export interface ContactAsideView {
   tag: string;
   note?: string;
   activities: { text: string; time: string; color?: string }[];
+  /**
+   * Campos personalizados mesclados: inboxLeadPanelFields (contato) +
+   * dealInboxPanelFields do primeiro deal ativo, deduplicados por fieldId,
+   * com valores nulos/vazios filtrados.
+   */
+  panelFields: PanelField[];
 }
 
 const FALLBACK_FIELD = "—";
@@ -509,6 +523,28 @@ export function toContactAside(
     customFields: (d as { customFields?: { fieldId: string; label: string; value: string | null }[] }).customFields ?? [],
   }));
 
+  // ── panelFields: mescla inboxLeadPanelFields (contato) + dealInboxPanelFields
+  // do deal ativo, deduplicando por fieldId e filtrando valores nulos/vazios.
+  const activeDealId = firstDeal?.id;
+  const contactPanelFields = contact?.inboxLeadPanelFields ?? [];
+  const dealPanelFields = activeDealId
+    ? (contact?.dealInboxPanelFields?.[activeDealId] ?? [])
+    : [];
+
+  const seenFieldIds = new Set<string>();
+  const panelFields: PanelField[] = [...contactPanelFields, ...dealPanelFields]
+    .filter((f) => {
+      if (!f.value?.trim() || seenFieldIds.has(f.fieldId)) return false;
+      seenFieldIds.add(f.fieldId);
+      return true;
+    })
+    .map((f) => ({
+      fieldId: f.fieldId,
+      label: f.label || f.name,
+      value: f.value as string,
+      type: f.type,
+    }));
+
   return {
     name,
     initials: avatarInitials(name),
@@ -534,6 +570,7 @@ export function toContactAside(
     note: contact?.notes ?? undefined,
     activities,
     deals,
+    panelFields,
   };
 }
 

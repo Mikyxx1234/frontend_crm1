@@ -139,6 +139,16 @@ export async function listUsers(): Promise<TeamUser[]> {
 // Contato (sidebar direito)
 // ─────────────────────────────────────────────────────────────────
 
+/** Campo personalizado marcado como "exibir no painel do inbox". */
+export interface InboxLeadPanelField {
+  fieldId: string;
+  name: string;
+  label: string;
+  type: string;
+  options: string[];
+  value: string | null;
+}
+
 export interface ContactDetail {
   id: string;
   name: string;
@@ -176,6 +186,16 @@ export interface ContactDetail {
     scheduledAt?: string | null;
     completedAt?: string | null;
   }[];
+  /**
+   * Campos do CONTATO marcados como "exibir no painel do inbox".
+   * Retornados pelo backend em GET /api/contacts/:id.
+   */
+  inboxLeadPanelFields?: InboxLeadPanelField[];
+  /**
+   * Campos dos NEGOCIOS ativos marcados como "exibir no painel do inbox".
+   * Chave = dealId; valor = array de campos daquele negocio.
+   */
+  dealInboxPanelFields?: Record<string, InboxLeadPanelField[]>;
 }
 
 /** GET /api/contacts/:id */

@@ -16,6 +16,8 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 
+import { useEffect, useState } from "react";
+
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
@@ -51,14 +53,21 @@ export function NavRailV2({ className }: { className?: string }) {
   const pathname = usePathname() ?? "";
   const { theme, toggle } = useThemeV2();
 
-  const preview = isPreviewMode();
-  const displayName = preview ? PREVIEW_USER.name : "Usuário";
-  const initials = displayName
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  // Iniciais resolvidas apenas no client para evitar hydration mismatch —
+  // isPreviewMode() depende de NEXT_PUBLIC_PREVIEW_MODE que pode diferir entre SSR e client.
+  const [initials, setInitials] = useState("··");
+  useEffect(() => {
+    const preview = isPreviewMode();
+    const displayName = preview ? PREVIEW_USER.name : "Usuário";
+    setInitials(
+      displayName
+        .split(" ")
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase(),
+    );
+  }, []);
 
   const isProfileActive = pathname.startsWith("/settings/profile");
 

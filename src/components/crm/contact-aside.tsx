@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { Chip } from "./chip"
 import { IconChevronDown, IconBriefcase, IconTag, IconCurrencyDollar, IconLayoutSidebarRightCollapse, IconLayoutSidebarRightExpand } from "@tabler/icons-react"
 
 /**
@@ -92,7 +91,7 @@ const isFilled = (v: string | undefined | null): v is string =>
 const formatCurrency = (v: number) =>
   v ? `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : PLACEHOLDER
 
-export function ContactAside({ contact, className, headerActionsNode, tagsNode, collapsed = false, onToggleCollapse }: ContactAsideProps) {
+export function ContactAside({ contact, className, collapsed = false, onToggleCollapse }: ContactAsideProps) {
   const [showAllPanelFields, setShowAllPanelFields] = useState(false)
 
   const course = contact.course ?? contact.product
@@ -128,47 +127,30 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode, 
   return (
     <aside
       aria-label="Detalhes do contato"
-      className={cn("flex flex-col gap-3.5 overflow-y-auto pr-0.5", className)}
+      className={cn("flex flex-col gap-3 overflow-y-auto pr-0.5", className)}
     >
-      {/* ── Cartao principal ──────────────────────────────────────── */}
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-[22px] backdrop-blur-md shadow-[var(--glass-shadow)]">
-
-        {/* Nome + botao de colapso */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="font-display text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
-              {contact.name}
-            </div>
-            <div className="mt-px font-display text-xs text-[var(--text-muted)]">
-              #{contact.contactId}
-            </div>
-          </div>
-          {onToggleCollapse && (
-            <button
-              type="button"
-              title="Recolher painel de contato"
-              onClick={onToggleCollapse}
-              className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-              aria-label="Recolher painel de contato"
-            >
-              <IconLayoutSidebarRightCollapse size={17} />
-            </button>
-          )}
+      {/* ── Botao de colapso flutuante ───────────────────────────── */}
+      {onToggleCollapse && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            title="Recolher painel de contato"
+            onClick={onToggleCollapse}
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            aria-label="Recolher painel de contato"
+          >
+            <IconLayoutSidebarRightCollapse size={17} />
+          </button>
         </div>
+      )}
 
-        {/* Responsavel */}
-        <Row label="Responsavel" className="mt-3.5">
-          {headerActionsNode ?? (
-            contact.assignee ? (
-              <Chip variant="brand">{contact.assignee}</Chip>
-            ) : (
-              <Chip variant="ghost">+Responsavel</Chip>
-            )
-          )}
-        </Row>
+      {/* ── Negocios vinculados — topo da aside ──────────────────── */}
+      {deals.length > 0 && deals.map((deal) => (
+        <DealCard key={deal.id} deal={deal} />
+      ))}
 
-        {/* Tags */}
-        {tagsNode && <Row label="Tags">{tagsNode}</Row>}
+      {/* ── Detalhes do contato ───────────────────────────────────── */}
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-[22px] backdrop-blur-md shadow-[var(--glass-shadow)]">
 
         {/* Produto / Curso */}
         {isFilled(course) && (
@@ -244,11 +226,6 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode, 
           </div>
         )}
       </div>
-
-      {/* ── Negocios vinculados (subidos para logo apos o cartao de contato) ── */}
-      {deals.length > 0 && deals.map((deal) => (
-        <DealCard key={deal.id} deal={deal} />
-      ))}
     </aside>
   )
 }
@@ -372,7 +349,7 @@ function DealCard({
   )
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────��─────────────
 // Helpers de layout
 // ─────────────────────────────────────────────────────────────────
 

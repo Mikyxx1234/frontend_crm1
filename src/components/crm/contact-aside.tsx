@@ -306,17 +306,19 @@ function DealCard({
           <IconBriefcase size={16} className="text-[var(--brand-primary)]" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-            {deal.title}
-          </p>
-          {/* Dropdown funcional (client) ou label estático (fallback) */}
-          {deal.stageDropdownSlot ? (
-            <div className="mt-0.5">{deal.stageDropdownSlot}</div>
-          ) : (
-            <p className="mt-0.5 font-display text-[11px] text-[var(--text-muted)]">
-              {deal.stageName ?? "Sem estagio"}
+          {/* Título + dropdown de fase na mesma linha */}
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+              {deal.title}
             </p>
-          )}
+            {deal.stageDropdownSlot ? (
+              <div className="shrink-0">{deal.stageDropdownSlot}</div>
+            ) : (
+              <span className="shrink-0 font-display text-[11px] text-[var(--text-muted)]">
+                {deal.stageName ?? "Sem estagio"}
+              </span>
+            )}
+          </div>
         </div>
         {deal.value > 0 && (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-success-bg,rgba(16,185,129,0.10))] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--color-success,#059669)]">

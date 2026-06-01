@@ -30,9 +30,22 @@ import { AutomationNode, type AutomationNodeData } from "./automation-node"
 import { getBlockMeta, blockAccent } from "../flow-block-icon"
 import type { FlowNodeData, FlowEdgeData } from "@/lib/automation-flow"
 
+export interface FlowCanvasSnapshotNode {
+  id: string
+  type: string
+  position: { x: number; y: number }
+  config: Record<string, unknown> | null
+}
+
 export interface FlowCanvasHandle {
   addBlock: (type: string) => void
   deselect: () => void
+  /**
+   * Retorna a snapshot atual dos nodes para persistência. A ordem é
+   * topológica simples por `y` crescente (e `x` como desempate),
+   * aproximando "fluxo de cima pra baixo".
+   */
+  getSnapshot: () => FlowCanvasSnapshotNode[]
 }
 
 interface FlowCanvasProps {
@@ -177,8 +190,18 @@ function CanvasInner(
         setNodes((nds) => nds.map((n) => ({ ...n, selected: false })))
         onSelect(null)
       },
+      getSnapshot: () => {
+        return [...nodes]
+          .sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x)
+          .map((n) => ({
+            id: n.id,
+            type: (n.data as { blockType?: string } | undefined)?.blockType ?? n.type ?? "unknown",
+            position: { x: n.position.x, y: n.position.y },
+            config: ((n.data as { config?: Record<string, unknown> } | undefined)?.config) ?? null,
+          }))
+      },
     }),
-    [addBlock, setNodes, onSelect],
+    [addBlock, setNodes, onSelect, nodes],
   )
 
   const onConnect = useCallback(

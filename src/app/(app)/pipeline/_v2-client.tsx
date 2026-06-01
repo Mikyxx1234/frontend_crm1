@@ -418,28 +418,13 @@ export default function KanbanV2ClientPage({
               pipelineId={pipelineId}
               statusFilter={status}
               trigger={
-                <span className="inline-flex cursor-pointer items-center gap-2 transition-opacity hover:opacity-75">
-                  {dealDetail?.owner?.name ? (
-                    <>
-                      <span
-                        className={cn(
-                          `av-${avatarColorSlugFromName(dealDetail.owner.name)}`,
-                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-display text-[9px] font-bold text-white",
-                        )}
-                      >
-                        {avatarInitials(dealDetail.owner.name)}
-                      </span>
-                      <span className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
-                        {dealDetail.owner.name}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="font-display text-[13px] italic text-[var(--text-muted)]">
-                      Sem responsável
-                    </span>
-                  )}
-                  <IconChevronDown size={12} className="text-[var(--text-muted)]" />
-                </span>
+                <Chip
+                  variant="brand"
+                  className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                >
+                  {dealDetail?.owner?.name ?? "Sem responsável"}
+                  <IconChevronDown size={10} />
+                </Chip>
               }
             />
           ) : undefined
@@ -826,7 +811,7 @@ function EmptyBoard({ isAuthenticated }: { isAuthenticated: boolean }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────��───────────
 // Helper: nome → slug de cor do v0 (av-blue, av-orange, ...).
 // O novo DealDetailPanel usa `av-${avatarColor}` direto no className,
 // então precisamos retornar um dos slugs definidos em globals-v2.css.

@@ -52,6 +52,11 @@ interface DealCardProps {
    * do card — permite plugar o `AssigneePopover` no kanban-v2.
    */
   ownerSlot?: React.ReactNode
+  /**
+   * Slot opcional renderizado no canto direito do rodape — usado para
+   * o menu de "mover de fase" (alternativa ao drag-and-drop).
+   */
+  moveMenuSlot?: React.ReactNode
 }
 
 const tagStyles: Record<TagType, string> = {
@@ -63,7 +68,7 @@ const tagStyles: Record<TagType, string> = {
   ref: "bg-[rgba(244,114,182,0.12)] text-[#be185d] border-[rgba(244,114,182,0.25)]",
 }
 
-export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) {
+export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot }: DealCardProps) {
   return (
     <article
       onClick={onClick}
@@ -174,6 +179,17 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot }: DealCardProps) 
           <Chip variant="brand" className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]">
             {deal.owner.name}
           </Chip>
+        )}
+        {moveMenuSlot && (
+          <div
+            className="ml-auto"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
+            {moveMenuSlot}
+          </div>
         )}
       </div>
     </article>

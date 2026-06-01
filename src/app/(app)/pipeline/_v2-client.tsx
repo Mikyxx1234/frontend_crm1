@@ -10,7 +10,7 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 
-import { IconChevronDown, IconDotsVertical, IconPencil, IconPlus, IconTrophy } from "@tabler/icons-react";
+import { IconArrowsExchange, IconChevronDown, IconDotsVertical, IconPencil, IconPlus, IconTrophy } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 import { NavRail } from "@/components/crm/nav-rail";
@@ -281,6 +281,7 @@ export default function KanbanV2ClientPage({
                 dealById={dealById}
                 pipelineId={pipelineId}
                 statusFilter={status}
+                stages={board}
                 onAddDeal={() =>
                   setAddStage({ id: col.stageId, name: col.title })
                 }
@@ -673,6 +674,123 @@ function formatDate(iso: string): string {
 // uma área Droppable em cima dos cards.
 // ─────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────
+// CardMoveMenu — botão "Mover" no rodapé do card que abre um menu de
+// fases (alternativa ao drag-and-drop, útil no mobile/touch). Reusa o
+// StagePicker (useMoveDeal) para a mutação com update otimista.
+// ─────────────────────────────────────────────────────────────────
+function CardMoveMenu({
+  dealId,
+  currentStageId,
+  pipelineId,
+  statusFilter,
+  stages,
+}: {
+  dealId: string;
+  currentStageId: string;
+  pipelineId: string | null;
+  statusFilter: StatusFilter;
+  stages: BoardStageDto[];
+}) {
+  return (
+    <StagePicker
+      dealId={dealId}
+      currentStageId={currentStageId}
+      pipelineId={pipelineId}
+      statusFilter={statusFilter}
+    >
+      {({ onSelectStage, isPending }) => (
+        <CardMoveDropdown
+          stages={stages}
+          currentStageId={currentStageId}
+          isPending={isPending}
+          onSelect={onSelectStage}
+        />
+      )}
+    </StagePicker>
+  );
+}
+
+function CardMoveDropdown({
+  stages,
+  currentStageId,
+  isPending,
+  onSelect,
+}: {
+  stages: BoardStageDto[];
+  currentStageId: string;
+  isPending: boolean;
+  onSelect: (stageId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={isPending}
+        title="Mover de fase"
+        aria-label="Mover de fase"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:cursor-wait disabled:opacity-50"
+      >
+        <IconArrowsExchange size={15} />
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full right-0 z-50 mb-1.5 max-h-[260px] min-w-[200px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)] backdrop-blur-md">
+          <div className="px-3 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Mover para
+          </div>
+          {[...stages]
+            .sort((a, b) => a.position - b.position)
+            .map((s) => {
+              const isActive = s.id === currentStageId;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={isPending || isActive}
+                  onClick={() => {
+                    onSelect(s.id);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-2 text-left font-display text-[12px] font-semibold transition-colors",
+                    isActive
+                      ? "cursor-default bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                  )}
+                >
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: s.color ?? "var(--brand-primary)" }}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                  {isActive && (
+                    <span className="shrink-0 font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                      Atual
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DroppableColumn({
   column,
   onDealClick,
@@ -680,6 +798,7 @@ function DroppableColumn({
   pipelineId,
   statusFilter,
   onAddDeal,
+  stages,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -687,6 +806,7 @@ function DroppableColumn({
   pipelineId: string | null;
   statusFilter: StatusFilter;
   onAddDeal?: () => void;
+  stages: BoardStageDto[];
 }) {
   return (
     <Droppable droppableId={column.stageId}>
@@ -784,6 +904,15 @@ function DroppableColumn({
                               </Chip>
                             )
                           }
+                        />
+                      }
+                      moveMenuSlot={
+                        <CardMoveMenu
+                          dealId={deal.id}
+                          currentStageId={column.stageId}
+                          pipelineId={pipelineId}
+                          statusFilter={statusFilter}
+                          stages={stages}
                         />
                       }
                     />

@@ -101,7 +101,15 @@ export async function middleware(req: NextRequest) {
     // PREVIEW MODE: libera todas as rotas sem checar cookie. Usado pelo
     // sandbox do v0.dev onde cookies cross-origin são bloqueados pelo browser.
     // NUNCA deve estar ativo em produção (qualquer um navega tudo sem login).
-    if (isPreviewMode()) {
+    // isPreviewMode() checa a env var (build time); isV0Host() checa o header
+    // "host" em runtime para cobrir o sandbox onde a env var não está disponível.
+    const requestHost = req.headers.get("host") ?? "";
+    const isV0Host =
+      requestHost.endsWith(".vusercontent.net") ||
+      requestHost.endsWith(".v0.dev") ||
+      requestHost.endsWith(".v0.app") ||
+      requestHost.endsWith(".v0.build");
+    if (isPreviewMode() || isV0Host) {
       return withSecurityHeaders(NextResponse.next());
     }
 

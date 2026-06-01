@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import {
   IconBolt,
@@ -9,15 +9,25 @@ import {
   IconChecklist,
   IconFilter,
   IconLayoutDashboard,
+  IconLogout,
   IconMessageCircle,
   IconMoon,
   IconSettings,
   IconSun,
+  IconUserCircle,
   IconUsers,
 } from "@tabler/icons-react";
+import { signOut } from "next-auth/react";
 
 import { useEffect, useState } from "react";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
@@ -51,16 +61,21 @@ function isActiveFor(pathname: string, item: NavItem): boolean {
 
 export function NavRailV2({ className }: { className?: string }) {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
   const { theme, toggle } = useThemeV2();
 
   // Iniciais resolvidas apenas no client para evitar hydration mismatch —
   // isPreviewMode() depende de NEXT_PUBLIC_PREVIEW_MODE que pode diferir entre SSR e client.
   const [initials, setInitials] = useState("··");
+  const [displayName, setDisplayName] = useState("Usuário");
+  const [email, setEmail] = useState<string | null>(null);
   useEffect(() => {
     const preview = isPreviewMode();
-    const displayName = preview ? PREVIEW_USER.name : "Usuário";
+    const name = preview ? PREVIEW_USER.name : "Usuário";
+    setDisplayName(name);
+    setEmail(preview ? (PREVIEW_USER.email ?? null) : null);
     setInitials(
-      displayName
+      name
         .split(" ")
         .map((p) => p[0])
         .slice(0, 2)
@@ -138,25 +153,59 @@ export function NavRailV2({ className }: { className?: string }) {
         )}
       </button>
 
-      {/* Avatar — redireciona direto para /settings/profile */}
-      <Link
-        href="/settings/profile"
-        title="Meu perfil"
-        aria-label="Ir para meu perfil"
-        className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
-      >
-        <div
-          className={cn(
-            "av-pink relative flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 font-display text-[10px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
-            isProfileActive
-              ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
-              : "border-[var(--glass-bg-strong)]",
-          )}
+      {/* Avatar — abre menu da conta (Meu perfil / Sair) */}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          title="Minha conta"
+          aria-label="Abrir menu da conta"
+          className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
         >
-          {initials}
-          <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
-        </div>
-      </Link>
+          <div
+            className={cn(
+              "relative flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[10px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+              isProfileActive
+                ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
+                : "border-[var(--glass-bg-strong)]",
+            )}
+          >
+            {initials}
+            <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
+          </div>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="start" className="w-60">
+          <div className="flex items-center gap-3 px-2 py-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[11px] font-bold text-white">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-display text-[13px] font-bold text-foreground">
+                {displayName}
+              </p>
+              {email && (
+                <p className="truncate text-[11px] text-muted-foreground">{email}</p>
+              )}
+            </div>
+          </div>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
+            <IconUserCircle size={16} className="text-muted-foreground" />
+            <span className="font-medium">Meu perfil</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            onClick={() => void signOut({ callbackUrl: "/login" })}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+          >
+            <IconLogout size={16} />
+            <span className="font-medium">Sair</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </nav>
   );
 }

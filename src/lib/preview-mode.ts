@@ -18,7 +18,24 @@ export function isPreviewMode(): boolean {
   // SOMENTE via env var explícita. NÃO ligar por NODE_ENV: localhost (`next dev`)
   // tambem e "development" e precisa bater no backend real de producao. O sandbox
   // do v0 deve setar NEXT_PUBLIC_PREVIEW_MODE=true no env do build.
-  return (process.env.NEXT_PUBLIC_PREVIEW_MODE ?? "").toLowerCase() === "true";
+  return (process.env.NEXT_PUBLIC_PREVIEW_MODE ?? "").trim().toLowerCase() === "true";
+}
+
+/**
+ * Detecta se estamos rodando no sandbox do v0 pelo hostname.
+ * NEXT_PUBLIC_* é inlinado em BUILD TIME — no sandbox do v0 a variável não está
+ * disponível durante o build, então isPreviewMode() retorna false no client.
+ * Esta função usa window.location em RUNTIME para contornar isso.
+ */
+export function isV0PreviewHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname.toLowerCase();
+  return (
+    host.endsWith(".vusercontent.net") ||
+    host.endsWith(".v0.dev") ||
+    host.endsWith(".v0.app") ||
+    host.endsWith(".v0.build")
+  );
 }
 
 /** User mockado retornado quando preview mode está ativo. */

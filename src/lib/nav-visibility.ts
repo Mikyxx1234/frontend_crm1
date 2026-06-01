@@ -93,30 +93,30 @@ export function filterItemsByRole<T extends { allowedRoles?: UserRole[] }>(
  */
 export const SIDEBAR_ROLE_MATRIX: Record<string, UserRole[] | undefined> = {
   // Operacional — todos
-  "/dashboard": undefined,
-  "/pipeline": undefined,
-  "/inbox": undefined,
-  "/tasks": undefined,
-  "/contacts": undefined,
-  "/companies": undefined,
+  "/old/dashboard": undefined,
+  "/old/pipeline": undefined,
+  "/old/inbox": undefined,
+  "/old/tasks": undefined,
+  "/old/contacts": undefined,
+  "/old/companies": undefined,
   // Gestao
-  "/automations": [UserRole.ADMIN, UserRole.MANAGER],
-  "/ai-agents": [UserRole.ADMIN, UserRole.MANAGER],
-  "/campaigns": [UserRole.ADMIN, UserRole.MANAGER],
-  "/analytics": [UserRole.ADMIN, UserRole.MANAGER],
-  "/analytics/inbox": [UserRole.ADMIN, UserRole.MANAGER],
-  "/reports": [UserRole.ADMIN, UserRole.MANAGER],
+  "/old/automations": [UserRole.ADMIN, UserRole.MANAGER],
+  "/old/ai-agents": [UserRole.ADMIN, UserRole.MANAGER],
+  "/old/campaigns": [UserRole.ADMIN, UserRole.MANAGER],
+  "/old/analytics": [UserRole.ADMIN, UserRole.MANAGER],
+  "/old/analytics/inbox": [UserRole.ADMIN, UserRole.MANAGER],
+  "/old/reports": [UserRole.ADMIN, UserRole.MANAGER],
   // Developer area — so ADMIN
-  "/developers": [UserRole.ADMIN],
+  "/old/developers": [UserRole.ADMIN],
   // Settings — todos enxergam, conteudo interno eh filtrado por grupo
-  "/settings": undefined,
+  "/old/settings": undefined,
 };
 
 /**
  * Rotas fora do rail da sidebar mas ainda sujeitas ao allow list granular
  * (`scopeGrants.sidebar.routes`). Usado junto com hrefs de nav/bottom.
  */
-export const SIDEBAR_GRANULAR_EXTRA_HREFS = ["/analytics/inbox"] as const;
+export const SIDEBAR_GRANULAR_EXTRA_HREFS = ["/old/analytics/inbox"] as const;
 
 export function computeHiddenSidebarRoutesFromAllowList(
   trackedHrefs: readonly string[],

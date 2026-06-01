@@ -86,6 +86,20 @@ const nextConfig: NextConfig = {
       { source: "/uploads/:path*", destination: `${base}/api/uploads/:path*` },
     ];
   },
+  /**
+   * REDIRECTS — Migração v2 → raiz.
+   *
+   * Após a migração de rotas, as URLs do segmento `/v2/*` deixaram de
+   * existir (a v2 virou a raiz). Mantemos redirects permanentes pra
+   * preservar links externos, atalhos do PWA, bookmarks e qualquer
+   * referência hardcoded que ainda exista em automações Kommo ou IA.
+   */
+  async redirects() {
+    return [
+      { source: "/v2", destination: "/dashboard", permanent: true },
+      { source: "/v2/:path*", destination: "/:path*", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

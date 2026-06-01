@@ -1,0 +1,71 @@
+/**
+ * Adapter entre o DTO de atividade do backend e o tipo `Activity`
+ * usado pela UI v2 (`@/lib/activities-data`).
+ *
+ * Backend `ActivityListItemDto`:
+ *   - type: "CALL" | "MEETING" | "EMAIL" | "TASK" | "OTHER"
+ *   - title, description, completed, scheduledAt (ISO|null), completedAt
+ *   - contact, deal, user
+ *
+ * UI `Activity`:
+ *   - kind: "tarefa" | "reuniao" | "ligacao" | "evento" | "email"
+ *   - title, start (ISO local YYYY-MM-DDTHH:mm), status, withWhom, notes
+ */
+
+import type { Activity, ActivityKind } from "@/lib/activities-data";
+import type { ActivityListItemDto, ActivityTypeDto } from "./api";
+
+const TYPE_TO_KIND: Record<ActivityTypeDto, ActivityKind> = {
+  CALL: "ligacao",
+  MEETING: "reuniao",
+  EMAIL: "email",
+  TASK: "tarefa",
+  OTHER: "evento",
+};
+
+const KIND_TO_TYPE: Record<ActivityKind, ActivityTypeDto> = {
+  ligacao: "CALL",
+  reuniao: "MEETING",
+  email: "EMAIL",
+  tarefa: "TASK",
+  evento: "OTHER",
+};
+
+/** Converte ISO UTC (com Z) em YYYY-MM-DDTHH:mm local, sem timezone. */
+function isoToLocalDateTime(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${day}T${hh}:${mm}`;
+}
+
+/** Converte YYYY-MM-DDTHH:mm (hora local) em ISO completo para a API. */
+export function localDateTimeToIso(localDt: string): string {
+  if (!localDt) return new Date().toISOString();
+  // `new Date("YYYY-MM-DDTHH:mm")` é interpretado como hora local
+  const d = new Date(localDt);
+  if (Number.isNaN(d.getTime())) return new Date().toISOString();
+  return d.toISOString();
+}
+
+export function dtoToActivity(dto: ActivityListItemDto): Activity {
+  const start = isoToLocalDateTime(dto.scheduledAt) || isoToLocalDateTime(dto.createdAt) || "";
+  return {
+    id: dto.id,
+    kind: TYPE_TO_KIND[dto.type] ?? "tarefa",
+    title: dto.title,
+    start,
+    status: dto.completed ? "concluida" : "pendente",
+    withWhom: dto.contact?.name ?? dto.deal?.title ?? undefined,
+    notes: dto.description ?? undefined,
+  };
+}
+
+export function activityKindToType(kind: ActivityKind): ActivityTypeDto {
+  return KIND_TO_TYPE[kind] ?? "TASK";
+}

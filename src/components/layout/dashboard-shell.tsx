@@ -90,16 +90,16 @@ const GESTAO: UserRole[] = [UserRole.ADMIN, UserRole.MANAGER];
 //    /developers ou link no hub de Configurações.
 const navItems: NavItem[] = [
   // â”€â”€â”€ Operacional â”€â”€â”€
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { href: "/old/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
   // "Pipeline" é o rótulo guarda-chuva na sidebar; a página tem 3 modos
   // (kanban="Funil", list="Lista", saleshub="Pipeline Ágil") que aparecem
   // como título dinâmico no header. A página lembra a ÃšLTIMA visualização
   // escolhida (`pipeline-view-mode` no localStorage).
-  { href: "/pipeline", label: "Pipeline", icon: Filter, requiredPermission: "pipeline:view" },
-  { href: "/contacts", label: "Contatos", icon: Users, requiredPermission: "contact:view" },
-  { href: "/companies", label: "Empresas", icon: Building2, requiredPermission: "company:view" },
-  { href: "/inbox", label: "Inbox", icon: MessageSquare, requiredPermission: "conversation:view" },
-  { href: "/tasks", label: "Tarefas", icon: CheckSquare, badgeKey: "overdueTasks", requiredPermission: "task:view" },
+  { href: "/old/pipeline", label: "Pipeline", icon: Filter, requiredPermission: "pipeline:view" },
+  { href: "/old/contacts", label: "Contatos", icon: Users, requiredPermission: "contact:view" },
+  { href: "/old/companies", label: "Empresas", icon: Building2, requiredPermission: "company:view" },
+  { href: "/old/inbox", label: "Inbox", icon: MessageSquare, requiredPermission: "conversation:view" },
+  { href: "/old/tasks", label: "Tarefas", icon: CheckSquare, badgeKey: "overdueTasks", requiredPermission: "task:view" },
 
   // â”€â”€â”€ Gestão (ADMIN + MANAGER) â”€â”€â”€
   // "Automação" agrupa Fluxos (/automations) + Agentes IA (/ai-agents)
@@ -108,23 +108,23 @@ const navItems: NavItem[] = [
   // O href do pai aponta pro primeiro filho como rota default; o
   // active state se propaga quando qualquer filho está ativo.
   {
-    href: "/automations",
+    href: "/old/automations",
     label: "Automação",
     icon: Zap,
     allowedRoles: GESTAO,
     requiredPermission: "automation:view",
     groupStart: true,
     children: [
-      { href: "/automations", label: "Fluxos", icon: Zap, allowedRoles: GESTAO, requiredPermission: "automation:view" },
-      { href: "/ai-agents", label: "Agentes IA", icon: Bot, allowedRoles: GESTAO, requiredPermission: "ai_agent:view" },
+      { href: "/old/automations", label: "Fluxos", icon: Zap, allowedRoles: GESTAO, requiredPermission: "automation:view" },
+      { href: "/old/ai-agents", label: "Agentes IA", icon: Bot, allowedRoles: GESTAO, requiredPermission: "ai_agent:view" },
     ],
   },
-  { href: "/campaigns", label: "Campanhas", icon: Megaphone, allowedRoles: GESTAO, requiredPermission: "campaign:view" },
-  { href: "/reports", label: "Relatórios", icon: FileBarChart, allowedRoles: GESTAO, requiredPermission: "report:view" },
+  { href: "/old/campaigns", label: "Campanhas", icon: Megaphone, allowedRoles: GESTAO, requiredPermission: "campaign:view" },
+  { href: "/old/reports", label: "Relatórios", icon: FileBarChart, allowedRoles: GESTAO, requiredPermission: "report:view" },
 ];
 
 const bottomItems: NavItem[] = [
-  { href: "/settings", label: "Configurações", icon: Settings, requiredPermission: "settings:team" },
+  { href: "/old/settings", label: "Configurações", icon: Settings, requiredPermission: "settings:team" },
 ];
 
 /** Hrefs considerados no allow list granular da sidebar (nav + bottom + extras). */
@@ -476,7 +476,7 @@ function OrgLogo({
 }
 
 function getPageTitle(pathname: string | null): string {
-  if (!pathname || pathname === "/" || pathname === "/dashboard") return "Dashboard";
+  if (!pathname || pathname === "/" || pathname === "/old/dashboard") return "Dashboard";
   // Match contra navItems (canonical) e bottomItems pra cobrir tudo.
   // Children têm prioridade sobre o pai — quando estamos em /ai-agents
   // queremos o título "Agentes IA", não "Automação".
@@ -516,7 +516,7 @@ function MobileTopBar({
     <header className="pt-safe sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-white/40 bg-white/40 px-4 pb-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-xl md:hidden">
       <div className="flex items-center gap-3">
         <Link
-          href="/dashboard"
+          href="/old/dashboard"
           aria-label={org?.name ?? "Início"}
           className="flex shrink-0"
         >
@@ -814,7 +814,7 @@ function MobileMoreSheet({
               );
             })}
             <Link
-              href="/settings/profile"
+              href="/old/settings/profile"
               onClick={onClose}
               className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-3 text-foreground active:bg-muted"
             >
@@ -878,7 +878,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const queryClient = useQueryClient();
   const { data: session, status } = useSession();
   const myUserId = (session?.user as { id?: string })?.id;
-  const inboxHeightLocked = pathname === "/inbox" || pathname?.startsWith("/inbox/") || pathname === "/sales-hub";
+  const inboxHeightLocked = pathname === "/old/inbox" || pathname?.startsWith("/old/inbox/") || pathname === "/old/sales-hub";
 
   // Heartbeat global: mantém lastActivityAt atualizado em qualquer rota autenticada.
   // O presence-reaper server-side rebaixa agentes inativos para AWAY/OFFLINE
@@ -1118,7 +1118,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <aside className="hidden w-16 shrink-0 flex-col items-center border-r border-white/40 bg-white/30 py-3 shadow-[var(--glass-shadow)] backdrop-blur-xl md:flex">
         <SidebarRailTooltip label={orgBranding?.name ?? "Início"}>
           <Link
-            href="/dashboard"
+            href="/old/dashboard"
             aria-label={orgBranding?.name ?? "Início"}
             className="relative mb-4 flex lumen-transition hover:scale-105"
           >
@@ -1268,7 +1268,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 {/* â”€â”€ Itens â”€â”€ */}
                 <nav className="flex flex-col gap-0.5 p-2">
                   <Link
-                    href="/settings/profile"
+                    href="/old/settings/profile"
                     onClick={() => setAccountMenuOpen(false)}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground lumen-transition hover:bg-muted"
                     role="menuitem"

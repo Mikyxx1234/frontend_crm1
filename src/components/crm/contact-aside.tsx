@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Chip } from "./chip"
-import { BadgeGlass } from "./badge-glass"
 import { IconChevronDown, IconBriefcase, IconTag, IconCurrencyDollar } from "@tabler/icons-react"
 
 /**
@@ -94,15 +93,6 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
   const [activeTab, setActiveTab] = useState<"informacoes" | "dados">("informacoes")
   const [showAllPanelFields, setShowAllPanelFields] = useState(false)
 
-  const segs = contact.stageSegments ?? 5
-  const activeIdx = contact.stageActiveIndex ?? 0
-
-  const badge =
-    contact.statusBadge ??
-    (contact.financialStatus && contact.financialLabel
-      ? { variant: contact.financialStatus, label: contact.financialLabel }
-      : undefined)
-
   const course = contact.course ?? contact.product
   const deals = contact.deals ?? []
 
@@ -140,26 +130,6 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
 
         {/* Tags */}
         {tagsNode && <Row label="Tags">{tagsNode}</Row>}
-
-        {/* Status */}
-        {badge && (
-          <Row label="Status">
-            <BadgeGlass variant={badge.variant}>{badge.label}</BadgeGlass>
-          </Row>
-        )}
-
-        {/* Stage progress bar */}
-        <div className="mt-3 flex gap-1">
-          {Array.from({ length: segs }).map((_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "h-[5px] flex-1 rounded-full",
-                i <= activeIdx ? "bg-[var(--color-lead)]" : "bg-[var(--glass-border)]",
-              )}
-            />
-          ))}
-        </div>
 
         {/* Toggle Produto / Perfil */}
         <div className="mb-1.5 mt-4 grid grid-cols-2 gap-1.5">

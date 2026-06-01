@@ -41,7 +41,10 @@ function LoginForm() {
   const [previewAllowed, setPreviewAllowed] = useState(false);
 
   useEffect(() => {
-    setPreviewAllowed(isPreviewMode() || isV0PreviewHost());
+    const envFlag = isPreviewMode();
+    const hostFlag = isV0PreviewHost();
+    console.log("[v0] login preview check — host:", window.location.hostname, "envFlag:", envFlag, "hostFlag:", hostFlag);
+    setPreviewAllowed(envFlag || hostFlag);
   }, []);
 
   useEffect(() => {

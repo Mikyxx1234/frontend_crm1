@@ -133,6 +133,8 @@ export interface InboxMessageDto {
   readAt?: string | null;
   replyToId?: string | null;
   reactions?: ReactionDto[];
+  /** Campo plano enviado diretamente pelo backend (ex: "/uploads/audio.ogg"). */
+  mediaUrl?: string | null;
   media?: {
     url: string;
     mimeType?: string;

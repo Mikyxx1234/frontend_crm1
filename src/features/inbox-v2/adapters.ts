@@ -328,7 +328,7 @@ export function toMessageBubble(
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
     messageType: dto.messageType ?? undefined,
-    mediaUrl: dto.media?.url ?? undefined,
+    mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
   };
 }
 

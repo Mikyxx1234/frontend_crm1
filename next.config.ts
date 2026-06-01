@@ -82,7 +82,8 @@ const nextConfig: NextConfig = {
       { source: "/api/signup", destination: `${base}/api/signup` },
       { source: "/api/push/:path*", destination: `${base}/api/push/:path*` },
       { source: "/api/webhooks/:path*", destination: `${base}/api/webhooks/:path*` },
-      { source: "/api/:path*", destination: `${base}/api/:path*` },
+      // Catch-all — exclui /api/preview-login (rota local Next.js)
+      { source: "/api/((?!preview-login).*)", destination: `${base}/api/:path*` },
       { source: "/uploads/:path*", destination: `${base}/api/uploads/:path*` },
     ];
   },

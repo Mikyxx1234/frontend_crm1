@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { IconChevronDown } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
@@ -40,6 +42,13 @@ import {
   TemplatePickerList,
 } from "@/features/inbox-v2/extras";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
+import {
+  useBoard,
+  useDealDetail,
+  useMoveDeal,
+} from "@/features/pipeline-v2/hooks";
+import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 const DEFAULT_FILTERS: InboxFilters = {};
 
@@ -355,10 +364,60 @@ export default function InboxV2ClientPage({
     </div>
   );
 
+  // ── Funil real do primeiro deal do contato ──────────────────────
+  const firstDeal = contactAsideView?.deals?.[0] ?? null;
+  const firstDealId = firstDeal?.id ?? null;
+  const { data: firstDealDetail } = useDealDetail(firstDealId);
+  const firstDealPipelineId = firstDealDetail?.pipelineId ?? firstDeal?.pipelineId ?? null;
+  const { data: boardStages } = useBoard({
+    pipelineId: firstDealPipelineId,
+    enabled: !!firstDealPipelineId,
+  });
+
+  // Monta funnelSegments e stageDropdownSlot para o primeiro deal.
+  // Os demais deals ficam com fallback (sem barra + stageName estático).
+  const firstDealFunnelSegments = boardStages?.map((s) => ({
+    id: s.id,
+    name: s.name,
+    color: s.color ?? "var(--brand-primary)",
+    position: s.position,
+  }));
+  const firstDealStageId = firstDealDetail?.stageId ?? firstDeal?.stageId ?? null;
+
+  // Injeta funnelSegments + stageDropdownSlot apenas no primeiro deal.
+  const dealsWithSlots = (contactAsideView?.deals ?? []).map((d, idx) => {
+    if (idx !== 0 || !boardStages?.length) return d;
+    return {
+      ...d,
+      stageId: firstDealStageId ?? d.stageId,
+      funnelSegments: firstDealFunnelSegments,
+      stageDropdownSlot: firstDealId && firstDealStageId ? (
+        <StagePicker
+          dealId={firstDealId}
+          currentStageId={firstDealStageId}
+          pipelineId={firstDealPipelineId}
+        >
+          {({ onSelectStage, isPending }) => (
+            <InboxStageDropdown
+              stages={boardStages}
+              currentStageId={firstDealStageId}
+              isPending={isPending}
+              onSelect={onSelectStage}
+            />
+          )}
+        </StagePicker>
+      ) : undefined,
+    };
+  });
+
+  const contactAsideViewWithSlots = contactAsideView
+    ? { ...contactAsideView, deals: dealsWithSlots }
+    : null;
+
   const asideNode =
-    contactAsideView && activeRow ? (
+    contactAsideViewWithSlots && activeRow ? (
       <ContactAside
-        contact={contactAsideView}
+        contact={contactAsideViewWithSlots}
         headerActionsNode={
           <AssigneePopover
             conversationId={activeId}
@@ -468,5 +527,92 @@ function EmptyAside() {
     >
       Sem contato selecionado.
     </aside>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// InboxStageDropdown — dropdown glass de troca de fase para o DealCard
+// do ContactAside (inbox). Mesmo padrão visual do StageDropdown do pipeline.
+// ─────────────────────────────────────────────────────────────────
+function InboxStageDropdown({
+  stages,
+  currentStageId,
+  isPending,
+  onSelect,
+}: {
+  stages: BoardStageDto[];
+  currentStageId: string | null;
+  isPending: boolean;
+  onSelect: (stageId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = stages.find((s) => s.id === currentStageId);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+      >
+        {current?.color && (
+          <span
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{ background: current.color }}
+          />
+        )}
+        {current?.name ?? "Sem estagio"}
+        <IconChevronDown
+          size={11}
+          className={cn("transition-transform duration-150", open && "rotate-180")}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md">
+          {[...stages]
+            .sort((a, b) => a.position - b.position)
+            .map((s) => {
+              const isActive = s.id === currentStageId;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => { onSelect(s.id); setOpen(false); }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-2 font-display text-[12px] font-semibold transition-colors",
+                    isActive
+                      ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                  )}
+                >
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: s.color ?? "var(--brand-primary)" }}
+                  />
+                  {s.name}
+                  {isActive && (
+                    <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                      Atual
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+        </div>
+      )}
+    </div>
   );
 }

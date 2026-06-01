@@ -41,9 +41,13 @@ export interface ContactDetails {
     title: string
     value: number
     stageName?: string | null
+    stageId?: string | null
+    pipelineId?: string | null
     productName?: string | null
-    stageCount?: number
-    stageIndex?: number
+    /** Segmentos reais do funil — fornecidos pelo client (useDealDetail + useBoard). */
+    funnelSegments?: { id: string; name: string; color: string; position: number }[]
+    /** Dropdown funcional de troca de fase — montado externamente no client. */
+    stageDropdownSlot?: React.ReactNode
     /** Campos personalizados do negocio */
     customFields?: { fieldId: string; label: string; value: string | null }[]
   }[]
@@ -315,8 +319,14 @@ function DealCard({
   const visibleFields = showAll ? fields : fields.slice(0, MAX_DEAL_FIELDS_VISIBLE)
   const hasMore = fields.length > MAX_DEAL_FIELDS_VISIBLE
 
-  const stageSegs = deal.stageCount ?? 5
-  const stageIdx = deal.stageIndex ?? 0
+  // Segmentos reais do funil — fornecidos pelo client via prop.
+  const segments = deal.funnelSegments
+  const sortedSegments = segments
+    ? [...segments].sort((a, b) => a.position - b.position)
+    : null
+  const currentSegIdx = sortedSegments
+    ? sortedSegments.findIndex((s) => s.id === deal.stageId)
+    : -1
 
   return (
     <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
@@ -329,9 +339,14 @@ function DealCard({
           <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
             {deal.title}
           </p>
-          <p className="mt-0.5 font-display text-[11px] text-[var(--text-muted)]">
-            {deal.stageName ?? "Sem estagio"}
-          </p>
+          {/* Dropdown funcional (client) ou label estático (fallback) */}
+          {deal.stageDropdownSlot ? (
+            <div className="mt-0.5">{deal.stageDropdownSlot}</div>
+          ) : (
+            <p className="mt-0.5 font-display text-[11px] text-[var(--text-muted)]">
+              {deal.stageName ?? "Sem estagio"}
+            </p>
+          )}
         </div>
         {deal.value > 0 && (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-success-bg,rgba(16,185,129,0.10))] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--color-success,#059669)]">
@@ -341,18 +356,22 @@ function DealCard({
         )}
       </div>
 
-      {/* Progresso do estagio */}
-      <div className="flex gap-1 px-5 pt-3">
-        {Array.from({ length: stageSegs }).map((_, i) => (
-          <span
-            key={i}
-            className={cn(
-              "h-[4px] flex-1 rounded-full transition-colors",
-              i <= stageIdx ? "bg-[var(--brand-primary)]" : "bg-[var(--glass-border)]",
-            )}
-          />
-        ))}
-      </div>
+      {/* Progresso do estagio — segmentos reais ou fallback vazio */}
+      {sortedSegments && sortedSegments.length > 0 && (
+        <div className="flex gap-1 px-5 pt-3">
+          {sortedSegments.map((seg, i) => (
+            <span
+              key={seg.id}
+              title={seg.name}
+              className="h-[4px] flex-1 rounded-full transition-colors"
+              style={{
+                background: seg.color || "var(--brand-primary)",
+                opacity: i <= currentSegIdx ? 1 : 0.18,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Produto */}
       {deal.productName && (

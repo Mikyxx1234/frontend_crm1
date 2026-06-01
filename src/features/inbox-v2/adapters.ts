@@ -511,15 +511,17 @@ export function toContactAside(
           : undefined,
   }));
 
-  // Mapeia todos os deals vinculados ao contato com campos customizados
-  const deals = (contact?.deals ?? []).map((d, i, arr) => ({
+  // Mapeia todos os deals vinculados ao contato com campos customizados.
+  // stageCount/stageIndex NÃO são derivados aqui — são falsos.
+  // O client do inbox usa useDealDetail + useBoard para obter segmentos reais.
+  const deals = (contact?.deals ?? []).map((d) => ({
     id: d.id,
     title: d.title,
     value: d.value,
     stageName: d.stageName ?? null,
+    stageId: d.stageId ?? null,
+    pipelineId: (d as { pipelineId?: string }).pipelineId ?? null,
     productName: d.productName ?? null,
-    stageCount: arr.length > 1 ? arr.length : 5,
-    stageIndex: i,
     customFields: (d as { customFields?: { fieldId: string; label: string; value: string | null }[] }).customFields ?? [],
   }));
 

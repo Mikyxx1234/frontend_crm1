@@ -79,6 +79,17 @@ interface DealDetailPanelProps {
    * Cada item: { fieldId, label, value } — value nulo exibe "—".
    */
   customFieldsSlot?: { fieldId: string; label: string; value: string | null }[]
+  /**
+   * Dropdown de troca de fase montado externamente (ex.: StagePicker glass).
+   * Quando fornecido, substitui o bloco "Funil de vendas / nome da fase" da sidebar.
+   */
+  stageDropdownSlot?: React.ReactNode
+  /**
+   * Segmentos reais do funil para a barra de progresso da sidebar.
+   * Cada item: { id, name, color, position } — renderizados em ordem de position.
+   * Se ausente, cai nos STAGES/FUNNEL_PALETTE hardcoded.
+   */
+  funnelSegments?: { id: string; name: string; color: string; position: number }[]
 }
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
@@ -120,6 +131,8 @@ export function DealDetailPanel({
   sessionAlertSlot,
   tabContentOverride,
   customFieldsSlot,
+  stageDropdownSlot,
+  funnelSegments,
 }: DealDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
 
@@ -330,21 +343,53 @@ export function DealDetailPanel({
                 <div className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   Funil de vendas
                 </div>
-                <div className="mt-1 font-display text-[15px] font-bold text-[var(--text-primary)]">
-                  {deal.stage ?? "Em processo"}
-                </div>
-                <div className="mt-2.5 flex gap-1">
-                  {STAGES.map((s, i) => (
-                    <span
-                      key={s}
-                      className="h-[6px] flex-1 rounded-full transition-opacity"
-                      style={{
-                        background: FUNNEL_PALETTE[i % FUNNEL_PALETTE.length],
-                        opacity: i <= currentStageIndex ? 1 : 0.18,
-                      }}
-                    />
-                  ))}
-                </div>
+
+                {/* Dropdown de fase (slot externo) ou label estático */}
+                {stageDropdownSlot ? (
+                  <div className="mt-1">{stageDropdownSlot}</div>
+                ) : (
+                  <div className="mt-1 font-display text-[15px] font-bold text-[var(--text-primary)]">
+                    {deal.stage ?? "Em processo"}
+                  </div>
+                )}
+
+                {/* Barra de progresso — segmentos reais ou fallback hardcoded */}
+                {funnelSegments && funnelSegments.length > 0 ? (
+                  <div className="mt-2.5 flex gap-1">
+                    {[...funnelSegments]
+                      .sort((a, b) => a.position - b.position)
+                      .map((seg) => {
+                        const segIdx = funnelSegments
+                          .sort((a, b) => a.position - b.position)
+                          .findIndex((s) => s.id === seg.id)
+                        const reached = segIdx <= currentStageIndex
+                        return (
+                          <span
+                            key={seg.id}
+                            title={seg.name}
+                            className="h-[6px] flex-1 rounded-full transition-opacity"
+                            style={{
+                              background: seg.color || "var(--brand-primary)",
+                              opacity: reached ? 1 : 0.18,
+                            }}
+                          />
+                        )
+                      })}
+                  </div>
+                ) : (
+                  <div className="mt-2.5 flex gap-1">
+                    {STAGES.map((s, i) => (
+                      <span
+                        key={s}
+                        className="h-[6px] flex-1 rounded-full transition-opacity"
+                        style={{
+                          background: FUNNEL_PALETTE[i % FUNNEL_PALETTE.length],
+                          opacity: i <= currentStageIndex ? 1 : 0.18,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

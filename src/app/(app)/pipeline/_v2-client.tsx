@@ -31,7 +31,7 @@ import {
   useMoveDeal,
   usePipelines,
 } from "@/features/pipeline-v2/hooks";
-import type { BoardDealDto, StatusFilter } from "@/features/pipeline-v2/api";
+import type { BoardDealDto, BoardStageDto, StatusFilter } from "@/features/pipeline-v2/api";
 import {
   AddDealDialog,
   AssigneePopover,
@@ -291,6 +291,47 @@ export default function KanbanV2ClientPage({
         deal={dealDetailVm ?? undefined}
         stageRibbonSlot={
           activeDealId && activeDealStageId ? (
+            <div className="flex items-center gap-1">
+              {board.map((s, idx) => {
+                const currentIdx = board.findIndex(
+                  (b) => b.id === activeDealStageId,
+                );
+                const done = idx < currentIdx;
+                const active = s.id === activeDealStageId;
+                return (
+                  <span
+                    key={s.id}
+                    className="flex-1 truncate rounded-full border px-2 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.06em]"
+                    style={
+                      active
+                        ? {
+                            background: "var(--brand-primary)",
+                            color: "#fff",
+                            borderColor: "var(--brand-primary-dark)",
+                            boxShadow: "0 4px 12px rgba(91,111,245,0.35)",
+                          }
+                        : done
+                          ? {
+                              background: "var(--color-success-bg)",
+                              color: "var(--color-success-text)",
+                              borderColor: "rgba(16,185,129,0.25)",
+                            }
+                          : {
+                              background: "var(--glass-bg)",
+                              color: "var(--text-muted)",
+                              borderColor: "var(--glass-border)",
+                            }
+                    }
+                  >
+                    {s.name}
+                  </span>
+                );
+              })}
+            </div>
+          ) : undefined
+        }
+        stageDropdownSlot={
+          activeDealId && activeDealStageId ? (
             <StagePicker
               dealId={activeDealId}
               currentStageId={activeDealStageId}
@@ -298,50 +339,22 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
             >
               {({ onSelectStage, isPending }) => (
-                <div className="flex items-center gap-1">
-                  {board.map((s, idx) => {
-                    const currentIdx = board.findIndex(
-                      (b) => b.id === activeDealStageId,
-                    );
-                    const done = idx < currentIdx;
-                    const active = s.id === activeDealStageId;
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        disabled={isPending}
-                        onClick={() => onSelectStage(s.id)}
-                        className="flex-1 truncate rounded-full border px-2 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.06em] transition-colors"
-                        style={
-                          active
-                            ? {
-                                background: "var(--brand-primary)",
-                                color: "#fff",
-                                borderColor: "var(--brand-primary-dark)",
-                                boxShadow: "0 4px 12px rgba(91,111,245,0.35)",
-                              }
-                            : done
-                              ? {
-                                  background: "var(--color-success-bg)",
-                                  color: "var(--color-success-text)",
-                                  borderColor: "rgba(16,185,129,0.25)",
-                                }
-                              : {
-                                  background: "var(--glass-bg)",
-                                  color: "var(--text-muted)",
-                                  borderColor: "var(--glass-border)",
-                                }
-                        }
-                      >
-                        {s.name}
-                      </button>
-                    );
-                  })}
-                </div>
+                <StageDropdown
+                  stages={board}
+                  currentStageId={activeDealStageId}
+                  isPending={isPending}
+                  onSelect={onSelectStage}
+                />
               )}
             </StagePicker>
           ) : undefined
         }
+        funnelSegments={board.map((s) => ({
+          id: s.id,
+          name: s.name,
+          color: s.color ?? "var(--brand-primary)",
+          position: s.position,
+        }))}
         winButtonSlot={
           activeDealId ? (
             <WinButton
@@ -525,6 +538,101 @@ export default function KanbanV2ClientPage({
       />
 
       {templateModal}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// StageDropdown — dropdown glass para troca de fase na sidebar.
+// Reusa o estilo de PipelineSwitcher / AssigneePopover.
+// ─────────────────────────────────────────────────────────────────
+
+function StageDropdown({
+  stages,
+  currentStageId,
+  isPending,
+  onSelect,
+}: {
+  stages: BoardStageDto[];
+  currentStageId: string | null;
+  isPending: boolean;
+  onSelect: (stageId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = stages.find((s) => s.id === currentStageId);
+
+  // Fecha ao clicar fora
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 font-display text-[15px] font-bold text-[var(--text-primary)] transition-opacity hover:opacity-70 disabled:cursor-wait disabled:opacity-50"
+      >
+        <span
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ background: current?.color ?? "var(--brand-primary)" }}
+        />
+        {current?.name ?? "Selecionar fase"}
+        <IconChevronDown
+          size={14}
+          className={cn(
+            "text-[var(--text-muted)] transition-transform duration-150",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full z-50 mt-1.5 min-w-[200px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md"
+        >
+          {[...stages]
+            .sort((a, b) => a.position - b.position)
+            .map((s) => {
+              const isActive = s.id === currentStageId;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => {
+                    onSelect(s.id);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 px-3.5 py-2 font-display text-[13px] font-semibold transition-colors",
+                    isActive
+                      ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                  )}
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: s.color ?? "var(--brand-primary)" }}
+                  />
+                  {s.name}
+                  {isActive && (
+                    <span className="ml-auto font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                      Atual
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 }

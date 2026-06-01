@@ -169,6 +169,9 @@ export default function KanbanV2ClientPage({
   // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
   const dealContactId = dealDetail?.contact?.id ?? null;
   const { data: dealContact } = useContactSidebar(dealContactId);
+  console.log("[v0] dealContactId:", dealContactId, "dealContact:", dealContact);
+  console.log("[v0] inboxLeadPanelFields:", dealContact?.inboxLeadPanelFields);
+  console.log("[v0] dealInboxPanelFields:", dealContact?.dealInboxPanelFields);
 
   // Encontra o stage corrente do deal aberto pra alimentar o header de pills.
   const activeDealStage = useMemo(() => {

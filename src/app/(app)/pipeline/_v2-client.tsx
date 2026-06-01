@@ -25,9 +25,9 @@ import {
   type KanbanColumnView,
 } from "@/features/pipeline-v2/adapters";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
+import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
   useBoard,
-  useDealCustomFields,
   useDealDetail,
   useMoveDeal,
   usePipelines,
@@ -164,7 +164,11 @@ export default function KanbanV2ClientPage({
   }, [board]);
 
   const { data: dealDetail } = useDealDetail(activeDealId);
-  const { data: dealCustomFields } = useDealCustomFields(activeDealId);
+
+  // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
+  // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
+  const dealContactId = dealDetail?.contact?.id ?? null;
+  const { data: dealContact } = useContactSidebar(dealContactId);
 
   // Encontra o stage corrente do deal aberto pra alimentar o header de pills.
   const activeDealStage = useMemo(() => {
@@ -474,7 +478,23 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        customFieldsSlot={dealCustomFields ?? []}
+        customFieldsSlot={(() => {
+          // Mesma lógica do toContactAside: mescla inboxLeadPanelFields (contato) +
+          // dealInboxPanelFields[activeDealId] (campos do negócio ativo),
+          // deduplicando por fieldId e filtrando vazios.
+          const contactFields = dealContact?.inboxLeadPanelFields ?? [];
+          const dealFields = activeDealId
+            ? (dealContact?.dealInboxPanelFields?.[activeDealId] ?? [])
+            : [];
+          const seen = new Set<string>();
+          return [...contactFields, ...dealFields]
+            .filter((f) => {
+              if (!f.value?.trim() || seen.has(f.fieldId)) return false;
+              seen.add(f.fieldId);
+              return true;
+            })
+            .map((f) => ({ fieldId: f.fieldId, label: f.label || f.name, value: f.value }));
+        })()}
         messagesSlot={messagesNode}
         composerSlot={composerNode}
         sessionAlertSlot={sessionAlertNode ?? null}

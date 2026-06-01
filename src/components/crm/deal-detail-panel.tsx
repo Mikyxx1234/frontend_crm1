@@ -228,37 +228,8 @@ export function DealDetailPanel({
             </div>
           </div>
 
-          {/* Pipeline progress */}
-          {stageRibbonSlot ? (
-            <div className="mx-6 flex-1" aria-label="Etapa do pipeline">
-              {stageRibbonSlot}
-            </div>
-          ) : (
-            <div className="mx-6 flex flex-1 items-center gap-1.5" aria-label="Etapa do pipeline">
-              {STAGES.map((stage, idx) => {
-                const done = idx < currentStageIndex
-                const active = idx === currentStageIndex
-                return (
-                  <button
-                    key={stage}
-                    type="button"
-                    className={cn(
-                      "flex-1 truncate rounded-full border px-2.5 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.06em] transition-colors",
-                      active &&
-                        "border-[var(--brand-primary-dark)] bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.30)]",
-                      done &&
-                        "border-[rgba(16,185,129,0.25)] bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
-                      !active &&
-                        !done &&
-                        "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                    )}
-                  >
-                    {stage}
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          {/* Espaço flex-1 para empurrar actions para a direita */}
+          <div className="flex-1" />
 
           {/* Actions */}
           <div className="flex items-center gap-2">

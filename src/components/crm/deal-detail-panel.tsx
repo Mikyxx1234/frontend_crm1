@@ -346,8 +346,8 @@ export function DealDetailPanel({
             </div>
 
             {/* Conteúdo rolável: lista densa de campos */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-[22px] py-4">
-              <div className="flex flex-col gap-5">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-[22px] py-4">
+              <div className="flex min-w-0 flex-col gap-5">
                 {/* Principal */}
                 <FieldCard>
                   <FieldRow
@@ -548,21 +548,21 @@ function FieldRow({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-3 py-2.5",
+        "flex min-w-0 items-center justify-between gap-3 py-2.5",
         !isLast && "border-b border-[var(--glass-border-subtle)]",
       )}
     >
-      <span className="shrink-0 text-[12.5px] font-medium text-[var(--text-muted)]">
+      <span className="min-w-0 shrink truncate text-[12.5px] font-medium text-[var(--text-muted)]">
         {label}
       </span>
       {valueNode ? (
-        <div className="ml-auto flex min-w-0 max-w-[64%] flex-wrap items-center justify-end gap-1.5 text-right">
+        <div className="ml-auto flex min-w-0 max-w-[70%] flex-wrap items-center justify-end gap-1.5 text-right">
           {valueNode}
         </div>
       ) : (
         <span
           className={cn(
-            "group flex max-w-[64%] items-center justify-end gap-1.5 text-right font-display text-[13px] font-bold",
+            "group flex min-w-0 max-w-[70%] items-center justify-end gap-1.5 text-right font-display text-[13px] font-bold",
             empty ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
             money && !empty && "text-[var(--color-success-text)]",
           )}

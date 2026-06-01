@@ -104,10 +104,10 @@ export function useDealChatBinding(params: {
       const showSeparator = dayLabel && dayLabel !== lastDayLabel;
       if (showSeparator) lastDayLabel = dayLabel;
       return (
-        <div key={b.id} className="contents">
+        <Fragment key={b.id}>
           {showSeparator && <DaySeparator date={dayLabel} />}
           <MessageBubble message={b} />
-        </div>
+        </Fragment>
       );
     });
   }

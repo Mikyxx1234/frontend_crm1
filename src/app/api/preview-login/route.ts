@@ -36,8 +36,20 @@ export async function GET(req: NextRequest) {
   const redirect = req.nextUrl.searchParams.get("redirect") ?? "/inbox";
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
 
-  // JWT com payload idêntico ao que o NextAuth gravaria após um login real
+  // O nome do cookie e a flag `secure` precisam bater EXATAMENTE com a lógica
+  // do auth.config.ts (useSecureCookies = NEXTAUTH_URL começa com https://),
+  // senão o auth()/middleware leem um cookie com nome diferente do que gravamos.
+  const useSecureCookies = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+  const cookieName = useSecureCookies
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+  const maxAge = 60 * 60 * 8; // 8h
+
+  // No Auth.js v5, `salt` é obrigatório e DEVE ser o nome do cookie de sessão.
   const token = await encode({
+    salt: cookieName,
+    secret,
+    maxAge,
     token: {
       sub: "preview-user",
       id: "preview-user",
@@ -46,22 +58,16 @@ export async function GET(req: NextRequest) {
       role: "ADMIN",
       organizationId: "preview-org",
       isSuperAdmin: false,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8, // 8h
     },
-    secret,
   });
-
-  const isSecure = req.url.startsWith("https://");
-  const cookieName = isSecure ? "__Secure-authjs.session-token" : "authjs.session-token";
 
   const response = NextResponse.redirect(new URL(redirect, req.url));
   response.cookies.set(cookieName, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isSecure,
+    secure: useSecureCookies,
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge,
   });
 
   return response;

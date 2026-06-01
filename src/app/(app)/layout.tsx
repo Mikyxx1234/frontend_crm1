@@ -14,6 +14,7 @@
  */
 
 import "@/styles/globals-v2.css";
+import { TooltipProvider } from "@/components/crm/tooltip-glass";
 
 export default function AppLayout({
   children,
@@ -21,14 +22,16 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className="v2-root v2-min-screen bg-[var(--bg-base)]"
-      style={{
-        backgroundImage:
-          "radial-gradient(at 20% 10%, var(--bg-mesh-1, #b8cfec) 0px, transparent 50%), radial-gradient(at 80% 90%, var(--bg-mesh-2, #e8d5f0) 0px, transparent 50%)",
-      }}
-    >
-      {children}
-    </div>
+    <TooltipProvider delay={300}>
+      <div
+        className="v2-root v2-min-screen bg-[var(--bg-base)]"
+        style={{
+          backgroundImage:
+            "radial-gradient(at 20% 10%, var(--bg-mesh-1, #b8cfec) 0px, transparent 50%), radial-gradient(at 80% 90%, var(--bg-mesh-2, #e8d5f0) 0px, transparent 50%)",
+        }}
+      >
+        {children}
+      </div>
+    </TooltipProvider>
   );
 }

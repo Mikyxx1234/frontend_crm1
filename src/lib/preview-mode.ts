@@ -15,11 +15,10 @@
  */
 
 export function isPreviewMode(): boolean {
-  if ((process.env.NEXT_PUBLIC_PREVIEW_MODE ?? "").toLowerCase() === "true") return true;
-  // Em desenvolvimento local (sandbox) a variável pode não ter sido injetada ainda —
-  // exibimos o botão de preview sempre que NODE_ENV === "development".
-  if (process.env.NODE_ENV === "development") return true;
-  return false;
+  // SOMENTE via env var explícita. NÃO ligar por NODE_ENV: localhost (`next dev`)
+  // tambem e "development" e precisa bater no backend real de producao. O sandbox
+  // do v0 deve setar NEXT_PUBLIC_PREVIEW_MODE=true no env do build.
+  return (process.env.NEXT_PUBLIC_PREVIEW_MODE ?? "").toLowerCase() === "true";
 }
 
 /** User mockado retornado quando preview mode está ativo. */

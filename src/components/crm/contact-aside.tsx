@@ -6,7 +6,6 @@ import {
   IconChevronDown,
   IconBriefcase,
   IconTag,
-  IconCurrencyDollar,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
 } from "@tabler/icons-react"
@@ -150,30 +149,24 @@ function DealInline({
   return (
     <div className="border-b border-[var(--glass-border-subtle)]">
       {/* Header do negocio */}
-      <div className="flex items-center gap-3 px-5 py-4">
+      <div className="flex items-start gap-3 px-5 pb-3 pt-4">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)]">
           <IconBriefcase size={16} className="text-[var(--brand-primary)]" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-              {deal.title}
-            </p>
-            <div className="relative shrink-0">
-              {deal.stageDropdownSlot ?? (
-                <span className="font-display text-[11px] text-[var(--text-muted)]">
-                  {deal.stageName ?? "Sem estagio"}
-                </span>
-              )}
-            </div>
+          {/* Titulo em linha propria, sem truncate agressivo */}
+          <p className="font-display text-[14px] font-bold leading-snug text-[var(--text-primary)]">
+            {deal.title}
+          </p>
+          {/* Estagio abaixo do titulo */}
+          <div className="relative mt-1">
+            {deal.stageDropdownSlot ?? (
+              <span className="font-display text-[11px] text-[var(--text-muted)]">
+                {deal.stageName ?? "Sem estagio"}
+              </span>
+            )}
           </div>
         </div>
-        {deal.value > 0 && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[rgba(16,185,129,0.10)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--color-success,#059669)]">
-            <IconCurrencyDollar size={12} />
-            {deal.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-          </span>
-        )}
       </div>
 
       {/* Barra de progresso do funil */}

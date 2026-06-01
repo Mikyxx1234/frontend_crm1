@@ -297,21 +297,19 @@ export function ContactAside({
       className={cn("flex flex-col overflow-y-auto pr-0.5", className)}
     >
       {/* Card unico que envolve tudo */}
-      <div className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="relative flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
 
-        {/* Botao de colapso */}
+        {/* Botao de colapso — absoluto para nao gerar espaco */}
         {onToggleCollapse && (
-          <div className="flex justify-end px-3 pt-3">
-            <button
-              type="button"
-              title="Recolher painel de contato"
-              onClick={onToggleCollapse}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-              aria-label="Recolher painel de contato"
-            >
-              <IconLayoutSidebarRightCollapse size={17} />
-            </button>
-          </div>
+          <button
+            type="button"
+            title="Recolher painel de contato"
+            onClick={onToggleCollapse}
+            className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            aria-label="Recolher painel de contato"
+          >
+            <IconLayoutSidebarRightCollapse size={15} />
+          </button>
         )}
 
         {/* Negocios vinculados — topo do card */}

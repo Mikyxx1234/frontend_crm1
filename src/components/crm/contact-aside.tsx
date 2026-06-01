@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Chip } from "./chip"
-import { IconChevronDown, IconBriefcase, IconTag, IconCurrencyDollar } from "@tabler/icons-react"
+import { IconChevronDown, IconBriefcase, IconTag, IconCurrencyDollar, IconLayoutSidebarRightCollapse, IconLayoutSidebarRightExpand } from "@tabler/icons-react"
 
 /**
  * Shape estendido — combina os campos do design v2 com os campos
@@ -77,6 +77,10 @@ interface ContactAsideProps {
   headerActionsNode?: React.ReactNode
   /** Slot para chips de tags + TagsPopover */
   tagsNode?: React.ReactNode
+  /** Estado recolhido — quando true exibe apenas a aba lateral com o botao de toggle */
+  collapsed?: boolean
+  /** Callback disparado ao clicar no botao de toggle */
+  onToggleCollapse?: () => void
 }
 
 const PLACEHOLDER = "—"
@@ -88,7 +92,7 @@ const isFilled = (v: string | undefined | null): v is string =>
 const formatCurrency = (v: number) =>
   v ? `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : PLACEHOLDER
 
-export function ContactAside({ contact, className, headerActionsNode, tagsNode }: ContactAsideProps) {
+export function ContactAside({ contact, className, headerActionsNode, tagsNode, collapsed = false, onToggleCollapse }: ContactAsideProps) {
   const [activeView, setActiveView] = useState<"produto" | "perfil">("perfil")
   const [activeTab, setActiveTab] = useState<"informacoes" | "dados">("informacoes")
   const [showAllPanelFields, setShowAllPanelFields] = useState(false)
@@ -100,6 +104,29 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
   const visiblePanelFields = showAllPanelFields ? panelFields : panelFields.slice(0, MAX_DEAL_FIELDS_VISIBLE)
   const hasMorPanelFields = panelFields.length > MAX_DEAL_FIELDS_VISIBLE
 
+  /* ── Estado recolhido: faixa vertical com botao de expansao ─── */
+  if (collapsed) {
+    return (
+      <aside
+        aria-label="Detalhes do contato (recolhido)"
+        className={cn(
+          "flex h-full flex-col items-center justify-start rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pt-3 backdrop-blur-md shadow-[var(--glass-shadow)]",
+          className,
+        )}
+      >
+        <button
+          type="button"
+          title="Expandir painel de contato"
+          onClick={onToggleCollapse}
+          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+          aria-label="Expandir painel de contato"
+        >
+          <IconLayoutSidebarRightExpand size={18} />
+        </button>
+      </aside>
+    )
+  }
+
   return (
     <aside
       aria-label="Detalhes do contato"
@@ -107,14 +134,27 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode }
     >
       {/* ── Cartao principal ──────────────────────────────────────── */}
       <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-[22px] backdrop-blur-md shadow-[var(--glass-shadow)]">
-        {/* Nome + ID */}
-        <div>
-          <div className="font-display text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
-            {contact.name}
+        {/* Nome + botao de colapso */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
+              {contact.name}
+            </div>
+            <div className="mt-px font-display text-xs text-[var(--text-muted)]">
+              #{contact.contactId}
+            </div>
           </div>
-          <div className="mt-px font-display text-xs text-[var(--text-muted)]">
-            #{contact.contactId}
-          </div>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              title="Recolher painel de contato"
+              onClick={onToggleCollapse}
+              className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+              aria-label="Recolher painel de contato"
+            >
+              <IconLayoutSidebarRightCollapse size={17} />
+            </button>
+          )}
         </div>
 
         {/* Responsavel */}

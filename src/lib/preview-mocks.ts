@@ -517,105 +517,96 @@ function makeMessages(conversationId: string) {
 }
 
 /* ── Automações ── */
+/* ── Automations (dados reais anonimizados) ── */
 const AUTOMATIONS = [
   {
-    id: "au-1",
-    name: "Boas-vindas ao lead",
-    description: "Envia mensagem de boas-vindas 5 minutos após o primeiro contato via WhatsApp.",
-    triggerType: "CONVERSATION_CREATED",
-    triggerConfig: { channel: "WHATSAPP_META" },
+    id: "au-3001",
+    name: "Boas-vindas novo lead",
+    description: "Mensagem automática ao entrar lead via WhatsApp",
+    triggerType: "CONTACT_CREATED",
+    triggerConfig: { channel: "WHATSAPP" },
     active: true,
     executionCount: 312,
-    createdAt: "2026-04-10T08:00:00Z",
-    updatedAt: "2026-05-28T14:00:00Z",
-    stepCount: 3,
-    steps: [
-      { id: "as-1a", automationId: "au-1", type: "WAIT",         config: { delay: 300, unit: "seconds" },                              position: 1 },
-      { id: "as-1b", automationId: "au-1", type: "SEND_MESSAGE", config: { templateId: "tpl-welcome",    channel: "WHATSAPP_META" },    position: 2 },
-      { id: "as-1c", automationId: "au-1", type: "ADD_TAG",      config: { tagId: "tag-3" },                                           position: 3 },
-    ],
-  },
-  {
-    id: "au-2",
-    name: "Follow-up em 48h",
-    description: "Reenvia proposta se o lead não respondeu em 48 horas.",
-    triggerType: "DEAL_STAGE_CHANGED",
-    triggerConfig: { fromStage: "st-2", toStage: "st-3" },
-    active: true,
-    executionCount: 88,
-    createdAt: "2026-04-20T10:00:00Z",
-    updatedAt: "2026-05-30T09:00:00Z",
-    stepCount: 2,
-    steps: [
-      { id: "as-2a", automationId: "au-2", type: "WAIT",         config: { delay: 48, unit: "hours" },                                 position: 1 },
-      { id: "as-2b", automationId: "au-2", type: "SEND_MESSAGE", config: { templateId: "tpl-followup",  channel: "WHATSAPP_META" },    position: 2 },
-    ],
-  },
-  {
-    id: "au-3",
-    name: "Notificação de deal ganho",
-    description: "Alerta o time no Slack quando um negócio é marcado como Ganho.",
-    triggerType: "DEAL_WON",
-    triggerConfig: {},
-    active: true,
-    executionCount: 47,
-    createdAt: "2026-03-15T09:00:00Z",
-    updatedAt: "2026-05-01T12:00:00Z",
-    stepCount: 1,
-    steps: [
-      { id: "as-3a", automationId: "au-3", type: "WEBHOOK",      config: { url: "https://hooks.slack.com/services/T00/B00/xxx", method: "POST" }, position: 1 },
-    ],
-  },
-  {
-    id: "au-4",
-    name: "Reativação de leads frios",
-    description: "Envia campanha de reativação para leads sem atividade há 30 dias.",
-    triggerType: "CONTACT_IDLE",
-    triggerConfig: { idleDays: 30 },
-    active: false,
-    executionCount: 0,
-    createdAt: "2026-05-01T11:00:00Z",
-    updatedAt: "2026-05-25T08:00:00Z",
+    createdAt: "2026-03-10T10:00:00Z",
+    updatedAt: "2026-05-20T08:00:00Z",
     stepCount: 4,
     steps: [
-      { id: "as-4a", automationId: "au-4", type: "FILTER",          config: { lifecycleStage: "LEAD" },                                          position: 1 },
-      { id: "as-4b", automationId: "au-4", type: "ADD_TAG",         config: { tagId: "tag-4" },                                                  position: 2 },
-      { id: "as-4c", automationId: "au-4", type: "SEND_MESSAGE",    config: { templateId: "tpl-reactivate" },                                    position: 3 },
-      { id: "as-4d", automationId: "au-4", type: "CREATE_ACTIVITY", config: { type: "TASK", title: "Acompanhar reativação" },                    position: 4 },
+      { id: "as-3001a", automationId: "au-3001", type: "WAIT",            config: { delay: 300, unit: "seconds" },                           position: 1 },
+      { id: "as-3001b", automationId: "au-3001", type: "SEND_MESSAGE",    config: { templateId: "tpl-welcome", channel: "WHATSAPP" },        position: 2 },
+      { id: "as-3001c", automationId: "au-3001", type: "ADD_TAG",         config: { tagId: "tag-3" },                                        position: 3 },
+      { id: "as-3001d", automationId: "au-3001", type: "CREATE_ACTIVITY", config: { type: "TASK", title: "Qualificar novo lead" },           position: 4 },
     ],
   },
   {
-    id: "au-5",
-    name: "Criação de tarefa pós-reunião",
-    description: "Cria automaticamente uma tarefa de follow-up após reunião concluída.",
-    triggerType: "ACTIVITY_COMPLETED",
-    triggerConfig: { activityType: "MEETING" },
-    active: false,
-    executionCount: 23,
-    createdAt: "2026-05-10T14:00:00Z",
-    updatedAt: "2026-05-10T14:00:00Z",
-    stepCount: 2,
-    steps: [
-      { id: "as-5a", automationId: "au-5", type: "WAIT",            config: { delay: 1, unit: "hours" },                                         position: 1 },
-      { id: "as-5b", automationId: "au-5", type: "CREATE_ACTIVITY", config: { type: "TASK", title: "Follow-up pós-reunião", daysUntilDue: 1 },   position: 2 },
-    ],
-  },
-  {
-    id: "au-6",
-    name: "Alerta de deal parado",
-    description: "Avisa o responsável quando um deal ficou sem atualização por 7 dias.",
-    triggerType: "DEAL_IDLE",
-    triggerConfig: { idleDays: 7 },
+    id: "au-3002",
+    name: "Follow-up proposta",
+    description: "Cobra retorno 2 dias após envio da proposta",
+    triggerType: "DEAL_STAGE_CHANGED",
+    triggerConfig: { stageId: "stg-3" },
     active: true,
-    executionCount: 64,
-    createdAt: "2026-04-05T09:00:00Z",
-    updatedAt: "2026-05-20T10:00:00Z",
-    stepCount: 2,
+    executionCount: 88,
+    createdAt: "2026-04-02T10:00:00Z",
+    updatedAt: "2026-05-18T15:30:00Z",
+    stepCount: 3,
     steps: [
-      { id: "as-6a", automationId: "au-6", type: "SEND_INTERNAL",   config: { message: "O deal {{deal.title}} está parado há 7 dias." },          position: 1 },
-      { id: "as-6b", automationId: "au-6", type: "CREATE_ACTIVITY", config: { type: "TASK", title: "Retomar deal parado" },                       position: 2 },
+      { id: "as-3002a", automationId: "au-3002", type: "WAIT",         config: { delay: 48, unit: "hours" },                                position: 1 },
+      { id: "as-3002b", automationId: "au-3002", type: "SEND_MESSAGE", config: { templateId: "tpl-followup", channel: "WHATSAPP" },         position: 2 },
+      { id: "as-3002c", automationId: "au-3002", type: "ADD_TAG",      config: { tagId: "tag-4" },                                          position: 3 },
     ],
   },
+  {
+    id: "au-3003",
+    name: "Reativação inativos",
+    description: "Dispara para contatos sem interação há 30 dias",
+    triggerType: "SCHEDULE",
+    triggerConfig: { cron: "0 9 * * 1" },
+    active: false,
+    executionCount: 0,
+    createdAt: "2026-02-15T10:00:00Z",
+    updatedAt: "2026-05-01T12:00:00Z",
+    stepCount: 5,
+    steps: [
+      { id: "as-3003a", automationId: "au-3003", type: "FILTER",          config: { idleDays: 30 },                                         position: 1 },
+      { id: "as-3003b", automationId: "au-3003", type: "ADD_TAG",         config: { tagId: "tag-4" },                                       position: 2 },
+      { id: "as-3003c", automationId: "au-3003", type: "SEND_MESSAGE",    config: { templateId: "tpl-reactivate" },                         position: 3 },
+      { id: "as-3003d", automationId: "au-3003", type: "WAIT",            config: { delay: 72, unit: "hours" },                             position: 4 },
+      { id: "as-3003e", automationId: "au-3003", type: "CREATE_ACTIVITY", config: { type: "TASK", title: "Verificar reativação" },          position: 5 },
+    ],
+  },
+];
+
+/* ── Contacts list (shape de /api/contacts — dados reais anonimizados) ── */
+const CONTACTS_LIST = [
+  { id: "ct-1001", name: "Ana Beatriz Ferreira", email: "ana.ferreira@stellar.edu.br", phone: "+5531988120045", avatarUrl: null, leadScore: 87, lifecycleStage: "OPPORTUNITY", createdAt: "2026-05-22T13:40:00Z", company: { id: "co-6", name: "Stellar Educação", domain: "stellar.edu.br" }, tags: [TAGS[0], TAGS[1]] },
+  { id: "ct-1002", name: "Carlos Eduardo Lima",   email: "carlos.lima@acme.com",           phone: "+5511997640112", avatarUrl: null, leadScore: 64, lifecycleStage: "LEAD",        createdAt: "2026-05-19T09:10:00Z", company: { id: "co-1", name: "Acme Tech",        domain: "acme.com"       }, tags: [TAGS[2]] },
+  { id: "ct-1003", name: "Patrícia Gomes",        email: "patricia@globex.com.br",          phone: "+5511996330078", avatarUrl: null, leadScore: 42, lifecycleStage: "CUSTOMER",   createdAt: "2026-04-30T16:05:00Z", company: { id: "co-2", name: "Globex Logistics", domain: "globex.com.br"  }, tags: [TAGS[5]] },
+  { id: "ct-1004", name: "Rafael Monteiro",       email: null,                              phone: "+5521995210099", avatarUrl: null, leadScore: null, lifecycleStage: "LEAD",     createdAt: "2026-05-25T11:22:00Z", company: null,                                                                   tags: [] },
+];
+
+/* ── Companies list (shape de /api/companies — dados reais anonimizados) ── */
+const COMPANIES_LIST = [
+  { id: "co-1", name: "Acme Tech",        domain: "acme.com",       industry: "Software",  size: "51-200",  phone: "+5511999990001", address: "Av. Paulista, 1000 — São Paulo, SP",                 createdAt: "2026-04-12T10:00:00Z", _count: { contacts: 14 } },
+  { id: "co-2", name: "Globex Logistics", domain: "globex.com.br",  industry: "Logística", size: "201-500", phone: "+5511999990002", address: "Rod. Anhanguera, km 23 — Campinas, SP",              createdAt: "2026-03-28T10:00:00Z", _count: { contacts: 8  } },
+  { id: "co-6", name: "Stellar Educação", domain: "stellar.edu.br", industry: "Educação",  size: "51-200",  phone: "+5531999990006", address: "R. dos Inconfidentes, 800 — Belo Horizonte, MG",    createdAt: "2026-01-10T10:00:00Z", _count: { contacts: 17 } },
+];
+
+/* ── Board (shape de /api/pipelines/:id/board — dados reais anonimizados) ── */
+const BOARD_STAGES = [
+  {
+    id: "stg-1", name: "Entrada", color: "#3b82f6", position: 0, winProbability: 10, rottingDays: 7, isIncoming: true, totalCount: 2,
+    deals: [
+      { id: "dl-2001", number: 2001, title: "Plano Anual — Stellar",  value: 28500,  status: "OPEN", position: 0, expectedClose: "2026-06-30T00:00:00Z", createdAt: "2026-05-22T13:40:00Z", updatedAt: "2026-05-28T10:00:00Z", isRotting: false, priority: "HIGH",   contact: { id: "ct-1001", name: "Ana Beatriz Ferreira", email: "ana.ferreira@stellar.edu.br", phone: "+5531988120045", avatarUrl: null }, owner: { id: "u-juliana", name: "Juliana Costa",  avatarUrl: null }, lastMessage: { content: "Pode me enviar a proposta?",                 createdAt: "2026-05-28T09:55:00Z", direction: "INBOUND" }, channel: "WHATSAPP", productName: "Plano Anual EAD",  productType: "SERVICE", tags: [TAGS[0]], pendingActivities: 2, hasOverdueActivity: false, unreadCount: 1 },
+      { id: "dl-2002", number: 2002, title: "Licenças — Acme Tech",   value: 12000,  status: "OPEN", position: 1, expectedClose: null,                   createdAt: "2026-05-19T09:10:00Z", updatedAt: "2026-05-26T14:00:00Z", isRotting: true,  priority: "MEDIUM", contact: { id: "ct-1002", name: "Carlos Eduardo Lima",  email: "carlos.lima@acme.com",           phone: "+5511997640112", avatarUrl: null }, owner: { id: "u-rafael",  name: "Rafael Almeida", avatarUrl: null }, lastMessage: null,                                                                                                channel: "EMAIL",    productName: null,            productType: null,      tags: [],        pendingActivities: 0, hasOverdueActivity: true,  unreadCount: 0 },
+    ],
+  },
+  {
+    id: "stg-2", name: "Qualificação", color: "#f59e0b", position: 1, winProbability: 35, rottingDays: 10, totalCount: 1,
+    deals: [
+      { id: "dl-2003", number: 2003, title: "Consultoria — Globex",   value: 45000,  status: "OPEN", position: 0, expectedClose: "2026-07-15T00:00:00Z", createdAt: "2026-04-30T16:05:00Z", updatedAt: "2026-05-27T11:30:00Z", isRotting: false, priority: "HIGH",   contact: { id: "ct-1003", name: "Patrícia Gomes",       email: "patricia@globex.com.br",          phone: "+5511996330078", avatarUrl: null }, owner: { id: "u-marcelo", name: "Marcelo Santos", avatarUrl: null }, lastMessage: { content: "Fechado, vamos seguir!",                    createdAt: "2026-05-27T11:25:00Z", direction: "INBOUND" }, channel: "WHATSAPP", productName: "Consultoria EaD", productType: "SERVICE", tags: [TAGS[1]], pendingActivities: 1, hasOverdueActivity: false, unreadCount: 0 },
+    ],
+  },
+  { id: "stg-3", name: "Proposta",    color: "#8b5cf6", position: 2, winProbability: 60, rottingDays: 14, totalCount: 0, deals: [] },
+  { id: "stg-4", name: "Fechamento",  color: "#10b981", position: 3, winProbability: 85, rottingDays: 21, totalCount: 0, deals: [] },
 ];
 
 /* ── Quick replies ── */
@@ -798,7 +789,7 @@ const DEALS_OVERVIEW = {
 
 /* ═══════════════════════════════════════════════════════════════════
    ROUTER
-══════════════════════════════════════════════════════════════════ */
+════════════════════════════════════════���═════════════════════════ */
 
 function enrichDeal(d: typeof DEALS[number]) {
   const stage   = STAGES.find((s) => s.id === d.stageId)  ?? STAGES[0];
@@ -949,7 +940,12 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
   /* ── Directory ── */
   {
     test: (u) => u.pathname === "/api/contacts",
-    handler: () => ({ items: CONTACTS, total: CONTACTS.length, page: 1, perPage: 50 }),
+    handler: () => ({
+      items: CONTACTS_LIST,
+      total: CONTACTS_LIST.length,
+      page: 1,
+      perPage: 20,
+    }),
   },
   {
     test: (u) => /^\/api\/contacts\/[^/]+$/.test(u.pathname),
@@ -960,7 +956,12 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
   },
   {
     test: (u) => u.pathname === "/api/companies",
-    handler: () => ({ items: COMPANIES, total: COMPANIES.length, page: 1, perPage: 50 }),
+    handler: () => ({
+      items: COMPANIES_LIST,
+      total: COMPANIES_LIST.length,
+      page: 1,
+      perPage: 20,
+    }),
   },
   {
     test: (u) => /^\/api\/companies\/[^/]+$/.test(u.pathname),
@@ -1025,20 +1026,7 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
   },
   {
     test: (u) => /^\/api\/pipelines\/[^/]+\/board/.test(u.pathname),
-    handler: () => ({
-      stages: STAGES.map((s) => ({
-        ...s,
-        position: s.order,
-        winProbability: s.order >= 4 ? 80 : s.order * 15,
-        rottingDays: 7,
-        pipelineId: "pl-1",
-        deals: DEALS.filter((d) => d.stageId === s.id).map((d) => ({
-          ...enrichDeal(d),
-          isRotting: false,
-          lastMessage: null,
-        })),
-      })),
-    }),
+    handler: () => ({ stages: BOARD_STAGES }),
   },
   {
     test: (u) => /^\/api\/(deals|board)/.test(u.pathname),

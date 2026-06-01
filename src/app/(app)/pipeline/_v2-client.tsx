@@ -25,9 +25,9 @@ import {
   type KanbanColumnView,
 } from "@/features/pipeline-v2/adapters";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
+import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
   useBoard,
-  useDealCustomFields,
   useDealDetail,
   useMoveDeal,
   usePipelines,
@@ -164,7 +164,11 @@ export default function KanbanV2ClientPage({
   }, [board]);
 
   const { data: dealDetail } = useDealDetail(activeDealId);
-  const { data: dealCustomFields } = useDealCustomFields(activeDealId);
+
+  // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
+  // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
+  const dealContactId = dealDetail?.contact?.id ?? null;
+  const { data: dealContact } = useContactSidebar(dealContactId);
 
   // Encontra o stage corrente do deal aberto pra alimentar o header de pills.
   const activeDealStage = useMemo(() => {
@@ -414,16 +418,13 @@ export default function KanbanV2ClientPage({
               pipelineId={pipelineId}
               statusFilter={status}
               trigger={
-                <span
-                  className={`inline-flex cursor-pointer items-center gap-1.5 ${
-                    dealDetail?.owner?.name
-                      ? "font-display font-semibold text-[var(--text-primary)]"
-                      : "italic text-[var(--text-muted)]"
-                  }`}
+                <Chip
+                  variant="brand"
+                  className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]"
                 >
-                  {dealDetail?.owner?.name || "Sem responsavel"}
-                  <IconChevronDown size={12} />
-                </span>
+                  {dealDetail?.owner?.name ?? "Sem responsável"}
+                  <IconChevronDown size={10} />
+                </Chip>
               }
             />
           ) : undefined
@@ -438,7 +439,7 @@ export default function KanbanV2ClientPage({
               pipelineId={pipelineId}
               statusFilter={status}
               display={(v) => (
-                <span className="inline-flex items-center gap-1.5 font-display font-semibold text-[var(--text-primary)]">
+                <span className="inline-flex items-center gap-1.5 font-display text-[13px] font-semibold text-[var(--text-primary)]">
                   {v && v.trim() ? v : <span className="italic text-[var(--text-muted)]">Adicionar</span>}
                   <IconPencil size={12} className="opacity-50" />
                 </span>
@@ -462,11 +463,11 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
               display={(v) =>
                 v && v.trim() ? (
-                  <span className="cursor-pointer font-display font-semibold text-[var(--text-primary)]">
+                  <span className="cursor-pointer font-display text-[13px] font-semibold text-[var(--text-primary)]">
                     {formatDate(v)}
                   </span>
                 ) : (
-                  <span className="cursor-pointer italic text-[var(--text-muted)]">
+                  <span className="cursor-pointer font-display text-[13px] italic text-[var(--text-muted)]">
                     Indefinida
                   </span>
                 )
@@ -474,7 +475,23 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        customFieldsSlot={dealCustomFields ?? []}
+        customFieldsSlot={(() => {
+          // Mesma lógica do toContactAside: mescla inboxLeadPanelFields (contato) +
+          // dealInboxPanelFields[activeDealId] (campos do negócio ativo),
+          // deduplicando por fieldId e filtrando vazios.
+          const contactFields = dealContact?.inboxLeadPanelFields ?? [];
+          const dealFields = activeDealId
+            ? (dealContact?.dealInboxPanelFields?.[activeDealId] ?? [])
+            : [];
+          const seen = new Set<string>();
+          return [...contactFields, ...dealFields]
+            .filter((f) => {
+              if (!f.value?.trim() || seen.has(f.fieldId)) return false;
+              seen.add(f.fieldId);
+              return true;
+            })
+            .map((f) => ({ fieldId: f.fieldId, label: f.label || f.name, value: f.value }));
+        })()}
         messagesSlot={messagesNode}
         composerSlot={composerNode}
         sessionAlertSlot={sessionAlertNode ?? null}
@@ -794,11 +811,11 @@ function EmptyBoard({ isAuthenticated }: { isAuthenticated: boolean }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────��───────────
 // Helper: nome → slug de cor do v0 (av-blue, av-orange, ...).
 // O novo DealDetailPanel usa `av-${avatarColor}` direto no className,
 // então precisamos retornar um dos slugs definidos em globals-v2.css.
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────���────────────────────────────
 
 const AVATAR_SLUGS = [
   "green",

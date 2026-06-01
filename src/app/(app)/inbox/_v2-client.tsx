@@ -110,6 +110,7 @@ export default function InboxV2ClientPage({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [asideCollapsed, setAsideCollapsed] = useState(false);
 
   // Debounce do search (300ms). Evita refetch a cada tecla.
   useEffect(() => {
@@ -426,6 +427,8 @@ export default function InboxV2ClientPage({
           />
         }
         tagsNode={tagsNode}
+        collapsed={asideCollapsed}
+        onToggleCollapse={() => setAsideCollapsed((v) => !v)}
       />
     ) : (
       <EmptyAside />
@@ -470,8 +473,8 @@ export default function InboxV2ClientPage({
             }
           />
           <div
-            className="grid min-h-0 flex-1 gap-4"
-            style={{ gridTemplateColumns: `${convWidth}px 1fr 340px` }}
+            className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
+            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "44px" : "340px"}` }}
           >
             {conversationColumnNode}
             {chatNode}
@@ -489,7 +492,7 @@ export default function InboxV2ClientPage({
       className="v2-screen grid gap-4 p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 fixa.
-        gridTemplateColumns: `72px ${convWidth}px 1fr 340px`,
+        gridTemplateColumns: `72px ${convWidth}px 1fr ${asideCollapsed ? "44px" : "340px"}`,
       }}
     >
       {navRailNode}

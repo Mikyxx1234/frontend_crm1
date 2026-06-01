@@ -37,11 +37,11 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [previewAllowed, setPreviewAllowed] = useState(false);
-
-  useEffect(() => {
-    setPreviewAllowed(isPreviewMode() || isV0PreviewHost());
-  }, []);
+  // Lazy init: roda apenas no client, sem esperar useEffect
+  const [previewAllowed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return isPreviewMode() || isV0PreviewHost();
+  });
 
   useEffect(() => {
     if (!loginSuccess) return;

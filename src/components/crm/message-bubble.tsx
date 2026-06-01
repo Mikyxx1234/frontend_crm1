@@ -143,7 +143,7 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
           "flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
           isBot
             ? "bg-[#475569]"
-            : "bg-[var(--brand-primary)]",
+            : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
         )}>
           {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
         </div>

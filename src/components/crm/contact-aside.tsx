@@ -93,8 +93,6 @@ const formatCurrency = (v: number) =>
   v ? `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : PLACEHOLDER
 
 export function ContactAside({ contact, className, headerActionsNode, tagsNode, collapsed = false, onToggleCollapse }: ContactAsideProps) {
-  const [activeView, setActiveView] = useState<"produto" | "perfil">("perfil")
-  const [activeTab, setActiveTab] = useState<"informacoes" | "dados">("informacoes")
   const [showAllPanelFields, setShowAllPanelFields] = useState(false)
 
   const course = contact.course ?? contact.product
@@ -134,6 +132,7 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode, 
     >
       {/* ── Cartao principal ──────────────────────────────────────── */}
       <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-[22px] backdrop-blur-md shadow-[var(--glass-shadow)]">
+
         {/* Nome + botao de colapso */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -171,74 +170,25 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode, 
         {/* Tags */}
         {tagsNode && <Row label="Tags">{tagsNode}</Row>}
 
-        {/* Toggle Produto / Perfil */}
-        <div className="mb-1.5 mt-4 grid grid-cols-2 gap-1.5">
-          {(["produto", "perfil"] as const).map((view) => (
-            <button
-              key={view}
-              type="button"
-              onClick={() => setActiveView(view)}
-              className={cn(
-                "cursor-pointer rounded-full border px-4 py-2.5 font-display text-[13px] font-bold transition-all",
-                activeView === view
-                  ? "border-[var(--brand-primary-dark)] bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.30)]"
-                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)]",
-              )}
-            >
-              {view === "produto" ? "Produto" : "Perfil"}
-            </button>
-          ))}
-        </div>
-
-        {/* Tabs underline */}
-        <div className="mb-3.5 mt-4 flex gap-1.5 border-b border-[var(--glass-border-subtle)]">
-          {(["informacoes", "dados"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "-mb-px cursor-pointer border-b-2 bg-transparent px-3.5 py-2.5 font-display text-xs font-bold tracking-[0.08em] transition-all",
-                activeTab === tab
-                  ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
-                  : "border-transparent text-[var(--text-muted)]",
-              )}
-            >
-              {tab === "informacoes" ? "INFORMACOES" : "DADOS"}
-            </button>
-          ))}
-        </div>
-
-        {/* Nota */}
-        {contact.note && (
-          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-4">
-            <div className="mb-2.5 flex items-center gap-1.5 font-display text-[10px] font-bold tracking-[0.12em] text-[var(--brand-primary)]">
-              <span className="h-[7px] w-[7px] rounded-full bg-[var(--brand-primary)]" />
-              NOTAS
-            </div>
-            <div className="text-[13px] italic leading-[1.6] text-[var(--text-secondary)]">
-              {contact.note}
-            </div>
-          </div>
-        )}
-
-        {/* Detalhes Curso */}
-        {(isFilled(course) || isFilled(contact.formation) || isFilled(contact.entry)) && (
+        {/* Produto / Curso */}
+        {isFilled(course) && (
           <>
-            <SubLabel>Detalhes Curso</SubLabel>
-            {isFilled(course) && <Row label="Curso" value={course} />}
-            {isFilled(contact.formation) && <Row label="Formacao" value={contact.formation} />}
-            {isFilled(contact.entry) && (
-              <Row label="Entrada">
-                <button
-                  type="button"
-                  className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent font-display text-xs font-bold text-[var(--text-primary)]"
-                >
-                  {contact.entry}
-                  <IconChevronDown size={14} className="text-[var(--text-muted)]" />
-                </button>
-              </Row>
-            )}
+            <SubLabel>Produto</SubLabel>
+            <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[18px] py-3.5">
+              <Row label="Produto" value={course} isLast />
+              {isFilled(contact.formation) && <Row label="Formacao" value={contact.formation} isLast />}
+              {isFilled(contact.entry) && (
+                <Row label="Entrada" isLast>
+                  <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 border-none bg-transparent font-display text-xs font-bold text-[var(--text-primary)]"
+                  >
+                    {contact.entry}
+                    <IconChevronDown size={14} className="text-[var(--text-muted)]" />
+                  </button>
+                </Row>
+              )}
+            </div>
           </>
         )}
 
@@ -250,22 +200,15 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode, 
             <Row label="Telefone" valueStyle={{ color: "var(--brand-primary)" }} value={contact.phone} />
           )}
           {isFilled(contact.email) && (
-            <Row
-              label="Email"
-              value={contact.email}
-              valueStyle={{ color: "var(--brand-primary)", fontSize: 12 }}
-            />
+            <Row label="Email" value={contact.email} valueStyle={{ color: "var(--brand-primary)", fontSize: 12 }} />
           )}
           {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} />}
           {isFilled(contact.rg) && <Row label="RG" value={contact.rg} />}
           {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} />}
-          {isFilled(contact.addressNumber) && (
-            <Row label="N Residencia" value={contact.addressNumber} />
-          )}
-          {isFilled(contact.birthDate) && (
-            <Row label="Data de Nascimento" value={contact.birthDate} isLast />
-          )}
+          {isFilled(contact.addressNumber) && <Row label="N Residencia" value={contact.addressNumber} />}
+          {isFilled(contact.birthDate) && <Row label="Data de Nascimento" value={contact.birthDate} isLast />}
         </div>
+
         {/* Campos personalizados (inboxLeadPanelFields + dealInboxPanelFields) */}
         {panelFields.length > 0 && (
           <div className="mt-4">
@@ -294,20 +237,15 @@ export function ContactAside({ contact, className, headerActionsNode, tagsNode, 
                 onClick={() => setShowAllPanelFields((v) => !v)}
                 className="mt-2 flex w-full items-center justify-center gap-1 font-display text-[11.5px] font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-70"
               >
-                {showAllPanelFields
-                  ? "Mostrar menos"
-                  : `Mostrar mais (${panelFields.length - MAX_DEAL_FIELDS_VISIBLE})`}
-                <IconChevronDown
-                  size={13}
-                  className={cn("transition-transform", showAllPanelFields && "rotate-180")}
-                />
+                {showAllPanelFields ? "Mostrar menos" : `Mostrar mais (${panelFields.length - MAX_DEAL_FIELDS_VISIBLE})`}
+                <IconChevronDown size={13} className={cn("transition-transform", showAllPanelFields && "rotate-180")} />
               </button>
             )}
           </div>
         )}
       </div>
 
-      {/* ── Negocios vinculados ───────────────────────────────────── */}
+      {/* ── Negocios vinculados (subidos para logo apos o cartao de contato) ── */}
       {deals.length > 0 && deals.map((deal) => (
         <DealCard key={deal.id} deal={deal} />
       ))}

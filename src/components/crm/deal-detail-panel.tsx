@@ -6,10 +6,8 @@ import {
   IconArrowLeft,
   IconChevronDown,
   IconDotsVertical,
-  IconPhone,
-  IconPlus,
   IconSearch,
-  IconTrophy,
+  IconTag,
   IconPencil,
   IconMessageCircle,
   IconChecklist,
@@ -199,7 +197,7 @@ export function DealDetailPanel({
             type="button"
             onClick={onClose}
             title="Voltar"
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
           >
             <IconArrowLeft size={18} />
           </button>
@@ -233,23 +231,6 @@ export function DealDetailPanel({
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[rgba(91,111,245,0.25)] bg-[var(--color-enterprise-bg)] px-3.5 py-1.5 font-display text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[rgba(91,111,245,0.22)]"
-            >
-              <IconPhone size={15} />
-              Ligar
-              <IconChevronDown size={12} className="opacity-70" />
-            </button>
-            {winButtonSlot ?? (
-              <button
-                type="button"
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-success)] px-3.5 py-1.5 font-display text-xs font-bold text-white shadow-[0_4px_14px_rgba(16,185,129,0.30)] transition-transform hover:-translate-y-0.5"
-              >
-                <IconTrophy size={14} />
-                Ganhar
-              </button>
-            )}
             <PanelIconBtn title="Buscar">
               <IconSearch size={16} />
             </PanelIconBtn>

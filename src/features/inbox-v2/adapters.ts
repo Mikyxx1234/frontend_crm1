@@ -273,29 +273,59 @@ export function toConversationCard(
 /**
  * Detecta e parseia respostas de formulário Meta Flow.
  *
- * O backend envia o conteúdo no formato:
- *   *Resposta do formulário* — _flow_name_
- *   *Campo Um* ↳ Valor um
- *   *Campo Dois* ↳ Valor dois
+ * Formato REAL que o backend grava em dto.content:
  *
+ *   📋 *Resposta do formulário* — _Nome do Flow_
+ *
+ *   *Rótulo do campo 1*
+ *   ↳ Valor 1
+ *
+ *   *Rótulo do campo 2*
+ *   ↳ Valor 2
+ *
+ * Cada campo ocupa DUAS linhas: a primeira com o rótulo em negrito,
+ * a segunda começando com ↳ (ou ↓ / L) e o valor.
  * Retorna null se o conteúdo não corresponder ao padrão.
  */
 function parseFormResponse(content: string): { title: string; fields: FormField[] } | null {
-  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (!lines.length) return null;
+  // Mantém linhas em branco para navegação par-a-par; remove trailing spaces.
+  const raw = content.split(/\r?\n/).map((l) => l.trim());
+  if (!raw.length) return null;
 
-  // Primeira linha: *Resposta do formulário* — _flow_name_ (ou variações)
-  const headerMatch = lines[0].match(/[*_]?resposta\s+do\s+formul[aá]rio[*_]?\s*[—–-]\s*[_*]?(.+?)[_*]?$/i);
+  // Cabeçalho: aceita emoji 📋 opcional + marcadores *_ opcionais + " — _Flow_" opcional.
+  const headerMatch = raw[0].match(
+    /^[\u{1F4CB}\u{1F4CB}]?\s*[*_]*resposta\s+do\s+formul[aá]rio[*_]*(?:\s*[—–-]\s*[_*]*(.+?)[_*]*)?$/iu,
+  );
   if (!headerMatch) return null;
 
-  const title = headerMatch[1].replace(/[_*]/g, "").trim();
+  const title = (headerMatch[1] ?? "").replace(/[_*]/g, "").trim() || "Resposta do formulário";
   const fields: FormField[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    // Formato: *Label* ↳ Valor  (aceita ↓ ou L como alternativa ao ↳)
-    const fieldMatch = lines[i].match(/[*_](.+?)[*_]\s*[↳↓L]\s*(.+)/);
-    if (fieldMatch) {
-      fields.push({ label: fieldMatch[1].trim(), value: fieldMatch[2].trim() });
+  // Varre as linhas restantes procurando par: linha de rótulo + linha de valor.
+  for (let i = 1; i < raw.length; i++) {
+    const line = raw[i];
+    if (!line) continue; // linha em branco entre campos — pula
+
+    // Linha de rótulo: *Rótulo* ou _Rótulo_
+    const labelMatch = line.match(/^[*_]+(.+?)[*_]+$/);
+    if (labelMatch) {
+      // Próxima linha não-vazia deve ser o valor (↳ / ↓ / L)
+      let j = i + 1;
+      while (j < raw.length && !raw[j]) j++; // pula blanks
+      if (j < raw.length) {
+        const valueMatch = raw[j].match(/^[↳↓L]\s*(.+)/);
+        if (valueMatch) {
+          fields.push({ label: labelMatch[1].trim(), value: valueMatch[1].trim() });
+          i = j; // avança o cursor para após o valor
+          continue;
+        }
+      }
+    }
+
+    // Fallback: tenta o formato antigo (rótulo e valor na mesma linha).
+    const inlineMatch = line.match(/^[*_](.+?)[*_]\s*[↳↓L]\s*(.+)/);
+    if (inlineMatch) {
+      fields.push({ label: inlineMatch[1].trim(), value: inlineMatch[2].trim() });
     }
   }
 

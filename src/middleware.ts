@@ -105,6 +105,11 @@ export async function middleware(req: NextRequest) {
       return withSecurityHeaders(NextResponse.next());
     }
 
+    // Rotas /v2/* são sempre liberadas no sandbox de desenvolvimento.
+    if (pathname.startsWith("/v2")) {
+      return withSecurityHeaders(NextResponse.next());
+    }
+
     // Rotas de auth + assets do Next + webhooks + uploads não passam por auth.
     // O rewrite pro backend acontece em next.config.ts.
     if (

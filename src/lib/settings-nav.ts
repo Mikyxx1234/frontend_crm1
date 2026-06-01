@@ -128,7 +128,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     id: "crm-dados",
     label: "CRM & Dados",
     icon: Database,
-    description: "Campos, tags e importacao",
+    description: "Campos, tags e importação",
     items: [
       {
         id: "custom-fields",
@@ -142,7 +142,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "tags",
         label: "Tags",
-        description: "Rotulos e cores",
+        description: "Rótulos e cores",
         icon: Tag,
         href: "/settings/tags",
         allowedRoles: GESTAO,
@@ -151,7 +151,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "products",
         label: "Produtos",
-        description: "Catalogo usado em negocios",
+        description: "Catálogo usado em negócios",
         icon: Package,
         href: "/settings/products",
         allowedRoles: GESTAO,
@@ -160,7 +160,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "import",
         label: "Importar / Exportar",
-        description: "CSV de contatos e negocios",
+        description: "CSV de contatos e negócios",
         icon: Upload,
         href: "/settings/import",
         allowedRoles: GESTAO,
@@ -173,12 +173,12 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     id: "vendas",
     label: "Vendas & Pipeline",
     icon: Kanban,
-    description: "Funis, regras e distribuicao",
+    description: "Funis, regras e distribuição",
     items: [
       {
         id: "pipeline",
         label: "Pipeline",
-        description: "Estagios e regras de movimentacao",
+        description: "Estágios e regras de movimentação",
         icon: Kanban,
         href: "/settings/pipeline",
         allowedRoles: GESTAO,
@@ -187,7 +187,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "loss-reasons",
         label: "Motivos de perda",
-        description: "Razoes padrao ao marcar perdido",
+        description: "Razões padrão ao marcar perdido",
         icon: ThumbsDown,
         href: "/settings/loss-reasons",
         allowedRoles: GESTAO,
@@ -196,7 +196,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "distribution",
         label: "Distribuição",
-        description: "Round-robin, priorizacao e regras",
+        description: "Round-robin, priorização e regras",
         icon: Shuffle,
         href: "/settings/distribution",
         allowedRoles: GESTAO,
@@ -214,7 +214,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "team",
         label: "Equipe",
-        description: "Membros, funcoes e convites",
+        description: "Membros, funções e convites",
         icon: Users,
         href: "/settings/team",
         allowedRoles: GESTAO,
@@ -259,7 +259,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         id: "api-tokens",
         label: "API e Webhooks",
-        description: "Tokens de integracao e eventos",
+        description: "Tokens de integração e eventos",
         icon: Key,
         href: "/settings/api-tokens",
         allowedRoles: SO_ADMIN,
@@ -272,12 +272,12 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     id: "sistema",
     label: "Sistema",
     icon: Settings2,
-    description: "Preferencias e acessos",
+    description: "Preferências e acessos",
     items: [
       {
         id: "permissions",
         label: "Permissões",
-        description: "Visibilidade de leads por funcao",
+        description: "Visibilidade de leads por função",
         icon: Shield,
         href: "/settings/permissions",
         allowedRoles: SO_ADMIN,

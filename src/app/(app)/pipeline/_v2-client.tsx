@@ -439,7 +439,7 @@ export default function KanbanV2ClientPage({
               pipelineId={pipelineId}
               statusFilter={status}
               display={(v) => (
-                <span className="inline-flex items-center gap-1.5 font-display font-semibold text-[var(--text-primary)]">
+                <span className="inline-flex items-center gap-1.5 font-display text-[13px] font-semibold text-[var(--text-primary)]">
                   {v && v.trim() ? v : <span className="italic text-[var(--text-muted)]">Adicionar</span>}
                   <IconPencil size={12} className="opacity-50" />
                 </span>
@@ -463,11 +463,11 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
               display={(v) =>
                 v && v.trim() ? (
-                  <span className="cursor-pointer font-display font-semibold text-[var(--text-primary)]">
+                  <span className="cursor-pointer font-display text-[13px] font-semibold text-[var(--text-primary)]">
                     {formatDate(v)}
                   </span>
                 ) : (
-                  <span className="cursor-pointer italic text-[var(--text-muted)]">
+                  <span className="cursor-pointer font-display text-[13px] italic text-[var(--text-muted)]">
                     Indefinida
                   </span>
                 )
@@ -815,7 +815,7 @@ function EmptyBoard({ isAuthenticated }: { isAuthenticated: boolean }) {
 // Helper: nome → slug de cor do v0 (av-blue, av-orange, ...).
 // O novo DealDetailPanel usa `av-${avatarColor}` direto no className,
 // então precisamos retornar um dos slugs definidos em globals-v2.css.
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────���────────────────────────────
 
 const AVATAR_SLUGS = [
   "green",

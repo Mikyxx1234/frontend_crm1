@@ -24,9 +24,9 @@ export function isPreviewMode(): boolean {
 
 /** User mockado retornado quando preview mode está ativo. */
 export const PREVIEW_USER = {
-  id: "preview-user",
-  name: "Preview",
-  email: "preview@example.com",
+  id: "u-marcelo",
+  name: "Marcelo Santos",
+  email: "marcelo@eduit.com.br",
   role: "OWNER" as const,
   organizationId: "preview-org",
   isSuperAdmin: false,

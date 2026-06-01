@@ -327,6 +327,8 @@ export function toMessageBubble(
     isBot: isBot || undefined,
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
+    messageType: dto.messageType ?? undefined,
+    mediaUrl: dto.media?.url ?? undefined,
   };
 }
 
@@ -390,7 +392,7 @@ export function deriveStagePills(
   });
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────��─────────────────────────
 // Sidebar direito — ContactAside.contact
 // ─────────────────────────────────────────────────────────────────
 

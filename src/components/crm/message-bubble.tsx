@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { IconRobot, IconClipboardList } from "@tabler/icons-react"
+import { IconRobot, IconClipboardList, IconMicrophone } from "@tabler/icons-react"
 
 export interface FormField {
   label: string
@@ -18,6 +18,10 @@ export interface Message {
   formFields?: FormField[]
   /** Título do formulário (ex: "form_estag") */
   formTitle?: string
+  /** Tipo de mídia: "audio", "image", "document", "video", "text" etc. */
+  messageType?: string
+  /** URL da mídia para áudio, imagem, documento */
+  mediaUrl?: string | null
 }
 
 interface MessageBubbleProps {
@@ -108,13 +112,40 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
             </span>
           </div>
         )}
-        <span className="break-words">
-          {message.content}
-          <span
-            aria-hidden
-            className="ml-1 inline-block w-[36px] align-baseline"
-          />
-        </span>
+        {/* Player de áudio nativo */}
+        {(message.messageType === "audio" || message.messageType === "voice") ? (
+          <div className="flex min-w-[200px] flex-col gap-1.5 pb-1">
+            <div className={cn(
+              "flex items-center gap-2 rounded-full px-3 py-1.5",
+              isOutgoing ? "bg-white/15" : "bg-[var(--glass-bg-strong)]",
+            )}>
+              <IconMicrophone size={14} className={isOutgoing ? "text-white/80" : "text-[var(--brand-primary)]"} />
+              {message.mediaUrl ? (
+                <audio
+                  controls
+                  src={message.mediaUrl}
+                  className="h-7 w-full min-w-[140px]"
+                  aria-label="Mensagem de áudio"
+                />
+              ) : (
+                <span className={cn(
+                  "font-body text-[12px] italic",
+                  isOutgoing ? "text-white/70" : "text-[var(--text-muted)]",
+                )}>
+                  Áudio indisponível
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <span className="break-words">
+            {message.content}
+            <span
+              aria-hidden
+              className="ml-1 inline-block w-[36px] align-baseline"
+            />
+          </span>
+        )}
         <span
           className={cn(
             "pointer-events-none absolute bottom-1.5 right-2.5 select-none whitespace-nowrap text-[10.5px] leading-none",

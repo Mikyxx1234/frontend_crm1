@@ -17,6 +17,7 @@ import { DaySeparator, MessageBubble } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { Composer, TemplatePickerList } from "@/features/inbox-v2/extras";
 import {
+  useInboxRealtime,
   useMessages,
   useSendMessage,
 } from "@/features/inbox-v2/hooks";
@@ -43,6 +44,14 @@ export function useDealChatBinding(params: {
 
   const { data: messagesResp } = useMessages(conversationId);
   const sendMutation = useSendMessage(conversationId);
+
+  // SSE: assina /api/sse/messages e invalida as mensagens da conversa
+  // ativa quando chega new_message. Sem isto o chat do deal só atualizava
+  // após F5 (useMessages não tem polling) — o inbox já fazia isso.
+  useInboxRealtime({
+    activeConversationId: conversationId,
+    enabled: !!conversationId,
+  });
 
   const bubbles = useMemo(
     () =>

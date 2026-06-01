@@ -147,6 +147,13 @@ export interface InboxMessageDto {
     name: string;
     kind: "AGENT" | "CONTACT" | "BOT" | "SYSTEM";
   } | null;
+  /**
+   * Nome do autor da mensagem out (agente ou "Automação"). O backend NÃO
+   * envia o objeto `sender` acima — esse campo plano é a única chave de
+   * autoria que o GET /messages serializa hoje. Convenção do
+   * automation-executor: bot grava `senderName === "Automação"`.
+   */
+  senderName?: string | null;
   metaError?: string | null;
 }
 

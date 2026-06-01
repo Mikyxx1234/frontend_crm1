@@ -97,6 +97,24 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
+/**
+ * Rótulo de separador de dia no chat: "Hoje", "Ontem" ou "dd/mm/yyyy".
+ * Retorna "" se a data for inválida.
+ */
+export function formatDayLabel(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  if (isSameDay(date, now)) return "Hoje";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(date, yesterday)) return "Ontem";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mo}/${date.getFullYear()}`;
+}
+
 /** Heurística: contato "online" se houve atividade nos últimos 5min. */
 function deriveOnline(lastInboundAt: string | null | undefined): "online" | "offline" {
   if (!lastInboundAt) return "offline";
@@ -357,6 +375,7 @@ export function toMessageBubble(
     id: dto.id,
     content: formParsed ? "" : (dto.content ?? ""),
     time: formatTime(dto.createdAt),
+    createdAt: dto.createdAt ?? undefined,
     type: isInbound ? "incoming" : "outgoing",
     senderInitials: isInbound ? avatarInitials(contactName) : undefined,
     isBot: isBot || undefined,
@@ -596,7 +615,7 @@ export function toContactAside(
 
 // ─────────────────────────────────────────────────────────────────
 // Session expirada? (alerta de 24h da WhatsApp Business)
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────���───────────────────────────
 
 const SESSION_WINDOW_HOURS = 24;
 

@@ -11,6 +11,8 @@ export interface Message {
   id: string
   content: string
   time: string
+  /** ISO da data de criação — usado para agrupar mensagens por dia. */
+  createdAt?: string
   type: "incoming" | "outgoing"
   senderInitials?: string
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */

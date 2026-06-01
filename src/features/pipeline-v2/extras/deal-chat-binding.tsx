@@ -9,18 +9,18 @@
  * pra serem plugados nas props correspondentes do DealDetailPanel.
  */
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { IconMessageCirclePlus } from "@tabler/icons-react";
 
-import { MessageBubble } from "@/components/crm/message-bubble";
+import { DaySeparator, MessageBubble } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { Composer, TemplatePickerList } from "@/features/inbox-v2/extras";
 import {
   useMessages,
   useSendMessage,
 } from "@/features/inbox-v2/hooks";
-import { toMessageBubble } from "@/features/inbox-v2/adapters";
+import { formatDayLabel, toMessageBubble } from "@/features/inbox-v2/adapters";
 
 interface DealChatBindingResult {
   messagesNode: React.ReactNode;
@@ -98,7 +98,18 @@ export function useDealChatBinding(params: {
       </div>
     );
   } else {
-    messagesNode = bubbles.map((b) => <MessageBubble key={b.id} message={b} />);
+    let lastDayLabel: string | null = null;
+    messagesNode = bubbles.map((b) => {
+      const dayLabel = formatDayLabel(b.createdAt);
+      const showSeparator = dayLabel && dayLabel !== lastDayLabel;
+      if (showSeparator) lastDayLabel = dayLabel;
+      return (
+        <div key={b.id} className="contents">
+          {showSeparator && <DaySeparator date={dayLabel} />}
+          <MessageBubble message={b} />
+        </div>
+      );
+    });
   }
 
   // ── composer ────────────────────────────────────────────────

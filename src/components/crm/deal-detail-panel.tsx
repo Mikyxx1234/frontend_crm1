@@ -20,7 +20,7 @@ import {
 } from "@tabler/icons-react"
 import { BadgeGlass } from "./badge-glass"
 import { ChatArea } from "./chat-area"
-import { DaySeparator, MessageBubble, type Message } from "./message-bubble"
+import { type Message } from "./message-bubble"
 
 interface DealOwner {
   initials: string
@@ -443,7 +443,6 @@ export function DealDetailPanel({
               </header>
 
               <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-7 py-6">
-                <DaySeparator date="14/05/2026" />
                 {messagesSlot}
               </div>
 

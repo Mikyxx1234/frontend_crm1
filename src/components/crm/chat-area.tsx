@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect, type FormEvent } from "react"
+import { Fragment, useRef, useState, useEffect, type FormEvent } from "react"
 import { cn } from "@/lib/utils"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
@@ -152,13 +152,36 @@ export function ChatArea({
 
       {/* MESSAGES */}
       <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-7 py-6">
-        {daySeparator && <DaySeparator date={daySeparator} />}
-        {messages.map((message, index) => {
-          if (message.type === "incoming" || message.type === "outgoing") {
-            return <MessageBubble key={message.id || index} message={message} agentInitials={agentInitials} />
-          }
-          return null
-        })}
+        {(() => {
+          // Separador de dia ("Hoje" / "Ontem" / "DD/MM/AAAA") inserido
+          // automaticamente sempre que a data muda entre mensagens. Usa o
+          // `createdAt` (ISO) de cada mensagem; quando ausente, cai no prop
+          // `daySeparator` legado exibido uma única vez no topo.
+          let lastDayKey: string | null = null
+          let usedFallback = false
+          return messages.map((message, index) => {
+            if (message.type !== "incoming" && message.type !== "outgoing") {
+              return null
+            }
+            const dayKey = dayKeyFromISO(message.createdAt)
+            let separator: string | null = null
+            if (dayKey) {
+              if (dayKey !== lastDayKey) {
+                separator = dayLabelFromISO(message.createdAt)
+                lastDayKey = dayKey
+              }
+            } else if (daySeparator && !usedFallback) {
+              separator = daySeparator
+              usedFallback = true
+            }
+            return (
+              <Fragment key={message.id || index}>
+                {separator && <DaySeparator date={separator} />}
+                <MessageBubble message={message} agentInitials={agentInitials} />
+              </Fragment>
+            )
+          })
+        })()}
       </div>
 
       {/* SESSION ALERT */}
@@ -217,6 +240,31 @@ export function ChatArea({
       )}
     </main>
   )
+}
+
+/** Chave de dia estável (toDateString) usada para detectar troca de data. */
+function dayKeyFromISO(iso?: string): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toDateString()
+}
+
+/** Rótulo do separador: "Hoje", "Ontem" ou "DD/MM/AAAA". */
+function dayLabelFromISO(iso?: string): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const now = new Date()
+  if (d.toDateString() === now.toDateString()) return "Hoje"
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString()) return "Ontem"
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
 }
 
 function IconBtn({

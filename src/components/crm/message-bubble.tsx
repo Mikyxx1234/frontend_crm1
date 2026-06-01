@@ -26,10 +26,12 @@ export interface Message {
 
 interface MessageBubbleProps {
   message: Message
+  /** Iniciais do agente logado — exibidas no avatar das mensagens outgoing. */
+  agentInitials?: string
   className?: string
 }
 
-export function MessageBubble({ message, className }: MessageBubbleProps) {
+export function MessageBubble({ message, agentInitials, className }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
   const hasForm = !!(message.formFields && message.formFields.length > 0)
@@ -89,7 +91,7 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
             ? "bg-[#475569]"
             : "bg-[var(--brand-primary)]",
         )}>
-          {isBot ? <IconRobot size={14} /> : (message.senderInitials || "AS")}
+          {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
         </div>
       )}
       <div

@@ -1,7 +1,9 @@
 "use client"
 
-import { useRef, type FormEvent } from "react"
+import { useRef, useState, useEffect, type FormEvent } from "react"
 import { cn } from "@/lib/utils"
+import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
+import { getInitials } from "@/lib/utils"
 import { BadgeGlass } from "./badge-glass"
 import { MessageBubble, DaySeparator, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
@@ -89,6 +91,12 @@ export function ChatArea({
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
+
+  const [agentInitials, setAgentInitials] = useState("·")
+  useEffect(() => {
+    const name = isPreviewMode() ? PREVIEW_USER.name : "Agente"
+    setAgentInitials(getInitials(name) || "?")
+  }, [])
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
 
@@ -147,7 +155,7 @@ export function ChatArea({
         {daySeparator && <DaySeparator date={daySeparator} />}
         {messages.map((message, index) => {
           if (message.type === "incoming" || message.type === "outgoing") {
-            return <MessageBubble key={message.id || index} message={message} />
+            return <MessageBubble key={message.id || index} message={message} agentInitials={agentInitials} />
           }
           return null
         })}

@@ -1,6 +1,77 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { IconRobot, IconClipboardList, IconMicrophone, IconChevronDown } from "@tabler/icons-react"
+import {
+  IconRobot,
+  IconClipboardList,
+  IconMicrophone,
+  IconChevronDown,
+  IconFile,
+  IconDownload,
+} from "@tabler/icons-react"
+
+type MediaKind = "image" | "audio" | "video" | "document" | null
+
+/** Domínios da Meta/WhatsApp cujas URLs expiram — passam pelo proxy do backend. */
+const META_MEDIA_DOMAINS = [
+  "lookaside.fbsbx.com",
+  "scontent.whatsapp.net",
+  "graph.facebook.com",
+]
+
+/**
+ * Normaliza a URL de mídia para um path servível pelo frontend.
+ * URLs internas (/uploads, /api) passam direto; URLs da CDN da Meta
+ * (que expiram) são roteadas pelo proxy autenticado do backend.
+ */
+function resolveMediaUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (url.startsWith("blob:") || url.startsWith("data:")) return url
+  if (url.startsWith("/uploads/") || url.startsWith("/api/")) return url
+  try {
+    const p = new URL(url, window.location.origin)
+    if (p.pathname.startsWith("/uploads/")) return `${p.pathname}${p.search}`
+    if (p.pathname.startsWith("/api/")) return `${p.pathname}${p.search}`
+    if (META_MEDIA_DOMAINS.some((d) => p.hostname.endsWith(d))) {
+      return `/api/media/proxy?url=${encodeURIComponent(url)}`
+    }
+  } catch {
+    /* URL relativa malformada — cai no fallback abaixo */
+  }
+  if (url.includes("/uploads/")) return url.slice(url.indexOf("/uploads/"))
+  return url
+}
+
+/** Deriva o tipo de mídia a partir do messageType e, como fallback, da extensão da URL. */
+function detectMediaKind(messageType: string | undefined, mediaUrl: string | null | undefined): MediaKind {
+  const mt = String(messageType ?? "").toLowerCase()
+  if (mt === "whatsapp_call_recording" && mediaUrl) return "audio"
+  if (mt === "image" || mt === "sticker") return "image"
+  if (mt === "audio" || mt === "ptt" || mt === "voice") return "audio"
+  if (mt === "video") return "video"
+  if (mt === "document") return "document"
+  const u = mediaUrl ?? ""
+  if (/\.(jpg|jpeg|png|gif|webp)($|\?)/i.test(u)) return "image"
+  if (/\.(webm|ogg|mp3|wav|m4a|aac|amr|opus)($|\?)/i.test(u)) return "audio"
+  if (/\.(mp4|mov|avi|3gp)($|\?)/i.test(u)) return "video"
+  if (mediaUrl) return "document"
+  return null
+}
+
+/** Texto-placeholder do backend (ex.: "[video]", "[image] 👁") não deve virar legenda. */
+function isPlaceholderContent(content: string): boolean {
+  const c = content.trim()
+  if (!c) return true
+  return /^\[[^\]]+\]\s*(👁)?$/.test(c)
+}
+
+/** Nome do arquivo para documentos: tira o prefixo "📎" e o sufixo view-once. */
+function documentLabel(content: string): string {
+  const c = content
+    .replace(/^📎\s*/, "")
+    .replace(/\s*👁\s*$/, "")
+    .trim()
+  return c || "Documento"
+}
 
 export interface FormField {
   label: string
@@ -120,6 +191,143 @@ function FormBubble({ message, className }: { message: Message; className?: stri
   )
 }
 
+/** Renderiza o corpo da bolha: player de mídia quando houver, senão texto. */
+function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing: boolean }) {
+  const kind = detectMediaKind(message.messageType, message.mediaUrl)
+  const url = resolveMediaUrl(message.mediaUrl)
+  const content = message.content ?? ""
+  // Legenda só aparece se for texto real (não o placeholder "[video]" etc.).
+  const caption = isPlaceholderContent(content) ? "" : content
+
+  // ── Áudio / voz / PTT ──────────────────────────────────────────
+  if (kind === "audio") {
+    return (
+      <div className="flex min-w-[200px] flex-col gap-1.5 pb-1">
+        <div className={cn(
+          "flex items-center gap-2 rounded-full px-3 py-1.5",
+          isOutgoing ? "bg-white/15" : "bg-[var(--glass-bg-strong)]",
+        )}>
+          <IconMicrophone size={14} className={isOutgoing ? "text-white/80" : "text-[var(--brand-primary)]"} />
+          {url ? (
+            <audio
+              controls
+              src={url}
+              className="h-7 w-full min-w-[140px]"
+              aria-label="Mensagem de áudio"
+            />
+          ) : (
+            <span className={cn(
+              "font-body text-[12px] italic",
+              isOutgoing ? "text-white/70" : "text-[var(--text-muted)]",
+            )}>
+              Áudio indisponível
+            </span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Imagem / sticker ───────────────────────────────────────────
+  if (kind === "image" && url) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <a href={url} target="_blank" rel="noopener noreferrer" className="group block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt={caption || "Imagem recebida"}
+            className="max-h-[320px] w-auto max-w-full rounded-[var(--radius-md)] object-cover transition-opacity group-hover:opacity-[0.97]"
+            loading="lazy"
+          />
+        </a>
+        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
+      </div>
+    )
+  }
+
+  // ── Vídeo ──────────────────────────────────────────────────────
+  if (kind === "video" && url) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <video
+          controls
+          preload="metadata"
+          src={url}
+          className="max-h-[320px] w-full min-w-[220px] rounded-[var(--radius-md)] bg-black"
+        />
+        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
+      </div>
+    )
+  }
+
+  // ── Documento ──────────────────────────────────────────────────
+  if (kind === "document" && url) {
+    const label = documentLabel(content)
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        download
+        className={cn(
+          "flex min-w-[200px] max-w-[280px] items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 transition-colors",
+          isOutgoing ? "bg-white/15 hover:bg-white/25" : "bg-[var(--glass-bg-strong)] hover:bg-[var(--glass-bg-overlay)]",
+        )}
+      >
+        <div className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)]",
+          isOutgoing ? "bg-white/20" : "bg-[var(--brand-primary)]/10",
+        )}>
+          <IconFile size={18} className={isOutgoing ? "text-white" : "text-[var(--brand-primary)]"} />
+        </div>
+        <span className={cn(
+          "min-w-0 flex-1 truncate font-body text-[12.5px] font-medium",
+          isOutgoing ? "text-white" : "text-[var(--text-primary)]",
+        )}>
+          {label}
+        </span>
+        <IconDownload size={15} className={cn("shrink-0", isOutgoing ? "text-white/70" : "text-[var(--text-muted)]")} />
+      </a>
+    )
+  }
+
+  // ── Mídia sem URL (download falhou) — placeholder amigável ──────
+  if (kind && !url) {
+    const labels: Record<string, string> = {
+      image: "Imagem indisponível",
+      video: "Vídeo indisponível",
+      document: "Documento indisponível",
+    }
+    return (
+      <span className={cn(
+        "font-body text-[12px] italic",
+        isOutgoing ? "text-white/70" : "text-[var(--text-muted)]",
+      )}>
+        {labels[kind] ?? "Mídia indisponível"}
+      </span>
+    )
+  }
+
+  // ── Texto ──────────────────────────────────────────────────────
+  return (
+    <span className="break-words">
+      {content}
+      <span aria-hidden className="ml-1 inline-block w-[36px] align-baseline" />
+    </span>
+  )
+}
+
+/** Legenda exibida abaixo de imagem/vídeo, com espaço reservado pro timestamp. */
+function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boolean }) {
+  return (
+    <span className={cn("break-words text-[13px]", !isOutgoing && "text-[var(--chat-bubble-received-text)]")}>
+      {caption}
+      <span aria-hidden className="ml-1 inline-block w-[36px] align-baseline" />
+    </span>
+  )
+}
+
 export function MessageBubble({ message, agentInitials, className }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
@@ -168,40 +376,8 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
             </span>
           </div>
         )}
-        {/* Player de áudio nativo */}
-        {(message.messageType === "audio" || message.messageType === "voice") ? (
-          <div className="flex min-w-[200px] flex-col gap-1.5 pb-1">
-            <div className={cn(
-              "flex items-center gap-2 rounded-full px-3 py-1.5",
-              isOutgoing ? "bg-white/15" : "bg-[var(--glass-bg-strong)]",
-            )}>
-              <IconMicrophone size={14} className={isOutgoing ? "text-white/80" : "text-[var(--brand-primary)]"} />
-              {message.mediaUrl ? (
-                <audio
-                  controls
-                  src={message.mediaUrl}
-                  className="h-7 w-full min-w-[140px]"
-                  aria-label="Mensagem de áudio"
-                />
-              ) : (
-                <span className={cn(
-                  "font-body text-[12px] italic",
-                  isOutgoing ? "text-white/70" : "text-[var(--text-muted)]",
-                )}>
-                  Áudio indisponível
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <span className="break-words">
-            {message.content}
-            <span
-              aria-hidden
-              className="ml-1 inline-block w-[36px] align-baseline"
-            />
-          </span>
-        )}
+        {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
+        <MessageContent message={message} isOutgoing={isOutgoing} />
         <span
           className={cn(
             "pointer-events-none absolute bottom-1.5 right-2.5 select-none whitespace-nowrap text-[10.5px] leading-none",

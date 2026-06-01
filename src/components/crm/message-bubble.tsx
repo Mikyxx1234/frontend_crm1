@@ -56,12 +56,20 @@ function FormBubble({ message, className }: { message: Message; className?: stri
             <p className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-primary)]/70 leading-none mb-0.5">
               Formulário
             </p>
-            <p className="truncate font-display text-[12px] font-bold leading-tight text-[var(--text-primary)]">
-              {message.formTitle || "Resposta"}
-              <span className="ml-1.5 font-normal text-[var(--text-muted)]">
-                · {count} {count === 1 ? "campo" : "campos"}
-              </span>
-            </p>
+            <div className="flex items-baseline gap-1.5 min-w-0">
+              <p className="truncate font-display text-[12px] font-bold leading-tight text-[var(--text-primary)]">
+                {message.formTitle || "Resposta"}
+                <span className="ml-1.5 font-normal text-[var(--text-muted)]">
+                  · {count} {count === 1 ? "campo" : "campos"}
+                </span>
+              </p>
+              {/* Timestamp inline no estado recolhido — padrão WhatsApp */}
+              {!open && (
+                <span className="shrink-0 font-body text-[10px] leading-none text-[var(--text-muted)]">
+                  {message.time}
+                </span>
+              )}
+            </div>
           </div>
           <IconChevronDown
             size={14}
@@ -74,35 +82,35 @@ function FormBubble({ message, className }: { message: Message; className?: stri
 
         {/* Campos — só visíveis quando aberto */}
         {open && (
-          <>
-            <div className="border-t border-[var(--glass-border)]/60">
-              {fields.map((f, i) => (
+          <div className="border-t border-[var(--glass-border)]/60">
+            {fields.map((f, i) => {
+              const isLast = i === fields.length - 1
+              return (
                 <div
                   key={i}
                   className={cn(
                     "px-3 py-1.5",
-                    i < fields.length - 1 && "border-b border-[var(--glass-border)]/40",
+                    !isLast && "border-b border-[var(--glass-border)]/40",
+                    isLast && "pb-2",
                   )}
                 >
                   <p className="font-display text-[9.5px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-none mb-0.5">
                     {f.label}
                   </p>
-                  <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)]">
-                    {f.value}
-                  </p>
+                  {/* No último campo, o timestamp flutua no canto inferior direito — padrão WhatsApp */}
+                  <div className="relative">
+                    <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)] pr-[42px]">
+                      {f.value}
+                    </p>
+                    {isLast && (
+                      <span className="pointer-events-none absolute bottom-0 right-0 select-none font-body text-[10px] leading-none text-[var(--text-muted)]">
+                        {message.time}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="px-3 py-1.5 text-right border-t border-[var(--glass-border)]/40">
-              <span className="font-body text-[10px] text-[var(--text-muted)]">{message.time}</span>
-            </div>
-          </>
-        )}
-
-        {/* Timestamp inline quando recolhido */}
-        {!open && (
-          <div className="px-3 pb-1.5 text-right">
-            <span className="font-body text-[10px] text-[var(--text-muted)]">{message.time}</span>
+              )
+            })}
           </div>
         )}
       </div>

@@ -11,6 +11,7 @@ import {
 } from "@hello-pangea/dnd";
 
 import { IconChevronDown, IconDotsVertical, IconPencil, IconPlus, IconTrophy } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { PipelineHeader } from "@/components/crm/pipeline-header";

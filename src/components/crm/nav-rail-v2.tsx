@@ -21,8 +21,8 @@ import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
 
 /**
- * NavRail dedicado ao segmento REAL `/v2/*`.
- * O avatar redireciona diretamente para /v2/settings/profile.
+ * NavRail dedicado ao segmento REAL `/*`.
+ * O avatar redireciona diretamente para /settings/profile.
  */
 
 interface NavItem {
@@ -33,13 +33,13 @@ interface NavItem {
 }
 
 const items: NavItem[] = [
-  { icon: <IconLayoutDashboard size={20} />, title: "Dashboard", href: "/v2/dashboard" },
-  { icon: <IconFilter size={20} />, title: "Pipeline", href: "/v2/pipeline" },
-  { icon: <IconUsers size={20} />, title: "Contatos", href: "/v2/contacts" },
-  { icon: <IconBuilding size={20} />, title: "Empresas", href: "/v2/companies" },
-  { icon: <IconMessageCircle size={20} />, title: "Inbox", href: "/v2/inbox" },
-  { icon: <IconChecklist size={20} />, title: "Atividades", href: "/v2/activities" },
-  { icon: <IconBolt size={20} />, title: "Automações", href: "/v2/automations" },
+  { icon: <IconLayoutDashboard size={20} />, title: "Dashboard", href: "/dashboard" },
+  { icon: <IconFilter size={20} />, title: "Pipeline", href: "/pipeline" },
+  { icon: <IconUsers size={20} />, title: "Contatos", href: "/contacts" },
+  { icon: <IconBuilding size={20} />, title: "Empresas", href: "/companies" },
+  { icon: <IconMessageCircle size={20} />, title: "Inbox", href: "/inbox" },
+  { icon: <IconChecklist size={20} />, title: "Atividades", href: "/activities" },
+  { icon: <IconBolt size={20} />, title: "Automações", href: "/automations" },
 ];
 
 function isActiveFor(pathname: string, item: NavItem): boolean {
@@ -60,7 +60,7 @@ export function NavRailV2({ className }: { className?: string }) {
     .join("")
     .toUpperCase();
 
-  const isProfileActive = pathname.startsWith("/v2/settings/profile");
+  const isProfileActive = pathname.startsWith("/settings/profile");
 
   return (
     <nav
@@ -71,7 +71,7 @@ export function NavRailV2({ className }: { className?: string }) {
       )}
     >
       <Link
-        href="/v2/dashboard"
+        href="/dashboard"
         aria-label="Início"
         className="mb-2 flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]"
       >
@@ -101,12 +101,12 @@ export function NavRailV2({ className }: { className?: string }) {
       <div className="flex-1" />
 
       <Link
-        href="/v2/settings"
+        href="/settings"
         title="Configurações"
         aria-label="Configurações"
         className={cn(
           "flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] transition-all duration-150",
-          pathname.startsWith("/v2/settings") && !isProfileActive
+          pathname.startsWith("/settings") && !isProfileActive
             ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
             : "bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
         )}
@@ -129,9 +129,9 @@ export function NavRailV2({ className }: { className?: string }) {
         )}
       </button>
 
-      {/* Avatar — redireciona direto para /v2/settings/profile */}
+      {/* Avatar — redireciona direto para /settings/profile */}
       <Link
-        href="/v2/settings/profile"
+        href="/settings/profile"
         title="Meu perfil"
         aria-label="Ir para meu perfil"
         className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"

@@ -31,9 +31,12 @@ export function formatDateTime(date: Date | string): string {
   }).format(new Date(date));
 }
 
-export function getInitials(name: string): string {
+export function getInitials(name: string | null | undefined): string {
+  if (!name?.trim()) return "";
   return name
+    .trim()
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .toUpperCase()

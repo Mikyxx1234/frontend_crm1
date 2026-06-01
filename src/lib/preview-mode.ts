@@ -15,12 +15,17 @@
  */
 
 export function isPreviewMode(): boolean {
-  // Via env var explícita. NÃO ligar por NODE_ENV: localhost (`next dev`)
-  // tambem e "development" e precisa bater no backend real de producao. O sandbox
-  // do v0 deve setar NEXT_PUBLIC_PREVIEW_MODE=true no env do build.
-  // `.trim()`: o painel do v0 às vezes salva o valor com espaço/quebra de linha
-  // ("true\n"), o que furava o match estrito.
-  return (process.env.NEXT_PUBLIC_PREVIEW_MODE ?? "").trim().toLowerCase() === "true";
+  // 1) Via env var explícita (build/runtime). NÃO ligar por NODE_ENV: localhost
+  //    (`next dev`) também é "development" e precisa bater no backend real.
+  //    `.trim()`: o painel do v0 às vezes salva "true\n", o que furava o match.
+  if ((process.env.NEXT_PUBLIC_PREVIEW_MODE ?? "").trim().toLowerCase() === "true") {
+    return true;
+  }
+  // 2) Fallback CLIENT por hostname do v0. CRÍTICO: sem isto, TODO o app
+  //    (mocks, sessão fake, hooks v2) ficaria desligado no preview do v0 quando
+  //    a env var não é inlinada no build — aí você "entra" mas é tratado como
+  //    deslogado e volta pro login. NUNCA casa localhost nem produção.
+  return isV0PreviewHost();
 }
 
 /**

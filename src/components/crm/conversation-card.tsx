@@ -306,27 +306,27 @@ export function ConversationCard({
             </span>
           </div>
 
-          {/* Preview — 2 linhas, fonte menor itálica (estilo kanban).
+          {/* Preview — 1 linha, fonte menor itálica (estilo kanban).
               Texto => ícone de conversa com borda azul; mídia => ícone
               do tipo + label padronizado (sem itálico). */}
-          <div className="mt-1 flex items-start gap-1.5 text-[11.5px] italic leading-[1.4] text-[var(--text-muted)]">
+          <div className="mt-1 flex items-center gap-1.5 text-[11.5px] italic leading-[1.4] text-[var(--text-muted)]">
             {isOutgoing && (
               <IconCheck
                 size={12}
-                className="mt-0.5 shrink-0 not-italic text-[var(--color-success)]"
+                className="shrink-0 not-italic text-[var(--color-success)]"
                 aria-label="Você"
               />
             )}
             {TypeIcon ? (
-              <TypeIcon size={13} className="mt-0.5 shrink-0 text-[var(--brand-primary)]" />
+              <TypeIcon size={13} className="shrink-0 text-[var(--brand-primary)]" />
             ) : (
-              <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+              <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
                 <IconMessage size={9} />
               </span>
             )}
             <span
               className={cn(
-                "line-clamp-2 flex-1 overflow-hidden",
+                "line-clamp-1 flex-1 overflow-hidden",
                 typeLabel && "font-medium not-italic text-[var(--text-secondary)]",
               )}
             >

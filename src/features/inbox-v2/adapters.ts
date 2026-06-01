@@ -531,6 +531,19 @@ export function toContactAside(
     ? (contact?.dealInboxPanelFields?.[activeDealId] ?? [])
     : [];
 
+  /** Remove prefixo "n_" e troca "_" por espaço de uma opção do Meta Flow. */
+  function cleanFlowOption(s: string): string {
+    return s.replace(/^\d+_/, "").replace(/_+/g, " ").trim();
+  }
+  /** Limpa valor de opção individual ou lista "n_Texto, n_Texto" do Meta Flow. */
+  function cleanFlowValue(v: string): string {
+    if (!v) return v;
+    if (v.includes(", ") && v.split(", ").every((p) => /^\d+_/.test(p.trim()))) {
+      return v.split(", ").map((p) => cleanFlowOption(p.trim())).join(", ");
+    }
+    return cleanFlowOption(v);
+  }
+
   const seenFieldIds = new Set<string>();
   const panelFields: PanelField[] = [...contactPanelFields, ...dealPanelFields]
     .filter((f) => {
@@ -541,7 +554,7 @@ export function toContactAside(
     .map((f) => ({
       fieldId: f.fieldId,
       label: f.label || f.name,
-      value: f.value as string,
+      value: cleanFlowValue(f.value as string),
       type: f.type,
     }));
 

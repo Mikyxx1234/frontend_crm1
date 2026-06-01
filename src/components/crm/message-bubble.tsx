@@ -1,5 +1,6 @@
+import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { IconRobot, IconClipboardList, IconMicrophone } from "@tabler/icons-react"
+import { IconRobot, IconClipboardList, IconMicrophone, IconChevronDown } from "@tabler/icons-react"
 
 export interface FormField {
   label: string
@@ -31,72 +32,91 @@ interface MessageBubbleProps {
   className?: string
 }
 
+function FormBubble({ message, className }: { message: Message; className?: string }) {
+  const [open, setOpen] = useState(false)
+  const fields = message.formFields!
+  const count = fields.length
+
+  return (
+    <div className={cn("flex max-w-[72%] flex-col gap-1", className)}>
+      <div
+        className="overflow-hidden rounded-[var(--radius-lg)] rounded-bl-[4px] border border-[var(--glass-border)] shadow-[0_2px_8px_rgba(100,130,180,0.08)]"
+        style={{ background: "var(--chat-bubble-received-bg)" }}
+      >
+        {/* Cabeçalho clicável — sempre visível */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center gap-2 px-3 py-2 transition-colors hover:bg-[var(--brand-primary)]/[0.04]"
+        >
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--brand-primary)]/10">
+            <IconClipboardList size={13} className="text-[var(--brand-primary)]" />
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-primary)]/70 leading-none mb-0.5">
+              Formulário
+            </p>
+            <p className="truncate font-display text-[12px] font-bold leading-tight text-[var(--text-primary)]">
+              {message.formTitle || "Resposta"}
+              <span className="ml-1.5 font-normal text-[var(--text-muted)]">
+                · {count} {count === 1 ? "campo" : "campos"}
+              </span>
+            </p>
+          </div>
+          <IconChevronDown
+            size={14}
+            className={cn(
+              "shrink-0 text-[var(--text-muted)] transition-transform duration-200",
+              open && "rotate-180",
+            )}
+          />
+        </button>
+
+        {/* Campos — só visíveis quando aberto */}
+        {open && (
+          <>
+            <div className="border-t border-[var(--glass-border)]/60">
+              {fields.map((f, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "px-3 py-1.5",
+                    i < fields.length - 1 && "border-b border-[var(--glass-border)]/40",
+                  )}
+                >
+                  <p className="font-display text-[9.5px] font-semibold uppercase tracking-wider text-[var(--text-muted)] leading-none mb-0.5">
+                    {f.label}
+                  </p>
+                  <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)]">
+                    {f.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="px-3 py-1.5 text-right border-t border-[var(--glass-border)]/40">
+              <span className="font-body text-[10px] text-[var(--text-muted)]">{message.time}</span>
+            </div>
+          </>
+        )}
+
+        {/* Timestamp inline quando recolhido */}
+        {!open && (
+          <div className="px-3 pb-1.5 text-right">
+            <span className="font-body text-[10px] text-[var(--text-muted)]">{message.time}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function MessageBubble({ message, agentInitials, className }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
   const hasForm = !!(message.formFields && message.formFields.length > 0)
 
-  // Bolha de formulário Meta Flow — padrão visual WhatsApp, lado inbound.
   if (hasForm) {
-    return (
-      <div className={cn("flex max-w-[78%] flex-col gap-1", className)}>
-        {/* Avatar do contato, alinhado à esquerda como bolha inbound normal */}
-        {message.senderInitials && (
-          <div className="mb-0.5 flex items-center gap-1.5">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--glass-bg-strong)] font-display text-[9px] font-bold text-[var(--text-secondary)]">
-              {message.senderInitials}
-            </div>
-          </div>
-        )}
-        <div
-          className="overflow-hidden rounded-[var(--radius-lg)] rounded-bl-[4px] border border-[var(--glass-border)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]"
-          style={{ background: "var(--chat-bubble-received-bg)" }}
-        >
-          {/* Cabeçalho: ícone + nome do flow */}
-          <div className="flex items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--brand-primary)]/[0.06] px-3.5 py-2.5">
-            <IconClipboardList size={15} className="shrink-0 text-[var(--brand-primary)]" />
-            <div className="min-w-0">
-              <p className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-primary)]/70">
-                Resposta do formulário
-              </p>
-              {message.formTitle && (
-                <p className="truncate font-display text-[12.5px] font-bold leading-tight text-[var(--text-primary)]">
-                  {message.formTitle}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Lista de campos — estilo WhatsApp */}
-          <div className="px-3.5 pb-2 pt-1">
-            {message.formFields!.map((f, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "py-2",
-                  i < message.formFields!.length - 1 &&
-                    "border-b border-[var(--glass-border)]/60",
-                )}
-              >
-                <p className="mb-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                  {f.label}
-                </p>
-                <p className="font-body text-[13px] leading-snug text-[var(--text-primary)]">
-                  {f.value}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Timestamp no rodapé, alinhado à direita como bolha normal */}
-          <div className="px-3.5 pb-2 text-right">
-            <span className="font-body text-[10.5px] text-[var(--text-muted)]">
-              {message.time}
-            </span>
-          </div>
-        </div>
-      </div>
-    )
+    return <FormBubble message={message} className={className} />
   }
 
   return (

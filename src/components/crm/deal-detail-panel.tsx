@@ -73,6 +73,12 @@ interface DealDetailPanelProps {
    * Timeline conectarem em endpoints reais sem reescrever o panel.
    */
   tabContentOverride?: Partial<Record<TabId, React.ReactNode>>
+  /**
+   * Campos personalizados reais do negócio.
+   * Quando fornecido, substitui os rótulos hardcoded (FIELD_GROUPS).
+   * Cada item: { fieldId, label, value } — value nulo exibe "—".
+   */
+  customFieldsSlot?: { fieldId: string; label: string; value: string | null }[]
 }
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
@@ -113,6 +119,7 @@ export function DealDetailPanel({
   composerSlot,
   sessionAlertSlot,
   tabContentOverride,
+  customFieldsSlot,
 }: DealDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
 
@@ -396,16 +403,19 @@ export function DealDetailPanel({
                   <FieldRow label="Email" value={deal.email ?? undefined} isLast />
                 </FieldCard>
 
-                {/* Campos do negócio (placeholders editáveis) */}
-                <FieldCard title="Campos do negócio">
-                  {FIELD_GROUPS.map((field, i) => (
-                    <FieldRow
-                      key={field}
-                      label={field}
-                      isLast={i === FIELD_GROUPS.length - 1}
-                    />
-                  ))}
-                </FieldCard>
+                {/* Campos do negócio — dados reais via customFieldsSlot */}
+                {customFieldsSlot && customFieldsSlot.length > 0 && (
+                  <FieldCard title="Campos do negócio">
+                    {customFieldsSlot.map((field, i) => (
+                      <FieldRow
+                        key={field.fieldId}
+                        label={field.label}
+                        value={field.value ?? undefined}
+                        isLast={i === customFieldsSlot.length - 1}
+                      />
+                    ))}
+                  </FieldCard>
+                )}
               </div>
             </div>
           </aside>

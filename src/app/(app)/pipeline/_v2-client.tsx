@@ -26,6 +26,7 @@ import {
 import { avatarInitials } from "@/features/inbox-v2/adapters";
 import {
   useBoard,
+  useDealCustomFields,
   useDealDetail,
   useMoveDeal,
   usePipelines,
@@ -162,6 +163,7 @@ export default function KanbanV2ClientPage({
   }, [board]);
 
   const { data: dealDetail } = useDealDetail(activeDealId);
+  const { data: dealCustomFields } = useDealCustomFields(activeDealId);
 
   // Encontra o stage corrente do deal aberto pra alimentar o header de pills.
   const activeDealStage = useMemo(() => {
@@ -458,6 +460,7 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
+        customFieldsSlot={dealCustomFields ?? []}
         messagesSlot={messagesNode}
         composerSlot={composerNode}
         sessionAlertSlot={sessionAlertNode ?? null}

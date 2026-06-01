@@ -228,14 +228,16 @@ export function ConversationColumn({
             </span>
           )}
           {headerVariant === "full" && (
-            <button
-              type="button"
-              title="Nova conversa"
-              onClick={onNewConversation}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
-            >
-              <IconPlus size={18} />
-            </button>
+            <TooltipGlass label="Nova conversa" side="top">
+              <button
+                type="button"
+                aria-label="Nova conversa"
+                onClick={onNewConversation}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+              >
+                <IconPlus size={18} />
+              </button>
+            </TooltipGlass>
           )}
         </div>
       )}

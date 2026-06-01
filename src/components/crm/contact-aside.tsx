@@ -2,25 +2,26 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { IconChevronDown, IconBriefcase, IconTag, IconCurrencyDollar, IconLayoutSidebarRightCollapse, IconLayoutSidebarRightExpand } from "@tabler/icons-react"
+import {
+  IconChevronDown,
+  IconBriefcase,
+  IconTag,
+  IconCurrencyDollar,
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
+} from "@tabler/icons-react"
 
-/**
- * Shape estendido — combina os campos do design v2 com os campos
- * legados produzidos pelo `toContactAside` do `inbox-v2/adapters.ts`.
- */
+// ─────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────
+
 export interface ContactDetails {
   name: string
   contactId: string
   assignee?: string
-
-  /** Badge no header — derivada de financialStatus quando ausente. */
   statusBadge?: { variant: "lead" | "enterprise" | "success"; label: string }
-
-  /** Stage progress: number of segments and active index (0-based) */
   stageSegments?: number
   stageActiveIndex?: number
-
-  // Campos de contato
   course?: string
   formation?: string
   entry?: string
@@ -32,8 +33,6 @@ export interface ContactDetails {
   addressNumber?: string
   birthDate?: string
   note?: string
-
-  /** Negocios vinculados ao contato */
   deals?: {
     id: string
     title: string
@@ -42,15 +41,11 @@ export interface ContactDetails {
     stageId?: string | null
     pipelineId?: string | null
     productName?: string | null
-    /** Segmentos reais do funil — fornecidos pelo client (useDealDetail + useBoard). */
     funnelSegments?: { id: string; name: string; color: string; position: number }[]
-    /** Dropdown funcional de troca de fase — montado externamente no client. */
     stageDropdownSlot?: React.ReactNode
-    /** Campos personalizados do negocio */
     customFields?: { fieldId: string; label: string; value: string | null }[]
   }[]
-
-  // Campos legados — retrocompat com toContactAside
+  // campos legados
   financialStatus?: "success" | "lead" | "enterprise"
   financialLabel?: string
   product?: string
@@ -61,24 +56,15 @@ export interface ContactDetails {
   avatarColor?: string
   status?: string
   activities?: { text: string; time: string; color?: string }[]
-  /**
-   * Campos personalizados mesclados (contato + deal ativo),
-   * produzidos por toContactAside a partir de inboxLeadPanelFields e
-   * dealInboxPanelFields.
-   */
   panelFields?: { fieldId: string; label: string; value: string; type: string }[]
 }
 
 interface ContactAsideProps {
   contact: ContactDetails
   className?: string
-  /** Slot para o AssigneePopover — substitui a linha "Responsavel" */
   headerActionsNode?: React.ReactNode
-  /** Slot para chips de tags + TagsPopover */
   tagsNode?: React.ReactNode
-  /** Estado recolhido — quando true exibe apenas a aba lateral com o botao de toggle */
   collapsed?: boolean
-  /** Callback disparado ao clicar no botao de toggle */
   onToggleCollapse?: () => void
 }
 
@@ -91,127 +77,54 @@ const isFilled = (v: string | undefined | null): v is string =>
 const formatCurrency = (v: number) =>
   v ? `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : PLACEHOLDER
 
-export function ContactAside({ contact, className, collapsed = false, onToggleCollapse }: ContactAsideProps) {
-  const [showAllPanelFields, setShowAllPanelFields] = useState(false)
+// ─────────────────────────────────────────────────────────────────
+// Helpers de layout
+// ─────────────────────────────────────────────────────────────────
 
-  const course = contact.course ?? contact.product
-  const deals = contact.deals ?? []
-
-  const panelFields = contact.panelFields ?? []
-  const visiblePanelFields = showAllPanelFields ? panelFields : panelFields.slice(0, MAX_DEAL_FIELDS_VISIBLE)
-  const hasMorPanelFields = panelFields.length > MAX_DEAL_FIELDS_VISIBLE
-
-  /* ── Estado recolhido: faixa vertical com botao de expansao ─── */
-  if (collapsed) {
-    return (
-      <aside
-        aria-label="Detalhes do contato (recolhido)"
-        className={cn(
-          "flex h-full flex-col items-center justify-start rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pt-3 backdrop-blur-md shadow-[var(--glass-shadow)]",
-          className,
-        )}
-      >
-        <button
-          type="button"
-          title="Expandir painel de contato"
-          onClick={onToggleCollapse}
-          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-          aria-label="Expandir painel de contato"
-        >
-          <IconLayoutSidebarRightExpand size={18} />
-        </button>
-      </aside>
-    )
-  }
-
+function SubLabel({ children }: { children: React.ReactNode }) {
   return (
-    <aside
-      aria-label="Detalhes do contato"
-      className={cn("flex flex-col overflow-y-auto pr-0.5", className)}
+    <div className="mb-2 mt-5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      {children}
+    </div>
+  )
+}
+
+function Row({
+  label,
+  value,
+  valueStyle,
+  children,
+  isLast,
+  className,
+}: {
+  label: string
+  value?: string
+  valueStyle?: React.CSSProperties
+  children?: React.ReactNode
+  isLast?: boolean
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between py-2.5 text-[13px]",
+        !isLast && "border-b border-[var(--glass-border-subtle)]",
+        className,
+      )}
     >
-      {/* ── Card unico que envolve tudo ───────────────────────────── */}
-      <div className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-
-        {/* Botao de colapso no canto superior direito */}
-        {onToggleCollapse && (
-          <div className="flex justify-end px-3 pt-3">
-            <button
-              type="button"
-              title="Recolher painel de contato"
-              onClick={onToggleCollapse}
-              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-              aria-label="Recolher painel de contato"
-            >
-              <IconLayoutSidebarRightCollapse size={17} />
-            </button>
-          </div>
-        )}
-
-        {/* ── Negocios vinculados — topo do card ───────────────────── */}
-        {deals.map((deal) => (
-          <DealInline key={deal.id} deal={deal} course={course} contact={contact} />
-        ))}
-
-        {/* ── Detalhes de Contato ───────────────────────────────────── */}
-        <div className="px-5 pb-5">
-          <SubLabel>Detalhes de Contato</SubLabel>
-          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[18px] py-1">
-            <Row label="Nome" value={contact.name} />
-            {isFilled(contact.phone) && (
-              <Row label="Telefone" valueStyle={{ color: "var(--brand-primary)" }} value={contact.phone} />
-            )}
-            {isFilled(contact.email) && (
-              <Row label="Email" value={contact.email} valueStyle={{ color: "var(--brand-primary)", fontSize: 12 }} />
-            )}
-            {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} />}
-            {isFilled(contact.rg) && <Row label="RG" value={contact.rg} />}
-            {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} />}
-            {isFilled(contact.addressNumber) && <Row label="N Residencia" value={contact.addressNumber} />}
-            {isFilled(contact.birthDate) && <Row label="Data de Nascimento" value={contact.birthDate} isLast />}
-          </div>
-
-          {/* Campos personalizados */}
-          {panelFields.length > 0 && (
-            <div className="mt-4">
-              <SubLabel>Campos personalizados</SubLabel>
-              <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
-                {visiblePanelFields.map((f, i) => (
-                  <div
-                    key={f.fieldId}
-                    className={cn(
-                      "px-[14px] py-2.5",
-                      i < visiblePanelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
-                    )}
-                  >
-                    <p className="font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                      {f.label}
-                    </p>
-                    <p className="mt-0.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
-                      {f.value || PLACEHOLDER}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              {hasMorPanelFields && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllPanelFields((v) => !v)}
-                  className="mt-2 flex w-full items-center justify-center gap-1 font-display text-[11.5px] font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-70"
-                >
-                  {showAllPanelFields ? "Mostrar menos" : `Mostrar mais (${panelFields.length - MAX_DEAL_FIELDS_VISIBLE})`}
-                  <IconChevronDown size={13} className={cn("transition-transform", showAllPanelFields && "rotate-180")} />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </aside>
+      <span className="font-medium text-[var(--text-muted)]">{label}</span>
+      {children ?? (
+        <span className="font-display font-bold text-[var(--text-primary)]" style={valueStyle}>
+          {value}
+        </span>
+      )}
+    </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────
 // DealInline — negocio embutido dentro do card unico da aside
+// (declarado ANTES de ContactAside para evitar referencia antecipada)
 // ─────────────────────────────────────────────────────────────────
 
 function DealInline({
@@ -229,20 +142,15 @@ function DealInline({
   const hasMore = fields.length > MAX_DEAL_FIELDS_VISIBLE
 
   const segments = deal.funnelSegments
-  const sortedSegments = segments
-    ? [...segments].sort((a, b) => a.position - b.position)
-    : null
-  const currentSegIdx = sortedSegments
-    ? sortedSegments.findIndex((s) => s.id === deal.stageId)
-    : -1
+  const sortedSegments = segments ? [...segments].sort((a, b) => a.position - b.position) : null
+  const currentSegIdx = sortedSegments ? sortedSegments.findIndex((s) => s.id === deal.stageId) : -1
 
-  // Nome e valor do produto: prioriza deal.productName, depois course
   const productName = deal.productName ?? course ?? null
 
   return (
     <div className="border-b border-[var(--glass-border-subtle)]">
       {/* Header do negocio */}
-      <div className="relative flex items-center gap-3 px-5 py-4">
+      <div className="flex items-center gap-3 px-5 py-4">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)]">
           <IconBriefcase size={16} className="text-[var(--brand-primary)]" />
         </div>
@@ -251,7 +159,6 @@ function DealInline({
             <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
               {deal.title}
             </p>
-            {/* Dropdown envolto em relative para o menu abrir corretamente */}
             <div className="relative shrink-0">
               {deal.stageDropdownSlot ?? (
                 <span className="font-display text-[11px] text-[var(--text-muted)]">
@@ -262,7 +169,7 @@ function DealInline({
           </div>
         </div>
         {deal.value > 0 && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-success-bg,rgba(16,185,129,0.10))] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--color-success,#059669)]">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[rgba(16,185,129,0.10)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--color-success,#059669)]">
             <IconCurrencyDollar size={12} />
             {deal.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </span>
@@ -286,7 +193,7 @@ function DealInline({
         </div>
       )}
 
-      {/* ── Produto — destaque dentro do negocio ─────────────────── */}
+      {/* Produto — destaque dentro do negocio */}
       {productName && (
         <div className="mx-5 mb-4 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-4 py-3">
           <p className="mb-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -349,51 +256,130 @@ function DealInline({
   )
 }
 
-// ───────────────────────────────────────────────────��─────────────
-// Helpers de layout
+// ─────────────────────────────────────────────────────────────────
+// ContactAside — componente principal
 // ─────────────────────────────────────────────────────────────────
 
-function SubLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-2 mt-5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-      {children}
-    </div>
-  )
-}
-
-
-function Row({
-  label,
-  value,
-  valueStyle,
-  children,
-  isLast,
+export function ContactAside({
+  contact,
   className,
-}: {
-  label: string
-  value?: string
-  valueStyle?: React.CSSProperties
-  children?: React.ReactNode
-  isLast?: boolean
-  className?: string
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between py-2.5 text-[13px]",
-        !isLast && "border-b border-[var(--glass-border-subtle)]",
-        className,
-      )}
-    >
-      <span className="font-medium text-[var(--text-muted)]">{label}</span>
-      {children ?? (
-        <span
-          className="font-display font-bold text-[var(--text-primary)]"
-          style={valueStyle}
+  collapsed = false,
+  onToggleCollapse,
+}: ContactAsideProps) {
+  const [showAllPanelFields, setShowAllPanelFields] = useState(false)
+
+  const course = contact.course ?? contact.product
+  const deals = contact.deals ?? []
+
+  const panelFields = contact.panelFields ?? []
+  const visiblePanelFields = showAllPanelFields ? panelFields : panelFields.slice(0, MAX_DEAL_FIELDS_VISIBLE)
+  const hasMorPanelFields = panelFields.length > MAX_DEAL_FIELDS_VISIBLE
+
+  /* ── Estado recolhido ─────────────────────────────────────────── */
+  if (collapsed) {
+    return (
+      <aside
+        aria-label="Detalhes do contato (recolhido)"
+        className={cn(
+          "flex h-full flex-col items-center justify-start rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pt-3 backdrop-blur-md shadow-[var(--glass-shadow)]",
+          className,
+        )}
+      >
+        <button
+          type="button"
+          title="Expandir painel de contato"
+          onClick={onToggleCollapse}
+          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+          aria-label="Expandir painel de contato"
         >
-          {value}
-        </span>
-      )}
-    </div>
+          <IconLayoutSidebarRightExpand size={18} />
+        </button>
+      </aside>
+    )
+  }
+
+  return (
+    <aside
+      aria-label="Detalhes do contato"
+      className={cn("flex flex-col overflow-y-auto pr-0.5", className)}
+    >
+      {/* Card unico que envolve tudo */}
+      <div className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+
+        {/* Botao de colapso */}
+        {onToggleCollapse && (
+          <div className="flex justify-end px-3 pt-3">
+            <button
+              type="button"
+              title="Recolher painel de contato"
+              onClick={onToggleCollapse}
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+              aria-label="Recolher painel de contato"
+            >
+              <IconLayoutSidebarRightCollapse size={17} />
+            </button>
+          </div>
+        )}
+
+        {/* Negocios vinculados — topo do card */}
+        {deals.map((deal) => (
+          <DealInline key={deal.id} deal={deal} course={course} contact={contact} />
+        ))}
+
+        {/* Detalhes de Contato */}
+        <div className="px-5 pb-5">
+          <SubLabel>Detalhes de Contato</SubLabel>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[18px] py-1">
+            <Row label="Nome" value={contact.name} />
+            {isFilled(contact.phone) && (
+              <Row label="Telefone" valueStyle={{ color: "var(--brand-primary)" }} value={contact.phone} />
+            )}
+            {isFilled(contact.email) && (
+              <Row label="Email" value={contact.email} valueStyle={{ color: "var(--brand-primary)", fontSize: 12 }} />
+            )}
+            {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} />}
+            {isFilled(contact.rg) && <Row label="RG" value={contact.rg} />}
+            {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} />}
+            {isFilled(contact.addressNumber) && <Row label="N Residencia" value={contact.addressNumber} />}
+            {isFilled(contact.birthDate) && <Row label="Data de Nascimento" value={contact.birthDate} isLast />}
+          </div>
+
+          {/* Campos personalizados do contato */}
+          {panelFields.length > 0 && (
+            <div className="mt-4">
+              <SubLabel>Campos personalizados</SubLabel>
+              <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
+                {visiblePanelFields.map((f, i) => (
+                  <div
+                    key={f.fieldId}
+                    className={cn(
+                      "px-[14px] py-2.5",
+                      i < visiblePanelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+                    )}
+                  >
+                    <p className="font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                      {f.label}
+                    </p>
+                    <p className="mt-0.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                      {f.value || PLACEHOLDER}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {hasMorPanelFields && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllPanelFields((v) => !v)}
+                  className="mt-2 flex w-full items-center justify-center gap-1 font-display text-[11.5px] font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-70"
+                >
+                  {showAllPanelFields ? "Mostrar menos" : `Mostrar mais (${panelFields.length - MAX_DEAL_FIELDS_VISIBLE})`}
+                  <IconChevronDown size={13} className={cn("transition-transform", showAllPanelFields && "rotate-180")} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </aside>
   )
 }

@@ -384,6 +384,8 @@ export default function InboxV2ClientPage({
     position: s.position,
   }));
   const firstDealStageId = firstDealDetail?.stageId ?? firstDeal?.stageId ?? null;
+  const firstDealStageName =
+    boardStages?.find((s) => s.id === firstDealStageId)?.name ?? null;
 
   // Injeta funnelSegments + stageDropdownSlot apenas no primeiro deal.
   const dealsWithSlots = (contactAsideView?.deals ?? []).map((d, idx) => {
@@ -391,6 +393,7 @@ export default function InboxV2ClientPage({
     return {
       ...d,
       stageId: firstDealStageId ?? d.stageId,
+      stageName: firstDealStageName ?? d.stageName,
       funnelSegments: firstDealFunnelSegments,
       stageDropdownSlot: firstDealId && firstDealStageId ? (
         <StagePicker

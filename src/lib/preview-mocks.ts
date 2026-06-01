@@ -593,20 +593,22 @@ const COMPANIES_LIST = [
 /* ── Board (shape de /api/pipelines/:id/board — dados reais anonimizados) ── */
 const BOARD_STAGES = [
   {
-    id: "stg-1", name: "Entrada", color: "#3b82f6", position: 0, winProbability: 10, rottingDays: 7, isIncoming: true, totalCount: 2,
+    id: "st-1", name: "Novo lead", color: "#3b82f6", position: 0, winProbability: 10, rottingDays: 7, isIncoming: true, totalCount: 2,
     deals: [
       { id: "dl-2001", number: 2001, title: "Plano Anual — Stellar",  value: 28500,  status: "OPEN", position: 0, expectedClose: "2026-06-30T00:00:00Z", createdAt: "2026-05-22T13:40:00Z", updatedAt: "2026-05-28T10:00:00Z", isRotting: false, priority: "HIGH",   contact: { id: "ct-1001", name: "Ana Beatriz Ferreira", email: "ana.ferreira@stellar.edu.br", phone: "+5531988120045", avatarUrl: null }, owner: { id: "u-juliana", name: "Juliana Costa",  avatarUrl: null }, lastMessage: { content: "Pode me enviar a proposta?",                 createdAt: "2026-05-28T09:55:00Z", direction: "INBOUND" }, channel: "WHATSAPP", productName: "Plano Anual EAD",  productType: "SERVICE", tags: [TAGS[0]], pendingActivities: 2, hasOverdueActivity: false, unreadCount: 1 },
       { id: "dl-2002", number: 2002, title: "Licenças — Acme Tech",   value: 12000,  status: "OPEN", position: 1, expectedClose: null,                   createdAt: "2026-05-19T09:10:00Z", updatedAt: "2026-05-26T14:00:00Z", isRotting: true,  priority: "MEDIUM", contact: { id: "ct-1002", name: "Carlos Eduardo Lima",  email: "carlos.lima@acme.com",           phone: "+5511997640112", avatarUrl: null }, owner: { id: "u-rafael",  name: "Rafael Almeida", avatarUrl: null }, lastMessage: null,                                                                                                channel: "EMAIL",    productName: null,            productType: null,      tags: [],        pendingActivities: 0, hasOverdueActivity: true,  unreadCount: 0 },
     ],
   },
   {
-    id: "stg-2", name: "Qualificação", color: "#f59e0b", position: 1, winProbability: 35, rottingDays: 10, totalCount: 1,
+    id: "st-2", name: "Qualificado", color: "#8b5cf6", position: 1, winProbability: 35, rottingDays: 10, totalCount: 1,
     deals: [
       { id: "dl-2003", number: 2003, title: "Consultoria — Globex",   value: 45000,  status: "OPEN", position: 0, expectedClose: "2026-07-15T00:00:00Z", createdAt: "2026-04-30T16:05:00Z", updatedAt: "2026-05-27T11:30:00Z", isRotting: false, priority: "HIGH",   contact: { id: "ct-1003", name: "Patrícia Gomes",       email: "patricia@globex.com.br",          phone: "+5511996330078", avatarUrl: null }, owner: { id: "u-marcelo", name: "Marcelo Santos", avatarUrl: null }, lastMessage: { content: "Fechado, vamos seguir!",                    createdAt: "2026-05-27T11:25:00Z", direction: "INBOUND" }, channel: "WHATSAPP", productName: "Consultoria EaD", productType: "SERVICE", tags: [TAGS[1]], pendingActivities: 1, hasOverdueActivity: false, unreadCount: 0 },
     ],
   },
-  { id: "stg-3", name: "Proposta",    color: "#8b5cf6", position: 2, winProbability: 60, rottingDays: 14, totalCount: 0, deals: [] },
-  { id: "stg-4", name: "Fechamento",  color: "#10b981", position: 3, winProbability: 85, rottingDays: 21, totalCount: 0, deals: [] },
+  { id: "st-3", name: "Proposta",   color: "#f59e0b", position: 2, winProbability: 60, rottingDays: 14, totalCount: 0, deals: [] },
+  { id: "st-4", name: "Negociação", color: "#10b981", position: 3, winProbability: 85, rottingDays: 21, totalCount: 0, deals: [] },
+  { id: "st-5", name: "Ganho",      color: "#22c55e", position: 4, winProbability: 100, rottingDays: 0, totalCount: 0, deals: [] },
+  { id: "st-6", name: "Perdido",    color: "#ef4444", position: 5, winProbability: 0, rottingDays: 0, totalCount: 0, deals: [] },
 ];
 
 /* ── Quick replies ── */

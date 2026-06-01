@@ -1,9 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import { cn } from "@/lib/utils"
 import {
-  IconChevronDown,
   IconBriefcase,
   IconTag,
   IconLayoutSidebarRightCollapse,
@@ -68,7 +66,6 @@ interface ContactAsideProps {
 }
 
 const PLACEHOLDER = "—"
-const MAX_DEAL_FIELDS_VISIBLE = 4
 
 const isFilled = (v: string | undefined | null): v is string =>
   !!v && v !== PLACEHOLDER
@@ -135,14 +132,18 @@ function DealInline({
   course: string | undefined
   contact: ContactDetails
 }) {
-  const [showAll, setShowAll] = useState(false)
   const fields = deal.customFields ?? []
-  const visibleFields = showAll ? fields : fields.slice(0, MAX_DEAL_FIELDS_VISIBLE)
-  const hasMore = fields.length > MAX_DEAL_FIELDS_VISIBLE
 
   const segments = deal.funnelSegments
   const sortedSegments = segments ? [...segments].sort((a, b) => a.position - b.position) : null
   const currentSegIdx = sortedSegments ? sortedSegments.findIndex((s) => s.id === deal.stageId) : -1
+
+  // Nome do estágio: usa stageName direto; senão deriva do segmento do funil
+  // que casa com o stageId; por fim cai no placeholder.
+  const stageLabel =
+    deal.stageName ??
+    sortedSegments?.find((s) => s.id === deal.stageId)?.name ??
+    "Sem estágio"
 
   const productName = deal.productName ?? course ?? null
 
@@ -162,7 +163,7 @@ function DealInline({
           <div className="relative mt-1">
             {deal.stageDropdownSlot ?? (
               <span className="font-display text-[11px] text-[var(--text-muted)]">
-                {deal.stageName ?? "Sem estagio"}
+                {stageLabel}
               </span>
             )}
           </div>
@@ -218,12 +219,12 @@ function DealInline({
         <div className="px-5 pb-4">
           <SubLabel>Campos do negocio</SubLabel>
           <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
-            {visibleFields.map((f, i) => (
+            {fields.map((f, i) => (
               <div
                 key={f.fieldId}
                 className={cn(
                   "flex items-center justify-between gap-3 px-[14px] py-2.5 text-[12.5px]",
-                  i < visibleFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+                  i < fields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
                 )}
               >
                 <span className="shrink-0 font-medium text-[var(--text-muted)]">{f.label}</span>
@@ -233,16 +234,6 @@ function DealInline({
               </div>
             ))}
           </div>
-          {hasMore && (
-            <button
-              type="button"
-              onClick={() => setShowAll((v) => !v)}
-              className="mt-2 flex w-full items-center justify-center gap-1 font-display text-[11.5px] font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-70"
-            >
-              {showAll ? "Mostrar menos" : `Mostrar mais (${fields.length - MAX_DEAL_FIELDS_VISIBLE})`}
-              <IconChevronDown size={13} className={cn("transition-transform", showAll && "rotate-180")} />
-            </button>
-          )}
         </div>
       )}
     </div>
@@ -259,14 +250,10 @@ export function ContactAside({
   collapsed = false,
   onToggleCollapse,
 }: ContactAsideProps) {
-  const [showAllPanelFields, setShowAllPanelFields] = useState(false)
-
   const course = contact.course ?? contact.product
   const deals = contact.deals ?? []
 
   const panelFields = contact.panelFields ?? []
-  const visiblePanelFields = showAllPanelFields ? panelFields : panelFields.slice(0, MAX_DEAL_FIELDS_VISIBLE)
-  const hasMorPanelFields = panelFields.length > MAX_DEAL_FIELDS_VISIBLE
 
   /* ── Estado recolhido ─────────────────────────────────────────── */
   if (collapsed) {
@@ -342,12 +329,12 @@ export function ContactAside({
             <div className="mt-4">
               <SubLabel>Campos personalizados</SubLabel>
               <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
-                {visiblePanelFields.map((f, i) => (
+                {panelFields.map((f, i) => (
                   <div
                     key={f.fieldId}
                     className={cn(
                       "px-[14px] py-2.5",
-                      i < visiblePanelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+                      i < panelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
                     )}
                   >
                     <p className="font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
@@ -359,16 +346,6 @@ export function ContactAside({
                   </div>
                 ))}
               </div>
-              {hasMorPanelFields && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllPanelFields((v) => !v)}
-                  className="mt-2 flex w-full items-center justify-center gap-1 font-display text-[11.5px] font-semibold text-[var(--brand-primary)] transition-opacity hover:opacity-70"
-                >
-                  {showAllPanelFields ? "Mostrar menos" : `Mostrar mais (${panelFields.length - MAX_DEAL_FIELDS_VISIBLE})`}
-                  <IconChevronDown size={13} className={cn("transition-transform", showAllPanelFields && "rotate-180")} />
-                </button>
-              )}
             </div>
           )}
         </div>

@@ -448,11 +448,7 @@ export function DealDetailPanel({
 
               {sessionAlertSlot}
 
-              {composerSlot ? (
-                <div className="mx-6 mb-6">{composerSlot}</div>
-              ) : (
-                <FallbackComposer />
-              )}
+              {composerSlot ? composerSlot : <FallbackComposer />}
             </main>
           ) : (
             // Default: usa o ChatArea novo com mensagens mock.
@@ -591,7 +587,7 @@ function formatMoney(v: number | string | null | undefined): string | undefined 
 function FallbackComposer() {
   return (
     <div
-      className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-[18px] pr-2 opacity-60 shadow-[var(--glass-shadow-sm)]"
+      className="mx-[22px] mb-[22px] flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-[18px] pr-2 opacity-60 shadow-[var(--glass-shadow-sm)]"
     >
       <button
         type="button"

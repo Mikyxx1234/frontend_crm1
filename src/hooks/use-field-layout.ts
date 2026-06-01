@@ -10,7 +10,13 @@ import {
   type SectionConfig,
 } from "@/lib/field-layout";
 
-export function useFieldLayout(context: "deal_workspace" | "inbox_crm") {
+export type FieldLayoutContext =
+  | "deal_workspace"
+  | "inbox_crm"
+  | "inbox_lead_v2"
+  | "deal_panel_v2";
+
+export function useFieldLayout(context: FieldLayoutContext) {
   const { data: session } = useSession();
   const role = (session?.user as { role?: string })?.role;
   const isAdmin = role === "ADMIN" || role === "MANAGER";

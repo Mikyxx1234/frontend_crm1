@@ -7,7 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Check, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { isPreviewMode } from "@/lib/preview-mode";
+import { isPreviewMode, isV0PreviewHost } from "@/lib/preview-mode";
 
 function LoginShellFallback() {
   return (
@@ -37,6 +37,14 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Botão de preview: resolvido só no client (após mount) para cobrir o caso
+  // do v0.dev onde a env var NEXT_PUBLIC_PREVIEW_MODE não foi inlinada no build.
+  // Em SSR fica `false` → sem hydration mismatch.
+  const [previewAllowed, setPreviewAllowed] = useState(false);
+
+  useEffect(() => {
+    setPreviewAllowed(isPreviewMode() || isV0PreviewHost());
+  }, []);
 
   useEffect(() => {
     if (!loginSuccess) return;
@@ -229,7 +237,7 @@ function LoginForm() {
             )}
           </button>
 
-          {isPreviewMode() ? (
+          {previewAllowed ? (
             <button
               type="button"
               onClick={() => {

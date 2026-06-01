@@ -369,7 +369,16 @@ export default function InboxV2ClientPage({
   const firstDeal = contactAsideView?.deals?.[0] ?? null;
   const firstDealId = firstDeal?.id ?? null;
   const { data: firstDealDetail } = useDealDetail(firstDealId);
-  const firstDealPipelineId = firstDealDetail?.pipelineId ?? firstDeal?.pipelineId ?? null;
+  // O detail do deal (/api/deals/:id) devolve pipeline e stage ANINHADOS
+  // em `deal.stage.pipeline.id` / `deal.stage.id` — não no topo. Ler o
+  // caminho errado deixava pipelineId nulo, o board nunca carregava e a
+  // aside mostrava "Sem estágio" sem dropdown de troca de fase.
+  const dealStage = (
+    firstDealDetail as
+      | { stage?: { id?: string; pipeline?: { id?: string } } }
+      | undefined
+  )?.stage;
+  const firstDealPipelineId = dealStage?.pipeline?.id ?? firstDeal?.pipelineId ?? null;
   const { data: boardStages } = useBoard({
     pipelineId: firstDealPipelineId,
     enabled: !!firstDealPipelineId,
@@ -383,9 +392,11 @@ export default function InboxV2ClientPage({
     color: s.color ?? "var(--brand-primary)",
     position: s.position,
   }));
-  const firstDealStageId = firstDealDetail?.stageId ?? firstDeal?.stageId ?? null;
+  const firstDealStageId = dealStage?.id ?? firstDeal?.stageId ?? null;
   const firstDealStageName =
-    boardStages?.find((s) => s.id === firstDealStageId)?.name ?? null;
+    boardStages?.find((s) => s.id === firstDealStageId)?.name ??
+    firstDeal?.stageName ??
+    null;
 
   // Injeta funnelSegments + stageDropdownSlot apenas no primeiro deal.
   const dealsWithSlots = (contactAsideView?.deals ?? []).map((d, idx) => {

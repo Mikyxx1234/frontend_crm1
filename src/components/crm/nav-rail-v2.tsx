@@ -17,7 +17,7 @@ import {
   IconUserCircle,
   IconUsers,
 } from "@tabler/icons-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 import { useEffect, useState } from "react";
 
@@ -59,30 +59,39 @@ function isActiveFor(pathname: string, item: NavItem): boolean {
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
+function computeInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "··";
+  return parts
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export function NavRailV2({ className }: { className?: string }) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const { theme, toggle } = useThemeV2();
+  const { data: session } = useSession();
 
   // Iniciais resolvidas apenas no client para evitar hydration mismatch —
   // isPreviewMode() depende de NEXT_PUBLIC_PREVIEW_MODE que pode diferir entre SSR e client.
+  // Prioridade: usuário autenticado (NextAuth) > usuário de preview > genérico.
   const [initials, setInitials] = useState("··");
   const [displayName, setDisplayName] = useState("Usuário");
   const [email, setEmail] = useState<string | null>(null);
   useEffect(() => {
     const preview = isPreviewMode();
-    const name = preview ? PREVIEW_USER.name : "Usuário";
+    const sessUser = session?.user;
+    const name =
+      sessUser?.name?.trim() || (preview ? PREVIEW_USER.name : "Usuário");
+    const mail =
+      sessUser?.email ?? (preview ? (PREVIEW_USER.email ?? null) : null);
     setDisplayName(name);
-    setEmail(preview ? (PREVIEW_USER.email ?? null) : null);
-    setInitials(
-      name
-        .split(" ")
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase(),
-    );
-  }, []);
+    setEmail(mail);
+    setInitials(computeInitials(name));
+  }, [session]);
 
   const isProfileActive = pathname.startsWith("/settings/profile");
 

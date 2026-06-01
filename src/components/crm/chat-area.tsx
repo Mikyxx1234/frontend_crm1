@@ -1,6 +1,7 @@
 "use client"
 
 import { Fragment, useRef, useState, useEffect, type FormEvent } from "react"
+import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
@@ -91,12 +92,17 @@ export function ChatArea({
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
+  const { data: session } = useSession()
 
+  // Iniciais do agente nas bolhas outgoing. Prioridade: usuário
+  // autenticado (NextAuth) > usuário de preview > genérico.
   const [agentInitials, setAgentInitials] = useState("·")
   useEffect(() => {
-    const name = isPreviewMode() ? PREVIEW_USER.name : "Agente"
+    const sessionName = session?.user?.name?.trim()
+    const name =
+      sessionName || (isPreviewMode() ? PREVIEW_USER.name : "Agente")
     setAgentInitials(getInitials(name) || "?")
-  }, [])
+  }, [session])
   const effectiveDisabled = inputDisabled ?? showSessionAlert
   const value = inputValue ?? ""
 

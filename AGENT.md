@@ -5,6 +5,43 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-02 — Migração do novo design (frontend novo → branch `feature/migracao-novo-design`)
+
+**Decisão.** Trazido o estado completo do frontend novo
+(`marketingeduit-rgb/frontend_crm`, HEAD `a7b4aeb`) para a branch
+`feature/migracao-novo-design` deste repositório via **fast-forward merge**,
+preservando os 119 commits originais. Sem migração parcial arquivo-a-arquivo.
+
+**Contexto.** Análise de `git merge-base` provou que o HEAD deste repo
+(`8e31ce9`) é **ancestral direto** do HEAD do frontend novo — os repos não
+divergiram. O novo = este repo + 119 commits (236 arquivos, +18.178/−1.882).
+Logo não há conflito possível e toda a lógica de negócio antiga já está
+preservada na ascendência. As mudanças incluem reestruturação de rotas
+(`/v2/*` → raiz `(app)/*`; v1 arquivada em `/old/*`), design system
+glassmorphism + dark mode, novos componentes CRM, `next.config` (rewrites
+`afterFiles` + redirects `/v2`→raiz) e `middleware`. Única dependência nova:
+`@xyflow/react`.
+
+**Alternativas descartadas.** (1) Migração seletiva arquivo-a-arquivo —
+descartada: a mudança é uma reestruturação acoplada (rotas + middleware +
+settings-nav + redirects + design tokens); migrar parcial quebraria imports e
+roteamento. (2) Squash em 1 commit — descartada a pedido: preferiu-se
+preservar histórico/autoria.
+
+**Preview/mock do v0.dev.** Mantido, pois é **inerte em produção**: só ativa
+com `NEXT_PUBLIC_PREVIEW_MODE=true` (env) ou em hostname `.v0.dev`/
+`.vusercontent.net`/`.v0.app`/`.v0.build` (runtime). NUNCA casa `localhost`
+nem o domínio de produção (Easypanel). Em dev local normal e em produção o
+middleware segue exigindo sessão NextAuth e as chamadas batem no backend real
+via rewrite `/api/*`. Os mocks (`src/lib/preview-mocks.ts`) só são instalados
+pelo `preview-mocks-installer` quando `isPreviewMode()` é verdadeiro.
+
+**Impacto.** Branch não mergeada na `main` (validação manual pendente pelo
+dono do repo). Env real apenas em `.env.local` (gitignored) / Easypanel —
+nenhum segredo commitado.
+
+---
+
 ### 2026-05-29 — Hotfix: hooks do slash command antes do early return
 
 **Bug.** Versão inicial colocou `useQuery(contactDetail)`, `useMemo`,

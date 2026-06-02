@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Check, Download, Sparkles } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
 import { TriggerConfigFields, TriggerTypeSelect } from "@/components/automations/trigger-config-fields";
@@ -65,6 +65,12 @@ type WizardStep = 0 | 1 | 2 | 3;
 
 export default function NewAutomationPage() {
   const router = useRouter();
+  // Reusado em /old/automations/new e /automations/new — o "voltar" deve
+  // respeitar a origem para não jogar o usuário do v2 de volta no /old.
+  const pathname = usePathname();
+  const listHref = pathname?.startsWith("/old/")
+    ? "/old/automations"
+    : "/automations";
   const [wizard, setWizard] = useState<WizardStep>(0);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -176,7 +182,7 @@ export default function NewAutomationPage() {
     <div className="w-full space-y-6">
       <div className="flex items-center gap-4">
         <Button type="button" variant="ghost" size="icon" asChild>
-          <Link href="/old/automations" aria-label="Voltar">
+          <Link href={listHref} aria-label="Voltar">
             <ArrowLeft className="size-4" />
           </Link>
         </Button>

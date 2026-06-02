@@ -11,6 +11,7 @@ import {
   IconArrowDownRight,
   IconArrowUpRight,
   IconCircleX,
+  IconSparkles,
 } from "@tabler/icons-react"
 import { StatCard } from "@/components/crm/stat-card"
 import { ButtonGlass } from "@/components/crm/button-glass"
@@ -29,6 +30,7 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const stages = data?.stages ?? []
   const summary = data?.summary ?? EMPTY_SUMMARY
+  const newInPeriod = data?.newInPeriod ?? { count: 0, value: 0 }
 
   const scroll = (dir: "left" | "right") => {
     scrollRef.current?.scrollBy({ left: dir === "left" ? -320 : 320, behavior: "smooth" })
@@ -99,6 +101,30 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
           </p>
         ) : (
           <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-1.5 [scrollbar-width:thin]">
+            {/* Card fixo "Novos do período" — negócios criados na janela
+                selecionada (padrão: hoje). Respeita o range do calendário. */}
+            <article className="flex w-[200px] shrink-0 flex-col justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/35 bg-[color-mix(in_srgb,var(--brand-primary)_9%,var(--glass-bg-overlay))] p-3.5 shadow-[var(--glass-shadow-sm)]">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]">
+                  <IconSparkles size={15} />
+                </span>
+                <h4 className="font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
+                  Novos do período
+                </h4>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-display text-[28px] font-extrabold leading-none tracking-tight text-[var(--brand-primary)]">
+                  {newInPeriod.count}
+                </span>
+                <span className="mt-1 font-body text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                  negócios criados
+                </span>
+              </div>
+              <span className="font-display text-[13px] font-bold text-[var(--text-secondary)]">
+                {formatCurrency(newInPeriod.value)}
+              </span>
+            </article>
+
             {stages.map((stage) => (
               <article
                 key={stage.id}

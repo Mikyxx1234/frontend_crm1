@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import {
   IconRobot,
@@ -7,6 +7,10 @@ import {
   IconChevronDown,
   IconFile,
   IconDownload,
+  IconCheck,
+  IconChecks,
+  IconClock,
+  IconAlertCircle,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -57,6 +61,46 @@ function detectMediaKind(messageType: string | undefined, mediaUrl: string | nul
   return null
 }
 
+/**
+ * Renderiza a formatação inline do WhatsApp em nós React:
+ *   *negrito*  _itálico_  ~tachado~  `monoespaçado`
+ * Usado para que a assinatura do agente (`*Nome*:`) e qualquer mensagem
+ * formatada apareçam como o cliente vê no WhatsApp — sem asteriscos crus.
+ */
+function formatWhatsapp(text: string): ReactNode {
+  if (!text) return text
+  const tokenRe = /(\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|`[^`\n]+`)/g
+  const parts: ReactNode[] = []
+  let last = 0
+  let key = 0
+  let m: RegExpExecArray | null
+  while ((m = tokenRe.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index))
+    const tok = m[0]
+    const inner = tok.slice(1, -1)
+    switch (tok[0]) {
+      case "*":
+        parts.push(<strong key={key++} className="font-semibold">{inner}</strong>)
+        break
+      case "_":
+        parts.push(<em key={key++}>{inner}</em>)
+        break
+      case "~":
+        parts.push(<s key={key++}>{inner}</s>)
+        break
+      default:
+        parts.push(
+          <code key={key++} className="rounded bg-black/10 px-1 font-mono text-[0.92em]">
+            {inner}
+          </code>,
+        )
+    }
+    last = m.index + tok.length
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return parts.length ? parts : text
+}
+
 /** Texto-placeholder do backend (ex.: "[video]", "[image] 👁") não deve virar legenda. */
 function isPlaceholderContent(content: string): boolean {
   const c = content.trim()
@@ -96,6 +140,33 @@ export interface Message {
   messageType?: string
   /** URL da mídia para áudio, imagem, documento */
   mediaUrl?: string | null
+  /**
+   * Status de entrega (apenas mensagens outgoing) — exibe ticks estilo
+   * WhatsApp: enviando (relógio), enviada (✓), entregue (✓✓ cinza),
+   * lida (✓✓ azul), falha (alerta vermelho).
+   */
+  status?: "pending" | "sent" | "delivered" | "read" | "failed"
+}
+
+/** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing). */
+function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
+  if (status === "pending") {
+    return <IconClock size={12} className="shrink-0 text-white/70" aria-label="Enviando" />
+  }
+  if (status === "failed") {
+    return <IconAlertCircle size={13} className="shrink-0 text-[#fca5a5]" aria-label="Falha no envio" />
+  }
+  if (status === "sent") {
+    return <IconCheck size={14} className="shrink-0 text-white/75" aria-label="Enviada" />
+  }
+  // delivered | read — duplo tick; azul quando lida.
+  return (
+    <IconChecks
+      size={15}
+      className={cn("shrink-0", status === "read" ? "text-[#7fd4ff]" : "text-white/75")}
+      aria-label={status === "read" ? "Lida" : "Entregue"}
+    />
+  )
 }
 
 interface MessageBubbleProps {
@@ -312,8 +383,12 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
   // ── Texto ──────────────────────────────────────────────────────
   return (
     <span className="break-words">
-      {content}
-      <span aria-hidden className="ml-1 inline-block w-[36px] align-baseline" />
+      {formatWhatsapp(content)}
+      {/* Espaço reservado p/ horário (+ ticks quando outgoing). */}
+      <span
+        aria-hidden
+        className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
+      />
     </span>
   )
 }
@@ -322,8 +397,11 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
 function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boolean }) {
   return (
     <span className={cn("break-words text-[13px]", !isOutgoing && "text-[var(--chat-bubble-received-text)]")}>
-      {caption}
-      <span aria-hidden className="ml-1 inline-block w-[36px] align-baseline" />
+      {formatWhatsapp(caption)}
+      <span
+        aria-hidden
+        className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
+      />
     </span>
   )
 }
@@ -380,11 +458,12 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
         <MessageContent message={message} isOutgoing={isOutgoing} />
         <span
           className={cn(
-            "pointer-events-none absolute bottom-1.5 right-2.5 select-none whitespace-nowrap text-[10.5px] leading-none",
+            "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
             isOutgoing ? "text-white/80" : "text-[var(--text-muted)]",
           )}
         >
           {message.time}
+          {isOutgoing && message.status && <StatusTicks status={message.status} />}
         </span>
       </div>
     </div>

@@ -54,6 +54,15 @@ export function usePortalPopover(): PortalPopoverState {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
       const t = e.target as Node;
+      // Ignora cliques dentro de portais do Radix (DropdownMenu/Select/
+      // Popover) que renderizam FORA do popoverRef. Sem isso, selecionar
+      // uma opção de um dropdown aninhado fecharia o popover inteiro.
+      if (
+        t instanceof Element &&
+        t.closest("[data-radix-popper-content-wrapper]")
+      ) {
+        return;
+      }
       if (
         triggerRef.current &&
         !triggerRef.current.contains(t) &&

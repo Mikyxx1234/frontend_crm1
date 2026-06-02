@@ -1,13 +1,29 @@
 "use client";
 
-import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { IconSend, IconMoodSmile, IconLock } from "@tabler/icons-react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import {
+  IconSend,
+  IconMoodSmile,
+  IconLock,
+  IconSignature,
+  IconPencil,
+  IconCheck,
+  IconX,
+} from "@tabler/icons-react";
 
+import { cn } from "@/lib/utils";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   useSlashMenu,
   SlashCommandMenu,
+  type SlashItem,
 } from "@/components/inbox/slash-command-menu";
+import { sendMessage, sendTemplate } from "@/features/inbox-v2/api";
+import { messagesKey } from "@/features/inbox-v2/hooks";
+import { interpolateInternalTemplate } from "@/lib/internal-template-variables";
 
 import { AudioRecorderButton } from "./audio-recorder-button";
 import { ComposerMenu } from "./composer-menu";
@@ -48,9 +64,95 @@ export function Composer({
   contactId?: string | null;
 }) {
   const [noteMode, setNoteMode] = useState(false);
+  const qc = useQueryClient();
 
   // Ref para o textarea — exigido pelo useSlashMenu para movimentar o cursor
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Container do composer — usado para detectar clique-fora do slash menu.
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // ── Assinatura do agente (estilo WhatsApp) ───────────────────────
+  // Toggle + nome personalizado, persistidos em localStorage (mesmas
+  // chaves do /inbox v1 → o operador mantém a preferência ao migrar).
+  // Quando ligada e fora do modo nota, prefixa `*Nome*: ` na mensagem.
+  const { data: session } = useSession();
+  const agentName = (session?.user?.name ?? "").trim();
+  const [sigEnabled, setSigEnabled] = useState(true);
+  const [sigValue, setSigValue] = useState("");
+  const [sigEditing, setSigEditing] = useState(false);
+  const [sigDraft, setSigDraft] = useState("");
+
+  useEffect(() => {
+    try {
+      const e = window.localStorage.getItem("eduit:signature:enabled");
+      const v = window.localStorage.getItem("eduit:signature:value");
+      if (e !== null) setSigEnabled(e === "1");
+      if (v !== null) setSigValue(v);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const effectiveSignature = (sigValue.trim() || agentName).trim();
+
+  function persistSigEnabled(v: boolean) {
+    setSigEnabled(v);
+    try {
+      window.localStorage.setItem("eduit:signature:enabled", v ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }
+  function persistSigValue(v: string) {
+    setSigValue(v);
+    try {
+      window.localStorage.setItem("eduit:signature:value", v);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Prefixa a assinatura de forma idempotente (não duplica se o texto já
+  // vier assinado em qualquer um dos formatos usados historicamente).
+  function applySignature(text: string): string {
+    const sig = effectiveSignature;
+    if (!sigEnabled || !sig) return text;
+    const s = sig.toLowerCase();
+    const lower = text.toLowerCase();
+    const already =
+      lower.startsWith(`*${s}:*`) ||
+      lower.startsWith(`*${s}*:`) ||
+      lower.startsWith(`*${s}*`) ||
+      lower.startsWith(`${s}:`);
+    return already ? text : `*${sig}*: ${text}`;
+  }
+
+  // ── Envio direto a partir do slash menu ("Mensagens prontas") ────
+  // Igual ao menu "+": clicar/Enter no item ENVIA na hora. Modelos
+  // internos viram mensagem de texto; templates Meta vão via Cloud API.
+  const slashSend = useMutation({
+    mutationFn: (item: SlashItem) => {
+      if (!conversationId) throw new Error("Nenhuma conversa selecionada");
+      if (item.kind === "internal-template") {
+        const text = applySignature(interpolateInternalTemplate(item.content, {}));
+        return sendMessage(conversationId, { content: text });
+      }
+      return sendTemplate(conversationId, {
+        templateName: item.name,
+        bodyPreview: item.bodyPreview,
+      });
+    },
+    onSuccess: (_data, item) => {
+      toast.success(
+        item.kind === "meta-template" ? "Template enviado" : "Modelo enviado",
+      );
+      if (conversationId) {
+        qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+        qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+      }
+    },
+    onError: (err: Error) => toast.error(err.message || "Falha ao enviar"),
+  });
 
   // ── Slash command (/modelos) ────────────────────────────────────
   const slash = useSlashMenu({
@@ -59,12 +161,30 @@ export function Composer({
     textareaRef,
     // Desabilita o atalho em modo nota (não faz sentido inserir templates ali)
     disabled: disabled || noteMode,
-    onPickMetaTemplate: () => {
-      // Quando o operador seleciona um template Meta, o Composer apenas
-      // limpa o token "/" — o fluxo de "pendingTemplate" é aberto via
-      // ComposerMenu que já tem essa lógica. Nada a fazer aqui.
-    },
+    onPickMetaTemplate: () => {},
+    // Override: clique/Enter no item envia direto (o hook já remove o "/").
+    onSelectOverride: (item) => slashSend.mutate(item),
   });
+
+  // Fechar o slash menu via ESC (mesmo sem foco no textarea) e ao clicar
+  // fora do composer — o hook só fecha por teclado com o textarea focado.
+  useEffect(() => {
+    if (!slash.state.open) return;
+    function onEsc(e: globalThis.KeyboardEvent) {
+      if (e.key === "Escape") slash.close();
+    }
+    function onPointer(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        slash.close();
+      }
+    }
+    document.addEventListener("keydown", onEsc);
+    document.addEventListener("mousedown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onEsc);
+      document.removeEventListener("mousedown", onPointer);
+    };
+  }, [slash.state.open, slash.close]);
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,7 +193,7 @@ export function Composer({
     if (noteMode && onSendNote) {
       onSendNote(trimmed);
     } else {
-      onSend(trimmed);
+      onSend(applySignature(trimmed));
     }
   }
 
@@ -90,13 +210,13 @@ export function Composer({
       if (noteMode && onSendNote) {
         onSendNote(trimmed);
       } else {
-        onSend(trimmed);
+        onSend(applySignature(trimmed));
       }
     }
   }
 
   return (
-    <div className="relative mx-[22px] mb-[22px]">
+    <div ref={rootRef} className="relative mx-[22px] mb-[22px]">
       {/* Slash command menu — flutua acima do composer */}
       {slash.state.open && (
         <div className="absolute bottom-full left-0 mb-2 w-full">
@@ -108,6 +228,100 @@ export function Composer({
           />
         </div>
       )}
+
+      {/* Barra de assinatura do agente — só no modo mensagem (não em nota) */}
+      {!noteMode ? (
+        <div className="mb-1.5 flex items-center gap-2 px-2">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={sigEnabled}
+            aria-label={sigEnabled ? "Desligar assinatura" : "Ligar assinatura"}
+            onClick={() => persistSigEnabled(!sigEnabled)}
+            className={cn(
+              "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors",
+              sigEnabled ? "bg-[var(--brand-primary)]" : "bg-[var(--text-muted)]/40",
+            )}
+          >
+            <span
+              className={cn(
+                "inline-block size-3 rounded-full bg-white shadow transition-transform",
+                sigEnabled ? "translate-x-[14px]" : "translate-x-[2px]",
+              )}
+            />
+          </button>
+          <IconSignature size={13} className="shrink-0 text-[var(--text-muted)]" />
+          {sigEditing ? (
+            <span className="flex items-center gap-1">
+              <input
+                autoFocus
+                value={sigDraft}
+                onChange={(e) => setSigDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    persistSigValue(sigDraft.trim());
+                    setSigEditing(false);
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setSigEditing(false);
+                  }
+                }}
+                placeholder={agentName || "Seu nome"}
+                className="h-6 w-40 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 font-body text-[11.5px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+              />
+              <button
+                type="button"
+                aria-label="Salvar assinatura"
+                onClick={() => {
+                  persistSigValue(sigDraft.trim());
+                  setSigEditing(false);
+                }}
+                className="rounded-[var(--radius-sm)] p-0.5 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
+              >
+                <IconCheck size={14} />
+              </button>
+              <button
+                type="button"
+                aria-label="Cancelar"
+                onClick={() => setSigEditing(false)}
+                className="rounded-[var(--radius-sm)] p-0.5 text-[var(--text-muted)] hover:bg-[var(--text-muted)]/10"
+              >
+                <IconX size={14} />
+              </button>
+            </span>
+          ) : (
+            <>
+              <span
+                className={cn(
+                  "max-w-[180px] truncate font-body text-[11.5px] font-semibold transition-colors",
+                  sigEnabled
+                    ? "text-[var(--text-primary)]"
+                    : "text-[var(--text-muted)] line-through",
+                )}
+                title={
+                  effectiveSignature
+                    ? `Assinando como ${effectiveSignature}`
+                    : "Defina um nome para assinar"
+                }
+              >
+                {effectiveSignature || "Sem assinatura"}
+              </span>
+              <button
+                type="button"
+                aria-label="Editar assinatura"
+                onClick={() => {
+                  setSigDraft(sigValue);
+                  setSigEditing(true);
+                }}
+                className="rounded-[var(--radius-sm)] p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+              >
+                <IconPencil size={12} />
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <form
         onSubmit={handleSubmit}

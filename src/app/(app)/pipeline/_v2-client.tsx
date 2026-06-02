@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -31,7 +32,9 @@ import {
   useDealDetail,
   useMoveDeal,
   usePipelines,
+  useTeamUsers,
 } from "@/features/pipeline-v2/hooks";
+import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BoardDealDto, BoardStageDto, StatusFilter } from "@/features/pipeline-v2/api";
 import {
   AddDealDialog,
@@ -113,6 +116,26 @@ export default function KanbanV2ClientPage({
   });
 
   const moveDeal = useMoveDeal(pipelineId, status);
+
+  // ── Seleção em massa (resgatada da versão antiga) ────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { data: teamUsers = [] } = useTeamUsers(isAuthenticated);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  // Limpa a seleção ao trocar de pipeline ou aba — os IDs não fazem
+  // sentido entre boards diferentes.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [pipelineId, activeTab]);
 
   // Aplica filtros client-side ANTES de virar colunas. Mantemos o
   // total real (totalCount) para o badge de "todos no estagio" — mas
@@ -282,6 +305,8 @@ export default function KanbanV2ClientPage({
                 pipelineId={pipelineId}
                 statusFilter={status}
                 stages={board}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
                 onAddDeal={() =>
                   setAddStage({ id: col.stageId, name: col.title })
                 }
@@ -559,6 +584,21 @@ export default function KanbanV2ClientPage({
         statusFilter={status}
       />
 
+      {pipelineId ? (
+        <BulkActionsBar
+          selectedCount={selectedIds.size}
+          selectedIds={selectedIds}
+          onClear={clearSelection}
+          pipelineId={pipelineId}
+          stages={board.map((s) => ({
+            id: s.id,
+            name: s.name,
+            color: s.color ?? undefined,
+          }))}
+          users={teamUsers.map((u) => ({ id: u.id, name: u.name }))}
+        />
+      ) : null}
+
       {templateModal}
     </div>
   );
@@ -799,6 +839,8 @@ function DroppableColumn({
   statusFilter,
   onAddDeal,
   stages,
+  selectedIds,
+  onToggleSelect,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -807,6 +849,8 @@ function DroppableColumn({
   statusFilter: StatusFilter;
   onAddDeal?: () => void;
   stages: BoardStageDto[];
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
 }) {
   return (
     <Droppable droppableId={column.stageId}>
@@ -835,19 +879,22 @@ function DroppableColumn({
             const raw = dealById.get(deal.id);
             return (
               <Draggable key={deal.id} draggableId={deal.id} index={index}>
-                {(dragProvided, dragSnapshot) => (
+                {(dragProvided, dragSnapshot) => {
+                  const node = (
                   <div
                     ref={dragProvided.innerRef}
                     {...dragProvided.draggableProps}
                     {...dragProvided.dragHandleProps}
                     style={{
                       ...dragProvided.draggableProps.style,
-                      opacity: dragSnapshot.isDragging ? 0.85 : 1,
+                      opacity: dragSnapshot.isDragging ? 0.9 : 1,
                     }}
                   >
                     <DealCard
                       deal={deal}
                       onClick={() => onDealClick(deal.id)}
+                      isSelected={selectedIds.has(deal.id)}
+                      onToggleSelect={() => onToggleSelect(deal.id)}
                       tagsSlot={
                         <>
                           {(raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>)).map((t) => (
@@ -917,7 +964,18 @@ function DroppableColumn({
                       }
                     />
                   </div>
-                )}
+                  );
+                  // Enquanto arrasta, renderizamos o card num portal pro
+                  // <body>. Os ancestrais do Kanban usam backdrop-blur/
+                  // transform (glass), que criam um containing block novo e
+                  // quebram o `position: fixed` que a lib aplica ao item
+                  // arrastado — sem o portal, o card "some"/salta pra fora da
+                  // tela. Portar pro body (sem ancestral transformado) faz o
+                  // ghost seguir o cursor normalmente.
+                  return dragSnapshot.isDragging && typeof document !== "undefined"
+                    ? createPortal(node, document.body)
+                    : node;
+                }}
               </Draggable>
             );
           }}

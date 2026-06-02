@@ -13,6 +13,8 @@ import { ServiceOverview } from "@/components/crm/dashboard/service-overview";
 import {
   FilterBar,
   computePeriod,
+  rangeToPeriod,
+  type CustomRange,
   type PeriodPreset,
 } from "@/features/dashboard-v2/components/filter-bar";
 import {
@@ -37,10 +39,21 @@ export default function DashboardV2ClientPage({
   const isAuthenticated = sessionStatus === "authenticated";
 
   const [activeTab, setActiveTab] = useState(0);
-  const [preset, setPreset] = useState<PeriodPreset>("30d");
+  // Padrão "Hoje" (estilo Kommo); um range de calendário sobrepõe o preset.
+  const [preset, setPreset] = useState<PeriodPreset>("hoje");
+  const [customRange, setCustomRange] = useState<CustomRange | null>(null);
   const [pipelineId, setPipelineId] = useState<string | undefined>(undefined);
 
-  const period = useMemo(() => computePeriod(preset), [preset]);
+  const period = useMemo(
+    () => (customRange ? rangeToPeriod(customRange) : computePeriod(preset)),
+    [preset, customRange],
+  );
+
+  // Selecionar um preset limpa o range custom (e vice-versa).
+  const handlePreset = (p: PeriodPreset) => {
+    setPreset(p);
+    setCustomRange(null);
+  };
 
   const { data: pipelines = [] } = usePipelineOptions(isAuthenticated);
 
@@ -75,7 +88,9 @@ export default function DashboardV2ClientPage({
           actions={
             <FilterBar
               preset={preset}
-              onPresetChange={setPreset}
+              onPresetChange={handlePreset}
+              customRange={customRange}
+              onCustomRangeChange={setCustomRange}
               pipelines={pipelines}
               pipelineId={pipelineId}
               onPipelineChange={setPipelineId}

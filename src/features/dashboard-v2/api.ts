@@ -29,6 +29,8 @@ export interface DealStageFlow {
 
 export interface DealsOverview {
   stages: DealStageFlow[];
+  /** Negócios criados no período selecionado (1º card do carrossel). */
+  newInPeriod?: { count: number; value: number };
   summary: {
     totalValue: number;
     totalDeals: number;

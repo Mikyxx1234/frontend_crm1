@@ -57,6 +57,13 @@ interface DealCardProps {
    * o menu de "mover de fase" (alternativa ao drag-and-drop).
    */
   moveMenuSlot?: React.ReactNode
+  /**
+   * Seleção em massa. Quando `onToggleSelect` é passado, o card exibe um
+   * checkbox no canto superior esquerdo (visível em hover ou quando
+   * selecionado) e ganha um anel de destaque ao ser selecionado.
+   */
+  isSelected?: boolean
+  onToggleSelect?: () => void
 }
 
 const tagStyles: Record<TagType, string> = {
@@ -68,16 +75,44 @@ const tagStyles: Record<TagType, string> = {
   ref: "bg-[rgba(244,114,182,0.12)] text-[#be185d] border-[rgba(244,114,182,0.25)]",
 }
 
-export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot }: DealCardProps) {
+export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect }: DealCardProps) {
   return (
     <article
       onClick={onClick}
       className={cn(
-        "cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all",
+        "group relative cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all",
         "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-base)] hover:shadow-[var(--glass-shadow)]",
+        isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",
       )}
     >
+      {/* Checkbox de seleção em massa — canto superior esquerdo. Aparece
+          em hover OU quando o card está selecionado. stopPropagation em
+          vários eventos evita abrir o deal ou iniciar o drag. */}
+      {onToggleSelect ? (
+        <label
+          className={cn(
+            "absolute left-2 top-2 z-20 flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-sm backdrop-blur-md transition-opacity",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          )}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={!!isSelected}
+            onChange={(e) => {
+              e.stopPropagation()
+              onToggleSelect()
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="h-3.5 w-3.5 cursor-pointer accent-[var(--brand-primary)]"
+          />
+        </label>
+      ) : null}
+
       {/* Top row: avatar + name + dealNumber/date */}
       <div className="flex items-center gap-2.5">
         <div

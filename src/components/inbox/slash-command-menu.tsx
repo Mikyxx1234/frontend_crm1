@@ -182,6 +182,14 @@ export type UseSlashMenuOptions = {
   templateContext?: InternalTemplateContext;
   /** Disparado quando o operador escolhe um template Meta — pai abre o flow. */
   onPickMetaTemplate: (item: Extract<SlashItem, { kind: "meta-template" }>) => void;
+  /**
+   * Quando fornecido, SUBSTITUI a ação padrão de selecionar um item
+   * (inserir texto / abrir flow). O hook só remove o token "/..." do draft
+   * e delega TODO o resto ao consumidor — usado pelo composer v2 para
+   * ENVIAR direto o modelo/template. Aplica-se tanto a clique quanto a
+   * teclado (Enter/Tab), mantendo o comportamento consistente.
+   */
+  onSelectOverride?: (item: SlashItem) => void;
   /** Desliga totalmente o atalho (ex.: modo nota, anexo pendente). */
   disabled?: boolean;
 };
@@ -192,6 +200,7 @@ export function useSlashMenu({
   textareaRef,
   templateContext,
   onPickMetaTemplate,
+  onSelectOverride,
   disabled = false,
 }: UseSlashMenuOptions) {
   const [open, setOpen] = React.useState(false);
@@ -303,6 +312,17 @@ export function useSlashMenu({
   const applyItem = React.useCallback(
     (item: SlashItem) => {
       if (!token) return;
+
+      // Override (composer v2): remove o "/token" e delega o envio ao pai.
+      if (onSelectOverride) {
+        const before = draft.slice(0, token.start);
+        const after = draft.slice(token.end);
+        setDraft(before + after);
+        close();
+        onSelectOverride(item);
+        return;
+      }
+
       if (item.kind === "meta-template") {
         // Substitui o "/query" por nada — o pai vai abrir o pendingTemplate
         // panel; deixar o token no draft só atrapalha.
@@ -331,7 +351,7 @@ export function useSlashMenu({
         el.setSelectionRange(pos, pos);
       });
     },
-    [draft, setDraft, token, close, onPickMetaTemplate, templateContext, textareaRef],
+    [draft, setDraft, token, close, onPickMetaTemplate, onSelectOverride, templateContext, textareaRef],
   );
 
   const applyActive = React.useCallback(() => {

@@ -26,7 +26,7 @@ export function BuilderTopbar({ name, active, onToggle, onRename, onSave, saved 
       {/* Esquerda: voltar + breadcrumb + nome editável */}
       <div className="flex min-w-0 items-center gap-2.5">
         <Link
-          href="/v2/automations"
+          href="/automations"
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
           aria-label="Voltar para automações"
         >
@@ -39,7 +39,7 @@ export function BuilderTopbar({ name, active, onToggle, onRename, onSave, saved 
 
         <div className="flex min-w-0 flex-col">
           <Link
-            href="/v2/automations"
+            href="/automations"
             className="font-body text-[11px] font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)]"
           >
             Automações

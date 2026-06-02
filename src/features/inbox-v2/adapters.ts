@@ -383,7 +383,29 @@ export function toMessageBubble(
     formTitle: formParsed?.title,
     messageType: dto.messageType ?? undefined,
     mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
+    // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.
+    status: isInbound ? undefined : toBubbleStatus(dto),
   };
+}
+
+/** Mapeia o status do DTO (PENDING/SENT/DELIVERED/READ/FAILED) para a
+ *  forma usada pela bolha. `readAt` serve de fallback quando o backend
+ *  ainda não preencheu `status`. */
+function toBubbleStatus(dto: InboxMessageDto): Message["status"] {
+  switch (dto.status) {
+    case "PENDING":
+      return "pending";
+    case "SENT":
+      return "sent";
+    case "DELIVERED":
+      return "delivered";
+    case "READ":
+      return "read";
+    case "FAILED":
+      return "failed";
+    default:
+      return dto.readAt ? "read" : undefined;
+  }
 }
 
 /** Header do ChatArea (contact pill). */

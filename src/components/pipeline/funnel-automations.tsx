@@ -738,7 +738,7 @@ function AddAutomationDialog({
               </button>
 
               <NextLink
-                href="/old/automations/new"
+                href="/automations/new"
                 className="flex items-center gap-3 rounded-xl border-2 border-border bg-white px-4 py-4 text-left transition-all hover:border-violet-400 hover:bg-violet-50/30 hover:shadow-sm"
               >
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-100">

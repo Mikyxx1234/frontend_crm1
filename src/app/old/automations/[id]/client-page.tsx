@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { AutomationStats } from "@/lib/automation-stats-types";
@@ -430,6 +430,13 @@ export default function AutomationDetailPage() {
   const id = typeof params.id === "string" ? params.id : "";
   const router = useRouter();
   const queryClient = useQueryClient();
+  // O editor é reusado em duas rotas: /old/automations/[id] (legado) e
+  // /automations/[id] (v2). A navegação "voltar à lista" deve respeitar a
+  // origem — senão sair do editor v2 jogava o usuário de volta no /old.
+  const pathname = usePathname();
+  const listHref = pathname?.startsWith("/old/")
+    ? "/old/automations"
+    : "/automations";
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -597,7 +604,7 @@ export default function AutomationDetailPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["automations"] });
-      router.push("/old/automations");
+      router.push(listHref);
     },
   });
 
@@ -690,7 +697,7 @@ export default function AutomationDetailPage() {
           {(detailQuery.error as Error)?.message ?? "Não foi possível carregar"}
         </p>
         <Button type="button" variant="outline" size="sm" asChild>
-          <Link href="/old/automations">Voltar à lista</Link>
+          <Link href={listHref}>Voltar à lista</Link>
         </Button>
       </div>
     );
@@ -705,7 +712,7 @@ export default function AutomationDetailPage() {
       <div className="flex shrink-0 items-center gap-3 border-b border-border/60 bg-white/85 px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
         {/* Breadcrumb */}
         <Link
-          href="/old/automations"
+          href={listHref}
           className="group/back flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-[var(--color-ink-soft)] transition-colors hover:bg-[#eef4ff]/60 hover:text-primary"
         >
           <ArrowLeft className="size-4 transition-transform group-hover/back:-translate-x-0.5" strokeWidth={2.4} />

@@ -35,7 +35,7 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
     <div className="group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--card)] shadow-[var(--glass-shadow-sm)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--glass-shadow)]">
       {/* Link expandido sobre todo o card (stretched link) */}
       <Link
-        href={`/v2/automations/${automation.id}`}
+        href={`/automations/${automation.id}`}
         className="absolute inset-0 z-0 rounded-[var(--radius-xl)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
         aria-label={`Abrir editor de ${automation.name}`}
       >

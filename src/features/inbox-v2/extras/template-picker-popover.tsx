@@ -104,7 +104,10 @@ function TemplateItemWithConfirm({
   isPending: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const prior = usePriorSend(conversationId, tpl.name);
+  // O backend grava o nome canônico WABA (metaTemplateName) no conteúdo
+  // da mensagem out — `tpl.name` pode ser o label (rótulo de exibição).
+  // Fallback pra `tpl.name` mantém compat se o adapter não preencheu.
+  const prior = usePriorSend(conversationId, tpl.metaTemplateName ?? tpl.name);
 
   if (confirming && prior) {
     return (
@@ -349,8 +352,15 @@ export function TemplatePickerList({
   const sendMutation = useMutation({
     mutationFn: (tpl: WhatsappTemplate) =>
       sendTemplate(conversationId, {
-        templateName: tpl.name,
+        // O backend espera o nome canônico WABA em `templateName`. Quando
+        // `metaTemplateName` está disponível (caminho normal), preferimos
+        // ele — `tpl.name` pode ter sido derivado do `label`, que é só
+        // exibição e não casa com o template aprovado na Graph.
+        templateName: tpl.metaTemplateName ?? tpl.name,
         bodyPreview: tpl.body,
+        // Garante que o backend mapeie pro template correto na Graph
+        // mesmo quando há ambiguidade de nome entre orgs.
+        templateGraphId: tpl.metaTemplateId ?? null,
       }),
     onSuccess: () => {
       toast.success("Template enviado");

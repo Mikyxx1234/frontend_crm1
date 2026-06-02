@@ -338,10 +338,35 @@ export async function listQuickReplies(): Promise<QuickReply[]> {
 
 export interface WhatsappTemplate {
   id: string;
+  /** Nome de exibição (label > metaTemplateName), análogo ao slash-menu. */
   name: string;
   category?: string;
   body?: string;
   language?: string;
+  /** Identificador na Graph (Cloud API) — necessário pra `sendTemplate`. */
+  metaTemplateId?: string;
+  /** Nome canônico WABA (vai para `templateName` no POST). */
+  metaTemplateName?: string;
+  hasButtons?: boolean;
+  hasVariables?: boolean;
+}
+
+/**
+ * Shape bruto retornado pelo backend `/api/whatsapp-template-configs/agent-enabled`.
+ * Mantemos privado pra que o frontend trabalhe sempre com `WhatsappTemplate`
+ * normalizado — evita o bug histórico em que componentes consumiam `tpl.name`
+ * (undefined) e renderizavam itens em branco.
+ */
+interface AgentEnabledTemplateRaw {
+  id: string;
+  metaTemplateId?: string;
+  metaTemplateName?: string;
+  label?: string;
+  language?: string;
+  category?: string | null;
+  bodyPreview?: string;
+  hasButtons?: boolean;
+  hasVariables?: boolean;
 }
 
 /** GET /api/whatsapp-template-configs/agent-enabled */
@@ -349,7 +374,20 @@ export async function listAgentEnabledTemplates(): Promise<WhatsappTemplate[]> {
   const res = await fetch(apiUrl("/api/whatsapp-template-configs/agent-enabled"));
   if (!res.ok) throw new Error("Erro ao carregar templates");
   const data = await res.json();
-  return Array.isArray(data) ? data : data.items ?? [];
+  const rows: AgentEnabledTemplateRaw[] = Array.isArray(data)
+    ? data
+    : (Array.isArray(data?.items) ? data.items : []);
+  return rows.map((row) => ({
+    id: row.id,
+    name: (row.label && row.label.trim()) || row.metaTemplateName || "(sem nome)",
+    metaTemplateId: row.metaTemplateId,
+    metaTemplateName: row.metaTemplateName,
+    body: row.bodyPreview ?? "",
+    category: row.category ?? undefined,
+    language: row.language,
+    hasButtons: row.hasButtons,
+    hasVariables: row.hasVariables,
+  }));
 }
 
 export interface ChannelConfig {

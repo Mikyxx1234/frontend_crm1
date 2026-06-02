@@ -166,6 +166,19 @@ export async function middleware(req: NextRequest) {
     }
 
     if (!reqAuth) {
+      // Para /api/* sem sessão, devolve 401 JSON em vez de redirect pro /login.
+      // Por que: o fetch dos hooks segue redirects e acaba tentando dar JSON.parse
+      // na página de login (HTML), causando o erro
+      // `Unexpected token '<', "<!doctype "... is not valid JSON`. Devolver 401
+      // JSON deixa o React Query ir direto pro estado de erro com payload tratável.
+      if (pathname.startsWith("/api/")) {
+        return withSecurityHeaders(
+          NextResponse.json(
+            { message: "Unauthorized", code: "AUTH_REQUIRED" },
+            { status: 401 },
+          ),
+        );
+      }
       const loginUrl = new URL("/login", req.nextUrl.origin);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return withSecurityHeaders(NextResponse.redirect(loginUrl));

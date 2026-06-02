@@ -325,11 +325,26 @@ export function TemplatePickerList({
   onClose?: () => void;
 }) {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery<WhatsappTemplate[]>({
+  const { data, isLoading, error, isError } = useQuery<WhatsappTemplate[]>({
     queryKey: ["whatsapp-templates", "agent-enabled"],
-    queryFn: listAgentEnabledTemplates,
+    queryFn: async () => {
+      const items = await listAgentEnabledTemplates();
+      // Diagnóstico: logamos quantos templates voltaram. Útil quando o
+      // operador relata "modal vazia": confirma se backend retornou lista
+      // (sinal de `agentEnabled=false` em todos) ou se a chamada falhou
+      // antes mesmo de montar a UI.
+      // eslint-disable-next-line no-console
+      console.info("[templates] agent-enabled returned", items?.length ?? 0, "items");
+      return items;
+    },
     staleTime: 5 * 60_000,
+    retry: 1,
   });
+
+  if (isError) {
+    // eslint-disable-next-line no-console
+    console.error("[templates] agent-enabled fetch failed", error);
+  }
 
   const sendMutation = useMutation({
     mutationFn: (tpl: WhatsappTemplate) =>
@@ -370,9 +385,19 @@ export function TemplatePickerList({
         <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
           Carregando...
         </div>
+      ) : isError ? (
+        <div className="px-2 py-3 text-center text-[12px] text-rose-600 dark:text-rose-400">
+          Falha ao carregar templates
+          <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+            {(error as Error)?.message ?? "Tente novamente."}
+          </div>
+        </div>
       ) : !data?.length ? (
         <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
           Nenhum template habilitado para este agente.
+          <div className="mt-1 text-[11px] text-[var(--text-muted)]/70">
+            Habilite em Configurações &gt; Templates do WhatsApp.
+          </div>
         </div>
       ) : (
         <div className="space-y-0.5">

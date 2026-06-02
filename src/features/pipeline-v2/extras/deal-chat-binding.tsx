@@ -21,7 +21,11 @@ import {
   useMessages,
   useSendMessage,
 } from "@/features/inbox-v2/hooks";
-import { formatDayLabel, toMessageBubble } from "@/features/inbox-v2/adapters";
+import {
+  formatDayLabel,
+  isSessionExpired,
+  toMessageBubble,
+} from "@/features/inbox-v2/adapters";
 
 interface DealChatBindingResult {
   messagesNode: React.ReactNode;
@@ -35,15 +39,48 @@ export function useDealChatBinding(params: {
   conversationId: string | null;
   contactName: string;
   contactId?: string | null;
+  /**
+   * Override opcional. Quando ausente, o hook deriva `sessionExpired` do
+   * `session` retornado pela própria query `useMessages` (mesma fonte que o
+   * /inbox usa). Mantemos o backend como source of truth quando disponível,
+   * com fallback heurístico em `lastInboundAt` se o backend ficar silente.
+   */
   sessionExpired?: boolean;
 }): DealChatBindingResult {
-  const { conversationId, contactName, contactId, sessionExpired } = params;
+  const { conversationId, contactName, contactId, sessionExpired: sessionExpiredOverride } = params;
 
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
 
   const { data: messagesResp } = useMessages(conversationId);
   const sendMutation = useSendMessage(conversationId);
+
+  // Deriva sessionExpired da mesma fonte do /inbox: prioriza `session.active`
+  // do backend; se o objeto `session` não vier, cai no heurístico de 24h
+  // baseado em `lastInboundAt`. O override por prop continua válido (ex.:
+  // testes ou casos onde o caller já tem o sinal).
+  const sessionInfo = messagesResp?.session;
+  const sessionActiveFromBackend = sessionInfo?.active;
+  // Última mensagem inbound carregada na lista (rede de segurança caso o
+  // backend não envie `session.lastInboundAt`). `direction === "in"` é o
+  // valor canônico do backend (vide MessageDirection em api/types.ts).
+  const lastInboundFromMessages =
+    (messagesResp?.messages ?? [])
+      .filter((m) => m.direction === "in")
+      .map((m) => m.createdAt)
+      .sort()
+      .pop() ?? null;
+  // Só decide depois que o fetch responder, senão `isSessionExpired(null)`
+  // dispara um falso positivo durante o loading inicial.
+  const sessionExpiredDerived =
+    sessionExpiredOverride !== undefined
+      ? sessionExpiredOverride
+      : !messagesResp
+        ? false
+        : sessionActiveFromBackend !== undefined
+          ? !sessionActiveFromBackend
+          : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundFromMessages);
+  const sessionExpired = !!conversationId && sessionExpiredDerived;
 
   // SSE: assina /api/sse/messages e invalida as mensagens da conversa
   // ativa quando chega new_message. Sem isto o chat do deal só atualizava

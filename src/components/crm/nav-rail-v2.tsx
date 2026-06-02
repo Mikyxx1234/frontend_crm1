@@ -81,6 +81,17 @@ export function NavRailV2({ className }: { className?: string }) {
   const [initials, setInitials] = useState("··");
   const [displayName, setDisplayName] = useState("Usuário");
   const [email, setEmail] = useState<string | null>(null);
+  // `mounted` evita hydration mismatch do DropdownMenu (Radix). Quando este
+  // componente é instanciado em uma Server Page e passado como prop JSX,
+  // os IDs gerados por `useId()` do Radix divergem entre SSR e client porque
+  // a posição na árvore difere. Renderizamos um botão estático no SSR e
+  // trocamos pelo DropdownMenu real só após mount — comportamento idêntico
+  // do ponto de vista do usuário (o dropdown só abre via clique, que naturalmente
+  // ocorre depois do mount).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   useEffect(() => {
     const preview = isPreviewMode();
     const sessUser = session?.user;
@@ -162,7 +173,29 @@ export function NavRailV2({ className }: { className?: string }) {
         )}
       </button>
 
-      {/* Avatar — abre menu da conta (Meu perfil / Sair) */}
+      {/* Avatar — abre menu da conta (Meu perfil / Sair).
+          No SSR/primeiro render renderizamos um botão estático equivalente
+          para evitar hydration mismatch (ver comentário em `mounted` acima). */}
+      {!mounted ? (
+        <button
+          type="button"
+          title="Minha conta"
+          aria-label="Abrir menu da conta"
+          className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
+        >
+          <div
+            className={cn(
+              "relative flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[10px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+              isProfileActive
+                ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
+                : "border-[var(--glass-bg-strong)]",
+            )}
+          >
+            {initials}
+            <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
+          </div>
+        </button>
+      ) : (
       <DropdownMenu>
         <DropdownMenuTrigger
           title="Minha conta"
@@ -215,6 +248,7 @@ export function NavRailV2({ className }: { className?: string }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      )}
     </nav>
   );
 }

@@ -131,6 +131,25 @@ export default function KanbanV2ClientPage({
   }, []);
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
+  /**
+   * Toggle "selecionar todos desta etapa". Se TODOS os IDs passados já
+   * estão selecionados, remove. Senão, adiciona todos. Usado pelo botão
+   * de checkbox no header de cada KanbanColumn (resgatado da versão antiga).
+   */
+  const toggleSelectMany = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setSelectedIds((prev) => {
+      const allSelected = ids.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) {
+        for (const id of ids) next.delete(id);
+      } else {
+        for (const id of ids) next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
   // Limpa a seleção ao trocar de pipeline ou aba — os IDs não fazem
   // sentido entre boards diferentes.
   useEffect(() => {
@@ -239,8 +258,9 @@ export default function KanbanV2ClientPage({
     useDealChatBinding({
       conversationId: dealConversationId,
       contactName: dealContactName,
-      // Por ora nao temos sinal de "sessionExpired" no get-deal; mantemos false.
-      sessionExpired: false,
+      // sessionExpired derivado dentro do hook a partir do session retornado
+      // por useMessages (backend = source of truth) com fallback heurístico
+      // em lastInboundAt. Não passar override manual aqui.
     });
 
   function handleDragEnd(result: DropResult) {
@@ -307,6 +327,7 @@ export default function KanbanV2ClientPage({
                 stages={board}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
+                onToggleSelectAllInColumn={toggleSelectMany}
                 onAddDeal={() =>
                   setAddStage({ id: col.stageId, name: col.title })
                 }
@@ -841,6 +862,7 @@ function DroppableColumn({
   stages,
   selectedIds,
   onToggleSelect,
+  onToggleSelectAllInColumn,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -851,7 +873,19 @@ function DroppableColumn({
   stages: BoardStageDto[];
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
+  onToggleSelectAllInColumn: (ids: string[]) => void;
 }) {
+  // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
+  // coluna. Replica o comportamento do kanban antigo.
+  const dealIdsInColumn = column.deals.map((d) => d.id);
+  const selectedInColumnCount = dealIdsInColumn.reduce(
+    (acc, id) => acc + (selectedIds.has(id) ? 1 : 0),
+    0,
+  );
+  const allSelected =
+    dealIdsInColumn.length > 0 && selectedInColumnCount === dealIdsInColumn.length;
+  const someSelected = selectedInColumnCount > 0;
+
   return (
     <Droppable droppableId={column.stageId}>
       {(provided, snapshot) => (
@@ -863,6 +897,13 @@ function DroppableColumn({
           deals={column.deals}
           onDealClick={onDealClick}
           onAddDeal={onAddDeal}
+          selection={{
+            allSelected,
+            someSelected,
+            selectedCount: selectedInColumnCount,
+            totalInColumn: dealIdsInColumn.length,
+            onToggleAll: () => onToggleSelectAllInColumn(dealIdsInColumn),
+          }}
           dealsContainerRef={provided.innerRef}
           dealsContainerProps={{
             ...provided.droppableProps,

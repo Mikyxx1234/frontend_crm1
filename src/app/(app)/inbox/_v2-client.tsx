@@ -123,7 +123,12 @@ export default function InboxV2ClientPage({
   // ao mudar ordenação e a limitação do `sortBy` do backend).
   const { sortBy, sortOrder, windowState, ...serverFilters } = filters;
 
-  const { data: listData } = useConversations({
+  const {
+    data: listData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useConversations({
     tab,
     filters: serverFilters,
     search: debouncedSearch,
@@ -131,10 +136,15 @@ export default function InboxV2ClientPage({
   });
   const rawRows = listData?.items ?? [];
 
-  // Ordena (default: última mensagem RECEBIDA primeiro) e filtra a janela
-  // de 24h. Ordenar por `lastInboundAt` (em vez de `updatedAt`) mantém a
-  // posição ESTÁVEL ao marcar como lida — que só toca `updatedAt` — então
-  // o card não "pula" ao ser clicado.
+  // Ordena (default: última atividade primeiro) e filtra a janela de 24h.
+  // Usa `lastMessageAt` (com fallback p/ `lastInboundAt`) para casar a ordem
+  // com o `time` exibido no card — que também usa `lastMessageAt ?? lastInboundAt`
+  // (ver `toConversationCard` em adapters.ts). Sem isso, mensagens outbound
+  // recentes "puxam" o tempo no card mas não a posição na lista, parecendo
+  // desordenado pro operador.
+  // `lastMessageAt` só é tocado por NOVAS mensagens (in ou out), nunca por
+  // leitura — então a posição continua estável ao marcar como lida (motivo
+  // original pra evitar `updatedAt`).
   const rows = useMemo(() => {
     let list = rawRows;
     if (windowState === "open") {
@@ -145,12 +155,14 @@ export default function InboxV2ClientPage({
     const by = sortBy ?? "lastInboundAt";
     const sign = (sortOrder ?? "desc") === "asc" ? 1 : -1;
     const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
+    const lastActivityTs = (r: typeof rawRows[number]) =>
+      ts(r.lastMessageAt ?? r.lastInboundAt);
     return [...list].sort((a, b) => {
       if (by === "unreadCount") {
         const d = (b.unreadCount ?? 0) - (a.unreadCount ?? 0);
-        return d !== 0 ? d : ts(b.lastInboundAt) - ts(a.lastInboundAt);
+        return d !== 0 ? d : lastActivityTs(b) - lastActivityTs(a);
       }
-      return sign * (ts(a.lastInboundAt) - ts(b.lastInboundAt));
+      return sign * (lastActivityTs(a) - lastActivityTs(b));
     });
   }, [rawRows, windowState, sortBy, sortOrder]);
 
@@ -227,11 +239,19 @@ export default function InboxV2ClientPage({
     [messages, contactName],
   );
   const chatContact = activeRow ? toChatContact(activeRow) : null;
-  // Espelha exatamente o legado (chat-window.tsx): se o backend não
-  // enviou o objeto session, assume janela ATIVA (?? true). Nunca usar
-  // heurística client-side de lastInboundAt — backend é o source of truth.
-  const sessionActive = sessionInfo?.active ?? true;
-  const sessionExpired = activeRow ? !sessionActive : false;
+  // Backend é source of truth quando disponível (`session.active`).
+  // Fallback heurístico: se o backend não enviou `session`, calculamos a
+  // janela de 24h via `isSessionExpired(lastInboundAt)`. Garante que o
+  // alerta volte a aparecer mesmo em cenários onde o payload do messages
+  // não inclui o objeto `session` (ex.: cache stale, payload reduzido,
+  // backends mais antigos). Só decide depois que `messagesData` chegou
+  // para evitar falso-positivo durante o loading inicial.
+  const sessionActiveFromBackend = sessionInfo?.active;
+  const sessionExpired = activeRow && messagesData
+    ? sessionActiveFromBackend !== undefined
+      ? !sessionActiveFromBackend
+      : isSessionExpired(sessionInfo?.lastInboundAt ?? activeRow.lastInboundAt)
+    : false;
   const contactAsideView = activeRow ? toContactAside(contactDetail, activeRow) : null;
 
   // ── Stage pills no header do chat — placeholder até integrar com pipeline real
@@ -265,6 +285,11 @@ export default function InboxV2ClientPage({
         if (next) setTab(next);
       }}
       resizerSlot={<ColumnResizer value={convWidth} onChange={setConvWidth} />}
+      onLoadMore={() => {
+        if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+      }}
+      hasMore={hasNextPage}
+      isLoadingMore={isFetchingNextPage}
       renderCardSlots={(c) => ({
         tagsSlot: (
           <TagsPopover

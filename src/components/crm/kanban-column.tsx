@@ -1,11 +1,30 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { IconPlus } from "@tabler/icons-react"
+import {
+  IconPlus,
+  IconSquare,
+  IconSquareCheckFilled,
+  IconSquareMinus,
+} from "@tabler/icons-react"
 import type { HTMLAttributes, ReactNode } from "react"
 import { DealCard, type Deal } from "./deal-card"
 
 export type ColumnColor = "novo" | "quali" | "proposta" | "nego" | "fecha"
+
+/**
+ * Estado de seleção em massa por coluna. Quando passado, a coluna
+ * exibe um checkbox no header (3 estados: vazio / parcial / cheio) que
+ * permite marcar/desmarcar todos os deals JÁ CARREGADOS daquele estágio.
+ * Comportamento idêntico ao kanban antigo (`/old/pipeline`).
+ */
+export interface KanbanColumnSelection {
+  allSelected: boolean
+  someSelected: boolean
+  selectedCount: number
+  totalInColumn: number
+  onToggleAll: () => void
+}
 
 interface KanbanColumnProps {
   title: string
@@ -28,6 +47,8 @@ interface KanbanColumnProps {
   dealsContainerProps?: HTMLAttributes<HTMLDivElement>
   /** Slot do `provided.placeholder` do react-dnd. */
   placeholderSlot?: ReactNode
+  /** Estado de seleção em massa. Sem passar, o checkbox de "selecionar todos" não aparece. */
+  selection?: KanbanColumnSelection
 }
 
 const colorMap: Record<ColumnColor, string> = {
@@ -51,7 +72,10 @@ export function KanbanColumn({
   dealsContainerRef,
   dealsContainerProps,
   placeholderSlot,
+  selection,
 }: KanbanColumnProps) {
+  const showSelectAll = !!selection && selection.totalInColumn > 0
+
   return (
     <section
       aria-label={`Coluna ${title}`}
@@ -63,6 +87,46 @@ export function KanbanColumn({
       {/* Header */}
       <div className="flex items-center justify-between px-1 pb-2.5">
         <div className="flex items-center gap-2.5">
+          {/* Checkbox "selecionar todos desta etapa" — estados:
+              vazio / parcial (alguns) / cheio (todos). Aparece apenas
+              quando a coluna tem deals e o caller fornece `selection`.
+              Comportamento herdado do kanban antigo. */}
+          {showSelectAll && selection ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                selection.onToggleAll()
+              }}
+              title={
+                selection.allSelected
+                  ? `Limpar seleção desta etapa (${selection.selectedCount})`
+                  : selection.someSelected
+                    ? `Selecionar todos os ${selection.totalInColumn} (já marcados: ${selection.selectedCount})`
+                    : `Selecionar todos os ${selection.totalInColumn} desta etapa`
+              }
+              aria-label={
+                selection.allSelected
+                  ? "Limpar seleção desta etapa"
+                  : "Selecionar todos desta etapa"
+              }
+              aria-pressed={selection.someSelected}
+              className={cn(
+                "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+                selection.someSelected
+                  ? "text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
+                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]",
+              )}
+            >
+              {selection.allSelected ? (
+                <IconSquareCheckFilled size={16} />
+              ) : selection.someSelected ? (
+                <IconSquareMinus size={16} />
+              ) : (
+                <IconSquare size={16} />
+              )}
+            </button>
+          ) : null}
           <span
             className="h-[18px] w-[3px] rounded-full"
             style={{ background: colorMap[color] }}

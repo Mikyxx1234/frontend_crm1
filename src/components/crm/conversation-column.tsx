@@ -72,6 +72,15 @@ interface ConversationColumnProps {
     tagsSlot?: React.ReactNode
     assigneeSlot?: React.ReactNode
   }
+  /**
+   * Infinite scroll: callback disparado quando o scroll chega perto do
+   * fim e ainda há páginas pra carregar. Usado pelo `useConversations`
+   * (useInfiniteQuery) — sem isso, o cap de 60 conversas iniciais
+   * impede o operador de ver o resto da fila.
+   */
+  onLoadMore?: () => void
+  hasMore?: boolean
+  isLoadingMore?: boolean
 }
 
 const DEFAULT_TABS: TabItem[] = [
@@ -137,7 +146,33 @@ export function ConversationColumn({
   renderCardSlots,
   filterSlot,
   hideSearch = false,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
 }: ConversationColumnProps) {
+  // Sentinela invisível no fim da lista. Quando entra no viewport
+  // (com 200px de margem), dispara `onLoadMore`. IntersectionObserver
+  // é a forma mais confiável — onScroll perde frame em listas longas
+  // e tem que recalcular thresholds manualmente.
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!onLoadMore || !hasMore) return
+    const el = sentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            onLoadMore()
+            break
+          }
+        }
+      },
+      { rootMargin: "200px 0px" },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [onLoadMore, hasMore])
   const [internalTab, setInternalTab] = useState(0)
   const isControlledTabs = tabsOverride !== undefined
   const tabs: ReadonlyArray<TabItem> = isControlledTabs ? tabsOverride : DEFAULT_TABS
@@ -360,9 +395,27 @@ export function ConversationColumn({
             />
           )
         })}
-        {displayed.length === 0 && (
+        {displayed.length === 0 && !isLoadingMore && (
           <div className="px-2 py-6 text-center text-[12px] text-[var(--text-muted)]">
             Nenhuma conversa encontrada.
+          </div>
+        )}
+
+        {/* Sentinela do infinite scroll. Fica vazia mas é observada pelo
+            IntersectionObserver acima. Quando aparece no viewport, pede
+            a próxima página. */}
+        {hasMore && (
+          <div
+            ref={sentinelRef}
+            aria-hidden="true"
+            className="h-1 w-full shrink-0"
+          />
+        )}
+
+        {isLoadingMore && (
+          <div className="flex items-center justify-center py-3 text-[11.5px] text-[var(--text-muted)]">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--text-muted)] border-t-transparent" />
+            <span className="ml-2">Carregando mais...</span>
           </div>
         )}
       </div>

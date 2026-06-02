@@ -76,6 +76,7 @@ const PUBLIC_PATHS = new Set([
   "/register",
   "/health",
   "/accept-invite",
+  "/test-bulk-bar",
 ]);
 
 const PUBLIC_API_PATHS = new Set(["/api/signup"]);

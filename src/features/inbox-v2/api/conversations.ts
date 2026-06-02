@@ -21,6 +21,7 @@ export interface ListConversationsParams extends InboxFilters {
   tab: InboxTab;
   search?: string;
   perPage?: number;
+  page?: number;
 }
 
 function buildConversationsUrl(p: ListConversationsParams): string {
@@ -28,6 +29,7 @@ function buildConversationsUrl(p: ListConversationsParams): string {
     perPage: String(p.perPage ?? 60),
     tab: p.tab,
   });
+  if (p.page && p.page > 1) q.set("page", String(p.page));
   if (p.ownerId) q.set("ownerId", p.ownerId);
   if (p.channel) q.set("channel", p.channel);
   if (p.stageId) q.set("stageId", p.stageId);

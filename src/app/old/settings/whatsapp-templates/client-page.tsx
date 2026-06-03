@@ -319,7 +319,7 @@ function WhatsappMetaTemplatesPage() {
       const sp = new URLSearchParams(searchParams.toString());
       sp.delete("create");
       const qs = sp.toString();
-      router.replace(qs ? `/settings/message-models?${qs}` : "/old/settings/message-models?tab=whatsapp");
+      router.replace(qs ? `/old/settings/message-models?${qs}` : "/old/settings/message-models?tab=whatsapp");
     });
   }, [router, searchParams]);
 

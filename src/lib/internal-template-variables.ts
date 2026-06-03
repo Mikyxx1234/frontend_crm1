@@ -1,6 +1,6 @@
 /**
  * Catálogo + helpers de interpolação para **templates internos** do CRM
- * (cadastrados em `/settings/message-models?tab=internal`).
+ * (cadastrados em `/old/settings/message-models?tab=internal`).
  *
  * Diferença em relação a `automation-webhook-variables.ts`:
  *   - Foco em conversa humana (contato + negócio + atendente), não em

@@ -123,7 +123,7 @@ export default function MessageModelsHubPage() {
           else sp.set(k, v);
         }
       }
-      router.replace(`/settings/message-models?${sp.toString()}`);
+      router.replace(`/old/settings/message-models?${sp.toString()}`);
     },
     [router, searchParams],
   );
@@ -181,7 +181,7 @@ export default function MessageModelsHubPage() {
     },
     onSuccess: (out) => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-definitions"] });
-      router.push(`/settings/message-models/flows/${out.id}`);
+      router.push(`/old/settings/message-models/flows/${out.id}`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -219,7 +219,7 @@ export default function MessageModelsHubPage() {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-meta-list"] });
       setImportOpen(false);
       toast.success(out.created ? "Flow importado da Meta." : "Flow já estava no CRM — abrindo editor.");
-      router.push(`/settings/message-models/flows/${out.id}`);
+      router.push(`/old/settings/message-models/flows/${out.id}`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -347,7 +347,7 @@ export default function MessageModelsHubPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => router.push(`/settings/message-models/flows/${f.id}`)}
+                          onClick={() => router.push(`/old/settings/message-models/flows/${f.id}`)}
                         >
                           Editar
                         </Button>
@@ -448,7 +448,7 @@ export default function MessageModelsHubPage() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/settings/message-models/flows/${f.id}`)}
+                          onClick={() => router.push(`/old/settings/message-models/flows/${f.id}`)}
                         >
                           Editar
                         </Button>
@@ -555,7 +555,7 @@ export default function MessageModelsHubPage() {
                       onClick={() => {
                         if (mf.crmFlowDefinitionId) {
                           setImportOpen(false);
-                          router.push(`/settings/message-models/flows/${mf.crmFlowDefinitionId}`);
+                          router.push(`/old/settings/message-models/flows/${mf.crmFlowDefinitionId}`);
                         }
                       }}
                     >

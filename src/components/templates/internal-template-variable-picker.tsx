@@ -3,7 +3,7 @@
 /**
  * Picker de variáveis para **templates internos** do CRM. Renderizado
  * abaixo da textarea no form de criação/edição em
- * `/settings/message-models?tab=internal`.
+ * `/old/settings/message-models?tab=internal`.
  *
  * Diferente do picker do step Webhook, aqui há só um alvo possível
  * (a textarea de mensagem), então a API é bem mais simples: o pai

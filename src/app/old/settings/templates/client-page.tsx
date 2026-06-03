@@ -68,7 +68,7 @@ export default function TemplatesSettingsPage() {
       const sp = new URLSearchParams(searchParams.toString());
       sp.delete("new");
       const qs = sp.toString();
-      router.replace(qs ? `/settings/message-models?${qs}` : "/old/settings/message-models?tab=internal");
+      router.replace(qs ? `/old/settings/message-models?${qs}` : "/old/settings/message-models?tab=internal");
     });
   }, [router, searchParams]);
 

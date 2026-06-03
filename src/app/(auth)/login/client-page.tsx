@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Check, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { HeroGeometric } from "@/components/ui/hero-geometric";
 import { isPreviewMode, isV0PreviewHost } from "@/lib/preview-mode";
 
 function LoginShellFallback() {
@@ -133,6 +134,7 @@ function LoginForm() {
   }
 
   return (
+    <HeroGeometric color1="#a78bfa" color2="#f472b6" speed={1}>
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="flex w-full max-w-sm flex-col items-center">
         <div className="mb-6 flex flex-col items-center text-center">
@@ -145,8 +147,8 @@ function LoginForm() {
           >
             <ShieldCheck className="size-8 text-white" strokeWidth={2} />
           </div>
-          <h1 className="font-display text-[22px] font-bold tracking-tight text-foreground">CRM EduIT</h1>
-          <p className="mt-1 text-[14px] text-[var(--color-ink-soft)]">Faça login para gerenciar conversas e negócios.</p>
+          <h1 className="font-display text-[22px] font-bold tracking-tight text-white">CRM EduIT</h1>
+          <p className="mt-1 text-[14px] text-white/70">Faça login para gerenciar conversas e negócios.</p>
         </div>
 
         <form
@@ -154,11 +156,11 @@ function LoginForm() {
           className="glass-overlay w-full rounded-[32px] p-8"
         >
           <div className="mb-4">
-            <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-[var(--color-ink-soft)]">
+            <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-[#374151]">
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]" aria-hidden />
+              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6b7280]" aria-hidden />
               <input
                 id="email"
                 name="email"
@@ -169,17 +171,17 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 w-full rounded-full border border-white/55 bg-white/55 pl-9 pr-4 text-[14px] text-foreground placeholder:text-[var(--color-ink-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-9 pr-4 text-[14px] text-[#1f2937] placeholder:text-[#6b7280] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
           </div>
 
           <div className="mb-6">
-            <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-[var(--color-ink-soft)]">
+            <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-[#374151]">
               Senha
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-ink-muted)]" aria-hidden />
+              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6b7280]" aria-hidden />
               <input
                 id="password"
                 name="password"
@@ -190,12 +192,12 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 w-full rounded-full border border-white/55 bg-white/55 pl-9 pr-11 text-[14px] text-foreground placeholder:text-[var(--color-ink-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-9 pr-11 text-[14px] text-[#1f2937] placeholder:text-[#6b7280] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
               <button
                 type="button"
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-muted)] transition-colors hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] transition-colors hover:text-[#1f2937]"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
               >
@@ -248,7 +250,7 @@ function LoginForm() {
             </a>
           ) : null}
 
-          <p className="mt-4 text-center text-[13px] text-[var(--color-ink-soft)]">
+          <p className="mt-4 text-center text-[13px] text-[#374151]">
             Não tem uma conta?{" "}
             <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
               Criar conta
@@ -256,9 +258,10 @@ function LoginForm() {
           </p>
         </form>
 
-        <p className="mt-6 text-center text-[12px] text-[var(--color-ink-muted)]">Acesso restrito · CRM EduIT</p>
+        <p className="mt-6 text-center text-[12px] text-white/75">Acesso restrito · CRM EduIT</p>
       </div>
     </div>
+    </HeroGeometric>
   );
 }
 

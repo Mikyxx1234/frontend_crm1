@@ -30,6 +30,10 @@ import {
   type ConditionRule,
 } from "@/lib/automation-condition";
 import { WebhookStepConfig } from "@/components/automations/webhook-step-config";
+import {
+  validateEntries as validateWebhookEntries,
+  type WebhookBodyEntry,
+} from "@/lib/webhook-body-builder";
 
 type PipelineStage = { id: string; name: string };
 type Pipeline = { id: string; name: string; stages: PipelineStage[] };
@@ -518,6 +522,27 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         userType: String(config.userType ?? "HUMAN") === "AI" ? "AI" : "HUMAN",
         target: String(config.target ?? "deal") === "contact" ? "contact" : "deal",
       };
+    }
+    if (step.type === "webhook") {
+      // O construtor visual mantém `__webhookBodyEntries` em paralelo
+      // ao `body` no draft. Validamos as entries antes de salvar — se
+      // houver chave vazia, duplicada, perigosa, conflito de path,
+      // entry incompleta ou tokens não reconhecidos vindos de body
+      // legado, bloqueamos o save.
+      const rawEntries = config.__webhookBodyEntries;
+      const entries: WebhookBodyEntry[] = Array.isArray(rawEntries)
+        ? (rawEntries as WebhookBodyEntry[])
+        : [];
+      const errors = validateWebhookEntries(entries);
+      if (errors.length > 0) {
+        toast.error(`Body do webhook: ${errors[0].message}`);
+        return;
+      }
+      // `__webhookBodyEntries` é estado de UI — não persiste no config
+      // do step. O `body` (string JSON) é o que o backend consome.
+      const { __webhookBodyEntries: _drop, ...rest } = config as Record<string, unknown>;
+      void _drop;
+      config = rest;
     }
     onSave({ ...step, config: { ...config, ...preserved } });
     onOpenChange(false);

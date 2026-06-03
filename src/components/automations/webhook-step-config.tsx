@@ -2,34 +2,55 @@
 
 /**
  * Bloco de configuração do step "Webhook" — usado dentro do
- * `StepConfigPanel`. Componente isolado pra não inflar mais o
- * `step-config-panel.tsx` e pra permitir testes/refactor focados.
+ * `StepConfigPanel`.
+ *
+ * Em 03/jun/26 a tela foi reescrita: o usuário NÃO escreve mais JSON
+ * manualmente no Body. No lugar, ele monta um construtor visual de
+ * campos onde cada linha mapeia uma chave (que aparece no payload) a
+ * um campo do catálogo (que vira `{{token}}` no body salvo). O JSON
+ * gerado segue o mesmo formato consumido por `interpolateWebhookString`
+ * no backend — então o motor de disparo não muda.
  *
  * Compatibilidade com config legado:
- *   - Antes existiam só `url` e `method`. Mantemos.
- *   - `headers` é um array de pares `{ key, value }` (string). Vazio = não
- *     envia headers customizados; o backend continua setando
- *     `Content-Type: application/json` automaticamente quando há body.
- *   - `body` é uma string template. Quando `body` é vazio/whitespace, o
- *     executor cai no payload legado (`{ event, contactId, dealId, data }`).
+ *   - URL e método continuam idênticos.
+ *   - Headers seguem como array `[{ key, value }]`. Picker de
+ *     variáveis insere tokens na URL e nos values dos headers.
+ *   - `body` é uma string JSON. Quando o draft já tinha um body salvo
+ *     manualmente, o parser tenta hidratar o construtor visual; tokens
+ *     desconhecidos (ou valores literais) viram entries marcadas como
+ *     "não reconhecida" e bloqueiam o save até o operador corrigir.
+ *   - Body vazio = backend mantém o payload legado (compat).
  *
- * O picker de variáveis insere tokens `{{caminho.aninhado}}` na posição
- * do cursor — consumido pelo backend via dotted-path resolver.
+ * Custom fields de contato/negócio são carregados via
+ * `/api/custom-fields?entity=...` e injetados como opções dinâmicas no
+ * catálogo. O backend (`buildWebhookRoot`) expõe `contactCustomFields`
+ * e `dealCustomFields` no root pra resolução dos tokens.
  */
 
 import * as React from "react";
-import { ChevronDown, Code2, Copy, Plus, Trash2, Variable } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, Code2, Eye, Plus, Search, Trash2, Variable } from "lucide-react";
 
+import { apiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  DEFAULT_WEBHOOK_BODY_TEMPLATE,
   WEBHOOK_VARIABLE_GROUPS,
   WEBHOOK_VARIABLE_OPTIONS,
+  buildCustomFieldOptions,
+  defaultKeyPathFor,
+  type WebhookVariableGroup,
+  type WebhookVariableOption,
 } from "@/lib/automation-webhook-variables";
+import {
+  entriesToBodyString,
+  makeEntry,
+  parseBodyToEntries,
+  validateEntries,
+  type WebhookBodyEntry,
+} from "@/lib/webhook-body-builder";
 import { cn } from "@/lib/utils";
 
 export type WebhookHeaderEntry = { key: string; value: string };
@@ -41,7 +62,13 @@ type Props = {
   setDraft: React.Dispatch<React.SetStateAction<Draft>>;
 };
 
-/** Normaliza headers do config legado (objeto plano) para o formato de array. */
+type CustomFieldApiOption = {
+  id: string;
+  name: string;
+  label: string;
+  entity: string;
+};
+
 function readHeadersFromDraft(draft: Draft): WebhookHeaderEntry[] {
   const raw = draft.headers;
   if (Array.isArray(raw)) {
@@ -68,21 +95,124 @@ function readHeadersFromDraft(draft: Draft): WebhookHeaderEntry[] {
 export function WebhookStepConfig({ draft, setDraft }: Props) {
   const url = String(draft.url ?? "");
   const method = String(draft.method ?? "POST");
-  const body = String(draft.body ?? "");
+  const bodyFromDraft = String(draft.body ?? "");
   const headers = React.useMemo<WebhookHeaderEntry[]>(
     () => readHeadersFromDraft(draft),
     [draft],
   );
 
+  // Custom fields dinâmicos — carregados em paralelo. Enquanto não
+  // chega, o catálogo só tem o estático; entries vindas de bodies
+  // legados que referenciem custom fields ficam marcadas como unknown
+  // até a query resolver (re-parse abaixo).
+  const customFieldsQuery = useQuery({
+    queryKey: ["webhook-custom-fields"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const [contactRes, dealRes] = await Promise.all([
+        fetch(apiUrl("/api/custom-fields?entity=contact")),
+        fetch(apiUrl("/api/custom-fields?entity=deal")),
+      ]);
+      const contacts = contactRes.ok
+        ? ((await contactRes.json()) as CustomFieldApiOption[])
+        : [];
+      const deals = dealRes.ok
+        ? ((await dealRes.json()) as CustomFieldApiOption[])
+        : [];
+      return [...contacts, ...deals];
+    },
+  });
+
+  const allOptions = React.useMemo<WebhookVariableOption[]>(() => {
+    const dyn = buildCustomFieldOptions(customFieldsQuery.data ?? []);
+    return [...WEBHOOK_VARIABLE_OPTIONS, ...dyn];
+  }, [customFieldsQuery.data]);
+
+  // Entries do construtor visual. Persistimos `draft.body` como JSON
+  // serializado (formato consumido pelo backend); `entries` é a
+  // representação da UI que regeneramos a cada mudança.
+  const [entries, setEntries] = React.useState<WebhookBodyEntry[]>(() =>
+    parseBodyToEntries(bodyFromDraft, allOptions),
+  );
+  const lastEmittedRef = React.useRef<string>("");
+
+  // Re-parseia quando `draft.body` mudou de fora (ex.: parent setou
+  // outro step). Também re-parseia quando o catálogo cresce (custom
+  // fields chegaram), pra resolver entries que estavam unknown.
+  React.useEffect(() => {
+    if (lastEmittedRef.current === bodyFromDraft) return;
+    setEntries(parseBodyToEntries(bodyFromDraft, allOptions));
+    lastEmittedRef.current = bodyFromDraft;
+  }, [bodyFromDraft, allOptions]);
+
+  React.useEffect(() => {
+    setEntries((prev) => {
+      if (!prev.some((e) => e.unknownToken || e.literalValue !== undefined)) return prev;
+      return parseBodyToEntries(bodyFromDraft, allOptions);
+    });
+    // Disparamos só quando o número de opções dinâmicas muda (custom
+    // fields chegaram). Body string é cuidado no efeito acima.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allOptions.length]);
+
+  // Sempre que `entries` muda, regeneramos o JSON e propagamos para
+  // o draft. Marcamos `lastEmittedRef` pra não re-parsear o que nós
+  // mesmos emitimos.
+  const commitEntries = React.useCallback(
+    (next: WebhookBodyEntry[]) => {
+      setEntries(next);
+      const nextBody = next.length === 0 ? "" : entriesToBodyString(next, allOptions);
+      lastEmittedRef.current = nextBody;
+      setDraft((d) => ({ ...d, body: nextBody, __webhookBodyEntries: next }));
+    },
+    [allOptions, setDraft],
+  );
+
+  const validationErrors = React.useMemo(
+    () => validateEntries(entries),
+    [entries],
+  );
+  const errorByEntry = React.useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const err of validationErrors) {
+      const list = map.get(err.entryId) ?? [];
+      list.push(err.message);
+      map.set(err.entryId, list);
+    }
+    return map;
+  }, [validationErrors]);
+
+  // Index do catálogo por key — usado pra exibir o token interno e
+  // resolver o campo selecionado em cada linha.
+  const optionByKey = React.useMemo(
+    () => new Map(allOptions.map((o) => [o.key, o] as const)),
+    [allOptions],
+  );
+
+  // Catálogo agrupado pra os selects da linha (categoria → campo).
+  const optionsByGroup = React.useMemo(() => {
+    const map = new Map<WebhookVariableGroup, WebhookVariableOption[]>();
+    for (const opt of allOptions) {
+      const list = map.get(opt.group) ?? [];
+      list.push(opt);
+      map.set(opt.group, list);
+    }
+    return map;
+  }, [allOptions]);
+
+  const visibleGroups = React.useMemo(
+    () => WEBHOOK_VARIABLE_GROUPS.filter((g) => (optionsByGroup.get(g)?.length ?? 0) > 0),
+    [optionsByGroup],
+  );
+
+  // ─── Headers/URL state ───────────────────────────────────
   const urlRef = React.useRef<HTMLInputElement | null>(null);
-  const bodyRef = React.useRef<HTMLTextAreaElement | null>(null);
   const headerValueRefs = React.useRef<Record<number, HTMLInputElement | null>>({});
 
   type FocusTarget =
     | { type: "url" }
-    | { type: "body" }
     | { type: "header-value"; index: number };
-  const [focusTarget, setFocusTarget] = React.useState<FocusTarget>({ type: "body" });
+  const [focusTarget, setFocusTarget] = React.useState<FocusTarget>({ type: "url" });
 
   const setHeaders = (next: WebhookHeaderEntry[]) => {
     setDraft((d) => ({ ...d, headers: next }));
@@ -114,19 +244,6 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
       });
       return;
     }
-    if (target.type === "body") {
-      const el = bodyRef.current;
-      const start = el?.selectionStart ?? body.length;
-      const end = el?.selectionEnd ?? body.length;
-      const next = body.slice(0, start) + token + body.slice(end);
-      setDraft((d) => ({ ...d, body: next }));
-      requestAnimationFrame(() => {
-        el?.focus();
-        const pos = start + token.length;
-        el?.setSelectionRange(pos, pos);
-      });
-      return;
-    }
     if (target.type === "header-value") {
       const i = target.index;
       const el = headerValueRefs.current[i];
@@ -143,17 +260,112 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
     }
   };
 
-  const insertSampleBody = () => {
-    setDraft((d) => ({ ...d, body: DEFAULT_WEBHOOK_BODY_TEMPLATE }));
-    setFocusTarget({ type: "body" });
+  const focusLabel: string =
+    focusTarget.type === "url" ? "URL" : `Header #${focusTarget.index + 1}`;
+
+  // ─── Body builder handlers ───────────────────────────────
+  const addEntry = (preset?: Partial<WebhookBodyEntry>) => {
+    commitEntries([...entries, makeEntry(preset)]);
   };
 
-  const focusLabel: string =
-    focusTarget.type === "url"
-      ? "URL"
-      : focusTarget.type === "body"
-        ? "Body"
-        : `Header #${focusTarget.index + 1}`;
+  const updateEntry = (id: string, patch: Partial<WebhookBodyEntry>) => {
+    commitEntries(entries.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  };
+
+  const removeEntry = (id: string) => {
+    commitEntries(entries.filter((e) => e.id !== id));
+  };
+
+  // Categoria é estado de UI separado de `optionKey` (em
+  // `selectedGroupByEntry`). Trocar a categoria limpa o campo
+  // selecionado e qualquer flag legada (unknown/literal).
+  const handleCategoryChange = (id: string, group: WebhookVariableGroup) => {
+    const current = entries.find((e) => e.id === id);
+    if (!current) return;
+    commitEntries(
+      entries.map((e) =>
+        e.id === id
+          ? { ...e, optionKey: "", unknownToken: undefined, literalValue: undefined }
+          : e,
+      ),
+    );
+    setSelectedGroupByEntry((prev) => ({ ...prev, [id]: group }));
+  };
+
+  const handleOptionChange = (id: string, optionKey: string) => {
+    const opt = optionByKey.get(optionKey);
+    const current = entries.find((e) => e.id === id);
+    if (!current) return;
+    const nextKeyPath = current.keyPath.trim()
+      ? current.keyPath
+      : opt
+        ? defaultKeyPathFor(opt)
+        : "";
+    commitEntries(
+      entries.map((e) =>
+        e.id === id
+          ? {
+              ...e,
+              optionKey,
+              keyPath: nextKeyPath,
+              unknownToken: undefined,
+              literalValue: undefined,
+            }
+          : e,
+      ),
+    );
+  };
+
+  // Categoria selecionada por linha (memória local da UI). Quando a
+  // entry tem `optionKey` válida, derivamos do catálogo. Quando é
+  // unknown/literal/incompleta, lembramos a última seleção do usuário.
+  const [selectedGroupByEntry, setSelectedGroupByEntry] = React.useState<
+    Record<string, WebhookVariableGroup>
+  >({});
+
+  const groupForEntry = (entry: WebhookBodyEntry): WebhookVariableGroup | "" => {
+    if (entry.optionKey) {
+      const opt = optionByKey.get(entry.optionKey);
+      if (opt) return opt.group;
+    }
+    return selectedGroupByEntry[entry.id] ?? "";
+  };
+
+  const tokenForEntry = (entry: WebhookBodyEntry): string => {
+    if (entry.unknownToken) return entry.unknownToken;
+    if (entry.optionKey) {
+      const opt = optionByKey.get(entry.optionKey);
+      if (opt) return opt.token;
+    }
+    return "—";
+  };
+
+  // ─── Search box (catálogo geral) ────────────────────────
+  const [search, setSearch] = React.useState("");
+  const searchResults = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return [] as WebhookVariableOption[];
+    return allOptions
+      .filter(
+        (o) =>
+          o.label.toLowerCase().includes(q) ||
+          o.token.toLowerCase().includes(q) ||
+          o.key.toLowerCase().includes(q) ||
+          (o.hint?.toLowerCase().includes(q) ?? false),
+      )
+      .slice(0, 30);
+  }, [search, allOptions]);
+
+  // ─── Preview ────────────────────────────────────────────
+  const previewJson = React.useMemo(() => {
+    if (entries.length === 0) {
+      return "// Nenhum campo configurado — body vazio (payload legado será enviado).";
+    }
+    if (validationErrors.length > 0) {
+      return "// Corrija os erros sinalizados acima para gerar o preview.";
+    }
+    return entriesToBodyString(entries, allOptions);
+  }, [entries, allOptions, validationErrors]);
 
   return (
     <div className="space-y-5">
@@ -211,8 +423,9 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
         </div>
         {headers.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border/60 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
-            Nenhum header customizado. <code className="rounded bg-muted px-1">Content-Type: application/json</code>{" "}
-            é setado automaticamente quando há body.
+            Nenhum header customizado.{" "}
+            <code className="rounded bg-muted px-1">Content-Type: application/json</code> é
+            setado automaticamente quando há body.
           </p>
         ) : (
           <div className="space-y-1.5">
@@ -252,62 +465,259 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
         )}
       </div>
 
-      {/* Body + Picker */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="sc-wh-body">Body</Label>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1 px-2 text-xs"
-              onClick={insertSampleBody}
-              title="Substituir o body por um exemplo padrão"
-            >
-              <Copy className="size-3.5" />
-              Modelo padrão
-            </Button>
-          </div>
+      {/* Body builder */}
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <Label>Body do Webhook</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Configure quais dados serão enviados. Cada linha vira uma chave no JSON do
+            disparo. Use ponto na chave (ex.:{" "}
+            <code className="rounded bg-muted px-1">ad.headline</code>) para criar objetos
+            aninhados.
+          </p>
         </div>
-        <Textarea
-          id="sc-wh-body"
-          ref={bodyRef}
-          rows={10}
-          value={body}
-          onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
-          onFocus={() => setFocusTarget({ type: "body" })}
-          placeholder={`{\n  "event": "{{event}}",\n  "contact": "{{contact.name}}"\n}`}
-          className="font-mono text-xs leading-relaxed"
+
+        {/* Header da tabela — só aparece quando há entries pra evitar
+            ruído visual no estado inicial. */}
+        {entries.length > 0 && (
+          <div className="grid grid-cols-[1.4fr_1.2fr_1.6fr_1.4fr_auto] gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span>Chave enviada</span>
+            <span>Categoria</span>
+            <span>Campo</span>
+            <span>Valor interno</span>
+            <span aria-hidden="true" />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {entries.length === 0 && (
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-6 text-center text-xs text-muted-foreground">
+              Nenhum campo configurado. Clique em{" "}
+              <strong className="text-foreground">+ Adicionar campo</strong> para começar.
+            </div>
+          )}
+          {entries.map((entry) => {
+            const group = groupForEntry(entry);
+            const groupOptions = group ? optionsByGroup.get(group) ?? [] : [];
+            const errs = errorByEntry.get(entry.id) ?? [];
+            const hasError = errs.length > 0;
+            const isUnknown = !!entry.unknownToken;
+            const isLiteral = entry.literalValue !== undefined;
+            return (
+              <div
+                key={entry.id}
+                className={cn(
+                  "rounded-xl border bg-background/60 p-2",
+                  hasError ? "border-destructive/60 bg-destructive/5" : "border-border/60",
+                )}
+              >
+                <div className="grid grid-cols-[1.4fr_1.2fr_1.6fr_1.4fr_auto] items-center gap-2">
+                  <Input
+                    value={entry.keyPath}
+                    onChange={(e) => updateEntry(entry.id, { keyPath: e.target.value })}
+                    placeholder="ex.: dealId, ad.headline"
+                    className="font-mono text-xs"
+                    autoComplete="off"
+                  />
+                  <SelectNative
+                    value={group}
+                    onChange={(e) =>
+                      handleCategoryChange(entry.id, e.target.value as WebhookVariableGroup)
+                    }
+                    className="text-xs"
+                  >
+                    <option value="">Selecione…</option>
+                    {visibleGroups.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </SelectNative>
+                  <SelectNative
+                    value={entry.optionKey}
+                    disabled={!group}
+                    onChange={(e) => handleOptionChange(entry.id, e.target.value)}
+                    className="text-xs"
+                  >
+                    <option value="">
+                      {group ? "Selecione um campo…" : "Escolha a categoria primeiro"}
+                    </option>
+                    {groupOptions.map((opt) => (
+                      <option key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </SelectNative>
+                  <code
+                    className={cn(
+                      "block truncate rounded-md border border-border/40 bg-muted/40 px-2 py-1.5 font-mono text-[11px]",
+                      (isUnknown || isLiteral) && "border-destructive/60 bg-destructive/10 text-destructive",
+                    )}
+                    title={tokenForEntry(entry)}
+                  >
+                    {isLiteral ? `literal: ${entry.literalValue}` : tokenForEntry(entry)}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeEntry(entry.id)}
+                    aria-label="Remover campo"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+                {hasError && (
+                  <ul className="mt-1.5 ml-1 space-y-0.5 text-[11px] text-destructive">
+                    {errs.map((msg, idx) => (
+                      <li key={idx}>• {msg}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1 text-xs"
+            onClick={() => addEntry()}
+          >
+            <Plus className="size-3.5" />
+            Adicionar campo
+          </Button>
+          {customFieldsQuery.isLoading && (
+            <span className="text-[10px] text-muted-foreground">
+              Carregando campos customizados…
+            </span>
+          )}
+        </div>
+
+        {/* Busca rápida — atalho pra adicionar entries */}
+        <FieldQuickSearch
+          value={search}
+          onChange={setSearch}
+          results={searchResults}
+          onPick={(opt) =>
+            addEntry({
+              optionKey: opt.key,
+              keyPath: defaultKeyPathFor(opt),
+            })
+          }
         />
-        <p className="text-[11px] text-muted-foreground">
-          JSON ou texto livre. Variáveis no formato{" "}
-          <code className="rounded bg-muted px-1">{"{{caminho.aninhado}}"}</code> são substituídas no momento do
-          disparo. Body vazio = envia o payload legado (compat).
-        </p>
+
+        {/* Preview readonly */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <Eye className="size-3.5" />
+            <span className="font-semibold uppercase tracking-wider">
+              Preview do payload
+            </span>
+            <span>(somente leitura)</span>
+          </div>
+          <pre className="max-h-64 overflow-auto rounded-xl border border-border/60 bg-muted/30 p-3 font-mono text-[11px] leading-relaxed text-foreground">
+            {previewJson}
+          </pre>
+        </div>
       </div>
 
-      {/* Picker */}
-      <VariablePicker focusLabel={focusLabel} onSelect={(token) => insertTokenAt(focusTarget, token)} />
+      {/* Picker — agora só pra URL e Headers (Body é construído visualmente) */}
+      <VariablePickerForUrlAndHeaders
+        focusLabel={focusLabel}
+        options={allOptions}
+        onSelect={(token) => insertTokenAt(focusTarget, token)}
+      />
     </div>
   );
 }
 
-function VariablePicker({
+function FieldQuickSearch({
+  value,
+  onChange,
+  results,
+  onPick,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  results: WebhookVariableOption[];
+  onPick: (opt: WebhookVariableOption) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/20">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Search className="size-3.5 text-muted-foreground" />
+        <span className="text-xs font-semibold">Buscar campo</span>
+        <span className="text-[11px] text-muted-foreground">
+          (clique no resultado para adicionar)
+        </span>
+      </div>
+      <div className="space-y-2 border-t border-border/60 p-3">
+        <input
+          type="search"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="ex.: telefone, ctwa, campaign, custom"
+          className="w-full rounded-lg border border-border bg-background py-1.5 px-2.5 text-xs placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+        />
+        {value.trim() === "" ? (
+          <p className="px-1 py-1 text-[11px] text-muted-foreground">
+            Digite para buscar entre todos os campos disponíveis.
+          </p>
+        ) : results.length === 0 ? (
+          <p className="px-1 py-1 text-[11px] text-muted-foreground">
+            Nada encontrado para &quot;{value}&quot;.
+          </p>
+        ) : (
+          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+            {results.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => onPick(opt)}
+                className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted"
+              >
+                <span className="mt-0.5 shrink-0 rounded bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  {opt.group}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-medium text-foreground">
+                    {opt.label}
+                  </span>
+                  <span className="block truncate font-mono text-[10px] text-muted-foreground">
+                    {opt.token}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VariablePickerForUrlAndHeaders({
   focusLabel,
+  options,
   onSelect,
 }: {
   focusLabel: string;
+  options: WebhookVariableOption[];
   onSelect: (token: string) => void;
 }) {
-  const [open, setOpen] = React.useState(true);
+  const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
 
   const grouped = React.useMemo(() => {
     const q = search.trim().toLowerCase();
     return WEBHOOK_VARIABLE_GROUPS.map((group) => ({
       group,
-      items: WEBHOOK_VARIABLE_OPTIONS.filter(
+      items: options.filter(
         (opt) =>
           opt.group === group &&
           (q === "" ||
@@ -316,7 +726,7 @@ function VariablePicker({
             (opt.hint?.toLowerCase().includes(q) ?? false)),
       ),
     })).filter((g) => g.items.length > 0);
-  }, [search]);
+  }, [search, options]);
 
   return (
     <div className="rounded-xl border border-border/60 bg-muted/20">
@@ -326,14 +736,16 @@ function VariablePicker({
         className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/40"
         aria-expanded={open}
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
           <Variable className="size-3.5 text-muted-foreground" />
-          <span className="text-xs font-semibold">Variáveis disponíveis</span>
+          <span className="text-xs font-semibold">Variáveis para URL e Headers</span>
           <span className="truncate text-[11px] text-muted-foreground">
             · inserir em <span className="font-mono">{focusLabel}</span>
           </span>
         </div>
-        <ChevronDown className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
+        <ChevronDown
+          className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-180")}
+        />
       </button>
 
       {open && (
@@ -363,7 +775,7 @@ function VariablePicker({
                   <div className="grid gap-1">
                     {g.items.map((opt) => (
                       <button
-                        key={opt.token}
+                        key={opt.key}
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => onSelect(opt.token)}

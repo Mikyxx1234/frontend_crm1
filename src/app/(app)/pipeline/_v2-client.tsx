@@ -11,7 +11,7 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 
-import { IconArrowsExchange, IconChevronDown, IconDotsVertical, IconPencil, IconPlus, IconTrophy } from "@tabler/icons-react";
+import { IconArrowsExchange, IconChevronDown, IconDotsVertical, IconPencil, IconPlus, IconSettings, IconTrophy } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 import { NavRail } from "@/components/crm/nav-rail";
@@ -284,25 +284,37 @@ export default function KanbanV2ClientPage({
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4">
       {navRail ?? <NavRail />}
       <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
-        <PipelineHeader
-          activeTab={activeTab}
-          onTabChange={(t) => setActiveTab(t)}
-          activeView="kanban"
-          onViewChange={(view) => {
-            if (view === "list" && listHref) router.push(listHref);
-          }}
-          pipelineNameSlot={
-            <PipelineSwitcher
-              selectedId={pipelineId}
-              onChange={(id) => setPipelineId(id)}
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <PipelineHeader
+              activeTab={activeTab}
+              onTabChange={(t) => setActiveTab(t)}
+              activeView="kanban"
+              onViewChange={(view) => {
+                if (view === "list" && listHref) router.push(listHref);
+              }}
+              pipelineNameSlot={
+                <PipelineSwitcher
+                  selectedId={pipelineId}
+                  onChange={(id) => setPipelineId(id)}
+                />
+              }
+              filtersButtonRef={filtersBtnRef}
+              onFiltersClick={() => setFiltersOpen((v) => !v)}
+              activeFiltersCount={countActiveFilters(filters)}
+              search={search}
+              onSearchChange={setSearch}
             />
-          }
-          filtersButtonRef={filtersBtnRef}
-          onFiltersClick={() => setFiltersOpen((v) => !v)}
-          activeFiltersCount={countActiveFilters(filters)}
-          search={search}
-          onSearchChange={setSearch}
-        />
+          </div>
+          <button
+            type="button"
+            title="Configurações do pipeline"
+            onClick={() => router.push("/settings/pipeline")}
+            className="mt-1 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+          >
+            <IconSettings size={17} />
+          </button>
+        </div>
         <FiltersPopover
           open={filtersOpen}
           anchorRef={filtersBtnRef}

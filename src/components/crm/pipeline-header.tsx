@@ -45,6 +45,12 @@ interface PipelineHeaderProps {
   onSearchChange?: (value: string) => void
   /** Placeholder da busca. */
   searchPlaceholder?: string
+  /**
+   * Substitui toda a faixa de abas de status (Abertos/Ganhos/Perdidos/Todos)
+   * por um nó arbitrário. Útil para reutilizar o shell do PipelineHeader em
+   * telas que não usam o conceito de status (ex.: /settings/pipeline).
+   */
+  tabsOverride?: React.ReactNode
 }
 
 export function PipelineHeader({
@@ -60,6 +66,7 @@ export function PipelineHeader({
   search,
   onSearchChange,
   searchPlaceholder = "Buscar por título, contato...",
+  tabsOverride,
 }: PipelineHeaderProps) {
   const [tab, setTab] = useState<TabId>(activeTab)
   const [view, setView] = useState<ViewType>(activeView)
@@ -171,39 +178,41 @@ export function PipelineHeader({
           </div>
         )}
 
-        <div className="flex items-center gap-0.5">
-          {tabs.map((t) => {
-            const isActive = tab === t.id
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => handleTabChange(t.id)}
-                className={cn(
-                  "-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3.5 py-2 font-display text-[12px] font-bold tracking-[0.04em] transition-all",
-                  isActive
-                    ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
-                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                )}
-              >
-                {t.icon}
-                {t.label}
-                {t.count !== undefined && (
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
-                      isActive
-                        ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                        : "bg-black/[0.06] text-[var(--text-muted)]",
-                    )}
-                  >
-                    {t.count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+        {tabsOverride ?? (
+          <div className="flex items-center gap-0.5">
+            {tabs.map((t) => {
+              const isActive = tab === t.id
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleTabChange(t.id)}
+                  className={cn(
+                    "-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3.5 py-2 font-display text-[12px] font-bold tracking-[0.04em] transition-all",
+                    isActive
+                      ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
+                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                  )}
+                >
+                  {t.icon}
+                  {t.label}
+                  {t.count !== undefined && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
+                        isActive
+                          ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+                          : "bg-black/[0.06] text-[var(--text-muted)]",
+                      )}
+                    >
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-2">
           <button

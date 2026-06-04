@@ -4,12 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
+  IconArrowLeft,
+  IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
+  IconDots,
+  IconPalette,
+  IconPencil,
   IconPlus,
   IconRobot,
   IconStar,
-  IconArrowLeft,
-  IconDots,
-  IconCheck,
+  IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +25,8 @@ import { usePipelines, useBoard } from "@/features/pipeline-v2/hooks";
 import { useAutomations } from "@/features/automations-v2/hooks";
 import { AddAutomationDrawer } from "./add-automation-drawer";
 
-// Mapa de rótulo do gatilho de estágio
+// ─── Constantes ───────────────────────────────────────────────────
+
 const STAGE_TRIGGER_LABELS: Record<string, string> = {
   STAGE_ENTERED: "Quando criado nesta etapa",
   STAGE_EXITED: "Quando sair desta etapa",
@@ -30,16 +36,29 @@ const STAGE_TRIGGER_LABELS: Record<string, string> = {
   DEAL_LOST: "Quando negócio for perdido",
 };
 
+const COLOR_PALETTE = [
+  { label: "Azul", value: "#5B6FF5" },
+  { label: "Roxo", value: "#8B5CF6" },
+  { label: "Ciano", value: "#06B6D4" },
+  { label: "Verde", value: "#10B981" },
+  { label: "Lima", value: "#84CC16" },
+  { label: "Âmbar", value: "#F59E0B" },
+  { label: "Laranja", value: "#F97316" },
+  { label: "Vermelho", value: "#EF4444" },
+  { label: "Rosa", value: "#EC4899" },
+  { label: "Cinza", value: "#64748B" },
+];
+
 // ─── Tipos locais ─────────────────────────────────────────────────
 
 interface Automation {
   id: string;
-  /** Título do gatilho, ex: "Negócio criado", "Etapa alterada" */
-  title: string;
-  /** Subtexto do quando, ex: "Quando criado nesta etapa" */
-  when: string;
-  /** Nome da ação/automação, ex: "Boas-vindas WhatsApp" */
-  actionName: string;
+  /** Chip no topo: quando executar no estágio */
+  stageTrigger: string;
+  /** Nome da automação */
+  name: string;
+  /** Descrição / ação secundária */
+  description?: string;
 }
 
 interface StageConfig {
@@ -50,28 +69,255 @@ interface StageConfig {
   automations: Automation[];
 }
 
-
-// ─── AutomationCard — estilo protótipo v0 ────────────────────────
+// ─── AutomationCard ───────────────────────────────────────────────
 
 function AutomationCard({ automation }: { automation: Automation }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2.5 shadow-[var(--glass-shadow-sm)] transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-[var(--glass-bg-overlay)]">
-      {/* Ícone robô */}
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
-        <IconRobot size={14} className="text-[var(--brand-primary)]" />
-      </div>
+    <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white/60 px-3 py-2.5 shadow-[var(--glass-shadow-sm)] transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/8">
+      {/* Chip do gatilho */}
+      <span className="inline-flex w-fit items-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+        {automation.stageTrigger}
+      </span>
 
-      {/* Textos */}
-      <div className="min-w-0 flex-1">
-        <p className="font-display text-[12.5px] font-bold text-[var(--text-primary)]">
-          {automation.title}
-        </p>
-        <p className="mt-0.5 truncate font-display text-[11px] text-[var(--text-muted)]">
-          {automation.when}
-        </p>
-        <p className="mt-0.5 truncate font-display text-[11.5px] font-semibold text-[var(--brand-primary)]">
-          {automation.actionName}
-        </p>
+      {/* Conteúdo: robô + nome */}
+      <div className="flex items-start gap-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12">
+          <IconRobot size={14} className="text-[var(--brand-primary)]" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+            {automation.name}
+          </p>
+          {automation.description && (
+            <p className="mt-0.5 truncate font-display text-[11px] text-[var(--text-muted)]">
+              {automation.description}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── StageOptionsMenu ─────────────────────────────────────────────
+
+interface StageOptionsMenuProps {
+  stageId: string;
+  isFirst: boolean;
+  isLast: boolean;
+  currentColor: string;
+  onMoveForward: () => void;
+  onMoveBackward: () => void;
+  onRename: () => void;
+  onChangeColor: (color: string) => void;
+}
+
+function StageOptionsMenu({
+  stageId: _stageId,
+  isFirst,
+  isLast,
+  currentColor,
+  onMoveForward,
+  onMoveBackward,
+  onRename,
+  onChangeColor,
+}: StageOptionsMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [showColors, setShowColors] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const fn = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setShowColors(false);
+      }
+    };
+    document.addEventListener("pointerdown", fn);
+    return () => document.removeEventListener("pointerdown", fn);
+  }, [open]);
+
+  const close = () => {
+    setOpen(false);
+    setShowColors(false);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        title="Opções do estágio"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+      >
+        <IconDots size={16} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)] backdrop-blur-md">
+          {/* Mover posição */}
+          <div className="px-2 py-1">
+            <p className="px-2 pb-1 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              Posição
+            </p>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                disabled={isFirst}
+                onClick={() => { onMoveForward(); close(); }}
+                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <IconChevronLeft size={14} />
+                Mover frente
+              </button>
+              <button
+                type="button"
+                disabled={isLast}
+                onClick={() => { onMoveBackward(); close(); }}
+                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Mover atrás
+                <IconChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          <div className="my-1 border-t border-[var(--glass-border-subtle)]" />
+
+          {/* Renomear */}
+          <button
+            type="button"
+            onClick={() => { onRename(); close(); }}
+            className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+          >
+            <IconPencil size={14} className="text-[var(--text-muted)]" />
+            Renomear estágio
+          </button>
+
+          {/* Alterar cor */}
+          <button
+            type="button"
+            onClick={() => setShowColors((v) => !v)}
+            className="flex w-full cursor-pointer items-center justify-between gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+          >
+            <span className="flex items-center gap-2.5">
+              <IconPalette size={14} className="text-[var(--text-muted)]" />
+              Alterar cor
+            </span>
+            <span
+              className="h-4 w-4 rounded-full border border-white/30"
+              style={{ background: currentColor }}
+            />
+          </button>
+
+          {/* Swatches de cor */}
+          {showColors && (
+            <div className="border-t border-[var(--glass-border-subtle)] px-3.5 py-2.5">
+              <div className="grid grid-cols-5 gap-1.5">
+                {COLOR_PALETTE.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    title={c.label}
+                    onClick={() => { onChangeColor(c.value); close(); }}
+                    className={cn(
+                      "h-6 w-6 rounded-full border-2 transition-transform hover:scale-110",
+                      currentColor === c.value
+                        ? "border-[var(--text-primary)]"
+                        : "border-transparent",
+                    )}
+                    style={{ background: c.value }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Modal de renomear estágio ────────────────────────────────────
+
+function RenameStageModal({
+  open,
+  initialName,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  initialName: string;
+  onClose: () => void;
+  onConfirm: (name: string) => void;
+}) {
+  const [value, setValue] = useState(initialName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setValue(initialName);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 50);
+    }
+  }, [open, initialName]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[0_16px_48px_rgba(15,20,40,0.20)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            Renomear estágio
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)]"
+          >
+            <IconX size={16} />
+          </button>
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && value.trim()) onConfirm(value.trim());
+            if (e.key === "Escape") onClose();
+          }}
+          placeholder="Nome do estágio..."
+          className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-display text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[var(--glass-border)] bg-transparent px-4 py-2 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={!value.trim() || value.trim() === initialName}
+            onClick={() => value.trim() && onConfirm(value.trim())}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.30)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:opacity-50"
+          >
+            <IconCheck size={13} />
+            Salvar
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -81,16 +327,31 @@ function AutomationCard({ automation }: { automation: Automation }) {
 
 interface StageColumnProps {
   stage: StageConfig;
+  isFirst: boolean;
+  isLast: boolean;
   onAddAutomation: (stageId: string) => void;
+  onMoveForward: (stageId: string) => void;
+  onMoveBackward: (stageId: string) => void;
+  onRename: (stageId: string) => void;
+  onChangeColor: (stageId: string, color: string) => void;
 }
 
-function StageColumn({ stage, onAddAutomation }: StageColumnProps) {
+function StageColumn({
+  stage,
+  isFirst,
+  isLast,
+  onAddAutomation,
+  onMoveForward,
+  onMoveBackward,
+  onRename,
+  onChangeColor,
+}: StageColumnProps) {
   return (
     <section
       aria-label={`Estágio ${stage.name}`}
-      className="flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]"
+      className="flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
     >
-      {/* Header — idêntico ao KanbanColumn */}
+      {/* Header */}
       <div className="flex items-center justify-between px-1 pb-2.5">
         <div className="flex items-center gap-2.5">
           <span
@@ -104,16 +365,19 @@ function StageColumn({ stage, onAddAutomation }: StageColumnProps) {
             {stage.automations.length}
           </span>
         </div>
-        <button
-          type="button"
-          title="Opções do estágio"
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-        >
-          <IconDots size={16} />
-        </button>
+        <StageOptionsMenu
+          stageId={stage.id}
+          isFirst={isFirst}
+          isLast={isLast}
+          currentColor={stage.color}
+          onMoveForward={() => onMoveForward(stage.id)}
+          onMoveBackward={() => onMoveBackward(stage.id)}
+          onRename={() => onRename(stage.id)}
+          onChangeColor={(color) => onChangeColor(stage.id, color)}
+        />
       </div>
 
-      {/* Subtítulo de contagem */}
+      {/* Subtítulo */}
       <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-1 pb-2.5 font-display text-xs font-semibold text-[var(--text-secondary)]">
         {stage.automations.length === 0
           ? "Sem automações"
@@ -126,12 +390,11 @@ function StageColumn({ stage, onAddAutomation }: StageColumnProps) {
           <AutomationCard key={auto.id} automation={auto} />
         ))}
 
-        {/* "+ Adicionar automação" */}
         <button
           type="button"
           onClick={() => onAddAutomation(stage.id)}
           className={cn(
-            "mt-1 flex cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border-[1.5px] border-dashed border-[var(--glass-border)] bg-transparent py-2.5 font-display text-xs font-semibold text-[var(--text-muted)] transition-all",
+            "mt-1 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-dashed border-[var(--glass-border)] bg-transparent py-2.5 font-display text-xs font-semibold text-[var(--text-muted)] transition-all",
             "hover:border-[var(--brand-primary)] hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]",
           )}
         >
@@ -143,7 +406,7 @@ function StageColumn({ stage, onAddAutomation }: StageColumnProps) {
   );
 }
 
-// ─── Modal inline "Novo pipeline" ────────────────────────────────
+// ─── Modal "Novo pipeline" ────────────────────────────────────────
 
 function NewPipelineModal({
   open,
@@ -172,7 +435,7 @@ function NewPipelineModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[0_16px_48px_rgba(15,20,40,0.20)]"
+        className="w-full max-w-sm rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[0_16px_48px_rgba(15,20,40,0.20)]"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-1 font-display text-[15px] font-bold text-[var(--text-primary)]">
@@ -191,7 +454,7 @@ function NewPipelineModal({
             if (e.key === "Escape") onClose();
           }}
           placeholder="Nome do pipeline..."
-          className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-display text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+          className="w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-display text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
         />
         <div className="mt-4 flex justify-end gap-2">
           <button
@@ -216,7 +479,7 @@ function NewPipelineModal({
   );
 }
 
-// ─── TabsOverride da tela de settings ────────────────────────────
+// ─── TabsOverride ─────────────────────────────────────────────────
 
 interface TabsOverrideProps {
   onNewPipeline: () => void;
@@ -240,7 +503,7 @@ function PipelineSettingsTabs({ onNewPipeline, onSetDefault, onBack }: TabsOverr
         type="button"
         onClick={onSetDefault}
         title="Definir como pipeline padrão"
-        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--color-enterprise-bg)] hover:text-amber-500"
+        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-amber-400/50 hover:bg-amber-50 hover:text-amber-500 dark:hover:bg-amber-500/10"
       >
         <IconStar size={15} />
       </button>
@@ -268,13 +531,21 @@ export default function PipelineSettingsClientPage() {
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
 
-  // Estado das automações adicionadas por estágio (mapa stageId → Automation[])
+  // Automações por estágio (estado local)
   const [stageAutomationsMap, setStageAutomationsMap] = useState<Record<string, Automation[]>>({});
 
   // Drawer "Adicionar automação"
   const [addAutomationStageId, setAddAutomationStageId] = useState<string | null>(null);
 
-  // Dados de automações para look-up ao confirmar no drawer
+  // Estado local de ordem, nomes e cores dos estágios
+  const [stageOrder, setStageOrder] = useState<string[]>([]);
+  const [stageNameOverrides, setStageNameOverrides] = useState<Record<string, string>>({});
+  const [stageColorOverrides, setStageColorOverrides] = useState<Record<string, string>>({});
+
+  // Modal de renomear
+  const [renamingStageId, setRenamingStageId] = useState<string | null>(null);
+
+  // Automações do backend para look-up
   const { data: automationsData } = useAutomations({ perPage: 200, enabled: isAuthenticated });
 
   useEffect(() => {
@@ -290,22 +561,77 @@ export default function PipelineSettingsClientPage() {
     enabled: isAuthenticated,
   });
 
-  const stages: StageConfig[] = useMemo(
-    () =>
-      board.map((s) => ({
-        id: s.id,
-        name: s.name,
-        color: s.color ?? "var(--brand-primary)",
-        position: s.position,
-        automations: stageAutomationsMap[s.id] ?? [],
-      })),
-    [board, stageAutomationsMap],
-  );
+  // Inicializa a ordem quando o board carrega ou muda de pipeline
+  useEffect(() => {
+    if (board.length > 0) {
+      setStageOrder(board.map((s) => s.id));
+      setStageNameOverrides({});
+      setStageColorOverrides({});
+    }
+  }, [board]);
+
+  // Monta os estágios na ordem local, mesclando overrides
+  const stages: StageConfig[] = useMemo(() => {
+    const stageMap = new Map(board.map((s) => [s.id, s]));
+    const order = stageOrder.length > 0 ? stageOrder : board.map((s) => s.id);
+    return order
+      .map((id) => {
+        const s = stageMap.get(id);
+        if (!s) return null;
+        return {
+          id: s.id,
+          name: stageNameOverrides[s.id] ?? s.name,
+          color: stageColorOverrides[s.id] ?? s.color ?? "#5B6FF5",
+          position: s.position,
+          automations: stageAutomationsMap[s.id] ?? [],
+        } satisfies StageConfig;
+      })
+      .filter(Boolean) as StageConfig[];
+  }, [board, stageOrder, stageNameOverrides, stageColorOverrides, stageAutomationsMap]);
 
   const addAutomationStageName = useMemo(() => {
     if (!addAutomationStageId) return "";
-    return board.find((s) => s.id === addAutomationStageId)?.name ?? "";
-  }, [addAutomationStageId, board]);
+    return stages.find((s) => s.id === addAutomationStageId)?.name ?? "";
+  }, [addAutomationStageId, stages]);
+
+  const renamingStageCurrentName = useMemo(() => {
+    if (!renamingStageId) return "";
+    return stages.find((s) => s.id === renamingStageId)?.name ?? "";
+  }, [renamingStageId, stages]);
+
+  // ─── Handlers de estágio ────────────────────────────────────────
+
+  const handleMoveForward = useCallback((stageId: string) => {
+    setStageOrder((prev) => {
+      const idx = prev.indexOf(stageId);
+      if (idx <= 0) return prev;
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next;
+    });
+  }, []);
+
+  const handleMoveBackward = useCallback((stageId: string) => {
+    setStageOrder((prev) => {
+      const idx = prev.indexOf(stageId);
+      if (idx === -1 || idx >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
+  }, []);
+
+  const handleRenameConfirm = useCallback((name: string) => {
+    if (!renamingStageId) return;
+    setStageNameOverrides((prev) => ({ ...prev, [renamingStageId]: name }));
+    setRenamingStageId(null);
+  }, [renamingStageId]);
+
+  const handleChangeColor = useCallback((stageId: string, color: string) => {
+    setStageColorOverrides((prev) => ({ ...prev, [stageId]: color }));
+  }, []);
+
+  // ─── Handlers de automação ──────────────────────────────────────
 
   const handleAddAutomation = useCallback((stageId: string) => {
     setAddAutomationStageId(stageId);
@@ -321,28 +647,26 @@ export default function PipelineSettingsClientPage() {
       applyToExisting: boolean;
     }) => {
       if (!addAutomationStageId) return;
-
       const autoDto = automationsData?.items.find((a) => a.id === automationId);
       if (!autoDto) return;
 
-      const whenLabel = STAGE_TRIGGER_LABELS[trigger] ?? trigger;
-
       const newAuto: Automation = {
         id: `${addAutomationStageId}-${automationId}-${Date.now()}`,
-        title: autoDto.name,
-        when: whenLabel,
-        actionName: autoDto.description ?? autoDto.name,
+        stageTrigger: STAGE_TRIGGER_LABELS[trigger] ?? trigger,
+        name: autoDto.name,
+        description: autoDto.description ?? undefined,
       };
 
       setStageAutomationsMap((prev) => ({
         ...prev,
         [addAutomationStageId]: [...(prev[addAutomationStageId] ?? []), newAuto],
       }));
-
       setAddAutomationStageId(null);
     },
     [addAutomationStageId, automationsData?.items],
   );
+
+  // ─── Outros handlers ────────────────────────────────────────────
 
   const handleNewPipeline = useCallback((name: string) => {
     setNewPipelineOpen(false);
@@ -363,7 +687,13 @@ export default function PipelineSettingsClientPage() {
             pipelineNameSlot={
               <PipelineSwitcher
                 selectedId={pipelineId}
-                onChange={(id) => setPipelineId(id)}
+                onChange={(id) => {
+                  setPipelineId(id);
+                  setStageOrder([]);
+                  setStageNameOverrides({});
+                  setStageColorOverrides({});
+                  setStageAutomationsMap({});
+                }}
               />
             }
             tabsOverride={
@@ -380,11 +710,17 @@ export default function PipelineSettingsClientPage() {
           {/* Board de estágios */}
           <div className="flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-2">
             {stages.length > 0 ? (
-              stages.map((stage) => (
+              stages.map((stage, idx) => (
                 <StageColumn
                   key={stage.id}
                   stage={stage}
+                  isFirst={idx === 0}
+                  isLast={idx === stages.length - 1}
                   onAddAutomation={handleAddAutomation}
+                  onMoveForward={handleMoveForward}
+                  onMoveBackward={handleMoveBackward}
+                  onRename={setRenamingStageId}
+                  onChangeColor={handleChangeColor}
                 />
               ))
             ) : (
@@ -400,6 +736,13 @@ export default function PipelineSettingsClientPage() {
         onConfirm={handleNewPipeline}
       />
 
+      <RenameStageModal
+        open={!!renamingStageId}
+        initialName={renamingStageCurrentName}
+        onClose={() => setRenamingStageId(null)}
+        onConfirm={handleRenameConfirm}
+      />
+
       <AddAutomationDrawer
         open={!!addAutomationStageId}
         stageName={addAutomationStageName}
@@ -412,12 +755,12 @@ export default function PipelineSettingsClientPage() {
 
 function EmptyStages({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
-    <div className="grid w-full place-items-center rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg)] p-12 text-center backdrop-blur-md">
+    <div className="grid w-full place-items-center rounded-xl border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg)] p-12 text-center backdrop-blur-md">
       <div>
         <h2 className="font-display text-base font-bold text-[var(--text-primary)]">
           {isAuthenticated ? "Selecione um pipeline" : "Carregando..."}
         </h2>
-        <p className="mt-1 max-w-sm text-[12.5px] text-[var(--text-muted)]">
+        <p className="mt-1 max-w-sm font-display text-[12.5px] text-[var(--text-muted)]">
           Pipeline ativo não retornou estágios. Verifique a configuração no painel de administração.
         </p>
       </div>

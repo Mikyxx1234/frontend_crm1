@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+import { isPreviewMode } from "@/lib/preview-mode";
+
 /**
  * Middleware do FRONTEND separado.
  *
@@ -74,6 +76,7 @@ const PUBLIC_PATHS = new Set([
   "/register",
   "/health",
   "/accept-invite",
+  "/test-bulk-bar",
 ]);
 
 const PUBLIC_API_PATHS = new Set(["/api/signup"]);
@@ -95,6 +98,29 @@ const PWA_PUBLIC_PATHS = new Set([
 export async function middleware(req: NextRequest) {
   try {
     const { pathname } = req.nextUrl;
+
+    // PREVIEW MODE: libera todas as rotas sem checar cookie. Usado pelo
+    // sandbox do v0.dev onde cookies cross-origin são bloqueados pelo browser.
+    // NUNCA deve estar ativo em produção (qualquer um navega tudo sem login).
+    //
+    // `isPreviewMode()` no edge não vê `window`, então cobrimos o host do v0
+    // lendo o header `host` em RUNTIME (a env var NEXT_PUBLIC_* costuma não
+    // estar disponível no build do sandbox). Só casa domínios de preview do v0
+    // — nunca localhost nem o domínio de produção (Easypanel).
+    const requestHost = (req.headers.get("host") ?? "").toLowerCase();
+    const isV0Host =
+      requestHost.endsWith(".vusercontent.net") ||
+      requestHost.endsWith(".v0.dev") ||
+      requestHost.endsWith(".v0.app") ||
+      requestHost.endsWith(".v0.build");
+    if (isPreviewMode() || isV0Host) {
+      return withSecurityHeaders(NextResponse.next());
+    }
+
+    // Rotas /v2/* são sempre liberadas no sandbox de desenvolvimento.
+    if (pathname.startsWith("/v2")) {
+      return withSecurityHeaders(NextResponse.next());
+    }
 
     // Rotas de auth + assets do Next + webhooks + uploads não passam por auth.
     // O rewrite pro backend acontece em next.config.ts.
@@ -141,6 +167,19 @@ export async function middleware(req: NextRequest) {
     }
 
     if (!reqAuth) {
+      // Para /api/* sem sessão, devolve 401 JSON em vez de redirect pro /login.
+      // Por que: o fetch dos hooks segue redirects e acaba tentando dar JSON.parse
+      // na página de login (HTML), causando o erro
+      // `Unexpected token '<', "<!doctype "... is not valid JSON`. Devolver 401
+      // JSON deixa o React Query ir direto pro estado de erro com payload tratável.
+      if (pathname.startsWith("/api/")) {
+        return withSecurityHeaders(
+          NextResponse.json(
+            { message: "Unauthorized", code: "AUTH_REQUIRED" },
+            { status: 401 },
+          ),
+        );
+      }
       const loginUrl = new URL("/login", req.nextUrl.origin);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return withSecurityHeaders(NextResponse.redirect(loginUrl));

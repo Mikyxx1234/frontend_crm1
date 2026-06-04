@@ -253,7 +253,7 @@ export function DealSidebar({
   );
 }
 
-function DealProductsSection({ dealId, compact = false }: { dealId: string; compact?: boolean }) {
+export function DealProductsSection({ dealId, compact = false }: { dealId: string; compact?: boolean }) {
   const queryClient = useQueryClient();
   const confirmDialog = useConfirm();
   const [showAdd, setShowAdd] = React.useState(false);

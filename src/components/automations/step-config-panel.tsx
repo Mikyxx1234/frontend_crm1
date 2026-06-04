@@ -29,6 +29,11 @@ import {
   type ConditionOp,
   type ConditionRule,
 } from "@/lib/automation-condition";
+import { WebhookStepConfig } from "@/components/automations/webhook-step-config";
+import {
+  validateEntries as validateWebhookEntries,
+  type WebhookBodyEntry,
+} from "@/lib/webhook-body-builder";
 
 type PipelineStage = { id: string; name: string };
 type Pipeline = { id: string; name: string; stages: PipelineStage[] };
@@ -475,6 +480,9 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
     if (step.type === "finish_conversation") {
       config = {};
     }
+    if (step.type === "consume_stock") {
+      config = {};
+    }
     if (step.type === "business_hours") {
       config = {
         schedule: Array.isArray(config.schedule) ? config.schedule : [],
@@ -514,6 +522,27 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         userType: String(config.userType ?? "HUMAN") === "AI" ? "AI" : "HUMAN",
         target: String(config.target ?? "deal") === "contact" ? "contact" : "deal",
       };
+    }
+    if (step.type === "webhook") {
+      // O construtor visual mantém `__webhookBodyEntries` em paralelo
+      // ao `body` no draft. Validamos as entries antes de salvar — se
+      // houver chave vazia, duplicada, perigosa, conflito de path,
+      // entry incompleta ou tokens não reconhecidos vindos de body
+      // legado, bloqueamos o save.
+      const rawEntries = config.__webhookBodyEntries;
+      const entries: WebhookBodyEntry[] = Array.isArray(rawEntries)
+        ? (rawEntries as WebhookBodyEntry[])
+        : [];
+      const errors = validateWebhookEntries(entries);
+      if (errors.length > 0) {
+        toast.error(`Body do webhook: ${errors[0].message}`);
+        return;
+      }
+      // `__webhookBodyEntries` é estado de UI — não persiste no config
+      // do step. O `body` (string JSON) é o que o backend consome.
+      const { __webhookBodyEntries: _drop, ...rest } = config as Record<string, unknown>;
+      void _drop;
+      config = rest;
     }
     onSave({ ...step, config: { ...config, ...preserved } });
     onOpenChange(false);
@@ -915,29 +944,7 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
           })()}
 
           {step.type === "webhook" && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="sc-wh-url">URL</Label>
-                <Input
-                  id="sc-wh-url"
-                  value={String(draft.url ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sc-wh-method">Método</Label>
-                <SelectNative
-                  id="sc-wh-method"
-                  value={String(draft.method ?? "POST")}
-                  onChange={(e) => setDraft((d) => ({ ...d, method: e.target.value }))}
-                >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="PATCH">PATCH</option>
-                </SelectNative>
-              </div>
-            </>
+            <WebhookStepConfig draft={draft} setDraft={setDraft} />
           )}
 
           {step.type === "delay" && (() => {
@@ -1358,6 +1365,23 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             <p className="text-sm text-muted-foreground">
               Encerra todas as conversas abertas do contato, marcando-as como resolvidas.
             </p>
+          )}
+
+          {step.type === "consume_stock" && (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+              <p>
+                Reduz o estoque dos produtos vinculados ao negócio, pela quantidade de cada item.
+                Só age em produtos com <strong className="text-foreground">controle de estoque</strong> ativado.
+              </p>
+              <p>
+                Use este passo com um gatilho como <strong className="text-foreground">Negócio ganho</strong>{" "}
+                ou entrada em um estágio. Sem este passo, nenhum estoque é baixado.
+              </p>
+              <p>
+                Se algum produto não tiver saldo suficiente, o passo é{" "}
+                <strong className="text-foreground">bloqueado</strong> (nada é baixado, sem estoque negativo).
+              </p>
+            </div>
           )}
 
           {step.type === "business_hours" && (() => {
@@ -2802,7 +2826,7 @@ function TransferToAIAgentStepConfig({
         ) : activeAgents.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Nenhum agente IA ativo. Crie um em{" "}
-            <a href="/ai-agents" className="underline">
+            <a href="/old/ai-agents" className="underline">
               Agentes IA
             </a>
             .
@@ -2902,7 +2926,7 @@ function AskAIAgentStepConfig({
         ) : activeAgents.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Nenhum agente ativo. Crie um em{" "}
-            <a href="/ai-agents" className="underline">
+            <a href="/old/ai-agents" className="underline">
               Agentes IA
             </a>
             .

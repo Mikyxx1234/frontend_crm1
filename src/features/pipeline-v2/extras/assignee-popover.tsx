@@ -58,7 +58,7 @@ export function AssigneePopover({
     );
   }
 
-  const position = computePopoverPosition(rect, 280);
+  const position = computePopoverPosition(rect, 280, 256);
 
   return (
     <>

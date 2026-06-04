@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
+import { cn } from "@/lib/utils"
+import { PageHeader } from "@/components/crm/page-header"
+import { SearchInput } from "@/components/crm/search-input"
 import {
-  IconChevronRight,
   IconFilter,
   IconBookmark,
-  IconLayoutGrid,
   IconLayoutKanban,
   IconList,
   IconUser,
@@ -15,16 +17,34 @@ import {
   IconCircleX,
   IconGridDots,
 } from "@tabler/icons-react"
-import { useState } from "react"
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos"
-type ViewType = "grid" | "kanban" | "list"
+type ViewType = "kanban" | "list"
 
 interface PipelineHeaderProps {
   activeTab?: TabId
   onTabChange?: (tab: TabId) => void
   activeView?: ViewType
   onViewChange?: (view: ViewType) => void
+  /**
+   * Slot opcional que substitui o nome "Pipeline Principal" hardcoded
+   * — use para plugar um seletor real (ex.: PipelineSwitcher).
+   */
+  pipelineNameSlot?: React.ReactNode
+  /** Counts dinamicos por aba. Quando undefined, mantem o "14" mock do v0. */
+  tabCounts?: Partial<Record<TabId, number>>
+  /** Ref no botao Filtros para ancorar popovers. */
+  filtersButtonRef?: React.Ref<HTMLButtonElement>
+  /** Handler do botao Filtros. Quando ausente, botao fica decorativo. */
+  onFiltersClick?: () => void
+  /** Numero de filtros ativos — exibe badge ao lado do icone. */
+  activeFiltersCount?: number
+  /** Valor da busca. Quando `onSearchChange` existe, exibe a barra padrao. */
+  search?: string
+  /** Handler da busca. Sem ele, a barra de busca nao e renderizada. */
+  onSearchChange?: (value: string) => void
+  /** Placeholder da busca. */
+  searchPlaceholder?: string
 }
 
 export function PipelineHeader({
@@ -32,6 +52,14 @@ export function PipelineHeader({
   onTabChange,
   activeView = "kanban",
   onViewChange,
+  pipelineNameSlot,
+  tabCounts,
+  filtersButtonRef,
+  onFiltersClick,
+  activeFiltersCount = 0,
+  search,
+  onSearchChange,
+  searchPlaceholder = "Buscar por título, contato...",
 }: PipelineHeaderProps) {
   const [tab, setTab] = useState<TabId>(activeTab)
   const [view, setView] = useState<ViewType>(activeView)
@@ -47,127 +75,127 @@ export function PipelineHeader({
   }
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode; count?: number }[] = [
-    { id: "abertos", label: "Abertos", icon: <IconClock size={14} />, count: 14 },
-    { id: "ganhos", label: "Ganhos", icon: <IconCircleCheck size={14} /> },
-    { id: "perdidos", label: "Perdidos", icon: <IconCircleX size={14} /> },
-    { id: "todos", label: "Todos", icon: <IconGridDots size={14} /> },
+    { id: "abertos", label: "Abertos", icon: <IconClock size={14} />, count: tabCounts?.abertos ?? 14 },
+    { id: "ganhos", label: "Ganhos", icon: <IconCircleCheck size={14} />, count: tabCounts?.ganhos },
+    { id: "perdidos", label: "Perdidos", icon: <IconCircleX size={14} />, count: tabCounts?.perdidos },
+    { id: "todos", label: "Todos", icon: <IconGridDots size={14} />, count: tabCounts?.todos },
   ]
 
   return (
-    <>
-      <header className="bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-xl)] px-5 py-3.5 flex items-center gap-4 shadow-[var(--glass-shadow)]">
-        <div className="flex items-center gap-2.5">
-          <span className="font-display text-[14px] text-[var(--text-muted)] font-medium cursor-pointer">Funil</span>
-          <IconChevronRight size={12} className="text-[var(--text-muted)]" />
-          <span className="font-display text-[14px] text-[var(--text-primary)] font-semibold cursor-pointer">
-            Pipeline Principal
-          </span>
-        </div>
-
-        <div className="flex-1 max-w-[420px] relative">
-          <input
-            type="text"
-            placeholder="Buscar e filtrar..."
-            className="w-full font-body text-[13px] text-[var(--text-primary)] bg-[var(--glass-bg-overlay)] backdrop-blur-[8px] border border-[var(--glass-border)] rounded-full py-2 pl-[38px] pr-3.5 outline-none placeholder:text-[var(--text-muted)]"
-          />
-          <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
-          <button className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
-            <IconFilter size={14} /> Filtros
-          </button>
-          <button className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
-            <IconBookmark size={14} /> Salvos
-          </button>
-
-          <div className="flex items-center gap-1 bg-[var(--glass-bg-strong)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-md)] p-[3px]">
+    <div className="flex flex-col gap-3">
+      <PageHeader
+        icon={<IconLayoutKanban size={22} />}
+        title="Pipeline"
+        description="Acompanhe e mova seus negócios pelas etapas do funil."
+        center={
+          onSearchChange ? (
+            <SearchInput
+              value={search ?? ""}
+              onChange={onSearchChange}
+              placeholder={searchPlaceholder}
+            />
+          ) : undefined
+        }
+        actions={
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => handleViewChange("grid")}
-              title="Grid"
-              className={`w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer transition-all ${
-                view === "grid"
-                  ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                  : "bg-transparent text-[var(--text-muted)]"
-              }`}
+              ref={filtersButtonRef}
+              type="button"
+              onClick={onFiltersClick}
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[13px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white"
+              style={
+                activeFiltersCount > 0
+                  ? {
+                      borderColor: "var(--brand-primary, #5b6ff5)",
+                      background: "rgba(91,111,245,0.12)",
+                    }
+                  : undefined
+              }
             >
-              <IconLayoutGrid size={15} />
+              <IconFilter size={15} /> Filtros
+              {activeFiltersCount > 0 && (
+                <span
+                  className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums text-white"
+                  style={{ background: "var(--brand-primary, #5b6ff5)" }}
+                >
+                  {activeFiltersCount}
+                </span>
+              )}
             </button>
             <button
-              onClick={() => handleViewChange("kanban")}
-              title="Kanban"
-              className={`w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer transition-all ${
-                view === "kanban"
-                  ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                  : "bg-transparent text-[var(--text-muted)]"
-              }`}
+              type="button"
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[13px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white"
             >
-              <IconLayoutKanban size={15} />
+              <IconBookmark size={15} /> Salvos
             </button>
+
+            <div className="flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
+              {(
+                [
+                  { id: "kanban", icon: <IconLayoutKanban size={15} />, title: "Pipeline" },
+                  { id: "list", icon: <IconList size={15} />, title: "Lista" },
+                ] as const
+              ).map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => handleViewChange(v.id as ViewType)}
+                  title={v.title}
+                  className={cn(
+                    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all",
+                    view === v.id
+                      ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
+                      : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                  )}
+                >
+                  {v.icon}
+                </button>
+              ))}
+            </div>
+
             <button
-              onClick={() => handleViewChange("list")}
-              title="Lista"
-              className={`w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center cursor-pointer transition-all ${
-                view === "list"
-                  ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                  : "bg-transparent text-[var(--text-muted)]"
-              }`}
+              type="button"
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
             >
-              <IconList size={15} />
+              <IconPlus size={16} /> Novo
             </button>
           </div>
+        }
+      />
 
-          <button className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-transparent text-[var(--text-secondary)] border border-transparent hover:bg-[var(--glass-bg-strong)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
-            <IconUser size={14} /> Meus
-          </button>
-          <button
-            className="font-display text-[12px] font-semibold rounded-full px-3 py-[5px] cursor-pointer bg-transparent border border-transparent hover:bg-[var(--glass-bg-strong)] transition-all inline-flex items-center gap-1.5 whitespace-nowrap"
-            style={{ color: "var(--color-warning-text)" }}
-          >
-            <IconAlertTriangle size={14} /> Urgentes
-          </button>
-          <button className="font-display text-[12px] font-semibold rounded-full px-4 py-[5px] cursor-pointer bg-[var(--brand-primary)] text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] hover:bg-[var(--brand-primary-dark)] hover:-translate-y-px transition-all inline-flex items-center gap-1.5 whitespace-nowrap">
-            <IconPlus size={14} /> Novo
-          </button>
-        </div>
-      </header>
+      {/* Abas de status + seletor de pipeline + filtros rápidos */}
+      <div className="flex items-center gap-2 px-1">
+        {pipelineNameSlot && (
+          <div className="mr-1.5 border-r border-black/[0.06] pr-2.5">
+            {pipelineNameSlot}
+          </div>
+        )}
 
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-0.5">
           {tabs.map((t) => {
             const isActive = tab === t.id
             return (
               <button
                 key={t.id}
+                type="button"
                 onClick={() => handleTabChange(t.id)}
-                className={`font-display text-[13px] font-semibold py-2 px-[18px] rounded-full cursor-pointer transition-all inline-flex items-center gap-2 ${
+                className={cn(
+                  "-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3.5 py-2 font-display text-[12px] font-bold tracking-[0.04em] transition-all",
                   isActive
-                    ? "bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]"
-                    : "bg-transparent text-[var(--text-muted)] border border-transparent hover:text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]"
-                }`}
+                    ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
+                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
               >
                 {t.icon}
                 {t.label}
                 {t.count !== undefined && (
                   <span
-                    className={`text-[11px] font-bold px-[7px] py-px rounded-full ${
+                    className={cn(
+                      "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
                       isActive
                         ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                        : "bg-[rgba(163,163,163,0.15)] text-[var(--text-muted)]"
-                    }`}
+                        : "bg-black/[0.06] text-[var(--text-muted)]",
+                    )}
                   >
                     {t.count}
                   </span>
@@ -176,7 +204,23 @@ export function PipelineHeader({
             )
           })}
         </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+          >
+            <IconUser size={14} /> Meus
+          </button>
+          <button
+            type="button"
+            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 font-display text-xs font-semibold transition-colors hover:bg-[var(--glass-bg-strong)]"
+            style={{ color: "var(--color-warning-text)" }}
+          >
+            <IconAlertTriangle size={14} /> Urgentes
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   )
 }

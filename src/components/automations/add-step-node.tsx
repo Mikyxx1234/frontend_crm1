@@ -19,6 +19,7 @@ import {
   MessageCircleQuestion,
   MessageSquare,
   MousePointerClick,
+  PackageMinus,
   Pause,
   Pencil,
   Plus,
@@ -66,6 +67,7 @@ export const stepIcon: Record<string, ComponentType<{ className?: string; stroke
   business_hours: Timer,
   ask_ai_agent: Bot,
   transfer_to_ai_agent: BotMessageSquare,
+  consume_stock: PackageMinus,
 };
 
 // Descricao curta (1 linha) usada no modal "O que deseja automatizar?"
@@ -99,6 +101,8 @@ export const stepDescription: Record<string, string> = {
   ask_ai_agent: "Consulta um agente de IA e salva a resposta em variavel.",
   transfer_to_ai_agent:
     "Transfere o atendimento pra um agente IA, que assume a conversa automaticamente.",
+  consume_stock:
+    "Reduz o estoque dos produtos do negócio. Bloqueia se faltar saldo (sem estoque negativo).",
 };
 
 export const stepColor: Record<string, string> = {
@@ -129,6 +133,7 @@ export const stepColor: Record<string, string> = {
   business_hours: "text-amber-600",
   ask_ai_agent: "text-violet-500",
   transfer_to_ai_agent: "text-violet-600",
+  consume_stock: "text-orange-600",
 };
 
 export type StepGroup = { title: string; items: ActionStepType[] };
@@ -160,6 +165,7 @@ export const STEP_GROUPS: StepGroup[] = [
       "update_lead_score",
       "create_deal",
       "finish_conversation",
+      "consume_stock",
     ],
   },
   {

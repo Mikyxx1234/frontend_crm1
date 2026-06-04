@@ -65,6 +65,17 @@ export interface ConversationListRow {
     direction: MessageDirection;
     status?: MessageStatus;
   } | null;
+  /**
+   * Forma atual retornada pelo backend (services/conversations.ts).
+   * Mantemos `lastMessage` acima como fallback semântico (caso o
+   * backend padronize no futuro), e tratamos ambos no adapter.
+   */
+  lastMessagePreview?: {
+    content: string;
+    messageType: string;
+    mediaUrl: string | null;
+    direction: string;
+  } | null;
   unreadCount?: number;
   tags?: { id: string; name: string; color: string | null }[];
   hasError?: boolean;
@@ -93,8 +104,14 @@ export interface InboxFilters {
   channel?: string;
   stageId?: string;
   tagIds?: string[];
+  /**
+   * Ordenação e janela são aplicadas CLIENT-SIDE no /inbox-v2 (não vão
+   * para o backend). `sortBy` aceita "lastInboundAt" (padrão) ou
+   * "unreadCount"; `windowState` filtra a janela de 24h da Meta/WhatsApp.
+   */
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  windowState?: "open" | "closed";
 }
 
 export interface ReactionDto {
@@ -116,6 +133,8 @@ export interface InboxMessageDto {
   readAt?: string | null;
   replyToId?: string | null;
   reactions?: ReactionDto[];
+  /** Campo plano enviado diretamente pelo backend (ex: "/uploads/audio.ogg"). */
+  mediaUrl?: string | null;
   media?: {
     url: string;
     mimeType?: string;
@@ -128,6 +147,13 @@ export interface InboxMessageDto {
     name: string;
     kind: "AGENT" | "CONTACT" | "BOT" | "SYSTEM";
   } | null;
+  /**
+   * Nome do autor da mensagem out (agente ou "Automação"). O backend NÃO
+   * envia o objeto `sender` acima — esse campo plano é a única chave de
+   * autoria que o GET /messages serializa hoje. Convenção do
+   * automation-executor: bot grava `senderName === "Automação"`.
+   */
+  senderName?: string | null;
   metaError?: string | null;
 }
 

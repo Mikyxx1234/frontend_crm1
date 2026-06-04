@@ -56,34 +56,44 @@ const nextConfig: NextConfig = {
   /**
    * REWRITES — Frontend separado.
    *
-   * O frontend NÃO tem rotas /api/* próprias (exceto /api/health), todas
-   * as chamadas /api/* são repassadas pro backend via rewrite. Isso evita
-   * que código copiado do monolito quebre só por causa de URLs absolutas
-   * e mantém os cookies de auth no mesmo origin do frontend.
+   * O frontend NÃO tem rotas /api/* próprias (exceto /api/preview-login),
+   * todas as chamadas /api/* são repassadas pro backend via rewrite. Isso
+   * evita que código copiado do monolito quebre só por causa de URLs
+   * absolutas e mantém os cookies de auth no mesmo origin do frontend.
    *
-   * Lista de rewrites:
-   *   - /api/auth/*          → backend (NextAuth handler, cookies same-origin)
-   *   - /api/signup          → backend (signup público, sem auth)
-   *   - /api/push/*          → backend (web-push: VAPID, subscribe/unsubscribe)
-   *   - /api/webhooks/*      → backend (Meta, Stripe — endpoints públicos)
-   *   - /api/*               → backend (CATCH-ALL: pega todo o resto)
-   *   - /uploads/*           → backend (servir mídias armazenadas no backend)
+   * Usamos `afterFiles` para que o Next.js verifique o filesystem local
+   * ANTES de aplicar o rewrite. Assim /api/preview-login (rota Next.js
+   * local do frontend) é servida localmente, e tudo mais é proxiado para
+   * o backend sem precisar de regex de exclusão.
    *
-   * IMPORTANTE: o catch-all `/api/:path*` precisa vir POR ÚLTIMO. As regras
-   * acima dele são redundantes em termos funcionais mas servem de documentação
-   * explícita pros endpoints públicos / críticos. Next aplica as regras em
-   * ordem, então as específicas matcham antes.
+   * Lista de rewrites (afterFiles):
+   *   - /api/:path*          → backend (CATCH-ALL via parâmetro nomeado)
+   *   - /uploads/:path*      → backend (servir mídias armazenadas no backend)
    */
   async rewrites() {
     const base = backendBase();
     if (!base) return [];
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        { source: "/api/:path*", destination: `${base}/api/:path*` },
+        { source: "/uploads/:path*", destination: `${base}/api/uploads/:path*` },
+      ],
+      fallback: [],
+    };
+  },
+  /**
+   * REDIRECTS — Migração v2 → raiz.
+   *
+   * Após a migração de rotas, as URLs do segmento `/v2/*` deixaram de
+   * existir (a v2 virou a raiz). Mantemos redirects permanentes pra
+   * preservar links externos, atalhos do PWA, bookmarks e qualquer
+   * referência hardcoded que ainda exista em automações Kommo ou IA.
+   */
+  async redirects() {
     return [
-      { source: "/api/auth/:path*", destination: `${base}/api/auth/:path*` },
-      { source: "/api/signup", destination: `${base}/api/signup` },
-      { source: "/api/push/:path*", destination: `${base}/api/push/:path*` },
-      { source: "/api/webhooks/:path*", destination: `${base}/api/webhooks/:path*` },
-      { source: "/api/:path*", destination: `${base}/api/:path*` },
-      { source: "/uploads/:path*", destination: `${base}/api/uploads/:path*` },
+      { source: "/v2", destination: "/dashboard", permanent: true },
+      { source: "/v2/:path*", destination: "/:path*", permanent: true },
     ];
   },
   async headers() {

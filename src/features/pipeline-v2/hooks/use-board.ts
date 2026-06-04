@@ -10,12 +10,14 @@ import {
   type StatusFilter,
 } from "../api";
 
+import { isPreviewMode } from "@/lib/preview-mode";
+
 /** Lista de pipelines (dropdown do header). */
 export function usePipelines(enabled = true) {
   return useQuery<PipelineListItemDto[]>({
     queryKey: ["pipelines-v2"],
     queryFn: listPipelines,
-    enabled,
+    enabled: isPreviewMode() ? true : enabled,
     staleTime: 5 * 60_000,
   });
 }
@@ -31,10 +33,11 @@ export function useBoard(params: {
   enabled?: boolean;
 }) {
   const status = params.status ?? "OPEN";
+  const preview = isPreviewMode();
   return useQuery<BoardStageDto[]>({
-    queryKey: boardKey(params.pipelineId, status),
-    queryFn: () => getBoard(params.pipelineId as string, status),
-    enabled: (params.enabled ?? true) && !!params.pipelineId,
+    queryKey: boardKey(params.pipelineId ?? "pl-1", status),
+    queryFn: () => getBoard(params.pipelineId ?? "pl-1", status),
+    enabled: preview ? true : ((params.enabled ?? true) && !!params.pipelineId),
     staleTime: 10_000,
     refetchInterval: 30_000,
   });

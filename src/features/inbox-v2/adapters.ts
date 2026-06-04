@@ -9,8 +9,8 @@
  * correspondente, sem espalhar mapping pelo código.
  */
 
-import type { Conversation } from "@/components/crm/conversation-card";
-import type { Message } from "@/components/crm/message-bubble";
+import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
+import type { Message, FormField } from "@/components/crm/message-bubble";
 
 import type {
   ContactDetail,
@@ -97,6 +97,24 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
+/**
+ * Rótulo de separador de dia no chat: "Hoje", "Ontem" ou "dd/mm/yyyy".
+ * Retorna "" se a data for inválida.
+ */
+export function formatDayLabel(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  if (isSameDay(date, now)) return "Hoje";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(date, yesterday)) return "Ontem";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mo}/${date.getFullYear()}`;
+}
+
 /** Heurística: contato "online" se houve atividade nos últimos 5min. */
 function deriveOnline(lastInboundAt: string | null | undefined): "online" | "offline" {
   if (!lastInboundAt) return "offline";
@@ -105,10 +123,88 @@ function deriveOnline(lastInboundAt: string | null | undefined): "online" | "off
   return Date.now() - d.getTime() < 5 * 60_000 ? "online" : "offline";
 }
 
-/** Deriva o badge visual a partir das tags do contato / estado da conversa. */
-function deriveBadge(
-  row: ConversationListRow,
-): Conversation["badge"] | undefined {
+/**
+ * Deriva o "badge" semantico a partir das tags do contato / estado da
+ * conversa. A versao nova do `ConversationCard` (v0 ajustes-v3) NAO
+ * exibe mais o badge no card — mas o tipo continua sendo retornado
+ * porque o `ChatContactView` e o `toContactStatus` o usam para
+ * o header do chat (Enterprise / Lead / Cliente).
+ */
+export type ConversationBadge = "enterprise" | "lead" | "success";
+
+/**
+ * Tempo restante ate a janela de 24h da Meta/WhatsApp expirar.
+ * Espelha a logica do legado (chat-window): backend e' source of truth,
+ * mas para o CARD da lista nao temos `session.active` por conversa —
+ * computamos a partir de `lastInboundAt`. Aceitamos divergencia de
+ * minutos com o ChatArea (a Meta tem alguma folga).
+ */
+export function sessionRemainingFromInbound(
+  lastInboundAt: string | null | undefined,
+  windowHours = 24,
+): { label: string | null; expired: boolean } {
+  if (!lastInboundAt) return { label: null, expired: true };
+  const d = new Date(lastInboundAt);
+  if (Number.isNaN(d.getTime())) return { label: null, expired: true };
+  const deadline = d.getTime() + windowHours * 3600_000;
+  const ms = deadline - Date.now();
+  if (ms <= 0) return { label: "Expirada", expired: true };
+  const totalMin = Math.floor(ms / 60_000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h >= 1) return { label: `${h}h ${m}min`, expired: false };
+  return { label: `${m}min`, expired: false };
+}
+
+/**
+ * Infere o tipo da ultima mensagem a partir do preview ou de pistas
+ * comuns que o backend coloca em listagens (ex.: "[Áudio]", "📎 Doc.pdf").
+ * Quando o backend evoluir e enviar `lastMessage.messageType`, usamos
+ * direto. Por enquanto, regex resiliente — fallback "text".
+ */
+export function inferLastMessageType(
+  preview: string | null | undefined,
+  explicitType?: string | null,
+): LastMessageType {
+  if (explicitType) {
+    const t = explicitType.toLowerCase();
+    if (t === "image") return "image";
+    if (t === "audio" || t === "voice") return "audio";
+    if (t === "video") return "video";
+    if (t === "document") return "document";
+    if (t === "file") return "file";
+    if (t === "template") return "template";
+    if (t === "note") return "note";
+    if (t === "location") return "location";
+    if (t === "contact" || t === "contacts") return "contact";
+  }
+  const p = (preview ?? "").trim().toLowerCase();
+  if (!p) return "text";
+  if (/^\[?(áudio|audio|voz|voice)\]?/.test(p) || p.startsWith("🎵") || p.startsWith("🎤")) {
+    return "audio";
+  }
+  if (/^\[?(imagem|foto|image|photo)\]?/.test(p) || p.startsWith("📷") || p.startsWith("🖼")) {
+    return "image";
+  }
+  if (/^\[?(vídeo|video)\]?/.test(p) || p.startsWith("🎥") || p.startsWith("🎬")) {
+    return "video";
+  }
+  if (
+    /^\[?(documento|document|arquivo|pdf)\]?/.test(p) ||
+    p.startsWith("📎") ||
+    p.startsWith("📄")
+  ) {
+    return "document";
+  }
+  if (/^\[?(template|modelo)\]?/.test(p)) return "template";
+  if (/^\[?(localiza|location|mapa)\]?/.test(p) || p.startsWith("📍")) {
+    return "location";
+  }
+  if (/^\[?(contato|contact|vcard)\]?/.test(p)) return "contact";
+  return "text";
+}
+
+function deriveBadge(row: ConversationListRow): ConversationBadge | undefined {
   const tagNames = (row.tags ?? []).map((t) => (t.name ?? "").toLowerCase());
   if (tagNames.some((n) => n === "vip" || n.includes("enterprise"))) {
     return "enterprise";
@@ -129,20 +225,130 @@ export function toConversationCard(
 ): Conversation {
   const name = row.contact?.name?.trim() || "Sem nome";
   const lastActivity = row.lastMessageAt ?? row.lastInboundAt ?? null;
+  // Sessao da Meta (24h da ultima mensagem inbound do cliente).
+  const sess = sessionRemainingFromInbound(row.lastInboundAt);
+  // Primeira tag do contato — mostrada como pill ao lado do nome.
+  // Filtra strings vazias/whitespace por defesa.
+  const firstTagName = (row.tags ?? [])
+    .map((t) => (t.name ?? "").trim())
+    .find((n) => n.length > 0);
+  // O backend pode enviar tanto `lastMessage` (forma futura, com
+  // `preview`) quanto `lastMessagePreview` (forma atual, com `content`
+  // + `messageType`). Preferimos o que tiver dado real; se nenhum
+  // tiver, cai pra string vazia (mostra apenas o tipo, se conhecido).
+  const previewText =
+    row.lastMessage?.preview ??
+    row.lastMessagePreview?.content ??
+    "";
+  const lastMessageType = inferLastMessageType(
+    previewText,
+    row.lastMessagePreview?.messageType ?? null,
+  );
+  const dir = String(
+    row.lastMessage?.direction ?? row.lastMessagePreview?.direction ?? "",
+  ).toLowerCase();
+  const lastMessageDirection: "in" | "out" | undefined =
+    dir === "out" || dir === "outbound"
+      ? "out"
+      : dir === "in" || dir === "inbound"
+        ? "in"
+        : undefined;
+
   return {
     id: row.id,
     name,
     initials: avatarInitials(name),
     avatarColor: colorFromName(name),
     status: deriveOnline(row.lastInboundAt),
-    badge: deriveBadge(row),
     time: formatRelative(lastActivity),
-    preview: row.lastMessage?.preview ?? "",
+    preview: previewText,
     assignee: row.assignedTo?.name,
-    unread: row.unreadCount && row.unreadCount > 0 ? row.unreadCount : undefined,
+    // O card novo nao tem mais contador. Mapeamos unread > 0 para o
+    // marcador visual `urgent` (relogio vermelho) — preserva o sinal
+    // de "atencao necessaria" sem badge numerico.
+    urgent: !!(row.unreadCount && row.unreadCount > 0),
     active: options?.active,
     inactive: row.status !== "OPEN",
+    // ── Novos campos visuais ──────────────────────────────────────
+    tag: firstTagName ?? null,
+    // Lista completa de tags com id/cor — usada pelo cluster de chips
+    // do card (até 2 + indicador "+N") e pelo TagsPopover injetado
+    // via slot. Filtra entradas sem nome (defesa).
+    tags: (row.tags ?? [])
+      .filter((t) => (t.name ?? "").trim().length > 0)
+      .map((t) => ({ id: t.id, name: t.name, color: t.color ?? null })),
+    assigneeId: row.assignedTo?.id ?? null,
+    sessionExpiresIn: sess.label,
+    sessionExpired: sess.expired,
+    lastMessageType,
+    lastMessageDirection,
+    // Canal de origem — substitui o status dot pelo logo da plataforma
+    // no canto inferior direito do avatar.
+    channel: row.channel ?? null,
   };
+}
+
+/**
+ * Detecta e parseia respostas de formulário Meta Flow.
+ *
+ * Formato REAL que o backend grava em dto.content:
+ *
+ *   📋 *Resposta do formulário* — _Nome do Flow_
+ *
+ *   *Rótulo do campo 1*
+ *   ↳ Valor 1
+ *
+ *   *Rótulo do campo 2*
+ *   ↳ Valor 2
+ *
+ * Cada campo ocupa DUAS linhas: a primeira com o rótulo em negrito,
+ * a segunda começando com ↳ (ou ↓ / L) e o valor.
+ * Retorna null se o conteúdo não corresponder ao padrão.
+ */
+function parseFormResponse(content: string): { title: string; fields: FormField[] } | null {
+  // Mantém linhas em branco para navegação par-a-par; remove trailing spaces.
+  const raw = content.split(/\r?\n/).map((l) => l.trim());
+  if (!raw.length) return null;
+
+  // Cabeçalho: aceita emoji 📋 opcional + marcadores *_ opcionais + " — _Flow_" opcional.
+  const headerMatch = raw[0].match(
+    /^[\u{1F4CB}\u{1F4CB}]?\s*[*_]*resposta\s+do\s+formul[aá]rio[*_]*(?:\s*[—–-]\s*[_*]*(.+?)[_*]*)?$/iu,
+  );
+  if (!headerMatch) return null;
+
+  const title = (headerMatch[1] ?? "").replace(/[_*]/g, "").trim() || "Resposta do formulário";
+  const fields: FormField[] = [];
+
+  // Varre as linhas restantes procurando par: linha de rótulo + linha de valor.
+  for (let i = 1; i < raw.length; i++) {
+    const line = raw[i];
+    if (!line) continue; // linha em branco entre campos — pula
+
+    // Linha de rótulo: *Rótulo* ou _Rótulo_
+    const labelMatch = line.match(/^[*_]+(.+?)[*_]+$/);
+    if (labelMatch) {
+      // Próxima linha não-vazia deve ser o valor (↳ / ↓ / L)
+      let j = i + 1;
+      while (j < raw.length && !raw[j]) j++; // pula blanks
+      if (j < raw.length) {
+        const valueMatch = raw[j].match(/^[↳↓L]\s*(.+)/);
+        if (valueMatch) {
+          fields.push({ label: labelMatch[1].trim(), value: valueMatch[1].trim() });
+          i = j; // avança o cursor para após o valor
+          continue;
+        }
+      }
+    }
+
+    // Fallback: tenta o formato antigo (rótulo e valor na mesma linha).
+    const inlineMatch = line.match(/^[*_](.+?)[*_]\s*[↳↓L]\s*(.+)/);
+    if (inlineMatch) {
+      fields.push({ label: inlineMatch[1].trim(), value: inlineMatch[2].trim() });
+    }
+  }
+
+  if (!fields.length) return null;
+  return { title, fields };
 }
 
 /** InboxMessageDto → Message (bolha do chat). */
@@ -155,14 +361,51 @@ export function toMessageBubble(
   // ou SSE futuro mude o casing — nunca regredir o lado dos balões).
   const dir = String(dto.direction ?? "").toLowerCase();
   const isInbound = dir === "in" || dir === "inbound";
+  // O backend não envia `sender.kind`; a única chave de autoria serializada
+  // hoje é `senderName`. Automação grava `senderName === "Automação"` (mesma
+  // convenção da v1 e de lib/message-author.ts). Mantemos `sender.kind` como
+  // fallback forward-compatible caso o DTO passe a expor o objeto sender.
+  const isBot =
+    dto.sender?.kind === "BOT" || (!isInbound && dto.senderName === "Automação");
+
+  // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
+  const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
+
   return {
     id: dto.id,
-    content: dto.content ?? "",
+    content: formParsed ? "" : (dto.content ?? ""),
     time: formatTime(dto.createdAt),
+    createdAt: dto.createdAt ?? undefined,
     type: isInbound ? "incoming" : "outgoing",
     senderInitials: isInbound ? avatarInitials(contactName) : undefined,
-    senderColor: isInbound ? colorFromName(contactName) : undefined,
+    isBot: isBot || undefined,
+    formFields: formParsed?.fields,
+    formTitle: formParsed?.title,
+    messageType: dto.messageType ?? undefined,
+    mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
+    // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.
+    status: isInbound ? undefined : toBubbleStatus(dto),
   };
+}
+
+/** Mapeia o status do DTO (PENDING/SENT/DELIVERED/READ/FAILED) para a
+ *  forma usada pela bolha. `readAt` serve de fallback quando o backend
+ *  ainda não preencheu `status`. */
+function toBubbleStatus(dto: InboxMessageDto): Message["status"] {
+  switch (dto.status) {
+    case "PENDING":
+      return "pending";
+    case "SENT":
+      return "sent";
+    case "DELIVERED":
+      return "delivered";
+    case "READ":
+      return "read";
+    case "FAILED":
+      return "failed";
+    default:
+      return dto.readAt ? "read" : undefined;
+  }
 }
 
 /** Header do ChatArea (contact pill). */
@@ -171,7 +414,7 @@ export interface ChatContactView {
   initials: string;
   avatarColor: Conversation["avatarColor"];
   status: Conversation["status"];
-  badge?: Conversation["badge"];
+  badge?: ConversationBadge;
   phone: string;
   contactId: string;
 }
@@ -225,9 +468,17 @@ export function deriveStagePills(
   });
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────��─────────────────────────
 // Sidebar direito — ContactAside.contact
 // ─────────────────────────────────────────────────────────────────
+
+/** Shape normalizado de um campo do painel — usado em ContactAsideView. */
+export interface PanelField {
+  fieldId: string;
+  label: string;
+  value: string;
+  type: string;
+}
 
 export interface ContactAsideView {
   name: string;
@@ -253,6 +504,12 @@ export interface ContactAsideView {
   tag: string;
   note?: string;
   activities: { text: string; time: string; color?: string }[];
+  /**
+   * Campos personalizados mesclados: inboxLeadPanelFields (contato) +
+   * dealInboxPanelFields do primeiro deal ativo, deduplicados por fieldId,
+   * com valores nulos/vazios filtrados.
+   */
+  panelFields: PanelField[];
 }
 
 const FALLBACK_FIELD = "—";
@@ -300,6 +557,55 @@ export function toContactAside(
           : undefined,
   }));
 
+  // Mapeia todos os deals vinculados ao contato com campos customizados.
+  // stageCount/stageIndex NÃO são derivados aqui — são falsos.
+  // O client do inbox usa useDealDetail + useBoard para obter segmentos reais.
+  const deals = (contact?.deals ?? []).map((d) => ({
+    id: d.id,
+    title: d.title,
+    value: d.value,
+    stageName: d.stageName ?? null,
+    stageId: d.stageId ?? null,
+    pipelineId: (d as { pipelineId?: string }).pipelineId ?? null,
+    productName: d.productName ?? null,
+    customFields: (d as { customFields?: { fieldId: string; label: string; value: string | null }[] }).customFields ?? [],
+  }));
+
+  // ── panelFields: mescla inboxLeadPanelFields (contato) + dealInboxPanelFields
+  // do deal ativo, deduplicando por fieldId e filtrando valores nulos/vazios.
+  const activeDealId = firstDeal?.id;
+  const contactPanelFields = contact?.inboxLeadPanelFields ?? [];
+  const dealPanelFields = activeDealId
+    ? (contact?.dealInboxPanelFields?.[activeDealId] ?? [])
+    : [];
+
+  /** Remove prefixo "n_" e troca "_" por espaço de uma opção do Meta Flow. */
+  function cleanFlowOption(s: string): string {
+    return s.replace(/^\d+_/, "").replace(/_+/g, " ").trim();
+  }
+  /** Limpa valor de opção individual ou lista "n_Texto, n_Texto" do Meta Flow. */
+  function cleanFlowValue(v: string): string {
+    if (!v) return v;
+    if (v.includes(", ") && v.split(", ").every((p) => /^\d+_/.test(p.trim()))) {
+      return v.split(", ").map((p) => cleanFlowOption(p.trim())).join(", ");
+    }
+    return cleanFlowOption(v);
+  }
+
+  const seenFieldIds = new Set<string>();
+  const panelFields: PanelField[] = [...contactPanelFields, ...dealPanelFields]
+    .filter((f) => {
+      if (!f.value?.trim() || seenFieldIds.has(f.fieldId)) return false;
+      seenFieldIds.add(f.fieldId);
+      return true;
+    })
+    .map((f) => ({
+      fieldId: f.fieldId,
+      label: f.label || f.name,
+      value: cleanFlowValue(f.value as string),
+      type: f.type,
+    }));
+
   return {
     name,
     initials: avatarInitials(name),
@@ -324,12 +630,14 @@ export function toContactAside(
     tag: tags[0]?.name ?? FALLBACK_FIELD,
     note: contact?.notes ?? undefined,
     activities,
+    deals,
+    panelFields,
   };
 }
 
 // ─────────────────────────────────────────────────────────────────
 // Session expirada? (alerta de 24h da WhatsApp Business)
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────���───────────────────────────
 
 const SESSION_WINDOW_HOURS = 24;
 

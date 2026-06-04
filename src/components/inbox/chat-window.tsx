@@ -46,7 +46,6 @@ import {
   Volume2,
   Wrench,
   X,
-  Zap,
 } from "lucide-react";
 import { AIDraftCard } from "@/components/inbox/ai-draft-card";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
@@ -54,9 +53,15 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { AudioRecorder } from "@/components/inbox/audio-recorder";
 import { EmojiPicker } from "@/components/inbox/emoji-picker";
-import { QuickReplies } from "@/components/inbox/quick-replies";
 import { TemplatePicker } from "@/components/inbox/template-picker";
+import {
+  SlashCommandMenu,
+  useSlashMenu,
+  type SlashItem,
+} from "@/components/inbox/slash-command-menu";
 import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
+import { getContact } from "@/features/inbox-v2/api/misc";
+import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -264,7 +269,6 @@ async function postForward(
 
 type ActivePanel =
   | "none"
-  | "quick-replies"
   | "emoji"
   | "templates"
   | "task"
@@ -317,7 +321,6 @@ function HighlightedText({
 
 type AttachPopoverProps = {
   onFile: () => void;
-  onQuickReply: () => void;
   onTemplate: () => void;
   onTask: () => void;
   onSchedule: () => void;
@@ -334,7 +337,6 @@ type AttachPopoverProps = {
 
 function AttachPopover({
   onFile,
-  onQuickReply,
   onTemplate,
   onTask,
   onSchedule,
@@ -356,20 +358,13 @@ function AttachPopover({
       >
         <Plus className="size-5" strokeWidth={2} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bottom-full start-0 z-[60] mb-1 mt-0 min-w-[208px] rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
+      <DropdownMenuContent className="z-[60] min-w-[208px] rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
         <DropdownMenuItem
           className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
           onClick={onFile}
         >
           <Paperclip className="size-3.5 shrink-0" />
           Anexar arquivo
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
-          onClick={onQuickReply}
-        >
-          <Zap className="size-3.5 shrink-0" />
-          Respostas rápidas
         </DropdownMenuItem>
         {!isBaileysChannel ? (
           <DropdownMenuItem
@@ -1302,6 +1297,12 @@ export function ChatWindow({
     effectiveSignature,
   ]);
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // CRÍTICO: dar prioridade ao slash menu — quando ele está aberto,
+    // Up/Down/Enter/Esc/Tab DEVEM controlá-lo, e não disparar envio.
+    // O hook retorna `true` quando consumiu o evento.
+    if (slash.onKeyDown(e)) {
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (pendingFile) sendFile();
@@ -1477,6 +1478,78 @@ export function ChatWindow({
   );
   const isBusy = sendMutation.isPending || attachMutation.isPending;
   const isResolved = conversationStatus === "RESOLVED";
+
+  /** Composer Meta sem sessão ativa (textarea desabilitado) — mesmo critério do `disabled` do textarea. */
+  const composeDisabled =
+    !isBaileysChannel && !sessionActive && sessionInfo != null && !noteMode;
+
+  // ─── Slash command (mensagens prontas via "/") ───────────────────
+  // CRÍTICO: estes hooks PRECISAM ficar antes do `if (!conversationId)
+  // return null` abaixo. Caso contrário, ao alternar entre "nenhuma
+  // conversa selecionada" e "conversa aberta", a quantidade de hooks
+  // muda entre renders → React quebra com "Rendered more hooks than
+  // during the previous render".
+  const contactDetailQuery = useQuery({
+    queryKey: ["chat-contact-detail", contactId],
+    queryFn: () => getContact(contactId!),
+    enabled: !!contactId,
+    staleTime: 5 * 60_000,
+  });
+  const slashTemplateContext = React.useMemo<InternalTemplateContext>(() => {
+    const c = contactDetailQuery.data;
+    const firstDeal = c?.deals?.[0];
+    return {
+      contact: c
+        ? {
+            name: c.name,
+            phone: c.phone ?? null,
+            email: c.email ?? null,
+            cpf: c.cpf ?? null,
+            tags: c.tags ?? null,
+          }
+        : null,
+      deal: firstDeal
+        ? {
+            id: firstDeal.id,
+            title: firstDeal.title,
+            value: firstDeal.value,
+            stageName: firstDeal.stageName ?? null,
+            productName: firstDeal.productName ?? null,
+          }
+        : null,
+      agent: {
+        name: session?.user?.name ?? null,
+        email: session?.user?.email ?? null,
+      },
+    };
+  }, [contactDetailQuery.data, session]);
+
+  const handlePickMetaTemplate = React.useCallback(
+    (item: Extract<SlashItem, { kind: "meta-template" }>) => {
+      // Reusa o pendingTemplate flow já existente — abre o painel de
+      // preview/variáveis e o operador confirma o envio.
+      if (!conversationId) return;
+      setPendingTemplate({
+        name: item.name,
+        label: item.label || undefined,
+        content: item.bodyPreview,
+        metaTemplateId: item.id,
+        operatorVariables: item.operatorVariables ?? null,
+      });
+    },
+    [conversationId],
+  );
+
+  const slash = useSlashMenu({
+    draft,
+    setDraft,
+    textareaRef,
+    templateContext: slashTemplateContext,
+    onPickMetaTemplate: handlePickMetaTemplate,
+    // Em modo nota ou com anexo pendente, atalho fica "à toa" — usuário
+    // raramente quer template numa nota interna ou junto com mídia.
+    disabled: noteMode || !!pendingFile || composeDisabled,
+  });
 
   if (!conversationId) return null;
   if (isLoading)
@@ -1769,10 +1842,6 @@ export function ChatWindow({
       return null;
     return c;
   };
-
-  /** Composer Meta sem sessão ativa (textarea desabilitado) — mesmo critério do `disabled` do textarea. */
-  const composeDisabled =
-    !isBaileysChannel && !sessionActive && sessionInfo != null && !noteMode;
 
   return (
     <div
@@ -2141,20 +2210,28 @@ export function ChatWindow({
                         "relative",
                         isNote &&
                           cn(
-                            "w-full border-l-2 border-l-slate-200 bg-[#f8fafc]",
-                            isPinned &&
-                              "border-l-primary bg-[var(--color-primary-soft)]/35",
+                            "w-full border-l-2",
+                            isPinned
+                              ? "border-l-primary bg-[var(--color-primary-soft)]/35"
+                              : "border-l-[var(--chat-bubble-note-border)]",
                           ),
                         !isNote &&
                           (out ? dt.chat.bubble.sent : dt.chat.bubble.received),
                       )}
                       style={
-                        !isNote && out
-                          ? {
-                              background: "var(--chat-bubble-sent-bg)",
-                              color: "var(--chat-bubble-sent-text)",
-                            }
-                          : undefined
+                        isNote && !isPinned
+                          ? { background: "var(--chat-bubble-note-bg)" }
+                          : !isNote && out
+                            ? {
+                                background: "var(--chat-bubble-sent-bg)",
+                                color: "var(--chat-bubble-sent-text)",
+                              }
+                            : !isNote && !out
+                              ? {
+                                  background: "var(--chat-bubble-received-bg)",
+                                  borderColor: "var(--chat-bubble-received-border)",
+                                }
+                              : undefined
                       }
                     >
                       {!isNote && (
@@ -2607,10 +2684,10 @@ export function ChatWindow({
                                   )}
                                   style={
                                     out && !isNote
-                                      ? {
-                                          color: "var(--chat-bubble-sent-text)",
-                                        }
-                                      : undefined
+                                      ? { color: "var(--chat-bubble-sent-text)" }
+                                      : !out && !isNote
+                                        ? { color: "var(--chat-bubble-received-text)" }
+                                        : undefined
                                   }
                                 >
                                   {textBody}
@@ -2860,14 +2937,6 @@ export function ChatWindow({
         {/* Mobile: px-3 (composer encosta nas bordas pra ganhar largura
             de digitação). Desktop: px-6 preserva o respiro premium. */}
         <div className={cn(rowMax, "px-3 sm:px-6")}>
-          <QuickReplies
-            open={activePanel === "quick-replies"}
-            onPick={(t) => {
-              setDraft(t);
-              setActivePanel("none");
-              textareaRef.current?.focus();
-            }}
-          />
           <EmojiPicker open={activePanel === "emoji"} onPick={insertEmoji} />
           <TemplatePicker
             open={activePanel === "templates"}
@@ -3446,7 +3515,13 @@ export function ChatWindow({
 
         {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
         {compactChrome ? (
-          <footer className="shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+          <footer className="relative shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+            <SlashCommandMenu
+              state={slash.state}
+              onSelectItem={slash.onSelectItem}
+              onHover={slash.setActiveIndex}
+              className="absolute bottom-full left-2 mb-2"
+            />
             {noteMode ? (
               <div
                 className={cn(
@@ -3473,7 +3548,6 @@ export function ChatWindow({
             >
               <AttachPopover
                 onFile={() => fileInputRef.current?.click()}
-                onQuickReply={() => togglePanel("quick-replies")}
                 onTemplate={() => togglePanel("templates")}
                 onTask={() => togglePanel("task")}
                 onSchedule={() => togglePanel("schedule")}
@@ -3529,7 +3603,9 @@ export function ChatWindow({
                       ? "Nota interna…"
                       : composeDisabled
                         ? "Sessão expirada. Envie um template…"
-                        : "Mensagem"
+                        : isMobile
+                          ? "Mensagem ou /"
+                          : "Mensagem ou / para respostas rápidas"
                 }
                 rows={1}
                 disabled={composeDisabled}
@@ -3593,7 +3669,13 @@ export function ChatWindow({
             </div>
           </footer>
         ) : (
-          <footer className="border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-white/5">
+          <footer className="relative border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-white/5">
+            <SlashCommandMenu
+              state={slash.state}
+              onSelectItem={slash.onSelectItem}
+              onHover={slash.setActiveIndex}
+              className="absolute bottom-full left-3 mb-2 sm:left-6"
+            />
             <div className="rounded-[22px] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-white/10 dark:bg-white/8">
               <div className="flex items-center border-b border-white/40 px-5 py-3">
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -3664,7 +3746,6 @@ export function ChatWindow({
               >
                 <AttachPopover
                   onFile={() => fileInputRef.current?.click()}
-                  onQuickReply={() => togglePanel("quick-replies")}
                   onTemplate={() => togglePanel("templates")}
                   onTask={() => togglePanel("task")}
                   onSchedule={() => togglePanel("schedule")}

@@ -45,11 +45,16 @@
   --color-danger-text:      #b91c1c;
   --color-warning:          #f59e0b;
   --color-info:             #3b82f6;
+  --color-teal:             #10D8D8;
+
+  /* ── Tooltip (charts/heatmap do Dashboard v2) ─────────────────── */
+  --tooltip-bg:             #0f172a;
+  --tooltip-text:           #f8fafc;
 
   /* ── Tokens de texto (espelhar globals.css principal) ─────────── */
   --text-primary:           #0f172a;
-  --text-secondary:         #475569;
-  --text-muted:             #64748b;
+  --text-secondary:         #374151;   /* era #475569 — escurecido para ratio 7.2:1 */
+  --text-muted:             #4b5563;   /* era #64748b — escurecido para ratio 6.1:1 */
 
   /* ── Cores das colunas do Kanban (KanbanColumn.color) ─────────── */
   --col-novo:      #94a3b8;    /* slate — estágio inicial neutro */
@@ -58,13 +63,39 @@
   --col-nego:      #f59e0b;    /* amber */
   --col-fecha:     #10b981;    /* emerald — fechamento/sucesso */
 
-  /* ── Raio extra usado em alguns wrappers do v0 ────────────────── */
-  --radius-2xl: 2rem;       /* 32px — wrappers da NavRail / DealDetailPanel */
+  /* ── Glass — superfícies, bordas e sombras ────────────────────── */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de negócio/conversa — legíveis */
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);   /* inputs, popovers */
+  --glass-bg-panel:         rgba(255, 255, 255, 0.32);   /* nav-rail, colunas — translúcido real */
+  --glass-bg-strong:        rgba(255, 255, 255, 0.32);   /* kanban columns — mesmo nível do panel */
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais/dialogs — opaco */
+  --glass-border:           rgba(180, 200, 230, 0.55);   /* borda padrão */
+  --glass-border-subtle:    rgba(180, 200, 230, 0.30);   /* borda sutil */
+  --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
+  --glass-shadow:           0 4px 24px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+
+  /* ── Raios extras usados nos componentes do v0 ────────────────── */
+  --radius-sm:   0.375rem;  /*  6px */
+  --radius-md:   0.5rem;    /*  8px */
+  --radius-lg:   0.75rem;   /* 12px */
+  --radius-xl:   1rem;      /* 16px */
+  --radius-2xl:  2rem;      /* 32px — wrappers da NavRail / DealDetailPanel */
   --radius-full: 9999px;
 
   /* ── Transições padrão do v0 ──────────────────────────────────── */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Tokens de input / formulário ─────────────────────────────── */
+  --input-bg:           var(--glass-bg-overlay);
+  --input-border:       var(--glass-border);
+  --input-border-focus: rgba(91, 111, 245, 0.50);
+  --input-ring-focus:   rgba(91, 111, 245, 0.20);
+  --input-text:         var(--text-primary);
+  --input-placeholder:  var(--text-muted);
+  --input-radius:       var(--radius-lg);
+  --input-height:       2.5rem;   /* 40px */
 }
 
 /* ── Gradientes de avatar usados em DealCard, AvatarGlass, NavRail
@@ -105,11 +136,201 @@
   --color-enterprise-bg: rgba(91, 111, 245, 0.15);
   --color-lead:          #f59e0b;
   --color-lead-bg:       rgba(245, 158, 11, 0.15);
+  --color-teal:          #10D8D8;
+
+  /* Tooltip (charts/heatmap do Dashboard v2) */
+  --tooltip-bg:          #0f172a;
+  --tooltip-text:        #f8fafc;
 
   /* Texto */
   --text-primary:        #0f172a;
-  --text-secondary:      #475569;
-  --text-muted:          #64748b;
+  --text-secondary:      #374151;
+  --text-muted:          #4b5563;
+
+  /* Glass — superfícies, bordas e sombras */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);
+  --glass-bg-panel:         rgba(255, 255, 255, 0.32);
+  --glass-bg-strong:        rgba(255, 255, 255, 0.32);
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);
+  --glass-border:           rgba(180, 200, 230, 0.55);
+  --glass-border-subtle:    rgba(180, 200, 230, 0.30);
+  --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
+  --glass-shadow:           0 4px 24px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+
+  /* Raios extras */
+  --radius-sm:   0.375rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-xl:   1rem;
+  --radius-2xl:  2rem;
+  --radius-full: 9999px;
+
+  /* Tokens de input */
+  --input-bg:           rgba(255, 255, 255, 0.72);
+  --input-border:       rgba(180, 200, 230, 0.55);
+  --input-border-focus: rgba(91, 111, 245, 0.50);
+  --input-ring-focus:   rgba(91, 111, 245, 0.20);
+  --input-text:         #0f172a;
+  --input-placeholder:  #64748b;
+  --input-radius:       0.75rem;
+  --input-height:       2.5rem;
+
+  /* Chat bubbles — light mode */
+  --chat-bubble-received-bg:     #ffffff;
+  --chat-bubble-received-border: rgba(203, 213, 225, 0.80);
+  --chat-bubble-received-text:   #0f172a;
+  --chat-bubble-received-time:   #94a3b8;
+  --chat-bubble-note-bg:         #f8fafc;
+  --chat-bubble-note-border:     #e2e8f0;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Escala global das rotas v2 (zoom 0.88).
+   Motivo: o pacote v0 foi desenhado com paddings/fonts mais generosos
+   que ficam grandes demais em 100% de zoom em monitores comuns
+   (1080p / 1440p). Aplicamos `zoom` no wrapper da rota, o que escala
+   layout E tipografia uniformemente — px, rem, gaps, shadows etc.
+   `zoom` é suportado em todos os Chromium e Safari modernos, que
+   sao os browsers alvo deste CRM.
+   Popovers via createPortal (escapam o subtree do v2-root) continuam
+   no tamanho natural; isso e' desejado para nao distorcer dropdowns
+   ancorados a posicoes fixed calculadas em pixels reais da viewport.
+   Ajuste centralizado: mude o valor de `zoom` aqui se quiser uma
+   escala diferente (ex.: 0.9 para mais conservador, 0.85 para mais
+   denso). Nao mexa em px/font-size dos componentes individuais.
+   ────────────────────────────────────────────────────────────────── */
+.v2-root {
+  --v2-scale: 0.88;
+  zoom: var(--v2-scale);
+}
+
+/* Utility para alturas que devem ocupar 100% da viewport REAL apesar
+   do zoom. Sem isso, `h-dvh` (que e' 100% da viewport REAL) e' encolhido
+   pelo zoom e o conteudo cobre apenas 88% da tela, sobrando faixa
+   vazia embaixo. Com --v2-scale, `calc(100dvh / 0.88)` ≈ 113.64dvh
+   antes do zoom — apos o zoom encolher, fica exatamente 100dvh. */
+.v2-screen {
+  height: calc(100dvh / var(--v2-scale, 1));
+}
+.v2-min-screen {
+  min-height: calc(100dvh / var(--v2-scale, 1));
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Scrollbars sutis para todas as rotas v2.
+   - WebKit (Chromium/Safari): track invisível, thumb fino (6px) com
+     opacidade baixa que sobe levemente no hover. Sem setas.
+   - Firefox: scrollbar-width thin + cor matching.
+   - IE/Edge legado ignoram, mantendo o padrão.
+   Aplicado para qualquer elemento dentro de .v2-root, cobrindo as
+   colunas (Conversas, Kanban) e quaisquer áreas de overflow internas.
+   ────────────────────────────────────────────────────────────────── */
+.v2-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.v2-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.v2-root ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.12);
+  border-radius: 9999px;
+  transition: background 150ms ease;
+}
+.v2-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.28);
+}
+.v2-root ::-webkit-scrollbar-button {
+  display: none; /* remove setas no topo e base */
+  height: 0;
+  width: 0;
+}
+.v2-root ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Firefox */
+.v2-root * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DARK MODE v2 — ativado pela classe .v2-dark no <html>
+   ══════════════════════════════════════════════════════════════════ */
+.v2-dark {
+  /* Background mesh escuro — azul-marinho profundo com toque roxo */
+  --bg-base:    #0f1623;
+  --bg-mesh-1:  #141d2e;
+  --bg-mesh-2:  #1a1030;
+  --bg-mesh:    linear-gradient(135deg, #0f1623 0%, #141d2e 40%, #1a1030 70%, #0f1623 100%);
+
+  /* Marca — mantém as mesmas cores de destaque, levemente mais claras */
+  --brand-primary:       #7b8df7;
+  --brand-primary-light: #a0aefa;
+  --brand-primary-dark:  #5b6ff5;
+  --brand-secondary:     #c4b5fd;
+  --brand-accent:        #f9a8d4;
+
+  /* Texto */
+  --text-primary:   #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+
+  /* Glass — escuro com blur */
+  --glass-bg-base:     rgba(30, 41, 59, 0.85);
+  --glass-bg-overlay:  rgba(30, 41, 59, 0.65);
+  --glass-bg-panel:    rgba(15, 23, 42, 0.55);
+  --glass-bg-strong:   rgba(15, 23, 42, 0.55);
+  --glass-bg-modal:    rgba(15, 23, 42, 0.98);
+  --glass-border:      rgba(99, 120, 180, 0.30);
+  --glass-border-subtle: rgba(99, 120, 180, 0.18);
+  --glass-shadow-sm:   0 1px 6px rgba(0, 0, 0, 0.35);
+  --glass-shadow:      0 4px 24px rgba(0, 0, 0, 0.50);
+  --glass-shadow-lg:   0 8px 40px rgba(0, 0, 0, 0.60);
+
+  /* Inputs */
+  --input-bg:           rgba(30, 41, 59, 0.65);
+  --input-border:       rgba(99, 120, 180, 0.30);
+  --input-border-focus: rgba(123, 141, 247, 0.60);
+  --input-ring-focus:   rgba(123, 141, 247, 0.25);
+  --input-text:         #e2e8f0;
+  --input-placeholder:  #64748b;
+
+  /* Cores semânticas */
+  --color-enterprise-bg: rgba(123, 141, 247, 0.20);
+  --color-lead-bg:       rgba(245, 158, 11, 0.20);
+  --color-success-bg:    rgba(16, 185, 129, 0.18);
+
+  /* Tooltip */
+  --tooltip-bg:   #1e2d45;
+  --tooltip-text: #e2e8f0;
+
+  /* Chat bubbles — balao recebido usa slate-700 opaco para
+     contrastar com o fundo do chat (#0f1623 / #141d2e) */
+  --chat-bubble-received-bg:     #334155;
+  --chat-bubble-received-border: rgba(99, 120, 180, 0.30);
+  --chat-bubble-received-text:   #e2e8f0;
+  --chat-bubble-received-time:   #94a3b8;
+  --chat-bubble-note-bg:         #1e3a5f;
+  --chat-bubble-note-border:     rgba(99, 120, 180, 0.35);
+
+  /* Scrollbar no dark */
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+/* Scrollbars dark */
+.v2-dark .v2-root ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+}
+.v2-dark .v2-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Background do layout dark */
+.v2-dark .bg-\[var\(--bg-base\)\] {
+  background-color: var(--bg-base);
 }
 
 @layer utilities {

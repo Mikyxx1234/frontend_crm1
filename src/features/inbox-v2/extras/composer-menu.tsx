@@ -2,34 +2,61 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  IconPlus,
   IconPaperclip,
-  IconBolt,
   IconFileText,
+  IconLock,
+  IconClock,
+  IconCheckbox,
+  IconCircleCheck,
+  IconRotateClockwise,
+  IconMessageCode,
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
 
 import { FilePickerButton } from "./file-picker-button";
-import { QuickReplyList } from "./quick-reply-popover";
-import { TemplatePickerList } from "./template-picker-popover";
+import { TemplatePickerList, InternalTemplatePickerList } from "./template-picker-popover";
+import { ScheduleDialog } from "./schedule-dialog";
+import { TaskDialog } from "./task-dialog";
 
 /**
- * Menu unificado de anexos / ações secundárias do composer.
- * Substitui o botão "Anexar" do ChatArea: ao clicar abre um popover
- * com 3 opções rápidas (arquivo, resposta rapida, template).
+ * Menu unificado "+" do composer (estilo WhatsApp). Reúne as ações
+ * do composer do /inbox v1:
+ *  - Anexar arquivo
+ *  - Templates WhatsApp
+ *  - Nota interna (toggle — só quando onToggleNote é passado)
+ *  - Agendar mensagem
+ *  - Nova tarefa
+ *  - Finalizar / Reabrir conversa (só quando isResolved é definido)
  */
 export function ComposerMenu({
   conversationId,
-  onInsertText,
   className,
+  noteMode,
+  onToggleNote,
+  isResolved,
+  contactId,
 }: {
   conversationId: string | null;
-  onInsertText: (text: string) => void;
   className?: string;
+  noteMode?: boolean;
+  onToggleNote?: () => void;
+  isResolved?: boolean;
+  contactId?: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"root" | "quick" | "template">("root");
+  const [view, setView] = useState<"root" | "template" | "internal">("root");
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const toggleResolve = useToggleConversationResolve();
+
+  function closeMenu() {
+    setOpen(false);
+    setView("root");
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -38,15 +65,11 @@ export function ComposerMenu({
         popoverRef.current &&
         !popoverRef.current.contains(e.target as Node)
       ) {
-        setOpen(false);
-        setView("root");
+        closeMenu();
       }
     }
     function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setOpen(false);
-        setView("root");
-      }
+      if (e.key === "Escape") closeMenu();
     }
     document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onEsc);
@@ -55,6 +78,17 @@ export function ComposerMenu({
       document.removeEventListener("keydown", onEsc);
     };
   }, [open]);
+
+  function handleToggleResolve() {
+    if (!conversationId) return;
+    toggleResolve.mutate(
+      { conversationId, action: isResolved ? "reopen" : "resolve" },
+      { onSuccess: closeMenu },
+    );
+  }
+
+  const itemClass =
+    "flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-primary/8 hover:text-primary transition-colors [&>svg]:transition-colors hover:[&>svg]:text-primary";
 
   return (
     <div className="relative">
@@ -70,7 +104,7 @@ export function ComposerMenu({
         disabled={!conversationId}
         title="Anexos e mais opções"
       >
-        <IconPaperclip size={20} />
+        <IconPlus size={22} />
       </ButtonGlass>
 
       {open && conversationId ? (
@@ -80,49 +114,121 @@ export function ComposerMenu({
           role="menu"
         >
           {view === "root" ? (
-            <div className="flex w-56 flex-col gap-0.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+            <div
+              style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
+              className="flex w-56 flex-col gap-px rounded-[var(--radius-lg)] border border-border p-1.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
+            >
               <FilePickerButton
                 conversationId={conversationId}
-                className="w-full justify-start px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)]"
+                className="w-full justify-start rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] transition-colors hover:bg-primary/8 hover:text-primary [&>svg]:transition-colors hover:[&>svg]:text-primary"
               >
-                <span className="inline-flex items-center gap-2">
-                  <IconPaperclip size={14} /> Anexar arquivo
+                <span className="inline-flex items-center gap-2.5">
+                  <IconPaperclip size={15} /> Anexar arquivo
                 </span>
               </FilePickerButton>
+
               <button
                 type="button"
-                onClick={() => setView("quick")}
-                className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)]"
+                onClick={() => setView("internal")}
+                className={itemClass}
               >
-                <IconBolt size={14} /> Respostas rápidas
+                <IconMessageCode size={15} /> Modelos internos
               </button>
+
               <button
                 type="button"
                 onClick={() => setView("template")}
-                className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)]"
+                className={itemClass}
               >
-                <IconFileText size={14} /> Templates WhatsApp
+                <IconFileText size={15} /> Templates WhatsApp
               </button>
+
+              {onToggleNote ? (
+                <>
+                  <div className="my-1 h-px bg-border/60" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleNote();
+                      closeMenu();
+                    }}
+                    className={itemClass}
+                  >
+                    <IconLock size={15} />
+                    {noteMode ? "Sair do modo nota" : "Nota interna"}
+                  </button>
+                </>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setScheduleOpen(true);
+                  closeMenu();
+                }}
+                className={itemClass}
+              >
+                <IconClock size={15} /> Agendar mensagem
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTaskOpen(true);
+                  closeMenu();
+                }}
+                className={itemClass}
+              >
+                <IconCheckbox size={15} /> Nova tarefa
+              </button>
+
+              {isResolved !== undefined ? (
+                <>
+                  <div className="my-1 h-px bg-border/60" />
+                  <button
+                    type="button"
+                    disabled={toggleResolve.isPending}
+                    onClick={handleToggleResolve}
+                    className={`${itemClass} disabled:opacity-50`}
+                  >
+                    {isResolved ? (
+                      <>
+                        <IconRotateClockwise size={15} /> Reabrir conversa
+                      </>
+                    ) : (
+                      <>
+                        <IconCircleCheck size={15} /> Finalizar conversa
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : null}
             </div>
-          ) : view === "quick" ? (
-            <QuickReplyList
-              onInsert={onInsertText}
-              onClose={() => {
-                setOpen(false);
-                setView("root");
-              }}
+          ) : view === "internal" ? (
+            <InternalTemplatePickerList
+              conversationId={conversationId}
+              onClose={closeMenu}
             />
           ) : (
             <TemplatePickerList
               conversationId={conversationId}
-              onClose={() => {
-                setOpen(false);
-                setView("root");
-              }}
+              onClose={closeMenu}
             />
           )}
         </div>
       ) : null}
+
+      <ScheduleDialog
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        conversationId={conversationId}
+      />
+      <TaskDialog
+        open={taskOpen}
+        onClose={() => setTaskOpen(false)}
+        conversationId={conversationId}
+        contactId={contactId}
+      />
     </div>
   );
 }

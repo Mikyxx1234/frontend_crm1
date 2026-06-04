@@ -54,6 +54,15 @@ export function usePortalPopover(): PortalPopoverState {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
       const t = e.target as Node;
+      // Ignora cliques dentro de portais do Radix (DropdownMenu/Select/
+      // Popover) que renderizam FORA do popoverRef. Sem isso, selecionar
+      // uma opção de um dropdown aninhado fecharia o popover inteiro.
+      if (
+        t instanceof Element &&
+        t.closest("[data-radix-popper-content-wrapper]")
+      ) {
+        return;
+      }
       if (
         triggerRef.current &&
         !triggerRef.current.contains(t) &&
@@ -72,16 +81,34 @@ export function usePortalPopover(): PortalPopoverState {
 
 /**
  * Calcula posicao do popover a partir do rect do trigger.
- * Faz auto-flip se ultrapassa o bottom do viewport.
+ * - Auto-flip vertical se ultrapassa o bottom do viewport.
+ * - Clamp horizontal: quando o popover (largura `popoverWidth`)
+ *   ultrapassaria a borda direita da viewport, alinha pela DIREITA do
+ *   trigger (ou encosta na margem), evitando "vazar" a tela — caso
+ *   comum quando o trigger fica na sidebar direita.
  */
 export function computePopoverPosition(
   rect: DOMRect | null,
   popoverHeight = 280,
+  popoverWidth = 256,
+  margin = 8,
 ): { top: number; left: number } {
   if (!rect) return { top: 0, left: 0 };
   const viewportH = typeof window !== "undefined" ? window.innerHeight : 800;
+  const viewportW = typeof window !== "undefined" ? window.innerWidth : 1200;
+
   const spaceBelow = viewportH - rect.bottom;
   const flipUp = spaceBelow < popoverHeight && rect.top > popoverHeight;
   const top = flipUp ? rect.top - popoverHeight - 4 : rect.bottom + 4;
-  return { top, left: rect.left };
+
+  // Horizontal: tenta alinhar pela esquerda do trigger. Se estourar a
+  // direita, alinha o popover pela direita do trigger; por fim, faz
+  // clamp para nunca passar das margens da viewport.
+  let left = rect.left;
+  if (left + popoverWidth + margin > viewportW) {
+    left = rect.right - popoverWidth;
+  }
+  left = Math.max(margin, Math.min(left, viewportW - popoverWidth - margin));
+
+  return { top, left };
 }

@@ -37,7 +37,7 @@ export function AvatarGlass({
   return (
     <div
       className={cn(
-        "relative flex shrink-0 items-center justify-center rounded-full border-2 border-white font-display font-bold text-white",
+        "relative flex shrink-0 items-center justify-center rounded-full border-2 border-[var(--glass-bg-strong)] font-display font-bold text-white",
         sizeClasses[size],
         colorClasses[color],
         className
@@ -47,7 +47,7 @@ export function AvatarGlass({
       {status !== 'none' && (
         <span
           className={cn(
-            "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white",
+            "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--glass-bg-strong)]",
             status === 'online' ? 'bg-[var(--color-online)]' : 'bg-[var(--color-offline)]'
           )}
         />

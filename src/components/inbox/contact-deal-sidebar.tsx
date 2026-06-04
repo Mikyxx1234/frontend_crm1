@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { SortableSidebar } from "@/components/ui/sortable-sidebar";
 import { SidebarField } from "@/components/ui/sidebar-field";
+import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";
 import { useFieldLayout } from "@/hooks/use-field-layout";
 import type { SectionConfig } from "@/lib/field-layout";
 import { dt } from "@/lib/design-tokens";
@@ -225,6 +226,9 @@ export function ContactDealSidebar(props: Props) {
                   >
                     {activeDeal.stage?.name}
                   </span>
+                </div>
+                <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+                  <DealProductsSection dealId={activeDeal.id} compact />
                 </div>
               </>
             ) : (

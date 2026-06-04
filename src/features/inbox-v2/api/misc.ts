@@ -139,6 +139,16 @@ export async function listUsers(): Promise<TeamUser[]> {
 // Contato (sidebar direito)
 // ─────────────────────────────────────────────────────────────────
 
+/** Campo personalizado marcado como "exibir no painel do inbox". */
+export interface InboxLeadPanelField {
+  fieldId: string;
+  name: string;
+  label: string;
+  type: string;
+  options: string[];
+  value: string | null;
+}
+
 export interface ContactDetail {
   id: string;
   name: string;
@@ -160,7 +170,15 @@ export interface ContactDetail {
     stageId: string;
     stageName?: string | null;
     productName?: string | null;
+    /** Campos personalizados do negocio: array de pares label → valor */
+    customFields?: { fieldId: string; label: string; value: string | null }[];
+    /** Numero de estagios no pipeline (para progress bar) */
+    stageCount?: number;
+    /** Indice 0-based do estagio atual no pipeline */
+    stageIndex?: number;
   }[];
+  /** Campos personalizados do contato */
+  customFields?: { fieldId: string; label: string; value: string | null }[];
   activities?: {
     id: string;
     type: string;
@@ -168,6 +186,16 @@ export interface ContactDetail {
     scheduledAt?: string | null;
     completedAt?: string | null;
   }[];
+  /**
+   * Campos do CONTATO marcados como "exibir no painel do inbox".
+   * Retornados pelo backend em GET /api/contacts/:id.
+   */
+  inboxLeadPanelFields?: InboxLeadPanelField[];
+  /**
+   * Campos dos NEGOCIOS ativos marcados como "exibir no painel do inbox".
+   * Chave = dealId; valor = array de campos daquele negocio.
+   */
+  dealInboxPanelFields?: Record<string, InboxLeadPanelField[]>;
 }
 
 /** GET /api/contacts/:id */
@@ -198,7 +226,7 @@ export async function updateContact(
 
 // ─────────────────────────────────────────────────────────────────
 // Tags
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────��───────────────────────────────
 
 export interface Tag {
   id: string;
@@ -233,17 +261,61 @@ export async function createTag(payload: {
   return data as Tag;
 }
 
-/** POST /api/conversations/:id/tags */
-export async function setConversationTags(
+/**
+ * Resposta do endpoint de tags da conversa. O backend aplica a tag nas
+ * DUAS pontas (contato + deal OPEN do contato), então o retorno informa
+ * onde a tag foi aplicada — útil para invalidar as queries do Kanban.
+ */
+export interface ConversationTagResult {
+  ok: true;
+  action: "add" | "remove";
+  appliedToContact: boolean;
+  appliedToDeal: string | null;
+}
+
+/**
+ * POST /api/conversations/:id/tags — adiciona UMA tag à conversa.
+ *
+ * O contrato do backend é por tag (`{ tagId, action }`), não um array.
+ * Como não existe `TagOnConversation`, o backend grava em `TagOnContact`
+ * e replica no `TagOnDeal` do deal OPEN — por isso a tag aparece tanto
+ * no inbox quanto no Kanban (sincronização nativa).
+ */
+export async function addConversationTag(
   conversationId: string,
-  tagIds: string[],
-): Promise<void> {
+  tagId: string,
+): Promise<ConversationTagResult> {
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/tags`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tagIds }),
+    body: JSON.stringify({ tagId, action: "add" }),
   });
-  if (!res.ok) throw new Error("Erro ao atualizar tags");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao adicionar tag",
+    );
+  }
+  return data as ConversationTagResult;
+}
+
+/** DELETE /api/conversations/:id/tags — remove UMA tag (contato + deal). */
+export async function removeConversationTag(
+  conversationId: string,
+  tagId: string,
+): Promise<ConversationTagResult> {
+  const res = await fetch(apiUrl(`/api/conversations/${conversationId}/tags`), {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tagId }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao remover tag",
+    );
+  }
+  return data as ConversationTagResult;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -266,10 +338,35 @@ export async function listQuickReplies(): Promise<QuickReply[]> {
 
 export interface WhatsappTemplate {
   id: string;
+  /** Nome de exibição (label > metaTemplateName), análogo ao slash-menu. */
   name: string;
   category?: string;
   body?: string;
   language?: string;
+  /** Identificador na Graph (Cloud API) — necessário pra `sendTemplate`. */
+  metaTemplateId?: string;
+  /** Nome canônico WABA (vai para `templateName` no POST). */
+  metaTemplateName?: string;
+  hasButtons?: boolean;
+  hasVariables?: boolean;
+}
+
+/**
+ * Shape bruto retornado pelo backend `/api/whatsapp-template-configs/agent-enabled`.
+ * Mantemos privado pra que o frontend trabalhe sempre com `WhatsappTemplate`
+ * normalizado — evita o bug histórico em que componentes consumiam `tpl.name`
+ * (undefined) e renderizavam itens em branco.
+ */
+interface AgentEnabledTemplateRaw {
+  id: string;
+  metaTemplateId?: string;
+  metaTemplateName?: string;
+  label?: string;
+  language?: string;
+  category?: string | null;
+  bodyPreview?: string;
+  hasButtons?: boolean;
+  hasVariables?: boolean;
 }
 
 /** GET /api/whatsapp-template-configs/agent-enabled */
@@ -277,7 +374,20 @@ export async function listAgentEnabledTemplates(): Promise<WhatsappTemplate[]> {
   const res = await fetch(apiUrl("/api/whatsapp-template-configs/agent-enabled"));
   if (!res.ok) throw new Error("Erro ao carregar templates");
   const data = await res.json();
-  return Array.isArray(data) ? data : data.items ?? [];
+  const rows: AgentEnabledTemplateRaw[] = Array.isArray(data)
+    ? data
+    : (Array.isArray(data?.items) ? data.items : []);
+  return rows.map((row) => ({
+    id: row.id,
+    name: (row.label && row.label.trim()) || row.metaTemplateName || "(sem nome)",
+    metaTemplateId: row.metaTemplateId,
+    metaTemplateName: row.metaTemplateName,
+    body: row.bodyPreview ?? "",
+    category: row.category ?? undefined,
+    language: row.language,
+    hasButtons: row.hasButtons,
+    hasVariables: row.hasVariables,
+  }));
 }
 
 export interface ChannelConfig {

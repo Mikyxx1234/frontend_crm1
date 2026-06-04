@@ -166,16 +166,20 @@ export function BulkActionsBar({
     <>
       {showBar && (
       <div className="fixed inset-x-0 bottom-6 z-50 flex items-center justify-center px-4 transition-all animate-in slide-in-from-bottom-4 fade-in">
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 px-5 py-3 text-card-foreground shadow-2xl shadow-black/20 backdrop-blur-lg dark:shadow-black/60">
-          <div className="mr-2 flex items-center gap-2 border-r border-border pr-4">
+        {/* Em dark, `bg-card/95` resolve a `rgba(255,255,255,0.05)*0.95` ≈ invisível.
+            Forçamos um fundo sólido navy + borda visível em dark para a barra
+            ficar legível sobre o body/board. `!` necessário pra vencer o
+            `bg-transparent`/`text-primary` do variant outline do <Button>. */}
+        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 px-5 py-3 text-card-foreground shadow-2xl shadow-black/20 backdrop-blur-lg dark:!border-slate-700 dark:!bg-slate-900 dark:!text-slate-100 dark:shadow-black/60">
+          <div className="mr-2 flex items-center gap-2 border-r border-border pr-4 dark:border-slate-700/70">
             <CheckCircle2 className="size-4 text-cyan-600 dark:text-cyan-400" />
-            <span className="text-[13px] font-bold text-foreground">
+            <span className="text-[13px] font-bold text-foreground dark:text-slate-100">
               {selectedCount} selecionado{selectedCount !== 1 ? "s" : ""}
             </span>
             <button
               type="button"
               onClick={onClear}
-              className="ml-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="ml-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             >
               <X className="size-3.5" />
             </button>
@@ -188,7 +192,7 @@ export function BulkActionsBar({
               size="sm"
               variant="outline"
               onClick={() => setMoveOpen((v) => !v)}
-              className="h-8 gap-1.5 rounded-xl text-[12px]"
+              className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:hover:!bg-slate-700 dark:hover:!text-white"
               disabled={mutation.isPending}
             >
               <ArrowRightLeft className="size-3.5" />
@@ -225,7 +229,7 @@ export function BulkActionsBar({
               size="sm"
               variant="outline"
               onClick={() => setOwnerOpen((v) => !v)}
-              className="h-8 gap-1.5 rounded-xl text-[12px]"
+              className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:hover:!bg-slate-700 dark:hover:!text-white"
               disabled={mutation.isPending}
             >
               <UserCog className="size-3.5" />
@@ -290,7 +294,7 @@ export function BulkActionsBar({
             type="button"
             size="sm"
             variant="ghost"
-            className="h-8 gap-1.5 rounded-xl text-[12px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className="h-8 gap-1.5 rounded-xl text-[12px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive dark:!text-slate-300 dark:hover:!bg-rose-500/20 dark:hover:!text-rose-300"
             disabled={mutation.isPending}
             onClick={() => setDeleteOpen(true)}
           >

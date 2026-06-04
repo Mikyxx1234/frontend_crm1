@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Check, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { isPreviewMode, isV0PreviewHost } from "@/lib/preview-mode";
 
 function LoginShellFallback() {
   return (
@@ -36,6 +37,14 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Botão de preview: resolvido só no client (após mount) para cobrir o caso
+  // do v0.dev onde a env var NEXT_PUBLIC_PREVIEW_MODE não foi inlinada no build.
+  // Em SSR fica `false` → sem hydration mismatch.
+  const [previewAllowed, setPreviewAllowed] = useState(false);
+
+  useEffect(() => {
+    setPreviewAllowed(isPreviewMode() || isV0PreviewHost());
+  }, []);
 
   useEffect(() => {
     if (!loginSuccess) return;
@@ -227,6 +236,17 @@ function LoginForm() {
               </>
             )}
           </button>
+
+          {previewAllowed ? (
+            <a
+              href={`/api/preview-login?redirect=${encodeURIComponent(callbackUrl)}`}
+              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full border border-amber-400/60 bg-amber-50/80 text-[13px] font-medium text-amber-900 backdrop-blur transition-all hover:bg-amber-100/90 active:scale-[0.98]"
+              title="Disponível apenas em ambientes de preview (v0.dev). Pula a autenticação."
+            >
+              <Eye className="size-4" />
+              Entrar (preview)
+            </a>
+          ) : null}
 
           <p className="mt-4 text-center text-[13px] text-[var(--color-ink-soft)]">
             Não tem uma conta?{" "}

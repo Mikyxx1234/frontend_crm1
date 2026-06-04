@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { useSetDealStatus } from "@/features/pipeline-v2/hooks";
+import { useDeleteDeal, useSetDealStatus } from "@/features/pipeline-v2/hooks";
 import type { DealStatus, StatusFilter } from "@/features/pipeline-v2/api";
 
 interface DealActionsMenuProps {
@@ -16,6 +16,8 @@ interface DealActionsMenuProps {
   pipelineId: string | null;
   statusFilter?: StatusFilter;
   trigger: React.ReactNode;
+  /** Notifica o caller para fechar o detail panel apos exclusao. */
+  onDeleted?: () => void;
 }
 
 export function DealActionsMenu({
@@ -24,11 +26,13 @@ export function DealActionsMenu({
   pipelineId,
   statusFilter = "OPEN",
   trigger,
+  onDeleted,
 }: DealActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const setStatus = useSetDealStatus(pipelineId, statusFilter);
+  const deleteDealMut = useDeleteDeal(pipelineId, statusFilter);
 
   useEffect(() => {
     if (!open) return;
@@ -67,12 +71,7 @@ export function DealActionsMenu({
 
       {open && (
         <div
-          className="absolute right-0 top-full z-30 mt-1 w-48 rounded-[var(--radius-lg)] border p-1 backdrop-blur-md"
-          style={{
-            background: "var(--glass-bg-strong)",
-            borderColor: "var(--glass-border)",
-            boxShadow: "var(--glass-shadow)",
-          }}
+          className="absolute right-0 top-full z-30 mt-1.5 w-52 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_32px_rgba(15,20,40,0.16)] backdrop-blur-xl"
           role="menu"
         >
           {currentStatus !== "LOST" && (
@@ -84,7 +83,7 @@ export function DealActionsMenu({
                 if (!reason.trim()) return;
                 apply("LOST", reason.trim());
               }}
-              className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-left text-[12.5px] text-[var(--color-danger)] hover:bg-white/10"
+              className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8 disabled:opacity-50"
             >
               Marcar como perdido
             </button>
@@ -94,7 +93,7 @@ export function DealActionsMenu({
               type="button"
               disabled={setStatus.isPending}
               onClick={() => apply("WON")}
-              className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-left text-[12.5px] text-[var(--color-success)] hover:bg-white/10"
+              className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--color-success)] transition-colors hover:bg-[var(--color-success)]/8 disabled:opacity-50"
             >
               Marcar como ganho
             </button>
@@ -104,11 +103,35 @@ export function DealActionsMenu({
               type="button"
               disabled={setStatus.isPending}
               onClick={() => apply("OPEN")}
-              className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-white/10"
+              className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
             >
               Reabrir
             </button>
           )}
+          <div className="mx-3.5 my-1 h-px bg-[var(--glass-border)]" />
+          <button
+            type="button"
+            disabled={!dealId || deleteDealMut.isPending}
+            onClick={() => {
+              if (!dealId) return;
+              const ok = window.confirm(
+                "Excluir este negocio? Esta acao nao pode ser desfeita.",
+              );
+              if (!ok) return;
+              deleteDealMut.mutate(
+                { dealId },
+                {
+                  onSuccess: () => {
+                    setOpen(false);
+                    onDeleted?.();
+                  },
+                },
+              );
+            }}
+            className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8 disabled:opacity-60"
+          >
+            Excluir negocio
+          </button>
         </div>
       )}
     </div>

@@ -1,185 +1,353 @@
 "use client"
 
-import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { AvatarGlass } from "./avatar-glass"
-import { Chip } from "./chip"
-import { TabsGlass } from "./tabs-glass"
-import { StatusPill } from "./status-pill"
-import { GlassCard } from "./glass-card"
+import {
+  IconBriefcase,
+  IconTag,
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
+} from "@tabler/icons-react"
 
-interface ContactDetails {
+// ─────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────
+
+export interface ContactDetails {
   name: string
-  initials: string
-  avatarColor: 'blue' | 'teal' | 'orange' | 'purple' | 'pink' | 'coral'
-  status: 'online' | 'offline' | 'none'
   contactId: string
   assignee?: string
-  financialStatus: 'success' | 'lead' | 'enterprise'
-  financialLabel: string
-  product: string
-  origin: string
-  formation: string
-  entry: string
-  phone: string
-  email: string
-  cpf: string
-  rg: string
-  cep: string
-  addressNumber: string
-  birthDate: string
-  createdAt: string
-  tag: string
+  statusBadge?: { variant: "lead" | "enterprise" | "success"; label: string }
+  stageSegments?: number
+  stageActiveIndex?: number
+  course?: string
+  formation?: string
+  entry?: string
+  phone?: string
+  email?: string
+  cpf?: string
+  rg?: string
+  cep?: string
+  addressNumber?: string
+  birthDate?: string
   note?: string
-  activities: {
-    text: string
-    time: string
-    color?: string
+  deals?: {
+    id: string
+    title: string
+    value: number
+    stageName?: string | null
+    stageId?: string | null
+    pipelineId?: string | null
+    productName?: string | null
+    funnelSegments?: { id: string; name: string; color: string; position: number }[]
+    stageDropdownSlot?: React.ReactNode
+    customFields?: { fieldId: string; label: string; value: string | null }[]
   }[]
+  // campos legados
+  financialStatus?: "success" | "lead" | "enterprise"
+  financialLabel?: string
+  product?: string
+  origin?: string
+  createdAt?: string
+  tag?: string
+  initials?: string
+  avatarColor?: string
+  status?: string
+  activities?: { text: string; time: string; color?: string }[]
+  panelFields?: { fieldId: string; label: string; value: string; type: string }[]
 }
 
 interface ContactAsideProps {
   contact: ContactDetails
   className?: string
-  /**
-   * Slot opcional que substitui INTEIRAMENTE a linha de chips
-   * (responsável + tag) abaixo do nome. Quando ausente, mantém
-   * o comportamento padrão visual (chips estáticos sem ação).
-   */
   headerActionsNode?: React.ReactNode
+  tagsNode?: React.ReactNode
+  collapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
-export function ContactAside({ contact, className, headerActionsNode }: ContactAsideProps) {
-  const [activeTab, setActiveTab] = useState(0)
-  const tabs = ["Perfil", "Informações", "Dados", "Notas"]
+const PLACEHOLDER = "—"
 
+const isFilled = (v: string | undefined | null): v is string =>
+  !!v && v !== PLACEHOLDER
+
+const formatCurrency = (v: number) =>
+  v ? `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : PLACEHOLDER
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers de layout
+// ─────────────────────────────────────────────────────────────────
+
+function SubLabel({ children }: { children: React.ReactNode }) {
   return (
-    <aside
-      aria-label="Detalhes do contato"
-      className={cn("flex flex-col gap-3.5 overflow-y-auto", className)}
-    >
-      <GlassCard className="p-[18px]">
-        {/* Header */}
-        <div className="mb-3.5 flex flex-col items-center gap-2 border-b border-[var(--glass-border-subtle)] pb-3.5">
-          <AvatarGlass
-            initials={contact.initials}
-            size="lg"
-            color={contact.avatarColor}
-            status={contact.status}
-          />
-          <div className="flex flex-col items-center gap-1">
-            <div className="font-display text-base font-bold text-[var(--text-primary)]">
-              {contact.name}
-            </div>
-            <div className="text-[11px] text-[var(--text-muted)]">#{contact.contactId}</div>
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5">
-            {headerActionsNode ?? (
-              <>
-                {contact.assignee && <Chip variant="brand">{contact.assignee}</Chip>}
-                <Chip variant="ghost">+Responsável</Chip>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <TabsGlass
-          tabs={tabs}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          className="mb-3.5"
-        />
-
-        {/* Status Section */}
-        <SectionLabel>Status</SectionLabel>
-        <DetailRow label="Financeiro">
-          <StatusPill variant={contact.financialStatus} className="px-2.5 py-0.5 text-[10px]">
-            {contact.financialLabel}
-          </StatusPill>
-        </DetailRow>
-        <DetailRow label="Produto" value={contact.product} />
-        <DetailRow label="Origem" value={contact.origin} />
-        <DetailRow label="Formação" value={contact.formation} />
-        <DetailRow label="Entrada" value={contact.entry} />
-
-        {/* Contact Details Section */}
-        <SectionLabel>Detalhes de contato</SectionLabel>
-        <DetailRow label="Telefone" value={contact.phone} />
-        <DetailRow label="Email" value={contact.email} valueClassName="text-[11px]" />
-        <DetailRow label="CPF" value={contact.cpf} />
-        <DetailRow label="RG" value={contact.rg} />
-        <DetailRow label="CEP" value={contact.cep} />
-        <DetailRow label="N° Residência" value={contact.addressNumber} />
-        <DetailRow label="Data Nascimento" value={contact.birthDate} />
-        <DetailRow label="Data Criação" value={contact.createdAt} />
-        <DetailRow label="Tag" value={contact.tag} isLast />
-
-        {/* Note */}
-        {contact.note && (
-          <>
-            <SectionLabel>Nota</SectionLabel>
-            <div className="rounded-[var(--radius-md)] border border-yellow-300/20 border-l-[3px] border-l-[var(--color-warning)] bg-yellow-50/45 px-3.5 py-3 text-[12.5px] italic leading-relaxed text-[var(--text-secondary)] backdrop-blur-sm">
-              {contact.note}
-            </div>
-          </>
-        )}
-
-        {/* Activity */}
-        <SectionLabel>Atividade recente</SectionLabel>
-        {contact.activities.map((activity, index) => (
-          <div
-            key={index}
-            className={cn(
-              "flex gap-2.5 py-2",
-              index < contact.activities.length - 1 && "border-b border-white/25"
-            )}
-          >
-            <div
-              className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-              style={{ background: activity.color || 'var(--brand-primary)' }}
-            />
-            <div className="flex-1">
-              <div className="text-[12.5px] text-[var(--text-primary)]">{activity.text}</div>
-              <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">{activity.time}</div>
-            </div>
-          </div>
-        ))}
-      </GlassCard>
-    </aside>
-  )
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-2 mt-3.5 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+    <div className="mb-2 mt-5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
       {children}
     </div>
   )
 }
 
-interface DetailRowProps {
+function Row({
+  label,
+  value,
+  valueStyle,
+  children,
+  isLast,
+  className,
+}: {
   label: string
   value?: string
-  valueClassName?: string
+  valueStyle?: React.CSSProperties
   children?: React.ReactNode
   isLast?: boolean
-}
-
-function DetailRow({ label, value, valueClassName, children, isLast }: DetailRowProps) {
+  className?: string
+}) {
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-2.5 py-1.5 text-[13px]",
-        !isLast && "border-b border-white/25"
+        "flex items-center justify-between py-2.5 text-[13px]",
+        !isLast && "border-b border-[var(--glass-border-subtle)]",
+        className,
       )}
     >
-      <span className="text-[var(--text-muted)]">{label}</span>
-      {children || (
-        <span className={cn("text-right font-display font-semibold text-[var(--text-primary)]", valueClassName)}>
+      <span className="font-medium text-[var(--text-muted)]">{label}</span>
+      {children ?? (
+        <span className="font-display font-bold text-[var(--text-primary)]" style={valueStyle}>
           {value}
         </span>
       )}
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DealInline — negocio embutido dentro do card unico da aside
+// (declarado ANTES de ContactAside para evitar referencia antecipada)
+// ─────────────────────────────────────────────────────────────────
+
+function DealInline({
+  deal,
+  course,
+  contact,
+}: {
+  deal: NonNullable<ContactDetails["deals"]>[number]
+  course: string | undefined
+  contact: ContactDetails
+}) {
+  const fields = deal.customFields ?? []
+
+  const segments = deal.funnelSegments
+  const sortedSegments = segments ? [...segments].sort((a, b) => a.position - b.position) : null
+  const currentSegIdx = sortedSegments ? sortedSegments.findIndex((s) => s.id === deal.stageId) : -1
+
+  // Nome do estágio: usa stageName direto; senão deriva do segmento do funil
+  // que casa com o stageId; por fim cai no placeholder.
+  const stageLabel =
+    deal.stageName ??
+    sortedSegments?.find((s) => s.id === deal.stageId)?.name ??
+    "Sem estágio"
+
+  const productName = deal.productName ?? course ?? null
+
+  return (
+    <div className="border-b border-[var(--glass-border-subtle)]">
+      {/* Header do negocio */}
+      <div className="flex items-start gap-3 px-5 pb-3 pt-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)]">
+          <IconBriefcase size={16} className="text-[var(--brand-primary)]" />
+        </div>
+        <div className="min-w-0 flex-1">
+          {/* Titulo em linha propria, sem truncate agressivo */}
+          <p className="font-display text-[14px] font-bold leading-snug text-[var(--text-primary)]">
+            {deal.title}
+          </p>
+          {/* Estagio abaixo do titulo */}
+          <div className="relative mt-1">
+            {deal.stageDropdownSlot ?? (
+              <span className="font-display text-[11px] text-[var(--text-muted)]">
+                {stageLabel}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de progresso do funil */}
+      {sortedSegments && sortedSegments.length > 0 && (
+        <div className="flex gap-1 px-5 pb-3">
+          {sortedSegments.map((seg, i) => (
+            <span
+              key={seg.id}
+              title={seg.name}
+              className="h-[4px] flex-1 rounded-full transition-colors"
+              style={{
+                background: seg.color || "var(--brand-primary)",
+                opacity: i <= currentSegIdx ? 1 : 0.18,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Produto — destaque dentro do negocio */}
+      {productName && (
+        <div className="mx-5 mb-4 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-4 py-3">
+          <p className="mb-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            Produto
+          </p>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <IconTag size={14} className="shrink-0 text-[var(--brand-primary)]" />
+              <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                {productName}
+              </span>
+            </div>
+            {deal.value > 0 && (
+              <span className="shrink-0 font-display text-[13px] font-bold text-[var(--color-success,#059669)]">
+                {formatCurrency(deal.value)}
+              </span>
+            )}
+          </div>
+          {isFilled(contact.formation) && (
+            <p className="mt-1.5 font-display text-[11px] text-[var(--text-muted)]">
+              {contact.formation}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Campos personalizados do negocio */}
+      {fields.length > 0 && (
+        <div className="px-5 pb-4">
+          <SubLabel>Campos do negocio</SubLabel>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
+            {fields.map((f, i) => (
+              <div
+                key={f.fieldId}
+                className={cn(
+                  "flex items-center justify-between gap-3 px-[14px] py-2.5 text-[12.5px]",
+                  i < fields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+                )}
+              >
+                <span className="shrink-0 font-medium text-[var(--text-muted)]">{f.label}</span>
+                <span className="min-w-0 truncate text-right font-display font-bold text-[var(--text-primary)]">
+                  {f.value ?? PLACEHOLDER}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ContactAside — componente principal
+// ─────────────────────────────────────────────────────────────────
+
+export function ContactAside({
+  contact,
+  className,
+  collapsed = false,
+  onToggleCollapse,
+}: ContactAsideProps) {
+  const course = contact.course ?? contact.product
+  const deals = contact.deals ?? []
+
+  const panelFields = contact.panelFields ?? []
+
+  /* ── Estado recolhido ─────────────────────────────────────────── */
+  if (collapsed) {
+    return (
+      <aside
+        aria-label="Detalhes do contato (recolhido)"
+        className={cn(
+          "flex h-full flex-col items-center justify-start rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pt-3 backdrop-blur-md shadow-[var(--glass-shadow)]",
+          className,
+        )}
+      >
+        <button
+          type="button"
+          title="Expandir painel de contato"
+          onClick={onToggleCollapse}
+          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+          aria-label="Expandir painel de contato"
+        >
+          <IconLayoutSidebarRightExpand size={18} />
+        </button>
+      </aside>
+    )
+  }
+
+  return (
+    <aside
+      aria-label="Detalhes do contato"
+      className={cn("flex flex-col overflow-y-auto pr-0.5", className)}
+    >
+      {/* Card unico que envolve tudo */}
+      <div className="relative flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+
+        {/* Botao de colapso — flutuante no canto p/ nao ocupar faixa vertical */}
+        {onToggleCollapse && (
+          <button
+            type="button"
+            title="Recolher painel de contato"
+            onClick={onToggleCollapse}
+            className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            aria-label="Recolher painel de contato"
+          >
+            <IconLayoutSidebarRightCollapse size={17} />
+          </button>
+        )}
+
+        {/* Negocios vinculados — topo do card */}
+        {deals.map((deal) => (
+          <DealInline key={deal.id} deal={deal} course={course} contact={contact} />
+        ))}
+
+        {/* Detalhes de Contato */}
+        <div className="px-5 pb-5">
+          <SubLabel>Detalhes de Contato</SubLabel>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[18px] py-1">
+            <Row label="Nome" value={contact.name} />
+            {isFilled(contact.phone) && (
+              <Row label="Telefone" valueStyle={{ color: "var(--brand-primary)" }} value={contact.phone} />
+            )}
+            {isFilled(contact.email) && (
+              <Row label="Email" value={contact.email} valueStyle={{ color: "var(--brand-primary)", fontSize: 12 }} />
+            )}
+            {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} />}
+            {isFilled(contact.rg) && <Row label="RG" value={contact.rg} />}
+            {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} />}
+            {isFilled(contact.addressNumber) && <Row label="N Residencia" value={contact.addressNumber} />}
+            {isFilled(contact.birthDate) && <Row label="Data de Nascimento" value={contact.birthDate} isLast />}
+          </div>
+
+          {/* Campos personalizados do contato */}
+          {panelFields.length > 0 && (
+            <div className="mt-4">
+              <SubLabel>Campos personalizados</SubLabel>
+              <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
+                {panelFields.map((f, i) => (
+                  <div
+                    key={f.fieldId}
+                    className={cn(
+                      "px-[14px] py-2.5",
+                      i < panelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+                    )}
+                  >
+                    <p className="font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                      {f.label}
+                    </p>
+                    <p className="mt-0.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                      {f.value || PLACEHOLDER}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </aside>
   )
 }

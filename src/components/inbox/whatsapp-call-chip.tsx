@@ -687,7 +687,7 @@ export function WhatsappCallChip({
                       <code className="rounded bg-slate-100 px-1">call_permission</code>{" "}
                       encontrado. Cadastre em{" "}
                       <a
-                        href="/settings/message-models?tab=whatsapp"
+                        href="/old/settings/message-models?tab=whatsapp"
                         className="font-medium text-primary underline-offset-2 hover:underline"
                       >
                         Configurações → Templates

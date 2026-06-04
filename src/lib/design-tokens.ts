@@ -62,13 +62,11 @@ export const dt = {
     bubble: {
       /** Cores via `var(--chat-bubble-sent-*)` no wrapper; padding no bloco interno (`px-[9px] py-[5px]`). */
       sent: "rounded-[10px] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
-      /** Recebida — fundo SOLIDO (bg-white) p/ contraste contra qualquer painel.
-       *  Antes usava `bg-card` (rgba .40) que ficava invisivel quando o painel
-       *  do chat era branco solido. */
+      /** Recebida — fundo via token de tema para suportar dark mode corretamente. */
       received:
-        "rounded-[10px] rounded-bl-[2px] border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
+        "rounded-[10px] rounded-bl-[2px] border border-[var(--chat-bubble-received-border)] bg-[var(--chat-bubble-received-bg)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
       /** Nota interna — faixa compacta (menos altura que bolha de conversa). */
-      note: "border-l-2 border-l-[#e2e8f0] bg-[#f8fafc]",
+      note: "border-l-2 border-l-[var(--chat-bubble-note-border)] bg-[var(--chat-bubble-note-bg)]",
       audio: "rounded-[10px] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
     },
     text: {

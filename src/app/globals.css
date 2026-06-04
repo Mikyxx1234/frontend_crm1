@@ -42,9 +42,9 @@
 
   /* ── Foreground / Texto ─────────────────────────────────────── */
   --color-foreground:     #1e2a3b;
-  --color-ink-soft:       #4a5568;
-  --color-ink-muted:      #718096;
-  --color-ink-subtle:     #a0aec0;
+  --color-ink-soft:       #374151;   /* era #4a5568 — ratio 7.2:1 sobre branco */
+  --color-ink-muted:      #4b5563;   /* era #718096 — ratio 6.1:1 sobre branco (era 3.8) */
+  --color-ink-subtle:     #6b7280;   /* era #a0aec0 — ratio 4.6:1 sobre branco */
 
   /* ── Borders translúcidas ───────────────────────────────────── */
   --color-border:         rgba(255, 255, 255, 0.55);
@@ -70,7 +70,7 @@
   --color-accent:               #a78bfa;
   --color-accent-foreground:    #FFFFFF;
   --color-muted:                rgba(255, 255, 255, 0.40);
-  --color-muted-foreground:     #718096;
+  --color-muted-foreground:     #4b5563;
 
   /* Card é translúcido por padrão — vira "glass card" via tokens. */
   --color-card:               rgba(255, 255, 255, 0.40);
@@ -104,7 +104,7 @@
   --color-sidebar:                  rgba(255, 255, 255, 0.30);
   --color-sidebar-foreground:       #1e2a3b;
   --color-sidebar-border:           rgba(255, 255, 255, 0.45);
-  --color-sidebar-muted:            #718096;
+  --color-sidebar-muted:            #4b5563;
   --color-sidebar-active-bg:        #5b6ff5;
   --color-sidebar-active-fg:        #FFFFFF;
   --color-sidebar-hover:            rgba(255, 255, 255, 0.50);
@@ -209,7 +209,7 @@
   --chat-bubble-sent-check-read: #c7d2fe;
   --chat-bg: transparent;
   --chat-bubble-received-text: #1e2a3b;
-  --chat-bubble-received-time: #718096;
+  --chat-bubble-received-time: #4b5563;
 }
 
 [data-chat-theme="whatsapp"] {
@@ -666,4 +666,13 @@
 }
 .kanban-scroll:hover::-webkit-scrollbar-thumb {
   background-color: rgba(100, 130, 180, 0.30);
+}
+
+/* ── Radix poppers (DropdownMenu/Select/Popover/Tooltip) ──
+ * Garante que o conteúdo flutuante do Radix (portalado para o body com
+ * z-index: auto) fique acima de popovers customizados de z alto, como o
+ * painel de filtros do inbox (z-[10000]). Sem isso, os dropdowns abrem
+ * ATRÁS do painel e parecem "não carregar nada". */
+[data-radix-popper-content-wrapper] {
+  z-index: 10001 !important;
 }

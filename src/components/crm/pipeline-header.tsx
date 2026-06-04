@@ -51,6 +51,12 @@ interface PipelineHeaderProps {
    * telas que não usam o conceito de status (ex.: /settings/pipeline).
    */
   tabsOverride?: React.ReactNode
+  /**
+   * Slot para ícone/botão de configurações — renderizado inline na barra
+   * secundária, logo após o separador do pipelineNameSlot. Posição correta
+   * conforme protótipo v0: colado ao PipelineSwitcher, antes das tabs.
+   */
+  settingsSlot?: React.ReactNode
 }
 
 export function PipelineHeader({
@@ -67,6 +73,7 @@ export function PipelineHeader({
   onSearchChange,
   searchPlaceholder = "Buscar por título, contato...",
   tabsOverride,
+  settingsSlot,
 }: PipelineHeaderProps) {
   const [tab, setTab] = useState<TabId>(activeTab)
   const [view, setView] = useState<ViewType>(activeView)
@@ -173,8 +180,9 @@ export function PipelineHeader({
       {/* Abas de status + seletor de pipeline + filtros rápidos */}
       <div className="flex items-center gap-2 px-1">
         {pipelineNameSlot && (
-          <div className="mr-1.5 border-r border-black/[0.06] pr-2.5">
+          <div className="mr-1.5 flex items-center gap-1.5 border-r border-black/[0.06] pr-2.5">
             {pipelineNameSlot}
+            {settingsSlot}
           </div>
         )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -17,6 +17,18 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { usePipelines, useBoard } from "@/features/pipeline-v2/hooks";
+import { useAutomations } from "@/features/automations-v2/hooks";
+import { AddAutomationDrawer } from "./add-automation-drawer";
+
+// Mapa de rótulo do gatilho de estágio
+const STAGE_TRIGGER_LABELS: Record<string, string> = {
+  STAGE_ENTERED: "Quando criado nesta etapa",
+  STAGE_EXITED: "Quando sair desta etapa",
+  DEAL_CREATED: "Quando negócio for criado",
+  MESSAGE_RECEIVED: "Quando mensagem for recebida",
+  DEAL_WON: "Quando negócio for ganho",
+  DEAL_LOST: "Quando negócio for perdido",
+};
 
 // ─── Tipos locais ─────────────────────────────────────────────────
 
@@ -35,33 +47,9 @@ interface StageConfig {
   name: string;
   color: string;
   position: number;
-  probability?: number;
   automations: Automation[];
 }
 
-// ─── Mock de automações por estágio ──────────────────────────────
-
-const MOCK_AUTOMATIONS: Automation[][] = [
-  [
-    { id: "a1", title: "Negócio criado", when: "Quando criado nesta etapa", actionName: "redireciona2310" },
-    { id: "a2", title: "Negócio criado", when: "Quando criado nesta etapa", actionName: "Agente IA" },
-  ],
-  [
-    { id: "b1", title: "Negócio criado", when: "Quando movido para esta etapa", actionName: "Boas-vindas WhatsApp" },
-    { id: "b2", title: "Mensagem recebida", when: "Quando criado nesta etapa", actionName: "Agente IA" },
-  ],
-  [
-    { id: "c1", title: "Etapa alterada", when: "Quando movido para esta etapa", actionName: "Follow-up proposta" },
-  ],
-  [],
-  [
-    { id: "e1", title: "Etapa alterada", when: "Quando criado nesta etapa", actionName: "Follow-up proposta" },
-  ],
-];
-
-function buildStageAutomations(stageIndex: number): Automation[] {
-  return MOCK_AUTOMATIONS[stageIndex % MOCK_AUTOMATIONS.length] ?? [];
-}
 
 // ─── AutomationCard — estilo protótipo v0 ────────────────────────
 
@@ -125,17 +113,12 @@ function StageColumn({ stage, onAddAutomation }: StageColumnProps) {
         </button>
       </div>
 
-      {/* Probabilidade / subtítulo */}
-      {stage.probability !== undefined && (
-        <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-1 pb-2.5 font-display text-xs font-semibold text-[var(--text-secondary)]">
-          {stage.probability}% chance de ganho
-        </div>
-      )}
-      {stage.probability === undefined && (
-        <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-1 pb-2.5 font-display text-xs font-semibold text-[var(--text-secondary)]">
-          {stage.automations.length === 0 ? "Sem automações" : `${stage.automations.length} automação${stage.automations.length > 1 ? "ões" : ""}`}
-        </div>
-      )}
+      {/* Subtítulo de contagem */}
+      <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-1 pb-2.5 font-display text-xs font-semibold text-[var(--text-secondary)]">
+        {stage.automations.length === 0
+          ? "Sem automações"
+          : `${stage.automations.length} automação${stage.automations.length !== 1 ? "ões" : ""}`}
+      </div>
 
       {/* Lista de cards */}
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
@@ -285,6 +268,15 @@ export default function PipelineSettingsClientPage() {
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const [newPipelineOpen, setNewPipelineOpen] = useState(false);
 
+  // Estado das automações adicionadas por estágio (mapa stageId → Automation[])
+  const [stageAutomationsMap, setStageAutomationsMap] = useState<Record<string, Automation[]>>({});
+
+  // Drawer "Adicionar automação"
+  const [addAutomationStageId, setAddAutomationStageId] = useState<string | null>(null);
+
+  // Dados de automações para look-up ao confirmar no drawer
+  const { data: automationsData } = useAutomations({ perPage: 200, enabled: isAuthenticated });
+
   useEffect(() => {
     if (!pipelineId && pipelines?.length) {
       const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
@@ -298,28 +290,66 @@ export default function PipelineSettingsClientPage() {
     enabled: isAuthenticated,
   });
 
-  const stages: StageConfig[] = board.map((s, idx) => ({
-    id: s.id,
-    name: s.name,
-    color: s.color ?? "var(--brand-primary)",
-    position: s.position,
-    probability: idx === 0 ? undefined : Math.round(((idx) / board.length) * 100),
-    automations: buildStageAutomations(idx),
-  }));
+  const stages: StageConfig[] = useMemo(
+    () =>
+      board.map((s) => ({
+        id: s.id,
+        name: s.name,
+        color: s.color ?? "var(--brand-primary)",
+        position: s.position,
+        automations: stageAutomationsMap[s.id] ?? [],
+      })),
+    [board, stageAutomationsMap],
+  );
 
-  const handleAddAutomation = useCallback((_stageId: string) => {
-    // TODO: abrir construtor de automação
-    alert("Em breve: construtor visual de automações por estágio.");
+  const addAutomationStageName = useMemo(() => {
+    if (!addAutomationStageId) return "";
+    return board.find((s) => s.id === addAutomationStageId)?.name ?? "";
+  }, [addAutomationStageId, board]);
+
+  const handleAddAutomation = useCallback((stageId: string) => {
+    setAddAutomationStageId(stageId);
   }, []);
+
+  const handleDrawerConfirm = useCallback(
+    ({
+      automationId,
+      trigger,
+    }: {
+      automationId: string;
+      trigger: string;
+      applyToExisting: boolean;
+    }) => {
+      if (!addAutomationStageId) return;
+
+      const autoDto = automationsData?.items.find((a) => a.id === automationId);
+      if (!autoDto) return;
+
+      const whenLabel = STAGE_TRIGGER_LABELS[trigger] ?? trigger;
+
+      const newAuto: Automation = {
+        id: `${addAutomationStageId}-${automationId}-${Date.now()}`,
+        title: autoDto.name,
+        when: whenLabel,
+        actionName: autoDto.description ?? autoDto.name,
+      };
+
+      setStageAutomationsMap((prev) => ({
+        ...prev,
+        [addAutomationStageId]: [...(prev[addAutomationStageId] ?? []), newAuto],
+      }));
+
+      setAddAutomationStageId(null);
+    },
+    [addAutomationStageId, automationsData?.items],
+  );
 
   const handleNewPipeline = useCallback((name: string) => {
     setNewPipelineOpen(false);
-    // TODO: chamar POST /api/pipelines e invalidar cache
     alert(`Pipeline "${name}" será criado em breve.`);
   }, []);
 
   const handleSetDefault = useCallback(() => {
-    // TODO: chamar PATCH /api/pipelines/:id { isDefault: true }
     alert("Funcionalidade em desenvolvimento.");
   }, []);
 
@@ -368,6 +398,13 @@ export default function PipelineSettingsClientPage() {
         open={newPipelineOpen}
         onClose={() => setNewPipelineOpen(false)}
         onConfirm={handleNewPipeline}
+      />
+
+      <AddAutomationDrawer
+        open={!!addAutomationStageId}
+        stageName={addAutomationStageName}
+        onClose={() => setAddAutomationStageId(null)}
+        onConfirm={handleDrawerConfirm}
       />
     </>
   );

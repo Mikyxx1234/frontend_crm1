@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
 import { IconSearch, IconBell, IconHelp } from "@tabler/icons-react"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 
 interface TopbarProps {
   user: {
@@ -33,20 +34,22 @@ export function Topbar({ user, onlineLabel = "Online", className }: TopbarProps)
         {onlineLabel}
       </span>
 
-      <button
-        type="button"
-        title="Notificações"
-        className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-      >
-        <IconBell size={18} />
-      </button>
-      <button
-        type="button"
-        title="Ajuda"
-        className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-      >
-        <IconHelp size={18} />
-      </button>
+      <TooltipGlass label="Notificações" side="bottom">
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+        >
+          <IconBell size={18} />
+        </button>
+      </TooltipGlass>
+      <TooltipGlass label="Ajuda" side="bottom">
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+        >
+          <IconHelp size={18} />
+        </button>
+      </TooltipGlass>
 
       <div className="flex items-center gap-2.5 pl-1.5">
         <div className="text-right">

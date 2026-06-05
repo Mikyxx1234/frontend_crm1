@@ -321,7 +321,6 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
       <div className="flex items-center gap-2 bg-[var(--brand-primary)] px-4 pb-3">
         <button
           type="button"
-          title="Copiar para outra fase"
           onClick={(e) => { e.stopPropagation(); setCopyModalOpen(true); }}
           className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/20 py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-white/30"
         >

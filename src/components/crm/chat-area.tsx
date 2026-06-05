@@ -3,6 +3,7 @@
 import { Fragment, useRef, useState, useEffect, type FormEvent } from "react"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
 import { BadgeGlass } from "./badge-glass"
@@ -200,14 +201,15 @@ export function ChatArea({
           onSubmit={handleSubmit}
           className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-[18px] pr-2 shadow-[var(--glass-shadow-sm)]"
         >
-          <button
-            type="button"
-            title="Anexar"
-            onClick={onAttachClick}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
-          >
-            <IconPaperclip size={18} />
-          </button>
+          <TooltipGlass label="Anexar" side="top">
+            <button
+              type="button"
+              onClick={onAttachClick}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+            >
+              <IconPaperclip size={18} />
+            </button>
+          </TooltipGlass>
           <input
             type="text"
             placeholder={inputPlaceholder ?? "Escreva sua mensagem..."}
@@ -216,32 +218,35 @@ export function ChatArea({
             onChange={isControlled ? (e) => onInputChange?.(e.target.value) : undefined}
             className="flex-1 border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <button
-            type="button"
-            title="Emoji"
-            onClick={onEmojiClick}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
-          >
-            <IconMoodSmile size={18} />
-          </button>
-          {onRecordClick && (
+          <TooltipGlass label="Emoji" side="top">
             <button
               type="button"
-              title="Áudio"
-              onClick={onRecordClick}
+              onClick={onEmojiClick}
               className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
             >
               <IconMoodSmile size={18} />
             </button>
+          </TooltipGlass>
+          {onRecordClick && (
+            <TooltipGlass label="Áudio" side="top">
+              <button
+                type="button"
+                onClick={onRecordClick}
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+              >
+                <IconMoodSmile size={18} />
+              </button>
+            </TooltipGlass>
           )}
-          <button
-            type={isControlled ? "submit" : "button"}
-            title="Enviar"
-            disabled={isControlled && (!value.trim() || sending || effectiveDisabled)}
-            className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-all hover:scale-105 hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
-          >
-            <IconSend size={16} />
-          </button>
+          <TooltipGlass label="Enviar mensagem" side="top">
+            <button
+              type={isControlled ? "submit" : "button"}
+              disabled={isControlled && (!value.trim() || sending || effectiveDisabled)}
+              className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-all hover:scale-105 hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+            >
+              <IconSend size={16} />
+            </button>
+          </TooltipGlass>
         </form>
       )}
     </main>
@@ -282,14 +287,15 @@ function IconBtn({
   title?: string
   onClick?: () => void
 }) {
-  return (
+  const btn = (
     <button
       type="button"
-      title={title}
       onClick={onClick}
       className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
     >
       {children}
     </button>
   )
+  if (!title) return btn
+  return <TooltipGlass label={title} side="bottom">{btn}</TooltipGlass>
 }

@@ -536,17 +536,18 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
               onDeleted={() => setActiveDealId(null)}
               trigger={
-                <span
-                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
-                  style={{
-                    background: "var(--glass-bg-strong)",
-                    borderColor: "var(--glass-border)",
-                    boxShadow: "var(--glass-shadow-sm)",
-                  }}
-                  title="Mais"
-                >
-                  <IconDotsVertical size={16} />
-                </span>
+                <TooltipGlass label="Mais opções" side="bottom">
+                  <span
+                    className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
+                    style={{
+                      background: "var(--glass-bg-strong)",
+                      borderColor: "var(--glass-border)",
+                      boxShadow: "var(--glass-shadow-sm)",
+                    }}
+                  >
+                    <IconDotsVertical size={16} />
+                  </span>
+                </TooltipGlass>
               }
             />
           ) : undefined
@@ -889,16 +890,17 @@ function CardMoveDropdown({
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
-        disabled={isPending}
-        title="Mover de fase"
-        aria-label="Mover de fase"
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:cursor-wait disabled:opacity-50"
-      >
-        <IconArrowsExchange size={15} />
-      </button>
+      <TooltipGlass label="Mover de fase" side="top">
+        <button
+          type="button"
+          disabled={isPending}
+          aria-label="Mover de fase"
+          onClick={() => setOpen((v) => !v)}
+          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:cursor-wait disabled:opacity-50"
+        >
+          <IconArrowsExchange size={15} />
+        </button>
+      </TooltipGlass>
 
       {open && (
         <div className="absolute bottom-full right-0 z-50 mb-1.5 max-h-[260px] min-w-[200px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)] backdrop-blur-md">

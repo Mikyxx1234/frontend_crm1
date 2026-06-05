@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconArrowLeft,
   IconChevronDown,
@@ -193,14 +194,15 @@ export function DealDetailPanel({
       <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
         {/* HEADER */}
         <header className="flex items-center gap-[18px] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-[22px] py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          <button
-            type="button"
-            onClick={onClose}
-            title="Voltar"
-      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-          >
-            <IconArrowLeft size={18} />
-          </button>
+          <TooltipGlass label="Voltar" side="bottom">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            >
+              <IconArrowLeft size={18} />
+            </button>
+          </TooltipGlass>
 
           {/* Contact */}
           <div className="flex items-center gap-3">
@@ -474,15 +476,16 @@ function PanelIconBtn({
   children: React.ReactNode
   title?: string
 }) {
-  return (
+  const btn = (
     <button
       type="button"
-      title={title}
       className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
     >
       {children}
     </button>
   )
+  if (!title) return btn
+  return <TooltipGlass label={title} side="bottom">{btn}</TooltipGlass>
 }
 
 /** Rótulo de seção (uppercase tracking) acima de cada cartão de campos. */

@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -69,19 +70,23 @@ export function NavRail({ className }: { className?: string }) {
 
       <div className="flex-1" />
 
-      <button
-        title="Notificações"
-        className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center cursor-pointer transition-all duration-150 bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-      >
-        <IconBell size={20} />
-      </button>
+      <TooltipGlass label="Notificações" side="right">
+        <button
+          type="button"
+          className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center cursor-pointer transition-all duration-150 bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+        >
+          <IconBell size={20} />
+        </button>
+      </TooltipGlass>
 
-      <button
-        title="Configurações"
-        className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center cursor-pointer transition-all duration-150 bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-      >
-        <IconSettings size={20} />
-      </button>
+      <TooltipGlass label="Configurações" side="right">
+        <button
+          type="button"
+          className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center cursor-pointer transition-all duration-150 bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+        >
+          <IconSettings size={20} />
+        </button>
+      </TooltipGlass>
 
       <div className="av-pink relative w-[30px] h-[30px] rounded-full flex items-center justify-center font-display font-bold text-[10px] text-white border-2 border-white">
         AL

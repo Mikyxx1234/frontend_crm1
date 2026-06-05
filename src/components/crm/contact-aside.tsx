@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconBriefcase,
   IconTag,
@@ -265,15 +266,16 @@ export function ContactAside({
           className,
         )}
       >
-        <button
-          type="button"
-          title="Expandir painel de contato"
-          onClick={onToggleCollapse}
-          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-          aria-label="Expandir painel de contato"
-        >
-          <IconLayoutSidebarRightExpand size={18} />
-        </button>
+        <TooltipGlass label="Expandir painel de contato" side="left">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            aria-label="Expandir painel de contato"
+          >
+            <IconLayoutSidebarRightExpand size={18} />
+          </button>
+        </TooltipGlass>
       </aside>
     )
   }
@@ -288,15 +290,16 @@ export function ContactAside({
 
         {/* Botao de colapso — flutuante no canto p/ nao ocupar faixa vertical */}
         {onToggleCollapse && (
-          <button
-            type="button"
-            title="Recolher painel de contato"
-            onClick={onToggleCollapse}
-            className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-            aria-label="Recolher painel de contato"
-          >
-            <IconLayoutSidebarRightCollapse size={17} />
-          </button>
+          <TooltipGlass label="Recolher painel de contato" side="left">
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+              aria-label="Recolher painel de contato"
+            >
+              <IconLayoutSidebarRightCollapse size={17} />
+            </button>
+          </TooltipGlass>
         )}
 
         {/* Negocios vinculados — topo do card */}

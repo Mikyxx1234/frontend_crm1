@@ -1,6 +1,7 @@
 "use client";
 
 import { apiUrl, getApiBaseUrl } from "@/lib/api";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, ShieldCheck, ShieldOff, Webhook } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -242,20 +243,21 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                   className="font-mono text-xs"
                   onFocus={(e) => e.currentTarget.select()}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 px-3"
-                  onClick={() => copyToClipboard(webhookUrl, "url")}
-                  title="Copiar URL"
-                >
-                  {copiedField === "url" ? (
-                    <Check className="size-3.5 text-green-600" />
-                  ) : (
-                    <Copy className="size-3.5" />
-                  )}
-                </Button>
+                <TooltipGlass label="Copiar URL" side="top">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 px-3"
+                    onClick={() => copyToClipboard(webhookUrl, "url")}
+                  >
+                    {copiedField === "url" ? (
+                      <Check className="size-3.5 text-green-600" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
+                  </Button>
+                </TooltipGlass>
               </div>
               {!channel.organizationSlug ? (
                 <p className="text-xs text-amber-600">
@@ -276,31 +278,33 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                   placeholder="Clique em 'Gerar' pra criar um token aleatorio"
                   className="font-mono text-xs"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="px-3 text-xs"
-                  onClick={() => setVerifyToken(generateVerifyToken())}
-                  title="Gerar token aleatorio"
-                >
-                  Gerar
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 px-3"
-                  disabled={!verifyToken.trim()}
-                  onClick={() => copyToClipboard(verifyToken, "token")}
-                  title="Copiar token"
-                >
-                  {copiedField === "token" ? (
-                    <Check className="size-3.5 text-green-600" />
-                  ) : (
-                    <Copy className="size-3.5" />
-                  )}
-                </Button>
+                <TooltipGlass label="Gerar token aleatório" side="top">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="px-3 text-xs"
+                    onClick={() => setVerifyToken(generateVerifyToken())}
+                  >
+                    Gerar
+                  </Button>
+                </TooltipGlass>
+                <TooltipGlass label="Copiar token" side="top">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 px-3"
+                    disabled={!verifyToken.trim()}
+                    onClick={() => copyToClipboard(verifyToken, "token")}
+                  >
+                    {copiedField === "token" ? (
+                      <Check className="size-3.5 text-green-600" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
+                  </Button>
+                </TooltipGlass>
               </div>
               <p className="text-xs text-muted-foreground">
                 Cole o mesmo valor no campo &quot;Verify Token&quot; do painel Meta. Salve o canal aqui ANTES de clicar em &quot;Verify and save&quot; no painel da Meta.

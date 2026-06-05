@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconPlus,
   IconSquare,
@@ -138,14 +139,15 @@ export function KanbanColumn({
             {count}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onAddDeal}
-          title="Adicionar negócio"
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
-        >
-          <IconPlus size={16} />
-        </button>
+        <TooltipGlass label="Adicionar negócio" side="top">
+          <button
+            type="button"
+            onClick={onAddDeal}
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+          >
+            <IconPlus size={16} />
+          </button>
+        </TooltipGlass>
       </div>
 
       {/* Total */}

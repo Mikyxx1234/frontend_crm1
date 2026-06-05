@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
   IconBolt,
   IconBuilding,
@@ -144,34 +145,36 @@ export function NavRailV2({ className }: { className?: string }) {
 
       <div className="flex-1" />
 
-      <Link
-        href="/settings"
-        title="Configurações"
-        aria-label="Configurações"
-        className={cn(
-          "flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] transition-all duration-150",
-          pathname.startsWith("/settings") && !isProfileActive
-            ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-            : "bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
-        )}
-      >
-        <IconSettings size={20} />
-      </Link>
+      <TooltipGlass label="Configurações" side="right">
+        <Link
+          href="/settings"
+          aria-label="Configurações"
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] transition-all duration-150",
+            pathname.startsWith("/settings") && !isProfileActive
+              ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+              : "bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
+          )}
+        >
+          <IconSettings size={20} />
+        </Link>
+      </TooltipGlass>
 
       {/* Tema: lua / sol */}
-      <button
-        type="button"
-        onClick={toggle}
-        title={theme === "light" ? "Modo escuro" : "Modo claro"}
-        aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}
-        className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-all duration-150 hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-      >
-        {theme === "light" ? (
-          <IconMoon size={20} />
-        ) : (
-          <IconSun size={20} />
-        )}
-      </button>
+      <TooltipGlass label={theme === "light" ? "Modo escuro" : "Modo claro"} side="right">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}
+          className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-all duration-150 hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+        >
+          {theme === "light" ? (
+            <IconMoon size={20} />
+          ) : (
+            <IconSun size={20} />
+          )}
+        </button>
+      </TooltipGlass>
 
       {/* Avatar — abre menu da conta (Meu perfil / Sair).
           No SSR/primeiro render renderizamos um botão estático equivalente

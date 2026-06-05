@@ -464,7 +464,7 @@ export default function KanbanV2ClientPage({
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="relative flex min-h-0 flex-1 flex-col">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div
             ref={boardRef}
             className="kanban-board-hscroll flex min-w-0 flex-1 gap-3.5 pb-1"

@@ -444,7 +444,7 @@ export function DealDetailPanel({
                 </div>
               </header>
 
-              <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-7 py-6">
+              <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
               </div>
 

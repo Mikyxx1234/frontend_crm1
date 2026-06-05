@@ -25,6 +25,12 @@ export interface KanbanColumnSelection {
   selectedCount: number
   totalInColumn: number
   onToggleAll: () => void
+  /**
+   * Quando `false`, o checkbox "selecionar todos" do header NÃO é
+   * renderizado — alinhando com o "modo seleção" global do kanban.
+   * Default: `true` (mantém compat com kanban antigo).
+   */
+  enabled?: boolean
 }
 
 interface KanbanColumnProps {
@@ -86,7 +92,10 @@ export function KanbanColumn({
   selection,
   addFormSlot,
 }: KanbanColumnProps) {
-  const showSelectAll = !!selection && selection.totalInColumn > 0
+  const showSelectAll =
+    !!selection &&
+    selection.totalInColumn > 0 &&
+    selection.enabled !== false
 
   return (
     <section

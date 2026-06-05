@@ -158,7 +158,7 @@ export function ChatArea({
       </header>
 
       {/* MESSAGES */}
-      <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-7 py-6">
+      <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
         {(() => {
           // Separador de dia ("Hoje" / "Ontem" / "DD/MM/AAAA") inserido
           // automaticamente sempre que a data muda entre mensagens. Usa o

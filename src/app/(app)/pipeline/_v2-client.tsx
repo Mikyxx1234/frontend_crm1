@@ -1334,15 +1334,15 @@ interface ImportExportModalProps {
 function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps) {
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/25 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/25 px-4 py-4 backdrop-blur-[2px] sm:px-6 sm:py-6"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.16)]"
+        className="relative w-full max-w-[1100px] max-h-[92vh] overflow-y-auto rounded-2xl border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/95 px-7 py-5 backdrop-blur-sm">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/95 px-6 py-5 backdrop-blur-sm sm:px-8">
           <div className="flex items-center gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--brand-primary)]/10">
               {activeTab === "import"
@@ -1373,7 +1373,7 @@ function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps)
         </div>
 
         {/* Conteúdo */}
-        <div className="p-7">
+        <div className="p-6 sm:p-8">
           {activeTab === "import"
             ? <ImportPanel onDone={() => { bump(); onClose(); }} />
             : <ExportPanel />

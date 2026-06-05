@@ -1334,27 +1334,27 @@ interface ImportExportModalProps {
 function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps) {
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/25 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/25 px-4 py-4 backdrop-blur-[2px] sm:px-6 sm:py-6"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.16)]"
+        className="relative w-full max-w-[1320px] max-h-[92vh] overflow-y-auto rounded-2xl border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)]/95 px-6 py-5 backdrop-blur-sm sm:px-8">
+          <div className="flex items-center gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--brand-primary)]/10">
               {activeTab === "import"
-                ? <IconUpload size={16} className="text-[var(--brand-primary)]" />
-                : <IconDownload size={16} className="text-[var(--brand-primary)]" />
+                ? <IconUpload size={20} className="text-[var(--brand-primary)]" />
+                : <IconDownload size={20} className="text-[var(--brand-primary)]" />
               }
             </div>
             <div>
-              <h2 className="font-display text-[15px] font-bold text-slate-800">
+              <h2 className="font-display text-[17px] font-bold text-[var(--text-primary)]">
                 {activeTab === "import" ? "Importar dados" : "Exportar dados"}
               </h2>
-              <p className="mt-0.5 font-display text-[11.5px] text-slate-500">
+              <p className="mt-0.5 font-body text-[13px] text-[var(--text-muted)]">
                 {activeTab === "import"
                   ? "CSV de contatos ou negócios"
                   : "Baixar base em CSV"}
@@ -1365,15 +1365,15 @@ function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps)
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
             >
-              <IconX size={16} />
+              <IconX size={17} />
             </button>
           </TooltipGlass>
         </div>
 
         {/* Conteúdo */}
-        <div className="p-6">
+        <div className="p-6 sm:p-8">
           {activeTab === "import"
             ? <ImportPanel onDone={() => { bump(); onClose(); }} />
             : <ExportPanel />

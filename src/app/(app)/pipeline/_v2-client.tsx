@@ -73,7 +73,7 @@ import {
   WinButton,
   useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
-import { FilterDropdown } from "@/components/pipeline/kanban-filters/filter-dropdown";
+import { FilterModalThreeCol } from "@/components/pipeline/kanban-filters/v2";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import {
   countActiveFilters,
@@ -415,10 +415,9 @@ export default function KanbanV2ClientPage({
           search={search}
           onSearchChange={setSearch}
         />
-        <FilterDropdown
+        <FilterModalThreeCol
           open={filtersOpen}
           onOpenChange={setFiltersOpen}
-          anchorRef={filtersBtnRef}
           value={filters}
           options={filterOptions}
           optionsLoading={filterOptionsLoading}
@@ -1238,7 +1237,7 @@ function avatarColorSlugFromName(name: string | null | undefined): string {
   return AVATAR_SLUGS[sum % AVATAR_SLUGS.length];
 }
 
-// ─── PipelineKebabMenu ─────────────────────────────────────��──────
+// ─── PipelineKebabMenu ─────────────────────────────────────���──────
 
 const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
   { key: "default",        label: "Padrão (posição)",      icon: <IconArrowsSort size={13} /> },

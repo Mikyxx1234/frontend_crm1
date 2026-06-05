@@ -50,6 +50,8 @@ interface KanbanColumnProps {
   placeholderSlot?: ReactNode
   /** Estado de seleção em massa. Sem passar, o checkbox de "selecionar todos" não aparece. */
   selection?: KanbanColumnSelection
+  /** Formulário inline de criação de deal — renderizado acima do botão "Adicionar negócio". */
+  addFormSlot?: ReactNode
 }
 
 const colorMap: Record<ColumnColor, string> = {
@@ -82,6 +84,7 @@ export function KanbanColumn({
   dealsContainerProps,
   placeholderSlot,
   selection,
+  addFormSlot,
 }: KanbanColumnProps) {
   const showSelectAll = !!selection && selection.totalInColumn > 0
 
@@ -211,6 +214,8 @@ export function KanbanColumn({
           ),
         )}
         {placeholderSlot}
+
+        {addFormSlot}
 
         {showAddButton && (
           <button

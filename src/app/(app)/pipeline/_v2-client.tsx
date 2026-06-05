@@ -433,12 +433,14 @@ export default function KanbanV2ClientPage({
                 pipelineId={pipelineId}
                 statusFilter={status}
                 stages={board}
+                addStage={addStage}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
                 onToggleSelectAllInColumn={toggleSelectMany}
                 onAddDeal={() =>
                   setAddStage({ id: col.stageId, name: col.title })
                 }
+                onCloseAddDeal={() => setAddStage(null)}
               />
             ))}
             {columns.length === 0 ? (
@@ -709,17 +711,6 @@ export default function KanbanV2ClientPage({
             </div>
           ) : undefined
         }
-      />
-
-      <AddDealDialog
-        open={!!addStage}
-        onOpenChange={(o) => {
-          if (!o) setAddStage(null);
-        }}
-        stageId={addStage?.id ?? ""}
-        stageName={addStage?.name}
-        pipelineId={pipelineId}
-        statusFilter={status}
       />
 
       {pipelineId ? (
@@ -1010,6 +1001,8 @@ function DroppableColumn({
   pipelineId,
   statusFilter,
   onAddDeal,
+  onCloseAddDeal,
+  addStage,
   stages,
   selectedIds,
   onToggleSelect,
@@ -1021,6 +1014,8 @@ function DroppableColumn({
   pipelineId: string | null;
   statusFilter: StatusFilter;
   onAddDeal?: () => void;
+  onCloseAddDeal?: () => void;
+  addStage: { id: string; name: string } | null;
   stages: BoardStageDto[];
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
@@ -1037,6 +1032,8 @@ function DroppableColumn({
     dealIdsInColumn.length > 0 && selectedInColumnCount === dealIdsInColumn.length;
   const someSelected = selectedInColumnCount > 0;
 
+  const isAddingHere = addStage?.id === column.stageId;
+
   return (
     <Droppable droppableId={column.stageId}>
       {(provided, snapshot) => (
@@ -1048,6 +1045,18 @@ function DroppableColumn({
           deals={column.deals}
           onDealClick={onDealClick}
           onAddDeal={onAddDeal}
+          addFormSlot={
+            isAddingHere ? (
+              <AddDealDialog
+                open={true}
+                onOpenChange={(o) => { if (!o) onCloseAddDeal?.(); }}
+                stageId={column.stageId}
+                stageName={column.title}
+                pipelineId={pipelineId}
+                statusFilter={statusFilter}
+              />
+            ) : undefined
+          }
           selection={{
             allSelected,
             someSelected,

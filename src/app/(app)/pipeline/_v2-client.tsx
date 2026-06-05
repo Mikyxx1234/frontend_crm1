@@ -140,24 +140,38 @@ export default function KanbanV2ClientPage({
   const boardRef = useRef<HTMLDivElement>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Mede o wrapper flex-col e propaga a altura disponível para o board
-  // via CSS custom property --col-h, diretamente no elemento.
+  // Mede a altura disponível para as colunas observando o próprio
+  // kanban-board-hscroll — assim que ele tiver tamanho definido pelo
+  // flex-1 do wrapper, propagamos esse valor como --col-h nas colunas.
   useEffect(() => {
     const wrapper = boardWrapperRef.current;
     if (!wrapper) return;
-    const setColH = () => {
+
+    const apply = () => {
+      // Altura total do grid (v2-screen) menos a posição top do wrapper
+      // dentro do grid dá exatamente o espaço disponível.
+      const screenEl = wrapper.closest<HTMLElement>(".v2-screen");
+      const screenH = screenEl ? screenEl.getBoundingClientRect().height : window.innerHeight;
+      const wrapperTop = wrapper.getBoundingClientRect().top - (screenEl?.getBoundingClientRect().top ?? 0);
+      const wrapperH = screenH - wrapperTop;
+
+      // Altura disponível para o board = posição bottom do screen - posição top do board
       const board = wrapper.querySelector<HTMLElement>(".kanban-board-hscroll");
       if (!board) return;
-      // Altura do wrapper menos o espaço ocupado pelos irmãos acima do board
-      const wH = wrapper.getBoundingClientRect().height;
-      const boardTop = board.getBoundingClientRect().top - wrapper.getBoundingClientRect().top;
-      const h = Math.max(120, wH - boardTop - 4);
-      board.style.height = `${h}px`;
-      board.style.setProperty("--col-h", `${h}px`);
+      const boardTop = board.getBoundingClientRect().top;
+      // Usamos window.innerHeight para o bottom real do viewport (sem padding)
+      const colH = Math.max(120, window.innerHeight - boardTop - 16);
+
+      board.style.height = `${colH}px`;
+      board.style.setProperty("--col-h", `${colH}px`);
     };
-    setColH();
-    const ro = new ResizeObserver(setColH);
+
+    // Observa tanto o wrapper quanto o screen para reagir a redimensionamentos
+    apply();
+    const ro = new ResizeObserver(apply);
     ro.observe(wrapper);
+    const screenEl = wrapper.closest<HTMLElement>(".v2-screen");
+    if (screenEl) ro.observe(screenEl);
     return () => ro.disconnect();
   }, []);
 
@@ -392,8 +406,8 @@ export default function KanbanV2ClientPage({
       {navRail ?? <NavRail />}
       <div
         ref={boardWrapperRef}
-        className="flex min-w-0 flex-col gap-3 overflow-hidden"
-        style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)" }}
+        className="flex min-w-0 flex-col gap-3"
+        style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)", overflow: "clip" }}
       >
         <PipelineHeader
           activeTab={activeTab}

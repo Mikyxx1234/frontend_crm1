@@ -903,7 +903,7 @@ function CardMoveDropdown({
       </TooltipGlass>
 
       {open && (
-        <div className="absolute bottom-full right-0 z-50 mb-1.5 max-h-[260px] min-w-[200px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)] backdrop-blur-md">
+        <div className="absolute bottom-full right-0 z-50 mb-1.5 max-h-[260px] min-w-[200px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)]">
           <div className="px-3 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Mover para
           </div>

@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   IconArrowLeft,
+  IconBolt,
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconCopy,
   IconDots,
+  IconExternalLink,
   IconPalette,
   IconPencil,
   IconPlus,
-  IconRobot,
   IconStar,
   IconX,
 } from "@tabler/icons-react";
@@ -21,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import { usePipelines, useBoard } from "@/features/pipeline-v2/hooks";
 import { useAutomations } from "@/features/automations-v2/hooks";
 import { AddAutomationDrawer } from "./add-automation-drawer";
@@ -69,31 +72,90 @@ interface StageConfig {
   automations: Automation[];
 }
 
-// ─── AutomationCard ───────────────────────────────────────────────
+// ─── AutomationCard (Variante C — header brand) ───────────────────
+
+function CopyButton({ className }: { className?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      title="Duplicar automação"
+      onClick={(e) => {
+        e.stopPropagation();
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1800);
+      }}
+      className={cn(
+        "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-white/20 py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-white/30",
+        className,
+      )}
+    >
+      {copied
+        ? <><IconCheck size={12} className="text-white" /> Copiado</>
+        : <><IconCopy size={12} /> Duplicar</>
+      }
+    </button>
+  );
+}
 
 function AutomationCard({ automation }: { automation: Automation }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white/60 px-3 py-2.5 shadow-[var(--glass-shadow-sm)] transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/8">
-      {/* Chip do gatilho */}
-      <span className="inline-flex w-fit items-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
-        {automation.stageTrigger}
-      </span>
+  const [active, setActive] = useState(true);
 
-      {/* Conteúdo: robô + nome */}
-      <div className="flex items-start gap-2.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12">
-          <IconRobot size={14} className="text-[var(--brand-primary)]" />
+  return (
+    <div className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]">
+      {/* Header com gradiente brand */}
+      <div
+        className="relative flex flex-col gap-2 px-4 pb-4 pt-4"
+        style={{ background: "linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-light, #7B8FF7) 100%)" }}
+      >
+        {/* Ícone decorativo watermark */}
+        <div className="absolute right-3 top-2 opacity-10" aria-hidden>
+          <IconBolt size={42} className="text-white" />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-            {automation.name}
-          </p>
-          {automation.description && (
-            <p className="mt-0.5 truncate font-display text-[11px] text-[var(--text-muted)]">
-              {automation.description}
+
+        {/* Tag de gatilho */}
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 font-display text-[10px] font-bold text-white/90">
+          <IconBolt size={10} />
+          {automation.stageTrigger}
+        </span>
+
+        {/* Nome + toggle */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+              <IconBolt size={14} className="text-white" />
+            </div>
+            <p className="truncate font-display text-[13.5px] font-bold text-white">
+              {automation.name}
             </p>
-          )}
+          </div>
+          <SwitchGlass
+            checked={active}
+            onChange={(v) => setActive(v)}
+            size="sm"
+            aria-label={`${active ? "Desativar" : "Ativar"} ${automation.name}`}
+            className="relative z-10 shrink-0"
+          />
         </div>
+
+        {automation.description && (
+          <p className="line-clamp-1 font-body text-[11px] leading-relaxed text-white/65">
+            {automation.description}
+          </p>
+        )}
+      </div>
+
+      {/* Rodapé pill buttons */}
+      <div className="flex items-center gap-2 bg-[var(--brand-primary)] px-4 pb-3">
+        <CopyButton />
+        <a
+          href={`/automations/${automation.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white py-1.5 font-display text-[11px] font-bold text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-px"
+        >
+          Abrir
+          <IconExternalLink size={11} />
+        </a>
       </div>
     </div>
   );

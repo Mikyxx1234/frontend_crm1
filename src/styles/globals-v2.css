@@ -398,3 +398,8 @@
   .av-yellow  { background: linear-gradient(220deg, #FAFF5D 46%, #B89500 100%); }
   .av-red     { background: linear-gradient(220deg, #FF5D6D 46%, #B81530 100%); }
 }
+
+@keyframes addDealExpand {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

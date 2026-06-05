@@ -35,9 +35,9 @@ type Props = {
   onApply: (next: AdvancedDealFilters) => void;
   onClear: () => void;
   onRequestSave?: (current: AdvancedDealFilters) => void;
-  /** Largura do dropdown. Default: 420px. */
+  /** Largura do dropdown. Default: 780px. */
   width?: number;
-  /** Altura maxima do dropdown. Default: 70vh. */
+  /** Altura maxima do dropdown. Default: 80vh / 680px. */
   maxHeight?: string;
   className?: string;
 };
@@ -45,7 +45,7 @@ type Props = {
 export function FilterDropdown({
   open,
   onOpenChange,
-  anchorRef,
+  anchorRef: _anchorRef,
   value,
   options,
   optionsLoading,
@@ -53,19 +53,14 @@ export function FilterDropdown({
   onApply,
   onClear,
   onRequestSave,
-  width = 420,
-  maxHeight = "min(70vh, 640px)",
+  width = 900,
+  maxHeight = "min(85vh, 720px)",
   className,
 }: Props) {
   const ref = React.useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = React.useState<{ top: number; left: number } | null>(
-    null,
-  );
   const [isDark, setIsDark] = React.useState(false);
 
-  // Detecta dark mode pelo `.dark` no <html> (next-themes attribute=class).
-  // Inline style precisa do valor literal pq `var(--dropdown-solid-bg)`
-  // pode falhar dependendo de onde o portal é montado.
+  // Detecta dark mode pelo `.dark` no <html>.
   React.useEffect(() => {
     if (typeof document === "undefined") return;
     const update = () => setIsDark(document.documentElement.classList.contains("dark"));
@@ -75,81 +70,76 @@ export function FilterDropdown({
     return () => obs.disconnect();
   }, []);
 
-  // Posiciona o dropdown a partir do retângulo do anchor.
+  // Trava scroll do body enquanto o modal está aberto.
   React.useEffect(() => {
-    if (!open) return;
-    function compute() {
-      const rect = anchorRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      setPos({ top: rect.bottom + 8, left: rect.left });
+    if (typeof document === "undefined") return;
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
     }
-    compute();
-    window.addEventListener("scroll", compute, true);
-    window.addEventListener("resize", compute);
-    return () => {
-      window.removeEventListener("scroll", compute, true);
-      window.removeEventListener("resize", compute);
-    };
-  }, [open, anchorRef]);
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
 
+  // Fecha ao pressionar ESC.
   React.useEffect(() => {
     if (!open) return;
-    function onDocClick(e: MouseEvent) {
-      const t = e.target as Node;
-      if (ref.current?.contains(t)) return;
-      if (anchorRef.current?.contains(t)) return;
-      onOpenChange(false);
-    }
     function onEsc(e: KeyboardEvent) {
       if (e.key === "Escape") onOpenChange(false);
     }
-    document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [open, onOpenChange, anchorRef]);
+    return () => document.removeEventListener("keydown", onEsc);
+  }, [open, onOpenChange]);
 
-  if (!open || !pos || typeof document === "undefined") return null;
+  if (!open || typeof document === "undefined") return null;
 
-  // Portal direto no <body> escapa de qualquer stacking context,
-  // backdrop-filter ou overflow:hidden do pai que vinha causando o
-  // popover aparentar translúcido. Position fixed + coords absolutas
-  // do anchor. Cor de fundo via VALOR LITERAL inline (não var(--))
-  // pra ser 100% imune a escopo de CSS variables.
   return createPortal(
-    <div
-      ref={ref}
-      style={{
-        position: "fixed",
-        top: pos.top,
-        left: pos.left,
-        width,
-        height: maxHeight,
-        maxHeight,
-        zIndex: 9999,
-        backgroundColor: isDark ? "#1a2238" : "#ffffff",
-        isolation: "isolate",
-      }}
-      className={cn(
-        "flex flex-col overflow-hidden",
-        "rounded-[22px] border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-slate-700",
-        className,
-      )}
-    >
-      <FilterPanelBody
-        value={value}
-        options={options}
-        optionsLoading={optionsLoading}
-        optionsError={optionsError}
-        onApply={onApply}
-        onClear={onClear}
-        onRequestSave={onRequestSave}
-        onClose={() => onOpenChange(false)}
-        withHeader
+    <>
+      {/* Overlay escuro semitransparente — clicar fecha */}
+      <div
+        aria-hidden="true"
+        style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+        className="bg-black/40 backdrop-blur-[2px]"
+        onMouseDown={() => onOpenChange(false)}
       />
-    </div>,
+
+      {/* Dialog centrado — sempre 100% dentro do viewport */}
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filtros avançados"
+        style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: `min(${width}px, calc(100vw - 32px))`,
+          height: maxHeight,          /* altura explícita: permite flex-1 interno crescer */
+          maxHeight,
+          zIndex: 9999,
+          backgroundColor: isDark ? "#13192d" : "#ffffff",
+          isolation: "isolate",
+        }}
+        className={cn(
+          "flex flex-col overflow-hidden",
+          "rounded-2xl border border-[var(--glass-border)] shadow-[0_24px_64px_rgba(15,20,40,0.22)] dark:border-slate-700",
+          className,
+        )}
+      >
+        <FilterPanelBody
+          value={value}
+          options={options}
+          optionsLoading={optionsLoading}
+          optionsError={optionsError}
+          onApply={onApply}
+          onClear={onClear}
+          onRequestSave={onRequestSave}
+          onClose={() => onOpenChange(false)}
+          withHeader
+        />
+      </div>
+    </>,
     document.body,
   );
 }

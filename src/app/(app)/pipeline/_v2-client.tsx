@@ -65,17 +65,20 @@ import {
   DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
-  EMPTY_FILTERS,
-  FiltersPopover,
   InlineEditText,
   PipelineSwitcher,
   StagePicker,
   TagsPopover,
   WinButton,
-  countActiveFilters,
   useDealChatBinding,
-  type KanbanFilters,
 } from "@/features/pipeline-v2/extras";
+import { FilterDropdown } from "@/components/pipeline/kanban-filters/filter-dropdown";
+import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
+import {
+  countActiveFilters,
+  isEmptyFilters,
+  type AdvancedDealFilters,
+} from "@/components/pipeline/kanban-filters/types";
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos";
 
@@ -124,9 +127,11 @@ export default function KanbanV2ClientPage({
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
   );
-  const [filters, setFilters] = useState<KanbanFilters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<AdvancedDealFilters>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [filterOptions, setFilterOptions] = useState<import("@/components/pipeline/kanban-filters/types").FilterOptionsResponse | null>(null);
+  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
   const filtersBtnRef = useRef<HTMLButtonElement>(null);
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -196,37 +201,54 @@ export default function KanbanV2ClientPage({
     setSelectedIds(new Set());
   }, [pipelineId, activeTab]);
 
-  // Aplica filtros client-side ANTES de virar colunas. Mantemos o
-  // total real (totalCount) para o badge de "todos no estagio" — mas
-  // contamos visualmente apenas os filtrados em `count`.
-  const filteredBoard = useMemo(() => {
-    const hasOwner = filters.ownerIds.length > 0;
-    const hasTag = filters.tagIds.length > 0;
-    const q = search.trim().toLowerCase();
-    const hasSearch = q.length > 0;
+  // Carrega options de filtro quando o painel é aberto pela primeira vez
+  useEffect(() => {
+    if (!filtersOpen || filterOptions !== null || filterOptionsLoading) return;
+    setFilterOptionsLoading(true);
+    fetchFilterOptions()
+      .then(setFilterOptions)
+      .catch(() => setFilterOptions(null))
+      .finally(() => setFilterOptionsLoading(false));
+  }, [filtersOpen, filterOptions, filterOptionsLoading]);
 
-    const filtered = (!hasOwner && !hasTag && !hasSearch)
+  // Aplica filtros client-side ANTES de virar colunas.
+  const filteredBoard = useMemo(() => {
+    const q = (filters.search ?? search).trim().toLowerCase();
+    const hasSearch = q.length > 0;
+    const hasOwner = (filters.ownerIds?.length ?? 0) > 0;
+    const hasTag = (filters.tagIds?.length ?? 0) > 0;
+    const hasStage = (filters.stageIds?.length ?? 0) > 0;
+    const vMin = filters.valueFrom != null ? Number(filters.valueFrom) : null;
+    const vMax = filters.valueTo != null ? Number(filters.valueTo) : null;
+    const hasValue = vMin !== null || vMax !== null;
+
+    const noFilters = !hasSearch && !hasOwner && !hasTag && !hasStage && !hasValue && isEmptyFilters(filters);
+
+    const filtered = noFilters
       ? board
-      : board.map((stage) => ({
-          ...stage,
-          deals: stage.deals.filter((d) => {
-            if (hasOwner && (!d.owner?.id || !filters.ownerIds.includes(d.owner.id))) {
-              return false;
-            }
-            if (hasTag) {
-              const ids = (d.tags ?? []).map((t) => t.id);
-              if (!filters.tagIds.some((id) => ids.includes(id))) return false;
-            }
-            if (hasSearch) {
-              const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-              if (!hay.includes(q)) return false;
-            }
-            return true;
-          }),
-        }));
+      : board
+          .filter((stage) => !hasStage || (filters.stageIds ?? []).includes(stage.id))
+          .map((stage) => ({
+            ...stage,
+            deals: stage.deals.filter((d) => {
+              if (hasOwner && (!d.owner?.id || !(filters.ownerIds ?? []).includes(d.owner.id))) return false;
+              if (hasTag) {
+                const ids = (d.tags ?? []).map((t) => t.id);
+                if (!(filters.tagIds ?? []).some((id) => ids.includes(id))) return false;
+              }
+              if (hasSearch) {
+                const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
+                  .filter(Boolean).join(" ").toLowerCase();
+                if (!hay.includes(q)) return false;
+              }
+              if (hasValue) {
+                const val = Number(d.value) || 0;
+                if (vMin !== null && val < vMin) return false;
+                if (vMax !== null && val > vMax) return false;
+              }
+              return true;
+            }),
+          }));
 
     // Ordenação client-side dos cards dentro de cada coluna
     if (sortKey === "default") return filtered;
@@ -382,16 +404,19 @@ export default function KanbanV2ClientPage({
           }
           filtersButtonRef={filtersBtnRef}
           onFiltersClick={() => setFiltersOpen((v) => !v)}
-          activeFiltersCount={countActiveFilters(filters)}
+          activeFiltersCount={countActiveFilters(filters) + (search.trim() ? 1 : 0)}
           search={search}
           onSearchChange={setSearch}
         />
-        <FiltersPopover
+        <FilterDropdown
           open={filtersOpen}
+          onOpenChange={setFiltersOpen}
           anchorRef={filtersBtnRef}
-          onClose={() => setFiltersOpen(false)}
-          filters={filters}
-          onChange={setFilters}
+          value={filters}
+          options={filterOptions}
+          optionsLoading={filterOptionsLoading}
+          onApply={setFilters}
+          onClear={() => setFilters({})}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -408,12 +433,14 @@ export default function KanbanV2ClientPage({
                 pipelineId={pipelineId}
                 statusFilter={status}
                 stages={board}
+                addStage={addStage}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
                 onToggleSelectAllInColumn={toggleSelectMany}
                 onAddDeal={() =>
                   setAddStage({ id: col.stageId, name: col.title })
                 }
+                onCloseAddDeal={() => setAddStage(null)}
               />
             ))}
             {columns.length === 0 ? (
@@ -684,17 +711,6 @@ export default function KanbanV2ClientPage({
             </div>
           ) : undefined
         }
-      />
-
-      <AddDealDialog
-        open={!!addStage}
-        onOpenChange={(o) => {
-          if (!o) setAddStage(null);
-        }}
-        stageId={addStage?.id ?? ""}
-        stageName={addStage?.name}
-        pipelineId={pipelineId}
-        statusFilter={status}
       />
 
       {pipelineId ? (
@@ -985,6 +1001,8 @@ function DroppableColumn({
   pipelineId,
   statusFilter,
   onAddDeal,
+  onCloseAddDeal,
+  addStage,
   stages,
   selectedIds,
   onToggleSelect,
@@ -996,6 +1014,8 @@ function DroppableColumn({
   pipelineId: string | null;
   statusFilter: StatusFilter;
   onAddDeal?: () => void;
+  onCloseAddDeal?: () => void;
+  addStage: { id: string; name: string } | null;
   stages: BoardStageDto[];
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
@@ -1012,6 +1032,8 @@ function DroppableColumn({
     dealIdsInColumn.length > 0 && selectedInColumnCount === dealIdsInColumn.length;
   const someSelected = selectedInColumnCount > 0;
 
+  const isAddingHere = addStage?.id === column.stageId;
+
   return (
     <Droppable droppableId={column.stageId}>
       {(provided, snapshot) => (
@@ -1023,6 +1045,18 @@ function DroppableColumn({
           deals={column.deals}
           onDealClick={onDealClick}
           onAddDeal={onAddDeal}
+          addFormSlot={
+            isAddingHere ? (
+              <AddDealDialog
+                open={true}
+                onOpenChange={(o) => { if (!o) onCloseAddDeal?.(); }}
+                stageId={column.stageId}
+                stageName={column.title}
+                pipelineId={pipelineId}
+                statusFilter={statusFilter}
+              />
+            ) : undefined
+          }
           selection={{
             allSelected,
             someSelected,

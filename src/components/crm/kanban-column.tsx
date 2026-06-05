@@ -60,6 +60,14 @@ const colorMap: Record<ColumnColor, string> = {
   fecha: "#ef4444",
 }
 
+const colorBgMap: Record<ColumnColor, string> = {
+  novo:     "rgba(91, 111, 245, 0.10)",
+  quali:    "rgba(16, 185, 129, 0.10)",
+  proposta: "rgba(245, 158, 11,  0.10)",
+  nego:     "rgba(167, 139, 250, 0.10)",
+  fecha:    "rgba(239, 68,  68,  0.10)",
+}
+
 export function KanbanColumn({
   title,
   color,
@@ -80,18 +88,18 @@ export function KanbanColumn({
   return (
     <section
       aria-label={`Coluna ${title}`}
-      // h-full + min-h-0 garantem que a coluna ocupe a altura total
-      // do flex parent (board) sem estourar — o overflow-y-auto interno
-      // do bloco de deals so funciona se aqui a altura for limitada.
-      className="flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 backdrop-blur-md shadow-[var(--glass-shadow)]"
+      className="flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-3 backdrop-blur-md shadow-[var(--glass-shadow)]"
     >
+      {/* Barra de acento colorida no topo da coluna */}
+      <div
+        className="h-[3px] w-full shrink-0 rounded-t-[var(--radius-xl)]"
+        style={{ background: colorMap[color] }}
+      />
+
       {/* Header */}
-      <div className="flex items-center justify-between px-1 pb-2.5">
-        <div className="flex items-center gap-2.5">
-          {/* Checkbox "selecionar todos desta etapa" — estados:
-              vazio / parcial (alguns) / cheio (todos). Aparece apenas
-              quando a coluna tem deals e o caller fornece `selection`.
-              Comportamento herdado do kanban antigo. */}
+      <div className="flex items-center justify-between px-4 pb-2.5 pt-3.5">
+        <div className="flex items-center gap-2">
+          {/* Checkbox "selecionar todos desta etapa" */}
           {showSelectAll && selection ? (
             <TooltipGlass
               label={
@@ -103,61 +111,87 @@ export function KanbanColumn({
               }
               side="top"
             >
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                selection.onToggleAll()
-              }}
-              aria-label={
-                selection.allSelected
-                  ? "Limpar seleção desta etapa"
-                  : "Selecionar todos desta etapa"
-              }
-              aria-pressed={selection.someSelected}
-              className={cn(
-                "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
-                selection.someSelected
-                  ? "text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
-                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]",
-              )}
-            >
-              {selection.allSelected ? (
-                <IconSquareCheckFilled size={16} />
-              ) : selection.someSelected ? (
-                <IconSquareMinus size={16} />
-              ) : (
-                <IconSquare size={16} />
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  selection.onToggleAll()
+                }}
+                aria-label={
+                  selection.allSelected
+                    ? "Limpar seleção desta etapa"
+                    : "Selecionar todos desta etapa"
+                }
+                aria-pressed={selection.someSelected}
+                className={cn(
+                  "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+                  selection.someSelected
+                    ? "text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
+                    : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]",
+                )}
+              >
+                {selection.allSelected ? (
+                  <IconSquareCheckFilled size={16} />
+                ) : selection.someSelected ? (
+                  <IconSquareMinus size={16} />
+                ) : (
+                  <IconSquare size={16} />
+                )}
+              </button>
             </TooltipGlass>
           ) : null}
-          <span
-            className="h-[18px] w-[3px] rounded-full"
-            style={{ background: colorMap[color] }}
-          />
-          <h3 className="font-display text-[15px] font-bold tracking-tight text-[var(--text-primary)]">
+
+          <h3 className="font-display text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
             {title}
           </h3>
-          <span className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-muted)]">
+
+          {/* Badge de contagem com cor da etapa */}
+          <span
+            className="rounded-full px-2 py-0.5 font-display text-[11px] font-bold"
+            style={{
+              background: colorBgMap[color],
+              color: colorMap[color],
+            }}
+          >
             {count}
           </span>
         </div>
+
         <TooltipGlass label="Adicionar negócio" side="top">
           <button
             type="button"
             onClick={onAddDeal}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] transition-colors hover:text-white"
+            style={
+              {
+                "--hover-bg": colorMap[color],
+              } as React.CSSProperties
+            }
+            onMouseEnter={(e) => {
+              const btn = e.currentTarget
+              btn.style.background = colorMap[color]
+              btn.style.borderColor = colorMap[color]
+              btn.style.color = "#fff"
+            }}
+            onMouseLeave={(e) => {
+              const btn = e.currentTarget
+              btn.style.background = ""
+              btn.style.borderColor = ""
+              btn.style.color = ""
+            }}
           >
-            <IconPlus size={16} />
+            <IconPlus size={15} />
           </button>
         </TooltipGlass>
       </div>
 
       {/* Total */}
-      <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-1 pb-2.5 font-display text-xs font-semibold text-[var(--text-secondary)]">
+      <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-4 pb-2.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">
         {total}
       </div>
+
+      {/* Padding lateral dos deals */}
+      <div className="flex min-h-0 flex-1 flex-col px-2.5">
 
       {/* Deals — container respeita Droppable (ref + props do react-dnd).
           min-h-0 e' OBRIGATORIO: este e' o no onde o scroll-Y precisa
@@ -192,6 +226,7 @@ export function KanbanColumn({
           </button>
         )}
       </div>
+      </div>{/* fim do padding lateral */}
     </section>
   )
 }

@@ -419,6 +419,10 @@ export default function KanbanV2ClientPage({
           onClear={() => setFilters({})}
         />
 
+        {/* flex-1 min-h-0 AQUI é o ponto crítico: DragDropContext
+            renderiza um Fragment — este wrapper garante que o board
+            herde a altura restante do flex-col pai (v2-screen). */}
+        <div className="flex min-h-0 flex-1 flex-col">
         <DragDropContext onDragEnd={handleDragEnd}>
           {/* min-h-0 + min-w-0 são CRÍTICOS: sem isso o flex-1 nao
               limita altura, as <section> filhas estouram e os cards
@@ -448,6 +452,7 @@ export default function KanbanV2ClientPage({
             ) : null}
           </div>
         </DragDropContext>
+        </div>{/* fim wrapper flex-1 do board */}
       </div>
 
       {importExportOpen && (
@@ -838,7 +843,7 @@ function formatDate(iso: string): string {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────���────────────────────────────────────────────────
 // Coluna drop-friendly: re-renderiza a KanbanColumn original com
 // uma área Droppable em cima dos cards.
 // ─────────────────────────────────────────────────────────────────

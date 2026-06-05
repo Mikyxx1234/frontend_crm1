@@ -58,12 +58,14 @@ export type AdvancedDealFilters = {
   lastInteractionAt?: DateRangeValue;
   dealCustomFields?: CustomFieldFilter[];
   contactCustomFields?: CustomFieldFilter[];
+  valueFrom?: number | null;
+  valueTo?: number | null;
 };
 
 export type FilterOptionsResponse = {
   pipelines: { id: string; name: string; stages: { id: string; name: string; color: string; position: number }[] }[];
   users: { id: string; name: string; avatarUrl?: string | null; role: string; type: string }[];
-  tags: { id: string; name: string; color: string }[];
+  tags: { id: string; name: string; color: string; dealCount?: number }[];
   dealCustomFields: CustomField[];
   contactCustomFields: CustomField[];
   sources: string[];
@@ -131,5 +133,6 @@ export function countActiveFilters(f: AdvancedDealFilters | null | undefined): n
   if (f.lastInteractionAt?.from || f.lastInteractionAt?.to) n++;
   if (f.dealCustomFields?.length) n += f.dealCustomFields.length;
   if (f.contactCustomFields?.length) n += f.contactCustomFields.length;
+  if (f.valueFrom != null || f.valueTo != null) n++;
   return n;
 }

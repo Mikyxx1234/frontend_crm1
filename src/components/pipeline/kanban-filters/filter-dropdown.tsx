@@ -35,9 +35,9 @@ type Props = {
   onApply: (next: AdvancedDealFilters) => void;
   onClear: () => void;
   onRequestSave?: (current: AdvancedDealFilters) => void;
-  /** Largura do dropdown. Default: 420px. */
+  /** Largura do dropdown. Default: 780px. */
   width?: number;
-  /** Altura maxima do dropdown. Default: 70vh. */
+  /** Altura maxima do dropdown. Default: 80vh / 680px. */
   maxHeight?: string;
   className?: string;
 };
@@ -53,8 +53,8 @@ export function FilterDropdown({
   onApply,
   onClear,
   onRequestSave,
-  width = 420,
-  maxHeight = "min(70vh, 640px)",
+  width = 780,
+  maxHeight = "min(80vh, 680px)",
   className,
 }: Props) {
   const ref = React.useRef<HTMLDivElement | null>(null);

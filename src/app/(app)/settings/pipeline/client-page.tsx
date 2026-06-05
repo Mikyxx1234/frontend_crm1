@@ -1385,7 +1385,7 @@ export default function PipelineSettingsClientPage() {
           />
 
           {/* Board de estágios */}
-          <div className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-3">
+          <div className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-1">
             {stages.length > 0 ? (
               stages.map((stage, idx) => (
                 <StageColumn

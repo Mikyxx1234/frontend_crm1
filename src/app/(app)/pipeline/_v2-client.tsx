@@ -453,7 +453,7 @@ export default function KanbanV2ClientPage({
               <EmptyBoard isAuthenticated={isAuthenticated} />
             ) : null}
           </div>
-          <ScrollMap boardRef={boardRef} />
+          <ScrollMap boardRef={boardRef} columnCount={columns.length} />
           </div>{/* fim relative wrapper */}
         </DragDropContext>
       </div>

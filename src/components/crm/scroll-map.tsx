@@ -6,32 +6,41 @@ import { cn } from "@/lib/utils";
 interface ScrollMapProps {
   /** ref do elemento com overflow-x: scroll (o kanban-board-hscroll) */
   boardRef: React.RefObject<HTMLDivElement | null>;
+  /** Número de colunas no board — define quantos segmentos aparecem */
+  columnCount: number;
   className?: string;
 }
 
 /**
- * ScrollMap — barra de navegação horizontal minimalista.
- * Fica fixada no canto inferior direito (sobre o board), substituindo a
- * scrollbar nativa que foi escondida via CSS.
- * Largura proporcional ao viewport / scrollWidth do board.
+ * ScrollMap — navegador horizontal estilo Kommo.
+ *
+ * Mostra um item por coluna do board. Um indicador ("screen-position")
+ * desliza sobre eles refletindo a área visível atual. O usuário pode
+ * arrastar o indicador ou clicar em qualquer segmento para navegar.
  */
-export function ScrollMap({ boardRef, className }: ScrollMapProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [thumbPct, setThumbPct] = useState({ left: 0, width: 1 });
-  const dragging = useRef(false);
+export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, scrollLeft: 0 });
+
+  // left e width do indicador em % relativo ao wrapper
+  const [indicator, setIndicator] = useState({ left: 0, width: 100 });
+  const [visible, setVisible] = useState(false);
 
   const recalc = useCallback(() => {
     const el = boardRef.current;
     if (!el) return;
     const { scrollLeft, scrollWidth, clientWidth } = el;
-    if (scrollWidth <= clientWidth) {
-      setThumbPct({ left: 0, width: 1 });
-      return;
-    }
+    const hasOverflow = scrollWidth > clientWidth + 2;
+    setVisible(hasOverflow);
+    if (!hasOverflow) return;
     const ratio = clientWidth / scrollWidth;
-    const leftRatio = scrollLeft / (scrollWidth - clientWidth);
-    setThumbPct({ left: leftRatio * (1 - ratio), width: ratio });
+    const maxScroll = scrollWidth - clientWidth;
+    const leftRatio = maxScroll > 0 ? scrollLeft / maxScroll : 0;
+    setIndicator({
+      left: leftRatio * (1 - ratio) * 100,
+      width: ratio * 100,
+    });
   }, [boardRef]);
 
   useEffect(() => {
@@ -47,75 +56,96 @@ export function ScrollMap({ boardRef, className }: ScrollMapProps) {
     };
   }, [boardRef, recalc]);
 
-  // Arrasto do thumb
-  const onThumbMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
+  // Clique num segmento — scroll proporcional
+  const onSegmentClick = useCallback(
+    (index: number) => {
       const el = boardRef.current;
       if (!el) return;
-      dragging.current = true;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      el.scrollLeft = (index / Math.max(1, columnCount - 1)) * maxScroll;
+    },
+    [boardRef, columnCount],
+  );
+
+  // Arrasto do indicador
+  const onIndicatorMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const el = boardRef.current;
+      if (!el) return;
+      isDragging.current = true;
       dragStart.current = { x: e.clientX, scrollLeft: el.scrollLeft };
 
       const onMove = (ev: MouseEvent) => {
-        if (!dragging.current) return;
-        const track = trackRef.current;
-        if (!track || !boardRef.current) return;
-        const trackW = track.clientWidth;
-        const scrollRange = boardRef.current.scrollWidth - boardRef.current.clientWidth;
+        if (!isDragging.current) return;
+        const wrapper = wrapperRef.current;
+        if (!wrapper || !boardRef.current) return;
+        const wrapperW = wrapper.clientWidth;
+        const maxScroll = boardRef.current.scrollWidth - boardRef.current.clientWidth;
+        const indicatorW = (indicator.width / 100) * wrapperW;
+        const trackW = wrapperW - indicatorW;
         const dx = ev.clientX - dragStart.current.x;
-        const ratio = dx / (trackW * (1 - thumbPct.width));
+        const scrollDelta = trackW > 0 ? (dx / trackW) * maxScroll : 0;
         boardRef.current.scrollLeft = Math.max(
           0,
-          Math.min(scrollRange, dragStart.current.scrollLeft + ratio * scrollRange),
+          Math.min(maxScroll, dragStart.current.scrollLeft + scrollDelta),
         );
       };
-      const onUp = () => { dragging.current = false; };
+
+      const onUp = () => {
+        isDragging.current = false;
+        window.removeEventListener("mousemove", onMove);
+      };
+
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp, { once: true });
     },
-    [boardRef, thumbPct.width],
+    [boardRef, indicator.width],
   );
 
-  // Clique no track (fora do thumb) — scroll até aquele ponto
-  const onTrackClick = useCallback(
-    (e: React.MouseEvent) => {
-      const track = trackRef.current;
-      const el = boardRef.current;
-      if (!track || !el) return;
-      const rect = track.getBoundingClientRect();
-      const clickRatio = (e.clientX - rect.left) / rect.width;
-      const scrollRange = el.scrollWidth - el.clientWidth;
-      el.scrollLeft = clickRatio * scrollRange;
-    },
-    [boardRef],
-  );
+  if (!visible) return null;
 
-  // Não renderiza se não há overflow horizontal
-  if (thumbPct.width >= 0.99) return null;
+  const segments = Math.max(1, columnCount);
 
   return (
     <div
+      aria-hidden="true"
       className={cn(
         "pointer-events-none absolute bottom-2 right-3 z-20",
         "flex items-center",
         className,
       )}
-      aria-hidden="true"
     >
-      {/* Track */}
+      {/* Wrapper dos segmentos — tamanho proporcional ao número de colunas */}
       <div
-        ref={trackRef}
-        onClick={onTrackClick}
-        className="pointer-events-auto relative h-[5px] w-[180px] cursor-pointer overflow-hidden rounded-full"
-        style={{ background: "rgba(91,111,245,0.12)" }}
+        ref={wrapperRef}
+        className="pointer-events-auto relative flex h-[8px] select-none items-stretch gap-[2px]"
+        style={{ width: Math.min(segments * 28, 320) + "px" }}
       >
-        {/* Thumb */}
+        {/* Um segmento por coluna */}
+        {Array.from({ length: segments }).map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`Ir para coluna ${i + 1}`}
+            onClick={() => onSegmentClick(i)}
+            className="h-full flex-1 cursor-pointer rounded-[2px] transition-colors duration-150"
+            style={{ background: "rgba(91,111,245,0.14)" }}
+          />
+        ))}
+
+        {/* Indicador de posição ("screen-position") — desliza sobre os segmentos */}
         <div
-          onMouseDown={onThumbMouseDown}
-          className="absolute inset-y-0 cursor-grab rounded-full transition-[width,left] duration-75 active:cursor-grabbing"
+          onMouseDown={onIndicatorMouseDown}
+          className={cn(
+            "absolute inset-y-0 cursor-grab rounded-[2px]",
+            "active:cursor-grabbing",
+            "transition-[left,width] duration-75 ease-linear",
+          )}
           style={{
-            left: `${thumbPct.left * 100}%`,
-            width: `${thumbPct.width * 100}%`,
+            left: `${indicator.left}%`,
+            width: `${indicator.width}%`,
             background: "rgba(91,111,245,0.55)",
           }}
         />

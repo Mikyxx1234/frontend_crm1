@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
+import { ScrollMap } from "@/components/crm/scroll-map";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { SwitchGlass } from "@/components/crm/switch-glass";
@@ -715,7 +716,7 @@ function StageColumn({
       onDrop={(e) => { e.preventDefault(); onDrop(stage.id); }}
       onDragEnd={onDragEnd}
       className={cn(
-        "flex h-full min-h-0 w-[300px] shrink-0 flex-col rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
+        "kanban-col flex w-[300px] shrink-0 flex-col rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
         isDragOver
           ? "scale-[1.02] border-[var(--brand-primary)] shadow-[0_0_0_2px_rgba(91,111,245,0.25),var(--glass-shadow)]"
           : "border-[var(--glass-border)]",
@@ -967,6 +968,35 @@ export default function PipelineSettingsClientPage() {
   // Drag-and-drop
   const dragSourceId = useRef<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  // Refs do board para scroll horizontal / altura das colunas
+  const boardRef = useRef<HTMLDivElement>(null);
+  const boardWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Propaga a altura disponível para as colunas via --col-h (mesma técnica
+  // usada no board do pipeline) — quebra a dependência da cadeia flex.
+  useEffect(() => {
+    const wrapper = boardWrapperRef.current;
+    if (!wrapper) return;
+    const apply = () => {
+      const board = wrapper.querySelector<HTMLElement>(".kanban-board-hscroll");
+      if (!board) return;
+      const boardTop = board.getBoundingClientRect().top;
+      const colH = Math.max(120, window.innerHeight - boardTop - 16);
+      board.style.height = `${colH}px`;
+      board.style.setProperty("--col-h", `${colH}px`);
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(wrapper);
+    const screenEl = wrapper.closest<HTMLElement>(".v2-screen");
+    if (screenEl) ro.observe(screenEl);
+    window.addEventListener("resize", apply);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
 
   // Modal de renomear
   const [renamingStageId, setRenamingStageId] = useState<string | null>(null);
@@ -1357,7 +1387,11 @@ export default function PipelineSettingsClientPage() {
       <div className="v2-screen grid grid-cols-[72px_1fr] grid-rows-1 gap-4 p-4">
         <NavRailV2 />
 
-        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-clip">
+        <div
+          ref={boardWrapperRef}
+          className="flex min-w-0 flex-col gap-3"
+          style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)", overflow: "clip" }}
+        >
           <PipelineHeader
             hideActions
             pipelineNameSlot={
@@ -1385,7 +1419,11 @@ export default function PipelineSettingsClientPage() {
           />
 
           {/* Board de estágios */}
-          <div className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-1">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <div
+            ref={boardRef}
+            className="kanban-board-hscroll flex min-w-0 flex-1 gap-3.5 pb-1"
+          >
             {stages.length > 0 ? (
               stages.map((stage, idx) => (
                 <StageColumn
@@ -1427,6 +1465,8 @@ export default function PipelineSettingsClientPage() {
               </button>
             </div>
           </div>
+          <ScrollMap boardRef={boardRef} columnCount={stages.length + 1} />
+          </div>{/* fim relative wrapper */}
         </div>
       </div>
 

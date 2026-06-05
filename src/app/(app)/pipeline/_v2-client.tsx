@@ -11,7 +11,23 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 
-import { IconArrowsExchange, IconChevronDown, IconDotsVertical, IconPencil, IconPlus, IconSettings, IconTrophy } from "@tabler/icons-react";
+import {
+  IconAbc,
+  IconArrowNarrowDown,
+  IconArrowNarrowUp,
+  IconArrowsExchange,
+  IconArrowsSort,
+  IconChevronDown,
+  IconClock,
+  IconDotsVertical,
+  IconDownload,
+  IconPencil,
+  IconPlus,
+  IconSettings,
+  IconTrophy,
+  IconUpload,
+  IconX,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 import { NavRail } from "@/components/crm/nav-rail";
@@ -25,6 +41,11 @@ import {
   toKanbanColumns,
   type KanbanColumnView,
 } from "@/features/pipeline-v2/adapters";
+import {
+  ExportPanel,
+  ImportPanel,
+  useImportExportBump,
+} from "@/features/pipeline-v2/import-export";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
 import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
@@ -56,6 +77,15 @@ import {
 } from "@/features/pipeline-v2/extras";
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos";
+
+type SortKey =
+  | "default"
+  | "value_desc"
+  | "value_asc"
+  | "name_az"
+  | "name_za"
+  | "created_newest"
+  | "created_oldest";
 
 const TAB_TO_STATUS: Record<TabId, StatusFilter> = {
   abertos: "OPEN",
@@ -97,6 +127,15 @@ export default function KanbanV2ClientPage({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const filtersBtnRef = useRef<HTMLButtonElement>(null);
+  const kebabBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Kebab menu e modal de import/export
+  const [kebabOpen, setKebabOpen] = useState(false);
+  const [importExportOpen, setImportExportOpen] = useState<"import" | "export" | null>(null);
+  const bump = useImportExportBump();
+
+  // Ordenação client-side dos cards dentro de cada etapa
+  const [sortKey, setSortKey] = useState<SortKey>("default");
 
   const status = TAB_TO_STATUS[activeTab];
   const { data: pipelines } = usePipelines(isAuthenticated);
@@ -164,28 +203,50 @@ export default function KanbanV2ClientPage({
     const hasTag = filters.tagIds.length > 0;
     const q = search.trim().toLowerCase();
     const hasSearch = q.length > 0;
-    if (!hasOwner && !hasTag && !hasSearch) return board;
-    return board.map((stage) => ({
-      ...stage,
-      deals: stage.deals.filter((d) => {
-        if (hasOwner && (!d.owner?.id || !filters.ownerIds.includes(d.owner.id))) {
-          return false;
-        }
-        if (hasTag) {
-          const ids = (d.tags ?? []).map((t) => t.id);
-          if (!filters.tagIds.some((id) => ids.includes(id))) return false;
-        }
-        if (hasSearch) {
-          const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      }),
-    }));
-  }, [board, filters, search]);
+
+    const filtered = (!hasOwner && !hasTag && !hasSearch)
+      ? board
+      : board.map((stage) => ({
+          ...stage,
+          deals: stage.deals.filter((d) => {
+            if (hasOwner && (!d.owner?.id || !filters.ownerIds.includes(d.owner.id))) {
+              return false;
+            }
+            if (hasTag) {
+              const ids = (d.tags ?? []).map((t) => t.id);
+              if (!filters.tagIds.some((id) => ids.includes(id))) return false;
+            }
+            if (hasSearch) {
+              const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+              if (!hay.includes(q)) return false;
+            }
+            return true;
+          }),
+        }));
+
+    // Ordenação client-side dos cards dentro de cada coluna
+    if (sortKey === "default") return filtered;
+    return filtered.map((stage) => {
+      const deals = [...stage.deals];
+      if (sortKey === "value_desc") {
+        deals.sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0));
+      } else if (sortKey === "value_asc") {
+        deals.sort((a, b) => (Number(a.value) || 0) - (Number(b.value) || 0));
+      } else if (sortKey === "name_az") {
+        deals.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? "", "pt-BR"));
+      } else if (sortKey === "name_za") {
+        deals.sort((a, b) => (b.title ?? "").localeCompare(a.title ?? "", "pt-BR"));
+      } else if (sortKey === "created_newest") {
+        deals.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+      } else if (sortKey === "created_oldest") {
+        deals.sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime());
+      }
+      return { ...stage, deals };
+    });
+  }, [board, filters, search, sortKey]);
 
   const columns: KanbanColumnView[] = useMemo(
     () => toKanbanColumns(filteredBoard),
@@ -298,14 +359,27 @@ export default function KanbanV2ClientPage({
             />
           }
           settingsSlot={
-            <button
-              type="button"
-              title="Configurações do pipeline"
-              onClick={() => router.push("/settings/pipeline")}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-            >
-              <IconSettings size={15} />
-            </button>
+            <div className="relative">
+              <button
+                ref={kebabBtnRef}
+                type="button"
+                title="Mais opções"
+                onClick={() => setKebabOpen((v) => !v)}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+              >
+                <IconDotsVertical size={15} />
+              </button>
+              <PipelineKebabMenu
+                open={kebabOpen}
+                anchorRef={kebabBtnRef}
+                sortKey={sortKey}
+                onSortChange={(k) => { setSortKey(k); setKebabOpen(false); }}
+                onImport={() => { setImportExportOpen("import"); setKebabOpen(false); }}
+                onExport={() => { setImportExportOpen("export"); setKebabOpen(false); }}
+                onSettings={() => { router.push("/settings/pipeline"); setKebabOpen(false); }}
+                onClose={() => setKebabOpen(false)}
+              />
+            </div>
           }
           filtersButtonRef={filtersBtnRef}
           onFiltersClick={() => setFiltersOpen((v) => !v)}
@@ -349,6 +423,14 @@ export default function KanbanV2ClientPage({
           </div>
         </DragDropContext>
       </div>
+
+      {importExportOpen && (
+        <ImportExportModal
+          activeTab={importExportOpen}
+          onClose={() => setImportExportOpen(null)}
+          bump={bump}
+        />
+      )}
 
       <DealDetailPanel
         isOpen={!!activeDealId}
@@ -1076,4 +1158,189 @@ function avatarColorSlugFromName(name: string | null | undefined): string {
   let sum = 0;
   for (let i = 0; i < safe.length; i += 1) sum += safe.charCodeAt(i);
   return AVATAR_SLUGS[sum % AVATAR_SLUGS.length];
+}
+
+// ─── PipelineKebabMenu ────────────────────────────────────────────
+
+const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
+  { key: "default",        label: "Padrão (posição)",      icon: <IconArrowsSort size={13} /> },
+  { key: "value_desc",     label: "Valor: maior primeiro", icon: <IconArrowNarrowDown size={13} /> },
+  { key: "value_asc",      label: "Valor: menor primeiro", icon: <IconArrowNarrowUp size={13} /> },
+  { key: "name_az",        label: "Nome: A → Z",           icon: <IconAbc size={13} /> },
+  { key: "name_za",        label: "Nome: Z → A",           icon: <IconAbc size={13} /> },
+  { key: "created_newest", label: "Criação: mais recente", icon: <IconClock size={13} /> },
+  { key: "created_oldest", label: "Criação: mais antigo",  icon: <IconClock size={13} /> },
+];
+
+interface PipelineKebabMenuProps {
+  open: boolean;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  sortKey: SortKey;
+  onSortChange: (k: SortKey) => void;
+  onImport: () => void;
+  onExport: () => void;
+  onSettings: () => void;
+  onClose: () => void;
+}
+
+function PipelineKebabMenu({
+  open,
+  anchorRef,
+  sortKey,
+  onSortChange,
+  onImport,
+  onExport,
+  onSettings,
+  onClose,
+}: PipelineKebabMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const fn = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, [open, onClose, anchorRef]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      ref={menuRef}
+      className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)]"
+    >
+      {/* Seção: ordenar */}
+      <div className="px-3 pb-1 pt-2.5">
+        <p className="font-display text-[9.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+          Ordenar cards
+        </p>
+      </div>
+      {SORT_OPTIONS.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onSortChange(opt.key)}
+          className={cn(
+            "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold transition-colors",
+            sortKey === opt.key
+              ? "bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+          )}
+        >
+          <span className={cn("shrink-0", sortKey === opt.key && "text-[var(--brand-primary)]")}>
+            {opt.icon}
+          </span>
+          {opt.label}
+          {sortKey === opt.key && (
+            <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-primary)]" />
+          )}
+        </button>
+      ))}
+
+      <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
+
+      {/* Seção: dados */}
+      <div className="px-3 pb-1 pt-1">
+        <p className="font-display text-[9.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+          Dados
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onImport}
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+      >
+        <IconUpload size={13} className="shrink-0" />
+        Importar CSV
+      </button>
+      <button
+        type="button"
+        onClick={onExport}
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+      >
+        <IconDownload size={13} className="shrink-0" />
+        Exportar CSV
+      </button>
+
+      <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
+
+      {/* Seção: pipeline */}
+      <button
+        type="button"
+        onClick={onSettings}
+        className="flex w-full items-center gap-2.5 px-3 py-2 pb-3 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+      >
+        <IconSettings size={13} className="shrink-0" />
+        Configurar pipeline
+      </button>
+    </div>
+  );
+}
+
+// ─── ImportExportModal ────────────────────────────────────────────
+
+interface ImportExportModalProps {
+  activeTab: "import" | "export";
+  onClose: () => void;
+  bump: () => void;
+}
+
+function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps) {
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/25 backdrop-blur-[2px]"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.16)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
+              {activeTab === "import"
+                ? <IconUpload size={16} className="text-[var(--brand-primary)]" />
+                : <IconDownload size={16} className="text-[var(--brand-primary)]" />
+              }
+            </div>
+            <div>
+              <h2 className="font-display text-[15px] font-bold text-slate-800">
+                {activeTab === "import" ? "Importar dados" : "Exportar dados"}
+              </h2>
+              <p className="mt-0.5 font-display text-[11.5px] text-slate-500">
+                {activeTab === "import"
+                  ? "CSV de contatos ou negócios"
+                  : "Baixar base em CSV"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <IconX size={16} />
+          </button>
+        </div>
+
+        {/* Conteúdo */}
+        <div className="p-6">
+          {activeTab === "import"
+            ? <ImportPanel onDone={() => { bump(); onClose(); }} />
+            : <ExportPanel />
+          }
+        </div>
+      </div>
+    </div>
+  );
 }

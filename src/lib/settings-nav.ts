@@ -21,7 +21,6 @@ import {
   Sparkles,
   Tag,
   ThumbsDown,
-  Upload,
   Users,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -128,7 +127,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     id: "crm-dados",
     label: "CRM & Dados",
     icon: Database,
-    description: "Campos, tags e importação",
+    description: "Campos, tags e produtos",
     items: [
       {
         id: "custom-fields",
@@ -156,15 +155,6 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         href: "/old/settings/products",
         allowedRoles: GESTAO,
         requiredPermission: "product:view",
-      },
-      {
-        id: "import",
-        label: "Importar / Exportar",
-        description: "CSV de contatos e negócios",
-        icon: Upload,
-        href: "/old/settings/import",
-        allowedRoles: GESTAO,
-        requiredPermission: "contact:import",
       },
     ],
   },

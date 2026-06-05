@@ -68,29 +68,29 @@ import { cn } from "@/lib/utils";
 
 // ─── Templates CSV ───────────────────────────────────────────────────────────
 
-const CONTACT_TEMPLATE = `name,email,phone,lifecycle_stage,source,company,assigned_to_email
-João Silva,joao.silva@empresa.com,+5511999990001,LEAD,Site,Acme Tecnologia,admin@empresa.com
-Maria Souza,maria.souza@email.com,+5511999990002,MQL,Indicação,Beta Solutions,admin@empresa.com
-Pedro Costa,pedro.costa@gmail.com,+5511999990003,SQL,Google Ads,Gamma Group,admin@empresa.com
-Ana Pereira,ana.pereira@outlook.com,+5511999990004,OPPORTUNITY,Facebook Ads,Delta Comercio,admin@empresa.com
-Lucas Ribeiro,lucas.ribeiro@uol.com.br,+5521999990005,LEAD,Webinar,Epsilon Servicos,admin@empresa.com
-Beatriz Almeida,beatriz.almeida@hotmail.com,+5521999990006,CUSTOMER,Site,Zeta Industria,admin@empresa.com
-Rafael Santos,rafael.santos@yahoo.com,+5531999990007,LEAD,LinkedIn,Eta Consultoria,admin@empresa.com
-Juliana Oliveira,juliana.oliveira@empresa.com,+5531999990008,SUBSCRIBER,Newsletter,Theta Educacao,admin@empresa.com
-Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,SQL,Indicação,Iota Marketing,admin@empresa.com
-Carla Mendes,carla.mendes@outlook.com,+5541999990010,MQL,Google Ads,Kappa Logistica,admin@empresa.com`;
+const CONTACT_TEMPLATE = `Nome,E-mail,Telefone,Ciclo de vida,Origem,Empresa,Responsável,E-mail do responsável
+João Silva,joao.silva@empresa.com,+5511999990001,LEAD,Site,Acme Tecnologia,,admin@empresa.com
+Maria Souza,maria.souza@email.com,+5511999990002,MQL,Indicação,Beta Solutions,,admin@empresa.com
+Pedro Costa,pedro.costa@gmail.com,+5511999990003,SQL,Google Ads,Gamma Group,,admin@empresa.com
+Ana Pereira,ana.pereira@outlook.com,+5511999990004,OPPORTUNITY,Facebook Ads,Delta Comercio,,admin@empresa.com
+Lucas Ribeiro,lucas.ribeiro@uol.com.br,+5521999990005,LEAD,Webinar,Epsilon Servicos,,admin@empresa.com
+Beatriz Almeida,beatriz.almeida@hotmail.com,+5521999990006,CUSTOMER,Site,Zeta Industria,,admin@empresa.com
+Rafael Santos,rafael.santos@yahoo.com,+5531999990007,LEAD,LinkedIn,Eta Consultoria,,admin@empresa.com
+Juliana Oliveira,juliana.oliveira@empresa.com,+5531999990008,SUBSCRIBER,Newsletter,Theta Educacao,,admin@empresa.com
+Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,SQL,Indicação,Iota Marketing,,admin@empresa.com
+Carla Mendes,carla.mendes@outlook.com,+5541999990010,MQL,Google Ads,Kappa Logistica,,admin@empresa.com`;
 
-const DEAL_TEMPLATE = `deal_number,title,value,status,pipeline_name,stage_name,contact_name,contact_email,contact_phone,owner_email,expected_close,lost_reason
-,Implantação CRM - Acme,12500.00,OPEN,Pipeline Principal,Qualificado,João Silva,joao.silva@empresa.com,+5511999990001,admin@empresa.com,2026-07-15,
-,Pacote Premium - Beta Solutions,8900.50,OPEN,Pipeline Principal,Proposta,Maria Souza,maria.souza@email.com,+5511999990002,admin@empresa.com,2026-07-22,
-,Renovação Anual - Gamma Group,24000.00,OPEN,Pipeline Principal,Negociação,Pedro Costa,pedro.costa@gmail.com,+5511999990003,admin@empresa.com,2026-08-01,
-,Consultoria Onboarding - Delta,4500.00,WON,Pipeline Principal,Fechamento,Ana Lima,ana.lima@delta.com.br,+5521999990004,admin@empresa.com,2026-06-30,
-,Treinamento Equipe - Epsilon,3200.00,OPEN,Pipeline Principal,Novo,Bruno Alves,bruno.alves@epsilon.io,+5521999990005,admin@empresa.com,2026-08-10,
-,Pacote Enterprise - Zeta,55000.00,OPEN,Pipeline Principal,Proposta,Camila Dias,camila.dias@zeta.tech,+5531999990006,admin@empresa.com,2026-09-05,
-,Upgrade Plano - Eta,1800.00,LOST,Pipeline Principal,Fechamento,Diego Nunes,diego.nunes@eta.app,+5531999990007,admin@empresa.com,2026-06-15,Preço acima do orçamento
-,Plataforma EAD - Theta,18750.00,OPEN,Pipeline Principal,Qualificado,Fernanda Reis,fernanda.reis@theta.edu,+5511999990008,admin@empresa.com,2026-08-20,
-,Campanha Trimestral - Iota,6700.00,OPEN,Pipeline Principal,Negociação,Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,admin@empresa.com,2026-07-30,
-,Migração Sistema - Kappa,32000.00,WON,Pipeline Principal,Fechamento,Carla Mendes,carla.mendes@outlook.com,+5541999990010,admin@empresa.com,2026-06-20,`;
+const DEAL_TEMPLATE = `Número do negócio,Título,Valor,Status,Pipeline,Etapa,Nome do contato,E-mail do contato,Telefone do contato,Responsável,E-mail do responsável,Previsão de fechamento,Motivo da perda
+,Implantação CRM - Acme,12500.00,OPEN,Pipeline Principal,Qualificado,João Silva,joao.silva@empresa.com,+5511999990001,,admin@empresa.com,2026-07-15,
+,Pacote Premium - Beta Solutions,8900.50,OPEN,Pipeline Principal,Proposta,Maria Souza,maria.souza@email.com,+5511999990002,,admin@empresa.com,2026-07-22,
+,Renovação Anual - Gamma Group,24000.00,OPEN,Pipeline Principal,Negociação,Pedro Costa,pedro.costa@gmail.com,+5511999990003,,admin@empresa.com,2026-08-01,
+,Consultoria Onboarding - Delta,4500.00,WON,Pipeline Principal,Fechamento,Ana Lima,ana.lima@delta.com.br,+5521999990004,,admin@empresa.com,2026-06-30,
+,Treinamento Equipe - Epsilon,3200.00,OPEN,Pipeline Principal,Novo,Bruno Alves,bruno.alves@epsilon.io,+5521999990005,,admin@empresa.com,2026-08-10,
+,Pacote Enterprise - Zeta,55000.00,OPEN,Pipeline Principal,Proposta,Camila Dias,camila.dias@zeta.tech,+5531999990006,,admin@empresa.com,2026-09-05,
+,Upgrade Plano - Eta,1800.00,LOST,Pipeline Principal,Fechamento,Diego Nunes,diego.nunes@eta.app,+5531999990007,,admin@empresa.com,2026-06-15,Preço acima do orçamento
+,Plataforma EAD - Theta,18750.00,OPEN,Pipeline Principal,Qualificado,Fernanda Reis,fernanda.reis@theta.edu,+5511999990008,,admin@empresa.com,2026-08-20,
+,Campanha Trimestral - Iota,6700.00,OPEN,Pipeline Principal,Negociação,Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,,admin@empresa.com,2026-07-30,
+,Migração Sistema - Kappa,32000.00,WON,Pipeline Principal,Fechamento,Carla Mendes,carla.mendes@outlook.com,+5541999990010,,admin@empresa.com,2026-06-20,`;
 
 // ─── Campos do sistema (mapeamento) ──────────────────────────────────────────
 
@@ -101,61 +101,117 @@ const SYSTEM_FIELDS: Record<ImportEntity, SystemField[]> = {
     { key: "name", label: "Nome" },
     { key: "email", label: "E-mail (chave de identificação)" },
     { key: "phone", label: "Telefone" },
-    { key: "lifecycle_stage", label: "Estágio do ciclo de vida" },
+    { key: "lifecycle_stage", label: "Ciclo de vida" },
     { key: "source", label: "Origem" },
     { key: "company", label: "Empresa" },
-    { key: "assigned_to_email", label: "Responsável (e-mail)" },
+    { key: "assigned_to_name", label: "Responsável" },
+    { key: "assigned_to_email", label: "E-mail do responsável" },
     { key: "lead_score", label: "Lead Score" },
     { key: "avatar_url", label: "URL do avatar" },
   ],
   deals: [
     { key: "deal_number", label: "Número do negócio (chave de atualização)" },
-    { key: "title", label: "Título do negócio" },
+    { key: "title", label: "Título" },
     { key: "value", label: "Valor" },
     { key: "status", label: "Status (OPEN/WON/LOST)" },
-    { key: "pipeline_name", label: "Nome do pipeline" },
-    { key: "stage_name", label: "Nome da etapa" },
+    { key: "pipeline_name", label: "Pipeline" },
+    { key: "stage_name", label: "Etapa" },
     { key: "contact_name", label: "Nome do contato (criar se não existir)" },
     { key: "contact_email", label: "E-mail do contato" },
     { key: "contact_phone", label: "Telefone do contato" },
-    { key: "owner_email", label: "Responsável (e-mail)" },
+    { key: "owner_name", label: "Responsável" },
+    { key: "owner_email", label: "E-mail do responsável" },
     { key: "expected_close", label: "Previsão de fechamento" },
     { key: "lost_reason", label: "Motivo da perda" },
   ],
 };
 
+/**
+ * Aliases para auto-mapping. Mapeia o header normalizado do CSV (lowercase,
+ * sem acento, sem espaço, _ ao invés de espaço) para a chave do sistema.
+ * Inclui sinônimos em PT-BR + inglês para compatibilidade com CSVs antigos.
+ */
 const ALIAS_MAP: Record<string, string> = {
+  // contatos
   nome: "name",
+  email: "email",
+  e_mail: "email",
   telefone: "phone",
   celular: "phone",
   whatsapp: "phone",
-  email: "email",
-  e_mail: "email",
-  empresa: "company",
-  responsavel: "assigned_to_email",
-  proprietario: "owner_email",
-  titulo: "title",
-  valor: "value",
-  etapa: "stage_name",
-  pipeline: "pipeline_name",
+  ciclo_de_vida: "lifecycle_stage",
+  lifecycle: "lifecycle_stage",
   origem: "source",
+  empresa: "company",
+  responsavel: "assigned_to_name",
+  nome_do_responsavel: "assigned_to_name",
+  e_mail_do_responsavel: "assigned_to_email",
+  email_do_responsavel: "assigned_to_email",
+  email_responsavel: "assigned_to_email",
+  // deals
+  numero_do_negocio: "deal_number",
+  numero_negocio: "deal_number",
+  numero: "deal_number",
+  titulo: "title",
+  titulo_do_negocio: "title",
+  valor: "value",
+  pipeline: "pipeline_name",
+  nome_do_pipeline: "pipeline_name",
+  etapa: "stage_name",
+  nome_da_etapa: "stage_name",
+  estagio: "stage_name",
+  nome_do_contato: "contact_name",
+  e_mail_do_contato: "contact_email",
+  email_do_contato: "contact_email",
+  telefone_do_contato: "contact_phone",
+  // deals — responsável (overrides do mapping de contato quando entidade=deals)
+  // ATENÇÃO: como o ALIAS_MAP é global, deals usam owner_*. Reescrevemos
+  // depois com base na entidade no autoMapColumns.
+  previsao: "expected_close",
+  previsao_de_fechamento: "expected_close",
+  motivo_da_perda: "lost_reason",
+  motivo_perda: "lost_reason",
+};
+
+/**
+ * Overrides do alias dependentes da entidade. "Responsável" mapeia para
+ * assigned_to_* em contatos e owner_* em negócios.
+ */
+const ALIAS_OVERRIDES_BY_ENTITY: Record<ImportEntity, Record<string, string>> = {
+  contacts: {},
+  deals: {
+    responsavel: "owner_name",
+    nome_do_responsavel: "owner_name",
+    e_mail_do_responsavel: "owner_email",
+    email_do_responsavel: "owner_email",
+    email_responsavel: "owner_email",
+  },
 };
 
 function autoMapColumns(headers: string[], entity: ImportEntity): Record<string, string> {
   const mapping: Record<string, string> = {};
   const fields = SYSTEM_FIELDS[entity];
+  const overrides = ALIAS_OVERRIDES_BY_ENTITY[entity];
   for (const header of headers) {
     const normalized = normalizeCsvHeader(header);
+    // 1) match exato com a chave técnica (deal_number, contact_email, etc.)
     const exact = fields.find((f) => f.key === normalized);
     if (exact) {
       mapping[header] = exact.key;
       continue;
     }
+    // 2) match com o label PT-BR do campo (case/acento-insensitive)
     const byLabel = fields.find((f) => normalizeCsvHeader(f.label) === normalized);
     if (byLabel) {
       mapping[header] = byLabel.key;
       continue;
     }
+    // 3) overrides por entidade (ex.: "responsavel" -> owner_name em deals)
+    if (overrides[normalized]) {
+      mapping[header] = overrides[normalized];
+      continue;
+    }
+    // 4) ALIAS_MAP global (sinônimos comuns)
     if (ALIAS_MAP[normalized]) {
       mapping[header] = ALIAS_MAP[normalized];
     }

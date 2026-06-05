@@ -582,7 +582,8 @@ function UploadStep({
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         className={cn(
-          "group relative flex cursor-pointer flex-col items-center justify-center gap-5 overflow-hidden rounded-[var(--radius-xl)] border-2 border-dashed py-20 text-center transition-all duration-200",
+          "group relative flex cursor-pointer flex-col items-center justify-center gap-5 overflow-hidden rounded-[var(--radius-xl)] border-2 border-dashed px-8 py-14 text-center transition-all duration-200",
+          "lg:flex-row lg:gap-8 lg:px-12 lg:py-12 lg:text-left",
           dragging
             ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
             : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] hover:border-[var(--brand-primary)]/60 hover:bg-[var(--glass-bg-strong)]",
@@ -594,7 +595,7 @@ function UploadStep({
         )}
 
         <div className={cn(
-          "flex h-16 w-16 items-center justify-center rounded-[var(--radius-lg)] border-2 transition-all duration-200",
+          "flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border-2 transition-all duration-200",
           dragging
             ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
             : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] group-hover:border-[var(--brand-primary)]/40 group-hover:text-[var(--brand-primary)]",
@@ -605,7 +606,7 @@ function UploadStep({
           }
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-1 flex-col gap-1.5">
           <p className="font-display text-[16px] font-bold text-[var(--text-primary)]">
             {busy ? "Lendo arquivo…" : dragging ? "Solte para importar" : "Arraste o arquivo aqui"}
           </p>
@@ -619,6 +620,7 @@ function UploadStep({
             variant="primary"
             size="default"
             onClick={(e) => { e.stopPropagation(); onSelectFile(); }}
+            className="shrink-0"
           >
             <IconCloudUpload size={16} />
             Selecionar arquivo
@@ -757,7 +759,7 @@ function MappingStep({
       </div>
 
       {/* ── Modelo salvo + Delimitador ── */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col gap-2">
           <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Modelo salvo
@@ -803,7 +805,8 @@ function MappingStep({
         </div>
       </div>
 
-      {/* ── Toggle: ignorar primeira linha ── */}
+      {/* ── Toggles: ignorar linha + atualizar existentes (lado a lado no desktop) ── */}
+      <div className="grid gap-3 lg:grid-cols-2">
       <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 transition-colors hover:bg-[var(--glass-bg-strong)]">
         <CheckboxGlass
           checked={skipHeader}
@@ -849,7 +852,7 @@ function MappingStep({
                   {headers.map((h) => (
                     <td
                       key={h}
-                      className="max-w-[180px] truncate px-4 py-2.5 font-body text-[13px] text-[var(--text-secondary)]"
+                      className="max-w-[240px] truncate px-4 py-2.5 font-body text-[13px] text-[var(--text-secondary)]"
                     >
                       {row[h] || <span className="text-[var(--text-muted)] opacity-40">—</span>}
                     </td>
@@ -887,7 +890,7 @@ function MappingStep({
       </div>
 
       {/* ── Tag + salvar modelo ── */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:gap-6">
         <div className="flex flex-col gap-2">
           <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Criar tag
@@ -925,7 +928,6 @@ function MappingStep({
         </div>
       </div>
 
-      {/* ── Toggle: atualizar existentes ── */}
       <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 transition-colors hover:bg-[var(--glass-bg-strong)]">
         <CheckboxGlass
           checked={updateExisting}
@@ -942,6 +944,7 @@ function MappingStep({
           </span>
         </span>
       </label>
+      </div>{/* fim do grid de toggles */}
 
       {/* ── Loading state ── */}
       {busy && (

@@ -913,6 +913,7 @@ function MappingStep({
 function ResultStep({ result, onCloseResult, onBackToUpload }: ImportFlowProps) {
   if (!result) return null;
   const skipped = result.skipped ?? 0;
+  const failed = Array.isArray(result.failed) ? result.failed : [];
 
   return (
     <Card className="border-border/60 shadow-sm">
@@ -931,17 +932,17 @@ function ResultStep({ result, onCloseResult, onBackToUpload }: ImportFlowProps) 
           <ResultStat label="Criados" value={result.created} color="emerald" />
           <ResultStat label="Atualizados" value={result.updated} color="indigo" />
           <ResultStat label="Ignorados" value={skipped} color="slate" />
-          <ResultStat label="Falhas" value={result.failed.length} color="red" />
+          <ResultStat label="Falhas" value={failed.length} color="red" />
         </div>
 
-        {result.failed.length > 0 && (
+        {failed.length > 0 && (
           <div className="rounded-lg border border-red-200 bg-red-50/40 p-3 dark:border-red-900/40 dark:bg-red-950/20">
             <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700 dark:text-red-300">
               <AlertCircle className="size-4" />
-              Linhas com falha ({result.failed.length})
+              Linhas com falha ({failed.length})
             </h4>
             <div className="max-h-48 space-y-1 overflow-y-auto pr-1 text-xs">
-              {result.failed.map((f, i) => (
+              {failed.map((f, i) => (
                 <div
                   key={`${f.row}-${i}`}
                   className="flex gap-3 border-b border-red-100 py-1 last:border-0 dark:border-red-900/40"

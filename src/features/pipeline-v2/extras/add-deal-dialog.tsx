@@ -7,8 +7,6 @@
  */
 
 import * as React from "react";
-import { IconSettings } from "@tabler/icons-react";
-
 import { useCreateDeal } from "@/features/pipeline-v2/hooks";
 import { cn } from "@/lib/utils";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
@@ -36,8 +34,7 @@ export function AddDealDialog({
   const [contactName,    setContactName]  = React.useState("");
   const [contactPhone,   setContactPhone] = React.useState("");
   const [contactEmail,   setContactEmail] = React.useState("");
-  const [companyName,    setCompanyName]  = React.useState("");
-  const [companyAddress, setCompanyAddr]  = React.useState("");
+
 
   const titleRef = React.useRef<HTMLInputElement>(null);
 
@@ -47,7 +44,7 @@ export function AddDealDialog({
       setTimeout(() => titleRef.current?.focus(), 50);
     } else {
       setTitle(""); setValue(""); setContactName(""); setContactPhone("");
-      setContactEmail(""); setCompanyName(""); setCompanyAddr("");
+      setContactEmail("");
     }
   }, [open]);
 
@@ -175,24 +172,6 @@ export function AddDealDialog({
           />
         </div>
 
-        {/* Bloco 3 — Empresa */}
-        <div className={divider}>
-          <input
-            type="text"
-            placeholder="Empresa: Nome"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-            className={cn(inputSm, divider)}
-          />
-          <input
-            type="text"
-            placeholder="Empresa: Endereço"
-            value={companyAddress}
-            onChange={(e) => setCompanyAddr(e.target.value)}
-            className={inputSm}
-          />
-        </div>
-
         {/* Footer */}
         <div className="flex items-center gap-1.5 px-3 py-2.5">
           <button
@@ -218,17 +197,7 @@ export function AddDealDialog({
             Cancelar
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              // TODO: abrir configurações de campos visíveis
-            }}
-            className="ml-auto flex items-center gap-1 font-display text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
-            title="Configurar campos do formulário"
-          >
-            <span>Configurações</span>
-            <IconSettings size={13} />
-          </button>
+
         </div>
 
       </form>

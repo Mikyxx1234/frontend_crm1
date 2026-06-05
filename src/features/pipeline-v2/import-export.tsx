@@ -24,8 +24,22 @@ import {
   Upload,
   XCircle,
 } from "lucide-react";
+import {
+  IconArrowLeft,
+  IconCheck,
+  IconCloudUpload,
+  IconFileSpreadsheet,
+  IconRefresh,
+  IconTableImport,
+  IconX,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { TabsGlass } from "@/components/crm/tabs-glass";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,7 +48,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { apiUrl } from "@/lib/api";
 import {
   type CsvDelimiter,
@@ -441,94 +455,56 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
     }
   };
 
+  const tabIndex = entity === "contacts" ? 0 : 1;
+
+  const sharedFlowProps = {
+    step,
+    file,
+    delimiter,
+    skipHeader,
+    headers,
+    rows: allRows,
+    columnMapping,
+    tag,
+    updateExisting,
+    modelName,
+    selectedModel,
+    savedModels,
+    busy,
+    result,
+    fileInputRef,
+    onSelectFile: () => fileInputRef.current?.click(),
+    onFileInputChange: handleFileInputChange,
+    onDrop: handleDrop,
+    onDelimiterChange: (d: CsvDelimiter) => void reparseWithDelimiter(d),
+    onSkipHeaderChange: setSkipHeader,
+    onColumnChange: (h: string, v: string) => setColumnMapping((m) => ({ ...m, [h]: v })),
+    onTagChange: setTag,
+    onUpdateExistingChange: setUpdateExisting,
+    onModelNameChange: setModelName,
+    onApplyModel: applyModel,
+    onSaveModel: persistModel,
+    onDeleteModel: removeModel,
+    onBackToUpload: reset,
+    onCancel: reset,
+    onSubmit: submit,
+    onCloseResult: reset,
+  };
+
   // ── Render ──
   return (
-    <Tabs value={entity} onValueChange={handleEntityChange} className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="contacts">Contatos</TabsTrigger>
-        <TabsTrigger value="deals">Negócios (leads)</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="contacts" className="mt-4">
-        <ImportFlow
-          entity="contacts"
-          step={step}
-          file={file}
-          delimiter={delimiter}
-          skipHeader={skipHeader}
-          headers={headers}
-          rows={allRows}
-          columnMapping={columnMapping}
-          tag={tag}
-          updateExisting={updateExisting}
-          modelName={modelName}
-          selectedModel={selectedModel}
-          savedModels={savedModels}
-          busy={busy}
-          result={result}
-          fileInputRef={fileInputRef}
-          template={CONTACT_TEMPLATE}
-          onSelectFile={() => fileInputRef.current?.click()}
-          onFileInputChange={handleFileInputChange}
-          onDrop={handleDrop}
-          onDelimiterChange={(d) => void reparseWithDelimiter(d)}
-          onSkipHeaderChange={setSkipHeader}
-          onColumnChange={(h, v) => setColumnMapping((m) => ({ ...m, [h]: v }))}
-          onTagChange={setTag}
-          onUpdateExistingChange={setUpdateExisting}
-          onModelNameChange={setModelName}
-          onApplyModel={applyModel}
-          onSaveModel={persistModel}
-          onDeleteModel={removeModel}
-          onBackToUpload={reset}
-          onCancel={reset}
-          onSubmit={submit}
-          onCloseResult={() => {
-            reset();
-          }}
-        />
-      </TabsContent>
-
-      <TabsContent value="deals" className="mt-4">
-        <ImportFlow
-          entity="deals"
-          step={step}
-          file={file}
-          delimiter={delimiter}
-          skipHeader={skipHeader}
-          headers={headers}
-          rows={allRows}
-          columnMapping={columnMapping}
-          tag={tag}
-          updateExisting={updateExisting}
-          modelName={modelName}
-          selectedModel={selectedModel}
-          savedModels={savedModels}
-          busy={busy}
-          result={result}
-          fileInputRef={fileInputRef}
-          template={DEAL_TEMPLATE}
-          onSelectFile={() => fileInputRef.current?.click()}
-          onFileInputChange={handleFileInputChange}
-          onDrop={handleDrop}
-          onDelimiterChange={(d) => void reparseWithDelimiter(d)}
-          onSkipHeaderChange={setSkipHeader}
-          onColumnChange={(h, v) => setColumnMapping((m) => ({ ...m, [h]: v }))}
-          onTagChange={setTag}
-          onUpdateExistingChange={setUpdateExisting}
-          onModelNameChange={setModelName}
-          onApplyModel={applyModel}
-          onSaveModel={persistModel}
-          onDeleteModel={removeModel}
-          onBackToUpload={reset}
-          onCancel={reset}
-          onSubmit={submit}
-          onCloseResult={() => {
-            reset();
-          }}
-        />
-      </TabsContent>
-    </Tabs>
+    <div className="flex w-full flex-col gap-4">
+      <TabsGlass
+        tabs={["Contatos", "Negócios (leads)"]}
+        activeTab={tabIndex}
+        onChange={(i) => handleEntityChange(i === 0 ? "contacts" : "deals")}
+      />
+      <ImportFlow
+        entity={entity}
+        template={entity === "contacts" ? CONTACT_TEMPLATE : DEAL_TEMPLATE}
+        {...sharedFlowProps}
+      />
+    </div>
   );
 }
 
@@ -587,82 +563,135 @@ function UploadStep({
   onFileInputChange,
   onDrop,
 }: ImportFlowProps) {
-  return (
-    <Card className="border-border/60 shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <FileSpreadsheet className="size-5 text-primary" />
-          Importar {entity === "contacts" ? "contatos" : "negócios"} de uma planilha
-        </CardTitle>
-        <CardDescription>
-          Você pode importar {entity === "contacts" ? "contatos" : "negócios"}, campos e tags, tudo
-          de uma vez só. Formatos aceitos: <code>.csv</code>, <code>.xlsx</code>, <code>.xls</code>,{" "}
-          <code>.ods</code>.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv,.xlsx,.xls,.ods,text/csv"
-          className="hidden"
-          onChange={onFileInputChange}
-        />
+  const [dragging, setDragging] = React.useState(false);
+  const entityLabel = entity === "contacts" ? "contatos" : "negócios";
 
-        <div
-          onClick={onSelectFile}
-          onDrop={onDrop}
-          onDragOver={(e) => e.preventDefault()}
-          className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/20 px-6 py-12 text-center transition-colors",
-            "hover:border-primary/50 hover:bg-muted/40",
-            busy && "pointer-events-none opacity-60",
+  return (
+    <div className="flex flex-col gap-5">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,.xlsx,.xls,.ods,text/csv"
+        className="hidden"
+        onChange={onFileInputChange}
+      />
+
+      {/* Drop zone */}
+      <div
+        onClick={!busy ? onSelectFile : undefined}
+        onDrop={(e) => { setDragging(false); onDrop(e); }}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        className={cn(
+          "group relative flex cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-[var(--radius-xl)] border-2 border-dashed py-14 text-center transition-all duration-200",
+          dragging
+            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] hover:border-[var(--brand-primary)]/60 hover:bg-[var(--glass-bg-strong)]",
+          busy && "pointer-events-none opacity-60",
+        )}
+      >
+        {/* Animated background pulse when dragging */}
+        {dragging && (
+          <div className="pointer-events-none absolute inset-0 animate-pulse rounded-[var(--radius-xl)] bg-[var(--brand-primary)]/5" />
+        )}
+
+        <div className={cn(
+          "flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] border transition-all duration-200",
+          dragging
+            ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] group-hover:border-[var(--brand-primary)]/40 group-hover:text-[var(--brand-primary)]",
+        )}>
+          {busy
+            ? <Loader2 className="size-6 animate-spin" />
+            : <IconCloudUpload size={24} stroke={1.5} />
+          }
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+            {busy ? "Lendo arquivo…" : dragging ? "Solte para importar" : "Arraste o arquivo aqui"}
+          </p>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            {busy ? "Aguarde, não feche esta janela" : "ou clique para selecionar · CSV, XLSX, XLS, ODS"}
+          </p>
+        </div>
+
+        {!busy && (
+          <ButtonGlass variant="glass" size="sm" onClick={(e) => { e.stopPropagation(); onSelectFile(); }}>
+            <IconCloudUpload size={14} />
+            Selecionar arquivo
+          </ButtonGlass>
+        )}
+      </div>
+
+      {/* Actions + tip */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+          Dica: para arquivos com datas, use CSV com separador{" "}
+          <code className="rounded bg-[var(--glass-bg-strong)] px-1 py-0.5 text-[10px]">;</code>
+        </p>
+        <ButtonGlass
+          variant="glass"
+          size="sm"
+          onClick={() => downloadCsv(
+            entity === "contacts" ? "contatos-modelo.csv" : "negocios-modelo.csv",
+            template,
           )}
         >
-          {busy ? (
-            <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          ) : (
-            <Upload className="size-8 text-muted-foreground" />
-          )}
-          <span className="text-sm font-medium text-foreground">
-            {busy ? "Lendo arquivo…" : "Arraste o arquivo aqui ou clique para selecionar"}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            CSV, XLSX, XLS, ODS — até 10MB
-          </span>
-        </div>
+          <Download size={13} />
+          Baixar modelo
+        </ButtonGlass>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" variant="outline" size="sm" onClick={onSelectFile} disabled={busy}>
-            <Upload className="size-3.5" />
-            Carregar arquivo
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="gap-1.5"
-            onClick={() =>
-              downloadCsv(
-                entity === "contacts" ? "contatos-modelo.csv" : "negocios-modelo.csv",
-                template,
-              )
-            }
+      {/* Format info chips */}
+      <div className="flex flex-wrap gap-1.5">
+        {["CSV", "XLSX", "XLS", "ODS"].map((fmt) => (
+          <span
+            key={fmt}
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]"
           >
-            <Download className="size-3.5" />
-            Baixar exemplo
-          </Button>
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          Dica: para arquivos com datas, use CSV com separador <code>;</code> (ponto e vírgula).
-        </p>
-      </CardContent>
-    </Card>
+            .{fmt.toLowerCase()}
+          </span>
+        ))}
+        <span className="ml-auto font-body text-[11px] text-[var(--text-muted)]">Até 10 MB</span>
+      </div>
+    </div>
   );
 }
 
 // ─── Step 2 — Mapping ─────────────────────────────────────────────────────────
+
+// ─── SelectGlass ─────────────────────────────────────────────────────────────
+// Select nativo estilizado com tokens DS v2
+function SelectGlass({
+  value,
+  onChange,
+  disabled,
+  children,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      className={cn(
+        "h-9 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none backdrop-blur-sm transition-all",
+        "focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20",
+        "disabled:cursor-not-allowed disabled:opacity-40",
+        className,
+      )}
+    >
+      {children}
+    </select>
+  );
+}
 
 function MappingStep({
   entity,
@@ -693,218 +722,254 @@ function MappingStep({
 }: ImportFlowProps) {
   const fields = SYSTEM_FIELDS[entity];
   const preview = rows.slice(0, 3);
-  const isSpreadsheet =
-    !!file && /\.(xlsx|xls|ods)$/i.test(file.name);
+  const isSpreadsheet = !!file && /\.(xlsx|xls|ods)$/i.test(file.name);
+  const mappedCount = headers.filter((h) => !!columnMapping[h]).length;
 
   return (
-    <Card className="border-border/60 shadow-sm">
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <CardTitle className="text-lg">Configurações de Importação</CardTitle>
-            <CardDescription>
-              Arquivo: <code className="text-xs">{file?.name}</code> · {rows.length} linhas
-              detectadas
-            </CardDescription>
-          </div>
-          <Button type="button" variant="ghost" size="sm" onClick={onBackToUpload}>
-            <ArrowLeft className="size-3.5" />
-            Trocar arquivo
-          </Button>
+    <div className="flex flex-col gap-5">
+      {/* Header contextual */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+            Mapeamento de colunas
+          </p>
+          <p className="mt-0.5 truncate font-body text-[11.5px] text-[var(--text-muted)]">
+            <span className="font-medium text-[var(--text-secondary)]">{file?.name}</span>
+            {" · "}{rows.length} linhas · {mappedCount}/{headers.length} colunas mapeadas
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {/* Modelo salvo + delimitador */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Modelo salvo</label>
-            <div className="flex gap-2">
-              <select
-                value={selectedModel}
-                onChange={(e) => onApplyModel(e.target.value)}
-                className="h-9 flex-1 rounded-md border border-border bg-background px-2 text-sm text-foreground"
-              >
-                <option value="">— Nenhum (mapeamento atual) —</option>
-                {savedModels.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
-              {selectedModel && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDeleteModel(selectedModel)}
-                  title="Remover modelo"
-                >
-                  <XCircle className="size-4" />
-                </Button>
-              )}
-            </div>
-          </div>
+        <ButtonGlass variant="glass" size="sm" onClick={onBackToUpload}>
+          <IconArrowLeft size={13} />
+          Trocar arquivo
+        </ButtonGlass>
+      </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Delimitador</label>
-            <select
-              value={delimiter}
-              onChange={(e) => onDelimiterChange(e.target.value as CsvDelimiter)}
-              disabled={isSpreadsheet}
-              className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground disabled:opacity-50"
+      {/* Modelo salvo + delimitador */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label className="font-display text-[11.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Modelo salvo
+          </label>
+          <div className="flex gap-2">
+            <SelectGlass
+              value={selectedModel}
+              onChange={onApplyModel}
+              className="flex-1"
             >
-              <option value=";">Ponto e vírgula (;)</option>
-              <option value=",">Vírgula (,)</option>
-              <option value="\t">Tab</option>
-            </select>
-            {isSpreadsheet && (
-              <p className="text-xs text-muted-foreground">
-                Não aplicável a planilhas (XLSX/ODS).
-              </p>
+              <option value="">Nenhum (mapeamento atual)</option>
+              {savedModels.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </SelectGlass>
+            {selectedModel && (
+              <TooltipGlass label="Remover modelo" side="top">
+                <button
+                  type="button"
+                  onClick={() => onDeleteModel(selectedModel)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                >
+                  <IconX size={14} />
+                </button>
+              </TooltipGlass>
             )}
           </div>
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={skipHeader}
-            onChange={(e) => onSkipHeaderChange(e.target.checked)}
-            className="accent-primary"
-          />
-          <span className="text-sm text-foreground">
-            Não importe a primeira linha (contém nomes de campos)
-          </span>
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <label className="font-display text-[11.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Delimitador
+          </label>
+          <SelectGlass
+            value={delimiter}
+            onChange={(v) => onDelimiterChange(v as CsvDelimiter)}
+            disabled={isSpreadsheet}
+          >
+            <option value=";">Ponto e vírgula ( ; )</option>
+            <option value=",">Vírgula ( , )</option>
+            <option value="\t">Tab</option>
+          </SelectGlass>
+          {isSpreadsheet && (
+            <p className="font-body text-[11px] text-[var(--text-muted)]">
+              Não aplicável a planilhas
+            </p>
+          )}
+        </div>
+      </div>
 
-        {/* Tabela preview + mapeamento */}
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-muted/40">
-                {headers.map((h) => (
-                  <th
-                    key={h}
-                    className="border-b border-border px-3 py-2 text-left font-medium text-muted-foreground"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {preview.map((row, i) => (
-                <tr key={i} className="border-b border-border/40">
-                  {headers.map((h) => (
-                    <td
-                      key={h}
-                      className="max-w-[200px] truncate px-3 py-2 text-foreground"
-                      title={row[h]}
-                    >
-                      {row[h]}
-                    </td>
-                  ))}
-                </tr>
+      {/* Toggle primeira linha */}
+      <label className="flex cursor-pointer items-center gap-2.5">
+        <CheckboxGlass
+          checked={skipHeader}
+          onChange={onSkipHeaderChange}
+          aria-label="Ignorar primeira linha"
+        />
+        <span className="font-body text-[13px] text-[var(--text-primary)]">
+          Ignorar a primeira linha{" "}
+          <span className="text-[var(--text-muted)]">(contém nomes dos campos)</span>
+        </span>
+      </label>
+
+      {/* Tabela preview + mapeamento */}
+      <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
+        <table className="w-full min-w-max text-[12px]">
+          <thead>
+            <tr className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-strong)]">
+              {headers.map((h) => (
+                <th
+                  key={h}
+                  className="px-3 py-2.5 text-left font-display text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]"
+                >
+                  {h}
+                </th>
               ))}
-              {/* linha do mapeamento */}
-              <tr className="bg-muted/30">
+            </tr>
+          </thead>
+          <tbody>
+            {preview.map((row, i) => (
+              <tr
+                key={i}
+                className={cn(
+                  "border-b border-[var(--glass-border-subtle)] transition-colors",
+                  i % 2 === 0 ? "bg-transparent" : "bg-[var(--glass-bg-subtle)]",
+                )}
+              >
                 {headers.map((h) => (
-                  <td key={h} className="px-2 py-2">
-                    <select
-                      value={columnMapping[h] ?? ""}
-                      onChange={(e) => onColumnChange(h, e.target.value)}
-                      className="w-full rounded border border-border bg-background px-1.5 py-1 text-[11px] text-foreground"
-                    >
-                      <option value="">Não importar</option>
-                      {fields.map((f) => (
-                        <option key={f.key} value={f.key}>
-                          {f.label}
-                        </option>
-                      ))}
-                    </select>
+                  <td
+                    key={h}
+                    className="max-w-[160px] truncate px-3 py-2 font-body text-[12px] text-[var(--text-secondary)]"
+                  >
+                    {row[h] || <span className="text-[var(--text-muted)] opacity-50">—</span>}
                   </td>
                 ))}
               </tr>
-            </tbody>
-          </table>
-        </div>
+            ))}
+            {/* Linha de mapeamento */}
+            <tr className="border-t-2 border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.03]">
+              {headers.map((h) => {
+                const isMapped = !!columnMapping[h];
+                return (
+                  <td key={h} className="px-2 py-2">
+                    <SelectGlass
+                      value={columnMapping[h] ?? ""}
+                      onChange={(v) => onColumnChange(h, v)}
+                      className={cn(
+                        "h-8 text-[11px]",
+                        isMapped && "border-[var(--brand-primary)]/40 text-[var(--brand-primary)]",
+                      )}
+                    >
+                      <option value="">Não importar</option>
+                      {fields.map((f) => (
+                        <option key={f.key} value={f.key}>{f.label}</option>
+                      ))}
+                    </SelectGlass>
+                  </td>
+                );
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-        {/* Tag + salvar modelo */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Criar tag</label>
-            <input
-              value={tag}
-              onChange={(e) => onTagChange(e.target.value)}
-              placeholder="Nome da tag (opcional)"
-              className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground"
+      {/* Tag + salvar modelo */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label className="font-display text-[11.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Tag de importação
+          </label>
+          <InputGlass
+            value={tag}
+            onChange={(e) => onTagChange(e.target.value)}
+            placeholder="Nome da tag (opcional)"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="font-display text-[11.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Salvar mapeamento
+          </label>
+          <div className="flex gap-2">
+            <InputGlass
+              value={modelName}
+              onChange={(e) => onModelNameChange(e.target.value)}
+              placeholder="Nome do modelo…"
+              onKeyDown={(e) => { if (e.key === "Enter" && modelName.trim()) onSaveModel(); }}
+              className="flex-1"
             />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Salvar modelo</label>
-            <div className="flex gap-2">
-              <input
-                value={modelName}
-                onChange={(e) => onModelNameChange(e.target.value)}
-                placeholder="Nome para salvar o mapeamento"
-                className="h-9 flex-1 rounded-md border border-border bg-background px-2 text-sm text-foreground"
-              />
-              <Button
+            <TooltipGlass label="Salvar modelo" side="top">
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={onSaveModel}
                 disabled={!modelName.trim()}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <Save className="size-3.5" />
-              </Button>
-            </div>
+                <Save size={14} />
+              </button>
+            </TooltipGlass>
           </div>
         </div>
+      </div>
 
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={updateExisting}
-            onChange={(e) => onUpdateExistingChange(e.target.checked)}
-            className="accent-primary"
-          />
-          <span className="text-sm text-foreground">
-            Atualizar dados existentes (quando encontrar match por <code>id</code> /{" "}
-            <code>external_id</code>)
+      {/* Atualizar existentes */}
+      <label className="flex cursor-pointer items-center gap-2.5">
+        <CheckboxGlass
+          checked={updateExisting}
+          onChange={onUpdateExistingChange}
+          aria-label="Atualizar dados existentes"
+        />
+        <span className="font-body text-[13px] text-[var(--text-primary)]">
+          Atualizar dados existentes{" "}
+          <span className="text-[var(--text-muted)]">
+            (match por <code className="rounded bg-[var(--glass-bg-strong)] px-1 text-[11px]">id</code>
+            {" "}ou{" "}
+            <code className="rounded bg-[var(--glass-bg-strong)] px-1 text-[11px]">external_id</code>)
           </span>
-        </label>
+        </span>
+      </label>
 
-        <div className="space-y-3 pt-2">
-          {busy && (
-            <div
-              className="rounded-md border border-border/60 bg-muted/40 p-3"
-              role="status"
-              aria-live="polite"
-            >
-              <div className="mb-2 flex items-center gap-2 text-sm">
-                <Loader2 className="size-4 animate-spin text-primary" />
-                <span className="font-medium">Importando {rows.length} linha(s)…</span>
-                <span className="text-muted-foreground">não feche esta janela</span>
-              </div>
-              {/* Barra indeterminada (CSS-only) */}
-              <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                <div className="absolute inset-y-0 left-0 w-1/3 animate-[importprogress_1.2s_ease-in-out_infinite] rounded-full bg-primary" />
-              </div>
+      {/* Loading state premium */}
+      {busy && (
+        <div
+          className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.04]"
+          role="status"
+          aria-live="polite"
+        >
+          {/* Barra de progresso indeterminada */}
+          <div className="h-0.5 w-full overflow-hidden bg-[var(--brand-primary)]/10">
+            <div className="h-full w-1/2 animate-[importprogress_1.4s_cubic-bezier(0.4,0,0.6,1)_infinite] rounded-full bg-[var(--brand-primary)]" />
+          </div>
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
+              <Loader2 className="size-4 animate-spin text-[var(--brand-primary)]" />
             </div>
-          )}
-          <div className="flex items-center gap-3">
-            <Button type="button" onClick={onSubmit} disabled={busy} className="gap-1.5">
-              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-              {busy ? "Importando…" : "Importar"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
-              Cancelar
-            </Button>
+            <div className="min-w-0">
+              <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                Importando {rows.length} {rows.length === 1 ? "linha" : "linhas"}…
+              </p>
+              <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+                Não feche esta janela
+              </p>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-2.5 pt-1">
+        <ButtonGlass
+          variant="primary"
+          size="default"
+          onClick={onSubmit}
+          disabled={busy}
+        >
+          {busy
+            ? <><Loader2 className="size-3.5 animate-spin" /> Importando…</>
+            : <><IconTableImport size={15} /> Importar agora</>
+          }
+        </ButtonGlass>
+        <ButtonGlass variant="glass" size="default" onClick={onCancel} disabled={busy}>
+          Cancelar
+        </ButtonGlass>
+      </div>
+    </div>
   );
 }
 
@@ -914,79 +979,116 @@ function ResultStep({ result, onCloseResult, onBackToUpload }: ImportFlowProps) 
   if (!result) return null;
   const skipped = result.skipped ?? 0;
   const failed = Array.isArray(result.failed) ? result.failed : [];
+  const hasFailures = failed.length > 0;
+  const successCount = result.created + result.updated;
+  const isFullSuccess = !hasFailures && successCount > 0;
 
   return (
-    <Card className="border-border/60 shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <CheckCircle2 className="size-5 text-emerald-600" />
-          Importação concluída
-        </CardTitle>
-        <CardDescription>
-          {result.totalRows} linhas processadas
-          {result.tagId && " · tag aplicada"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ResultStat label="Criados" value={result.created} color="emerald" />
-          <ResultStat label="Atualizados" value={result.updated} color="indigo" />
-          <ResultStat label="Ignorados" value={skipped} color="slate" />
-          <ResultStat label="Falhas" value={failed.length} color="red" />
+    <div className="flex flex-col gap-5">
+      {/* Status banner */}
+      <div className={cn(
+        "flex items-center gap-3 rounded-[var(--radius-lg)] border px-4 py-3.5",
+        isFullSuccess
+          ? "border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/20"
+          : hasFailures && successCount === 0
+            ? "border-red-200/60 bg-red-50/40 dark:border-red-800/40 dark:bg-red-950/20"
+            : "border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20",
+      )}>
+        <div className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+          isFullSuccess ? "bg-emerald-100 dark:bg-emerald-900/40"
+            : hasFailures && successCount === 0 ? "bg-red-100 dark:bg-red-900/40"
+            : "bg-amber-100 dark:bg-amber-900/40",
+        )}>
+          {isFullSuccess
+            ? <IconCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
+            : hasFailures && successCount === 0
+              ? <AlertCircle size={18} className="text-red-600 dark:text-red-400" />
+              : <AlertCircle size={18} className="text-amber-600 dark:text-amber-400" />
+          }
         </div>
+        <div>
+          <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+            {isFullSuccess ? "Importação concluída com sucesso"
+              : hasFailures && successCount === 0 ? "Nenhuma linha importada"
+              : "Importação concluída com falhas parciais"}
+          </p>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">
+            {result.totalRows} {result.totalRows === 1 ? "linha processada" : "linhas processadas"}
+            {result.tagId ? " · tag aplicada" : ""}
+          </p>
+        </div>
+      </div>
 
-        {failed.length > 0 && (
-          <div className="rounded-lg border border-red-200 bg-red-50/40 p-3 dark:border-red-900/40 dark:bg-red-950/20">
-            <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-700 dark:text-red-300">
-              <AlertCircle className="size-4" />
-              Linhas com falha ({failed.length})
-            </h4>
-            <div className="max-h-48 space-y-1 overflow-y-auto pr-1 text-xs">
-              {failed.map((f, i) => (
-                <div
-                  key={`${f.row}-${i}`}
-                  className="flex gap-3 border-b border-red-100 py-1 last:border-0 dark:border-red-900/40"
-                >
-                  <span className="shrink-0 text-muted-foreground">Linha {f.row}</span>
-                  <span className="text-foreground/80">{f.message}</span>
-                </div>
-              ))}
-            </div>
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <ResultStat label="Criados" value={result.created} tone="success" />
+        <ResultStat label="Atualizados" value={result.updated} tone="info" />
+        <ResultStat label="Ignorados" value={skipped} tone="neutral" />
+        <ResultStat label="Falhas" value={failed.length} tone="danger" />
+      </div>
+
+      {/* Falhas */}
+      {hasFailures && (
+        <div className="rounded-[var(--radius-lg)] border border-red-200/60 bg-red-50/30 dark:border-red-800/40 dark:bg-red-950/20">
+          <div className="flex items-center gap-2 border-b border-red-200/40 px-3.5 py-2.5 dark:border-red-800/30">
+            <AlertCircle size={14} className="shrink-0 text-red-600 dark:text-red-400" />
+            <span className="font-display text-[12px] font-semibold text-red-700 dark:text-red-300">
+              {failed.length} {failed.length === 1 ? "linha com falha" : "linhas com falha"}
+            </span>
           </div>
-        )}
-
-        <div className="flex gap-3">
-          <Button type="button" onClick={onCloseResult}>
-            Fechar
-          </Button>
-          <Button type="button" variant="outline" onClick={onBackToUpload}>
-            Nova importação
-          </Button>
+          <div className="scrollbar-thin max-h-48 overflow-y-auto divide-y divide-red-100/60 dark:divide-red-800/30">
+            {failed.map((f, i) => (
+              <div
+                key={`${f.row}-${i}`}
+                className="flex items-baseline gap-3 px-3.5 py-2"
+              >
+                <span className="shrink-0 rounded-full bg-red-100/70 px-1.5 py-0.5 font-display text-[10px] font-bold text-red-600 dark:bg-red-900/40 dark:text-red-400">
+                  L{f.row}
+                </span>
+                <span className="font-body text-[12px] text-[var(--text-secondary)]">{f.message}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-2.5 pt-1">
+        <ButtonGlass variant="primary" size="default" onClick={onCloseResult}>
+          <IconCheck size={14} />
+          Fechar
+        </ButtonGlass>
+        <ButtonGlass variant="glass" size="default" onClick={onBackToUpload}>
+          <IconRefresh size={14} />
+          Nova importação
+        </ButtonGlass>
+      </div>
+    </div>
   );
 }
 
 function ResultStat({
   label,
   value,
-  color,
+  tone,
 }: {
   label: string;
   value: number;
-  color: "emerald" | "indigo" | "slate" | "red";
+  tone: "success" | "info" | "neutral" | "danger";
 }) {
-  const colorClass: Record<typeof color, string> = {
-    emerald: "text-emerald-600 dark:text-emerald-400",
-    indigo: "text-indigo-600 dark:text-indigo-400",
-    slate: "text-slate-600 dark:text-slate-300",
-    red: "text-red-600 dark:text-red-400",
+  const styles: Record<typeof tone, { bg: string; text: string; dot: string }> = {
+    success: { bg: "border-emerald-200/50 bg-emerald-50/30 dark:border-emerald-800/30 dark:bg-emerald-950/20", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
+    info:    { bg: "border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.03]",                          text: "text-[var(--brand-primary)]",                                dot: "bg-[var(--brand-primary)]" },
+    neutral: { bg: "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]",                                   text: "text-[var(--text-secondary)]",                               dot: "bg-[var(--text-muted)]" },
+    danger:  { bg: "border-red-200/50 bg-red-50/30 dark:border-red-800/30 dark:bg-red-950/20",                   text: "text-red-600 dark:text-red-400",                             dot: "bg-red-500" },
   };
+  const s = styles[tone];
   return (
-    <div className="rounded-lg border border-border bg-card px-3 py-3 text-center">
-      <div className={cn("font-display text-2xl font-bold", colorClass[color])}>{value}</div>
-      <div className="mt-0.5 text-[11px] text-muted-foreground">{label}</div>
+    <div className={cn("flex flex-col items-center gap-1 rounded-[var(--radius-lg)] border px-3 py-3.5", s.bg)}>
+      <div className={cn("h-1.5 w-1.5 rounded-full", s.dot)} />
+      <div className={cn("font-display text-2xl font-bold leading-none", s.text)}>{value}</div>
+      <div className="font-body text-[11px] text-[var(--text-muted)]">{label}</div>
     </div>
   );
 }

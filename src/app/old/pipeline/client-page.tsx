@@ -19,8 +19,6 @@ import {
   Search,
   SlidersHorizontal,
   Star,
-  TriangleAlert as AlertTriangle,
-  User as UserIcon,
   X,
   XCircle,
 } from "lucide-react";
@@ -417,7 +415,7 @@ function applyFiltersClientSide(
   }));
 }
 
-// ─────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────���─────────────────────────────────────────
 // Custom-field filtering client-side (fallback p/ backend desatualizado).
 //
 // Quando o POST /board não está disponível, o GET retorna deals SEM os
@@ -430,7 +428,7 @@ function applyFiltersClientSide(
 // vezes durante a mesma rodada do filter (ex.: quando há 2+ critérios de
 // custom field). O React Query já dá outro nível de cache acima do
 // fetchBoard.
-// ─────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────���────
 
 type CustomFieldValuesRow = {
   fieldId: string;
@@ -1171,36 +1169,6 @@ export default function PipelinePage({ initialView }: PipelinePageProps = {}) {
             </div>
 
             <CardFieldsConfig fields={cardFields} onChange={setCardFields} />
-
-            <div className="h-4 w-px bg-[var(--color-border)]" />
-
-            {/* Filtros rápidos */}
-            <button
-              type="button"
-              onClick={() => toggleFilter("mine")}
-              className={cn(
-                "inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition",
-                activeFilter === "mine"
-                  ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-                  : "text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground",
-              )}
-            >
-              <UserIcon className="size-3" />
-              Meus
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleFilter("urgent")}
-              className={cn(
-                "inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition",
-                activeFilter === "urgent"
-                  ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-                  : "text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground",
-              )}
-            >
-              <AlertTriangle className="size-3" />
-              Urgentes
-            </button>
 
             <div className="h-4 w-px bg-[var(--color-border)]" />
 

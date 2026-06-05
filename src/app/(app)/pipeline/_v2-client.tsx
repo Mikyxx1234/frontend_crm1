@@ -138,6 +138,28 @@ export default function KanbanV2ClientPage({
   const filtersBtnRef = useRef<HTMLButtonElement>(null);
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+  const boardWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Mede o wrapper flex-col e propaga a altura disponível para o board
+  // via CSS custom property --col-h, diretamente no elemento.
+  useEffect(() => {
+    const wrapper = boardWrapperRef.current;
+    if (!wrapper) return;
+    const setColH = () => {
+      const board = wrapper.querySelector<HTMLElement>(".kanban-board-hscroll");
+      if (!board) return;
+      // Altura do wrapper menos o espaço ocupado pelos irmãos acima do board
+      const wH = wrapper.getBoundingClientRect().height;
+      const boardTop = board.getBoundingClientRect().top - wrapper.getBoundingClientRect().top;
+      const h = Math.max(120, wH - boardTop - 4);
+      board.style.height = `${h}px`;
+      board.style.setProperty("--col-h", `${h}px`);
+    };
+    setColH();
+    const ro = new ResizeObserver(setColH);
+    ro.observe(wrapper);
+    return () => ro.disconnect();
+  }, []);
 
   // Kebab menu e modal de import/export
   const [kebabOpen, setKebabOpen] = useState(false);
@@ -366,10 +388,13 @@ export default function KanbanV2ClientPage({
   }
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] grid-rows-1 gap-4 p-4">
+    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4" style={{ gridTemplateRows: "1fr" }}>
       {navRail ?? <NavRail />}
-      <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-clip"
-           style={{ height: `calc(100dvh / var(--v2-scale, 1) - 2rem)` }}>
+      <div
+        ref={boardWrapperRef}
+        className="flex min-w-0 flex-col gap-3 overflow-hidden"
+        style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)" }}
+      >
         <PipelineHeader
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t)}
@@ -425,10 +450,10 @@ export default function KanbanV2ClientPage({
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="relative min-h-0 flex-1">
+          <div className="relative flex min-h-0 flex-1 flex-col">
           <div
             ref={boardRef}
-            className="kanban-board-hscroll flex min-w-0 gap-3.5 pb-1"
+            className="kanban-board-hscroll flex min-w-0 flex-1 gap-3.5 pb-1"
           >
             {columns.map((col) => (
               <DroppableColumn

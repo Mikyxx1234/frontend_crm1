@@ -212,42 +212,42 @@
    vazia embaixo. Com --v2-scale, `calc(100dvh / 0.88)` ≈ 113.64dvh
    antes do zoom — apos o zoom encolher, fica exatamente 100dvh. */
 .v2-screen {
-  /* Altura total do viewport escalado */
+  /* Altura total da tela normalizada pela escala */
   height: calc(100dvh / var(--v2-scale, 1));
-
-  /*
-   * --board-top: soma de tudo que fica acima do kanban-board-hscroll:
-   *   padding-top do v2-screen (1rem = 16px)
-   *   + PipelineHeader (~48px) + gap (12px)
-   *   + FilterBar/tabs (~40px) + gap (12px)
-   *   + padding-bottom do v2-screen (1rem = 16px)
-   *   = 144px + 2rem de padding lateral não afeta a altura.
-   * Ajuste fino via dev-tools se necessário.
-   */
-  --board-top: 144px;
 }
 
-/* O kanban-board-hscroll ocupa exatamente o espaço restante */
+/* O grid do v2-screen tem uma única row — os filhos herdam a altura total */
+.v2-screen > * {
+  min-height: 0;
+}
+
+/* kanban-board-hscroll: flex-1 dentro do flex-col pai para ocupar
+   todo o espaço restante. Scrollbar horizontal nativa totalmente
+   escondida — substituída pelo ScrollMap. */
 .v2-screen .kanban-board-hscroll {
-  height: calc((100dvh / var(--v2-scale, 1)) - var(--board-top));
-  /* Esconde scrollbar nativa horizontal — substituída pelo ScrollMap */
-  overflow-x: scroll;
-  overflow-y: hidden;
-  scrollbar-width: none;        /* Firefox */
-  -ms-overflow-style: none;     /* IE / Edge legacy */
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-x: scroll !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
-.v2-screen .kanban-board-hscroll::-webkit-scrollbar {
-  display: none;                /* Chrome / Safari / Edge Chromium */
+/* Alta especificidade para vencer o .v2-root ::-webkit-scrollbar global */
+.v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar,
+.v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar-track,
+.v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar-thumb {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
 }
 
-/* Cada .kanban-col (section) ocupa 100% da altura do board.
-   align-self: stretch garante que filhos do flex container estiquem.
-   overflow: hidden impede que o conteúdo expanda a seção para além do board. */
+/* Cada .kanban-col usa a altura medida pelo ResizeObserver via --col-h.
+   Isso contorna a limitação de height:100% em flex sem referência explícita. */
 .v2-screen .kanban-board-hscroll .kanban-col {
-  align-self: stretch;
-  height: 100% !important;
-  max-height: 100% !important;
+  height: var(--col-h, 700px) !important;
+  max-height: var(--col-h, 700px) !important;
   overflow: hidden;
+  flex-shrink: 0;
 }
 .v2-min-screen {
   min-height: calc(100dvh / var(--v2-scale, 1));

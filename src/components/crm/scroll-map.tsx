@@ -4,9 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface ScrollMapProps {
-  /** ref do elemento com overflow-x: scroll (o kanban-board-hscroll) */
   boardRef: React.RefObject<HTMLDivElement | null>;
-  /** Número de colunas no board — define quantos segmentos aparecem */
   columnCount: number;
   className?: string;
 }
@@ -14,16 +12,15 @@ interface ScrollMapProps {
 /**
  * ScrollMap — navegador horizontal estilo Kommo.
  *
- * Mostra um item por coluna do board. Um indicador ("screen-position")
- * desliza sobre eles refletindo a área visível atual. O usuário pode
- * arrastar o indicador ou clicar em qualquer segmento para navegar.
+ * Um segmento por coluna. Indicador deslizante mostra a área visível.
+ * Clique num segmento navega para a coluna. Arrastar o indicador faz
+ * scroll proporcional.
  */
 export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, scrollLeft: 0 });
 
-  // left e width do indicador em % relativo ao wrapper
   const [indicator, setIndicator] = useState({ left: 0, width: 100 });
   const [visible, setVisible] = useState(false);
 
@@ -36,11 +33,8 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
     if (!hasOverflow) return;
     const ratio = clientWidth / scrollWidth;
     const maxScroll = scrollWidth - clientWidth;
-    const leftRatio = maxScroll > 0 ? scrollLeft / maxScroll : 0;
-    setIndicator({
-      left: leftRatio * (1 - ratio) * 100,
-      width: ratio * 100,
-    });
+    const leftPct = maxScroll > 0 ? (scrollLeft / maxScroll) * (1 - ratio) * 100 : 0;
+    setIndicator({ left: leftPct, width: ratio * 100 });
   }, [boardRef]);
 
   useEffect(() => {
@@ -56,18 +50,16 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
     };
   }, [boardRef, recalc]);
 
-  // Clique num segmento — scroll proporcional
   const onSegmentClick = useCallback(
     (index: number) => {
       const el = boardRef.current;
       if (!el) return;
       const maxScroll = el.scrollWidth - el.clientWidth;
-      el.scrollLeft = (index / Math.max(1, columnCount - 1)) * maxScroll;
+      el.scrollTo({ left: (index / Math.max(1, columnCount - 1)) * maxScroll, behavior: "smooth" });
     },
     [boardRef, columnCount],
   );
 
-  // Arrasto do indicador
   const onIndicatorMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -78,19 +70,13 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
       dragStart.current = { x: e.clientX, scrollLeft: el.scrollLeft };
 
       const onMove = (ev: MouseEvent) => {
-        if (!isDragging.current) return;
-        const wrapper = wrapperRef.current;
-        if (!wrapper || !boardRef.current) return;
-        const wrapperW = wrapper.clientWidth;
+        if (!isDragging.current || !boardRef.current || !wrapperRef.current) return;
+        const ww = wrapperRef.current.clientWidth;
         const maxScroll = boardRef.current.scrollWidth - boardRef.current.clientWidth;
-        const indicatorW = (indicator.width / 100) * wrapperW;
-        const trackW = wrapperW - indicatorW;
+        const trackW = ww * (1 - indicator.width / 100);
         const dx = ev.clientX - dragStart.current.x;
-        const scrollDelta = trackW > 0 ? (dx / trackW) * maxScroll : 0;
-        boardRef.current.scrollLeft = Math.max(
-          0,
-          Math.min(maxScroll, dragStart.current.scrollLeft + scrollDelta),
-        );
+        const delta = trackW > 0 ? (dx / trackW) * maxScroll : 0;
+        boardRef.current.scrollLeft = Math.max(0, Math.min(maxScroll, dragStart.current.scrollLeft + delta));
       };
 
       const onUp = () => {
@@ -112,41 +98,41 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
     <div
       aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute bottom-2 right-3 z-20",
-        "flex items-center",
+        "pointer-events-none absolute bottom-3 left-0 right-3 z-20",
+        "flex items-end justify-end",
         className,
       )}
     >
-      {/* Wrapper dos segmentos — tamanho proporcional ao número de colunas */}
       <div
         ref={wrapperRef}
-        className="pointer-events-auto relative flex h-[8px] select-none items-stretch gap-[2px]"
-        style={{ width: Math.min(segments * 28, 320) + "px" }}
+        className="pointer-events-auto relative flex select-none items-stretch gap-[3px]"
+        style={{
+          height: "16px",
+          /* Largura: ocupa da borda esquerda do board até o canto direito,
+             menos o espaço do NavRail (72px) e paddings */
+          width: `min(${segments * 52}px, calc(100vw - 140px))`,
+        }}
       >
-        {/* Um segmento por coluna */}
+        {/* Segmentos — um por coluna */}
         {Array.from({ length: segments }).map((_, i) => (
           <button
             key={i}
             type="button"
             aria-label={`Ir para coluna ${i + 1}`}
             onClick={() => onSegmentClick(i)}
-            className="h-full flex-1 cursor-pointer rounded-[2px] transition-colors duration-150"
-            style={{ background: "rgba(91,111,245,0.14)" }}
+            className="h-full flex-1 cursor-pointer rounded-[3px] transition-colors duration-150 hover:opacity-80"
+            style={{ background: "rgba(91,111,245,0.12)" }}
           />
         ))}
 
-        {/* Indicador de posição ("screen-position") — desliza sobre os segmentos */}
+        {/* Indicador de posição deslizante */}
         <div
           onMouseDown={onIndicatorMouseDown}
-          className={cn(
-            "absolute inset-y-0 cursor-grab rounded-[2px]",
-            "active:cursor-grabbing",
-            "transition-[left,width] duration-75 ease-linear",
-          )}
+          className="absolute inset-y-0 cursor-grab rounded-[3px] transition-[left,width] duration-75 ease-linear active:cursor-grabbing"
           style={{
             left: `${indicator.left}%`,
             width: `${indicator.width}%`,
-            background: "rgba(91,111,245,0.55)",
+            background: "rgba(91,111,245,0.45)",
           }}
         />
       </div>

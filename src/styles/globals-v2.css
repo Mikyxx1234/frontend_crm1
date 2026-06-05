@@ -339,7 +339,7 @@
   scrollbar-color: rgba(91, 111, 245, 0.60) rgba(0, 0, 0, 0.06);
 }
 .v2-root .kanban-board-hscroll::-webkit-scrollbar {
-  height: 8px;
+  height: 12px;
 }
 .v2-root .kanban-board-hscroll::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.06);

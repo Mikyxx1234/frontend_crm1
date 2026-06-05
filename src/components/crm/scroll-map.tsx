@@ -113,7 +113,11 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
     >
       <div
         ref={wrapperRef}
-        className="pointer-events-auto relative flex select-none items-stretch gap-[3px]"
+        className={cn(
+          "group/scrollmap pointer-events-auto relative flex select-none items-stretch gap-[3px]",
+          // Transparente em repouso, totalmente visível ao passar o mouse
+          "opacity-35 transition-opacity duration-200 ease-out hover:opacity-100",
+        )}
         style={{
           height: "34px",
           /* Largura mais compacta — ~34px por segmento, limitada à largura útil */

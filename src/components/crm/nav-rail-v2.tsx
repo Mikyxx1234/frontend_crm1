@@ -126,20 +126,20 @@ export function NavRailV2({ className }: { className?: string }) {
       {items.map((item) => {
         const active = isActiveFor(pathname, item);
         return (
-          <Link
-            key={item.title}
-            href={item.href}
-            title={item.title}
-            aria-label={item.title}
-            className={cn(
-              "flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] transition-all duration-150",
-              active
-                ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-                : "bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
-            )}
-          >
-            {item.icon}
-          </Link>
+          <TooltipGlass key={item.title} label={item.title} side="right">
+            <Link
+              href={item.href}
+              aria-label={item.title}
+              className={cn(
+                "flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] transition-all duration-150",
+                active
+                  ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+                  : "bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
+              )}
+            >
+              {item.icon}
+            </Link>
+          </TooltipGlass>
         );
       })}
 

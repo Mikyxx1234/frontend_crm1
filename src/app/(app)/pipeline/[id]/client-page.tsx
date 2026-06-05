@@ -187,7 +187,7 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
           <DealDetailsPanel
             record={record}
             productCount={0}
-            onBack={() => router.push("/v2/pipeline/list")}
+            onBack={() => router.push("/pipeline")}
           />
         ) : (
           <DealErrorPanel message="Negócio não encontrado." />
@@ -206,7 +206,7 @@ function DealErrorPanel({ message }: { message: string }) {
         {message}
       </p>
       <Link
-        href="/v2/pipeline/list"
+        href="/pipeline/list"
         className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-sm font-bold text-white"
       >
         <IconArrowLeft size={16} />

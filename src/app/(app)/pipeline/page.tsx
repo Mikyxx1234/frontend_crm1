@@ -11,5 +11,5 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 export const dynamic = "force-dynamic";
 
 export default function V2PipelinePage() {
-  return <KanbanV2ClientPage navRail={<NavRailV2 />} listHref="/v2/pipeline/list" />;
+  return <KanbanV2ClientPage navRail={<NavRailV2 />} listHref="/pipeline/list" />;
 }

@@ -145,7 +145,7 @@ export default function V2PipelineListClientPage() {
         ) : (
           <DealListTable
             deals={rows}
-            onRowClick={(id) => router.push(`/v2/pipeline/${id}`)}
+            onRowClick={(id) => router.push(`/pipeline/${id}`)}
           />
         )}
 
@@ -165,7 +165,7 @@ function ViewSwitcher({ current }: { current: "kanban" | "list" }) {
   return (
     <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
       <Link
-        href="/v2/pipeline"
+        href="/pipeline"
         className={cn(
           "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-[12px] font-bold transition-colors",
           current === "kanban"
@@ -177,7 +177,7 @@ function ViewSwitcher({ current }: { current: "kanban" | "list" }) {
         Kanban
       </Link>
       <Link
-        href="/v2/pipeline/list"
+        href="/pipeline/list"
         className={cn(
           "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-[12px] font-bold transition-colors",
           current === "list"

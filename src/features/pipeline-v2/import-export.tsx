@@ -55,10 +55,28 @@ import { cn } from "@/lib/utils";
 // ─── Templates CSV ───────────────────────────────────────────────────────────
 
 const CONTACT_TEMPLATE = `name,email,phone,external_id,id,lifecycle_stage,source,company,assigned_to_email
-João Silva,joao@email.com,+5511999999999,kommo_contact_1001,,LEAD,Site,Minha Empresa,admin@empresa.com`;
+João Silva,joao.silva@empresa.com,+5511999990001,kommo_contact_1001,,LEAD,Site,Acme Tecnologia,admin@empresa.com
+Maria Souza,maria.souza@email.com,+5511999990002,kommo_contact_1002,,MQL,Indicação,Beta Solutions,admin@empresa.com
+Pedro Costa,pedro.costa@gmail.com,+5511999990003,kommo_contact_1003,,SQL,Google Ads,Gamma Group,admin@empresa.com
+Ana Pereira,ana.pereira@outlook.com,+5511999990004,kommo_contact_1004,,OPPORTUNITY,Facebook Ads,Delta Comercio,admin@empresa.com
+Lucas Ribeiro,lucas.ribeiro@uol.com.br,+5521999990005,kommo_contact_1005,,LEAD,Webinar,Epsilon Servicos,admin@empresa.com
+Beatriz Almeida,beatriz.almeida@hotmail.com,+5521999990006,kommo_contact_1006,,CUSTOMER,Site,Zeta Industria,admin@empresa.com
+Rafael Santos,rafael.santos@yahoo.com,+5531999990007,kommo_contact_1007,,LEAD,LinkedIn,Eta Consultoria,admin@empresa.com
+Juliana Oliveira,juliana.oliveira@empresa.com,+5531999990008,kommo_contact_1008,,SUBSCRIBER,Newsletter,Theta Educacao,admin@empresa.com
+Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,kommo_contact_1009,,SQL,Indicação,Iota Marketing,admin@empresa.com
+Carla Mendes,carla.mendes@outlook.com,+5541999990010,kommo_contact_1010,,MQL,Google Ads,Kappa Logistica,admin@empresa.com`;
 
-const DEAL_TEMPLATE = `title,value,status,stage_id,external_id,deal_number,contact_external_id,owner_email,expected_close,lost_reason
-`;
+const DEAL_TEMPLATE = `title,value,status,stage_id,pipeline_name,stage_name,external_id,deal_number,contact_external_id,contact_name,contact_email,contact_phone,owner_email,expected_close,lost_reason
+Implantação CRM - Acme,12500.00,OPEN,,Pipeline Principal,Qualificado,kommo_lead_2001,,kommo_contact_1001,João Silva,joao.silva@empresa.com,+5511999990001,admin@empresa.com,2026-07-15,
+Pacote Premium - Beta Solutions,8900.50,OPEN,,Pipeline Principal,Proposta,kommo_lead_2002,,kommo_contact_1002,Maria Souza,maria.souza@email.com,+5511999990002,admin@empresa.com,2026-07-22,
+Renovação Anual - Gamma Group,24000.00,OPEN,,Pipeline Principal,Negociação,kommo_lead_2003,,kommo_contact_1003,Pedro Costa,pedro.costa@gmail.com,+5511999990003,admin@empresa.com,2026-08-01,
+Consultoria Onboarding - Delta,4500.00,WON,,Pipeline Principal,Fechamento,kommo_lead_2004,,kommo_contact_1004,Ana Lima,ana.lima@delta.com.br,+5521999990004,admin@empresa.com,2026-06-30,
+Treinamento Equipe - Epsilon,3200.00,OPEN,,Pipeline Principal,Novo,kommo_lead_2005,,kommo_contact_1005,Bruno Alves,bruno.alves@epsilon.io,+5521999990005,admin@empresa.com,2026-08-10,
+Pacote Enterprise - Zeta,55000.00,OPEN,,Pipeline Principal,Proposta,kommo_lead_2006,,kommo_contact_1006,Camila Dias,camila.dias@zeta.tech,+5531999990006,admin@empresa.com,2026-09-05,
+Upgrade Plano - Eta,1800.00,LOST,,Pipeline Principal,Fechamento,kommo_lead_2007,,kommo_contact_1007,Diego Nunes,diego.nunes@eta.app,+5531999990007,admin@empresa.com,2026-06-15,Preço acima do orçamento
+Plataforma EAD - Theta,18750.00,OPEN,,Pipeline Principal,Qualificado,kommo_lead_2008,,kommo_contact_1008,Fernanda Reis,fernanda.reis@theta.edu,+5511999990008,admin@empresa.com,2026-08-20,
+Campanha Trimestral - Iota,6700.00,OPEN,,Pipeline Principal,Negociação,kommo_lead_2009,,kommo_contact_1009,Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,admin@empresa.com,2026-07-30,
+Migração Sistema - Kappa,32000.00,WON,,Pipeline Principal,Fechamento,kommo_lead_2010,,kommo_contact_1010,Carla Mendes,carla.mendes@outlook.com,+5541999990010,admin@empresa.com,2026-06-20,`;
 
 // ─── Campos do sistema (mapeamento) ──────────────────────────────────────────
 
@@ -89,6 +107,9 @@ const SYSTEM_FIELDS: Record<ImportEntity, SystemField[]> = {
     { key: "id", label: "ID do sistema (atualizar)" },
     { key: "deal_number", label: "Número do negócio" },
     { key: "contact_external_id", label: "ID externo do contato" },
+    { key: "contact_name", label: "Nome do contato (criar se não existir)" },
+    { key: "contact_email", label: "E-mail do contato" },
+    { key: "contact_phone", label: "Telefone do contato" },
     { key: "owner_email", label: "Responsável (e-mail)" },
     { key: "expected_close", label: "Previsão de fechamento" },
     { key: "lost_reason", label: "Motivo da perda" },
@@ -390,7 +411,29 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
       const r = json as ImportResult;
       setResult(r);
       setStep("result");
-      if ((r.created ?? 0) > 0 || (r.updated ?? 0) > 0) onDone();
+
+      const created = r.created ?? 0;
+      const updated = r.updated ?? 0;
+      const failed = r.failed?.length ?? 0;
+      const skipped = r.skipped ?? 0;
+      const successCount = created + updated;
+
+      if (failed === 0 && successCount > 0) {
+        toast.success(
+          `Importação concluída: ${created} criado(s), ${updated} atualizado(s)` +
+            (skipped > 0 ? `, ${skipped} ignorado(s).` : "."),
+        );
+      } else if (successCount > 0 && failed > 0) {
+        toast.warning(
+          `Importação parcial: ${created} criado(s), ${updated} atualizado(s), ${failed} falha(s).`,
+        );
+      } else if (failed > 0 && successCount === 0) {
+        toast.error(`Nenhuma linha importada. ${failed} falha(s).`);
+      } else if (successCount === 0 && skipped > 0) {
+        toast.info(`${skipped} linha(s) ignorada(s). Nenhuma criação ou atualização.`);
+      }
+
+      if (successCount > 0) onDone();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao importar.");
     } finally {
@@ -832,14 +875,33 @@ function MappingStep({
           </span>
         </label>
 
-        <div className="flex items-center gap-3 pt-2">
-          <Button type="button" onClick={onSubmit} disabled={busy} className="gap-1.5">
-            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {busy ? "Importando…" : "Próximo"}
-          </Button>
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
-            Cancelar
-          </Button>
+        <div className="space-y-3 pt-2">
+          {busy && (
+            <div
+              className="rounded-md border border-border/60 bg-muted/40 p-3"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="mb-2 flex items-center gap-2 text-sm">
+                <Loader2 className="size-4 animate-spin text-primary" />
+                <span className="font-medium">Importando {rows.length} linha(s)…</span>
+                <span className="text-muted-foreground">não feche esta janela</span>
+              </div>
+              {/* Barra indeterminada (CSS-only) */}
+              <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div className="absolute inset-y-0 left-0 w-1/3 animate-[importprogress_1.2s_ease-in-out_infinite] rounded-full bg-primary" />
+              </div>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <Button type="button" onClick={onSubmit} disabled={busy} className="gap-1.5">
+              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+              {busy ? "Importando…" : "Importar"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
+              Cancelar
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

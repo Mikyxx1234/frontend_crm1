@@ -84,7 +84,6 @@ export function KanbanColumn({
   deals,
   onDealClick,
   onAddDeal,
-  showAddButton = true,
   renderDeal,
   dealsContainerRef,
   dealsContainerProps,
@@ -215,6 +214,10 @@ export function KanbanColumn({
         {...dealsContainerProps}
         className="kanban-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1"
       >
+        {/* Formulário inline de criação — renderizado no TOPO da fase,
+            acima dos cards. Disparado pelo "+" no header da coluna. */}
+        {addFormSlot}
+
         {deals.map((deal, index) =>
           renderDeal ? (
             renderDeal(deal, index)
@@ -223,22 +226,6 @@ export function KanbanColumn({
           ),
         )}
         {placeholderSlot}
-
-        {addFormSlot}
-
-        {showAddButton && (
-          <button
-            type="button"
-            onClick={onAddDeal}
-            className={cn(
-              "mt-1 flex cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-lg)] border-[1.5px] border-dashed border-[var(--glass-border)] bg-transparent py-2.5 font-display text-xs font-semibold text-[var(--text-muted)] transition-all",
-              "hover:border-[var(--brand-primary)] hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]",
-            )}
-          >
-            <IconPlus size={14} />
-            Adicionar negócio
-          </button>
-        )}
       </div>
       </div>{/* fim do padding lateral */}
     </section>

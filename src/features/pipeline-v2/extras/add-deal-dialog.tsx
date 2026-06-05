@@ -119,7 +119,7 @@ export function AddDealDialog({
     <div
       style={{ animation: "addDealExpand 180ms cubic-bezier(0.4,0,0.2,1)" }}
       className={cn(
-        "mx-2 mb-2 overflow-hidden",
+        "overflow-hidden",
         "rounded-[var(--radius-lg)] border border-[var(--glass-border)]",
         "bg-[var(--glass-bg-strong)] backdrop-blur-[16px]",
         "shadow-[var(--glass-shadow)]",

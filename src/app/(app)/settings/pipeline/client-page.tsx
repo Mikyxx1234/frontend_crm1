@@ -1088,7 +1088,7 @@ export default function PipelineSettingsClientPage() {
       <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4">
         <NavRailV2 />
 
-        <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
+        <div className="flex min-w-0 flex-col gap-3 overflow-clip">
           <PipelineHeader
             hideActions
             pipelineNameSlot={
@@ -1113,7 +1113,7 @@ export default function PipelineSettingsClientPage() {
           />
 
           {/* Board de estágios */}
-          <div className="flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-2">
+          <div className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-3">
             {stages.length > 0 ? (
               stages.map((stage, idx) => (
                 <StageColumn

@@ -167,7 +167,7 @@ export function KanbanColumn({
       <div
         ref={dealsContainerRef}
         {...dealsContainerProps}
-        className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1"
+        className="kanban-scroll flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1"
       >
         {deals.map((deal, index) =>
           renderDeal ? (

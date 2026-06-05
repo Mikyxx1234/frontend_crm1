@@ -430,6 +430,7 @@ export default function KanbanV2ClientPage({
           <div
             ref={boardRef}
             className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-3"
+            style={{ backgroundColor: "rgba(175, 19, 19, 0.00)" }}
           >
             {columns.map((col) => (
               <DroppableColumn

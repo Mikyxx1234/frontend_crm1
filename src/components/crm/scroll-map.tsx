@@ -40,15 +40,23 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
   useEffect(() => {
     const el = boardRef.current;
     if (!el) return;
-    recalc();
+    // Mede após o layout (rAF) — garante scrollWidth correto mesmo
+    // quando as colunas acabaram de ser inseridas/trocadas.
+    const raf = requestAnimationFrame(recalc);
     el.addEventListener("scroll", recalc, { passive: true });
     const ro = new ResizeObserver(recalc);
     ro.observe(el);
+    // Observa também os filhos diretos (colunas) para reagir a inserções
+    for (const child of Array.from(el.children)) ro.observe(child);
+    window.addEventListener("resize", recalc);
     return () => {
+      cancelAnimationFrame(raf);
       el.removeEventListener("scroll", recalc);
+      window.removeEventListener("resize", recalc);
       ro.disconnect();
     };
-  }, [boardRef, recalc]);
+    // columnCount nas deps: re-subscreve e re-mede quando o nº de colunas muda
+  }, [boardRef, recalc, columnCount]);
 
   const onSegmentClick = useCallback(
     (index: number) => {
@@ -107,10 +115,9 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
         ref={wrapperRef}
         className="pointer-events-auto relative flex select-none items-stretch gap-[3px]"
         style={{
-          height: "16px",
-          /* Largura: ocupa da borda esquerda do board até o canto direito,
-             menos o espaço do NavRail (72px) e paddings */
-          width: `min(${segments * 52}px, calc(100vw - 140px))`,
+          height: "34px",
+          /* Largura mais compacta — ~34px por segmento, limitada à largura útil */
+          width: `min(${segments * 34}px, calc(100vw - 140px))`,
         }}
       >
         {/* Segmentos — um por coluna */}

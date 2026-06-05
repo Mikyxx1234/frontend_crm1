@@ -16,6 +16,7 @@ import {
   IconPencil,
   IconPlus,
   IconStar,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -213,11 +214,27 @@ interface AutomationCardProps {
   stageId: string;
   stages: StageConfig[];
   onCopy: (automation: Automation, targetStageId: string) => void;
+  onEdit: (automation: Automation) => void;
+  onDelete: (automationId: string) => void;
 }
 
-function AutomationCard({ automation, stageId, stages, onCopy }: AutomationCardProps) {
+function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete }: AutomationCardProps) {
   const [active, setActive] = useState(true);
   const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Fecha menu ao clicar fora
+  useEffect(() => {
+    if (!menuOpen) return;
+    const fn = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, [menuOpen]);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]">
@@ -231,11 +248,48 @@ function AutomationCard({ automation, stageId, stages, onCopy }: AutomationCardP
           <IconBolt size={42} className="text-white" />
         </div>
 
-        {/* Tag de gatilho */}
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 font-display text-[10px] font-bold text-white/90">
-          <IconBolt size={10} />
-          {automation.stageTrigger}
-        </span>
+        {/* Tag de gatilho + menu contextual */}
+        <div className="relative flex items-center justify-between" ref={menuRef}>
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 font-display text-[10px] font-bold text-white/90">
+            <IconBolt size={10} />
+            {automation.stageTrigger}
+          </span>
+
+          <button
+            type="button"
+            title="Mais opções do gatilho"
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-white/0 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
+          >
+            <IconDots size={14} />
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 top-full z-50 mt-1.5 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(automation); }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-display text-[12.5px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <IconPencil size={13} className="text-slate-400" />
+                Editar gatilho
+              </button>
+              <div className="mx-3 h-px bg-slate-100" />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onDelete(automation.id);
+                }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left font-display text-[12.5px] font-semibold text-red-500 transition-colors hover:bg-red-50"
+              >
+                <IconTrash size={13} />
+                Deletar gatilho
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Nome + toggle */}
         <div className="flex items-center justify-between gap-2">
@@ -533,6 +587,8 @@ interface StageColumnProps {
   allStages: StageConfig[];
   onAddAutomation: (stageId: string) => void;
   onCopyAutomation: (automation: Automation, targetStageId: string, sourceStageId: string) => void;
+  onEditAutomation: (automation: Automation, stageId: string) => void;
+  onDeleteAutomation: (automationId: string, stageId: string) => void;
   onMoveForward: (stageId: string) => void;
   onMoveBackward: (stageId: string) => void;
   onRename: (stageId: string) => void;
@@ -551,6 +607,8 @@ function StageColumn({
   allStages,
   onAddAutomation,
   onCopyAutomation,
+  onEditAutomation,
+  onDeleteAutomation,
   onMoveForward,
   onMoveBackward,
   onRename,
@@ -631,6 +689,8 @@ function StageColumn({
             onCopy={(automation, targetStageId) =>
               onCopyAutomation(automation, targetStageId, stage.id)
             }
+            onEdit={(automation) => onEditAutomation(automation, stage.id)}
+            onDelete={(automationId) => onDeleteAutomation(automationId, stage.id)}
           />
         ))}
 
@@ -780,6 +840,9 @@ export default function PipelineSettingsClientPage() {
 
   // Drawer "Adicionar automação"
   const [addAutomationStageId, setAddAutomationStageId] = useState<string | null>(null);
+
+  // Drawer "Editar automação"
+  const [editingAutomation, setEditingAutomation] = useState<{ automation: Automation; stageId: string } | null>(null);
 
   // Estado local de ordem, nomes e cores dos estágios
   const [stageOrder, setStageOrder] = useState<string[]>([]);
@@ -945,6 +1008,52 @@ export default function PipelineSettingsClientPage() {
     [addAutomationStageId, automationsData?.items],
   );
 
+  const handleEditAutomation = useCallback(
+    (automation: Automation, stageId: string) => {
+      setEditingAutomation({ automation, stageId });
+    },
+    [],
+  );
+
+  const handleEditDrawerConfirm = useCallback(
+    ({
+      automationId,
+      trigger,
+    }: {
+      automationId: string;
+      trigger: string;
+      applyToExisting: boolean;
+    }) => {
+      if (!editingAutomation) return;
+      const { automation, stageId } = editingAutomation;
+      const autoDto = automationsData?.items.find((a) => a.id === automationId);
+      const updatedAuto: Automation = {
+        ...automation,
+        stageTrigger: STAGE_TRIGGER_LABELS[trigger] ?? trigger,
+        name: autoDto?.name ?? automation.name,
+        description: autoDto?.description ?? automation.description,
+      };
+      setStageAutomationsMap((prev) => ({
+        ...prev,
+        [stageId]: (prev[stageId] ?? []).map((a) =>
+          a.id === automation.id ? updatedAuto : a,
+        ),
+      }));
+      setEditingAutomation(null);
+    },
+    [editingAutomation, automationsData?.items],
+  );
+
+  const handleDeleteAutomation = useCallback(
+    (automationId: string, stageId: string) => {
+      setStageAutomationsMap((prev) => ({
+        ...prev,
+        [stageId]: (prev[stageId] ?? []).filter((a) => a.id !== automationId),
+      }));
+    },
+    [],
+  );
+
   const handleCopyAutomation = useCallback(
     (automation: Automation, targetStageId: string, _sourceStageId: string) => {
       const copy: Automation = {
@@ -1012,6 +1121,8 @@ export default function PipelineSettingsClientPage() {
                   allStages={stages}
                   onAddAutomation={handleAddAutomation}
                   onCopyAutomation={handleCopyAutomation}
+                  onEditAutomation={handleEditAutomation}
+                  onDeleteAutomation={handleDeleteAutomation}
                   onMoveForward={handleMoveForward}
                   onMoveBackward={handleMoveBackward}
                   onRename={setRenamingStageId}
@@ -1047,6 +1158,25 @@ export default function PipelineSettingsClientPage() {
         stageName={addAutomationStageName}
         onClose={() => setAddAutomationStageId(null)}
         onConfirm={handleDrawerConfirm}
+      />
+
+      {/* Drawer de edição de automação */}
+      <AddAutomationDrawer
+        open={!!editingAutomation}
+        stageName={
+          editingAutomation
+            ? (stages.find((s) => s.id === editingAutomation.stageId)?.name ?? "")
+            : ""
+        }
+        initialAutomationId={editingAutomation?.automation.id ?? null}
+        initialTrigger={
+          // Reverter label para value
+          Object.entries(STAGE_TRIGGER_LABELS).find(
+            ([, label]) => label === editingAutomation?.automation.stageTrigger,
+          )?.[0] ?? "STAGE_ENTERED"
+        }
+        onClose={() => setEditingAutomation(null)}
+        onConfirm={handleEditDrawerConfirm}
       />
     </>
   );

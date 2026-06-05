@@ -254,6 +254,9 @@ function AutomationPicker({
 export interface AddAutomationDrawerProps {
   open: boolean;
   stageName: string;
+  /** Pré-preenche para modo de edição */
+  initialAutomationId?: string | null;
+  initialTrigger?: string;
   onClose: () => void;
   onConfirm: (payload: {
     automationId: string;
@@ -265,12 +268,23 @@ export interface AddAutomationDrawerProps {
 export function AddAutomationDrawer({
   open,
   stageName,
+  initialAutomationId,
+  initialTrigger,
   onClose,
   onConfirm,
 }: AddAutomationDrawerProps) {
-  const [trigger, setTrigger] = useState("STAGE_ENTERED");
-  const [automationId, setAutomationId] = useState<string | null>(null);
+  const [trigger, setTrigger] = useState(initialTrigger ?? "STAGE_ENTERED");
+  const [automationId, setAutomationId] = useState<string | null>(initialAutomationId ?? null);
   const [applyToExisting, setApplyToExisting] = useState(false);
+
+  // Re-inicializa quando abre para edição
+  useEffect(() => {
+    if (open) {
+      setTrigger(initialTrigger ?? "STAGE_ENTERED");
+      setAutomationId(initialAutomationId ?? null);
+      setApplyToExisting(false);
+    }
+  }, [open, initialTrigger, initialAutomationId]);
 
   // Fecha ao pressionar Escape
   useEffect(() => {
@@ -318,7 +332,7 @@ export function AddAutomationDrawer({
             </div>
             <div>
               <h2 className="font-display text-[15px] font-bold text-slate-800">
-                Adicionar automação
+                {initialAutomationId ? "Editar automação" : "Adicionar automação"}
               </h2>
               <p className="mt-0.5 font-display text-[12px] text-slate-500">
                 Estágio:{" "}

@@ -222,21 +222,23 @@ export function PipelineHeader({
           </div>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
-          >
-            <IconUser size={14} /> Meus
-          </button>
-          <button
-            type="button"
-            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 font-display text-xs font-semibold transition-colors hover:bg-[var(--glass-bg-strong)]"
-            style={{ color: "var(--color-warning-text)" }}
-          >
-            <IconAlertTriangle size={14} /> Urgentes
-          </button>
-        </div>
+        {!tabsOverride && (
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+            >
+              <IconUser size={14} /> Meus
+            </button>
+            <button
+              type="button"
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-transparent px-3 py-1.5 font-display text-xs font-semibold transition-colors hover:bg-[var(--glass-bg-strong)]"
+              style={{ color: "var(--color-warning-text)" }}
+            >
+              <IconAlertTriangle size={14} /> Urgentes
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

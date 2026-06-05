@@ -202,31 +202,47 @@ export default function KanbanV2ClientPage({
   const filteredBoard = useMemo(() => {
     const hasOwner = filters.ownerIds.length > 0;
     const hasTag = filters.tagIds.length > 0;
+    const hasStage = filters.stageIds.length > 0;
     const q = search.trim().toLowerCase();
     const hasSearch = q.length > 0;
+    const vMin = filters.valueMin !== "" ? Number(filters.valueMin) : null;
+    const vMax = filters.valueMax !== "" ? Number(filters.valueMax) : null;
+    const hasValue = vMin !== null || vMax !== null;
 
-    const filtered = (!hasOwner && !hasTag && !hasSearch)
+    const noFilters = !hasOwner && !hasTag && !hasStage && !hasSearch && !hasValue;
+
+    // Filtro de etapa: esconde a coluna inteira se não estiver selecionada
+    const stageFiltered = noFilters
       ? board
-      : board.map((stage) => ({
-          ...stage,
-          deals: stage.deals.filter((d) => {
-            if (hasOwner && (!d.owner?.id || !filters.ownerIds.includes(d.owner.id))) {
-              return false;
-            }
-            if (hasTag) {
-              const ids = (d.tags ?? []).map((t) => t.id);
-              if (!filters.tagIds.some((id) => ids.includes(id))) return false;
-            }
-            if (hasSearch) {
-              const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-              if (!hay.includes(q)) return false;
-            }
-            return true;
-          }),
-        }));
+      : board
+          .filter((stage) => !hasStage || filters.stageIds.includes(stage.id))
+          .map((stage) => ({
+            ...stage,
+            deals: stage.deals.filter((d) => {
+              if (hasOwner && (!d.owner?.id || !filters.ownerIds.includes(d.owner.id))) {
+                return false;
+              }
+              if (hasTag) {
+                const ids = (d.tags ?? []).map((t) => t.id);
+                if (!filters.tagIds.some((id) => ids.includes(id))) return false;
+              }
+              if (hasSearch) {
+                const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
+                  .filter(Boolean)
+                  .join(" ")
+                  .toLowerCase();
+                if (!hay.includes(q)) return false;
+              }
+              if (hasValue) {
+                const val = Number(d.value) || 0;
+                if (vMin !== null && val < vMin) return false;
+                if (vMax !== null && val > vMax) return false;
+              }
+              return true;
+            }),
+          }));
+
+    const filtered = stageFiltered;
 
     // Ordenação client-side dos cards dentro de cada coluna
     if (sortKey === "default") return filtered;
@@ -392,6 +408,7 @@ export default function KanbanV2ClientPage({
           onClose={() => setFiltersOpen(false)}
           filters={filters}
           onChange={setFilters}
+          stages={board}
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -831,7 +848,7 @@ function formatDate(iso: string): string {
 // CardMoveMenu — botão "Mover" no rodapé do card que abre um menu de
 // fases (alternativa ao drag-and-drop, útil no mobile/touch). Reusa o
 // StagePicker (useMoveDeal) para a mutação com update otimista.
-// ─────────────────────────────────────────────────────────────────
+// ─────��───────────────────────────────────────────────────────────
 function CardMoveMenu({
   dealId,
   currentStageId,

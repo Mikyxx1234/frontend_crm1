@@ -227,7 +227,7 @@
 .v2-screen .kanban-board-hscroll {
   flex: 1 1 0%;
   min-height: 0;
-  overflow-x: scroll !important;
+  overflow-x: auto !important;
   overflow-y: hidden !important;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
@@ -241,13 +241,17 @@
   width: 0 !important;
 }
 
-/* Cada .kanban-col usa a altura medida pelo ResizeObserver via --col-h.
-   Isso contorna a limitação de height:100% em flex sem referência explícita. */
+/* Cada .kanban-col tem altura natural (ajusta ao conteúdo) e nunca
+   ultrapassa a altura do .kanban-board-hscroll. align-self: flex-start
+   impede o stretch automático do flex cross-axis — assim a coluna
+   "fecha" junto com o último card/botão em vez de mostrar um vazio
+   cinza no fim quando há poucos cards. Quando o conteúdo ultrapassa
+   o max-height, o .kanban-scroll interno (overflow-y-auto) cuida. */
 .v2-screen .kanban-board-hscroll .kanban-col {
-  height: var(--col-h, 700px) !important;
-  max-height: var(--col-h, 700px) !important;
-  overflow: hidden;
+  align-self: flex-start !important;
+  max-height: 100% !important;
   flex-shrink: 0;
+  min-height: 0;
 }
 .v2-min-screen {
   min-height: calc(100dvh / var(--v2-scale, 1));

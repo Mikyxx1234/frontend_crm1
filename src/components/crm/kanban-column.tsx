@@ -91,7 +91,7 @@ export function KanbanColumn({
   return (
     <section
       aria-label={`Coluna ${title}`}
-      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-3 backdrop-blur-md shadow-[var(--glass-shadow)]"
+      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-2 backdrop-blur-md shadow-[var(--glass-shadow)]"
     >
       {/* Barra de acento colorida no topo da coluna */}
       <div
@@ -100,7 +100,7 @@ export function KanbanColumn({
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pb-2.5 pt-3.5">
+      <div className="flex items-center justify-between px-4 pb-1.5 pt-2.5">
         <div className="flex items-center gap-2">
           {/* Checkbox "selecionar todos desta etapa" */}
           {showSelectAll && selection ? (
@@ -189,7 +189,7 @@ export function KanbanColumn({
       </div>
 
       {/* Total */}
-      <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-4 pb-2.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">
+      <div className="mb-2 border-b border-[var(--glass-border-subtle)] px-4 pb-1.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">
         {total}
       </div>
 
@@ -204,7 +204,7 @@ export function KanbanColumn({
       <div
         ref={dealsContainerRef}
         {...dealsContainerProps}
-        className="kanban-scroll flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1"
+        className="kanban-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1"
       >
         {deals.map((deal, index) =>
           renderDeal ? (

@@ -123,8 +123,6 @@ export default function KanbanV2ClientPage({
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
-
-
   const [activeTab, setActiveTab] = useState<TabId>("abertos");
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
@@ -139,41 +137,6 @@ export default function KanbanV2ClientPage({
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
-
-  // Mede a altura disponível para as colunas observando o próprio
-  // kanban-board-hscroll — assim que ele tiver tamanho definido pelo
-  // flex-1 do wrapper, propagamos esse valor como --col-h nas colunas.
-  useEffect(() => {
-    const wrapper = boardWrapperRef.current;
-    if (!wrapper) return;
-
-    const apply = () => {
-      // Altura total do grid (v2-screen) menos a posição top do wrapper
-      // dentro do grid dá exatamente o espaço disponível.
-      const screenEl = wrapper.closest<HTMLElement>(".v2-screen");
-      const screenH = screenEl ? screenEl.getBoundingClientRect().height : window.innerHeight;
-      const wrapperTop = wrapper.getBoundingClientRect().top - (screenEl?.getBoundingClientRect().top ?? 0);
-      const wrapperH = screenH - wrapperTop;
-
-      // Altura disponível para o board = posição bottom do screen - posição top do board
-      const board = wrapper.querySelector<HTMLElement>(".kanban-board-hscroll");
-      if (!board) return;
-      const boardTop = board.getBoundingClientRect().top;
-      // Usamos window.innerHeight para o bottom real do viewport (sem padding)
-      const colH = Math.max(120, window.innerHeight - boardTop - 16);
-
-      board.style.height = `${colH}px`;
-      board.style.setProperty("--col-h", `${colH}px`);
-    };
-
-    // Observa tanto o wrapper quanto o screen para reagir a redimensionamentos
-    apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(wrapper);
-    const screenEl = wrapper.closest<HTMLElement>(".v2-screen");
-    if (screenEl) ro.observe(screenEl);
-    return () => ro.disconnect();
-  }, []);
 
   // Kebab menu e modal de import/export
   const [kebabOpen, setKebabOpen] = useState(false);
@@ -406,8 +369,8 @@ export default function KanbanV2ClientPage({
       {navRail ?? <NavRail />}
       <div
         ref={boardWrapperRef}
-        className="flex min-w-0 flex-col gap-3"
-        style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)", overflow: "clip" }}
+        className="flex h-full min-h-0 min-w-0 flex-col gap-3"
+        style={{ overflow: "clip" }}
       >
         <PipelineHeader
           activeTab={activeTab}
@@ -467,7 +430,7 @@ export default function KanbanV2ClientPage({
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div
             ref={boardRef}
-            className="kanban-board-hscroll flex min-w-0 flex-1 gap-3.5 pb-1"
+            className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-3"
           >
             {columns.map((col) => (
               <DroppableColumn

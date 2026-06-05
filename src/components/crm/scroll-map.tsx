@@ -119,7 +119,7 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
           "opacity-35 transition-opacity duration-200 ease-out hover:opacity-100",
         )}
         style={{
-          height: "34px",
+          height: "44px",
           /* Largura mais compacta — ~34px por segmento, limitada à largura útil */
           width: `min(${segments * 34}px, calc(100vw - 140px))`,
         }}
@@ -131,7 +131,7 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
             type="button"
             aria-label={`Ir para coluna ${i + 1}`}
             onClick={() => onSegmentClick(i)}
-            className="h-full flex-1 cursor-pointer rounded-[3px] transition-colors duration-150 hover:opacity-80"
+            className="h-full flex-1 cursor-pointer rounded-md transition-colors duration-150 hover:opacity-80"
             style={{ background: "rgba(91,111,245,0.12)" }}
           />
         ))}
@@ -139,7 +139,7 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
         {/* Indicador de posição deslizante */}
         <div
           onMouseDown={onIndicatorMouseDown}
-          className="absolute inset-y-0 cursor-grab rounded-[3px] transition-[left,width] duration-75 ease-linear active:cursor-grabbing"
+          className="absolute inset-y-0 cursor-grab rounded-md transition-[left,width] duration-75 ease-linear active:cursor-grabbing"
           style={{
             left: `${indicator.left}%`,
             width: `${indicator.width}%`,

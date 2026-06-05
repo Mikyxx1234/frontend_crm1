@@ -80,7 +80,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
     <article
       onClick={onClick}
       className={cn(
-        "group relative cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all",
+        "group relative cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all",
         "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-base)] hover:shadow-[var(--glass-shadow)]",
         isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",
@@ -118,7 +118,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         <div
           className={cn(
             `av-${deal.avatarColor}`,
-            "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white font-display text-[11px] font-bold text-white",
+            "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white font-display text-[10px] font-bold text-white",
           )}
         >
           {deal.initials}
@@ -147,7 +147,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
 
       {/* Message preview */}
       {deal.message && (
-        <div className="mt-2 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-2.5 py-2 text-[11.5px] italic leading-[1.45] text-[var(--text-secondary)]">
+        <div className="mt-1.5 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-[11.5px] italic leading-[1.4] text-[var(--text-secondary)]">
           {/* Ícone de conversa com borda azul — mesmo do card de
               conversa do inbox, para padronizar a leitura visual. */}
           <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
@@ -172,7 +172,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           stopPropagation em multiplos eventos para nao abrir o deal
           ou iniciar drag ao interagir com popovers injetados. */}
       <div
-        className="mb-2 mt-2 flex flex-wrap items-center gap-1"
+        className="mb-1.5 mt-1.5 flex flex-wrap items-center gap-1"
         onClick={tagsSlot ? (e) => e.stopPropagation() : undefined}
         onMouseDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
         onPointerDown={tagsSlot ? (e) => e.stopPropagation() : undefined}
@@ -204,7 +204,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
 
       {/* Owner — slot tem prioridade. */}
       <div
-        className="flex items-center gap-1.5 border-t border-[var(--glass-border-subtle)] pt-2"
+        className="flex items-center gap-1.5 border-t border-[var(--glass-border-subtle)] pt-1.5"
         onClick={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onMouseDown={ownerSlot ? (e) => e.stopPropagation() : undefined}
         onPointerDown={ownerSlot ? (e) => e.stopPropagation() : undefined}

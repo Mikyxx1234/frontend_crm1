@@ -1207,10 +1207,10 @@ export function FilterPanelBody({
         </div>
       )}
 
-      {/* Layout 3 colunas */}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      {/* Layout 3 colunas — cada coluna tem scroll independente */}
+      <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: "200px 1fr 220px" }}>
         {/* Col 1 — Filtros Salvos */}
-        <aside className="flex w-[180px] shrink-0 flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] py-3">
+        <aside className="flex flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] py-3">
           <SavedFiltersColumn
             value={draft}
             onApply={(f) => {
@@ -1223,7 +1223,7 @@ export function FilterPanelBody({
         </aside>
 
         {/* Col 2 — Propriedades */}
-        <main className="min-w-0 flex-1 overflow-y-auto border-r border-[var(--glass-border-subtle)] px-3 py-3">
+        <main className="flex flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] px-4 py-3">
           <PropertiesColumn
             draft={draft}
             options={options}
@@ -1235,7 +1235,7 @@ export function FilterPanelBody({
         </main>
 
         {/* Col 3 — Tags */}
-        <aside className="flex w-[200px] shrink-0 flex-col overflow-hidden border-0 py-0">
+        <aside className="flex flex-col overflow-hidden">
           <TagsColumn
             draft={draft}
             options={options}

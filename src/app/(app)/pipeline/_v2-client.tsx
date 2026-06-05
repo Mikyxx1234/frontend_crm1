@@ -362,9 +362,9 @@ export default function KanbanV2ClientPage({
   }
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4">
+    <div className="v2-screen grid grid-cols-[72px_1fr] grid-rows-1 gap-4 p-4">
       {navRail ?? <NavRail />}
-      <div className="flex min-w-0 flex-col gap-3 overflow-clip">
+      <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-clip">
         <PipelineHeader
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t)}

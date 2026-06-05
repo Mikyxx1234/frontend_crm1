@@ -21,13 +21,18 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { usePipelines, useBoard } from "@/features/pipeline-v2/hooks";
+import { boardKey } from "@/features/pipeline-v2/hooks/use-board";
 import { useAutomations } from "@/features/automations-v2/hooks";
+import { apiUrl } from "@/lib/api";
 import { AddAutomationDrawer } from "./add-automation-drawer";
 
 // ─── Constantes ───────────────────────────────────────────────────
@@ -871,9 +876,19 @@ interface TabsOverrideProps {
   onNewPipeline: () => void;
   onSetDefault: () => void;
   onBack: () => void;
+  onSave: () => void;
+  hasChanges: boolean;
+  saving: boolean;
 }
 
-function PipelineSettingsTabs({ onNewPipeline, onSetDefault, onBack }: TabsOverrideProps) {
+function PipelineSettingsTabs({
+  onNewPipeline,
+  onSetDefault,
+  onBack,
+  onSave,
+  hasChanges,
+  saving,
+}: TabsOverrideProps) {
   return (
     <div className="flex w-full items-center gap-2">
       <button
@@ -895,14 +910,31 @@ function PipelineSettingsTabs({ onNewPipeline, onSetDefault, onBack }: TabsOverr
         </button>
       </TooltipGlass>
 
-      <button
-        type="button"
-        onClick={onBack}
-        className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-[12px] font-bold text-[var(--text-secondary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-      >
-        <IconArrowLeft size={14} />
-        Voltar
-      </button>
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!hasChanges || saving}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 font-display text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(16,185,129,0.30)] transition-all",
+            hasChanges && !saving
+              ? "cursor-pointer bg-emerald-500 hover:-translate-y-px hover:bg-emerald-600"
+              : "cursor-not-allowed bg-emerald-500/40 shadow-none",
+          )}
+        >
+          <IconCheck size={14} />
+          {saving ? "Salvando..." : "Salvar alterações"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-[12px] font-bold text-[var(--text-secondary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+        >
+          <IconArrowLeft size={14} />
+          Voltar
+        </button>
+      </div>
     </div>
   );
 }
@@ -958,14 +990,140 @@ export default function PipelineSettingsClientPage() {
     enabled: isAuthenticated,
   });
 
-  // Inicializa a ordem quando o board carrega ou muda de pipeline
+  // Snapshot do estado original do board — usado para diff ao salvar e para
+  // determinar se há alterações pendentes. É atualizado sempre que o board
+  // do backend muda (ex.: após salvar e revalidar).
+  const baselineRef = useRef<{
+    order: string[];
+    names: Record<string, string>;
+    colors: Record<string, string>;
+  }>({ order: [], names: {}, colors: {} });
+
+  const [saving, setSaving] = useState(false);
+
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     if (board.length > 0) {
-      setStageOrder(board.map((s) => s.id));
+      const order = board.map((s) => s.id);
+      const names: Record<string, string> = {};
+      const colors: Record<string, string> = {};
+      for (const s of board) {
+        names[s.id] = s.name;
+        colors[s.id] = s.color ?? "#5B6FF5";
+      }
+      baselineRef.current = { order, names, colors };
+      setStageOrder(order);
       setStageNameOverrides({});
       setStageColorOverrides({});
     }
   }, [board]);
+
+  // Detecta se há mudanças não salvas comparando estado atual vs baseline.
+  const hasChanges = useMemo(() => {
+    const base = baselineRef.current;
+    // Stages novos locais
+    if (stageOrder.some((id) => id.startsWith("local-stage-"))) return true;
+    // Ordem alterada (apenas dos persistidos)
+    const persistedOrder = stageOrder.filter((id) => !id.startsWith("local-stage-"));
+    if (
+      persistedOrder.length !== base.order.length ||
+      persistedOrder.some((id, i) => id !== base.order[i])
+    ) {
+      return true;
+    }
+    // Nome alterado
+    for (const [id, name] of Object.entries(stageNameOverrides)) {
+      if (id.startsWith("local-stage-")) continue;
+      if (base.names[id] !== undefined && base.names[id] !== name) return true;
+    }
+    // Cor alterada
+    for (const [id, color] of Object.entries(stageColorOverrides)) {
+      if (id.startsWith("local-stage-")) continue;
+      if (base.colors[id] !== undefined && base.colors[id] !== color) return true;
+    }
+    return false;
+  }, [stageOrder, stageNameOverrides, stageColorOverrides]);
+
+  const handleSaveAll = useCallback(async () => {
+    if (!pipelineId || saving) return;
+    setSaving(true);
+    try {
+      const base = baselineRef.current;
+
+      // 1) Criar stages novas locais (POST). Cada uma recebe id real, que
+      // substitui o id local na ordem final enviada ao reorder.
+      const localToRealId = new Map<string, string>();
+      const localIds = stageOrder.filter((id) => id.startsWith("local-stage-"));
+      for (const localId of localIds) {
+        const name = stageNameOverrides[localId];
+        const color = stageColorOverrides[localId];
+        if (!name) continue;
+        const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/stages`), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name, ...(color ? { color } : {}) }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.message ?? `Falha ao criar etapa "${name}".`);
+        }
+        const created = (await res.json()) as { id: string };
+        localToRealId.set(localId, created.id);
+      }
+
+      // 2) Atualizar nome/cor de stages persistidas (PATCH).
+      const persistedIds = Object.keys({ ...stageNameOverrides, ...stageColorOverrides }).filter(
+        (id) => !id.startsWith("local-stage-"),
+      );
+      for (const id of persistedIds) {
+        const patch: { name?: string; color?: string } = {};
+        const newName = stageNameOverrides[id];
+        const newColor = stageColorOverrides[id];
+        if (newName !== undefined && newName !== base.names[id]) patch.name = newName;
+        if (newColor !== undefined && newColor !== base.colors[id]) patch.color = newColor;
+        if (Object.keys(patch).length === 0) continue;
+        const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/stages/${id}`), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(patch),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.message ?? `Falha ao atualizar etapa.`);
+        }
+      }
+
+      // 3) Reordenar (PUT /stages) com a lista final, substituindo ids locais
+      // pelos reais. Só envia se a ordem mudou ou se houve criação.
+      const finalOrder = stageOrder.map((id) => localToRealId.get(id) ?? id);
+      const orderChanged =
+        finalOrder.length !== base.order.length ||
+        finalOrder.some((id, i) => id !== base.order[i]);
+      if (orderChanged) {
+        const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/stages`), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ stageIds: finalOrder }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.message ?? "Falha ao reordenar etapas.");
+        }
+      }
+
+      toast.success("Alterações salvas.");
+      // Revalida o board — useEffect re-inicializa overrides com baseline novo.
+      await queryClient.invalidateQueries({ queryKey: boardKey(pipelineId, "OPEN") });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar alterações.");
+    } finally {
+      setSaving(false);
+    }
+  }, [pipelineId, saving, stageOrder, stageNameOverrides, stageColorOverrides, queryClient]);
 
   // Monta os estágios na ordem local, mesclando overrides.
   // IDs com prefixo "local-stage-" são etapas criadas localmente (ainda não
@@ -1219,6 +1377,9 @@ export default function PipelineSettingsClientPage() {
                 onNewPipeline={() => setNewPipelineOpen(true)}
                 onSetDefault={handleSetDefault}
                 onBack={() => router.push("/pipeline")}
+                onSave={handleSaveAll}
+                hasChanges={hasChanges}
+                saving={saving}
               />
             }
           />

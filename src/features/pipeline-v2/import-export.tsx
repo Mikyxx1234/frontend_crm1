@@ -805,8 +805,7 @@ function MappingStep({
         </div>
       </div>
 
-      {/* ── Toggles: ignorar linha + atualizar existentes (lado a lado no desktop) ── */}
-      <div className="grid gap-3 lg:grid-cols-2">
+      {/* ── Toggle: ignorar primeira linha ── */}
       <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 transition-colors hover:bg-[var(--glass-bg-strong)]">
         <CheckboxGlass
           checked={skipHeader}
@@ -819,20 +818,19 @@ function MappingStep({
         </span>
       </label>
 
-      {/* ── Tabela preview + linha de mapeamento ── */}
+      {/* ── Tabela de pré-visualização + mapeamento de colunas ── */}
       <div className="flex flex-col gap-2">
         <p className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
           Pré-visualização e mapeamento de colunas
         </p>
         <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
           <table className="w-full min-w-max">
-            {/* Cabeçalhos do CSV */}
             <thead>
               <tr className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-strong)]">
                 {headers.map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-3 text-left font-display text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)]"
+                    className="whitespace-nowrap px-4 py-3 text-left font-display text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)]"
                   >
                     {h}
                   </th>
@@ -840,7 +838,6 @@ function MappingStep({
               </tr>
             </thead>
             <tbody>
-              {/* Linhas de preview */}
               {preview.map((row, i) => (
                 <tr
                   key={i}
@@ -852,7 +849,7 @@ function MappingStep({
                   {headers.map((h) => (
                     <td
                       key={h}
-                      className="max-w-[240px] truncate px-4 py-2.5 font-body text-[13px] text-[var(--text-secondary)]"
+                      className="max-w-[200px] truncate whitespace-nowrap px-4 py-2.5 font-body text-[13px] text-[var(--text-secondary)]"
                     >
                       {row[h] || <span className="text-[var(--text-muted)] opacity-40">—</span>}
                     </td>
@@ -864,12 +861,12 @@ function MappingStep({
                 {headers.map((h) => {
                   const isMapped = !!columnMapping[h];
                   return (
-                    <td key={h} className="px-2.5 py-2.5">
+                    <td key={h} className="px-2 py-2.5">
                       <SelectGlass
                         value={columnMapping[h] ?? ""}
                         onChange={(v) => onColumnChange(h, v)}
                         className={cn(
-                          "h-9 text-[12px]",
+                          "h-9 min-w-[140px] text-[12px]",
                           isMapped
                             ? "border-[var(--brand-primary)]/50 bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]"
                             : "",
@@ -928,6 +925,7 @@ function MappingStep({
         </div>
       </div>
 
+      {/* ── Toggle: atualizar dados existentes ── */}
       <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 transition-colors hover:bg-[var(--glass-bg-strong)]">
         <CheckboxGlass
           checked={updateExisting}
@@ -944,7 +942,6 @@ function MappingStep({
           </span>
         </span>
       </label>
-      </div>{/* fim do grid de toggles */}
 
       {/* ── Loading state ── */}
       {busy && (

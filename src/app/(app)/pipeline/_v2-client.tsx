@@ -461,6 +461,7 @@ export default function KanbanV2ClientPage({
                   setAddStage({ id: col.stageId, name: col.title })
                 }
                 onCloseAddDeal={() => setAddStage(null)}
+                columnHeight={columnHeight ? `${columnHeight}px` : undefined}
               />
             ))}
             {columns.length === 0 ? (
@@ -1027,6 +1028,7 @@ function DroppableColumn({
   selectedIds,
   onToggleSelect,
   onToggleSelectAllInColumn,
+  columnHeight,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -1040,6 +1042,7 @@ function DroppableColumn({
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAllInColumn: (ids: string[]) => void;
+  columnHeight?: string;
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.
@@ -1223,7 +1226,7 @@ function EmptyBoard({ isAuthenticated }: { isAuthenticated: boolean }) {
   );
 }
 
-// ─────────────────────────────────────────────────────��───────────
+// ────────────────────────────────────────────────���────��───────────
 // Helper: nome → slug de cor do v0 (av-blue, av-orange, ...).
 // O novo DealDetailPanel usa `av-${avatarColor}` direto no className,
 // então precisamos retornar um dos slugs definidos em globals-v2.css.

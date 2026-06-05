@@ -161,24 +161,24 @@ function StageOptionsMenu({
             <p className="px-2 pb-1 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
               Posição
             </p>
-            <div className="flex gap-1">
+            <div className="grid grid-cols-2 gap-1">
               <button
                 type="button"
                 disabled={isFirst}
                 onClick={() => { onMoveForward(); close(); }}
-                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex cursor-pointer items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <IconChevronLeft size={14} />
-                Mover frente
+                <IconChevronLeft size={13} />
+                <span className="whitespace-nowrap">Mover frente</span>
               </button>
               <button
                 type="button"
                 disabled={isLast}
                 onClick={() => { onMoveBackward(); close(); }}
-                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex cursor-pointer items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Mover atrás
-                <IconChevronRight size={14} />
+                <span className="whitespace-nowrap">Mover atrás</span>
+                <IconChevronRight size={13} />
               </button>
             </div>
           </div>
@@ -365,7 +365,7 @@ function StageColumn({
       onDrop={(e) => { e.preventDefault(); onDrop(stage.id); }}
       onDragEnd={onDragEnd}
       className={cn(
-        "flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
+        "flex h-full min-h-0 w-[300px] shrink-0 flex-col rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
         isDragOver
           ? "scale-[1.02] border-[var(--brand-primary)] shadow-[0_0_0_2px_rgba(91,111,245,0.25),var(--glass-shadow)]"
           : "border-[var(--glass-border)]",

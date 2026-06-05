@@ -581,6 +581,85 @@ function RenameStageModal({
   );
 }
 
+// ─── AddStageModal ────────────────────────────────────────────────
+
+function AddStageModal({
+  open,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (name: string) => void;
+}) {
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setValue("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-6 shadow-[0_16px_48px_rgba(15,20,40,0.20)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            Nova etapa
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)]"
+          >
+            <IconX size={16} />
+          </button>
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && value.trim()) onConfirm(value.trim());
+            if (e.key === "Escape") onClose();
+          }}
+          placeholder="Nome da etapa..."
+          className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-display text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[var(--glass-border)] bg-transparent px-4 py-2 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={!value.trim()}
+            onClick={() => value.trim() && onConfirm(value.trim())}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[12px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.30)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:opacity-50"
+          >
+            <IconCheck size={13} />
+            Criar etapa
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── StageColumn ──────────────────────────────────────────────────
 
 interface StageColumnProps {
@@ -860,6 +939,9 @@ export default function PipelineSettingsClientPage() {
   // Modal de renomear
   const [renamingStageId, setRenamingStageId] = useState<string | null>(null);
 
+  // Modal de nova etapa
+  const [addStageOpen, setAddStageOpen] = useState(false);
+
   // Automações do backend para look-up
   const { data: automationsData } = useAutomations({ perPage: 200, enabled: isAuthenticated });
 
@@ -885,21 +967,35 @@ export default function PipelineSettingsClientPage() {
     }
   }, [board]);
 
-  // Monta os estágios na ordem local, mesclando overrides
+  // Monta os estágios na ordem local, mesclando overrides.
+  // IDs com prefixo "local-stage-" são etapas criadas localmente (ainda não
+  // persistidas no backend) — montadas apenas a partir dos overrides.
   const stages: StageConfig[] = useMemo(() => {
     const stageMap = new Map(board.map((s) => [s.id, s]));
     const order = stageOrder.length > 0 ? stageOrder : board.map((s) => s.id);
     return order
-      .map((id) => {
+      .map((id, idx) => {
         const s = stageMap.get(id);
-        if (!s) return null;
-        return {
-          id: s.id,
-          name: stageNameOverrides[s.id] ?? s.name,
-          color: stageColorOverrides[s.id] ?? s.color ?? "#5B6FF5",
-          position: s.position,
-          automations: stageAutomationsMap[s.id] ?? [],
-        } satisfies StageConfig;
+        if (s) {
+          return {
+            id: s.id,
+            name: stageNameOverrides[s.id] ?? s.name,
+            color: stageColorOverrides[s.id] ?? s.color ?? "#5B6FF5",
+            position: s.position,
+            automations: stageAutomationsMap[s.id] ?? [],
+          } satisfies StageConfig;
+        }
+        // Etapa criada localmente (não está no board do backend ainda)
+        if (stageNameOverrides[id]) {
+          return {
+            id,
+            name: stageNameOverrides[id],
+            color: stageColorOverrides[id] ?? "#5B6FF5",
+            position: idx,
+            automations: stageAutomationsMap[id] ?? [],
+          } satisfies StageConfig;
+        }
+        return null;
       })
       .filter(Boolean) as StageConfig[];
   }, [board, stageOrder, stageNameOverrides, stageColorOverrides, stageAutomationsMap]);
@@ -976,6 +1072,21 @@ export default function PipelineSettingsClientPage() {
   const handleChangeColor = useCallback((stageId: string, color: string) => {
     setStageColorOverrides((prev) => ({ ...prev, [stageId]: color }));
   }, []);
+
+  const handleAddStage = useCallback((name: string) => {
+    const newId = `local-stage-${Date.now()}`;
+    const newStage: StageConfig = {
+      id: newId,
+      name,
+      color: "#5B6FF5",
+      position: stages.length,
+      automations: [],
+    };
+    setStageOrder((prev) => [...prev, newId]);
+    setStageNameOverrides((prev) => ({ ...prev, [newId]: name }));
+    setStageColorOverrides((prev) => ({ ...prev, [newId]: newStage.color }));
+    setAddStageOpen(false);
+  }, [stages.length]);
 
   // ─── Handlers de automação ──────────────────────────────────────
 
@@ -1140,6 +1251,20 @@ export default function PipelineSettingsClientPage() {
             ) : (
               <EmptyStages isAuthenticated={isAuthenticated} />
             )}
+
+            {/* Botão de adicionar nova etapa */}
+            <div className="flex w-[280px] shrink-0 items-start pt-0.5">
+              <button
+                type="button"
+                onClick={() => setAddStageOpen(true)}
+                className="flex w-full cursor-pointer items-center gap-2.5 rounded-[var(--radius-xl)] border-2 border-dashed border-[var(--glass-border)] bg-transparent px-4 py-3.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-all hover:border-[var(--brand-primary)]/50 hover:bg-[var(--brand-primary)]/5 hover:text-[var(--brand-primary)]"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current">
+                  <IconPlus size={13} />
+                </span>
+                Nova etapa
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1155,6 +1280,12 @@ export default function PipelineSettingsClientPage() {
         initialName={renamingStageCurrentName}
         onClose={() => setRenamingStageId(null)}
         onConfirm={handleRenameConfirm}
+      />
+
+      <AddStageModal
+        open={addStageOpen}
+        onClose={() => setAddStageOpen(false)}
+        onConfirm={handleAddStage}
       />
 
       <AddAutomationDrawer

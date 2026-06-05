@@ -877,33 +877,48 @@ function CardMoveDropdown({
   onSelect: (stageId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
+  // Fecha ao clicar fora — verifica tanto o botão quanto o menu no portal
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (
+        !btnRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  return (
-    <div ref={ref} className="relative">
-      <TooltipGlass label="Mover de fase" side="top">
-        <button
-          type="button"
-          disabled={isPending}
-          aria-label="Mover de fase"
-          onClick={() => setOpen((v) => !v)}
-          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:cursor-wait disabled:opacity-50"
-        >
-          <IconArrowsExchange size={15} />
-        </button>
-      </TooltipGlass>
+  function handleOpen() {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    // Posiciona acima do botão, alinhado à direita
+    setCoords({ top: rect.top + window.scrollY, left: rect.right + window.scrollX });
+    setOpen((v) => !v);
+  }
 
-      {open && (
-        <div className="absolute bottom-full right-0 z-50 mb-1.5 max-h-[260px] min-w-[200px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)]">
+  const menu = open && coords && typeof document !== "undefined"
+    ? createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: "absolute",
+            top: coords.top,
+            left: coords.left,
+            zIndex: 9999,
+            transform: "translate(-100%, -100%)",
+            marginBottom: "6px",
+          }}
+          className="max-h-[260px] min-w-[200px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)]"
+        >
           <div className="px-3 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Mover para
           </div>
@@ -940,9 +955,27 @@ function CardMoveDropdown({
                 </button>
               );
             })}
-        </div>
-      )}
-    </div>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <TooltipGlass label="Mover de fase" side="top">
+        <button
+          ref={btnRef}
+          type="button"
+          disabled={isPending}
+          aria-label="Mover de fase"
+          onClick={handleOpen}
+          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:cursor-wait disabled:opacity-50"
+        >
+          <IconArrowsExchange size={15} />
+        </button>
+      </TooltipGlass>
+      {menu}
+    </>
   );
 }
 

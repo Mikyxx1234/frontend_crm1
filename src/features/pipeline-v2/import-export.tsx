@@ -564,10 +564,9 @@ function UploadStep({
   onDrop,
 }: ImportFlowProps) {
   const [dragging, setDragging] = React.useState(false);
-  const entityLabel = entity === "contacts" ? "contatos" : "negócios";
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <input
         ref={fileInputRef}
         type="file"
@@ -583,53 +582,64 @@ function UploadStep({
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         className={cn(
-          "group relative flex cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-[var(--radius-xl)] border-2 border-dashed py-14 text-center transition-all duration-200",
+          "group relative flex cursor-pointer flex-col items-center justify-center gap-5 overflow-hidden rounded-[var(--radius-xl)] border-2 border-dashed py-20 text-center transition-all duration-200",
           dragging
             ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
             : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] hover:border-[var(--brand-primary)]/60 hover:bg-[var(--glass-bg-strong)]",
           busy && "pointer-events-none opacity-60",
         )}
       >
-        {/* Animated background pulse when dragging */}
         {dragging && (
           <div className="pointer-events-none absolute inset-0 animate-pulse rounded-[var(--radius-xl)] bg-[var(--brand-primary)]/5" />
         )}
 
         <div className={cn(
-          "flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] border transition-all duration-200",
+          "flex h-16 w-16 items-center justify-center rounded-[var(--radius-lg)] border-2 transition-all duration-200",
           dragging
             ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
             : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] group-hover:border-[var(--brand-primary)]/40 group-hover:text-[var(--brand-primary)]",
         )}>
           {busy
-            ? <Loader2 className="size-6 animate-spin" />
-            : <IconCloudUpload size={24} stroke={1.5} />
+            ? <Loader2 className="size-7 animate-spin" />
+            : <IconCloudUpload size={28} stroke={1.5} />
           }
         </div>
 
-        <div className="flex flex-col gap-1">
-          <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+        <div className="flex flex-col gap-1.5">
+          <p className="font-display text-[16px] font-bold text-[var(--text-primary)]">
             {busy ? "Lendo arquivo…" : dragging ? "Solte para importar" : "Arraste o arquivo aqui"}
           </p>
-          <p className="font-body text-[12px] text-[var(--text-muted)]">
+          <p className="font-body text-[13px] leading-relaxed text-[var(--text-muted)]">
             {busy ? "Aguarde, não feche esta janela" : "ou clique para selecionar · CSV, XLSX, XLS, ODS"}
           </p>
         </div>
 
         {!busy && (
-          <ButtonGlass variant="glass" size="sm" onClick={(e) => { e.stopPropagation(); onSelectFile(); }}>
-            <IconCloudUpload size={14} />
+          <ButtonGlass
+            variant="primary"
+            size="default"
+            onClick={(e) => { e.stopPropagation(); onSelectFile(); }}
+          >
+            <IconCloudUpload size={16} />
             Selecionar arquivo
           </ButtonGlass>
         )}
       </div>
 
-      {/* Actions + tip */}
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-body text-[11.5px] text-[var(--text-muted)]">
-          Dica: para arquivos com datas, use CSV com separador{" "}
-          <code className="rounded bg-[var(--glass-bg-strong)] px-1 py-0.5 text-[10px]">;</code>
-        </p>
+      {/* Formatos suportados + ação baixar modelo */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-body text-[12px] text-[var(--text-muted)]">Suportados:</span>
+          {["CSV", "XLSX", "XLS", "ODS"].map((fmt) => (
+            <span
+              key={fmt}
+              className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-1 font-display text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
+            >
+              .{fmt.toLowerCase()}
+            </span>
+          ))}
+          <span className="font-body text-[12px] text-[var(--text-muted)]">· Até 10 MB</span>
+        </div>
         <ButtonGlass
           variant="glass"
           size="sm"
@@ -638,23 +648,17 @@ function UploadStep({
             template,
           )}
         >
-          <Download size={13} />
-          Baixar modelo
+          <Download size={14} />
+          Baixar modelo CSV
         </ButtonGlass>
       </div>
 
-      {/* Format info chips */}
-      <div className="flex flex-wrap gap-1.5">
-        {["CSV", "XLSX", "XLS", "ODS"].map((fmt) => (
-          <span
-            key={fmt}
-            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2.5 py-1 font-display text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-          >
-            .{fmt.toLowerCase()}
-          </span>
-        ))}
-        <span className="ml-auto font-body text-[11px] text-[var(--text-muted)]">Até 10 MB</span>
-      </div>
+      {/* Dica */}
+      <p className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 font-body text-[13px] leading-relaxed text-[var(--text-muted)]">
+        Dica: para arquivos com datas, use CSV com separador{" "}
+        <code className="rounded bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--text-primary)]">;</code>
+        {" "}para evitar conflitos.
+      </p>
     </div>
   );
 }
@@ -682,7 +686,7 @@ function SelectGlass({
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       className={cn(
-        "h-9 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none backdrop-blur-sm transition-all",
+        "h-10 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none backdrop-blur-sm transition-all",
         "focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20",
         "disabled:cursor-not-allowed disabled:opacity-40",
         className,
@@ -726,37 +730,41 @@ function MappingStep({
   const mappedCount = headers.filter((h) => !!columnMapping[h]).length;
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header contextual */}
-      <div className="flex items-start justify-between gap-3">
+    <div className="flex flex-col gap-7">
+
+      {/* ── Cabeçalho contextual ── */}
+      <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
-            Mapeamento de colunas
-          </p>
-          <p className="mt-0.5 truncate font-body text-[11.5px] text-[var(--text-muted)]">
+          <h3 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            Configurações de Importação
+          </h3>
+          <p className="mt-1 truncate font-body text-[13px] text-[var(--text-muted)]">
             <span className="font-medium text-[var(--text-secondary)]">{file?.name}</span>
-            {" · "}{rows.length} linhas · {mappedCount}/{headers.length} colunas mapeadas
+            {" · "}{rows.length} {rows.length === 1 ? "linha detectada" : "linhas detectadas"}
+            {" · "}
+            <span className={cn(
+              "font-semibold",
+              mappedCount === headers.length ? "text-emerald-600" : "text-[var(--brand-primary)]"
+            )}>
+              {mappedCount}/{headers.length} colunas mapeadas
+            </span>
           </p>
         </div>
         <ButtonGlass variant="glass" size="sm" onClick={onBackToUpload}>
-          <IconArrowLeft size={13} />
+          <IconArrowLeft size={14} />
           Trocar arquivo
         </ButtonGlass>
       </div>
 
-      {/* Modelo salvo + delimitador */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label className="font-display text-[11.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+      {/* ── Modelo salvo + Delimitador ── */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Modelo salvo
           </label>
           <div className="flex gap-2">
-            <SelectGlass
-              value={selectedModel}
-              onChange={onApplyModel}
-              className="flex-1"
-            >
-              <option value="">Nenhum (mapeamento atual)</option>
+            <SelectGlass value={selectedModel} onChange={onApplyModel} className="flex-1 h-10 text-[13px]">
+              <option value="">— Nenhum (mapeamento atual) —</option>
               {savedModels.map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
@@ -766,185 +774,194 @@ function MappingStep({
                 <button
                   type="button"
                   onClick={() => onDeleteModel(selectedModel)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
                 >
-                  <IconX size={14} />
+                  <IconX size={15} />
                 </button>
               </TooltipGlass>
             )}
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="font-display text-[11.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+        <div className="flex flex-col gap-2">
+          <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Delimitador
           </label>
           <SelectGlass
             value={delimiter}
             onChange={(v) => onDelimiterChange(v as CsvDelimiter)}
             disabled={isSpreadsheet}
+            className="h-10 text-[13px]"
           >
             <option value=";">Ponto e vírgula ( ; )</option>
             <option value=",">Vírgula ( , )</option>
             <option value="\t">Tab</option>
           </SelectGlass>
           {isSpreadsheet && (
-            <p className="font-body text-[11px] text-[var(--text-muted)]">
-              Não aplicável a planilhas
-            </p>
+            <p className="font-body text-[12px] text-[var(--text-muted)]">Não aplicável a planilhas</p>
           )}
         </div>
       </div>
 
-      {/* Toggle primeira linha */}
-      <label className="flex cursor-pointer items-center gap-2.5">
+      {/* ── Toggle: ignorar primeira linha ── */}
+      <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 transition-colors hover:bg-[var(--glass-bg-strong)]">
         <CheckboxGlass
           checked={skipHeader}
           onChange={onSkipHeaderChange}
           aria-label="Ignorar primeira linha"
         />
-        <span className="font-body text-[13px] text-[var(--text-primary)]">
-          Ignorar a primeira linha{" "}
-          <span className="text-[var(--text-muted)]">(contém nomes dos campos)</span>
+        <span className="font-body text-[14px] leading-relaxed text-[var(--text-primary)]">
+          Não importe a primeira linha{" "}
+          <span className="text-[var(--text-muted)]">(contém nomes de campos)</span>
         </span>
       </label>
 
-      {/* Tabela preview + mapeamento */}
-      <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
-        <table className="w-full min-w-max text-[12px]">
-          <thead>
-            <tr className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-strong)]">
-              {headers.map((h) => (
-                <th
-                  key={h}
-                  className="px-3 py-2.5 text-left font-display text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {preview.map((row, i) => (
-              <tr
-                key={i}
-                className={cn(
-                  "border-b border-[var(--glass-border-subtle)] transition-colors",
-                  i % 2 === 0 ? "bg-transparent" : "bg-[var(--glass-bg-subtle)]",
-                )}
-              >
+      {/* ── Tabela preview + linha de mapeamento ── */}
+      <div className="flex flex-col gap-2">
+        <p className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+          Pré-visualização e mapeamento de colunas
+        </p>
+        <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
+          <table className="w-full min-w-max">
+            {/* Cabeçalhos do CSV */}
+            <thead>
+              <tr className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-strong)]">
                 {headers.map((h) => (
-                  <td
+                  <th
                     key={h}
-                    className="max-w-[160px] truncate px-3 py-2 font-body text-[12px] text-[var(--text-secondary)]"
+                    className="px-4 py-3 text-left font-display text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)]"
                   >
-                    {row[h] || <span className="text-[var(--text-muted)] opacity-50">—</span>}
-                  </td>
+                    {h}
+                  </th>
                 ))}
               </tr>
-            ))}
-            {/* Linha de mapeamento */}
-            <tr className="border-t-2 border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.03]">
-              {headers.map((h) => {
-                const isMapped = !!columnMapping[h];
-                return (
-                  <td key={h} className="px-2 py-2">
-                    <SelectGlass
-                      value={columnMapping[h] ?? ""}
-                      onChange={(v) => onColumnChange(h, v)}
-                      className={cn(
-                        "h-8 text-[11px]",
-                        isMapped && "border-[var(--brand-primary)]/40 text-[var(--brand-primary)]",
-                      )}
+            </thead>
+            <tbody>
+              {/* Linhas de preview */}
+              {preview.map((row, i) => (
+                <tr
+                  key={i}
+                  className={cn(
+                    "border-b border-[var(--glass-border)]/60 transition-colors",
+                    i % 2 === 0 ? "bg-transparent" : "bg-[var(--glass-bg-subtle)]",
+                  )}
+                >
+                  {headers.map((h) => (
+                    <td
+                      key={h}
+                      className="max-w-[180px] truncate px-4 py-2.5 font-body text-[13px] text-[var(--text-secondary)]"
                     >
-                      <option value="">Não importar</option>
-                      {fields.map((f) => (
-                        <option key={f.key} value={f.key}>{f.label}</option>
-                      ))}
-                    </SelectGlass>
-                  </td>
-                );
-              })}
-            </tr>
-          </tbody>
-        </table>
+                      {row[h] || <span className="text-[var(--text-muted)] opacity-40">—</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {/* Linha de mapeamento */}
+              <tr className="border-t-2 border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.04]">
+                {headers.map((h) => {
+                  const isMapped = !!columnMapping[h];
+                  return (
+                    <td key={h} className="px-2.5 py-2.5">
+                      <SelectGlass
+                        value={columnMapping[h] ?? ""}
+                        onChange={(v) => onColumnChange(h, v)}
+                        className={cn(
+                          "h-9 text-[12px]",
+                          isMapped
+                            ? "border-[var(--brand-primary)]/50 bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]"
+                            : "",
+                        )}
+                      >
+                        <option value="">Não importar</option>
+                        {fields.map((f) => (
+                          <option key={f.key} value={f.key}>{f.label}</option>
+                        ))}
+                      </SelectGlass>
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Tag + salvar modelo */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label className="font-display text-[11.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Tag de importação
+      {/* ── Tag + salvar modelo ── */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Criar tag
           </label>
           <InputGlass
             value={tag}
             onChange={(e) => onTagChange(e.target.value)}
             placeholder="Nome da tag (opcional)"
+            className="h-10 text-[13px]"
           />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="font-display text-[11.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Salvar mapeamento
+        <div className="flex flex-col gap-2">
+          <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Salvar modelo
           </label>
           <div className="flex gap-2">
             <InputGlass
               value={modelName}
               onChange={(e) => onModelNameChange(e.target.value)}
-              placeholder="Nome do modelo…"
+              placeholder="Nome para salvar o mapeamento"
               onKeyDown={(e) => { if (e.key === "Enter" && modelName.trim()) onSaveModel(); }}
-              className="flex-1"
+              className="flex-1 h-10 text-[13px]"
             />
             <TooltipGlass label="Salvar modelo" side="top">
               <button
                 type="button"
                 onClick={onSaveModel}
                 disabled={!modelName.trim()}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <Save size={14} />
+                <Save size={16} />
               </button>
             </TooltipGlass>
           </div>
         </div>
       </div>
 
-      {/* Atualizar existentes */}
-      <label className="flex cursor-pointer items-center gap-2.5">
+      {/* ── Toggle: atualizar existentes ── */}
+      <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 transition-colors hover:bg-[var(--glass-bg-strong)]">
         <CheckboxGlass
           checked={updateExisting}
           onChange={onUpdateExistingChange}
           aria-label="Atualizar dados existentes"
         />
-        <span className="font-body text-[13px] text-[var(--text-primary)]">
+        <span className="font-body text-[14px] leading-relaxed text-[var(--text-primary)]">
           Atualizar dados existentes{" "}
           <span className="text-[var(--text-muted)]">
-            (match por <code className="rounded bg-[var(--glass-bg-strong)] px-1 text-[11px]">id</code>
+            (match por{" "}
+            <code className="rounded bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--text-primary)]">id</code>
             {" "}ou{" "}
-            <code className="rounded bg-[var(--glass-bg-strong)] px-1 text-[11px]">external_id</code>)
+            <code className="rounded bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--text-primary)]">external_id</code>)
           </span>
         </span>
       </label>
 
-      {/* Loading state premium */}
+      {/* ── Loading state ── */}
       {busy && (
         <div
           className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.04]"
           role="status"
           aria-live="polite"
         >
-          {/* Barra de progresso indeterminada */}
-          <div className="h-0.5 w-full overflow-hidden bg-[var(--brand-primary)]/10">
-            <div className="h-full w-1/2 animate-[importprogress_1.4s_cubic-bezier(0.4,0,0.6,1)_infinite] rounded-full bg-[var(--brand-primary)]" />
+          <div className="h-1 w-full overflow-hidden bg-[var(--brand-primary)]/10">
+            <div className="h-full w-1/3 animate-[importprogress_1.4s_cubic-bezier(0.4,0,0.6,1)_infinite] rounded-full bg-[var(--brand-primary)]" />
           </div>
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
-              <Loader2 className="size-4 animate-spin text-[var(--brand-primary)]" />
+          <div className="flex items-center gap-4 px-5 py-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/10">
+              <Loader2 className="size-5 animate-spin text-[var(--brand-primary)]" />
             </div>
             <div className="min-w-0">
-              <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+              <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
                 Importando {rows.length} {rows.length === 1 ? "linha" : "linhas"}…
               </p>
-              <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+              <p className="font-body text-[12px] text-[var(--text-muted)]">
                 Não feche esta janela
               </p>
             </div>
@@ -952,22 +969,26 @@ function MappingStep({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-2.5 pt-1">
+      {/* ── Actions ── */}
+      <div className="flex items-center gap-3 border-t border-[var(--glass-border)] pt-5">
         <ButtonGlass
           variant="primary"
           size="default"
           onClick={onSubmit}
           disabled={busy}
+          className="min-w-[160px]"
         >
           {busy
-            ? <><Loader2 className="size-3.5 animate-spin" /> Importando…</>
-            : <><IconTableImport size={15} /> Importar agora</>
+            ? <><Loader2 className="size-4 animate-spin" /> Importando…</>
+            : <><IconTableImport size={16} /> Importar agora</>
           }
         </ButtonGlass>
         <ButtonGlass variant="glass" size="default" onClick={onCancel} disabled={busy}>
           Cancelar
         </ButtonGlass>
+        <p className="ml-auto hidden font-body text-[12px] text-[var(--text-muted)] sm:block">
+          {mappedCount} de {headers.length} colunas mapeadas
+        </p>
       </div>
     </div>
   );
@@ -982,85 +1003,86 @@ function ResultStep({ result, onCloseResult, onBackToUpload }: ImportFlowProps) 
   const hasFailures = failed.length > 0;
   const successCount = result.created + result.updated;
   const isFullSuccess = !hasFailures && successCount > 0;
+  const isAllFailed = hasFailures && successCount === 0;
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Status banner */}
+    <div className="flex flex-col gap-6">
+
+      {/* ── Banner de status ── */}
       <div className={cn(
-        "flex items-center gap-3 rounded-[var(--radius-lg)] border px-4 py-3.5",
+        "flex items-center gap-4 rounded-[var(--radius-lg)] border px-5 py-4",
         isFullSuccess
-          ? "border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/20"
-          : hasFailures && successCount === 0
+          ? "border-emerald-200/60 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20"
+          : isAllFailed
             ? "border-red-200/60 bg-red-50/40 dark:border-red-800/40 dark:bg-red-950/20"
             : "border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20",
       )}>
         <div className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
           isFullSuccess ? "bg-emerald-100 dark:bg-emerald-900/40"
-            : hasFailures && successCount === 0 ? "bg-red-100 dark:bg-red-900/40"
+            : isAllFailed ? "bg-red-100 dark:bg-red-900/40"
             : "bg-amber-100 dark:bg-amber-900/40",
         )}>
           {isFullSuccess
-            ? <IconCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
-            : hasFailures && successCount === 0
-              ? <AlertCircle size={18} className="text-red-600 dark:text-red-400" />
-              : <AlertCircle size={18} className="text-amber-600 dark:text-amber-400" />
+            ? <IconCheck size={20} className="text-emerald-600 dark:text-emerald-400" />
+            : isAllFailed
+              ? <AlertCircle size={20} className="text-red-600 dark:text-red-400" />
+              : <AlertCircle size={20} className="text-amber-600 dark:text-amber-400" />
           }
         </div>
         <div>
-          <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
-            {isFullSuccess ? "Importação concluída com sucesso"
-              : hasFailures && successCount === 0 ? "Nenhuma linha importada"
-              : "Importação concluída com falhas parciais"}
+          <p className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            {isFullSuccess
+              ? "Importação concluída com sucesso"
+              : isAllFailed
+                ? "Nenhuma linha importada"
+                : "Importação concluída com falhas parciais"}
           </p>
-          <p className="font-body text-[12px] text-[var(--text-muted)]">
+          <p className="mt-0.5 font-body text-[13px] text-[var(--text-muted)]">
             {result.totalRows} {result.totalRows === 1 ? "linha processada" : "linhas processadas"}
             {result.tagId ? " · tag aplicada" : ""}
           </p>
         </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      {/* ── Stats grid ── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <ResultStat label="Criados" value={result.created} tone="success" />
         <ResultStat label="Atualizados" value={result.updated} tone="info" />
         <ResultStat label="Ignorados" value={skipped} tone="neutral" />
         <ResultStat label="Falhas" value={failed.length} tone="danger" />
       </div>
 
-      {/* Falhas */}
+      {/* ── Lista de falhas ── */}
       {hasFailures && (
         <div className="rounded-[var(--radius-lg)] border border-red-200/60 bg-red-50/30 dark:border-red-800/40 dark:bg-red-950/20">
-          <div className="flex items-center gap-2 border-b border-red-200/40 px-3.5 py-2.5 dark:border-red-800/30">
-            <AlertCircle size={14} className="shrink-0 text-red-600 dark:text-red-400" />
-            <span className="font-display text-[12px] font-semibold text-red-700 dark:text-red-300">
+          <div className="flex items-center gap-2.5 border-b border-red-200/50 px-4 py-3 dark:border-red-800/30">
+            <AlertCircle size={15} className="shrink-0 text-red-600 dark:text-red-400" />
+            <span className="font-display text-[13px] font-semibold text-red-700 dark:text-red-300">
               {failed.length} {failed.length === 1 ? "linha com falha" : "linhas com falha"}
             </span>
           </div>
-          <div className="scrollbar-thin max-h-48 overflow-y-auto divide-y divide-red-100/60 dark:divide-red-800/30">
+          <div className="max-h-52 divide-y divide-red-100/70 overflow-y-auto dark:divide-red-800/30">
             {failed.map((f, i) => (
-              <div
-                key={`${f.row}-${i}`}
-                className="flex items-baseline gap-3 px-3.5 py-2"
-              >
-                <span className="shrink-0 rounded-full bg-red-100/70 px-1.5 py-0.5 font-display text-[10px] font-bold text-red-600 dark:bg-red-900/40 dark:text-red-400">
+              <div key={`${f.row}-${i}`} className="flex items-baseline gap-3 px-4 py-2.5">
+                <span className="shrink-0 rounded-full bg-red-100/80 px-2 py-0.5 font-display text-[11px] font-bold text-red-600 dark:bg-red-900/40 dark:text-red-400">
                   L{f.row}
                 </span>
-                <span className="font-body text-[12px] text-[var(--text-secondary)]">{f.message}</span>
+                <span className="font-body text-[13px] text-[var(--text-secondary)]">{f.message}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-2.5 pt-1">
+      {/* ── Actions ── */}
+      <div className="flex items-center gap-3 border-t border-[var(--glass-border)] pt-5">
         <ButtonGlass variant="primary" size="default" onClick={onCloseResult}>
-          <IconCheck size={14} />
+          <IconCheck size={16} />
           Fechar
         </ButtonGlass>
         <ButtonGlass variant="glass" size="default" onClick={onBackToUpload}>
-          <IconRefresh size={14} />
+          <IconRefresh size={16} />
           Nova importação
         </ButtonGlass>
       </div>
@@ -1085,10 +1107,10 @@ function ResultStat({
   };
   const s = styles[tone];
   return (
-    <div className={cn("flex flex-col items-center gap-1 rounded-[var(--radius-lg)] border px-3 py-3.5", s.bg)}>
-      <div className={cn("h-1.5 w-1.5 rounded-full", s.dot)} />
-      <div className={cn("font-display text-2xl font-bold leading-none", s.text)}>{value}</div>
-      <div className="font-body text-[11px] text-[var(--text-muted)]">{label}</div>
+    <div className={cn("flex flex-col items-center gap-2 rounded-[var(--radius-lg)] border px-4 py-5", s.bg)}>
+      <div className={cn("h-2 w-2 rounded-full", s.dot)} />
+      <div className={cn("font-display text-3xl font-bold leading-none", s.text)}>{value}</div>
+      <div className="font-body text-[12px] font-medium text-[var(--text-muted)]">{label}</div>
     </div>
   );
 }

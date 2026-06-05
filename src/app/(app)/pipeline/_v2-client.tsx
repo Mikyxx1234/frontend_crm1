@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -57,6 +57,7 @@ import {
   useTeamUsers,
 } from "@/features/pipeline-v2/hooks";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
+import { ScrollMap } from "@/components/crm/scroll-map";
 import type { BoardDealDto, BoardStageDto, StatusFilter } from "@/features/pipeline-v2/api";
 import {
   AddDealDialog,
@@ -122,26 +123,7 @@ export default function KanbanV2ClientPage({
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
-  const boardContainerRef = useRef<HTMLDivElement>(null);
-  const [columnHeight, setColumnHeight] = useState<number | null>(null);
 
-  // Mede a altura disponível para o board:
-  // = altura total do flex-col container - offsetTop do kanban-board-hscroll (relativo ao container)
-  useLayoutEffect(() => {
-    const container = boardContainerRef.current;
-    if (!container) return;
-    const measure = () => {
-      const containerH = container.getBoundingClientRect().height;
-      const board = container.querySelector(".kanban-board-hscroll") as HTMLElement | null;
-      if (!board) { setColumnHeight(containerH); return; }
-      const boardOffsetTop = board.getBoundingClientRect().top - container.getBoundingClientRect().top;
-      setColumnHeight(Math.max(200, containerH - boardOffsetTop - 4));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, []);
 
   const [activeTab, setActiveTab] = useState<TabId>("abertos");
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
@@ -155,6 +137,7 @@ export default function KanbanV2ClientPage({
   const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
   const filtersBtnRef = useRef<HTMLButtonElement>(null);
   const kebabBtnRef = useRef<HTMLButtonElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   // Kebab menu e modal de import/export
   const [kebabOpen, setKebabOpen] = useState(false);
@@ -385,7 +368,8 @@ export default function KanbanV2ClientPage({
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] grid-rows-1 gap-4 p-4">
       {navRail ?? <NavRail />}
-      <div ref={boardContainerRef} className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-clip">
+      <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-clip"
+           style={{ height: `calc(100dvh / var(--v2-scale, 1) - 2rem)` }}>
         <PipelineHeader
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t)}
@@ -441,8 +425,10 @@ export default function KanbanV2ClientPage({
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="relative min-h-0 flex-1">
           <div
-            className="kanban-board-hscroll flex min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-1"
+            ref={boardRef}
+            className="kanban-board-hscroll flex min-w-0 gap-3.5 pb-1"
           >
             {columns.map((col) => (
               <DroppableColumn
@@ -461,13 +447,14 @@ export default function KanbanV2ClientPage({
                   setAddStage({ id: col.stageId, name: col.title })
                 }
                 onCloseAddDeal={() => setAddStage(null)}
-                columnHeight={columnHeight ? `${columnHeight}px` : undefined}
               />
             ))}
             {columns.length === 0 ? (
               <EmptyBoard isAuthenticated={isAuthenticated} />
             ) : null}
           </div>
+          <ScrollMap boardRef={boardRef} />
+          </div>{/* fim relative wrapper */}
         </DragDropContext>
       </div>
 
@@ -1028,7 +1015,6 @@ function DroppableColumn({
   selectedIds,
   onToggleSelect,
   onToggleSelectAllInColumn,
-  columnHeight,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -1042,7 +1028,6 @@ function DroppableColumn({
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAllInColumn: (ids: string[]) => void;
-  columnHeight?: string;
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.
@@ -1061,7 +1046,6 @@ function DroppableColumn({
     <Droppable droppableId={column.stageId}>
       {(provided, snapshot) => (
         <KanbanColumn
-          columnHeight={columnHeight ? `${columnHeight}px` : undefined}
           title={column.title}
           color={column.color}
           count={column.count}
@@ -1230,7 +1214,7 @@ function EmptyBoard({ isAuthenticated }: { isAuthenticated: boolean }) {
 // Helper: nome → slug de cor do v0 (av-blue, av-orange, ...).
 // O novo DealDetailPanel usa `av-${avatarColor}` direto no className,
 // então precisamos retornar um dos slugs definidos em globals-v2.css.
-// ────────────────────────────────────���────────────────────────────
+// ──────────────────────────────────��─���────────────────────────────
 
 const AVATAR_SLUGS = [
   "green",

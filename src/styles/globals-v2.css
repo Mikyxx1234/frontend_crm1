@@ -212,22 +212,42 @@
    vazia embaixo. Com --v2-scale, `calc(100dvh / 0.88)` ≈ 113.64dvh
    antes do zoom — apos o zoom encolher, fica exatamente 100dvh. */
 .v2-screen {
+  /* Altura total do viewport escalado */
   height: calc(100dvh / var(--v2-scale, 1));
+
+  /*
+   * --board-top: soma de tudo que fica acima do kanban-board-hscroll:
+   *   padding-top do v2-screen (1rem = 16px)
+   *   + PipelineHeader (~48px) + gap (12px)
+   *   + FilterBar/tabs (~40px) + gap (12px)
+   *   + padding-bottom do v2-screen (1rem = 16px)
+   *   = 144px + 2rem de padding lateral não afeta a altura.
+   * Ajuste fino via dev-tools se necessário.
+   */
+  --board-top: 144px;
 }
 
-/* --kanban-col-h: altura disponível para o board e colunas.
-   Desconta: padding do v2-screen (2×1rem) + PipelineHeader (52px)
-   + tabs (40px) + gaps (16px) = ~140px. */
-.v2-screen {
-  --kanban-col-h: calc((100dvh / var(--v2-scale, 1)) - 140px - 2rem);
+/* O kanban-board-hscroll ocupa exatamente o espaço restante */
+.v2-screen .kanban-board-hscroll {
+  height: calc((100dvh / var(--v2-scale, 1)) - var(--board-top));
+  /* Esconde scrollbar nativa horizontal — substituída pelo ScrollMap */
+  overflow-x: scroll;
+  overflow-y: hidden;
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE / Edge legacy */
+}
+.v2-screen .kanban-board-hscroll::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari / Edge Chromium */
 }
 
-/* No react-beautiful-dnd v13 o Droppable não injeta wrapper —
-   a section é filho direto do board. Forçamos ela a ocupar 100%
-   da altura do board via align-self: stretch + height explícita. */
-.v2-screen .kanban-board-hscroll > section {
+/* Cada .kanban-col (section) ocupa 100% da altura do board.
+   align-self: stretch garante que filhos do flex container estiquem.
+   overflow: hidden impede que o conteúdo expanda a seção para além do board. */
+.v2-screen .kanban-board-hscroll .kanban-col {
   align-self: stretch;
   height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden;
 }
 .v2-min-screen {
   min-height: calc(100dvh / var(--v2-scale, 1));

@@ -25,6 +25,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { PipelineSwitcher } from "@/features/pipeline-v2/extras";
 import { SwitchGlass } from "@/components/crm/switch-glass";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { usePipelines, useBoard } from "@/features/pipeline-v2/hooks";
 import { useAutomations } from "@/features/automations-v2/hooks";
 import { AddAutomationDrawer } from "./add-automation-drawer";
@@ -127,13 +128,15 @@ function CopyToStageModal({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-          >
-            <IconX size={15} />
-          </button>
+          <TooltipGlass label="Fechar" side="left">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            >
+              <IconX size={15} />
+            </button>
+          </TooltipGlass>
         </div>
 
         <div className="h-px w-full bg-slate-100" />
@@ -255,14 +258,15 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
             {automation.stageTrigger}
           </span>
 
-          <button
-            type="button"
-            title="Mais opções do gatilho"
-            onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-white/0 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
-          >
-            <IconDots size={14} />
-          </button>
+          <TooltipGlass label="Mais opções do gatilho" side="top">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-white/0 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
+            >
+              <IconDots size={14} />
+            </button>
+          </TooltipGlass>
 
           {menuOpen && (
             <div className="absolute right-0 top-full z-50 mt-1.5 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
@@ -398,14 +402,15 @@ function StageOptionsMenu({
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
-        title="Opções do estágio"
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-      >
-        <IconDots size={16} />
-      </button>
+      <TooltipGlass label="Opções do estágio" side="top">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+        >
+          <IconDots size={16} />
+        </button>
+      </TooltipGlass>
 
       {open && (
         <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-white py-1 shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
@@ -636,17 +641,16 @@ function StageColumn({
       <div className="flex items-center justify-between px-1 pb-2.5">
         <div className="flex items-center gap-2.5">
           {/* Handle de drag */}
-          <span
-            title="Arrastar para reordenar"
-            className="flex cursor-grab flex-col gap-[3px] active:cursor-grabbing"
-          >
-            {[0,1,2].map((i) => (
+          <TooltipGlass label="Arrastar para reordenar" side="top">
+            <span className="flex cursor-grab flex-col gap-[3px] active:cursor-grabbing">
+              {[0,1,2].map((i) => (
               <span key={i} className="flex gap-[3px]">
                 <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
                 <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
               </span>
             ))}
-          </span>
+            </span>
+          </TooltipGlass>
           <span
             className="h-[18px] w-[3px] rounded-full"
             style={{ background: stage.color }}
@@ -802,14 +806,15 @@ function PipelineSettingsTabs({ onNewPipeline, onSetDefault, onBack }: TabsOverr
         Novo pipeline
       </button>
 
-      <button
-        type="button"
-        onClick={onSetDefault}
-        title="Definir como pipeline padrão"
-        className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-amber-400/50 hover:bg-amber-50 hover:text-amber-500 dark:hover:bg-amber-500/10"
-      >
-        <IconStar size={15} />
-      </button>
+      <TooltipGlass label="Definir como pipeline padrão" side="bottom">
+        <button
+          type="button"
+          onClick={onSetDefault}
+          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-amber-400/50 hover:bg-amber-50 hover:text-amber-500 dark:hover:bg-amber-500/10"
+        >
+          <IconStar size={15} />
+        </button>
+      </TooltipGlass>
 
       <button
         type="button"

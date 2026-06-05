@@ -46,6 +46,7 @@ import {
   ImportPanel,
   useImportExportBump,
 } from "@/features/pipeline-v2/import-export";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { avatarInitials } from "@/features/inbox-v2/adapters";
 import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
@@ -360,15 +361,16 @@ export default function KanbanV2ClientPage({
           }
           settingsSlot={
             <div className="relative">
-              <button
-                ref={kebabBtnRef}
-                type="button"
-                title="Mais opções"
-                onClick={() => setKebabOpen((v) => !v)}
-                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-              >
-                <IconDotsVertical size={15} />
-              </button>
+              <TooltipGlass label="Ordenar, importar e exportar" side="bottom">
+                <button
+                  ref={kebabBtnRef}
+                  type="button"
+                  onClick={() => setKebabOpen((v) => !v)}
+                  className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+                >
+                  <IconDotsVertical size={15} />
+                </button>
+              </TooltipGlass>
               <PipelineKebabMenu
                 open={kebabOpen}
                 anchorRef={kebabBtnRef}
@@ -1359,13 +1361,15 @@ function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps)
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-          >
-            <IconX size={16} />
-          </button>
+          <TooltipGlass label="Fechar" side="left">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            >
+              <IconX size={16} />
+            </button>
+          </TooltipGlass>
         </div>
 
         {/* Conteúdo */}

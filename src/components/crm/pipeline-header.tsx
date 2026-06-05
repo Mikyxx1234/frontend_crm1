@@ -4,6 +4,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/crm/page-header"
 import { SearchInput } from "@/components/crm/search-input"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconFilter,
   IconBookmark,
@@ -152,24 +153,24 @@ export function PipelineHeader({
               <div className="flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
                 {(
                   [
-                    { id: "kanban", icon: <IconLayoutKanban size={15} />, title: "Pipeline" },
-                    { id: "list", icon: <IconList size={15} />, title: "Lista" },
+                    { id: "kanban", icon: <IconLayoutKanban size={15} />, title: "Visualização kanban" },
+                    { id: "list", icon: <IconList size={15} />, title: "Visualização em lista" },
                   ] as const
                 ).map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => handleViewChange(v.id as ViewType)}
-                    title={v.title}
-                    className={cn(
-                      "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all",
-                      view === v.id
-                        ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                        : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                    )}
-                  >
-                    {v.icon}
-                  </button>
+                  <TooltipGlass key={v.id} label={v.title} side="bottom">
+                    <button
+                      type="button"
+                      onClick={() => handleViewChange(v.id as ViewType)}
+                      className={cn(
+                        "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all",
+                        view === v.id
+                          ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
+                          : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      {v.icon}
+                    </button>
+                  </TooltipGlass>
                 ))}
               </div>
 

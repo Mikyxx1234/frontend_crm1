@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import {
   IconRobot,
@@ -11,6 +11,8 @@ import {
   IconChecks,
   IconClock,
   IconAlertCircle,
+  IconPlayerPlay,
+  IconPlayerPause,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -262,6 +264,124 @@ function FormBubble({ message, className }: { message: Message; className?: stri
   )
 }
 
+/** Formata segundos em mm:ss */
+function fmtTime(s: number): string {
+  if (!isFinite(s) || s < 0) return "0:00"
+  const m = Math.floor(s / 60)
+  const sec = Math.floor(s % 60)
+  return `${m}:${sec.toString().padStart(2, "0")}`
+}
+
+/**
+ * Player de áudio minimalista — sem controles nativos do browser.
+ * Botão play/pause + barra de progresso clicável + timer.
+ */
+function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: boolean }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const [current, setCurrent] = useState(0)
+  const [duration, setDuration] = useState(0)
+
+  const toggle = useCallback(() => {
+    const el = audioRef.current
+    if (!el) return
+    if (playing) {
+      el.pause()
+    } else {
+      el.play().catch(() => {})
+    }
+  }, [playing])
+
+  useEffect(() => {
+    const el = audioRef.current
+    if (!el) return
+    const onPlay = () => setPlaying(true)
+    const onPause = () => setPlaying(false)
+    const onEnded = () => { setPlaying(false); setCurrent(0) }
+    const onTimeUpdate = () => setCurrent(el.currentTime)
+    const onLoaded = () => setDuration(el.duration)
+    el.addEventListener("play", onPlay)
+    el.addEventListener("pause", onPause)
+    el.addEventListener("ended", onEnded)
+    el.addEventListener("timeupdate", onTimeUpdate)
+    el.addEventListener("loadedmetadata", onLoaded)
+    return () => {
+      el.removeEventListener("play", onPlay)
+      el.removeEventListener("pause", onPause)
+      el.removeEventListener("ended", onEnded)
+      el.removeEventListener("timeupdate", onTimeUpdate)
+      el.removeEventListener("loadedmetadata", onLoaded)
+    }
+  }, [])
+
+  const pct = duration > 0 ? (current / duration) * 100 : 0
+  const timeLabel = playing || current > 0 ? fmtTime(current) : fmtTime(duration)
+
+  // Cores derivadas de isOutgoing
+  const trackBg   = isOutgoing ? "rgba(255,255,255,0.25)" : "rgba(91,111,245,0.15)"
+  const fillBg    = isOutgoing ? "rgba(255,255,255,0.85)" : "var(--brand-primary)"
+  const iconColor = isOutgoing ? "text-white"             : "text-[var(--brand-primary)]"
+  const timeColor = isOutgoing ? "text-white/70"          : "text-[var(--text-muted)]"
+  const micColor  = isOutgoing ? "text-white/50"          : "text-[var(--text-muted)]"
+
+  return (
+    <div className="flex w-[220px] items-center gap-2.5 py-0.5">
+      {/* Elemento audio oculto */}
+      {url && (
+        <audio ref={audioRef} src={url} preload="metadata" aria-hidden="true" />
+      )}
+
+      {/* Ícone mic (decorativo) */}
+      <IconMicrophone size={13} className={cn("shrink-0", micColor)} />
+
+      {/* Botão play/pause */}
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={!url}
+        aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
+        className={cn(
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-opacity",
+          isOutgoing ? "bg-white/20 hover:bg-white/30" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
+          !url && "opacity-40 cursor-not-allowed",
+        )}
+      >
+        {playing
+          ? <IconPlayerPause size={13} className={iconColor} />
+          : <IconPlayerPlay  size={13} className={iconColor} />
+        }
+      </button>
+
+      {/* Barra de progresso */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div
+          role="progressbar"
+          aria-valuenow={Math.round(pct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          className="relative h-[3px] w-full cursor-pointer overflow-hidden rounded-full"
+          style={{ background: trackBg }}
+          onClick={(e) => {
+            const el = audioRef.current
+            if (!el || !duration) return
+            const rect = e.currentTarget.getBoundingClientRect()
+            const ratio = (e.clientX - rect.left) / rect.width
+            el.currentTime = ratio * duration
+          }}
+        >
+          <div
+            className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-100"
+            style={{ width: `${pct}%`, background: fillBg }}
+          />
+        </div>
+        <span className={cn("font-body text-[10px] leading-none tabular-nums", timeColor)}>
+          {timeLabel}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 /** Renderiza o corpo da bolha: player de mídia quando houver, senão texto. */
 function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing: boolean }) {
   const kind = detectMediaKind(message.messageType, message.mediaUrl)
@@ -272,31 +392,7 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
 
   // ── Áudio / voz / PTT ──────────────────────────────────────────
   if (kind === "audio") {
-    return (
-      <div className="flex min-w-[200px] flex-col gap-1.5 pb-1">
-        <div className={cn(
-          "flex items-center gap-2 rounded-full px-3 py-1.5",
-          isOutgoing ? "bg-white/15" : "bg-[var(--glass-bg-strong)]",
-        )}>
-          <IconMicrophone size={14} className={isOutgoing ? "text-white/80" : "text-[var(--brand-primary)]"} />
-          {url ? (
-            <audio
-              controls
-              src={url}
-              className="h-7 w-full min-w-[140px]"
-              aria-label="Mensagem de áudio"
-            />
-          ) : (
-            <span className={cn(
-              "font-body text-[12px] italic",
-              isOutgoing ? "text-white/70" : "text-[var(--text-muted)]",
-            )}>
-              Áudio indisponível
-            </span>
-          )}
-        </div>
-      </div>
-    )
+    return <AudioPlayer url={url} isOutgoing={isOutgoing} />
   }
 
   // ── Imagem / sticker ───────────────────────────────────────────

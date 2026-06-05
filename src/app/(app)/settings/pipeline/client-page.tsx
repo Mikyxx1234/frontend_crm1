@@ -72,34 +72,152 @@ interface StageConfig {
   automations: Automation[];
 }
 
-// ─── AutomationCard (Variante C — header brand) ───────────────────
+// ─── CopyToStageModal ─────────────────────────────────────────────
 
-function CopyButton({ className }: { className?: string }) {
-  const [copied, setCopied] = useState(false);
+interface CopyToStageModalProps {
+  open: boolean;
+  automation: Automation;
+  currentStageId: string;
+  stages: StageConfig[];
+  onClose: () => void;
+  onConfirm: (targetStageId: string) => void;
+}
+
+function CopyToStageModal({
+  open,
+  automation,
+  currentStageId,
+  stages,
+  onClose,
+  onConfirm,
+}: CopyToStageModalProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) setSelectedId(null);
+  }, [open]);
+
+  if (!open) return null;
+
+  const targets = stages.filter((s) => s.id !== currentStageId);
+
   return (
-    <button
-      type="button"
-      title="Duplicar automação"
-      onClick={(e) => {
-        e.stopPropagation();
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-      }}
-      className={cn(
-        "flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-white/20 py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-white/30",
-        className,
-      )}
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/25 backdrop-blur-[2px]"
+      onClick={onClose}
     >
-      {copied
-        ? <><IconCheck size={12} className="text-white" /> Copiado</>
-        : <><IconCopy size={12} /> Duplicar</>
-      }
-    </button>
+      <div
+        className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.15)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="relative flex items-start justify-between bg-gradient-to-br from-[#5B6FF5]/10 via-white to-white px-5 pb-4 pt-5">
+          <span className="absolute left-0 top-0 h-full w-[3px] rounded-r-full bg-[var(--brand-primary)]" />
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
+              <IconCopy size={16} className="text-[var(--brand-primary)]" />
+            </div>
+            <div>
+              <h2 className="font-display text-[14px] font-bold text-slate-800">
+                Copiar para outra fase
+              </h2>
+              <p className="mt-0.5 font-display text-[11.5px] text-slate-500 line-clamp-1">
+                {automation.name}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <IconX size={15} />
+          </button>
+        </div>
+
+        <div className="h-px w-full bg-slate-100" />
+
+        {/* Lista de fases */}
+        <div className="flex flex-col gap-1 px-4 py-3">
+          <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Selecionar fase de destino
+          </p>
+          {targets.length === 0 ? (
+            <p className="py-4 text-center font-display text-[12.5px] text-slate-400">
+              Nenhuma outra fase disponível.
+            </p>
+          ) : (
+            targets.map((stage) => {
+              const isSelected = selectedId === stage.id;
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => setSelectedId(stage.id)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all",
+                    isSelected
+                      ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/6"
+                      : "border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white",
+                  )}
+                >
+                  <span
+                    className="h-5 w-1 shrink-0 rounded-full"
+                    style={{ background: stage.color }}
+                  />
+                  <span className="flex-1 font-display text-[13px] font-semibold text-slate-700">
+                    {stage.name}
+                  </span>
+                  <span className="font-display text-[11px] text-slate-400">
+                    {stage.automations.length} automação{stage.automations.length !== 1 ? "ões" : ""}
+                  </span>
+                  {isSelected && (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]">
+                      <IconCheck size={11} className="text-white" strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Rodapé */}
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/80 px-5 py-3.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-slate-200 bg-white px-4 py-1.5 font-display text-[12.5px] font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={!selectedId}
+            onClick={() => selectedId && onConfirm(selectedId)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-1.5 font-display text-[12.5px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.30)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <IconCopy size={12} />
+            Colar nesta fase
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function AutomationCard({ automation }: { automation: Automation }) {
+// ─── AutomationCard (Variante C — header brand) ───────────────────
+
+interface AutomationCardProps {
+  automation: Automation;
+  stageId: string;
+  stages: StageConfig[];
+  onCopy: (automation: Automation, targetStageId: string) => void;
+}
+
+function AutomationCard({ automation, stageId, stages, onCopy }: AutomationCardProps) {
   const [active, setActive] = useState(true);
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]">
@@ -147,7 +265,15 @@ function AutomationCard({ automation }: { automation: Automation }) {
 
       {/* Rodapé pill buttons */}
       <div className="flex items-center gap-2 bg-[var(--brand-primary)] px-4 pb-3">
-        <CopyButton />
+        <button
+          type="button"
+          title="Copiar para outra fase"
+          onClick={(e) => { e.stopPropagation(); setCopyModalOpen(true); }}
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/20 py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-white/30"
+        >
+          <IconCopy size={12} />
+          Duplicar
+        </button>
         <a
           href={`/automations/${automation.id}`}
           onClick={(e) => e.stopPropagation()}
@@ -157,6 +283,18 @@ function AutomationCard({ automation }: { automation: Automation }) {
           <IconExternalLink size={11} />
         </a>
       </div>
+
+      <CopyToStageModal
+        open={copyModalOpen}
+        automation={automation}
+        currentStageId={stageId}
+        stages={stages}
+        onClose={() => setCopyModalOpen(false)}
+        onConfirm={(targetId) => {
+          onCopy(automation, targetId);
+          setCopyModalOpen(false);
+        }}
+      />
     </div>
   );
 }
@@ -392,7 +530,9 @@ interface StageColumnProps {
   isFirst: boolean;
   isLast: boolean;
   isDragOver: boolean;
+  allStages: StageConfig[];
   onAddAutomation: (stageId: string) => void;
+  onCopyAutomation: (automation: Automation, targetStageId: string, sourceStageId: string) => void;
   onMoveForward: (stageId: string) => void;
   onMoveBackward: (stageId: string) => void;
   onRename: (stageId: string) => void;
@@ -408,7 +548,9 @@ function StageColumn({
   isFirst,
   isLast,
   isDragOver,
+  allStages,
   onAddAutomation,
+  onCopyAutomation,
   onMoveForward,
   onMoveBackward,
   onRename,
@@ -481,7 +623,15 @@ function StageColumn({
       {/* Lista de cards */}
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
         {stage.automations.map((auto) => (
-          <AutomationCard key={auto.id} automation={auto} />
+          <AutomationCard
+            key={auto.id}
+            automation={auto}
+            stageId={stage.id}
+            stages={allStages}
+            onCopy={(automation, targetStageId) =>
+              onCopyAutomation(automation, targetStageId, stage.id)
+            }
+          />
         ))}
 
         <button
@@ -795,6 +945,20 @@ export default function PipelineSettingsClientPage() {
     [addAutomationStageId, automationsData?.items],
   );
 
+  const handleCopyAutomation = useCallback(
+    (automation: Automation, targetStageId: string, _sourceStageId: string) => {
+      const copy: Automation = {
+        ...automation,
+        id: `${targetStageId}-${automation.id}-copy-${Date.now()}`,
+      };
+      setStageAutomationsMap((prev) => ({
+        ...prev,
+        [targetStageId]: [...(prev[targetStageId] ?? []), copy],
+      }));
+    },
+    [],
+  );
+
   // ─── Outros handlers ────────────────────────────────────────────
 
   const handleNewPipeline = useCallback((name: string) => {
@@ -845,7 +1009,9 @@ export default function PipelineSettingsClientPage() {
                   isFirst={idx === 0}
                   isLast={idx === stages.length - 1}
                   isDragOver={dragOverId === stage.id}
+                  allStages={stages}
                   onAddAutomation={handleAddAutomation}
+                  onCopyAutomation={handleCopyAutomation}
                   onMoveForward={handleMoveForward}
                   onMoveBackward={handleMoveBackward}
                   onRename={setRenamingStageId}

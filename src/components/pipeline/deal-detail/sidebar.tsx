@@ -2,6 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { Check, ChevronDown, Package, Pencil, Plus, X } from "lucide-react";
@@ -772,10 +773,10 @@ function TagPillSmall({
   isPending: boolean;
 }) {
   return (
+    <TooltipGlass label={tag.name} side="top">
     <span
       className={cn(dt.pill.base, "max-w-full gap-1")}
       style={tagPillStyle(tag.name, tag.color)}
-      title={tag.name}
     >
       <span className="max-w-[120px] truncate">{tag.name}</span>
       <button
@@ -788,6 +789,7 @@ function TagPillSmall({
         <X className="size-2.5" />
       </button>
     </span>
+    </TooltipGlass>
   );
 }
 function TagComposerInline({

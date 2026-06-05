@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 import { useDeleteDeal, useSetDealStatus } from "@/features/pipeline-v2/hooks";
 import type { DealStatus, StatusFilter } from "@/features/pipeline-v2/api";
@@ -167,14 +168,15 @@ export function WinButton({
   }
 
   return (
-    <button
-      type="button"
-      disabled={!dealId || setStatus.isPending}
-      onClick={handleClick}
-      className="inline-flex"
-      title={isWon ? "Reabrir negocio" : "Marcar como ganho"}
-    >
-      {trigger}
-    </button>
+    <TooltipGlass label={isWon ? "Reabrir negócio" : "Marcar como ganho"} side="top">
+      <button
+        type="button"
+        disabled={!dealId || setStatus.isPending}
+        onClick={handleClick}
+        className="inline-flex"
+      >
+        {trigger}
+      </button>
+    </TooltipGlass>
   );
 }

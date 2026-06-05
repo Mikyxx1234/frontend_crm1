@@ -1,15 +1,18 @@
 import { cn } from "@/lib/utils"
 import { forwardRef } from "react"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 
 interface ButtonGlassProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'glass' | 'icon'
   size?: 'default' | 'sm' | 'icon'
   children: React.ReactNode
+  /** Tooltip do DS v2. Substitui o atributo nativo `title` do browser. */
+  tooltipSide?: 'top' | 'bottom' | 'left' | 'right'
 }
 
 export const ButtonGlass = forwardRef<HTMLButtonElement, ButtonGlassProps>(
-  ({ variant = 'glass', size = 'default', className, children, ...props }, ref) => {
-    return (
+  ({ variant = 'glass', size = 'default', className, children, title, tooltipSide = 'top', ...props }, ref) => {
+    const btn = (
       <button
         ref={ref}
         className={cn(
@@ -29,6 +32,8 @@ export const ButtonGlass = forwardRef<HTMLButtonElement, ButtonGlassProps>(
         {children}
       </button>
     )
+    if (!title) return btn
+    return <TooltipGlass label={title} side={tooltipSide}>{btn}</TooltipGlass>
   }
 )
 ButtonGlass.displayName = "ButtonGlass"

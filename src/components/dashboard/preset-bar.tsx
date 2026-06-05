@@ -17,6 +17,7 @@ import {
   type DashboardPresetId,
 } from "@/stores/dashboard-store";
 import { cn } from "@/lib/utils";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 /**
  * Seletor de preset. Aplicar um preset troca o conjunto de widgets
@@ -48,11 +49,10 @@ export function PresetBar() {
           const Icon = PRESET_ICONS[p];
           const active = preset === p;
           return (
+            <TooltipGlass key={p} label={def.description} side="bottom">
             <button
-              key={p}
               type="button"
               onClick={() => applyPreset(p)}
-              title={def.description}
               className={cn(
                 "relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors",
                 active
@@ -70,6 +70,7 @@ export function PresetBar() {
               <Icon className="relative size-3.5" />
               <span className="relative">{def.label}</span>
             </button>
+            </TooltipGlass>
           );
         })}
       </div>

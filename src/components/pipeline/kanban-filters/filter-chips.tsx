@@ -7,6 +7,7 @@
 
 import * as React from "react";
 import { X } from "lucide-react";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 import { cn } from "@/lib/utils";
 
@@ -216,16 +217,16 @@ export function FilterChips({ filters, options, onPatch, className }: Props) {
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
       {chips.map((chip, idx) => (
-        <button
-          key={`${chip.label}-${idx}`}
-          type="button"
-          onClick={chip.onRemove}
-          className="group inline-flex items-center gap-1 rounded-full border border-primary/25 bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-medium text-primary backdrop-blur-sm transition-all hover:border-[var(--color-danger)]/35 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
-          title="Remover filtro"
-        >
-          <span>{chip.label}</span>
-          <X className="size-3 opacity-60 group-hover:opacity-100" />
-        </button>
+        <TooltipGlass key={`${chip.label}-${idx}`} label="Remover filtro" side="top">
+          <button
+            type="button"
+            onClick={chip.onRemove}
+            className="group inline-flex items-center gap-1 rounded-full border border-primary/25 bg-[var(--color-primary-soft)] px-2.5 py-0.5 text-[11px] font-medium text-primary backdrop-blur-sm transition-all hover:border-[var(--color-danger)]/35 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+          >
+            <span>{chip.label}</span>
+            <X className="size-3 opacity-60 group-hover:opacity-100" />
+          </button>
+        </TooltipGlass>
       ))}
     </div>
   );

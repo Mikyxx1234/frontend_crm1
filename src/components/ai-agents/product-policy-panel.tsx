@@ -21,6 +21,7 @@ import * as React from "react";
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 type FieldBuiltin = {
   source: "builtin";
@@ -205,7 +206,7 @@ export function ProductPolicyPanel({
           <div className="flex flex-wrap gap-1.5">
             {allFields.map((f) => {
               const isSel = selected.has(f.name);
-              return (
+              const btn = (
                 <button
                   key={`${f.source}-${f.name}`}
                   type="button"
@@ -213,7 +214,6 @@ export function ProductPolicyPanel({
                     toggleField(f.name);
                     insertField(f.label);
                   }}
-                  title={f.description}
                   className={cn(
                     "group flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors",
                     isSel
@@ -229,6 +229,9 @@ export function ProductPolicyPanel({
                   )}
                 </button>
               );
+              return f.description ? (
+                <TooltipGlass key={`${f.source}-${f.name}`} label={f.description} side="top">{btn}</TooltipGlass>
+              ) : btn;
             })}
             {allFields.length === 0 && (
               <p className="text-[12px] text-muted-foreground">

@@ -21,6 +21,7 @@ import { useSession } from "next-auth/react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import type { WhatsAppHealthStatus } from "@/services/whatsapp-health";
 
 const DISMISS_KEY_PREFIX = "whatsapp-health-dismissed:";
@@ -177,18 +178,19 @@ export function WhatsAppHealthBanner() {
           )}
         </div>
       </div>
-      <button
-        type="button"
-        onClick={handleDismiss}
-        aria-label="Silenciar aviso por 30 minutos"
-        title="Silenciar por 30 minutos"
-        className={cn(
-          "-mr-1 -mt-1 rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5",
-          isCritical ? "text-red-700 dark:text-red-200" : "text-amber-700 dark:text-amber-200",
-        )}
-      >
-        <X className="size-4" />
-      </button>
+      <TooltipGlass label="Silenciar por 30 minutos" side="left">
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Silenciar aviso por 30 minutos"
+          className={cn(
+            "-mr-1 -mt-1 rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5",
+            isCritical ? "text-red-700 dark:text-red-200" : "text-amber-700 dark:text-amber-200",
+          )}
+        >
+          <X className="size-4" />
+        </button>
+      </TooltipGlass>
     </div>
   );
 }

@@ -8,6 +8,7 @@
 
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 import { useTeamUsers, useUpdateDeal } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
@@ -62,18 +63,19 @@ export function AssigneePopover({
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        disabled={disabled || !dealId}
-        onClick={toggle}
-        className="inline-flex"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        title={currentOwnerName ?? "Selecionar responsavel"}
-      >
-        {trigger}
-      </button>
+      <TooltipGlass label={currentOwnerName ?? "Selecionar responsável"} side="top">
+        <button
+          ref={triggerRef}
+          type="button"
+          disabled={disabled || !dealId}
+          onClick={toggle}
+          className="inline-flex"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+        >
+          {trigger}
+        </button>
+      </TooltipGlass>
 
       {open && rect && typeof document !== "undefined" &&
         createPortal(

@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 import { useUpdateDeal } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter, UpdateDealPayload } from "@/features/pipeline-v2/api";
@@ -109,7 +110,6 @@ export function InlineEditText({
         if (e.key === "Enter" || e.key === " ") setEditing(true);
       }}
       className="cursor-pointer"
-      title="Clique para editar"
     >
       {display
         ? display(value)

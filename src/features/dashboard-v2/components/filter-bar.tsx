@@ -2,6 +2,7 @@
 
 import { IconCalendar, IconFilter, IconX } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass"
 import type { PipelineOption } from "@/features/dashboard-v2/api"
 
@@ -136,15 +137,16 @@ export function FilterBar({
           className="h-6 border-0 bg-transparent font-display text-[12px] font-semibold text-[var(--text-primary)] outline-none"
         />
         {isCustom && (
-          <button
-            type="button"
-            onClick={() => onCustomRangeChange(null)}
-            title="Limpar range"
-            aria-label="Limpar range"
-            className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-          >
-            <IconX size={13} />
-          </button>
+          <TooltipGlass label="Limpar range" side="top">
+            <button
+              type="button"
+              onClick={() => onCustomRangeChange(null)}
+              aria-label="Limpar range"
+              className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+            >
+              <IconX size={13} />
+            </button>
+          </TooltipGlass>
         )}
       </div>
 

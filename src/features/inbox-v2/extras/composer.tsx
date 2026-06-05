@@ -17,6 +17,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
   useSlashMenu,
   SlashCommandMenu,
@@ -384,21 +385,21 @@ export function Composer({
             </span>
           ) : (
             <>
-              <span
-                className={cn(
-                  "max-w-[180px] truncate font-body text-[11.5px] font-semibold transition-colors",
-                  sigEnabled
-                    ? "text-[var(--text-primary)]"
-                    : "text-[var(--text-muted)] line-through",
-                )}
-                title={
-                  effectiveSignature
-                    ? `Assinando como ${effectiveSignature}`
-                    : "Defina um nome para assinar"
-                }
+              <TooltipGlass
+                label={effectiveSignature ? `Assinando como ${effectiveSignature}` : "Defina um nome para assinar"}
+                side="top"
               >
-                {effectiveSignature || "Sem assinatura"}
-              </span>
+                <span
+                  className={cn(
+                    "max-w-[180px] truncate font-body text-[11.5px] font-semibold transition-colors",
+                    sigEnabled
+                      ? "text-[var(--text-primary)]"
+                      : "text-[var(--text-muted)] line-through",
+                  )}
+                >
+                  {effectiveSignature || "Sem assinatura"}
+                </span>
+              </TooltipGlass>
               <button
                 type="button"
                 aria-label="Editar assinatura"

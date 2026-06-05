@@ -9,6 +9,7 @@
 "use client";
 
 import * as React from "react";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { createPortal } from "react-dom";
 import {
   Copy,
@@ -168,36 +169,39 @@ export function SavedFiltersMenu({
                 </div>
               </button>
               <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                <button
-                  type="button"
-                  onClick={() => onToggleDefault(f)}
-                  title={f.isDefault ? "Remover padrão" : "Marcar como padrão"}
-                  className={cn(
-                    "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-amber-600 dark:hover:text-amber-400",
-                    f.isDefault && "text-amber-500",
-                  )}
-                >
-                  {f.isDefault ? <StarOff className="size-3" /> : <Star className="size-3" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDuplicate(f)}
-                  title="Duplicar"
-                  className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground"
-                >
-                  <Copy className="size-3" />
-                </button>
-                {(isOwner || f.isShared) && (
+                <TooltipGlass label={f.isDefault ? "Remover padrão" : "Marcar como padrão"} side="top">
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm(`Excluir filtro "${f.name}"?`)) onDelete(f);
-                    }}
-                    title="Excluir"
-                    className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-red-600 dark:hover:text-red-400"
+                    onClick={() => onToggleDefault(f)}
+                    className={cn(
+                      "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-amber-600 dark:hover:text-amber-400",
+                      f.isDefault && "text-amber-500",
+                    )}
                   >
-                    <Trash2 className="size-3" />
+                    {f.isDefault ? <StarOff className="size-3" /> : <Star className="size-3" />}
                   </button>
+                </TooltipGlass>
+                <TooltipGlass label="Duplicar" side="top">
+                  <button
+                    type="button"
+                    onClick={() => onDuplicate(f)}
+                    className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-foreground"
+                  >
+                    <Copy className="size-3" />
+                  </button>
+                </TooltipGlass>
+                {(isOwner || f.isShared) && (
+                  <TooltipGlass label="Excluir" side="top">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Excluir filtro "${f.name}"?`)) onDelete(f);
+                      }}
+                      className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-red-600 dark:hover:text-red-400"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  </TooltipGlass>
                 )}
               </div>
             </div>

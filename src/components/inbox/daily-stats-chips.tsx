@@ -6,6 +6,7 @@ import { AlertTriangle, Inbox, MessageCircle, Send } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 type DailyStats = {
   pending: number;
@@ -123,10 +124,9 @@ function Chip({
 }) {
   const interactive = !!onClick;
   const Tag = interactive ? "button" : "div";
-  return (
+  const chip = (
     <Tag
       type={interactive ? "button" : undefined}
-      title={title ?? label}
       onClick={onClick}
       className={cn(
         "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold tracking-tight ring-1 transition-colors sm:gap-1.5",
@@ -140,4 +140,8 @@ function Chip({
       <span className="tabular-nums">{value}</span>
     </Tag>
   );
+  const tooltipLabel = title ?? label;
+  return tooltipLabel ? (
+    <TooltipGlass label={tooltipLabel} side="bottom">{chip}</TooltipGlass>
+  ) : chip;
 }

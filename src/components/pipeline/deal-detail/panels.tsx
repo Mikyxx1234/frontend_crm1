@@ -2,6 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -337,18 +338,19 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
             {activities.map((a, idx) => (
               <div key={a.id} className="group/act relative flex gap-3 pb-5">
                 {idx < activities.length - 1 && <div className="absolute bottom-0 left-[15px] top-8 w-px bg-border/60" />}
-                <button
-                  type="button"
-                  onClick={() => toggleMut.mutate(a.id)}
-                  disabled={toggleMut.isPending}
-                  className={cn(
-                    "relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-emerald-400",
-                    a.completed ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40" : "border-border bg-muted/40",
-                  )}
-                  title={a.completed ? "Marcar como pendente" : "Marcar como concluída"}
-                >
-                  {ACTIVITY_TYPES.find((t) => t.value === a.type)?.icon ?? "📌"}
-                </button>
+                <TooltipGlass label={a.completed ? "Marcar como pendente" : "Marcar como concluída"} side="right">
+                  <button
+                    type="button"
+                    onClick={() => toggleMut.mutate(a.id)}
+                    disabled={toggleMut.isPending}
+                    className={cn(
+                      "relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-emerald-400",
+                      a.completed ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40" : "border-border bg-muted/40",
+                    )}
+                  >
+                    {ACTIVITY_TYPES.find((t) => t.value === a.type)?.icon ?? "📌"}
+                  </button>
+                </TooltipGlass>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className={cn("text-sm font-medium", a.completed && "line-through text-muted-foreground")}>{a.title}</span>

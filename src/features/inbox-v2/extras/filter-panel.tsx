@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { IconChevronDown, IconFilter, IconX } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { useTeamUsers } from "@/features/inbox-v2/hooks";
 import {
@@ -185,27 +186,28 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={toggle}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        title="Filtrar conversas"
-        className={cn(
-          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
-          activeCount > 0 || open
-            ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
-        )}
-      >
-        <IconFilter size={17} stroke={2} />
-        {activeCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[9px] font-bold text-white">
-            {activeCount}
-          </span>
-        )}
-      </button>
+      <TooltipGlass label="Filtrar conversas" side="bottom">
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={toggle}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          className={cn(
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
+            activeCount > 0 || open
+              ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
+          )}
+        >
+          <IconFilter size={17} stroke={2} />
+          {activeCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 font-display text-[9px] font-bold text-white">
+              {activeCount}
+            </span>
+          )}
+        </button>
+      </TooltipGlass>
 
       {open && typeof document !== "undefined"
         ? createPortal(

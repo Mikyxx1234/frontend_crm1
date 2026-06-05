@@ -115,7 +115,6 @@ export function InternalTemplateVariablePicker({
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => onSelect(opt.token)}
                         className="flex items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted"
-                        title={opt.hint}
                       >
                         <code className="mt-0.5 shrink-0 rounded bg-background px-1.5 py-0.5 font-mono text-[10px] text-foreground shadow-sm">
                           {opt.token}

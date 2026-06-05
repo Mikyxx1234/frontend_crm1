@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { IconAlertTriangle, IconX } from "@tabler/icons-react";
@@ -174,12 +175,14 @@ function TemplateItemWithConfirm({
           {tpl.name}
         </span>
         {prior && (
-          <span
-            className="shrink-0 rounded-full bg-amber-400/20 px-1.5 py-px text-[9.5px] font-semibold text-amber-600"
-            title={`Enviado por ${prior.author} em ${fmtDate(prior.sentAt)}${prior.repliedAt ? " · Respondido" : ""}`}
+          <TooltipGlass
+            label={`Enviado por ${prior.author} em ${fmtDate(prior.sentAt)}${prior.repliedAt ? " · Respondido" : ""}`}
+            side="top"
           >
-            {prior.repliedAt ? "respondido" : "enviado"}
-          </span>
+            <span className="shrink-0 rounded-full bg-amber-400/20 px-1.5 py-px text-[9.5px] font-semibold text-amber-600">
+              {prior.repliedAt ? "respondido" : "enviado"}
+            </span>
+          </TooltipGlass>
         )}
       </div>
       {tpl.body ? (

@@ -1208,7 +1208,7 @@ export function FilterPanelBody({
       )}
 
       {/* Layout 3 colunas — cada coluna tem scroll independente */}
-      <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: "200px 1fr 220px" }}>
+      <div className="grid min-h-0 flex-1 overflow-hidden" style={{ gridTemplateColumns: "200px 1fr 220px" }}>
         {/* Col 1 — Filtros Salvos */}
         <aside className="flex flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] py-3">
           <SavedFiltersColumn
@@ -1235,7 +1235,7 @@ export function FilterPanelBody({
         </main>
 
         {/* Col 3 — Tags */}
-        <aside className="flex flex-col overflow-hidden">
+        <aside className="flex flex-col overflow-y-auto">
           <TagsColumn
             draft={draft}
             options={options}

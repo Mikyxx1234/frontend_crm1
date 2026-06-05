@@ -115,6 +115,7 @@ export function FilterDropdown({
           left: "50%",
           transform: "translate(-50%, -50%)",
           width: `min(${width}px, calc(100vw - 32px))`,
+          height: maxHeight,          /* altura explícita: permite flex-1 interno crescer */
           maxHeight,
           zIndex: 9999,
           backgroundColor: isDark ? "#13192d" : "#ffffff",

@@ -68,29 +68,29 @@ import { cn } from "@/lib/utils";
 
 // ─── Templates CSV ───────────────────────────────────────────────────────────
 
-const CONTACT_TEMPLATE = `name,email,phone,external_id,id,lifecycle_stage,source,company,assigned_to_email
-João Silva,joao.silva@empresa.com,+5511999990001,kommo_contact_1001,,LEAD,Site,Acme Tecnologia,admin@empresa.com
-Maria Souza,maria.souza@email.com,+5511999990002,kommo_contact_1002,,MQL,Indicação,Beta Solutions,admin@empresa.com
-Pedro Costa,pedro.costa@gmail.com,+5511999990003,kommo_contact_1003,,SQL,Google Ads,Gamma Group,admin@empresa.com
-Ana Pereira,ana.pereira@outlook.com,+5511999990004,kommo_contact_1004,,OPPORTUNITY,Facebook Ads,Delta Comercio,admin@empresa.com
-Lucas Ribeiro,lucas.ribeiro@uol.com.br,+5521999990005,kommo_contact_1005,,LEAD,Webinar,Epsilon Servicos,admin@empresa.com
-Beatriz Almeida,beatriz.almeida@hotmail.com,+5521999990006,kommo_contact_1006,,CUSTOMER,Site,Zeta Industria,admin@empresa.com
-Rafael Santos,rafael.santos@yahoo.com,+5531999990007,kommo_contact_1007,,LEAD,LinkedIn,Eta Consultoria,admin@empresa.com
-Juliana Oliveira,juliana.oliveira@empresa.com,+5531999990008,kommo_contact_1008,,SUBSCRIBER,Newsletter,Theta Educacao,admin@empresa.com
-Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,kommo_contact_1009,,SQL,Indicação,Iota Marketing,admin@empresa.com
-Carla Mendes,carla.mendes@outlook.com,+5541999990010,kommo_contact_1010,,MQL,Google Ads,Kappa Logistica,admin@empresa.com`;
+const CONTACT_TEMPLATE = `name,email,phone,lifecycle_stage,source,company,assigned_to_email
+João Silva,joao.silva@empresa.com,+5511999990001,LEAD,Site,Acme Tecnologia,admin@empresa.com
+Maria Souza,maria.souza@email.com,+5511999990002,MQL,Indicação,Beta Solutions,admin@empresa.com
+Pedro Costa,pedro.costa@gmail.com,+5511999990003,SQL,Google Ads,Gamma Group,admin@empresa.com
+Ana Pereira,ana.pereira@outlook.com,+5511999990004,OPPORTUNITY,Facebook Ads,Delta Comercio,admin@empresa.com
+Lucas Ribeiro,lucas.ribeiro@uol.com.br,+5521999990005,LEAD,Webinar,Epsilon Servicos,admin@empresa.com
+Beatriz Almeida,beatriz.almeida@hotmail.com,+5521999990006,CUSTOMER,Site,Zeta Industria,admin@empresa.com
+Rafael Santos,rafael.santos@yahoo.com,+5531999990007,LEAD,LinkedIn,Eta Consultoria,admin@empresa.com
+Juliana Oliveira,juliana.oliveira@empresa.com,+5531999990008,SUBSCRIBER,Newsletter,Theta Educacao,admin@empresa.com
+Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,SQL,Indicação,Iota Marketing,admin@empresa.com
+Carla Mendes,carla.mendes@outlook.com,+5541999990010,MQL,Google Ads,Kappa Logistica,admin@empresa.com`;
 
-const DEAL_TEMPLATE = `title,value,status,stage_id,pipeline_name,stage_name,external_id,deal_number,contact_external_id,contact_name,contact_email,contact_phone,owner_email,expected_close,lost_reason
-Implantação CRM - Acme,12500.00,OPEN,,Pipeline Principal,Qualificado,kommo_lead_2001,,kommo_contact_1001,João Silva,joao.silva@empresa.com,+5511999990001,admin@empresa.com,2026-07-15,
-Pacote Premium - Beta Solutions,8900.50,OPEN,,Pipeline Principal,Proposta,kommo_lead_2002,,kommo_contact_1002,Maria Souza,maria.souza@email.com,+5511999990002,admin@empresa.com,2026-07-22,
-Renovação Anual - Gamma Group,24000.00,OPEN,,Pipeline Principal,Negociação,kommo_lead_2003,,kommo_contact_1003,Pedro Costa,pedro.costa@gmail.com,+5511999990003,admin@empresa.com,2026-08-01,
-Consultoria Onboarding - Delta,4500.00,WON,,Pipeline Principal,Fechamento,kommo_lead_2004,,kommo_contact_1004,Ana Lima,ana.lima@delta.com.br,+5521999990004,admin@empresa.com,2026-06-30,
-Treinamento Equipe - Epsilon,3200.00,OPEN,,Pipeline Principal,Novo,kommo_lead_2005,,kommo_contact_1005,Bruno Alves,bruno.alves@epsilon.io,+5521999990005,admin@empresa.com,2026-08-10,
-Pacote Enterprise - Zeta,55000.00,OPEN,,Pipeline Principal,Proposta,kommo_lead_2006,,kommo_contact_1006,Camila Dias,camila.dias@zeta.tech,+5531999990006,admin@empresa.com,2026-09-05,
-Upgrade Plano - Eta,1800.00,LOST,,Pipeline Principal,Fechamento,kommo_lead_2007,,kommo_contact_1007,Diego Nunes,diego.nunes@eta.app,+5531999990007,admin@empresa.com,2026-06-15,Preço acima do orçamento
-Plataforma EAD - Theta,18750.00,OPEN,,Pipeline Principal,Qualificado,kommo_lead_2008,,kommo_contact_1008,Fernanda Reis,fernanda.reis@theta.edu,+5511999990008,admin@empresa.com,2026-08-20,
-Campanha Trimestral - Iota,6700.00,OPEN,,Pipeline Principal,Negociação,kommo_lead_2009,,kommo_contact_1009,Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,admin@empresa.com,2026-07-30,
-Migração Sistema - Kappa,32000.00,WON,,Pipeline Principal,Fechamento,kommo_lead_2010,,kommo_contact_1010,Carla Mendes,carla.mendes@outlook.com,+5541999990010,admin@empresa.com,2026-06-20,`;
+const DEAL_TEMPLATE = `deal_number,title,value,status,pipeline_name,stage_name,contact_name,contact_email,contact_phone,owner_email,expected_close,lost_reason
+,Implantação CRM - Acme,12500.00,OPEN,Pipeline Principal,Qualificado,João Silva,joao.silva@empresa.com,+5511999990001,admin@empresa.com,2026-07-15,
+,Pacote Premium - Beta Solutions,8900.50,OPEN,Pipeline Principal,Proposta,Maria Souza,maria.souza@email.com,+5511999990002,admin@empresa.com,2026-07-22,
+,Renovação Anual - Gamma Group,24000.00,OPEN,Pipeline Principal,Negociação,Pedro Costa,pedro.costa@gmail.com,+5511999990003,admin@empresa.com,2026-08-01,
+,Consultoria Onboarding - Delta,4500.00,WON,Pipeline Principal,Fechamento,Ana Lima,ana.lima@delta.com.br,+5521999990004,admin@empresa.com,2026-06-30,
+,Treinamento Equipe - Epsilon,3200.00,OPEN,Pipeline Principal,Novo,Bruno Alves,bruno.alves@epsilon.io,+5521999990005,admin@empresa.com,2026-08-10,
+,Pacote Enterprise - Zeta,55000.00,OPEN,Pipeline Principal,Proposta,Camila Dias,camila.dias@zeta.tech,+5531999990006,admin@empresa.com,2026-09-05,
+,Upgrade Plano - Eta,1800.00,LOST,Pipeline Principal,Fechamento,Diego Nunes,diego.nunes@eta.app,+5531999990007,admin@empresa.com,2026-06-15,Preço acima do orçamento
+,Plataforma EAD - Theta,18750.00,OPEN,Pipeline Principal,Qualificado,Fernanda Reis,fernanda.reis@theta.edu,+5511999990008,admin@empresa.com,2026-08-20,
+,Campanha Trimestral - Iota,6700.00,OPEN,Pipeline Principal,Negociação,Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,admin@empresa.com,2026-07-30,
+,Migração Sistema - Kappa,32000.00,WON,Pipeline Principal,Fechamento,Carla Mendes,carla.mendes@outlook.com,+5541999990010,admin@empresa.com,2026-06-20,`;
 
 // ─── Campos do sistema (mapeamento) ──────────────────────────────────────────
 
@@ -99,10 +99,8 @@ type SystemField = { key: string; label: string };
 const SYSTEM_FIELDS: Record<ImportEntity, SystemField[]> = {
   contacts: [
     { key: "name", label: "Nome" },
-    { key: "email", label: "E-mail" },
+    { key: "email", label: "E-mail (chave de identificação)" },
     { key: "phone", label: "Telefone" },
-    { key: "external_id", label: "ID externo" },
-    { key: "id", label: "ID do sistema (atualizar)" },
     { key: "lifecycle_stage", label: "Estágio do ciclo de vida" },
     { key: "source", label: "Origem" },
     { key: "company", label: "Empresa" },
@@ -111,16 +109,12 @@ const SYSTEM_FIELDS: Record<ImportEntity, SystemField[]> = {
     { key: "avatar_url", label: "URL do avatar" },
   ],
   deals: [
+    { key: "deal_number", label: "Número do negócio (chave de atualização)" },
     { key: "title", label: "Título do negócio" },
     { key: "value", label: "Valor" },
     { key: "status", label: "Status (OPEN/WON/LOST)" },
-    { key: "stage_id", label: "ID da etapa" },
     { key: "pipeline_name", label: "Nome do pipeline" },
     { key: "stage_name", label: "Nome da etapa" },
-    { key: "external_id", label: "ID externo" },
-    { key: "id", label: "ID do sistema (atualizar)" },
-    { key: "deal_number", label: "Número do negócio" },
-    { key: "contact_external_id", label: "ID externo do contato" },
     { key: "contact_name", label: "Nome do contato (criar se não existir)" },
     { key: "contact_email", label: "E-mail do contato" },
     { key: "contact_phone", label: "Telefone do contato" },

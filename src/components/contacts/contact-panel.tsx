@@ -46,7 +46,7 @@ import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { TooltipHost } from "@/components/ui/tooltip";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { dt } from "@/lib/design-tokens";
 import { cn, formatCurrency, formatDateTime, getInitials, tagPillStyle, tagStyle } from "@/lib/utils";
 
@@ -664,15 +664,16 @@ function ActivitiesPanel({
             {activities.map((a, idx) => (
               <div key={a.id} className="group/act relative flex gap-3 pb-5">
                 {idx < activities.length - 1 && <div className="absolute left-[15px] top-8 bottom-0 w-px bg-border/60" />}
-                <button
-                  type="button"
-                  onClick={() => toggleMut.mutate(a.id)}
-                  disabled={toggleMut.isPending}
-                  className={cn("relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-emerald-400", a.completed ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40" : "border-border bg-muted/40")}
-                  title={a.completed ? "Marcar como pendente" : "Marcar como concluída"}
-                >
-                  {ACTIVITY_TYPES.find((t) => t.value === a.type)?.icon ?? "📌"}
-                </button>
+                <TooltipGlass label={a.completed ? "Marcar como pendente" : "Marcar como concluída"} side="right">
+                  <button
+                    type="button"
+                    onClick={() => toggleMut.mutate(a.id)}
+                    disabled={toggleMut.isPending}
+                    className={cn("relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-emerald-400", a.completed ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40" : "border-border bg-muted/40")}
+                  >
+                    {ACTIVITY_TYPES.find((t) => t.value === a.type)?.icon ?? "📌"}
+                  </button>
+                </TooltipGlass>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className={cn("text-sm font-medium", a.completed && "line-through text-muted-foreground")}>{a.title}</span>
@@ -681,7 +682,7 @@ function ActivitiesPanel({
                     ) : (
                       <Circle className="size-3.5 text-slate-300" />
                     )}
-                    <TooltipHost label="Excluir atividade" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
+                    <TooltipGlass label="Excluir atividade" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
                       <button
                         type="button"
                         onClick={() => deleteMut.mutate(a.id)}
@@ -691,7 +692,7 @@ function ActivitiesPanel({
                       >
                         <Trash2 className="size-3" />
                       </button>
-                    </TooltipHost>
+                    </TooltipGlass>
                   </div>
                   {a.description && <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{a.description}</p>}
                   <p className="mt-1 text-[11px] text-muted-foreground">

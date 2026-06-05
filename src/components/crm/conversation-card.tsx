@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconClock,
   IconPaperclip,
@@ -264,14 +265,15 @@ export function ConversationCard({
             cai no status dot online/offline tradicional.
           */}
           {ch ? (
-            <span
-              title={ch.title}
-              aria-label={ch.title}
-              className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-white shadow-sm"
-              style={{ background: ch.bg, color: ch.fg }}
-            >
-              <ch.Icon size={10} stroke={2.5} />
-            </span>
+            <TooltipGlass label={ch.title} side="top">
+              <span
+                aria-label={ch.title}
+                className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-white shadow-sm"
+                style={{ background: ch.bg, color: ch.fg }}
+              >
+                <ch.Icon size={10} stroke={2.5} />
+              </span>
+            </TooltipGlass>
           ) : (
             conversation.status !== "none" && (
               <span
@@ -352,27 +354,26 @@ export function ConversationCard({
           {(conversation.tags ?? []).slice(0, MAX_VISIBLE_TAGS).map((t) => {
             const c = tagColors(t.color)
             return (
-              <span
-                key={t.id}
-                className="inline-flex shrink-0 max-w-[110px] items-center gap-1 truncate whitespace-nowrap rounded-full border px-2 py-px font-display text-[10.5px] font-semibold"
-                style={{ background: c.bg, color: c.fg, borderColor: c.border }}
-                title={t.name}
-              >
-                <IconTag size={9} stroke={2.5} />
-                <span className="truncate">{t.name}</span>
-              </span>
+              <TooltipGlass key={t.id} label={t.name} side="top">
+                <span
+                  className="inline-flex shrink-0 max-w-[110px] items-center gap-1 truncate whitespace-nowrap rounded-full border px-2 py-px font-display text-[10.5px] font-semibold"
+                  style={{ background: c.bg, color: c.fg, borderColor: c.border }}
+                >
+                  <IconTag size={9} stroke={2.5} />
+                  <span className="truncate">{t.name}</span>
+                </span>
+              </TooltipGlass>
             )
           })}
           {(conversation.tags?.length ?? 0) > MAX_VISIBLE_TAGS && (
-            <span
-              className="inline-flex shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10.5px] font-bold text-[var(--text-secondary)]"
-              title={(conversation.tags ?? [])
-                .slice(MAX_VISIBLE_TAGS)
-                .map((t) => t.name)
-                .join(", ")}
+            <TooltipGlass
+              label={(conversation.tags ?? []).slice(MAX_VISIBLE_TAGS).map((t) => t.name).join(", ")}
+              side="top"
             >
-              +{(conversation.tags?.length ?? 0) - MAX_VISIBLE_TAGS}
-            </span>
+              <span className="inline-flex shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10.5px] font-bold text-[var(--text-secondary)]">
+                +{(conversation.tags?.length ?? 0) - MAX_VISIBLE_TAGS}
+              </span>
+            </TooltipGlass>
           )}
           {/* botão "gerenciar" — só aparece se houver slot. Compacto. */}
           {tagsSlot && (
@@ -418,22 +419,22 @@ export function ConversationCard({
         )}
 
         {conversation.sessionExpiresIn && (
-          <span
-            className={cn(
-              "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-[1px] font-display text-[10px] font-bold",
-              conversation.sessionExpired
-                ? "border-[var(--color-danger)]/25 bg-[var(--color-danger)]/[0.10] text-[var(--color-danger-text)]"
-                : "border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-warning-text)]",
-            )}
-            title={
-              conversation.sessionExpired
-                ? "Sessão de 24h da Meta expirada"
-                : "Tempo até expirar a sessão de 24h"
-            }
+          <TooltipGlass
+            label={conversation.sessionExpired ? "Sessão de 24h da Meta expirada" : "Tempo até expirar a sessão de 24h"}
+            side="top"
           >
-            <IconClock size={10} />
-            {conversation.sessionExpiresIn}
-          </span>
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-[1px] font-display text-[10px] font-bold",
+                conversation.sessionExpired
+                  ? "border-[var(--color-danger)]/25 bg-[var(--color-danger)]/[0.10] text-[var(--color-danger-text)]"
+                  : "border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-warning-text)]",
+              )}
+            >
+              <IconClock size={10} />
+              {conversation.sessionExpiresIn}
+            </span>
+          </TooltipGlass>
         )}
       </div>
     </article>

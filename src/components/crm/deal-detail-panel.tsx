@@ -318,15 +318,15 @@ export function DealDetailPanel({
                           .findIndex((s) => s.id === seg.id)
                         const reached = segIdx <= currentStageIndex
                         return (
-                          <span
-                            key={seg.id}
-                            title={seg.name}
-                            className="h-[6px] flex-1 rounded-full transition-opacity"
-                            style={{
-                              background: seg.color || "var(--brand-primary)",
-                              opacity: reached ? 1 : 0.18,
-                            }}
-                          />
+                          <TooltipGlass key={seg.id} label={seg.name} side="top">
+                            <span
+                              className="h-[6px] flex-1 rounded-full transition-opacity"
+                              style={{
+                                background: seg.color || "var(--brand-primary)",
+                                opacity: reached ? 1 : 0.18,
+                              }}
+                            />
+                          </TooltipGlass>
                         )
                       })}
                   </div>
@@ -592,40 +592,44 @@ function FallbackComposer() {
     <div
       className="mx-[22px] mb-[22px] flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-[18px] pr-2 opacity-60 shadow-[var(--glass-shadow-sm)]"
     >
-      <button
-        type="button"
-        title="Anexar"
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)]"
-      >
-        <IconPaperclip size={18} />
-      </button>
+      <TooltipGlass label="Anexar" side="top">
+        <button
+          type="button"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)]"
+        >
+          <IconPaperclip size={18} />
+        </button>
+      </TooltipGlass>
       <input
         type="text"
         placeholder="Sessão expirada. Envie um template..."
         disabled
         className="flex-1 border-none bg-transparent text-sm italic text-[var(--text-primary)] outline-none placeholder:italic placeholder:text-[var(--text-muted)]"
       />
-      <button
-        type="button"
-        title="Emoji"
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)]"
-      >
-        <IconMoodSmile size={18} />
-      </button>
-      <button
-        type="button"
-        title="Áudio"
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)]"
-      >
-        <IconMicrophone size={18} />
-      </button>
-      <button
-        type="button"
-        title="Enviar"
-        className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-      >
-        <IconSend size={16} />
-      </button>
+      <TooltipGlass label="Emoji" side="top">
+        <button
+          type="button"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)]"
+        >
+          <IconMoodSmile size={18} />
+        </button>
+      </TooltipGlass>
+      <TooltipGlass label="Áudio" side="top">
+        <button
+          type="button"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)]"
+        >
+          <IconMicrophone size={18} />
+        </button>
+      </TooltipGlass>
+      <TooltipGlass label="Enviar mensagem" side="top">
+        <button
+          type="button"
+          className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+        >
+          <IconSend size={16} />
+        </button>
+      </TooltipGlass>
     </div>
   )
 }

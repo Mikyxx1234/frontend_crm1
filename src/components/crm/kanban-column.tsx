@@ -93,19 +93,22 @@ export function KanbanColumn({
               quando a coluna tem deals e o caller fornece `selection`.
               Comportamento herdado do kanban antigo. */}
           {showSelectAll && selection ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                selection.onToggleAll()
-              }}
-              title={
+            <TooltipGlass
+              label={
                 selection.allSelected
                   ? `Limpar seleção desta etapa (${selection.selectedCount})`
                   : selection.someSelected
                     ? `Selecionar todos os ${selection.totalInColumn} (já marcados: ${selection.selectedCount})`
                     : `Selecionar todos os ${selection.totalInColumn} desta etapa`
               }
+              side="top"
+            >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                selection.onToggleAll()
+              }}
               aria-label={
                 selection.allSelected
                   ? "Limpar seleção desta etapa"
@@ -127,6 +130,7 @@ export function KanbanColumn({
                 <IconSquare size={16} />
               )}
             </button>
+            </TooltipGlass>
           ) : null}
           <span
             className="h-[18px] w-[3px] rounded-full"

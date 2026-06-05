@@ -175,15 +175,15 @@ function DealInline({
       {sortedSegments && sortedSegments.length > 0 && (
         <div className="flex gap-1 px-5 pb-3">
           {sortedSegments.map((seg, i) => (
-            <span
-              key={seg.id}
-              title={seg.name}
-              className="h-[4px] flex-1 rounded-full transition-colors"
-              style={{
-                background: seg.color || "var(--brand-primary)",
-                opacity: i <= currentSegIdx ? 1 : 0.18,
-              }}
-            />
+            <TooltipGlass key={seg.id} label={seg.name} side="top">
+              <span
+                className="h-[4px] flex-1 rounded-full transition-colors"
+                style={{
+                  background: seg.color || "var(--brand-primary)",
+                  opacity: i <= currentSegIdx ? 1 : 0.18,
+                }}
+              />
+            </TooltipGlass>
           ))}
         </div>
       )}

@@ -446,21 +446,22 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               }
               className="font-mono text-xs"
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="px-3"
-              onClick={() => setRevealAccessToken((v) => !v)}
-              title={revealAccessToken ? "Ocultar" : "Mostrar"}
-              aria-label={revealAccessToken ? "Ocultar token" : "Mostrar token"}
-            >
-              {revealAccessToken ? (
-                <EyeOff className="size-4" />
-              ) : (
-                <Eye className="size-4" />
-              )}
-            </Button>
+            <TooltipGlass label={revealAccessToken ? "Ocultar token" : "Mostrar token"} side="top">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="px-3"
+                onClick={() => setRevealAccessToken((v) => !v)}
+                aria-label={revealAccessToken ? "Ocultar token" : "Mostrar token"}
+              >
+                {revealAccessToken ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </Button>
+            </TooltipGlass>
           </div>
           {accessToken && accessToken.length < 50 ? (
             <p className="text-xs text-amber-600">
@@ -518,21 +519,22 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                 }
                 className="font-mono text-xs"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="px-3"
-                onClick={() => setRevealAppSecret((v) => !v)}
-                title={revealAppSecret ? "Ocultar" : "Mostrar"}
-                aria-label={revealAppSecret ? "Ocultar app secret" : "Mostrar app secret"}
-              >
-                {revealAppSecret ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </Button>
+              <TooltipGlass label={revealAppSecret ? "Ocultar app secret" : "Mostrar app secret"} side="top">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="px-3"
+                  onClick={() => setRevealAppSecret((v) => !v)}
+                  aria-label={revealAppSecret ? "Ocultar app secret" : "Mostrar app secret"}
+                >
+                  {revealAppSecret ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </Button>
+              </TooltipGlass>
             </div>
             {initialAppSecret ? (
               <p className="text-xs text-muted-foreground">

@@ -180,9 +180,9 @@ export function NavRailV2({ className }: { className?: string }) {
           No SSR/primeiro render renderizamos um botão estático equivalente
           para evitar hydration mismatch (ver comentário em `mounted` acima). */}
       {!mounted ? (
+        <TooltipGlass label="Minha conta" side="right">
         <button
           type="button"
-          title="Minha conta"
           aria-label="Abrir menu da conta"
           className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
         >
@@ -198,10 +198,11 @@ export function NavRailV2({ className }: { className?: string }) {
             <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
           </div>
         </button>
+        </TooltipGlass>
       ) : (
       <DropdownMenu>
+        <TooltipGlass label="Minha conta" side="right">
         <DropdownMenuTrigger
-          title="Minha conta"
           aria-label="Abrir menu da conta"
           className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
         >
@@ -217,6 +218,7 @@ export function NavRailV2({ className }: { className?: string }) {
             <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
           </div>
         </DropdownMenuTrigger>
+        </TooltipGlass>
 
         <DropdownMenuContent align="start" className="w-60">
           <div className="flex items-center gap-3 px-2 py-2">

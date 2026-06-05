@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { IconChevronDown } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
@@ -365,23 +366,22 @@ export default function InboxV2ClientPage({
           : "var(--brand-primary)";
         const border = valid ? `rgba(${r},${g},${b},0.30)` : "rgba(91,111,245,0.25)";
         return (
-          <span
-            key={t.id}
-            title={t.name}
-            className="inline-flex max-w-[100px] shrink-0 items-center truncate rounded-full border px-2 py-px font-display text-[10.5px] font-semibold"
-            style={{ background: bg, color: fg, borderColor: border }}
-          >
-            <span className="truncate">{t.name}</span>
-          </span>
+          <TooltipGlass key={t.id} label={t.name} side="top">
+            <span
+              className="inline-flex max-w-[100px] shrink-0 items-center truncate rounded-full border px-2 py-px font-display text-[10.5px] font-semibold"
+              style={{ background: bg, color: fg, borderColor: border }}
+            >
+              <span className="truncate">{t.name}</span>
+            </span>
+          </TooltipGlass>
         );
       })}
       {activeTags.length > MAX_ASIDE_TAGS && (
-        <span
-          className="inline-flex shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10.5px] font-bold text-[var(--text-secondary)]"
-          title={activeTags.slice(MAX_ASIDE_TAGS).map((t) => t.name).join(", ")}
-        >
-          +{activeTags.length - MAX_ASIDE_TAGS}
-        </span>
+        <TooltipGlass label={activeTags.slice(MAX_ASIDE_TAGS).map((t) => t.name).join(", ")} side="top">
+          <span className="inline-flex shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10.5px] font-bold text-[var(--text-secondary)]">
+            +{activeTags.length - MAX_ASIDE_TAGS}
+          </span>
+        </TooltipGlass>
       )}
       <TagsPopover
         conversationId={activeId}

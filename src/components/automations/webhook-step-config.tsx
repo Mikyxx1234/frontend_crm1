@@ -28,6 +28,7 @@
  */
 
 import * as React from "react";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Code2, Eye, Plus, Search, Trash2, Variable } from "lucide-react";
 
@@ -548,15 +549,16 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
                       </option>
                     ))}
                   </SelectNative>
-                  <code
-                    className={cn(
-                      "block truncate rounded-md border border-border/40 bg-muted/40 px-2 py-1.5 font-mono text-[11px]",
-                      (isUnknown || isLiteral) && "border-destructive/60 bg-destructive/10 text-destructive",
-                    )}
-                    title={tokenForEntry(entry)}
-                  >
-                    {isLiteral ? `literal: ${entry.literalValue}` : tokenForEntry(entry)}
-                  </code>
+                  <TooltipGlass label={tokenForEntry(entry)} side="top">
+                    <code
+                      className={cn(
+                        "block truncate rounded-md border border-border/40 bg-muted/40 px-2 py-1.5 font-mono text-[11px]",
+                        (isUnknown || isLiteral) && "border-destructive/60 bg-destructive/10 text-destructive",
+                      )}
+                    >
+                      {isLiteral ? `literal: ${entry.literalValue}` : tokenForEntry(entry)}
+                    </code>
+                  </TooltipGlass>
                   <Button
                     type="button"
                     variant="ghost"
@@ -780,7 +782,6 @@ function VariablePickerForUrlAndHeaders({
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => onSelect(opt.token)}
                         className="flex items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted"
-                        title={opt.hint}
                       >
                         <code className="mt-0.5 shrink-0 rounded bg-background px-1.5 py-0.5 font-mono text-[10px] text-foreground shadow-sm">
                           {opt.token}

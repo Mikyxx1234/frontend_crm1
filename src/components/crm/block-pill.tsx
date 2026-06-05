@@ -51,7 +51,6 @@ export function BlockPill({
         className,
       )}
       style={{ ["--accent" as string]: p.fg }}
-      title={label ?? meta.label}
     >
       <span
         className={cn("flex shrink-0 items-center justify-center rounded-full border", dims.ring)}

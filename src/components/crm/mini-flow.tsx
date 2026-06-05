@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
 import { getBlockMeta, blockChipStyle } from "./flow-block-icon"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 
 export interface MiniFlowStep {
   blockType: string
@@ -33,17 +34,18 @@ export function MiniFlow({ steps, max = 5, size = "md", className }: MiniFlowPro
         const Icon = meta.Icon
         return (
           <div key={i} className="flex items-center">
-            <span
-              className={cn(
-                "flex shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]",
-                dims.node,
-                step.blockType === "trigger" && "bg-[var(--brand-primary)] text-white",
-              )}
-              style={step.blockType === "trigger" ? undefined : blockChipStyle(step.blockType)}
-              title={meta.label}
-            >
-              <Icon size={dims.icon} />
-            </span>
+            <TooltipGlass label={meta.label} side="top">
+              <span
+                className={cn(
+                  "flex shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]",
+                  dims.node,
+                  step.blockType === "trigger" && "bg-[var(--brand-primary)] text-white",
+                )}
+                style={step.blockType === "trigger" ? undefined : blockChipStyle(step.blockType)}
+              >
+                <Icon size={dims.icon} />
+              </span>
+            </TooltipGlass>
             {i < visible.length - 1 && (
               <span
                 className={cn(

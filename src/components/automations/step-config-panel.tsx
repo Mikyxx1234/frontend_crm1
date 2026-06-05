@@ -1732,7 +1732,6 @@ function ConditionFieldPicker({
             setCustomMode(false);
             onChange("");
           }}
-          title="Voltar para a lista de campos"
         >
           ← Lista
         </Button>

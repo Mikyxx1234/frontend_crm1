@@ -57,6 +57,12 @@ interface PipelineHeaderProps {
    * conforme protótipo v0: colado ao PipelineSwitcher, antes das tabs.
    */
   settingsSlot?: React.ReactNode
+  /**
+   * Quando true, suprime os botões de ação do header (Filtros, Salvos,
+   * toggle kanban/lista e +Novo). Útil em telas de configuração onde
+   * esses controles não fazem sentido.
+   */
+  hideActions?: boolean
 }
 
 export function PipelineHeader({
@@ -74,6 +80,7 @@ export function PipelineHeader({
   searchPlaceholder = "Buscar por título, contato...",
   tabsOverride,
   settingsSlot,
+  hideActions = false,
 }: PipelineHeaderProps) {
   const [tab, setTab] = useState<TabId>(activeTab)
   const [view, setView] = useState<ViewType>(activeView)
@@ -111,69 +118,71 @@ export function PipelineHeader({
           ) : undefined
         }
         actions={
-          <div className="flex items-center gap-2">
-            <button
-              ref={filtersButtonRef}
-              type="button"
-              onClick={onFiltersClick}
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[13px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white"
-              style={
-                activeFiltersCount > 0
-                  ? {
-                      borderColor: "var(--brand-primary, #5b6ff5)",
-                      background: "rgba(91,111,245,0.12)",
-                    }
-                  : undefined
-              }
-            >
-              <IconFilter size={15} /> Filtros
-              {activeFiltersCount > 0 && (
-                <span
-                  className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums text-white"
-                  style={{ background: "var(--brand-primary, #5b6ff5)" }}
-                >
-                  {activeFiltersCount}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[13px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white"
-            >
-              <IconBookmark size={15} /> Salvos
-            </button>
+          hideActions ? undefined : (
+            <div className="flex items-center gap-2">
+              <button
+                ref={filtersButtonRef}
+                type="button"
+                onClick={onFiltersClick}
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[13px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white"
+                style={
+                  activeFiltersCount > 0
+                    ? {
+                        borderColor: "var(--brand-primary, #5b6ff5)",
+                        background: "rgba(91,111,245,0.12)",
+                      }
+                    : undefined
+                }
+              >
+                <IconFilter size={15} /> Filtros
+                {activeFiltersCount > 0 && (
+                  <span
+                    className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums text-white"
+                    style={{ background: "var(--brand-primary, #5b6ff5)" }}
+                  >
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[13px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white"
+              >
+                <IconBookmark size={15} /> Salvos
+              </button>
 
-            <div className="flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
-              {(
-                [
-                  { id: "kanban", icon: <IconLayoutKanban size={15} />, title: "Pipeline" },
-                  { id: "list", icon: <IconList size={15} />, title: "Lista" },
-                ] as const
-              ).map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => handleViewChange(v.id as ViewType)}
-                  title={v.title}
-                  className={cn(
-                    "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all",
-                    view === v.id
-                      ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                      : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                  )}
-                >
-                  {v.icon}
-                </button>
-              ))}
+              <div className="flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
+                {(
+                  [
+                    { id: "kanban", icon: <IconLayoutKanban size={15} />, title: "Pipeline" },
+                    { id: "list", icon: <IconList size={15} />, title: "Lista" },
+                  ] as const
+                ).map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => handleViewChange(v.id as ViewType)}
+                    title={v.title}
+                    className={cn(
+                      "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all",
+                      view === v.id
+                        ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
+                        : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
+                  >
+                    {v.icon}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
+              >
+                <IconPlus size={16} /> Novo
+              </button>
             </div>
-
-            <button
-              type="button"
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
-            >
-              <IconPlus size={16} /> Novo
-            </button>
-          </div>
+          )
         }
       />
 

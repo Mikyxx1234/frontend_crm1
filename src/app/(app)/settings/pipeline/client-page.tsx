@@ -155,10 +155,10 @@ function StageOptionsMenu({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.18)] backdrop-blur-md">
+        <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-white py-1 shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
           {/* Mover posição */}
           <div className="px-2 py-1">
-            <p className="px-2 pb-1 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            <p className="px-2 pb-1 font-display text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Posição
             </p>
             <div className="grid grid-cols-2 gap-1">
@@ -166,7 +166,7 @@ function StageOptionsMenu({
                 type="button"
                 disabled={isFirst}
                 onClick={() => { onMoveForward(); close(); }}
-                className="flex cursor-pointer items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex cursor-pointer items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11.5px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <IconChevronLeft size={13} />
                 <span className="whitespace-nowrap">Mover frente</span>
@@ -175,7 +175,7 @@ function StageOptionsMenu({
                 type="button"
                 disabled={isLast}
                 onClick={() => { onMoveBackward(); close(); }}
-                className="flex cursor-pointer items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex cursor-pointer items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 py-1.5 font-display text-[11.5px] font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <span className="whitespace-nowrap">Mover atrás</span>
                 <IconChevronRight size={13} />
@@ -183,15 +183,15 @@ function StageOptionsMenu({
             </div>
           </div>
 
-          <div className="my-1 border-t border-[var(--glass-border-subtle)]" />
+          <div className="my-1 border-t border-slate-100" />
 
           {/* Renomear */}
           <button
             type="button"
             onClick={() => { onRename(); close(); }}
-            className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+            className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
           >
-            <IconPencil size={14} className="text-[var(--text-muted)]" />
+            <IconPencil size={14} className="text-slate-400" />
             Renomear estágio
           </button>
 
@@ -199,10 +199,10 @@ function StageOptionsMenu({
           <button
             type="button"
             onClick={() => setShowColors((v) => !v)}
-            className="flex w-full cursor-pointer items-center justify-between gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+            className="flex w-full cursor-pointer items-center justify-between gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
           >
             <span className="flex items-center gap-2.5">
-              <IconPalette size={14} className="text-[var(--text-muted)]" />
+              <IconPalette size={14} className="text-slate-400" />
               Alterar cor
             </span>
             <span
@@ -213,7 +213,7 @@ function StageOptionsMenu({
 
           {/* Swatches de cor */}
           {showColors && (
-            <div className="border-t border-[var(--glass-border-subtle)] px-3.5 py-2.5">
+            <div className="border-t border-slate-100 px-3.5 py-2.5">
               <div className="grid grid-cols-5 gap-1.5">
                 {COLOR_PALETTE.map((c) => (
                   <button
@@ -751,6 +751,7 @@ export default function PipelineSettingsClientPage() {
 
         <div className="flex min-w-0 flex-col gap-3 overflow-hidden">
           <PipelineHeader
+            hideActions
             pipelineNameSlot={
               <PipelineSwitcher
                 selectedId={pipelineId}
@@ -770,8 +771,6 @@ export default function PipelineSettingsClientPage() {
                 onBack={() => router.push("/pipeline")}
               />
             }
-            search=""
-            onSearchChange={() => undefined}
           />
 
           {/* Board de estágios */}

@@ -329,31 +329,63 @@ interface StageColumnProps {
   stage: StageConfig;
   isFirst: boolean;
   isLast: boolean;
+  isDragOver: boolean;
   onAddAutomation: (stageId: string) => void;
   onMoveForward: (stageId: string) => void;
   onMoveBackward: (stageId: string) => void;
   onRename: (stageId: string) => void;
   onChangeColor: (stageId: string, color: string) => void;
+  onDragStart: (stageId: string) => void;
+  onDragOver: (stageId: string) => void;
+  onDrop: (targetId: string) => void;
+  onDragEnd: () => void;
 }
 
 function StageColumn({
   stage,
   isFirst,
   isLast,
+  isDragOver,
   onAddAutomation,
   onMoveForward,
   onMoveBackward,
   onRename,
   onChangeColor,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: StageColumnProps) {
   return (
     <section
       aria-label={`Estágio ${stage.name}`}
-      className="flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
+      draggable
+      onDragStart={() => onDragStart(stage.id)}
+      onDragOver={(e) => { e.preventDefault(); onDragOver(stage.id); }}
+      onDrop={(e) => { e.preventDefault(); onDrop(stage.id); }}
+      onDragEnd={onDragEnd}
+      className={cn(
+        "flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-xl border bg-[var(--glass-bg-strong)] px-3.5 pb-3 pt-4 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all duration-150",
+        isDragOver
+          ? "scale-[1.02] border-[var(--brand-primary)] shadow-[0_0_0_2px_rgba(91,111,245,0.25),var(--glass-shadow)]"
+          : "border-[var(--glass-border)]",
+      )}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-1 pb-2.5">
         <div className="flex items-center gap-2.5">
+          {/* Handle de drag */}
+          <span
+            title="Arrastar para reordenar"
+            className="flex cursor-grab flex-col gap-[3px] active:cursor-grabbing"
+          >
+            {[0,1,2].map((i) => (
+              <span key={i} className="flex gap-[3px]">
+                <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
+                <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
+              </span>
+            ))}
+          </span>
           <span
             className="h-[18px] w-[3px] rounded-full"
             style={{ background: stage.color }}
@@ -542,6 +574,10 @@ export default function PipelineSettingsClientPage() {
   const [stageNameOverrides, setStageNameOverrides] = useState<Record<string, string>>({});
   const [stageColorOverrides, setStageColorOverrides] = useState<Record<string, string>>({});
 
+  // Drag-and-drop
+  const dragSourceId = useRef<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
   // Modal de renomear
   const [renamingStageId, setRenamingStageId] = useState<string | null>(null);
 
@@ -600,6 +636,37 @@ export default function PipelineSettingsClientPage() {
   }, [renamingStageId, stages]);
 
   // ─── Handlers de estágio ────────────────────────────────────────
+
+  const handleDragStart = useCallback((stageId: string) => {
+    dragSourceId.current = stageId;
+  }, []);
+
+  const handleDragOver = useCallback((stageId: string) => {
+    if (dragSourceId.current && dragSourceId.current !== stageId) {
+      setDragOverId(stageId);
+    }
+  }, []);
+
+  const handleDrop = useCallback((targetId: string) => {
+    const sourceId = dragSourceId.current;
+    if (!sourceId || sourceId === targetId) return;
+    setStageOrder((prev) => {
+      const arr = [...prev];
+      const fromIdx = arr.indexOf(sourceId);
+      const toIdx = arr.indexOf(targetId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, sourceId);
+      return arr;
+    });
+    dragSourceId.current = null;
+    setDragOverId(null);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    dragSourceId.current = null;
+    setDragOverId(null);
+  }, []);
 
   const handleMoveForward = useCallback((stageId: string) => {
     setStageOrder((prev) => {
@@ -716,11 +783,16 @@ export default function PipelineSettingsClientPage() {
                   stage={stage}
                   isFirst={idx === 0}
                   isLast={idx === stages.length - 1}
+                  isDragOver={dragOverId === stage.id}
                   onAddAutomation={handleAddAutomation}
                   onMoveForward={handleMoveForward}
                   onMoveBackward={handleMoveBackward}
                   onRename={setRenamingStageId}
                   onChangeColor={handleChangeColor}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
                 />
               ))
             ) : (

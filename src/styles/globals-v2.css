@@ -214,6 +214,21 @@
 .v2-screen {
   height: calc(100dvh / var(--v2-scale, 1));
 }
+
+/* --kanban-col-h: altura disponível para o board e colunas.
+   Desconta: padding do v2-screen (2×1rem) + PipelineHeader (52px)
+   + tabs (40px) + gaps (16px) = ~140px. */
+.v2-screen {
+  --kanban-col-h: calc((100dvh / var(--v2-scale, 1)) - 140px - 2rem);
+}
+
+/* No react-beautiful-dnd v13 o Droppable não injeta wrapper —
+   a section é filho direto do board. Forçamos ela a ocupar 100%
+   da altura do board via align-self: stretch + height explícita. */
+.v2-screen .kanban-board-hscroll > section {
+  align-self: stretch;
+  height: 100% !important;
+}
 .v2-min-screen {
   min-height: calc(100dvh / var(--v2-scale, 1));
 }

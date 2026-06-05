@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -121,6 +121,27 @@ export default function KanbanV2ClientPage({
   const router = useRouter();
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
+
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+  const [columnHeight, setColumnHeight] = useState<number | null>(null);
+
+  // Mede a altura disponível para o board:
+  // = altura total do flex-col container - offsetTop do kanban-board-hscroll (relativo ao container)
+  useLayoutEffect(() => {
+    const container = boardContainerRef.current;
+    if (!container) return;
+    const measure = () => {
+      const containerH = container.getBoundingClientRect().height;
+      const board = container.querySelector(".kanban-board-hscroll") as HTMLElement | null;
+      if (!board) { setColumnHeight(containerH); return; }
+      const boardOffsetTop = board.getBoundingClientRect().top - container.getBoundingClientRect().top;
+      setColumnHeight(Math.max(200, containerH - boardOffsetTop - 4));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, []);
 
   const [activeTab, setActiveTab] = useState<TabId>("abertos");
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
@@ -364,7 +385,7 @@ export default function KanbanV2ClientPage({
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] grid-rows-1 gap-4 p-4">
       {navRail ?? <NavRail />}
-      <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-clip">
+      <div ref={boardContainerRef} className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-clip">
         <PipelineHeader
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t)}
@@ -419,15 +440,10 @@ export default function KanbanV2ClientPage({
           onClear={() => setFilters({})}
         />
 
-        {/* flex-1 min-h-0 AQUI é o ponto crítico: DragDropContext
-            renderiza um Fragment — este wrapper garante que o board
-            herde a altura restante do flex-col pai (v2-screen). */}
-        <div className="flex min-h-0 flex-1 flex-col">
         <DragDropContext onDragEnd={handleDragEnd}>
-          {/* min-h-0 + min-w-0 são CRÍTICOS: sem isso o flex-1 nao
-              limita altura, as <section> filhas estouram e os cards
-              do final somem (cortados embaixo) em telas menores. */}
-          <div className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-1">
+          <div
+            className="kanban-board-hscroll flex min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-1"
+          >
             {columns.map((col) => (
               <DroppableColumn
                 key={col.stageId}
@@ -452,7 +468,6 @@ export default function KanbanV2ClientPage({
             ) : null}
           </div>
         </DragDropContext>
-        </div>{/* fim wrapper flex-1 do board */}
       </div>
 
       {importExportOpen && (
@@ -1043,6 +1058,7 @@ function DroppableColumn({
     <Droppable droppableId={column.stageId}>
       {(provided, snapshot) => (
         <KanbanColumn
+          columnHeight={columnHeight ? `${columnHeight}px` : undefined}
           title={column.title}
           color={column.color}
           count={column.count}
@@ -1233,7 +1249,7 @@ function avatarColorSlugFromName(name: string | null | undefined): string {
   return AVATAR_SLUGS[sum % AVATAR_SLUGS.length];
 }
 
-// ─── PipelineKebabMenu ────────────────────────────────────────────
+// ─── PipelineKebabMenu ─────────────────────────────────────��──────
 
 const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
   { key: "default",        label: "Padrão (posição)",      icon: <IconArrowsSort size={13} /> },

@@ -52,6 +52,8 @@ interface KanbanColumnProps {
   selection?: KanbanColumnSelection
   /** Formulário inline de criação de deal — renderizado acima do botão "Adicionar negócio". */
   addFormSlot?: ReactNode
+  /** Altura explícita da coluna (CSS value). Usada para contornar o wrapper sem altura do Droppable. */
+  columnHeight?: string
 }
 
 const colorMap: Record<ColumnColor, string> = {
@@ -85,13 +87,15 @@ export function KanbanColumn({
   placeholderSlot,
   selection,
   addFormSlot,
+  columnHeight,
 }: KanbanColumnProps) {
   const showSelectAll = !!selection && selection.totalInColumn > 0
 
   return (
     <section
       aria-label={`Coluna ${title}`}
-      className="flex h-full min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-3 backdrop-blur-md shadow-[var(--glass-shadow)]"
+      className="flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-3 backdrop-blur-md shadow-[var(--glass-shadow)]"
+      style={columnHeight ? { height: columnHeight } : undefined}
     >
       {/* Barra de acento colorida no topo da coluna */}
       <div
@@ -235,3 +239,4 @@ export function KanbanColumn({
     </section>
   )
 }
+// DEBUG ONLY

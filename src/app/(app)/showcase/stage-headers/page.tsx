@@ -268,7 +268,9 @@ function HeaderE({ name, color, automations }: (typeof STAGES)[0]) {
       <p className="mt-1.5 pl-8 font-display text-[11px] font-semibold text-[var(--text-muted)]">
         {automations === 0
           ? "Sem automações"
-          : `${automations} automação${automations !== 1 ? "ões" : ""}`}
+          : automations === 1
+          ? "1 automação"
+          : `${automations} automações`}
       </p>
     </div>
   );
@@ -324,12 +326,14 @@ function StagePreview({
           <div className="mb-3 border-b border-[var(--glass-border-subtle)] px-1 pb-2.5 font-display text-xs font-semibold text-[var(--text-secondary)]">
             {stage.automations === 0
               ? "Sem automações"
-              : `${stage.automations} automação${stage.automations !== 1 ? "ões" : ""}`}
+              : stage.automations === 1
+              ? "1 automação"
+              : `${stage.automations} automações`}
           </div>
         )}
 
         {/* Cards placeholder */}
-        {Array.from({ length: Math.min(stage.automations, 2) }).map((_, i) => (
+        {Array.from({ length: Math.min(stage.automations, 2) }, (_, i) => i).map((i) => (
           <div
             key={i}
             className="mb-2 flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]"
@@ -401,7 +405,7 @@ export default function StageHeadersShowcase() {
 
   return (
     <div className="min-h-screen p-10">
-      <div className="mx-auto max-w-[1100px]">
+      <div className="mx-auto max-w-[1600px]">
         {/* Título */}
         <div className="mb-8">
           <h1 className="font-display text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
@@ -444,7 +448,7 @@ export default function StageHeadersShowcase() {
         </div>
 
         {/* Grid das 5 variações */}
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-5">
           {VARIANTS.map((v) => (
             <StagePreview
               key={v.id}

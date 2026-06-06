@@ -127,6 +127,9 @@ export interface InboxMessageDto {
   direction: MessageDirection;
   content: string;
   messageType?: "text" | "note" | "image" | "audio" | "video" | "file" | "template" | string;
+  // Backend serializa como `isPrivate` (Prisma). Mantemos `private` como
+  // alias por compat com chamadas legadas — adapter consulta os dois.
+  isPrivate?: boolean;
   private?: boolean;
   status?: MessageStatus;
   createdAt: string;

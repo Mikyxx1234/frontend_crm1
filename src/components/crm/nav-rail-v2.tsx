@@ -8,6 +8,7 @@ import {
   IconBolt,
   IconBuilding,
   IconChecklist,
+  IconClipboardList,
   IconFilter,
   IconLayoutDashboard,
   IconLogout,
@@ -53,6 +54,7 @@ const items: NavItem[] = [
   { icon: <IconMessageCircle size={20} />, title: "Inbox", href: "/inbox" },
   { icon: <IconChecklist size={20} />, title: "Atividades", href: "/activities" },
   { icon: <IconBolt size={20} />, title: "Automações", href: "/automations" },
+  { icon: <IconClipboardList size={20} />, title: "Logs", href: "/logs" },
 ];
 
 function isActiveFor(pathname: string, item: NavItem): boolean {

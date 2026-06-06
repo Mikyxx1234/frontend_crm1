@@ -13,6 +13,7 @@ import {
   IconChecklist,
   IconBolt,
   IconChartBar,
+  IconClipboardList,
   IconBell,
   IconSettings,
 } from "@tabler/icons-react"
@@ -32,6 +33,7 @@ const items: NavItem[] = [
   { icon: <IconChecklist size={20} />, title: "Atividades", href: "/activities" },
   { icon: <IconBolt size={20} />, title: "Automações", href: "/automations" },
   { icon: <IconChartBar size={20} />, title: "Relatórios", href: "/reports" },
+  { icon: <IconClipboardList size={20} />, title: "Logs", href: "/logs" },
 ]
 
 export function NavRail({ className }: { className?: string }) {

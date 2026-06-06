@@ -13,6 +13,7 @@ import {
   IconAlertCircle,
   IconPlayerPlay,
   IconPlayerPause,
+  IconLock,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -140,6 +141,12 @@ export interface Message {
   formTitle?: string
   /** Tipo de mídia: "audio", "image", "document", "video", "text" etc. */
   messageType?: string
+  /**
+   * Nota interna — não enviada ao cliente. Quando true, a bolha é
+   * renderizada com estilo diferenciado (fundo amarelo, borda lateral,
+   * badge "Nota"). Independe de `type` (sempre tratada como outgoing).
+   */
+  isNote?: boolean
   /** URL da mídia para áudio, imagem, documento */
   mediaUrl?: string | null
   /**
@@ -505,10 +512,39 @@ function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boo
 export function MessageBubble({ message, agentInitials, className }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
+  const isNote = message.isNote === true
   const hasForm = !!(message.formFields && message.formFields.length > 0)
 
   if (hasForm) {
     return <FormBubble message={message} className={className} />
+  }
+
+  // Nota interna: layout dedicado — full-width amarelo claro com borda
+  // lateral âmbar + badge "Nota". Não usa o esquema azul (que indicaria
+  // mensagem enviada ao cliente). Mantém `senderInitials`/avatar do
+  // agente, mas em circle neutro pra não competir com a cor da nota.
+  if (isNote) {
+    return (
+      <div className={cn("flex w-full items-start gap-2.5", className)}>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 font-display text-[10px] font-bold text-amber-700">
+          {message.senderInitials || agentInitials || "·"}
+        </div>
+        <div
+          className="relative min-w-0 flex-1 rounded-[var(--radius-md)] border-l-[3px] border-amber-400 bg-amber-50/80 px-3.5 py-2 text-sm leading-[1.45] text-[var(--text-primary)] shadow-[0_2px_8px_rgba(180,150,80,0.10)]"
+        >
+          <div className="mb-1 flex items-center gap-1.5">
+            <IconLock size={10} className="text-amber-600" />
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-amber-700">
+              Nota interna
+            </span>
+          </div>
+          <MessageContent message={message} isOutgoing={true} />
+          <span className="pointer-events-none mt-1 block select-none text-right text-[10.5px] leading-none text-amber-700/70">
+            {message.time}
+          </span>
+        </div>
+      </div>
+    )
   }
 
   return (

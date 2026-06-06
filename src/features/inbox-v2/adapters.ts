@@ -382,6 +382,16 @@ export function toMessageBubble(
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
     messageType: dto.messageType ?? undefined,
+    // Nota interna: backend serializa `isPrivate` (Prisma) e o composer
+    // legado mandava `private: true`. Detectamos pelos três sinais —
+    // qualquer um true marca como nota e dispara o estilo dedicado no
+    // MessageBubble (sem isso a nota era renderizada como balão de saída
+    // azul, indistinguível de mensagem enviada ao cliente).
+    isNote:
+      dto.isPrivate === true ||
+      dto.private === true ||
+      dto.messageType === "note" ||
+      undefined,
     mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
     // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.
     status: isInbound ? undefined : toBubbleStatus(dto),

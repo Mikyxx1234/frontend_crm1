@@ -239,7 +239,6 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
   for (let i = 0; i < steps.length; i++) {
     const a = steps[i];
     const cfg = a.config as Record<string, unknown>;
-    const nextArrayStep = steps[i + 1];
 
     if (isInteractiveStep(a.type)) {
       const buttons = Array.isArray(cfg.buttons)
@@ -426,7 +425,7 @@ function WorkflowCanvasInner({
   autoAlignVersion,
   className,
 }: InnerProps) {
-  const { screenToFlowPosition, getNodes, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const [configOpen, setConfigOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<AutomationStep | null>(null);
   const stepsRef = useRef(steps);

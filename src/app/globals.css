@@ -190,6 +190,11 @@
   --glass-shadow-lg:  0 16px 48px rgba(100, 130, 180, 0.24);
   --glass-shadow-sm:  0 4px 16px rgba(100, 130, 180, 0.12);
 
+  /* Hover dos cards do dashboard (claro = bem sutil). */
+  --card-hover-filter:
+    drop-shadow(0 5px 14px rgba(100, 130, 180, 0.14))
+    drop-shadow(0 0 1px color-mix(in srgb, var(--brand-primary) 18%, transparent));
+
   /* Blur */
   --glass-blur:        blur(16px);
   --glass-blur-strong: blur(24px);
@@ -350,6 +355,11 @@
   --glass-shadow:     0 8px 32px rgba(0, 0, 0, 0.35);
   --glass-shadow-lg:  0 16px 48px rgba(0, 0, 0, 0.45);
   --glass-shadow-sm:  0 4px 16px rgba(0, 0, 0, 0.25);
+
+  /* Hover dos cards do dashboard no escuro (mantém o realce da marca). */
+  --card-hover-filter:
+    drop-shadow(0 8px 20px color-mix(in srgb, var(--brand-primary) 15%, transparent))
+    drop-shadow(0 0 1px color-mix(in srgb, var(--brand-primary) 40%, transparent));
 
   --bg-gradient: linear-gradient(135deg, #0b1220 0%, #131b30 40%, #1c1530 70%, #0e1426 100%);
 

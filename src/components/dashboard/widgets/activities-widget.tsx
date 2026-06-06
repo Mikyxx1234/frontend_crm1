@@ -3,25 +3,6 @@
 import { useDashboardMetrics } from "@/hooks/use-dashboard-data";
 import { ComparisonBadge } from "../comparison-badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import {
-  Phone,
-  Mail,
-  Calendar,
-  CheckSquare,
-  StickyNote,
-  MessageSquare,
-  MoreHorizontal,
-} from "lucide-react";
-
-const ACTIVITY_TYPES = [
-  { key: "call", label: "Ligações", icon: Phone, color: "text-emerald-600 bg-emerald-50" },
-  { key: "email", label: "E-mails", icon: Mail, color: "text-blue-600 bg-blue-50" },
-  { key: "meeting", label: "Reuniões", icon: Calendar, color: "text-violet-600 bg-violet-50" },
-  { key: "task", label: "Tarefas", icon: CheckSquare, color: "text-amber-600 bg-amber-50" },
-  { key: "whatsapp", label: "WhatsApp", icon: MessageSquare, color: "text-green-600 bg-green-50" },
-  { key: "note", label: "Notas", icon: StickyNote, color: "text-[var(--color-ink-soft)] bg-[var(--color-bg-subtle)]" },
-] as const;
 
 export function ActivitiesWidget() {
   const { current, previous, isLoading, hasComparison } = useDashboardMetrics();

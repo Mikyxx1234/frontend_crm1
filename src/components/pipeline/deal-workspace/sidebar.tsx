@@ -2,7 +2,6 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import {
@@ -264,7 +263,7 @@ export function WorkspaceSidebar({
     return Number.isNaN(d.getTime()) ? null : d.toISOString();
   };
 
-  const saveCompactExpectedClose = () => {
+  const _saveCompactExpectedClose = () => {
     if (!onDealUpdate) {
       setEditingExpectedClose(false);
       return;

@@ -336,7 +336,6 @@ export function TemplatePickerList({
       // operador relata "modal vazia": confirma se backend retornou lista
       // (sinal de `agentEnabled=false` em todos) ou se a chamada falhou
       // antes mesmo de montar a UI.
-      // eslint-disable-next-line no-console
       console.info("[templates] agent-enabled returned", items?.length ?? 0, "items");
       return items;
     },
@@ -345,7 +344,6 @@ export function TemplatePickerList({
   });
 
   if (isError) {
-    // eslint-disable-next-line no-console
     console.error("[templates] agent-enabled fetch failed", error);
   }
 

@@ -7,7 +7,7 @@ import {
   IconChevronDown,
   IconDotsVertical,
   IconSearch,
-  IconTag,
+  IconPlus,
   IconPencil,
   IconMessageCircle,
   IconChecklist,
@@ -102,23 +102,10 @@ const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: numbe
   { id: "timeline", label: "Timeline", icon: IconClock },
 ]
 
-const FIELD_GROUPS = [
-  "Área de Atuação",
-  "CEP",
-  "Data de Nascimento",
-  "Endereço",
-  "Escolaridade",
-  "Idade",
-  "Local de Ensino",
-  "Nome Completo",
-]
-
 export function DealDetailPanel({
   isOpen,
   onClose,
   deal,
-  stageRibbonSlot,
-  winButtonSlot,
   moreActionsSlot,
   ownerSlot,
   sourceSlot,

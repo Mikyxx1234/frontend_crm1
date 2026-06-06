@@ -1,7 +1,6 @@
 "use client";
 
 import { formatCurrency } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
 type StageHeaderProps = {
   name: string;

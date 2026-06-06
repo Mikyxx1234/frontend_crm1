@@ -3,7 +3,6 @@
 import { useDashboardMetrics } from "@/hooks/use-dashboard-data";
 import { ComparisonBadge } from "../comparison-badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 export function ConversionWidget() {
   const { current, previous, isLoading, hasComparison } = useDashboardMetrics();

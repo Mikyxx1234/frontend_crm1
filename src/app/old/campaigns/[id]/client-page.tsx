@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   CircleCheck,
   CircleX,
-  Clock,
   Eye,
   Loader2,
   Megaphone,
@@ -15,7 +14,6 @@ import {
   Rocket,
   Send,
   X,
-  Zap,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";

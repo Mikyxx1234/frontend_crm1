@@ -4,18 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
-  IconBolt,
-  IconBuilding,
-  IconChecklist,
-  IconFilter,
-  IconLayoutDashboard,
   IconLogout,
-  IconMessageCircle,
   IconMoon,
   IconSettings,
   IconSun,
   IconUserCircle,
-  IconUsers,
 } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
 
@@ -32,32 +25,22 @@ import { DockButton, DockProvider } from "@/components/crm/floating-dock";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
+import { toNavItems } from "@/lib/sidebar-catalog";
+import { useSidebarPreferences } from "@/features/sidebar/hooks";
 
 /**
  * NavRail dedicado ao segmento REAL `/*`.
  * O avatar redireciona diretamente para /settings/profile.
+ *
+ * Os itens operacionais sao montados a partir do catalogo
+ * (`@/lib/sidebar-catalog`) mesclado com a preferencia pessoal do usuario
+ * (GET /api/profile/preferences). Antes da preferencia carregar, renderiza
+ * a ordem padrao do catalogo (mesmo resultado no SSR e no 1o render client,
+ * evitando hydration mismatch).
  */
 
-interface NavItem {
-  icon: React.ReactNode;
-  title: string;
-  href: string;
-  exact?: boolean;
-}
-
-const items: NavItem[] = [
-  { icon: <IconLayoutDashboard size={20} />, title: "Dashboard", href: "/dashboard" },
-  { icon: <IconFilter size={20} />, title: "Pipeline", href: "/pipeline" },
-  { icon: <IconUsers size={20} />, title: "Contatos", href: "/contacts" },
-  { icon: <IconBuilding size={20} />, title: "Empresas", href: "/companies" },
-  { icon: <IconMessageCircle size={20} />, title: "Inbox", href: "/inbox" },
-  { icon: <IconChecklist size={20} />, title: "Atividades", href: "/activities" },
-  { icon: <IconBolt size={20} />, title: "Automações", href: "/automations" },
-];
-
-function isActiveFor(pathname: string, item: NavItem): boolean {
-  if (item.exact) return pathname === item.href;
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+function isActiveFor(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function computeInitials(name: string): string {
@@ -75,6 +58,8 @@ export function NavRailV2({ className }: { className?: string }) {
   const router = useRouter();
   const { theme, toggle } = useThemeV2();
   const { data: session } = useSession();
+  const { data: prefs } = useSidebarPreferences();
+  const navItems = toNavItems(prefs?.sidebar.items);
 
   // Iniciais resolvidas apenas no client para evitar hydration mismatch —
   // isPreviewMode() depende de NEXT_PUBLIC_PREVIEW_MODE que pode diferir entre SSR e client.
@@ -123,16 +108,19 @@ export function NavRailV2({ className }: { className?: string }) {
         EL
       </Link>
 
-      {items.map((item) => (
-        <DockButton
-          key={item.title}
-          href={item.href}
-          title={item.title}
-          active={isActiveFor(pathname, item)}
-        >
-          {item.icon}
-        </DockButton>
-      ))}
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <DockButton
+            key={item.key}
+            href={item.href}
+            title={item.title}
+            active={isActiveFor(pathname, item.href)}
+          >
+            <Icon size={20} />
+          </DockButton>
+        );
+      })}
 
       <div className="flex-1" />
 

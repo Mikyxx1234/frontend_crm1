@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { dt } from "@/lib/design-tokens";
-import { cn, dealNumericValue, formatCurrency, formatDate, getInitials, tagPillStyle } from "@/lib/utils";
+import { cn, formatCurrency, getInitials, tagPillStyle } from "@/lib/utils";
 
 import {
   CatalogProduct,
@@ -57,7 +57,7 @@ export function DealSidebar({
   isUpdating,
 }: DealSidebarProps) {
   const queryClient = useQueryClient();
-  const confirmDialog = useConfirm();
+  const _confirmDialog = useConfirm();
   const { data: sessionData } = useSession();
   const userRole = (sessionData?.user as { role?: string })?.role ?? "MEMBER";
   const canCreateTag = userRole === "ADMIN" || userRole === "MANAGER";
@@ -514,7 +514,6 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
 
 function SidebarDealSummaryCard({
   deal,
-  contact,
   users,
   stageOptions,
   onStageChange,
@@ -661,8 +660,6 @@ function StageDropdown({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const progressPct = stages.length > 1 ? ((currentIdx + 1) / stages.length) * 100 : 100;
-
   return (
     <div ref={ref} className="relative">
       <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
@@ -798,7 +795,6 @@ function TagComposerInline({
   isOpen,
   onOpenChange,
   canCreateTag,
-  dealId,
   existingTagIds,
   onSubmit,
   onSelectExisting,

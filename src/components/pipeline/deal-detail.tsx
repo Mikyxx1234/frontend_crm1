@@ -56,7 +56,7 @@ export function DealDetail({ dealId, open, onOpenChange, pipelineId, boardStages
   const confirm = useConfirm();
   const [editing, setEditing] = React.useState(false);
   const [lostOpen, setLostOpen] = React.useState(false);
-  const [lostReason, setLostReason] = React.useState("");
+  const [_lostReason, setLostReason] = React.useState("");
   const [rightTab, setRightTab] = React.useState<RightTabValue>("conversations");
   const [selectedConv, setSelectedConv] = React.useState<ConversationRow | null>(null);
   const [convStatus, setConvStatus] = React.useState("");

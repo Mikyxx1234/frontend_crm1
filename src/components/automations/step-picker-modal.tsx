@@ -228,7 +228,7 @@ export function StepPickerModal({
             <div className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
               {filteredGroups.length === 0 ? (
                 <p className="py-12 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
-                  Nenhum passo encontrado para "{query}".
+                  Nenhum passo encontrado para &quot;{query}&quot;.
                 </p>
               ) : (
                 filteredGroups.map((group, idx) => {

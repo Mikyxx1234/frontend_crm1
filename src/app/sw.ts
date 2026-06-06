@@ -1,6 +1,5 @@
 import { apiUrl } from "@/lib/api";
 /// <reference lib="webworker" />
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { Serwist } from "serwist";

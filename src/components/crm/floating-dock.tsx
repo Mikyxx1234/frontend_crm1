@@ -30,10 +30,12 @@ import { cn } from "@/lib/utils";
 
 const DockMouseYContext = React.createContext<MotionValue<number> | null>(null);
 
-/** Escala no pico da magnificação (1 = sem efeito). */
-const MAX_SCALE = 1.5;
+/** Escala no pico da magnificação (1 = sem efeito). Sutil para não
+ *  "estourar" o item ativo dentro do trilho de 72px (1.5x quase encostava
+ *  nas bordas do painel). */
+const MAX_SCALE = 1.18;
 /** Raio (px) de influência do cursor em torno do centro do botão. */
-const INFLUENCE = 90;
+const INFLUENCE = 80;
 
 const SPRING = { mass: 0.1, stiffness: 170, damping: 14 } as const;
 

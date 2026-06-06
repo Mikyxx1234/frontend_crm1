@@ -318,8 +318,8 @@ function OpeningSection({
                 {preview}
               </div>
               <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-                Exemplo com contato fictício "Maria Silva" /
-                deal "Curso de Gestão".
+                Exemplo com contato fictício &quot;Maria Silva&quot; /
+                deal &quot;Curso de Gestão&quot;.
               </p>
             </div>
           )}

@@ -68,13 +68,6 @@ type MetaFlowListItem = {
   crmFlowDefinitionId: string | null;
 };
 
-const INTERNAL_STATUS: Record<string, string> = {
-  DRAFT: "Rascunho",
-  PENDING_APPROVAL: "Pendente",
-  APPROVED: "Aprovado",
-  REJECTED: "Rejeitado",
-};
-
 const META_STATUS: Record<string, string> = {
   APPROVED: "Aprovado",
   PENDING: "Em análise",

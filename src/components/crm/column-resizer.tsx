@@ -79,7 +79,6 @@ export function ColumnResizer({
     <button
       type="button"
       aria-label="Redimensionar coluna"
-      aria-orientation="vertical"
       onPointerDown={onPointerDown}
       className={cn(
         "group absolute -right-[6px] top-0 z-20 flex h-full w-3 cursor-col-resize items-center justify-center",

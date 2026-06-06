@@ -120,7 +120,6 @@ function AutomationCard({
   onToggle,
   onEdit,
   onDelete,
-  onOpenEditor,
 }: {
   automation: AutomationRow;
   onToggle: () => void;
@@ -513,7 +512,6 @@ function LinkExistingForm({
   stages,
   targetTrigger,
   targetStageId,
-  currentAutomationIds,
   onSubmit,
   onCancel,
 }: {

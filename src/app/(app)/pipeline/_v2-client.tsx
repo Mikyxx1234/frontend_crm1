@@ -302,6 +302,15 @@ export default function KanbanV2ClientPage({
           activeFiltersCount={countActiveFilters(filters)}
           search={search}
           onSearchChange={setSearch}
+          onNewDeal={
+            columns.length > 0
+              ? () =>
+                  setAddStage({
+                    id: columns[0].stageId,
+                    name: columns[0].title,
+                  })
+              : undefined
+          }
         />
         <FiltersPopover
           open={filtersOpen}
@@ -599,8 +608,8 @@ export default function KanbanV2ClientPage({
         onOpenChange={(o) => {
           if (!o) setAddStage(null);
         }}
-        stageId={addStage?.id ?? ""}
-        stageName={addStage?.name}
+        stages={board.map((s) => ({ id: s.id, name: s.name }))}
+        defaultStageId={addStage?.id ?? null}
         pipelineId={pipelineId}
         statusFilter={status}
       />

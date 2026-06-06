@@ -2,8 +2,8 @@
 
 import { useTeamData } from "@/hooks/use-dashboard-data";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency, cn } from "@/lib/utils";
-import { Trophy, TrendingDown } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { Trophy } from "lucide-react";
 
 export function TeamWidget() {
   const { data: team, isLoading } = useTeamData();

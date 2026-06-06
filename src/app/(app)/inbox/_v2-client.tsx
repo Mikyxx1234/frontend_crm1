@@ -45,7 +45,6 @@ import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inb
 import {
   useBoard,
   useDealDetail,
-  useMoveDeal,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";

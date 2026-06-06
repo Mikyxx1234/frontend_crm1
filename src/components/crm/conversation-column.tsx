@@ -16,6 +16,7 @@ import {
 } from "@tabler/icons-react"
 import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
+import { TooltipGlass } from "./tooltip-glass"
 import { ConversationCard, type Conversation } from "./conversation-card"
 
 interface ConversationColumnProps {

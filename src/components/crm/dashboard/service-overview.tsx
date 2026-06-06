@@ -46,7 +46,6 @@ function initialsOf(name: string): string {
     .toUpperCase()
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
@@ -54,7 +53,6 @@ function ChartTooltip({ active, payload, label }: any) {
       {label && (
         <p className="mb-1 font-display text-[11px] font-bold text-[var(--tooltip-text)]">{label}</p>
       )}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {payload.map((entry: any) => (
         <p key={entry.dataKey} className="flex items-center gap-1.5 font-body text-[11px] text-[var(--tooltip-text)]">
           <span className="h-2 w-2 rounded-full" style={{ background: entry.color || entry.fill }} />

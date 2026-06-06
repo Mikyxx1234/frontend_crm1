@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -229,7 +228,6 @@ export default function LeadPage() {
 
   const contact = deal.contact;
   const pipelineStages = deal.stage.pipeline.stages;
-  const activeStageIdx = pipelineStages.findIndex((s) => s.id === deal.stage.id);
   const totalProducts = products.reduce((s, p) => s + p.total, 0);
 
   return (

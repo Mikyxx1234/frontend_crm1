@@ -60,7 +60,6 @@ export function PreviewMocksInstaller() {
     };
 
     window.__previewFetchInstalled = true;
-    // eslint-disable-next-line no-console
     console.info(
       "[preview] fetch mocks instalados — /api/* não vai bater no backend",
     );

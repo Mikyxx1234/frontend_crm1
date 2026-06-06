@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import {
   Activity,
   AlertCircle,
-  AlertTriangle,
   Bot,
   Check,
   CheckCheck,
@@ -230,7 +229,6 @@ export function InboxListHeader({
   search,
   onSearchChange,
   appliedSearch = "",
-  activeTab,
   showFilters,
   onToggleFilters,
   selectionMode,

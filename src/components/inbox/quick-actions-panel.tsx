@@ -59,7 +59,7 @@ const URGENCY_STYLE = {
   low: "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]",
 };
 
-export function QuickActionsPanel({ conversationId, contactId, contactPhone, lastInboundAt, onSendTemplate, onCreateDeal, onAddTask }: Props) {
+export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSendTemplate, onCreateDeal, onAddTask }: Props) {
   const queryClient = useQueryClient();
 
   const { data: stages = [] } = useQuery<StageOption[]>({

@@ -309,8 +309,6 @@ function StatusPopup({
   onClose,
   onSelect,
   current,
-  voiceCallsEnabled,
-  onVoiceCallsChange,
 }: {
   open: boolean;
   onClose: () => void;

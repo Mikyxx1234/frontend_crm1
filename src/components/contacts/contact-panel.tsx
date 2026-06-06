@@ -12,7 +12,6 @@ import {
   Calendar,
   Check,
   CheckCircle2,
-  Clock,
   ExternalLink,
   FileText,
   Handshake,
@@ -28,7 +27,6 @@ import {
   Circle,
   Trash2,
   X,
-  Zap,
 } from "lucide-react";
 
 import { ChannelBadge } from "@/components/inbox/channel-badge";
@@ -43,7 +41,6 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";

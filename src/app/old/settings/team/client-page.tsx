@@ -269,7 +269,7 @@ export default function TeamSettingsPage() {
         </div>
         <Button className="shrink-0 gap-2" onClick={() => setInviteOpen(true)}>
           <Plus className="size-4" />
-          Convidar membro
+          Novo usuário
         </Button>
       </div>
 
@@ -367,9 +367,10 @@ export default function TeamSettingsPage() {
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Convidar membro</DialogTitle>
+            <DialogTitle>Criar usuário</DialogTitle>
             <DialogDescription>
-              Novo usuário acessa com o e-mail e a senha informados abaixo.
+              O usuário é criado na hora e já acessa com o e-mail e a senha
+              definidos abaixo. Nenhum e-mail de convite é enviado.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
@@ -410,6 +411,16 @@ export default function TeamSettingsPage() {
                 placeholder="••••••••"
                 autoComplete="new-password"
               />
+              <p
+                className={cn(
+                  "text-[11px]",
+                  invitePassword.length > 0 && invitePassword.length < 6
+                    ? "text-destructive"
+                    : "text-muted-foreground",
+                )}
+              >
+                Mínimo de 6 caracteres.
+              </p>
             </div>
             <div className="grid gap-1.5">
               <span className="text-sm font-medium">Função</span>
@@ -493,7 +504,7 @@ export default function TeamSettingsPage() {
               className="gap-2"
             >
               {invite.isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-              Enviar convite
+              Criar usuário
             </Button>
           </DialogFooter>
         </DialogContent>

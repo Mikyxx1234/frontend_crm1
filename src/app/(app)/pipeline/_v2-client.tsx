@@ -17,6 +17,7 @@ import {
   IconArrowNarrowUp,
   IconArrowsExchange,
   IconArrowsSort,
+  IconCheckbox,
   IconChevronDown,
   IconClock,
   IconDotsVertical,
@@ -34,6 +35,7 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
+import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
 import { Chip } from "@/components/crm/chip";
 
@@ -57,7 +59,6 @@ import {
   useTeamUsers,
 } from "@/features/pipeline-v2/hooks";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
-import { ScrollMap } from "@/components/crm/scroll-map";
 import type { BoardDealDto, BoardStageDto, StatusFilter } from "@/features/pipeline-v2/api";
 import {
   AddDealDialog,
@@ -167,6 +168,12 @@ export default function KanbanV2ClientPage({
 
   // ── Seleção em massa (resgatada da versão antiga) ────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  /**
+   * Modo seleção global: quando ativo (via kebab "Selecionar"), todos os
+   * cards exibem o checkbox e o conteúdo desloca para a direita. Sair do
+   * modo limpa a seleção atual.
+   */
+  const [selectionMode, setSelectionMode] = useState(false);
   const { data: teamUsers = [] } = useTeamUsers(isAuthenticated);
 
   const toggleSelect = useCallback((id: string) => {
@@ -369,8 +376,8 @@ export default function KanbanV2ClientPage({
       {navRail ?? <NavRail />}
       <div
         ref={boardWrapperRef}
-        className="flex h-full min-h-0 min-w-0 flex-col gap-3"
-        style={{ overflow: "clip" }}
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-3"
+        style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)", overflow: "clip" }}
       >
         <PipelineHeader
           activeTab={activeTab}
@@ -405,6 +412,15 @@ export default function KanbanV2ClientPage({
                 onImport={() => { setImportExportOpen("import"); setKebabOpen(false); }}
                 onExport={() => { setImportExportOpen("export"); setKebabOpen(false); }}
                 onSettings={() => { router.push("/settings/pipeline"); setKebabOpen(false); }}
+                selectionMode={selectionMode}
+                onToggleSelectionMode={() => {
+                  setSelectionMode((v) => {
+                    const next = !v;
+                    if (!next) setSelectedIds(new Set());
+                    return next;
+                  });
+                  setKebabOpen(false);
+                }}
                 onClose={() => setKebabOpen(false)}
               />
             </div>
@@ -426,7 +442,7 @@ export default function KanbanV2ClientPage({
         />
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             ref={boardRef}
             className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-3"
@@ -443,6 +459,7 @@ export default function KanbanV2ClientPage({
                 stages={board}
                 addStage={addStage}
                 selectedIds={selectedIds}
+                selectionMode={selectionMode}
                 onToggleSelect={toggleSelect}
                 onToggleSelectAllInColumn={toggleSelectMany}
                 onAddDeal={() =>
@@ -1015,6 +1032,7 @@ function DroppableColumn({
   addStage,
   stages,
   selectedIds,
+  selectionMode,
   onToggleSelect,
   onToggleSelectAllInColumn,
 }: {
@@ -1028,6 +1046,7 @@ function DroppableColumn({
   addStage: { id: string; name: string } | null;
   stages: BoardStageDto[];
   selectedIds: Set<string>;
+  selectionMode: boolean;
   onToggleSelect: (id: string) => void;
   onToggleSelectAllInColumn: (ids: string[]) => void;
 }) {
@@ -1073,6 +1092,7 @@ function DroppableColumn({
             selectedCount: selectedInColumnCount,
             totalInColumn: dealIdsInColumn.length,
             onToggleAll: () => onToggleSelectAllInColumn(dealIdsInColumn),
+            enabled: selectionMode,
           }}
           dealsContainerRef={provided.innerRef}
           dealsContainerProps={{
@@ -1105,6 +1125,7 @@ function DroppableColumn({
                       deal={deal}
                       onClick={() => onDealClick(deal.id)}
                       isSelected={selectedIds.has(deal.id)}
+                      selectionMode={selectionMode}
                       onToggleSelect={() => onToggleSelect(deal.id)}
                       tagsSlot={
                         <>
@@ -1212,7 +1233,7 @@ function EmptyBoard({ isAuthenticated }: { isAuthenticated: boolean }) {
   );
 }
 
-// ────────────────────────────────────────────────���────��───────────
+// ───────────────────────────────────────────────������────��───────────
 // Helper: nome → slug de cor do v0 (av-blue, av-orange, ...).
 // O novo DealDetailPanel usa `av-${avatarColor}` direto no className,
 // então precisamos retornar um dos slugs definidos em globals-v2.css.
@@ -1258,6 +1279,8 @@ interface PipelineKebabMenuProps {
   onImport: () => void;
   onExport: () => void;
   onSettings: () => void;
+  selectionMode: boolean;
+  onToggleSelectionMode: () => void;
   onClose: () => void;
 }
 
@@ -1269,6 +1292,8 @@ function PipelineKebabMenu({
   onImport,
   onExport,
   onSettings,
+  selectionMode,
+  onToggleSelectionMode,
   onClose,
 }: PipelineKebabMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -1323,6 +1348,23 @@ function PipelineKebabMenu({
           )}
         </button>
       ))}
+
+      <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
+
+      {/* Seção: seleção */}
+      <button
+        type="button"
+        onClick={onToggleSelectionMode}
+        className={cn(
+          "flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold transition-colors",
+          selectionMode
+            ? "bg-[var(--brand-primary)]/8 text-[var(--brand-primary)]"
+            : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+        )}
+      >
+        <IconCheckbox size={13} className="shrink-0" />
+        {selectionMode ? "Sair da seleção" : "Selecionar..."}
+      </button>
 
       <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
 

@@ -64,6 +64,12 @@ interface DealCardProps {
    */
   isSelected?: boolean
   onToggleSelect?: () => void
+  /**
+   * Modo seleção global. Quando `true`, o checkbox fica permanentemente
+   * visível em todos os cards e o conteúdo desloca para a direita para
+   * abrir espaço (estilo Kommo).
+   */
+  selectionMode?: boolean
 }
 
 const tagStyles: Record<TagType, string> = {
@@ -75,26 +81,31 @@ const tagStyles: Record<TagType, string> = {
   ref: "bg-[rgba(244,114,182,0.12)] text-[#be185d] border-[rgba(244,114,182,0.25)]",
 }
 
-export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect }: DealCardProps) {
+export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode }: DealCardProps) {
+  // O checkbox SÓ aparece quando o "modo seleção" global está ativo
+  // (acionado pelo kebab "Selecionar..."). Removemos o antigo
+  // comportamento de "aparecer no hover" para que entrada e saída
+  // do modo sejam explícitas e previsíveis.
+  const showCheckbox = !!selectionMode && !!onToggleSelect
   return (
     <article
       onClick={onClick}
       className={cn(
-        "group relative cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all",
+        "group relative cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-1.5 shadow-[var(--glass-shadow-sm)] transition-all",
         "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-base)] hover:shadow-[var(--glass-shadow)]",
         isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",
+        // Em modo seleção o conteúdo desloca para a direita para abrir
+        // espaço ao checkbox fixo no canto esquerdo.
+        showCheckbox ? "pl-9 pr-3" : "px-3",
       )}
     >
-      {/* Checkbox de seleção em massa — canto superior esquerdo. Aparece
-          em hover OU quando o card está selecionado. stopPropagation em
-          vários eventos evita abrir o deal ou iniciar o drag. */}
-      {onToggleSelect ? (
+      {/* Checkbox de seleção em massa — só renderizado quando o
+          "modo seleção" está ativo. stopPropagation em vários eventos
+          evita abrir o deal ou iniciar o drag. */}
+      {showCheckbox ? (
         <label
-          className={cn(
-            "absolute left-2 top-2 z-20 flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-sm backdrop-blur-md transition-opacity",
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-          )}
+          className="absolute left-2 top-2 z-20 flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] shadow-sm backdrop-blur-md"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}

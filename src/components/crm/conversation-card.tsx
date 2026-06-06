@@ -293,11 +293,6 @@ export function ConversationCard({
             <span className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
               {conversation.name}
             </span>
-            {conversation.tag && (
-              <span className="shrink-0 truncate rounded-full border border-[rgba(91,111,245,0.20)] bg-[var(--color-enterprise-bg)] px-1.5 py-px font-display text-[9.5px] font-bold uppercase tracking-wide text-[var(--brand-primary)]">
-                {conversation.tag}
-              </span>
-            )}
             <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
               {conversation.time}
               {conversation.urgent && (

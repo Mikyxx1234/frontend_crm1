@@ -241,14 +241,14 @@
   width: 0 !important;
 }
 
-/* Cada .kanban-col tem altura natural (ajusta ao conteúdo) e nunca
-   ultrapassa a altura do .kanban-board-hscroll. align-self: flex-start
-   impede o stretch automático do flex cross-axis — assim a coluna
-   "fecha" junto com o último card/botão em vez de mostrar um vazio
-   cinza no fim quando há poucos cards. Quando o conteúdo ultrapassa
-   o max-height, o .kanban-scroll interno (overflow-y-auto) cuida. */
+/* Cada .kanban-col ocupa a altura TOTAL do .kanban-board-hscroll
+   (stretch do flex cross-axis). Isso evita que o fundo do app
+   apareça abaixo de colunas curtas. Quando o conteúdo ultrapassa
+   a altura, o .kanban-scroll interno (overflow-y-auto) lida com
+   o scroll vertical da lista de cards. */
 .v2-screen .kanban-board-hscroll .kanban-col {
-  align-self: flex-start !important;
+  align-self: stretch !important;
+  height: 100% !important;
   max-height: 100% !important;
   flex-shrink: 0;
   min-height: 0;
@@ -372,36 +372,27 @@
   background-color: var(--bg-base);
 }
 
-/* ── Kanban board: scrollbar horizontal minimalista (estilo Kommo) ──
-   Thumb fino de 4 px, quase invisível, que ganha opacidade no hover.
-   Track transparente — sem trilho colorido chamativo.
-   ──────────────────────────────────────────────────────────────── */
-.v2-root .kanban-board-hscroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(91, 111, 245, 0.28) transparent;
+/* ── Kanban board: scrollbar horizontal TOTALMENTE oculta ──
+   A navegação horizontal acontece via ScrollMap custom (componente
+   <ScrollMap />) — não queremos trilha/thumb nativo. Especificidade
+   alta (.v2-root .v2-screen) + !important para vencer regras anteriores
+   e reservas de scrollbar-gutter. */
+.v2-root .v2-screen .kanban-board-hscroll {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  scrollbar-gutter: auto !important;
 }
-.v2-root .kanban-board-hscroll::-webkit-scrollbar {
-  height: 4px;
+.v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar,
+.v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar-track,
+.v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar-thumb,
+.v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar-button,
+.v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar-corner {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
-.v2-root .kanban-board-hscroll::-webkit-scrollbar-track {
-  background: transparent;
-  margin-inline: 8px;
-}
-.v2-root .kanban-board-hscroll::-webkit-scrollbar-thumb {
-  background-color: rgba(91, 111, 245, 0.28);
-  border-radius: 99px;
-  transition: background-color 200ms ease;
-}
-.v2-root .kanban-board-hscroll:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(91, 111, 245, 0.55);
-}
-.v2-root .kanban-board-hscroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(91, 111, 245, 0.75);
-}
-.v2-root .kanban-board-hscroll::-webkit-scrollbar-button {
-  display: none;
-  width: 0;
-}
+
 /* ── Kanban colunas: scrollbar vertical ghost (supera .v2-root *) ── */
 .v2-root .kanban-scroll {
   scrollbar-width: thin;
@@ -423,18 +414,12 @@
 .v2-root .kanban-scroll:hover::-webkit-scrollbar-thumb {
   background-color: rgba(100, 130, 180, 0.35);
 }
-/* Dark mode */
-.v2-dark .v2-root .kanban-board-hscroll {
-  scrollbar-color: rgba(123, 141, 247, 0.28) transparent;
-}
-.v2-dark .v2-root .kanban-board-hscroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.v2-dark .v2-root .kanban-board-hscroll::-webkit-scrollbar-thumb {
-  background-color: rgba(123, 141, 247, 0.28);
-}
-.v2-dark .v2-root .kanban-board-hscroll:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(123, 141, 247, 0.55);
+/* Dark mode: nada para a scrollbar do board pois está totalmente
+   escondida acima — apenas garante novamente que nenhum trilho
+   apareça mesmo se algum browser herdar via media-query. */
+.v2-dark .v2-root .v2-screen .kanban-board-hscroll,
+.v2-dark .v2-root .v2-screen .kanban-board-hscroll::-webkit-scrollbar {
+  background: transparent !important;
 }
 
 @layer utilities {

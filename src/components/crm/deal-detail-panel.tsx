@@ -244,42 +244,6 @@ export function DealDetailPanel({
           </div>
         </header>
 
-        {/* TABS */}
-        <div className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-2">
-          {TABS.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3.5 py-2.5 font-display text-xs font-bold tracking-[0.06em] transition-all",
-                  isActive
-                    ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
-                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                )}
-              >
-                <Icon size={14} />
-                {tab.label.toUpperCase()}
-                {tab.count !== undefined && (
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
-                      isActive
-                        ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                        : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                    )}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
         {/* 2 COLS: SIDEBAR + CONTENT */}
         <div className="grid min-h-0 flex-1 grid-cols-[340px_1fr] gap-4 overflow-hidden">
           {/* SIDEBAR — painel funcional estilo Kommo (DS glass) */}
@@ -425,6 +389,7 @@ export function DealDetailPanel({
               aria-label={activeTab}
               className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
             >
+              <TabsBar activeTab={activeTab} onChange={setActiveTab} />
               {tabContentOverride[activeTab]}
             </main>
           ) : messagesSlot || composerSlot || sessionAlertSlot ? (
@@ -435,16 +400,9 @@ export function DealDetailPanel({
               aria-label="Conversa"
               className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
             >
-              <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-[18px]">
-                <div className="flex flex-1 items-center gap-2.5">
-                  <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
-                    {deal.name}
-                  </h2>
-                  <BadgeGlass variant="enterprise">ENTERPRISE</BadgeGlass>
-                </div>
-              </header>
+              <TabsBar activeTab={activeTab} onChange={setActiveTab} />
 
-              <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-7 py-6">
+              <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
               </div>
 
@@ -453,13 +411,21 @@ export function DealDetailPanel({
               {composerSlot ? composerSlot : <FallbackComposer />}
             </main>
           ) : (
-            // Default: usa o ChatArea novo com mensagens mock.
-            <ChatArea
-              contact={{ name: deal.name, badge: "enterprise", badgeLabel: "ENTERPRISE" }}
-              messages={fallbackMessages}
-              daySeparator="14/05/2026"
-              showSessionAlert
-            />
+            // Default: container com header de tabs + ChatArea mock.
+            <main
+              aria-label="Conversa"
+              className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+            >
+              <TabsBar activeTab={activeTab} onChange={setActiveTab} />
+              <div className="min-h-0 flex-1">
+                <ChatArea
+                  contact={{ name: deal.name, badge: "enterprise", badgeLabel: "ENTERPRISE" }}
+                  messages={fallbackMessages}
+                  daySeparator="14/05/2026"
+                  showSessionAlert
+                />
+              </div>
+            </main>
           )}
         </div>
       </div>
@@ -468,6 +434,56 @@ export function DealDetailPanel({
 }
 
 /* ─── Subcomponentes locais ─── */
+
+/**
+ * Barra de abas (Conversa / Atividades / Notas / Timeline) renderizada
+ * no header do container de conteúdo. Antes ficava numa linha solta
+ * entre a topbar e os containers; agora vive dentro do próprio container.
+ */
+function TabsBar({
+  activeTab,
+  onChange,
+}: {
+  activeTab: TabId
+  onChange: (id: TabId) => void
+}) {
+  return (
+    <header className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3">
+      <div className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+        {TABS.map((tab) => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+                isActive
+                  ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+              )}
+            >
+              <Icon size={14} />
+              {tab.label}
+              {tab.count !== undefined && (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 font-display text-[10px] font-bold",
+                    isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                  )}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </header>
+  )
+}
 
 function PanelIconBtn({
   children,

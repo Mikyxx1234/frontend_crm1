@@ -74,7 +74,7 @@ import {
   WinButton,
   useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
-import { FilterDropdown } from "@/components/pipeline/kanban-filters/filter-dropdown";
+import { FilterModalThreeCol } from "@/components/pipeline/kanban-filters/v2";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import {
   countActiveFilters,
@@ -440,10 +440,9 @@ export default function KanbanV2ClientPage({
               : undefined
           }
         />
-        <FilterDropdown
+        <FilterModalThreeCol
           open={filtersOpen}
           onOpenChange={setFiltersOpen}
-          anchorRef={filtersBtnRef}
           value={filters}
           options={filterOptions}
           optionsLoading={filterOptionsLoading}
@@ -455,7 +454,8 @@ export default function KanbanV2ClientPage({
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             ref={boardRef}
-            className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden"
+            className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-3"
+            style={{ backgroundColor: "rgba(175, 19, 19, 0.00)" }}
           >
             {columns.map((col) => (
               <DroppableColumn
@@ -1253,7 +1253,7 @@ function EmptyBoard({ isAuthenticated }: { isAuthenticated: boolean }) {
   );
 }
 
-// ────────────────────────────────────────────────���────��───────────
+// ───────────────────────────────────────────────������────��───────────
 // Helper: nome → slug de cor do v0 (av-blue, av-orange, ...).
 // O novo DealDetailPanel usa `av-${avatarColor}` direto no className,
 // então precisamos retornar um dos slugs definidos em globals-v2.css.
@@ -1279,7 +1279,7 @@ function avatarColorSlugFromName(name: string | null | undefined): string {
   return AVATAR_SLUGS[sum % AVATAR_SLUGS.length];
 }
 
-// ─── PipelineKebabMenu ─────────────────────────────────────��──────
+// ─── PipelineKebabMenu ─────────────────────────────────────���──────
 
 const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
   { key: "default",        label: "Padrão (posição)",      icon: <IconArrowsSort size={13} /> },

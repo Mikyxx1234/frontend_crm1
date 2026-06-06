@@ -1,7 +1,7 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -13,8 +13,6 @@ import {
   Loader2,
   MessageSquare,
   Plus,
-  Send,
-  Zap,
 } from "lucide-react";
 import * as React from "react";
 
@@ -25,9 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatDateTime } from "@/lib/utils";
-
-type QuickReplyRow = { id: string; title: string; content: string; category: string | null };
-type TemplateRow = { id: string; name: string; content: string; status: string };
 
 type ConversationRow = {
   id: string;

@@ -15,6 +15,7 @@ import {
 } from "@tabler/icons-react"
 import { StatCard } from "@/components/crm/stat-card"
 import { ButtonGlass } from "@/components/crm/button-glass"
+import { HoverEffectGroup, HoverEffectItem } from "@/components/crm/dashboard/card-hover-effect"
 import { formatCurrency } from "@/features/dashboard-v2/format"
 import type { DealsOverview as DealsOverviewData } from "@/features/dashboard-v2/api"
 
@@ -41,38 +42,48 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
   return (
     <div className="flex flex-col gap-4">
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <StatCard
-          icon={<IconCurrencyReal size={18} />}
-          label="Valor total"
-          value={formatCurrency(summary.totalValue)}
-          accent="brand"
-          caption="no funil ativo"
-        />
-        <StatCard
-          icon={<IconBriefcase size={18} />}
-          label="Negócios"
-          value={String(summary.totalDeals)}
-          accent="teal"
-          caption="em andamento"
-        />
-        <StatCard
-          icon={<IconTrophy size={18} />}
-          label="Taxa de ganho"
-          value={`${summary.winRate}%`}
-          delta={summary.deltas.winRate}
-          accent="success"
-          caption="vs. período anterior"
-        />
-        <StatCard
-          icon={<IconReceipt size={18} />}
-          label="Ticket médio"
-          value={formatCurrency(summary.avgTicket)}
-          delta={summary.deltas.avgTicket}
-          accent="purple"
-          caption="por negócio ganho"
-        />
-      </div>
+      <HoverEffectGroup>
+        <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+          <HoverEffectItem itemKey="kpi-valor" className="h-full">
+            <StatCard
+              icon={<IconCurrencyReal size={18} />}
+              label="Valor total"
+              value={formatCurrency(summary.totalValue)}
+              accent="brand"
+              caption="no funil ativo"
+            />
+          </HoverEffectItem>
+          <HoverEffectItem itemKey="kpi-negocios" className="h-full">
+            <StatCard
+              icon={<IconBriefcase size={18} />}
+              label="Negócios"
+              value={String(summary.totalDeals)}
+              accent="teal"
+              caption="em andamento"
+            />
+          </HoverEffectItem>
+          <HoverEffectItem itemKey="kpi-taxa" className="h-full">
+            <StatCard
+              icon={<IconTrophy size={18} />}
+              label="Taxa de ganho"
+              value={`${summary.winRate}%`}
+              delta={summary.deltas.winRate}
+              accent="success"
+              caption="vs. período anterior"
+            />
+          </HoverEffectItem>
+          <HoverEffectItem itemKey="kpi-ticket" className="h-full">
+            <StatCard
+              icon={<IconReceipt size={18} />}
+              label="Ticket médio"
+              value={formatCurrency(summary.avgTicket)}
+              delta={summary.deltas.avgTicket}
+              accent="purple"
+              caption="por negócio ganho"
+            />
+          </HoverEffectItem>
+        </div>
+      </HoverEffectGroup>
 
       {/* Carrossel de etapas */}
       <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md shadow-[var(--glass-shadow-sm)]">
@@ -101,9 +112,12 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
           </p>
         ) : (
           <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-1.5 [scrollbar-width:thin]">
-            {/* Card fixo "Novos do período" — negócios criados na janela
-                selecionada (padrão: hoje). Respeita o range do calendário. */}
-            <article className="flex w-[200px] shrink-0 flex-col justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/35 bg-[color-mix(in_srgb,var(--brand-primary)_9%,var(--glass-bg-overlay))] p-3.5 shadow-[var(--glass-shadow-sm)]">
+           <HoverEffectGroup>
+            {/* Card fixo "Novos do período" — pessoas (contatos) que entraram
+                no CRM na janela selecionada. Escopo: organização inteira
+                (não depende do pipeline). Respeita o range do calendário. */}
+            <HoverEffectItem itemKey="novos-periodo" className="shrink-0">
+            <article className="flex h-full w-[200px] flex-col justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/35 bg-[color-mix(in_srgb,var(--brand-primary)_9%,var(--glass-bg-overlay))] p-3.5 shadow-[var(--glass-shadow-sm)]">
               <div className="flex items-center gap-2">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]">
                   <IconSparkles size={15} />
@@ -117,18 +131,19 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
                   {newInPeriod.count}
                 </span>
                 <span className="mt-1 font-body text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
-                  negócios criados
+                  novos contatos
                 </span>
               </div>
               <span className="font-display text-[13px] font-bold text-[var(--text-secondary)]">
                 {formatCurrency(newInPeriod.value)}
               </span>
             </article>
+            </HoverEffectItem>
 
             {stages.map((stage) => (
+              <HoverEffectItem key={stage.id} itemKey={stage.id} className="shrink-0">
               <article
-                key={stage.id}
-                className="flex w-[252px] shrink-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3.5 shadow-[var(--glass-shadow-sm)]"
+                className="flex h-full w-[252px] flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3.5 shadow-[var(--glass-shadow-sm)]"
               >
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
@@ -165,7 +180,9 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
                   <Metric icon={<IconCircleX size={13} />} value={stage.lost} label="Perdidos" tone="danger" />
                 </div>
               </article>
+              </HoverEffectItem>
             ))}
+           </HoverEffectGroup>
           </div>
         )}
       </section>

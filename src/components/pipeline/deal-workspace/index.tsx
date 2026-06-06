@@ -5,7 +5,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, User, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/hooks/use-confirm";
@@ -615,14 +615,5 @@ export function DealWorkspace({
         </div>
       )}
     </WorkspaceShell>
-  );
-}
-
-function EmptySidebar() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
-      <User className="mb-3 size-10 opacity-30" strokeWidth={1.5} />
-      <p>Nenhum contato vinculado a este negocio.</p>
-    </div>
   );
 }

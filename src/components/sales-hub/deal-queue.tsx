@@ -32,7 +32,7 @@ import {
   UserMinus,
   ArrowUpDown,
   Mic,
-  Image,
+  Image as ImageIcon,
   FileText,
   Paperclip,
   Video,
@@ -338,7 +338,7 @@ function PreviewLastMessage({ deal }: { deal: BoardDeal }) {
     return (
       <span className="flex items-center gap-1 text-[var(--color-ink-muted)]">
         {isOut ? <span className="text-[var(--color-ink-muted)]">Você: </span> : null}
-        <Image className="size-3 shrink-0 text-[#3b82f6]" />
+        <ImageIcon className="size-3 shrink-0 text-[#3b82f6]" />
         <span>Imagem</span>
       </span>
     );

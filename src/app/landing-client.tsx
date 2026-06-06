@@ -15,7 +15,9 @@ import {
   Users,
 } from "lucide-react";
 
+import { BlurText } from "@/components/ui/blur-text";
 import { Button } from "@/components/ui/button";
+import { HeroGeometric } from "@/components/ui/hero-geometric";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -28,19 +30,24 @@ import { cn } from "@/lib/utils";
  */
 export function LandingClient() {
   return (
-    <main className="min-h-dvh bg-zinc-950 text-white">
+    <HeroGeometric color1="#3B82F6" color2="#F0F9FF" speed={1}>
+    <main className="min-h-dvh text-white">
       <Header />
       <section className="relative mx-auto max-w-6xl px-6 py-12 md:py-20">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <div className="flex flex-col justify-center">
-            <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 bg-primary/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
-              <Sparkles className="size-3.5 text-white" />
-              CRM multi-tenant EduIT
-            </span>
+            <div className="mb-5 flex items-center gap-2">
+              <Sparkles className="size-4 shrink-0 text-sky-300" />
+              <BlurText
+                text="Feito para vender mais"
+                delay={90}
+                className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-200"
+              />
+            </div>
             <h1 className="font-heading text-4xl font-bold leading-[1.05] tracking-tight text-white md:text-5xl lg:text-6xl">
               Seu CRM, seu funil,<br />seu time — em um lugar só.
             </h1>
-            <p className="mt-5 max-w-xl text-base text-zinc-300 md:text-lg">
+            <p className="mt-5 max-w-xl text-base text-zinc-200 md:text-lg">
               Cadastre sua empresa em 30 segundos e comece a centralizar
               conversas de WhatsApp, pipeline de vendas e equipe no mesmo
               dashboard.
@@ -73,8 +80,8 @@ export function LandingClient() {
         </div>
       </section>
 
-      <footer className="border-t border-zinc-800 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-zinc-400 md:flex-row md:justify-between md:text-left">
+      <footer className="border-t border-white/10 py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-zinc-300 md:flex-row md:justify-between md:text-left">
           <span>© {new Date().getFullYear()} EduIT CRM. Todos os direitos reservados.</span>
           <span>
             Já tem conta?{" "}
@@ -85,6 +92,7 @@ export function LandingClient() {
         </div>
       </footer>
     </main>
+    </HeroGeometric>
   );
 }
 
@@ -125,7 +133,7 @@ function Feature({
       </div>
       <div>
         <div className="font-semibold text-white">{label}</div>
-        <div className="text-xs text-zinc-400">{desc}</div>
+        <div className="text-xs text-zinc-300">{desc}</div>
       </div>
     </li>
   );

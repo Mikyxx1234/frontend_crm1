@@ -73,12 +73,12 @@ const CONDITION_OPS = [
   { value: "contains", worker: "includes" as const, label: "Contém" },
 ] as const;
 
-function workerToUiOp(op: string): string {
+function _workerToUiOp(op: string): string {
   const m = CONDITION_OPS.find((o) => o.worker === op);
   return m?.value ?? "equals";
 }
 
-function uiOpToWorker(ui: string): string {
+function _uiOpToWorker(ui: string): string {
   const m = CONDITION_OPS.find((o) => o.value === ui);
   return m?.worker ?? "eq";
 }

@@ -69,7 +69,6 @@ import {
   apiStepsToWorkflow,
   defaultTriggerConfig,
   stepTypeLabel,
-  triggerTypeLabel,
   workflowStepsToPayload,
 } from "@/lib/automation-workflow";
 import { autoAlignWorkflowSteps } from "@/lib/automation-layout";

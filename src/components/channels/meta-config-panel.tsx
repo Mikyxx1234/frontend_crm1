@@ -422,7 +422,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
             placeholder="Ex: WhatsApp Eduit, WhatsApp Comercial"
           />
           <p className="text-xs text-muted-foreground">
-            Nome exibido como "Fonte" no contato quando criado por esta conexão.
+            Nome exibido como &quot;Fonte&quot; no contato quando criado por esta conexão.
           </p>
         </div>
         <div className="space-y-2">

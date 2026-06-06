@@ -62,6 +62,8 @@ interface PipelineHeaderProps {
    * esses controles não fazem sentido.
    */
   hideActions?: boolean
+  /** Handler do botao "Novo". Sem ele o botao fica desabilitado. */
+  onNewDeal?: () => void
 }
 
 export function PipelineHeader({
@@ -80,6 +82,7 @@ export function PipelineHeader({
   tabsOverride,
   settingsSlot,
   hideActions = false,
+  onNewDeal,
 }: PipelineHeaderProps) {
   const [tab, setTab] = useState<TabId>(activeTab)
   const [view, setView] = useState<ViewType>(activeView)
@@ -176,7 +179,9 @@ export function PipelineHeader({
 
               <button
                 type="button"
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
+                onClick={onNewDeal}
+                disabled={!onNewDeal}
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 <IconPlus size={16} /> Novo
               </button>

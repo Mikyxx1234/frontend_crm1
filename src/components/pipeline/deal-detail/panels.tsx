@@ -107,7 +107,6 @@ export function ConversationsPanel({
   convStatus,
   onStatusChange,
   contactId,
-  contactPhone,
   onConversationCreated,
 }: ConversationsPanelProps) {
   const queryClient = useQueryClient();

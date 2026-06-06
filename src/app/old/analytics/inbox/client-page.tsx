@@ -4,16 +4,12 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowDownRight,
-  ArrowUpRight,
   Clock,
   Headphones,
   Loader2,
   MessageSquare,
   MessagesSquare,
-  Send,
   Timer,
-  TrendingUp,
   Users,
 } from "lucide-react";
 import {

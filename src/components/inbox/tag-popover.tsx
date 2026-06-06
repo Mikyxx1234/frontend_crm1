@@ -45,7 +45,6 @@ async function fetchTags(): Promise<TagItem[]> {
 // preview/listagem para separar visualmente o emoji do texto.
 function splitEmojiPrefix(name: string): { emoji: string | null; label: string } {
   if (!name) return { emoji: null, label: "" };
-  // eslint-disable-next-line no-misleading-character-class
   const match = name.match(/^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s*/u);
   if (match) {
     return { emoji: match[1], label: name.slice(match[0].length).trim() };

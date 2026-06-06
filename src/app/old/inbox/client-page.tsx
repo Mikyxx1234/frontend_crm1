@@ -3,12 +3,10 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronsLeft, SquareCheck as CheckSquare, MessageSquare, X } from "lucide-react";
-import { AnimatePresence, MotionDiv } from "@/components/ui/motion";
+import { ChevronsLeft, MessageSquare, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
-import { ChannelBadge } from "@/components/inbox/channel-badge";
 import { ChatWindow } from "@/components/inbox/chat-window";
 import {
   ConversationList,
@@ -68,8 +66,6 @@ async function fetchTabCounts(): Promise<Record<InboxTab, number>> {
   }
   return res.json();
 }
-
-const statusLabels: Record<string, string> = { OPEN: "Aberto", RESOLVED: "Resolvido", PENDING: "Pendente", SNOOZED: "Adiado" };
 
 type AgentOnlineStatus = "ONLINE" | "OFFLINE" | "AWAY";
 

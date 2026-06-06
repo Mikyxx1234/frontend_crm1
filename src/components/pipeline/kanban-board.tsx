@@ -141,11 +141,11 @@ export function KanbanBoard({
   const [confirmDelete, setConfirmDelete] = React.useState<{ dealId: string; dealLabel: string } | null>(null);
   const [recentlyMoved, setRecentlyMoved] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const [activeStageIdx, setActiveStageIdx] = React.useState(0);
+  const [_activeStageIdx, setActiveStageIdx] = React.useState(0);
   const [scrollState, setScrollState] = React.useState({ left: 0, width: 0, client: 0 });
-  const isDraggingMinimap = React.useRef(false);
+  const _isDraggingMinimap = React.useRef(false);
 
-  const scrollToStage = React.useCallback((idx: number) => {
+  const _scrollToStage = React.useCallback((idx: number) => {
     if (!scrollRef.current) return;
     const cols = scrollRef.current.querySelectorAll<HTMLElement>(':scope > [data-stage-col]');
     const col = cols[idx];

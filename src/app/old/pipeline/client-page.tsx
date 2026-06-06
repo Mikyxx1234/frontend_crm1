@@ -26,7 +26,6 @@ import {
   createSavedFilter as apiCreateSavedFilter,
   deleteSavedFilter as apiDeleteSavedFilter,
   duplicateSavedFilter as apiDuplicateSavedFilter,
-  fetchBoardWithFilters,
   fetchFilterOptions,
   fetchSavedFilters,
   updateSavedFilter as apiUpdateSavedFilter,
@@ -192,17 +191,6 @@ async function fetchPipelines(): Promise<PipelineListItem[]> {
   if (Array.isArray(data)) return data;
   const list = data.pipelines ?? data.items;
   return Array.isArray(list) ? list : [];
-}
-
-/** Detecta se o backend ainda nao foi atualizado (POST nao existe). */
-class BackendOutdatedError extends Error {
-  constructor() {
-    super(
-      "O backend desta instalação ainda não foi atualizado para suportar filtros avançados. " +
-        "Faça redeploy do backend (as migrations rodam automaticamente no boot).",
-    );
-    this.name = "BackendOutdatedError";
-  }
 }
 
 async function fetchBoardGet(

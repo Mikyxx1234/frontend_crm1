@@ -1,206 +1,498 @@
 "use client";
 
 /*
- * Formulário inline de criação de deal — estilo Kommo CRM.
- * Renderiza DENTRO da coluna (sem portal, sem fixed) logo acima do
- * botão "+ Adicionar negócio". Mantém as mesmas props externas.
+ * Formulário completo de criação de negócio (paridade com o DealForm
+ * legado + extras pedidos pelo time):
+ *  - Campos nativos: título, valor, estágio (selecionável), responsável,
+ *    fechamento esperado.
+ *  - Contato: nenhum / buscar existente / criar novo (nome + telefone +
+ *    e-mail). Ao criar novo, o contato é cadastrado e atribuído ao deal.
+ *  - Custom fields de negócio (quando o usuário tem acesso às definições).
  */
 
-import * as React from "react";
-import { useCreateDeal } from "@/features/pipeline-v2/hooks";
-import { cn } from "@/lib/utils";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+import { apiUrl } from "@/lib/api";
+import { useCreateDeal, useTeamUsers } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
+import { useContacts, useCreateContact } from "@/features/directory-v2/hooks";
 
 interface AddDealDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  stageId: string;
-  stageName?: string;
+  /** Lista completa de estágios do pipeline ativo (para o seletor). */
+  stages: { id: string; name: string }[];
+  /** Estágio pré-selecionado (coluna que disparou a criação). */
+  defaultStageId?: string | null;
   pipelineId: string | null;
   statusFilter?: StatusFilter;
 }
 
+type ContactMode = "none" | "search" | "new";
+
+interface DealFieldDef {
+  id: string;
+  label: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+}
+
+const inputCls =
+  "w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]";
+const labelCls =
+  "mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]";
+
 export function AddDealDialog({
   open,
   onOpenChange,
-  stageId,
+  stages,
+  defaultStageId,
   pipelineId,
   statusFilter = "OPEN",
 }: AddDealDialogProps) {
-  const createMut = useCreateDeal(pipelineId, statusFilter);
+  const [title, setTitle] = useState("");
+  const [value, setValue] = useState("");
+  const [stageId, setStageId] = useState("");
+  const [ownerId, setOwnerId] = useState("");
+  const [expectedClose, setExpectedClose] = useState("");
 
-  const [title,          setTitle]        = React.useState("");
-  const [value,          setValue]        = React.useState("");
-  const [contactName,    setContactName]  = React.useState("");
-  const [contactPhone,   setContactPhone] = React.useState("");
-  const [contactEmail,   setContactEmail] = React.useState("");
+  const [contactMode, setContactMode] = useState<ContactMode>("none");
+  const [contactSearch, setContactSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedContact, setSelectedContact] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newEmail, setNewEmail] = useState("");
 
+  const [cfValues, setCfValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const titleRef = React.useRef<HTMLInputElement>(null);
+  const createDeal = useCreateDeal(pipelineId, statusFilter);
+  const createContact = useCreateContact();
+  const { data: users = [] } = useTeamUsers(open);
 
-  // Foca no campo Nome ao abrir; limpa ao fechar
-  React.useEffect(() => {
+  const { data: fieldDefs = [] } = useQuery<DealFieldDef[]>({
+    queryKey: ["deal-field-defs-v2"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/api/custom-fields?entity=deal"));
+      if (!res.ok) return [];
+      const data = await res.json().catch(() => []);
+      return Array.isArray(data) ? (data as DealFieldDef[]) : [];
+    },
+    enabled: open,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(contactSearch), 300);
+    return () => window.clearTimeout(t);
+  }, [contactSearch]);
+
+  const { data: contactsPage, isFetching: contactsLoading } = useContacts({
+    search: debouncedSearch || undefined,
+    page: 1,
+    perPage: 8,
+    enabled: open && contactMode === "search",
+  });
+  const contacts = contactsPage?.items ?? [];
+
+  useEffect(() => {
     if (open) {
-      setTimeout(() => titleRef.current?.focus(), 50);
+      setStageId(defaultStageId || stages[0]?.id || "");
     } else {
-      setTitle(""); setValue(""); setContactName(""); setContactPhone("");
-      setContactEmail("");
+      setTitle("");
+      setValue("");
+      setOwnerId("");
+      setExpectedClose("");
+      setContactMode("none");
+      setContactSearch("");
+      setSelectedContact(null);
+      setNewName("");
+      setNewPhone("");
+      setNewEmail("");
+      setCfValues({});
+      setError(null);
+      setSaving(false);
     }
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultStageId]);
 
-  // Fecha com ESC
-  React.useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onEsc(e: KeyboardEvent) {
       if (e.key === "Escape") onOpenChange(false);
     }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    if (open) {
+      window.addEventListener("keydown", onEsc);
+      return () => window.removeEventListener("keydown", onEsc);
+    }
   }, [open, onOpenChange]);
+
+  const pending = saving || createDeal.isPending || createContact.isPending;
+
+  const canSubmit = useMemo(() => {
+    if (!title.trim() || !stageId) return false;
+    if (contactMode === "new" && !newName.trim()) return false;
+    return true;
+  }, [title, stageId, contactMode, newName]);
+
+  if (!open || typeof document === "undefined") return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const t = title.trim();
-    if (!t) return;
-    const num = value.trim() ? parseFloat(value.replace(",", ".")) : undefined;
+    if (!canSubmit || pending) return;
+    setError(null);
+    setSaving(true);
+    try {
+      let contactId: string | undefined;
+      if (contactMode === "search" && selectedContact) {
+        contactId = selectedContact.id;
+      } else if (contactMode === "new" && newName.trim()) {
+        const created = await createContact.mutateAsync({
+          name: newName.trim(),
+          phone: newPhone.trim() || null,
+          email: newEmail.trim() || null,
+        });
+        contactId = created.id;
+      }
 
-    createMut.mutate(
-      {
-        title: t,
+      const num = value.trim() ? Number(value.replace(",", ".")) : undefined;
+      const { deal } = await createDeal.mutateAsync({
+        title: title.trim(),
         stageId,
         value: Number.isFinite(num) ? (num as number) : undefined,
-      },
-      {
-        onSuccess: async (deal) => {
-          // Se houver dados de contato, cria e vincula via /api/contacts
-          if (contactName.trim() || contactPhone.trim() || contactEmail.trim()) {
-            try {
-              await fetch("/api/contacts", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  name:   contactName.trim() || "Sem nome",
-                  phone:  contactPhone.trim() || undefined,
-                  email:  contactEmail.trim() || undefined,
-                  dealId: (deal as { id?: string })?.id,
-                }),
-              });
-            } catch {
-              // silencia — deal já foi criado com sucesso
-            }
-          }
-          onOpenChange(false);
-        },
-      },
-    );
+        ownerId: ownerId || undefined,
+        contactId,
+        expectedClose: expectedClose
+          ? new Date(expectedClose + "T12:00:00").toISOString()
+          : undefined,
+      });
+
+      const cfPayload = Object.entries(cfValues)
+        .filter(([, v]) => v != null && v !== "")
+        .map(([fieldId, v]) => ({ fieldId, value: String(v) }));
+      if (cfPayload.length > 0 && deal?.id) {
+        const res = await fetch(apiUrl(`/api/deals/${deal.id}/custom-fields`), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ values: cfPayload }),
+        });
+        if (!res.ok) {
+          toast.warning(
+            "Negócio criado, mas não foi possível salvar os campos personalizados.",
+          );
+        }
+      }
+
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao criar negócio.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (!open) return null;
-
-  const inputBase = cn(
-    "w-full bg-transparent px-3 py-2.5",
-    "font-display text-[13px] text-[var(--text-primary)]",
-    "placeholder:text-[var(--text-muted)]",
-    "outline-none transition-colors",
-    "focus:bg-[rgba(255,255,255,0.12)]",
-  );
-
-  const inputSm = cn(
-    "w-full bg-transparent px-3 py-2",
-    "font-display text-[12px] text-[var(--text-secondary)]",
-    "placeholder:text-[var(--text-muted)]",
-    "outline-none transition-colors",
-    "focus:bg-[rgba(255,255,255,0.12)]",
-  );
-
-  const divider = "border-b border-[var(--glass-border-subtle)]";
-
-  return (
+  return createPortal(
     <div
-      style={{ animation: "addDealExpand 180ms cubic-bezier(0.4,0,0.2,1)" }}
-      className={cn(
-        "mx-2 mb-2 overflow-hidden",
-        "rounded-[var(--radius-lg)] border border-[var(--glass-border)]",
-        "bg-[var(--glass-bg-strong)] backdrop-blur-[16px]",
-        "shadow-[var(--glass-shadow)]",
-      )}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={() => onOpenChange(false)}
     >
-      <form onSubmit={handleSubmit}>
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        className="flex max-h-[88vh] w-[460px] max-w-[92vw] flex-col rounded-[var(--radius-xl)] border shadow-2xl"
+        style={{
+          background: "rgba(255, 255, 255, 0.98)",
+          borderColor: "var(--glass-border, rgba(0,0,0,0.08))",
+        }}
+      >
+        <h3 className="border-b border-[var(--glass-border,rgba(0,0,0,0.08))] px-5 py-4 font-display text-base font-bold text-[var(--text-primary,#1a202c)]">
+          Novo negócio
+        </h3>
 
-        {/* Bloco 1 — Nome + Valor */}
-        <div className={divider}>
-          <input
-            ref={titleRef}
-            type="text"
-            placeholder="Nome"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={cn(inputBase, divider, "font-semibold")}
-          />
-          <input
-            type="text"
-            inputMode="decimal"
-            placeholder="R$ 0"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            className={inputBase}
-          />
+        <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+          <label className="block">
+            <span className={labelCls}>Título *</span>
+            <input
+              type="text"
+              autoFocus
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ex.: Proposta Empresa X"
+              className={inputCls}
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className={labelCls}>Valor (R$)</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="0,00"
+                className={inputCls}
+              />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Estágio *</span>
+              <select
+                value={stageId}
+                onChange={(e) => setStageId(e.target.value)}
+                className={inputCls}
+              >
+                {stages.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className={labelCls}>Responsável</span>
+              <select
+                value={ownerId}
+                onChange={(e) => setOwnerId(e.target.value)}
+                className={inputCls}
+              >
+                <option value="">Sem responsável</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Fechamento esperado</span>
+              <input
+                type="date"
+                value={expectedClose}
+                onChange={(e) => setExpectedClose(e.target.value)}
+                className={inputCls}
+              />
+            </label>
+          </div>
+
+          {/* Contato */}
+          <div className="rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] p-3">
+            <span className={labelCls}>Contato</span>
+            <div className="mb-2 flex gap-1">
+              {(
+                [
+                  { id: "none", label: "Sem contato" },
+                  { id: "search", label: "Buscar" },
+                  { id: "new", label: "Novo" },
+                ] as const
+              ).map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setContactMode(m.id)}
+                  className="rounded-full px-3 py-1 font-display text-[11px] font-semibold transition-colors"
+                  style={
+                    contactMode === m.id
+                      ? { background: "var(--brand-primary,#5b6ff5)", color: "#fff" }
+                      : { background: "rgba(0,0,0,0.05)", color: "var(--text-secondary,#4a5568)" }
+                  }
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {contactMode === "search" ? (
+              <div>
+                {selectedContact ? (
+                  <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[rgba(91,111,245,0.08)] px-3 py-2 text-[13px]">
+                    <span className="font-medium text-[var(--text-primary,#1a202c)]">
+                      {selectedContact.name}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-[12px] text-[var(--brand-primary,#5b6ff5)] underline"
+                      onClick={() => setSelectedContact(null)}
+                    >
+                      trocar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                      placeholder="Buscar por nome, e-mail…"
+                      className={inputCls}
+                    />
+                    <div className="mt-1 max-h-40 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))]">
+                      {contactsLoading ? (
+                        <p className="p-2 text-[12px] text-[var(--text-muted,#718096)]">
+                          Buscando…
+                        </p>
+                      ) : contacts.length === 0 ? (
+                        <p className="p-2 text-[12px] text-[var(--text-muted,#718096)]">
+                          Nenhum contato encontrado.
+                        </p>
+                      ) : (
+                        <ul>
+                          {contacts.map((c) => (
+                            <li key={c.id}>
+                              <button
+                                type="button"
+                                className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-[13px] hover:bg-black/5"
+                                onClick={() => {
+                                  setSelectedContact({ id: c.id, name: c.name });
+                                  setContactSearch("");
+                                }}
+                              >
+                                <span className="font-medium text-[var(--text-primary,#1a202c)]">
+                                  {c.name}
+                                </span>
+                                {c.email ? (
+                                  <span className="text-[11px] text-[var(--text-muted,#718096)]">
+                                    {c.email}
+                                  </span>
+                                ) : null}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
+
+            {contactMode === "new" ? (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Nome do contato *"
+                  className={inputCls}
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="tel"
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                    placeholder="Telefone"
+                    className={inputCls}
+                  />
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="E-mail"
+                    className={inputCls}
+                  />
+                </div>
+                <p className="text-[11px] text-[var(--text-muted,#718096)]">
+                  O contato é criado e atribuído ao negócio automaticamente.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Custom fields */}
+          {fieldDefs.length > 0 ? (
+            <div className="space-y-3 border-t border-[var(--glass-border,rgba(0,0,0,0.08))] pt-3">
+              {fieldDefs.map((f) => {
+                const v = cfValues[f.id] ?? "";
+                const onChange = (val: string) =>
+                  setCfValues((prev) => ({ ...prev, [f.id]: val }));
+                const type = (f.type || "").toLowerCase();
+                return (
+                  <label key={f.id} className="block">
+                    <span className={labelCls}>
+                      {f.label}
+                      {f.required ? " *" : ""}
+                    </span>
+                    {f.options && f.options.length > 0 ? (
+                      <select
+                        value={v}
+                        onChange={(e) => onChange(e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="">Selecione…</option>
+                        {f.options.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : type === "date" ? (
+                      <input
+                        type="date"
+                        value={v}
+                        onChange={(e) => onChange(e.target.value)}
+                        className={inputCls}
+                      />
+                    ) : type === "number" ? (
+                      <input
+                        type="number"
+                        value={v}
+                        onChange={(e) => onChange(e.target.value)}
+                        className={inputCls}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={v}
+                        onChange={(e) => onChange(e.target.value)}
+                        className={inputCls}
+                      />
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {error ? (
+            <p className="text-[12px] text-[var(--color-danger,#e11d48)]">{error}</p>
+          ) : null}
         </div>
 
-        {/* Bloco 2 — Contato */}
-        <div className={divider}>
-          <input
-            type="text"
-            placeholder="Contato: Primeiro nome"
-            value={contactName}
-            onChange={(e) => setContactName(e.target.value)}
-            className={cn(inputSm, divider)}
-          />
-          <input
-            type="tel"
-            placeholder="Contato: Telefone"
-            value={contactPhone}
-            onChange={(e) => setContactPhone(e.target.value)}
-            className={cn(inputSm, divider)}
-          />
-          <input
-            type="email"
-            placeholder="Contato: E-mail"
-            value={contactEmail}
-            onChange={(e) => setContactEmail(e.target.value)}
-            className={inputSm}
-          />
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center gap-1.5 px-3 py-2.5">
-          <button
-            type="submit"
-            disabled={!title.trim() || createMut.isPending}
-            className={cn(
-              "rounded-[var(--radius-md)] px-3.5 py-1.5",
-              "bg-[var(--brand-primary)] text-white",
-              "font-display text-[12px] font-semibold",
-              "shadow-[0_4px_14px_rgba(91,111,245,0.35)]",
-              "transition-all hover:bg-[var(--brand-primary-dark)] hover:shadow-[0_4px_18px_rgba(91,111,245,0.45)]",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          >
-            {createMut.isPending ? "Criando..." : "Adicionar"}
-          </button>
-
+        <div className="flex justify-end gap-2 border-t border-[var(--glass-border,rgba(0,0,0,0.08))] px-5 py-3">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="px-2.5 py-1.5 font-display text-[12px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary,#4a5568)] hover:bg-black/5"
           >
             Cancelar
           </button>
-
-
+          <button
+            type="submit"
+            disabled={!canSubmit || pending}
+            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-white disabled:opacity-60"
+            style={{
+              background: "var(--brand-primary, #5b6ff5)",
+              boxShadow: "0 4px 14px rgba(91,111,245,0.35)",
+            }}
+          >
+            {pending ? "Criando…" : "Criar negócio"}
+          </button>
         </div>
-
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,27 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { IconLayoutDashboard } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconLayoutDashboard } from "@tabler/icons-react";
+import { toast } from "sonner";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { PageHeader } from "@/components/crm/page-header";
 import { TabsGlass } from "@/components/crm/tabs-glass";
-import { DealsOverview } from "@/components/crm/dashboard/deals-overview";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { DealsDashboard } from "@/components/crm/dashboard/deals-dashboard";
+import { DashboardLayoutEditor } from "@/components/crm/dashboard/dashboard-layout-editor";
 import { ServiceOverview } from "@/components/crm/dashboard/service-overview";
 
+import { DashboardFilters } from "@/features/dashboard-v2/components/dashboard-filters";
 import {
-  FilterBar,
-  computePeriod,
-  rangeToPeriod,
-  type CustomRange,
-  type PeriodPreset,
-} from "@/features/dashboard-v2/components/filter-bar";
-import {
-  useDealsOverview,
-  usePipelineOptions,
+  useDashboard,
+  useDashboardFilterOptions,
   useServiceOverview,
 } from "@/features/dashboard-v2/hooks";
+import {
+  useDashboardPreferences,
+  useSaveDashboardPreferences,
+} from "@/features/dashboard-v2/preferences";
+import {
+  periodToRangeISO,
+  useDashboardFilters,
+} from "@/features/dashboard-v2/use-dashboard-filters";
+import { resolveDashboardBlocks } from "@/lib/dashboard-blocks-catalog";
 
 /**
  * Props opcionais — usadas para reaproveitar o dashboard dentro do
@@ -39,42 +45,33 @@ export default function DashboardV2ClientPage({
   const isAuthenticated = sessionStatus === "authenticated";
 
   const [activeTab, setActiveTab] = useState(0);
-  // Padrão "Hoje" (estilo Kommo); um range de calendário sobrepõe o preset.
-  const [preset, setPreset] = useState<PeriodPreset>("hoje");
-  const [customRange, setCustomRange] = useState<CustomRange | null>(null);
-  const [pipelineId, setPipelineId] = useState<string | undefined>(undefined);
-
-  const period = useMemo(
-    () => (customRange ? rangeToPeriod(customRange) : computePeriod(preset)),
-    [preset, customRange],
-  );
-
-  // Selecionar um preset limpa o range custom (e vice-versa).
-  const handlePreset = (p: PeriodPreset) => {
-    setPreset(p);
-    setCustomRange(null);
-  };
-
-  const { data: pipelines = [] } = usePipelineOptions(isAuthenticated);
-
-  useEffect(() => {
-    if (!pipelineId && pipelines.length) {
-      const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
-      setPipelineId(def.id);
-    }
-  }, [pipelines, pipelineId]);
-
   const isDeals = activeTab === 0;
 
-  const dealsQuery = useDealsOverview({
-    period,
-    pipelineId,
-    enabled: isAuthenticated && isDeals,
-  });
+  const [editing, setEditing] = useState(false);
+
+  const { filters, patch, clear } = useDashboardFilters();
+
+  const { data: options } = useDashboardFilterOptions(isAuthenticated);
+
+  const dashboardQuery = useDashboard(filters, isAuthenticated && isDeals);
+
+  const prefsQuery = useDashboardPreferences(isAuthenticated && isDeals);
+  const savePrefs = useSaveDashboardPreferences();
+  const resolvedBlocks = useMemo(
+    () => resolveDashboardBlocks(prefsQuery.data?.dashboard?.blocks),
+    [prefsQuery.data],
+  );
+
+  const period = useMemo(() => periodToRangeISO(filters), [filters]);
   const serviceQuery = useServiceOverview({
     period,
     enabled: isAuthenticated && !isDeals,
   });
+
+  // Pipeline em uso: o explicitamente selecionado ou o resolvido pelo
+  // backend (default da org) — usado para popular as opções de etapa.
+  const effectivePipelineId =
+    filters.pipelineId ?? dashboardQuery.data?.pipelineId;
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
@@ -85,35 +82,72 @@ export default function DashboardV2ClientPage({
           icon={<IconLayoutDashboard size={22} />}
           title="Dashboard"
           description="Visão geral de negócios e atendimento"
-          actions={
-            <FilterBar
-              preset={preset}
-              onPresetChange={handlePreset}
-              customRange={customRange}
-              onCustomRangeChange={setCustomRange}
-              pipelines={pipelines}
-              pipelineId={pipelineId}
-              onPipelineChange={setPipelineId}
-              showPipeline={isDeals}
-            />
-          }
         />
 
-        <TabsGlass
-          tabs={["Negócios", "Atendimento"]}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          className="max-w-[280px]"
-        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TabsGlass
+            tabs={["Negócios", "Atendimento"]}
+            activeTab={activeTab}
+            onChange={(i) => {
+              setActiveTab(i);
+              setEditing(false);
+            }}
+            className="max-w-[280px]"
+          />
+          {isDeals && !editing && dashboardQuery.data && (
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              onClick={() => setEditing(true)}
+            >
+              <IconAdjustmentsHorizontal size={15} />
+              Editar dashboard
+            </ButtonGlass>
+          )}
+        </div>
+
+        {!editing && (
+          <DashboardFilters
+            filters={filters}
+            onPatch={patch}
+            onClear={clear}
+            options={options}
+            effectivePipelineId={effectivePipelineId}
+            showStructural={isDeals}
+          />
+        )}
 
         {isDeals ? (
-          <QueryState
-            isLoading={dealsQuery.isLoading}
-            error={dealsQuery.error}
-            hasData={!!dealsQuery.data}
-          >
-            {dealsQuery.data && <DealsOverview data={dealsQuery.data} />}
-          </QueryState>
+          editing ? (
+            <DashboardLayoutEditor
+              initial={resolvedBlocks}
+              saving={savePrefs.isPending}
+              onCancel={() => setEditing(false)}
+              onSave={(blocks) =>
+                savePrefs.mutate(blocks, {
+                  onSuccess: () => {
+                    toast.success("Layout do dashboard salvo.");
+                    setEditing(false);
+                  },
+                  onError: (e) =>
+                    toast.error(e.message || "Não foi possível salvar o layout."),
+                })
+              }
+            />
+          ) : (
+            <QueryState
+              isLoading={dashboardQuery.isLoading}
+              error={dashboardQuery.error}
+              hasData={!!dashboardQuery.data}
+            >
+              {dashboardQuery.data && (
+                <DealsDashboard
+                  data={dashboardQuery.data}
+                  blocks={resolvedBlocks}
+                />
+              )}
+            </QueryState>
+          )
         ) : (
           <QueryState
             isLoading={serviceQuery.isLoading}
@@ -142,8 +176,8 @@ function QueryState({
   if (isLoading && !hasData) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
               className="h-[104px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]"

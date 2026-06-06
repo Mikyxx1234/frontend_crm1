@@ -489,7 +489,7 @@ export function ChatWindow({
   const dragDepthRef = React.useRef(0);
   const [isDraggingFile, setIsDraggingFile] = React.useState(false);
   const [replyTo, setReplyTo] = React.useState<InboxMessageDto | null>(null);
-  const [hoveredMsgId, setHoveredMsgId] = React.useState<
+  const [_hoveredMsgId, setHoveredMsgId] = React.useState<
     string | number | null
   >(null);
   const [reactionPickerMsgId, setReactionPickerMsgId] = React.useState<
@@ -653,9 +653,6 @@ export function ChatWindow({
     : null;
   const sessionInfo = messagesData?.session;
   const sessionActive = sessionInfo?.active ?? true;
-  const sessionExpiresAt = sessionInfo?.expiresAt
-    ? new Date(sessionInfo.expiresAt)
-    : null;
   const isBaileysChannel = messagesData?.channelProvider === "BAILEYS_MD";
 
   const [taskTitle, setTaskTitle] = React.useState("");
@@ -2118,7 +2115,6 @@ export function ChatWindow({
               out &&
               (m.senderName === "Automação" || m.senderName === "Sistema");
             const msgId = String(m.id);
-            const isHov = hoveredMsgId === m.id;
             const grouped = groupReactions(m.reactions ?? []);
             const showSenderName =
               m.senderName && (!prev || prev.direction !== m.direction);

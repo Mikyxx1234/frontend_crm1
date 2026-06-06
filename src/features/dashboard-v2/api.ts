@@ -29,7 +29,10 @@ export interface DealStageFlow {
 
 export interface DealsOverview {
   stages: DealStageFlow[];
-  /** Negócios criados no período selecionado (1º card do carrossel). */
+  /**
+   * Pessoas (contatos) novas que entraram no CRM no período — org inteira,
+   * independente do pipeline. `count` = contatos distintos criados.
+   */
   newInPeriod?: { count: number; value: number };
   summary: {
     totalValue: number;
@@ -151,4 +154,150 @@ export async function fetchPipelines(): Promise<PipelineOption[]> {
   if (!res.ok) return [];
   const list = Array.isArray(data) ? data : data.pipelines ?? data.items ?? [];
   return list as PipelineOption[];
+}
+
+// ── Dashboard comercial (Fase 1) ───────────────────────────────────
+
+/** Sentinela do filtro de origem para "Sem origem" (espelha o backend). */
+export const SOURCE_NONE = "__none__";
+
+export type PeriodKey =
+  | "today"
+  | "yesterday"
+  | "last_7"
+  | "last_30"
+  | "this_month"
+  | "last_month"
+  | "custom";
+
+export interface DashboardFiltersState {
+  period: PeriodKey;
+  /** yyyy-mm-dd, usado quando period = "custom". */
+  startDate?: string;
+  endDate?: string;
+  pipelineId?: string;
+  stageIds: string[];
+  tagIds: string[];
+  ownerIds: string[];
+  /** Pode incluir `SOURCE_NONE` para "Sem origem". */
+  sources: string[];
+}
+
+export interface DashboardSummary {
+  totalValue: number;
+  openDeals: number;
+  winRate: number;
+  avgTicket: number;
+  newContacts: number;
+  wonCount: number;
+  lostCount: number;
+  wonValue: number;
+  lostValue: number;
+  leadsWithoutOwner: number;
+  avgTimeToWinDays: number;
+  deltas: {
+    winRate: number;
+    avgTicket: number;
+    wonCount: number;
+    wonValue: number;
+  };
+}
+
+export interface DashboardFunnelStage {
+  id: string;
+  name: string;
+  color: string;
+  count: number;
+  value: number;
+  won: number;
+  lost: number;
+  conversion: number;
+  entered: number;
+  exited: number;
+}
+
+export interface DashboardTagRow {
+  id: string;
+  name: string;
+  color: string;
+  count: number;
+  won: number;
+  lost: number;
+  conversion: number;
+  wonValue: number;
+}
+
+export interface DashboardLossReason {
+  reason: string;
+  count: number;
+  value: number;
+}
+
+export interface DashboardDailyPoint {
+  date: string;
+  novos: number;
+  ganhos: number;
+  perdidos: number;
+}
+
+export interface DashboardStalledStage {
+  id: string;
+  name: string;
+  color: string;
+  count: number;
+  value: number;
+  rottingDays: number;
+}
+
+export interface DashboardSourceRow {
+  key: string;
+  label: string;
+  count: number;
+  won: number;
+  lost: number;
+  conversion: number;
+  wonValue: number;
+}
+
+export interface DashboardOwnerRow {
+  id: string;
+  name: string;
+  leads: number;
+  open: number;
+  won: number;
+  lost: number;
+  conversion: number;
+  wonValue: number;
+}
+
+export interface DashboardData {
+  pipelineId: string;
+  summary: DashboardSummary;
+  funnel: DashboardFunnelStage[];
+  bySource: DashboardSourceRow[];
+  byOwner: DashboardOwnerRow[];
+  byTag: DashboardTagRow[];
+  lossReasons: DashboardLossReason[];
+  dailyEvolution: DashboardDailyPoint[];
+  stalled: DashboardStalledStage[];
+}
+
+export async function fetchDashboard(
+  filters: DashboardFiltersState,
+): Promise<DashboardData> {
+  const sp = new URLSearchParams();
+  sp.set("period", filters.period);
+  if (filters.period === "custom" && filters.startDate && filters.endDate) {
+    sp.set("startDate", filters.startDate);
+    sp.set("endDate", filters.endDate);
+  }
+  if (filters.pipelineId) sp.set("pipelineId", filters.pipelineId);
+  if (filters.stageIds.length) sp.set("stages", filters.stageIds.join(","));
+  if (filters.tagIds.length) sp.set("tags", filters.tagIds.join(","));
+  if (filters.ownerIds.length) sp.set("owners", filters.ownerIds.join(","));
+  if (filters.sources.length) sp.set("sources", filters.sources.join(","));
+  return getJson<DashboardData>(
+    `/api/dashboard?${sp.toString()}`,
+    "Erro ao carregar o dashboard",
+  );
 }

@@ -160,7 +160,6 @@ export function KanbanCard({
   const productLine = show("product") ? deal.productName?.trim() || null : null;
   const interaction = lastInteractionLabel(deal);
   const valueNum = dealNumericValue(deal.value);
-  const unread = deal.unreadCount ?? 0;
   const pending = deal.pendingActivities ?? 0;
   const statusMeta = show("status") ? statusLabelCompact(deal.status) : null;
   const createdAtLabel = deal.createdAt ? formatDate(deal.createdAt) : null;

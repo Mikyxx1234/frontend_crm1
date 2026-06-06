@@ -3,21 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
-  IconBolt,
-  IconBuilding,
-  IconChecklist,
-  IconClipboardList,
-  IconFilter,
-  IconLayoutDashboard,
   IconLogout,
-  IconMessageCircle,
   IconMoon,
   IconSettings,
   IconSun,
   IconUserCircle,
-  IconUsers,
 } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
 
@@ -30,36 +21,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DockButton, DockProvider } from "@/components/crm/floating-dock";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
+import { toNavItems } from "@/lib/sidebar-catalog";
+import { useSidebarPreferences } from "@/features/sidebar/hooks";
 
 /**
  * NavRail dedicado ao segmento REAL `/*`.
  * O avatar redireciona diretamente para /settings/profile.
+ *
+ * Os itens operacionais sao montados a partir do catalogo
+ * (`@/lib/sidebar-catalog`) mesclado com a preferencia pessoal do usuario
+ * (GET /api/profile/preferences). Antes da preferencia carregar, renderiza
+ * a ordem padrao do catalogo (mesmo resultado no SSR e no 1o render client,
+ * evitando hydration mismatch).
  */
 
-interface NavItem {
-  icon: React.ReactNode;
-  title: string;
-  href: string;
-  exact?: boolean;
-}
-
-const items: NavItem[] = [
-  { icon: <IconLayoutDashboard size={20} />, title: "Dashboard", href: "/dashboard" },
-  { icon: <IconFilter size={20} />, title: "Pipeline", href: "/pipeline" },
-  { icon: <IconUsers size={20} />, title: "Contatos", href: "/contacts" },
-  { icon: <IconBuilding size={20} />, title: "Empresas", href: "/companies" },
-  { icon: <IconMessageCircle size={20} />, title: "Inbox", href: "/inbox" },
-  { icon: <IconChecklist size={20} />, title: "Atividades", href: "/activities" },
-  { icon: <IconBolt size={20} />, title: "Automações", href: "/automations" },
-  { icon: <IconClipboardList size={20} />, title: "Logs", href: "/logs" },
-];
-
-function isActiveFor(pathname: string, item: NavItem): boolean {
-  if (item.exact) return pathname === item.href;
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+function isActiveFor(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function computeInitials(name: string): string {
@@ -77,6 +58,8 @@ export function NavRailV2({ className }: { className?: string }) {
   const router = useRouter();
   const { theme, toggle } = useThemeV2();
   const { data: session } = useSession();
+  const { data: prefs } = useSidebarPreferences();
+  const navItems = toNavItems(prefs?.sidebar.items);
 
   // Iniciais resolvidas apenas no client para evitar hydration mismatch —
   // isPreviewMode() depende de NEXT_PUBLIC_PREVIEW_MODE que pode diferir entre SSR e client.
@@ -110,7 +93,7 @@ export function NavRailV2({ className }: { className?: string }) {
   const isProfileActive = pathname.startsWith("/settings/profile");
 
   return (
-    <nav
+    <DockProvider
       aria-label="Navegação principal"
       className={cn(
         "flex h-full flex-col items-center gap-2 bg-[var(--glass-bg-panel)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-xl)] px-3 py-4 shadow-[var(--glass-shadow)]",
@@ -120,71 +103,50 @@ export function NavRailV2({ className }: { className?: string }) {
       <Link
         href="/dashboard"
         aria-label="Início"
-        className="mb-2 flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]"
+        className="mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]"
       >
         EL
       </Link>
 
-      {items.map((item) => {
-        const active = isActiveFor(pathname, item);
+      {navItems.map((item) => {
+        const Icon = item.icon;
         return (
-          <TooltipGlass key={item.title} label={item.title} side="right">
-            <Link
-              href={item.href}
-              aria-label={item.title}
-              className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] transition-all duration-150",
-                active
-                  ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-                  : "bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
-              )}
-            >
-              {item.icon}
-            </Link>
-          </TooltipGlass>
+          <DockButton
+            key={item.key}
+            href={item.href}
+            title={item.title}
+            active={isActiveFor(pathname, item.href)}
+          >
+            <Icon size={20} />
+          </DockButton>
         );
       })}
 
       <div className="flex-1" />
 
-      <TooltipGlass label="Configurações" side="right">
-        <Link
-          href="/settings"
-          aria-label="Configurações"
-          className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] transition-all duration-150",
-            pathname.startsWith("/settings") && !isProfileActive
-              ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-              : "bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
-          )}
-        >
-          <IconSettings size={20} />
-        </Link>
-      </TooltipGlass>
+      <DockButton
+        href="/settings"
+        title="Configurações"
+        active={pathname.startsWith("/settings") && !isProfileActive}
+      >
+        <IconSettings size={20} />
+      </DockButton>
 
       {/* Tema: lua / sol */}
-      <TooltipGlass label={theme === "light" ? "Modo escuro" : "Modo claro"} side="right">
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={theme === "light" ? "Ativar modo escuro" : "Ativar modo claro"}
-          className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-all duration-150 hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
-        >
-          {theme === "light" ? (
-            <IconMoon size={20} />
-          ) : (
-            <IconSun size={20} />
-          )}
-        </button>
-      </TooltipGlass>
+      <DockButton
+        title={theme === "light" ? "Modo escuro" : "Modo claro"}
+        onClick={toggle}
+      >
+        {theme === "light" ? <IconMoon size={20} /> : <IconSun size={20} />}
+      </DockButton>
 
       {/* Avatar — abre menu da conta (Meu perfil / Sair).
           No SSR/primeiro render renderizamos um botão estático equivalente
           para evitar hydration mismatch (ver comentário em `mounted` acima). */}
       {!mounted ? (
-        <TooltipGlass label="Minha conta" side="right">
         <button
           type="button"
+          title="Minha conta"
           aria-label="Abrir menu da conta"
           className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
         >
@@ -200,11 +162,10 @@ export function NavRailV2({ className }: { className?: string }) {
             <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
           </div>
         </button>
-        </TooltipGlass>
       ) : (
       <DropdownMenu>
-        <TooltipGlass label="Minha conta" side="right">
         <DropdownMenuTrigger
+          title="Minha conta"
           aria-label="Abrir menu da conta"
           className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
         >
@@ -220,7 +181,6 @@ export function NavRailV2({ className }: { className?: string }) {
             <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
           </div>
         </DropdownMenuTrigger>
-        </TooltipGlass>
 
         <DropdownMenuContent align="start" className="w-60">
           <div className="flex items-center gap-3 px-2 py-2">
@@ -256,6 +216,6 @@ export function NavRailV2({ className }: { className?: string }) {
         </DropdownMenuContent>
       </DropdownMenu>
       )}
-    </nav>
+    </DockProvider>
   );
 }

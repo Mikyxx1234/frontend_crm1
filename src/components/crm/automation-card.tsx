@@ -32,11 +32,11 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
   const steps = flow.map((n) => ({ blockType: n.blockType }))
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--card)] shadow-[var(--glass-shadow-sm)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--glass-shadow)]">
+    <div className="group relative flex flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--glass-shadow)]">
       {/* Link expandido sobre todo o card (stretched link) */}
       <Link
         href={`/automations/${automation.id}`}
-        className="absolute inset-0 z-0 rounded-[var(--radius-xl)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+        className="absolute inset-0 z-0 rounded-[var(--radius-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
         aria-label={`Abrir editor de ${automation.name}`}
       >
         <span className="sr-only">Abrir editor</span>
@@ -84,7 +84,7 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
         </p>
 
         {/* Gatilho + mini-fluxo */}
-        <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] p-3.5">
+        <div className="rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] p-3.5">
           <div className="mb-2.5 flex items-center gap-1.5">
             <IconBolt size={13} className="text-[var(--brand-primary)]" />
             <span className="font-display text-[11px] font-semibold text-[var(--text-secondary)]">

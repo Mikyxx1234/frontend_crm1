@@ -522,6 +522,7 @@ function categorizeStepType(type: string): ActionCategory {
     case "send_email":
       return "messaging";
     case "assign_owner":
+    case "execute_distribution":
       return "assignment";
     case "move_stage":
       return "stage_move";

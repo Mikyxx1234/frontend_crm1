@@ -24,6 +24,7 @@ import {
   Pencil,
   Plus,
   Repeat,
+  Route,
   Square,
   StopCircle,
   Tag,
@@ -68,6 +69,7 @@ export const stepIcon: Record<string, ComponentType<{ className?: string; stroke
   ask_ai_agent: Bot,
   transfer_to_ai_agent: BotMessageSquare,
   consume_stock: PackageMinus,
+  execute_distribution: Route,
 };
 
 // Descricao curta (1 linha) usada no modal "O que deseja automatizar?"
@@ -103,6 +105,8 @@ export const stepDescription: Record<string, string> = {
     "Transfere o atendimento pra um agente IA, que assume a conversa automaticamente.",
   consume_stock:
     "Reduz o estoque dos produtos do negócio. Bloqueia se faltar saldo (sem estoque negativo).",
+  execute_distribution:
+    "Distribui o lead entre os responsáveis elegíveis (Distribuição Inteligente).",
 };
 
 export const stepColor: Record<string, string> = {
@@ -134,6 +138,7 @@ export const stepColor: Record<string, string> = {
   ask_ai_agent: "text-violet-500",
   transfer_to_ai_agent: "text-violet-600",
   consume_stock: "text-orange-600",
+  execute_distribution: "text-indigo-500",
 };
 
 export type StepGroup = { title: string; items: ActionStepType[] };
@@ -166,6 +171,7 @@ export const STEP_GROUPS: StepGroup[] = [
       "create_deal",
       "finish_conversation",
       "consume_stock",
+      "execute_distribution",
     ],
   },
   {

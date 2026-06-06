@@ -10,6 +10,7 @@
  */
 
 import { Fragment, useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { IconMessageCirclePlus } from "@tabler/icons-react";
 
@@ -126,15 +127,24 @@ export function useDealChatBinding(params: {
   let messagesNode: React.ReactNode;
   if (!conversationId) {
     messagesNode = (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-[var(--text-muted,#718096)]">
-        <IconMessageCirclePlus size={36} className="opacity-40" />
-        <div className="font-display text-[13px] font-semibold">
-          Sem conversa vinculada
+      <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]">
+          <IconMessageCirclePlus size={28} />
         </div>
-        <p className="max-w-xs text-[12px]">
-          Este negocio ainda nao tem conversa associada. Abra a Caixa de
+        <h3 className="mt-4 font-display text-[15px] font-bold text-[var(--text-primary)]">
+          Sem conversa vinculada
+        </h3>
+        <p className="mt-1.5 max-w-[340px] font-display text-[13px] leading-relaxed text-[var(--text-muted)]">
+          Este negócio ainda não tem conversa associada. Abra a Caixa de
           Entrada e vincule um contato para conversar por aqui.
         </p>
+        <Link
+          href="/inbox"
+          className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full bg-[var(--brand-primary)] px-5 py-2.5 font-display text-[13px] font-bold text-white shadow-[var(--glass-shadow-sm)] transition-opacity hover:opacity-90"
+        >
+          <IconMessageCirclePlus size={16} />
+          Abrir Caixa de Entrada
+        </Link>
       </div>
     );
   } else if (bubbles.length === 0) {

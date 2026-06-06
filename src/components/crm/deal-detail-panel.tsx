@@ -435,39 +435,39 @@ function TabsBar({
   onChange: (id: TabId) => void
 }) {
   return (
-    <header className="flex shrink-0 items-center gap-1 border-b border-[var(--glass-border-subtle)] px-3">
-      {TABS.map((tab) => {
-        const Icon = tab.icon
-        const isActive = activeTab === tab.id
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            className={cn(
-              "-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3.5 py-3.5 font-display text-xs font-bold tracking-[0.06em] transition-all",
-              isActive
-                ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-            )}
-          >
-            <Icon size={14} />
-            {tab.label.toUpperCase()}
-            {tab.count !== undefined && (
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-px font-display text-[10px] font-bold",
-                  isActive
-                    ? "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
-                    : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                )}
-              >
-                {tab.count}
-              </span>
-            )}
-          </button>
-        )
-      })}
+    <header className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3">
+      <div className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+        {TABS.map((tab) => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+                isActive
+                  ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+              )}
+            >
+              <Icon size={14} />
+              {tab.label}
+              {tab.count !== undefined && (
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 font-display text-[10px] font-bold",
+                    isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                  )}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
     </header>
   )
 }

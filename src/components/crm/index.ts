@@ -16,6 +16,12 @@ export { StagePills } from './stage-pills'
 export { MessageBubble, DaySeparator, type Message } from './message-bubble'
 export { SessionAlert } from './session-alert'
 export { ChatArea } from './chat-area'
+export {
+  ConversationTabs,
+  DEFAULT_CONVERSATION_TABS,
+  type ConversationTabId,
+  type ConversationTabConfig,
+} from './conversation-tabs'
 export { ContactAside } from './contact-aside'
 
 // Pipeline Components

@@ -19,8 +19,12 @@ import {
   IconMicrophone,
   IconSend,
 } from "@tabler/icons-react"
-import { BadgeGlass } from "./badge-glass"
 import { ChatArea } from "./chat-area"
+import {
+  ConversationTabs,
+  type ConversationTabId,
+  type ConversationTabConfig,
+} from "./conversation-tabs"
 import { type Message } from "./message-bubble"
 
 interface DealOwner {
@@ -31,6 +35,8 @@ interface DealOwner {
 
 export interface DealDetail {
   id: string
+  /** Número sequencial do negócio (exibido como #1, #2, …). */
+  number?: number | string | null
   name: string
   initials: string
   avatarColor: string
@@ -43,7 +49,7 @@ export interface DealDetail {
   owner?: DealOwner
 }
 
-type TabId = "conversa" | "atividades" | "notas" | "timeline"
+type TabId = ConversationTabId
 
 interface DealDetailPanelProps {
   isOpen: boolean
@@ -96,7 +102,7 @@ const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fech
 // Paleta do funil segmentado (estilo Kommo) — uma cor por etapa.
 const FUNNEL_PALETTE = ["#94a3b8", "#5b6ff5", "#a78bfa", "#f59e0b", "#ec4899", "#10b981"]
 
-const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: number }>; count?: number }[] = [
+const TABS: ConversationTabConfig[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
   { id: "atividades", label: "Atividades", icon: IconChecklist, count: 3 },
   { id: "notas", label: "Notas", icon: IconNote },
@@ -142,6 +148,13 @@ export function DealDetailPanel({
 
   const currentStageIndex = deal.stage ? STAGES.indexOf(deal.stage) : 2
   const avatarClass = `av-${deal.avatarColor}`
+
+  // Referência curta do negócio: usa o número sequencial (#1, #2, …)
+  // quando disponível; caso contrário, cai num prefixo do id.
+  const dealRef =
+    deal.number != null && String(deal.number).trim() !== ""
+      ? `#${deal.number}`
+      : `#${deal.id.slice(0, 4)}`
 
   // Mensagens default (mock alinhado ao DS) — usadas quando nao ha messagesSlot.
   const fallbackMessages: Message[] = [
@@ -207,10 +220,9 @@ export function DealDetailPanel({
             <div>
               <div className="flex items-center gap-2 font-display text-[18px] font-bold text-[var(--text-primary)]">
                 {deal.name}
-                <BadgeGlass variant="enterprise">ENTERPRISE</BadgeGlass>
               </div>
               <div className="mt-px font-display text-xs text-[var(--text-muted)]">
-                #{deal.id} · {deal.phone || "+55 11 98702-3902"}
+                {dealRef}
               </div>
             </div>
           </div>
@@ -241,7 +253,7 @@ export function DealDetailPanel({
             {/* Cabeçalho fixo: identificador + funil de vendas segmentado */}
             <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-[22px] pb-4 pt-[18px]">
               <h2 className="truncate font-display text-[16px] font-bold tracking-tight text-[var(--text-primary)]">
-                Lead #{deal.id.slice(-6).toUpperCase()}
+                Negócio {dealRef}
               </h2>
 
               <div className="mt-3.5">
@@ -406,7 +418,7 @@ export function DealDetailPanel({
               <TabsBar activeTab={activeTab} onChange={setActiveTab} />
               <div className="min-h-0 flex-1">
                 <ChatArea
-                  contact={{ name: deal.name, badge: "enterprise", badgeLabel: "ENTERPRISE" }}
+                  contact={{ name: deal.name }}
                   messages={fallbackMessages}
                   daySeparator="14/05/2026"
                   showSessionAlert
@@ -424,8 +436,8 @@ export function DealDetailPanel({
 
 /**
  * Barra de abas (Conversa / Atividades / Notas / Timeline) renderizada
- * no header do container de conteúdo. Antes ficava numa linha solta
- * entre a topbar e os containers; agora vive dentro do próprio container.
+ * no header do container de conteúdo. Usa o componente compartilhado
+ * `ConversationTabs` para manter o mesmo visual no Inbox.
  */
 function TabsBar({
   activeTab,
@@ -434,42 +446,7 @@ function TabsBar({
   activeTab: TabId
   onChange: (id: TabId) => void
 }) {
-  return (
-    <header className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3">
-      <div className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-        {TABS.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.id
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange(tab.id)}
-              className={cn(
-                "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
-                isActive
-                  ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-              )}
-            >
-              <Icon size={14} />
-              {tab.label}
-              {tab.count !== undefined && (
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 font-display text-[10px] font-bold",
-                    isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                  )}
-                >
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-    </header>
-  )
+  return <ConversationTabs activeTab={activeTab} onChange={onChange} tabs={TABS} />
 }
 
 function PanelIconBtn({

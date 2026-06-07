@@ -320,6 +320,7 @@ export default function KanbanV2ClientPage({
     const ownerName = dealDetail.owner?.name?.trim() || "Sem responsavel";
     return {
       id: dealDetail.id,
+      number: dealDetail.number ?? null,
       name: contactName,
       initials: avatarInitials(contactName),
       avatarColor: avatarColorSlugFromName(contactName),

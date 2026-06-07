@@ -10,6 +10,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
+import { ConversationTabs, type ConversationTabId } from "@/components/crm/conversation-tabs";
 import { ContactAside } from "@/components/crm/contact-aside";
 import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
@@ -48,6 +49,11 @@ import {
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import {
+  DealActivitiesTab,
+  DealNotesTab,
+  DealTimelineTab,
+} from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 const DEFAULT_FILTERS: InboxFilters = {};
@@ -111,6 +117,9 @@ export default function InboxV2ClientPage({
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
+  // Aba ativa da área central (Conversa / Atividades / Notas / Timeline),
+  // no mesmo formato visual do DealDetailPanel.
+  const [centerTab, setCenterTab] = useState<ConversationTabId>("conversa");
 
   // Debounce do search (300ms). Evita refetch a cada tecla.
   useEffect(() => {
@@ -206,6 +215,7 @@ export default function InboxV2ClientPage({
 
   function handleSelect(id: string) {
     setActiveId(id);
+    setCenterTab("conversa");
     markRead.mutate(id);
   }
 
@@ -389,7 +399,7 @@ export default function InboxV2ClientPage({
     </div>
   );
 
-  // ── Funil real do primeiro deal do contato ──────────────────────
+  // ── Funil real do primeiro deal do contato ──��───────────────────
   const firstDeal = contactAsideView?.deals?.[0] ?? null;
   const firstDealId = firstDeal?.id ?? null;
   const { data: firstDealDetail } = useDealDetail(firstDealId);

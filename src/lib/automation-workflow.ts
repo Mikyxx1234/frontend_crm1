@@ -150,7 +150,7 @@ export function triggerTypeLabel(t: string): string {
     message_sent: "Mensagem enviada",
     manual: "Manual (executar pela conversa)",
   };
-  return map[t] ?? t;
+  return map[t] ?? map[t?.toLowerCase()] ?? t;
 }
 
 export function stepTypeLabel(t: string): string {
@@ -199,7 +199,7 @@ export function summarizeTriggerConfig(
   lookup?: Record<string, string>,
 ): string {
   const c = asRecord(triggerConfig);
-  switch (triggerType) {
+  switch (triggerType?.toLowerCase()) {
     case "stage_changed": {
       const parts: string[] = [];
       if (c.fromStageId) {

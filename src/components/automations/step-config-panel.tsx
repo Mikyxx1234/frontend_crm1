@@ -34,6 +34,10 @@ import {
   validateEntries as validateWebhookEntries,
   type WebhookBodyEntry,
 } from "@/lib/webhook-body-builder";
+import {
+  WEBHOOK_VARIABLE_OPTIONS,
+  buildCustomFieldOptions,
+} from "@/lib/automation-webhook-variables";
 
 type PipelineStage = { id: string; name: string };
 type Pipeline = { id: string; name: string; stages: PipelineStage[] };
@@ -140,10 +144,12 @@ function VariableShortcutTextarea({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return options.slice(0, 20);
+    // Sem cap agressivo: o container tem scroll e o usuário precisa
+    // enxergar TODOS os campos disponíveis (mesmos do Webhook).
+    if (!q) return options.slice(0, 100);
     return options
       .filter((o) => o.label.toLowerCase().includes(q) || o.token.toLowerCase().includes(q))
-      .slice(0, 20);
+      .slice(0, 100);
   }, [options, query]);
 
   const refreshShortcutState = (el: HTMLTextAreaElement) => {
@@ -236,6 +242,25 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
     () => collectDeclaredVariables(allSteps, step?.id ?? ""),
     [allSteps, step?.id],
   );
+  const customFieldsQuery = useQuery({
+    queryKey: ["custom-fields-for-update-field"],
+    enabled:
+      open &&
+      (step?.type === "update_field" ||
+        step?.type === "send_whatsapp_message" ||
+        step?.type === "send_whatsapp_interactive" ||
+        step?.type === "question"),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [contactRes, dealRes] = await Promise.all([
+        fetch(apiUrl("/api/custom-fields?entity=contact")),
+        fetch(apiUrl("/api/custom-fields?entity=deal")),
+      ]);
+      const contacts = contactRes.ok ? ((await contactRes.json()) as CustomFieldOption[]) : [];
+      const deals = dealRes.ok ? ((await dealRes.json()) as CustomFieldOption[]) : [];
+      return [...contacts, ...deals];
+    },
+  });
   const variableShortcutOptions = useMemo<VariableShortcutOption[]>(() => {
     const out: VariableShortcutOption[] = [
       {
@@ -264,8 +289,24 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         token: `{{${name}|first_name}}`,
       });
     }
+    // Catálogo COMPLETO de campos — os mesmos do Webhook. Aparecem TODOS,
+    // mesmo que o contato/negócio não tenha valor (o backend envia vazio).
+    for (const opt of WEBHOOK_VARIABLE_OPTIONS) {
+      out.push({
+        label: `${opt.group} • ${opt.label}`,
+        token: opt.token,
+        hint: opt.hint,
+      });
+    }
+    for (const opt of buildCustomFieldOptions(customFieldsQuery.data ?? [])) {
+      out.push({
+        label: `${opt.group} • ${opt.label}`,
+        token: opt.token,
+        hint: opt.hint,
+      });
+    }
     return out;
-  }, [declaredVariables]);
+  }, [declaredVariables, customFieldsQuery.data]);
 
   const pipelinesQuery = useQuery({
     queryKey: ["pipelines-for-steps"],
@@ -275,21 +316,6 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       const res = await fetch(apiUrl("/api/pipelines"));
       if (!res.ok) return [] as Pipeline[];
       return (await res.json()) as Pipeline[];
-    },
-  });
-
-  const customFieldsQuery = useQuery({
-    queryKey: ["custom-fields-for-update-field"],
-    enabled: open && step?.type === "update_field",
-    staleTime: 60_000,
-    queryFn: async () => {
-      const [contactRes, dealRes] = await Promise.all([
-        fetch(apiUrl("/api/custom-fields?entity=contact")),
-        fetch(apiUrl("/api/custom-fields?entity=deal")),
-      ]);
-      const contacts = contactRes.ok ? ((await contactRes.json()) as CustomFieldOption[]) : [];
-      const deals = dealRes.ok ? ((await dealRes.json()) as CustomFieldOption[]) : [];
-      return [...contacts, ...deals];
     },
   });
 
@@ -644,6 +670,46 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
 
           {step.type === "transfer_to_ai_agent" && (
             <TransferToAIAgentStepConfig draft={draft} setDraft={setDraft} />
+          )}
+
+          {step.type === "execute_distribution" && (
+            <div className="space-y-3">
+              <p className="rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-3 text-[12px] leading-relaxed text-[var(--text-muted)]">
+                Distribui o lead entre os responsáveis elegíveis usando a
+                Distribuição Inteligente — a mesma regra da tela e da simulação.
+                Não força atribuição.
+              </p>
+              <div className="rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-3 text-[12px] leading-relaxed text-[var(--text-muted)]">
+                <p className="mb-1.5 font-semibold text-[var(--text-default)]">
+                  Funciona como um IF (Sim / Não):
+                </p>
+                <ul className="space-y-1">
+                  <li>
+                    <span className="font-semibold text-emerald-600">Distribuído</span>{" "}
+                    (saída verde) — havia agente disponível e o lead foi atribuído.
+                  </li>
+                  <li>
+                    <span className="font-semibold text-rose-600">Sem agente</span>{" "}
+                    (saída vermelha) — ninguém elegível no momento; o lead entra na
+                    fila de espera e você escolhe o que fazer aqui.
+                  </li>
+                </ul>
+                <p className="mt-1.5 text-[11px] opacity-80">
+                  Conecte cada saída do bloco no canvas para definir os próximos passos.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sc-dist-type">Tipo / segmento (opcional)</Label>
+                <Input
+                  id="sc-dist-type"
+                  value={String(draft.distributionType ?? "")}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, distributionType: e.target.value }))
+                  }
+                  placeholder="ex.: inbound, vendas, suporte"
+                />
+              </div>
+            </div>
           )}
 
           {(step.type === "add_tag" || step.type === "remove_tag") && (

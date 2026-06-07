@@ -83,16 +83,23 @@ function ChartTooltip({ active, payload, label }: any) {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-/** Renderizadores de cada bloco por `key` (catálogo de blocos). */
+/**
+ * Renderizadores de cada bloco por `key` (catálogo de blocos).
+ *
+ * Aplicamos defaults defensivos (`?? []`) porque a `DashboardData` chega de
+ * uma API e, em previews/mocks parciais (ex.: v0.dev), campos podem vir
+ * `undefined`. Sem isso, qualquer `.some()`/`.map()`/`.length` nos sub-
+ * componentes quebraria a árvore inteira do dashboard.
+ */
 const BLOCK_RENDERERS: Record<string, (data: DashboardData) => React.ReactNode> = {
   summary: (d) => <SummaryCards summary={d.summary} />,
-  funnel: (d) => <FunnelSection funnel={d.funnel} />,
-  dailyEvolution: (d) => <DailyEvolutionSection data={d.dailyEvolution} />,
-  bySource: (d) => <SourceSection rows={d.bySource} />,
-  byOwner: (d) => <OwnerSection rows={d.byOwner} />,
-  byTag: (d) => <TagSection rows={d.byTag} />,
-  lossReasons: (d) => <LossReasonSection rows={d.lossReasons} />,
-  stalled: (d) => <StalledSection rows={d.stalled} />,
+  funnel: (d) => <FunnelSection funnel={d.funnel ?? []} />,
+  dailyEvolution: (d) => <DailyEvolutionSection data={d.dailyEvolution ?? []} />,
+  bySource: (d) => <SourceSection rows={d.bySource ?? []} />,
+  byOwner: (d) => <OwnerSection rows={d.byOwner ?? []} />,
+  byTag: (d) => <TagSection rows={d.byTag ?? []} />,
+  lossReasons: (d) => <LossReasonSection rows={d.lossReasons ?? []} />,
+  stalled: (d) => <StalledSection rows={d.stalled ?? []} />,
 };
 
 export function DealsDashboard({

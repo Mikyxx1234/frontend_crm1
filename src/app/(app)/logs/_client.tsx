@@ -284,7 +284,7 @@ export default function LogsClientPage() {
                       <col className="w-[12%]" />
                       <col className="w-[8%]" />
                     </colgroup>
-                    <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
+                    <thead className="sticky top-0 z-10 bg-[var(--bg-base)] shadow-[0_1px_0_var(--glass-border)]">
                       <tr className="border-b border-[var(--glass-border)]">
                         <Th variant={variant}>Evento</Th>
                         <Th variant={variant}>Detalhe</Th>
@@ -301,7 +301,7 @@ export default function LogsClientPage() {
                           <tr className="sticky top-[41px] z-[5]">
                             <td
                               colSpan={5}
-                              className="border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+                              className="border-y border-[var(--glass-border-subtle)] bg-[var(--bg-base)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
                             >
                               {dayLabel(dayItems[0].occurredAt)}
                             </td>

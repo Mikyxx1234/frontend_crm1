@@ -309,6 +309,148 @@ function CardVariantC({ widget }: { widget: MockWidget }) {
 }
 
 // ---------------------------------------------------------------------------
+// VARIANTE D — "Compacto branco": card pequeno, sem lista, foco no essencial
+// ---------------------------------------------------------------------------
+
+function CardVariantD({ widget }: { widget: MockWidget }) {
+  const accent = `var(${widget.accentToken})`;
+  return (
+    <motion.div
+      whileHover={{ y: -3 }}
+      style={{ "--wa": accent } as React.CSSProperties}
+      className="group flex flex-col rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-4 shadow-[var(--glass-shadow-sm)] transition-shadow duration-300 hover:shadow-[var(--glass-shadow)]"
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-transform duration-300 group-hover:scale-105"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--wa) 12%, transparent)",
+            color: "var(--wa)",
+          }}
+        >
+          <widget.Icon className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-display text-[14px] font-bold leading-tight text-[var(--text-primary)]">
+            {widget.name}
+          </h3>
+          <p className="truncate font-body text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+            {widget.category}
+          </p>
+        </div>
+        <StatusBadge installed={widget.installed} />
+      </div>
+      <p className="mt-3 line-clamp-2 font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+        {widget.description}
+      </p>
+      <div className="mt-4">
+        <ActionButton installed={widget.installed} />
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// VARIANTE E — "Branco minimal": superfície clara, accent só em detalhes
+// ---------------------------------------------------------------------------
+
+function CardVariantE({ widget }: { widget: MockWidget }) {
+  const accent = `var(${widget.accentToken})`;
+  return (
+    <motion.div
+      whileHover={{ y: -3 }}
+      style={{ "--wa": accent } as React.CSSProperties}
+      className="group flex flex-col rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] p-5 shadow-[var(--glass-shadow-sm)] transition-all duration-300 hover:border-[color-mix(in_srgb,var(--wa)_40%,transparent)] hover:shadow-[var(--glass-shadow)]"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className="h-8 w-1 rounded-full"
+            style={{ backgroundColor: "var(--wa)" }}
+          />
+          <widget.Icon className="size-5" style={{ color: "var(--wa)" }} />
+        </div>
+        <StatusBadge installed={widget.installed} />
+      </div>
+      <h3 className="mt-3 font-display text-[15px] font-bold leading-tight text-[var(--text-primary)]">
+        {widget.name}
+      </h3>
+      <p className="mt-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+        {widget.category}
+      </p>
+      <p className="mt-2 font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+        {widget.description}
+      </p>
+      <div className="mt-4 flex flex-1 flex-col">
+        <FeatureList features={widget.features.slice(0, 3)} accent="var(--wa)" />
+        <div className="mt-auto pt-4">
+          <ActionButton installed={widget.installed} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// VARIANTE F — "Branco horizontal": ícone à esquerda, conteúdo ao lado
+// ---------------------------------------------------------------------------
+
+function CardVariantF({ widget }: { widget: MockWidget }) {
+  const accent = `var(${widget.accentToken})`;
+  return (
+    <motion.div
+      whileHover={{ y: -3 }}
+      style={{ "--wa": accent } as React.CSSProperties}
+      className="group flex gap-4 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-4 shadow-[var(--glass-shadow-sm)] transition-shadow duration-300 hover:shadow-[var(--glass-shadow)]"
+    >
+      <div
+        className="flex h-12 w-12 shrink-0 items-center justify-center self-start rounded-[var(--radius-md)] transition-transform duration-300 group-hover:scale-105"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--wa) 12%, transparent)",
+          color: "var(--wa)",
+        }}
+      >
+        <widget.Icon className="size-6" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-[14px] font-bold leading-tight text-[var(--text-primary)]">
+              {widget.name}
+            </h3>
+            <p className="truncate font-body text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              {widget.category}
+            </p>
+          </div>
+          <StatusBadge installed={widget.installed} />
+        </div>
+        <p className="mt-1.5 line-clamp-2 font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+          {widget.description}
+        </p>
+        <div className="mt-3 flex items-center justify-end">
+          {widget.installed ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[var(--color-danger-text)] hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]"
+            >
+              <IconTrash />
+              Remover
+            </Button>
+          ) : (
+            <Button variant="default" size="sm">
+              <IconPlus />
+              Instalar
+            </Button>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Seção de variante
 // ---------------------------------------------------------------------------
 
@@ -384,6 +526,24 @@ export default function WidgetsPreviewClientPage({
           title="Cabeçalho realçado"
           Card={CardVariantC}
           description="Banner com accent suave e ícone destacado sobre a borda."
+        />
+        <VariantSection
+          label="Variante D"
+          title="Compacto branco"
+          Card={CardVariantD}
+          description="Card pequeno em superfície branca, sem lista de recursos."
+        />
+        <VariantSection
+          label="Variante E"
+          title="Branco minimal"
+          Card={CardVariantE}
+          description="Superfície clara, accent só em detalhes e borda no hover."
+        />
+        <VariantSection
+          label="Variante F"
+          title="Branco horizontal"
+          Card={CardVariantF}
+          description="Layout em linha, ícone à esquerda e ação alinhada à direita."
         />
       </main>
     </div>

@@ -74,11 +74,26 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
         <MiniFlow steps={steps} max={5} size="sm" />
       </div>
 
-      {/* Métricas */}
-      <div className="hidden shrink-0 items-center gap-6 lg:flex">
-        <Metric icon={<IconActivity size={14} />} value={automation.runs.toLocaleString("pt-BR")} label="execuções" />
-        <Metric icon={<IconCircleCheck size={14} />} value={`${automation.successRate}%`} label="sucesso" />
-        <Metric icon={<IconClock size={14} />} value={automation.lastRun} label="última" />
+      {/* Métricas (revelação progressiva: sucesso → execuções → última) */}
+      <div className="flex shrink-0 items-center gap-3 sm:gap-4 lg:gap-6">
+        <Metric
+          className="flex"
+          icon={<IconCircleCheck size={14} />}
+          value={`${automation.successRate}%`}
+          label="sucesso"
+        />
+        <Metric
+          className="hidden md:flex"
+          icon={<IconActivity size={14} />}
+          value={automation.runs.toLocaleString("pt-BR")}
+          label="execuções"
+        />
+        <Metric
+          className="hidden lg:flex"
+          icon={<IconClock size={14} />}
+          value={automation.lastRun}
+          label="última"
+        />
       </div>
 
       {/* Ação de edição (desktop) */}
@@ -97,9 +112,19 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
   )
 }
 
-function Metric({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
+function Metric({
+  icon,
+  value,
+  label,
+  className,
+}: {
+  icon: React.ReactNode
+  value: string
+  label: string
+  className?: string
+}) {
   return (
-    <div className="flex min-w-[64px] flex-col gap-0.5">
+    <div className={cn("min-w-[56px] flex-col gap-0.5 lg:min-w-[64px]", className)}>
       <span className="flex items-center gap-1 text-[var(--text-muted)]">{icon}</span>
       <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">{value}</span>
       <span className="font-body text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{label}</span>

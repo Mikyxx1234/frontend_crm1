@@ -43,7 +43,6 @@ import { BusinessHoursNode } from "./business-hours-node";
 import { StepPickerModal } from "./step-picker-modal";
 import { ConditionNode } from "./condition-node";
 import { DelayNode } from "./delay-node";
-import { DistributionNode } from "./distribution-node";
 import { FinishNode } from "./finish-node";
 import { GotoNode } from "./goto-node";
 import { InteractiveNode } from "./interactive-node";
@@ -61,7 +60,6 @@ const nodeTypes = {
   action: ActionNode,
   condition: ConditionNode,
   businessHours: BusinessHoursNode,
-  distribution: DistributionNode,
   delay: DelayNode,
   question: QuestionNode,
   interactive: InteractiveNode,
@@ -94,7 +92,6 @@ function readRfPos(config: unknown): RfPos | null {
 function rfNodeType(stepType: string): keyof typeof nodeTypes {
   if (stepType === "condition") return "condition";
   if (stepType === "business_hours") return "businessHours";
-  if (stepType === "execute_distribution") return "distribution";
   if (stepType === "delay") return "delay";
   if (stepType === "question") return "interactive";
   if (stepType === "send_whatsapp_interactive") return "interactive";
@@ -311,21 +308,6 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
           type: EDGE_TYPE,
           interactionWidth: INTERACT_W,
           ...DELETE_LABEL_PROPS,
-        });
-      }
-    }
-
-    // execute_distribution = IF de 2 saídas (estilo n8n):
-    //   • SIM (handle "true") = fluxo linear via nextStepId (bloco genérico abaixo).
-    //   • NÃO (handle "false") = ramo `elseStepId` (sem agente elegível).
-    if (a.type === "execute_distribution") {
-      if (typeof cfg.elseStepId === "string" && cfg.elseStepId && stepIds.has(cfg.elseStepId)) {
-        out.push({
-          id: `${a.id}-else-${cfg.elseStepId}`,
-          source: a.id, target: cfg.elseStepId,
-          sourceHandle: "false",
-          animated: false, data: EDGE_DATA_ELSE, type: EDGE_TYPE,
-          interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
         });
       }
     }
@@ -863,7 +845,7 @@ function WorkflowCanvasInner({
           return;
         }
 
-        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
+        if (sourceHandle === "false" && srcStep.type === "business_hours") {
           const cfg = { ...srcStep.config, elseStepId: target };
           onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
           return;
@@ -1011,7 +993,7 @@ function WorkflowCanvasInner({
           return;
         }
 
-        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
+        if (sourceHandle === "false" && srcStep.type === "business_hours") {
           const cfg = { ...srcStep.config, elseStepId: id };
           const updated = cur.map((s) =>
             s.id === sourceId ? { ...s, config: cfg } : s
@@ -1163,7 +1145,7 @@ function WorkflowCanvasInner({
         return;
       }
 
-      if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
+      if (sourceHandle === "false" && srcStep.type === "business_hours") {
         const cfg = { ...srcStep.config } as Record<string, unknown>;
         delete cfg.elseStepId;
         onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
@@ -1258,11 +1240,10 @@ function WorkflowCanvasInner({
 
   return (
     <div className={cn("flex w-full", className)}>
-      {/* Canvas area — fundo cinza-azulado neutro (em vez de branco puro)
-          pra os nodes (cards claros) ganharem contraste e leitura. Os
-          radial gradients sutis dão profundidade sem competir com o conteúdo. */}
+      {/* Canvas area — radial gradients no fundo dão profundidade
+          "engenharia premium" sem competir com os nodes. */}
       <div
-        className="relative min-h-0 min-w-0 flex-1 bg-[#e7ecf4] bg-[radial-gradient(ellipse_at_top_left,rgba(80,125,241,0.10)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.07)_0%,transparent_55%)]"
+        className="relative min-h-0 min-w-0 flex-1 bg-white bg-[radial-gradient(ellipse_at_top_left,rgba(80,125,241,0.07)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.06)_0%,transparent_55%)]"
         onDrop={onDrop}
         onDragOver={onDragOver}
       >
@@ -1292,7 +1273,7 @@ function WorkflowCanvasInner({
             variant={BackgroundVariant.Dots}
             gap={24}
             size={1.4}
-            color="#aab6cc"
+            color="#cbd5e1"
           />
           <Controls
             className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/85! shadow-[var(--shadow-lg)]! backdrop-blur-xl! [&>button]:border-0! [&>button]:bg-transparent! [&>button]:text-[var(--color-ink-soft)]! [&>button:hover]:bg-primary/10! [&>button:hover]:text-primary!"

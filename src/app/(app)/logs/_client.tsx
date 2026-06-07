@@ -24,6 +24,7 @@ import {
 import { useActivityFeed } from "@/features/activity-feed/use-activity-feed";
 import type { ActivityFeedFilters } from "@/features/activity-feed/api";
 import { useActivityStats } from "@/features/activity-feed/use-activity-stats";
+import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
 
 const ENTITY_OPTIONS = [
   { value: "ALL", label: "Todas as entidades" },
@@ -89,6 +90,7 @@ export default function LogsClientPage() {
   const [actor, setActor] = React.useState<string>("ALL");
   const [q, setQ] = React.useState<string>("");
   const [qDebounced, setQDebounced] = React.useState<string>("");
+  const [demo, setDemo] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     const t = setTimeout(() => setQDebounced(q), 350);
@@ -114,10 +116,19 @@ export default function LogsClientPage() {
     isFetchingNextPage,
   } = useActivityFeed(filters);
 
-  const allItems = React.useMemo(
+  const realItems = React.useMemo(
     () => (data?.pages ?? []).flatMap((p) => p.items),
     [data],
   );
+
+  const hasFilters = entity !== "ALL" || actor !== "ALL" || Boolean(q);
+
+  // Modo demonstração: ativo manualmente OU automaticamente quando não há
+  // eventos reais e nenhum filtro aplicado (para visualizar todos os tipos).
+  const isDemo =
+    demo || (!isLoading && !isError && realItems.length === 0 && !hasFilters);
+
+  const allItems = isDemo ? MOCK_FEED : realItems;
 
   const groups = React.useMemo(() => groupFeedByDay(allItems), [allItems]);
 
@@ -141,8 +152,6 @@ export default function LogsClientPage() {
 
   const { data: stats, isLoading: statsLoading } = useActivityStats(!isFeed);
 
-  const hasFilters = entity !== "ALL" || actor !== "ALL" || Boolean(q);
-
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
@@ -161,6 +170,15 @@ export default function LogsClientPage() {
             onChange={setActiveTab}
             className="max-w-[320px]"
           />
+          {isFeed && (
+            <Button
+              variant={isDemo ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setDemo((v) => !v)}
+            >
+              {isDemo ? "Modo demonstração ativo" : "Ver dados de exemplo"}
+            </Button>
+          )}
         </div>
 
         {isFeed ? (
@@ -199,6 +217,15 @@ export default function LogsClientPage() {
                 </Button>
               )}
             </div>
+
+            {isDemo && (
+              <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--color-enterprise-bg)] px-3 py-2 font-body text-[12px] text-[var(--brand-primary)]">
+                <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[var(--brand-primary)]" />
+                Dados de exemplo — um evento de cada tipo para visualizar as
+                variações visuais. Os eventos reais aparecerão aqui assim que
+                ocorrerem.
+              </div>
+            )}
 
             {isLoading && allItems.length === 0 ? (
               <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />

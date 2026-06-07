@@ -19,8 +19,6 @@ import type { ActionStepType } from "@/lib/automation-workflow";
 import { stepTypeLabel } from "@/lib/automation-workflow";
 import { cn } from "@/lib/utils";
 
-import { useWidgets } from "@/features/widgets/hooks";
-
 import { STEP_GROUPS, stepColor, stepDescription, stepIcon } from "./add-step-node";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -119,34 +117,18 @@ export function StepPickerModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Gating por widget: a ação "Executar distribuição" só aparece na paleta
-  // se o módulo `smart_distribution` estiver instalado na organização.
-  const { data: widgetsData } = useWidgets(open);
-  const smartInstalled =
-    widgetsData?.items.find((w) => w.slug === "smart_distribution")?.installed ??
-    false;
-
   const q = normalize(query.trim());
   const filteredGroups = React.useMemo(() => {
-    const gated = STEP_GROUPS.map((g) => ({
+    if (!q) return STEP_GROUPS;
+    return STEP_GROUPS.map((g) => ({
       ...g,
-      items: g.items.filter(
-        (type) => type !== "execute_distribution" || smartInstalled,
-      ),
+      items: g.items.filter((type) => {
+        const label = normalize(stepTypeLabel(type));
+        const desc = normalize(stepDescription[type] ?? "");
+        return label.includes(q) || desc.includes(q);
+      }),
     })).filter((g) => g.items.length > 0);
-
-    if (!q) return gated;
-    return gated
-      .map((g) => ({
-        ...g,
-        items: g.items.filter((type) => {
-          const label = normalize(stepTypeLabel(type));
-          const desc = normalize(stepDescription[type] ?? "");
-          return label.includes(q) || desc.includes(q);
-        }),
-      }))
-      .filter((g) => g.items.length > 0);
-  }, [q, smartInstalled]);
+  }, [q]);
 
   // Intercepta wheel/touchmove ainda no ReactSyntheticEvent — é redundância
   // defensiva: o portal (via createPortal abaixo) já remove o modal da

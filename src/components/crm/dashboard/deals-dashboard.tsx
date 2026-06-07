@@ -531,10 +531,11 @@ function Td({
 // ── Evolução diária ──────────────────────────────────────────────────
 
 function DailyEvolutionSection({
-  data,
+  data: dataProp,
 }: {
   data: DashboardData["dailyEvolution"];
 }) {
+  const data = dataProp ?? [];
   const hasData = data.some((d) => d.novos || d.ganhos || d.perdidos);
   return (
     <ChartCard
@@ -598,7 +599,7 @@ function DailyEvolutionSection({
   );
 }
 
-// ── Performance por tags ─────────────────────────────────────────────
+// ── Performance por tags ──────────────────────────��──────────────────
 
 function TagSection({ rows = [] }: { rows: DashboardData["byTag"] }) {
   return (

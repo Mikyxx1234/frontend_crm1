@@ -109,26 +109,26 @@ function VariantB({ a, onToggle }: { a: Automation; onToggle: (id: string) => vo
   const steps = useFlowSteps(a.id)
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--card)] p-5 shadow-[var(--glass-shadow-sm)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--glass-shadow)]"
+      className="group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-sm)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[var(--glass-shadow)]"
       style={{ "--wa": ACCENT_HEX[a.accent] } as React.CSSProperties}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="mb-1 flex items-center gap-2">
-            <StatusDot active={a.active} />
-            <span className="font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {a.active ? "Ativa" : "Pausada"}
-            </span>
-          </div>
-          <h3 className="truncate font-display text-[16px] font-bold text-[var(--text-primary)]">
-            {a.name}
-          </h3>
-        </div>
+      {/* Header destacado: status + título + switch na mesma linha */}
+      <div
+        className="flex items-center gap-2.5 px-5 py-3"
+        style={{
+          background: "color-mix(in srgb, var(--wa) 9%, transparent)",
+          borderBottom: "1px solid color-mix(in srgb, var(--wa) 18%, transparent)",
+        }}
+      >
+        <StatusDot active={a.active} />
+        <h3 className="min-w-0 flex-1 truncate font-display text-[15px] font-bold text-[var(--text-primary)]">
+          {a.name}
+        </h3>
         <SwitchGlass checked={a.active} onChange={() => onToggle(a.id)} aria-label="toggle" />
       </div>
 
       {/* Hero metric */}
-      <div className="my-4 flex items-end gap-3">
+      <div className="flex items-end gap-3 px-5 pb-4 pt-4">
         <div
           className="flex flex-col rounded-[var(--radius-lg)] px-4 py-3"
           style={{ background: "color-mix(in srgb, var(--wa) 12%, transparent)" }}
@@ -162,7 +162,7 @@ function VariantB({ a, onToggle }: { a: Automation; onToggle: (id: string) => vo
         </div>
       </div>
 
-      <div className="mt-auto flex items-center justify-between border-t border-[var(--glass-border-subtle)] pt-3">
+      <div className="mt-auto flex items-center justify-between border-t border-[var(--glass-border-subtle)] px-5 py-3">
         <MiniFlow steps={steps} max={4} size="sm" />
         <span className="flex items-center gap-1 font-display text-[12px] font-bold text-[var(--brand-primary)]">
           Abrir <IconArrowRight size={13} />

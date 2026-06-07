@@ -188,9 +188,9 @@ export function DateRangePicker({
                   isEndpoint &&
                     "z-10 rounded-[var(--radius-md)] bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]",
                   !isEndpoint && !inRange && inMonth &&
-                    "rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-subtle)]",
+                    "rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--color-enterprise-bg)]",
                   !inMonth && !isEndpoint && !inRange &&
-                    "rounded-[var(--radius-md)] text-[var(--text-muted)]/40 hover:bg-[var(--glass-bg-subtle)]",
+                    "rounded-[var(--radius-md)] text-[var(--text-muted)]/40 hover:bg-[var(--color-enterprise-bg)]",
                 )}
               >
                 {format(day, "d")}
@@ -237,9 +237,9 @@ export function DateRangePicker({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 flex overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--bg-base)] shadow-[var(--glass-shadow)]">
+        <div className="absolute right-0 top-[calc(100%+8px)] z-50 flex overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
           {/* Presets */}
-          <div className="flex w-[150px] flex-col gap-0.5 border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] p-2">
+          <div className="flex w-[150px] flex-col gap-0.5 border-r border-[var(--glass-border-subtle)] p-2">
             {PRESETS.map((preset) => (
               <button
                 key={preset.label}
@@ -251,7 +251,7 @@ export function DateRangePicker({
                   setPendingFrom(null);
                   setOpen(false);
                 }}
-                className="rounded-[var(--radius-md)] px-2.5 py-1.5 text-left font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+                className="rounded-[var(--radius-md)] px-2.5 py-1.5 text-left font-display text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
               >
                 {preset.label}
               </button>
@@ -265,7 +265,7 @@ export function DateRangePicker({
                 type="button"
                 aria-label="Mês anterior"
                 onClick={() => setLeftMonth((m) => subMonths(m, 1))}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
               >
                 <IconChevronLeft size={18} />
               </button>
@@ -281,7 +281,7 @@ export function DateRangePicker({
                 type="button"
                 aria-label="Próximo mês"
                 onClick={() => setLeftMonth((m) => addMonths(m, 1))}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
               >
                 <IconChevronRight size={18} />
               </button>

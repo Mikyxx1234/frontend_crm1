@@ -326,6 +326,7 @@ export default function InboxV2ClientPage({
   const chatNode =
     chatContact && activeRow ? (
       <ChatArea
+        className="min-h-0 flex-1 rounded-none border-0 bg-transparent shadow-none backdrop-blur-none"
         contact={chatContact}
         messages={messageBubbles}
         stages={stagePillsView}
@@ -482,6 +483,48 @@ export default function InboxV2ClientPage({
       <EmptyAside />
     );
 
+  // Área central com abas (Conversa / Atividades / Notas / Timeline) no
+  // mesmo formato visual do DealDetailPanel: um container glass único com
+  // a barra de abas no topo e o conteúdo da aba ativa abaixo.
+  const centerNode =
+    chatContact && activeRow ? (
+      <main
+        aria-label={centerTab}
+        className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+      >
+        <ConversationTabs activeTab={centerTab} onChange={setCenterTab} />
+        {centerTab === "conversa" ? (
+          chatNode
+        ) : centerTab === "atividades" ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <DealActivitiesTab />
+          </div>
+        ) : centerTab === "notas" ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {firstDealId ? (
+              <DealNotesTab
+                dealId={firstDealId}
+                notes={firstDealDetail?.notes ?? null}
+                pipelineId={firstDealPipelineId}
+              />
+            ) : (
+              <NoDealTabState label="Sem negócio vinculado para exibir notas." />
+            )}
+          </div>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {firstDealId ? (
+              <DealTimelineTab dealId={firstDealId} />
+            ) : (
+              <NoDealTabState label="Sem negócio vinculado para exibir a timeline." />
+            )}
+          </div>
+        )}
+      </main>
+    ) : (
+      <EmptyChatArea />
+    );
+
   const templateModalNode =
     templateOpen && activeId ? (
       <div
@@ -525,7 +568,7 @@ export default function InboxV2ClientPage({
             style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "44px" : "340px"}` }}
           >
             {conversationColumnNode}
-            {chatNode}
+            {centerNode}
             {asideNode}
           </div>
         </div>
@@ -545,9 +588,17 @@ export default function InboxV2ClientPage({
     >
       {navRailNode}
       {conversationColumnNode}
-      {chatNode}
+      {centerNode}
       {asideNode}
       {templateModalNode}
+    </div>
+  );
+}
+
+function NoDealTabState({ label }: { label: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-[22px] text-center text-[var(--text-muted)]">
+      <p className="max-w-xs text-[12px]">{label}</p>
     </div>
   );
 }

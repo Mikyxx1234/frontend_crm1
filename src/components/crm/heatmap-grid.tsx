@@ -82,7 +82,13 @@ export function HeatmapGrid({
                         aria-label={`${yLabel} ${xLabels[x]}: ${formatValue(value)}`}
                       />
                       {isHover && (
-                        <div className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--tooltip-bg)] px-2 py-1 font-display text-[11px] font-semibold text-[var(--tooltip-text)] shadow-[var(--glass-shadow)]">
+                        <div
+                          className={cn(
+                            "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--tooltip-bg)] px-2 py-1 font-display text-[11px] font-semibold text-[var(--tooltip-text)] shadow-[var(--glass-shadow)]",
+                            // Primeira(s) linha(s) abrem o tooltip para baixo para não cortar no topo do card
+                            y === 0 ? "top-[calc(100%+6px)]" : "bottom-[calc(100%+6px)]",
+                          )}
+                        >
                           {xLabels[x]} · {formatValue(value)}
                         </div>
                       )}

@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
 import { Button } from "@/components/ui/button";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { DateRangePicker, type DateRange } from "@/components/crm/date-range-picker";
 import { TabsGlass } from "@/components/crm/tabs-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import {
@@ -100,6 +101,7 @@ export default function LogsClientPage() {
   const [qDebounced, setQDebounced] = React.useState<string>("");
   const [demo, setDemo] = React.useState<boolean>(false);
   const [variant, setVariant] = React.useState<TableVariant>("grid");
+  const [range, setRange] = React.useState<DateRange>({ from: null, to: null });
 
   React.useEffect(() => {
     const t = setTimeout(() => setQDebounced(q), 350);
@@ -111,9 +113,11 @@ export default function LogsClientPage() {
       entityType: entity === "ALL" ? undefined : [entity],
       actorType: actor === "ALL" ? undefined : [actor],
       q: qDebounced || undefined,
+      dateFrom: range.from ? format(range.from, "yyyy-MM-dd") : undefined,
+      dateTo: range.to ? format(range.to, "yyyy-MM-dd") : undefined,
       limit: 80,
     }),
-    [entity, actor, qDebounced],
+    [entity, actor, qDebounced, range],
   );
 
   const {
@@ -130,7 +134,8 @@ export default function LogsClientPage() {
     [data],
   );
 
-  const hasFilters = entity !== "ALL" || actor !== "ALL" || Boolean(q);
+  const hasFilters =
+    entity !== "ALL" || actor !== "ALL" || Boolean(q) || Boolean(range.from);
 
   // Modo demonstração: ativo manualmente OU automaticamente quando não há
   // eventos reais e nenhum filtro aplicado (para visualizar todos os tipos).
@@ -231,6 +236,7 @@ export default function LogsClientPage() {
                 menuLabel="Ator"
                 triggerClassName="min-w-[180px]"
               />
+              <DateRangePicker value={range} onChange={setRange} />
               {hasFilters && (
                 <Button
                   variant="ghost"
@@ -239,6 +245,7 @@ export default function LogsClientPage() {
                     setEntity("ALL");
                     setActor("ALL");
                     setQ("");
+                    setRange({ from: null, to: null });
                   }}
                 >
                   Limpar

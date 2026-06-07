@@ -115,8 +115,8 @@ export function ScrollMap({ boardRef, columnCount, className }: ScrollMapProps) 
         ref={wrapperRef}
         className={cn(
           "group/scrollmap pointer-events-auto relative flex select-none items-stretch gap-[3px]",
-          // Transparente em repouso, totalmente visível ao passar o mouse
-          "opacity-35 transition-opacity duration-200 ease-out hover:opacity-100",
+          // Invisível em repouso (board limpo), revela ao passar o mouse na base
+          "opacity-0 transition-opacity duration-200 ease-out hover:opacity-100 focus-within:opacity-100",
         )}
         style={{
           height: "44px",

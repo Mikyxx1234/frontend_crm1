@@ -59,7 +59,7 @@ export function NavRailV2({ className }: { className?: string }) {
   const { theme, toggle } = useThemeV2();
   const { data: session } = useSession();
   const { data: prefs } = useSidebarPreferences();
-  const navItems = toNavItems(prefs?.sidebar.items);
+  const navItems = toNavItems(prefs?.sidebar?.items);
 
   // Iniciais resolvidas apenas no client para evitar hydration mismatch —
   // isPreviewMode() depende de NEXT_PUBLIC_PREVIEW_MODE que pode diferir entre SSR e client.

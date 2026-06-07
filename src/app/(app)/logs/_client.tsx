@@ -82,6 +82,14 @@ const ACTOR_BADGE: Record<
   },
 };
 
+type TableVariant = "grid" | "divided" | "zebra";
+
+const VARIANT_OPTIONS: { value: TableVariant; label: string; hint: string }[] = [
+  { value: "grid", label: "Grade", hint: "Bordas em linhas e colunas" },
+  { value: "divided", label: "Divisores", hint: "Linhas verticais sutis" },
+  { value: "zebra", label: "Zebra", hint: "Faixas alternadas, sem grade" },
+];
+
 export default function LogsClientPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const isFeed = activeTab === 0;
@@ -91,6 +99,7 @@ export default function LogsClientPage() {
   const [q, setQ] = React.useState<string>("");
   const [qDebounced, setQDebounced] = React.useState<string>("");
   const [demo, setDemo] = React.useState<boolean>(false);
+  const [variant, setVariant] = React.useState<TableVariant>("grid");
 
   React.useEffect(() => {
     const t = setTimeout(() => setQDebounced(q), 350);
@@ -171,13 +180,32 @@ export default function LogsClientPage() {
             className="max-w-[320px]"
           />
           {isFeed && (
-            <Button
-              variant={isDemo ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setDemo((v) => !v)}
-            >
-              {isDemo ? "Modo demonstração ativo" : "Ver dados de exemplo"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-0.5 backdrop-blur-md">
+                {VARIANT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    title={opt.hint}
+                    onClick={() => setVariant(opt.value)}
+                    className={`rounded-[var(--radius-md)] px-2.5 py-1 font-display text-[12px] font-bold transition-colors ${
+                      variant === opt.value
+                        ? "bg-[var(--brand-primary)] text-[var(--brand-on-primary,#fff)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant={isDemo ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDemo((v) => !v)}
+              >
+                {isDemo ? "Modo demonstração ativo" : "Ver dados de exemplo"}
+              </Button>
+            </div>
           )}
         </div>
 
@@ -249,13 +277,24 @@ export default function LogsClientPage() {
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
                 <div className="scrollbar-thin min-h-0 flex-1 overflow-auto">
                   <table className="w-full table-fixed border-collapse">
+                    <colgroup>
+                      <col className="w-[240px]" />
+                      <col className="w-[300px]" />
+                      <col className="w-[200px]" />
+                      <col className="w-[150px]" />
+                      <col className="w-[90px]" />
+                      <col />
+                    </colgroup>
                     <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
-                      <tr className="border-b border-[var(--glass-border-subtle)]">
-                        <Th className="w-[260px]">Evento</Th>
-                        <Th>Detalhe</Th>
-                        <Th className="w-[150px]">Entidade</Th>
-                        <Th className="w-[170px]">Ator</Th>
-                        <Th className="w-[120px] text-right">Data</Th>
+                      <tr className="border-b border-[var(--glass-border)]">
+                        <Th variant={variant}>Evento</Th>
+                        <Th variant={variant}>Detalhe</Th>
+                        <Th variant={variant}>Entidade</Th>
+                        <Th variant={variant}>Ator</Th>
+                        <Th variant={variant} className="text-right">
+                          Data
+                        </Th>
+                        <Th variant={variant} last className="hidden md:table-cell" />
                       </tr>
                     </thead>
                     <tbody>
@@ -263,14 +302,19 @@ export default function LogsClientPage() {
                         <React.Fragment key={dayKey}>
                           <tr className="sticky top-[41px] z-[5]">
                             <td
-                              colSpan={5}
-                              className="bg-[var(--glass-bg-subtle)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+                              colSpan={6}
+                              className="border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
                             >
                               {dayLabel(dayItems[0].occurredAt)}
                             </td>
                           </tr>
-                          {dayItems.map((ev) => (
-                            <EventRow key={ev.id} event={ev} />
+                          {dayItems.map((ev, i) => (
+                            <EventRow
+                              key={ev.id}
+                              event={ev}
+                              variant={variant}
+                              index={i}
+                            />
                           ))}
                         </React.Fragment>
                       ))}
@@ -365,16 +409,44 @@ export default function LogsClientPage() {
   );
 }
 
-function EventRow({ event }: { event: FeedEvent }) {
+function EventRow({
+  event,
+  variant,
+  index,
+}: {
+  event: FeedEvent;
+  variant: TableVariant;
+  index: number;
+}) {
   const cfg = EVENT_CONFIG[event.type] ?? FALLBACK_CONFIG;
   const Icon = cfg.Icon;
   const detail = eventDescription(event);
   const actor = actorDisplay(event);
   const badge = ACTOR_BADGE[actor.type] ?? ACTOR_BADGE.SYSTEM;
 
+  // Borda vertical entre colunas para "grid" e "divided".
+  const colDivider =
+    variant === "zebra"
+      ? ""
+      : "border-r border-[var(--glass-border-subtle)]";
+  // Borda horizontal entre linhas apenas em "grid".
+  const rowDivider =
+    variant === "grid"
+      ? "border-b border-[var(--glass-border-subtle)]"
+      : variant === "divided"
+        ? "border-b border-[var(--glass-border-subtle)]/60"
+        : "";
+  // Faixas alternadas em "zebra".
+  const zebra =
+    variant === "zebra" && index % 2 === 1
+      ? "bg-[var(--glass-bg-subtle)]/50"
+      : "";
+
   return (
-    <tr className="border-b border-[var(--glass-border-subtle)] last:border-0 hover:bg-[var(--glass-bg-overlay)]">
-      <td className="px-3 py-2.5">
+    <tr
+      className={`${rowDivider} ${zebra} last:border-b-0 transition-colors hover:bg-[var(--glass-bg-overlay)]`}
+    >
+      <td className={`px-3 py-2.5 ${colDivider}`}>
         <div className="flex items-center gap-2.5">
           <span
             className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
@@ -386,12 +458,12 @@ function EventRow({ event }: { event: FeedEvent }) {
           </span>
         </div>
       </td>
-      <td className="px-3 py-2.5">
+      <td className={`px-3 py-2.5 ${colDivider}`}>
         <span className="block truncate font-body text-[13px] text-[var(--text-secondary)]">
           {detail || "—"}
         </span>
       </td>
-      <td className="px-3 py-2.5">
+      <td className={`px-3 py-2.5 ${colDivider}`}>
         {event.entityLabel || event.entityType ? (
           <span className="flex items-center gap-1.5 whitespace-nowrap">
             {event.entityType && (
@@ -409,18 +481,19 @@ function EventRow({ event }: { event: FeedEvent }) {
           <span className="text-[13px] text-[var(--text-muted)]">—</span>
         )}
       </td>
-      <td className="px-3 py-2.5">
+      <td className={`px-3 py-2.5 ${colDivider}`}>
         <span
           className={`inline-flex items-center rounded-full px-2 py-0.5 font-display text-[11px] font-bold ${badge.className}`}
         >
           {actor.label}
         </span>
       </td>
-      <td className="px-3 py-2.5 text-right">
+      <td className={`px-3 py-2.5 text-right ${colDivider}`}>
         <span className="font-display tabular-nums text-[12px] text-[var(--text-muted)]">
           {format(parseISO(event.occurredAt), "HH:mm", { locale: ptBR })}
         </span>
       </td>
+      <td className="hidden px-3 py-2.5 md:table-cell" />
     </tr>
   );
 }
@@ -442,13 +515,21 @@ function dayLabel(iso: string): string {
 function Th({
   children,
   className,
+  variant,
+  last,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
+  variant: TableVariant;
+  last?: boolean;
 }) {
+  const colDivider =
+    variant === "zebra" || last
+      ? ""
+      : "border-r border-[var(--glass-border-subtle)]";
   return (
     <th
-      className={`px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)] ${className ?? ""}`}
+      className={`px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)] ${colDivider} ${className ?? ""}`}
     >
       {children}
     </th>

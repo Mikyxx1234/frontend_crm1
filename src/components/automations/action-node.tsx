@@ -1,20 +1,7 @@
 "use client";
 
-import type { ComponentType } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import {
-  Activity,
-  ArrowRightLeft,
-  BotMessageSquare,
-  Image,
-  Mail,
-  MessageSquare,
-  MousePointerClick,
-  Pencil,
-  Tag,
-  UserPlus,
-  Webhook,
-} from "lucide-react";
+import { Activity } from "lucide-react";
 
 import {
   CategoryHeader,
@@ -25,9 +12,8 @@ import {
   StepBadge,
   TargetHandle,
   isMessageStep,
-  stepTone,
+  stepVisual,
 } from "./node-kit";
-import { canonicalStepType } from "@/lib/automation-workflow";
 
 export type ActionNodeData = {
   stepType: string;
@@ -41,31 +27,14 @@ export type ActionNodeData = {
   onStatsClick?: () => void;
 };
 
-const iconMap: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
-  send_email: Mail,
-  move_stage: ArrowRightLeft,
-  assign_owner: UserPlus,
-  add_tag: Tag,
-  remove_tag: Tag,
-  update_field: Pencil,
-  create_activity: Activity,
-  send_whatsapp_message: MessageSquare,
-  send_whatsapp_template: MessageSquare,
-  send_whatsapp_media: Image,
-  send_whatsapp_interactive: MousePointerClick,
-  webhook: Webhook,
-  update_lead_score: Activity,
-  transfer_to_ai_agent: BotMessageSquare,
-};
-
 /**
- * ActionNode — passo de ação linear (1 saída). Header colorido por
- * categoria (DS v2); passos de mensagem exibem o conteúdo num balão
- * de chat no corpo. Caso contrário, o resumo fica no header.
+ * ActionNode — passo de ação linear (1 saída). Ícone e cor seguem o
+ * tipo do passo (mesma identidade do seletor "O que deseja automatizar?"),
+ * via `stepVisual` do node-kit. Passos de mensagem exibem o conteúdo num
+ * balão de chat no corpo; caso contrário, o resumo fica no header.
  */
 export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
-  const tone = stepTone(data.stepType);
-  const Icon = iconMap[data.stepType] ?? iconMap[canonicalStepType(data.stepType)] ?? Activity;
+  const { Icon, tone } = stepVisual(data.stepType);
   const asMessage = isMessageStep(data.stepType);
 
   return (
@@ -82,7 +51,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
 
       <CategoryHeader
         tone={tone}
-        icon={Icon}
+        icon={Icon ?? Activity}
         title={data.label}
         summary={asMessage ? undefined : data.summary}
         onDelete={data.onDelete}

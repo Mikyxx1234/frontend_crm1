@@ -1,7 +1,7 @@
 "use client";
 
 import { type NodeProps } from "reactflow";
-import { CircleCheckBig, CircleSlash, Clock } from "lucide-react";
+import { CircleCheckBig, CircleSlash } from "lucide-react";
 
 import {
   CategoryHeader,
@@ -10,7 +10,7 @@ import {
   OutcomePill,
   StepBadge,
   TargetHandle,
-  categoryTone,
+  stepVisual,
 } from "./node-kit";
 
 export type BusinessHoursNodeData = {
@@ -28,7 +28,7 @@ export type BusinessHoursNodeData = {
  * IDs de handle "true"/"false" preservados.
  */
 export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNodeData>) {
-  const tone = categoryTone.logic;
+  const { Icon, tone } = stepVisual("business_hours");
 
   return (
     <NodeShell tone={tone} selected={selected} className="min-w-[244px] max-w-[300px]">
@@ -38,7 +38,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
 
       <CategoryHeader
         tone={tone}
-        icon={Clock}
+        icon={Icon!}
         title={data.label}
         summary={data.summary}
         onDelete={data.onDelete}

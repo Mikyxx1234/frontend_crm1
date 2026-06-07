@@ -1,7 +1,7 @@
 "use client";
 
 import { type NodeProps } from "reactflow";
-import { Clock, MessageCircle, Pause } from "lucide-react";
+import { Clock, MessageCircle } from "lucide-react";
 
 import {
   CategoryHeader,
@@ -11,7 +11,7 @@ import {
   StatsBar,
   StepBadge,
   TargetHandle,
-  categoryTone,
+  stepVisual,
 } from "./node-kit";
 
 export type WaitNodeData = {
@@ -29,10 +29,11 @@ export type WaitNodeData = {
 /**
  * WaitNode — espera mensagem ou cronômetro. Duas saídas-pílula:
  * "received" (verde) e "timeout" (cinza), cada uma com handle dedicado.
- * Categoria lógica (orange). IDs de handle preservados.
+ * Ícone/cor do tipo `wait_for_reply` (igual ao seletor). IDs de handle
+ * preservados.
  */
 export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
-  const tone = categoryTone.logic;
+  const { Icon, tone } = stepVisual("wait_for_reply");
 
   return (
     <NodeShell tone={tone} selected={selected} className="min-w-[250px] max-w-[310px]">
@@ -42,7 +43,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
 
       <CategoryHeader
         tone={tone}
-        icon={Pause}
+        icon={Icon!}
         title={data.label}
         summary={data.summary}
         onDelete={data.onDelete}

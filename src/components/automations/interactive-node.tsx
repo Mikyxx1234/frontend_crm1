@@ -13,7 +13,7 @@ import {
   StatsBar,
   StepBadge,
   TargetHandle,
-  stepTone,
+  stepVisual,
 } from "./node-kit";
 
 export type InteractiveButton = {
@@ -53,9 +53,9 @@ function buttonLabel(btn: InteractiveButton, idx: number): string {
  */
 export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeData>) {
   const buttons = data.buttons ?? [];
-  const tone = stepTone(data.stepType);
+  const { Icon: visualIcon, tone } = stepVisual(data.stepType);
   const isQuestion = data.stepType === "question";
-  const Icon = isQuestion ? MessageCircleQuestion : MousePointerClick;
+  const Icon = visualIcon ?? (isQuestion ? MessageCircleQuestion : MousePointerClick);
 
   return (
     <NodeShell

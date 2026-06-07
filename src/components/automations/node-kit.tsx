@@ -2,7 +2,38 @@
 
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 import { Handle, Position } from "reactflow";
-import { AlertTriangle, CheckCircle2, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRightLeft,
+  Bot,
+  BotMessageSquare,
+  Briefcase,
+  CalendarPlus,
+  CheckCircle2,
+  Clock,
+  CornerDownRight,
+  FileText,
+  GitBranch,
+  Globe,
+  Image,
+  Mail,
+  MessageCircleQuestion,
+  MessageSquare,
+  MousePointerClick,
+  PackageMinus,
+  Pause,
+  Pencil,
+  Repeat,
+  Route,
+  Square,
+  StopCircle,
+  Tag,
+  Timer,
+  Trash2,
+  TrendingUp,
+  UserPlus,
+  Variable,
+} from "lucide-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { canonicalStepType } from "@/lib/automation-workflow";
@@ -118,6 +149,109 @@ export function stepTone(stepType: string): Tone {
 
 export function isMessageStep(stepType: string): boolean {
   return MESSAGE_STEP_TYPES.has(stepType) || MESSAGE_STEP_TYPES.has(canonicalStepType(stepType));
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Identidade por passo — ícone + cor sólida POR TIPO (não por categoria).
+   Espelha exatamente o seletor "O que deseja automatizar?"
+   (stepIcon/stepColor em add-step-node) pra que o nó no canvas use o
+   MESMO ícone e a MESMA cor do card do modal. Fonte única de verdade.
+   ──────────────────────────────────────────────────────────────────── */
+
+/** stepType (canônico) → ícone lucide. */
+export const STEP_ICON: Record<string, IconType> = {
+  send_email: Mail,
+  move_stage: ArrowRightLeft,
+  assign_owner: UserPlus,
+  add_tag: Tag,
+  remove_tag: Tag,
+  update_field: Pencil,
+  create_activity: CalendarPlus,
+  send_whatsapp_message: MessageSquare,
+  send_whatsapp_template: FileText,
+  send_whatsapp_media: Image,
+  send_whatsapp_interactive: MousePointerClick,
+  webhook: Globe,
+  delay: Clock,
+  condition: GitBranch,
+  update_lead_score: TrendingUp,
+  question: MessageCircleQuestion,
+  wait_for_reply: Pause,
+  set_variable: Variable,
+  goto: CornerDownRight,
+  transfer_automation: Repeat,
+  stop_automation: StopCircle,
+  finish: Square,
+  create_deal: Briefcase,
+  finish_conversation: CheckCircle2,
+  business_hours: Timer,
+  ask_ai_agent: Bot,
+  transfer_to_ai_agent: BotMessageSquare,
+  consume_stock: PackageMinus,
+  execute_distribution: Route,
+};
+
+/**
+ * stepType (canônico) → cor sólida (hex) idêntica ao seletor.
+ * Convertido das classes Tailwind usadas em add-step-node:stepColor.
+ */
+export const STEP_COLOR: Record<string, string> = {
+  send_email: "#2563eb", // blue-600
+  move_stage: "#6366f1", // indigo-500
+  assign_owner: "#14b8a6", // teal-500
+  add_tag: "#10b981", // emerald-500
+  remove_tag: "#f87171", // red-400
+  update_field: "#f59e0b", // amber-500
+  create_activity: "#8b5cf6", // violet-500
+  send_whatsapp_message: "#16a34a", // green-600
+  send_whatsapp_template: "#22c55e", // green-500
+  send_whatsapp_media: "#22c55e", // green-500
+  send_whatsapp_interactive: "#8b5cf6", // violet-500
+  webhook: "#6b7280", // gray-500
+  delay: "#fb923c", // orange-400
+  condition: "#06b6d4", // cyan-500
+  update_lead_score: "#ec4899", // pink-500
+  question: "#3b82f6", // blue-500
+  wait_for_reply: "#f97316", // orange-500
+  set_variable: "#d946ef", // fuchsia-500
+  goto: "#0ea5e9", // sky-500
+  transfer_automation: "#6366f1", // indigo-500
+  stop_automation: "#f43f5e", // rose-500
+  finish: "#ef4444", // red-500
+  create_deal: "#059669", // emerald-600
+  finish_conversation: "#22c55e", // green-500
+  business_hours: "#d97706", // amber-600
+  ask_ai_agent: "#8b5cf6", // violet-500
+  transfer_to_ai_agent: "#7c3aed", // violet-600
+  consume_stock: "#ea580c", // orange-600
+  execute_distribution: "#2563eb", // blue-600
+};
+
+/** Constrói um Tone (fg/bg/ring) a partir de uma cor sólida via color-mix. */
+export function toneFromColor(fg: string): Tone {
+  return {
+    fg,
+    bg: `color-mix(in srgb, ${fg} 12%, transparent)`,
+    ring: `color-mix(in srgb, ${fg} 24%, transparent)`,
+  };
+}
+
+/** Ícone por tipo (cai no fallback da categoria se desconhecido). */
+export function stepIconFor(stepType: string): IconType | undefined {
+  return STEP_ICON[stepType] ?? STEP_ICON[canonicalStepType(stepType)];
+}
+
+/**
+ * Visual completo do passo: ícone + tom POR TIPO, espelhando o modal.
+ * Se o tipo não tiver cor própria, cai no tom da categoria (DS v2).
+ */
+export function stepVisual(stepType: string): { Icon: IconType | undefined; tone: Tone } {
+  const canonical = canonicalStepType(stepType);
+  const color = STEP_COLOR[stepType] ?? STEP_COLOR[canonical];
+  return {
+    Icon: stepIconFor(stepType),
+    tone: color ? toneFromColor(color) : stepTone(stepType),
+  };
 }
 
 /* ────────────────────────────────────────────────────────────────────

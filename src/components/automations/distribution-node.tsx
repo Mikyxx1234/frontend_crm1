@@ -1,7 +1,7 @@
 "use client";
 
 import { type NodeProps } from "reactflow";
-import { CircleCheckBig, CircleSlash, Route } from "lucide-react";
+import { CircleCheckBig, CircleSlash } from "lucide-react";
 
 import {
   CategoryHeader,
@@ -10,7 +10,7 @@ import {
   OutcomePill,
   StepBadge,
   TargetHandle,
-  categoryTone,
+  stepVisual,
 } from "./node-kit";
 
 export type DistributionNodeData = {
@@ -28,7 +28,7 @@ export type DistributionNodeData = {
  * IDs de handle preservados.
  */
 export function DistributionNode({ data, selected }: NodeProps<DistributionNodeData>) {
-  const tone = categoryTone.action;
+  const { Icon, tone } = stepVisual("execute_distribution");
 
   return (
     <NodeShell tone={tone} selected={selected} className="min-w-[244px] max-w-[300px]">
@@ -38,7 +38,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
 
       <CategoryHeader
         tone={tone}
-        icon={Route}
+        icon={Icon!}
         title={data.label}
         summary={data.summary}
         onDelete={data.onDelete}

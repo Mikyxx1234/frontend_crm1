@@ -1,14 +1,13 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { Variable } from "lucide-react";
 
 import {
   CategoryHeader,
   NodeShell,
   StepBadge,
   TargetHandle,
-  categoryTone,
+  stepVisual,
 } from "./node-kit";
 
 export type VariableNodeData = {
@@ -19,11 +18,11 @@ export type VariableNodeData = {
 };
 
 /**
- * VariableNode — set/update de variável do contexto. Categoria salesbot
- * (violet), saída linear única.
+ * VariableNode — set/update de variável do contexto. Ícone/cor do tipo
+ * `set_variable` (igual ao seletor), saída linear única.
  */
 export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
-  const tone = categoryTone.salesbot;
+  const { Icon, tone } = stepVisual("set_variable");
 
   return (
     <NodeShell tone={tone} selected={selected} className="min-w-[210px] max-w-[270px]">
@@ -33,7 +32,7 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
 
       <CategoryHeader
         tone={tone}
-        icon={Variable}
+        icon={Icon!}
         title={data.label}
         summary={data.summary}
         onDelete={data.onDelete}

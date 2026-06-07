@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { Ban, Filter, GitBranch } from "lucide-react";
+import { Ban, Filter } from "lucide-react";
 
 import type { ConditionBranch } from "@/lib/automation-condition";
 
@@ -10,7 +10,7 @@ import {
   NodeShell,
   OutcomeGroup,
   StepBadge,
-  categoryTone,
+  stepVisual,
 } from "./node-kit";
 
 export type ConditionNodeData = {
@@ -56,13 +56,14 @@ function ruleSummary(branch: ConditionBranch): string {
 /**
  * ConditionNode — bifurcação multi-branch. Uma pílula por branch
  * (+ "Nenhuma das condições" no fim), cada uma com handle source
- * dedicado (`branch:<id>` / `else`). Categoria lógica (orange).
+ * dedicado (`branch:<id>` / `else`). Ícone/cor do tipo `condition`
+ * (ramo, cyan) — igual ao seletor.
  * IDs de handle preservados — buildEdges depende deles.
  */
 export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) {
   const branches = data.branches ?? [];
   const hasBranches = branches.length > 0;
-  const tone = categoryTone.logic;
+  const { Icon, tone } = stepVisual("condition");
 
   return (
     <NodeShell tone={tone} selected={selected} className="w-[300px]">
@@ -77,7 +78,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
 
       <CategoryHeader
         tone={tone}
-        icon={GitBranch}
+        icon={Icon!}
         title={data.label}
         summary={
           hasBranches

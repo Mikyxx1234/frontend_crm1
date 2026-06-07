@@ -1,14 +1,13 @@
 "use client";
 
 import { type NodeProps } from "reactflow";
-import { CornerDownRight } from "lucide-react";
 
 import {
   CategoryHeader,
   NodeShell,
   StepBadge,
   TargetHandle,
-  categoryTone,
+  stepVisual,
 } from "./node-kit";
 
 export type GotoNodeData = {
@@ -20,10 +19,11 @@ export type GotoNodeData = {
 
 /**
  * GotoNode — salto pra outro passo (terminal: sem handle de saída
- * visível, o "goto" já carrega o destino). Categoria salesbot (violet).
+ * visível, o "goto" já carrega o destino). Ícone/cor do tipo `goto`
+ * (igual ao seletor).
  */
 export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
-  const tone = categoryTone.salesbot;
+  const { Icon, tone } = stepVisual("goto");
 
   return (
     <NodeShell tone={tone} selected={selected} className="min-w-[210px] max-w-[270px]">
@@ -33,7 +33,7 @@ export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
 
       <CategoryHeader
         tone={tone}
-        icon={CornerDownRight}
+        icon={Icon!}
         title={data.label}
         summary={data.summary}
         onDelete={data.onDelete}

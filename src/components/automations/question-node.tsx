@@ -1,7 +1,6 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { HelpCircle } from "lucide-react";
 
 import {
   CategoryHeader,
@@ -9,7 +8,7 @@ import {
   NodeShell,
   StatsBar,
   TargetHandle,
-  categoryTone,
+  stepVisual,
 } from "./node-kit";
 
 export type QuestionButton = { text: string; gotoStepId: string };
@@ -24,14 +23,14 @@ export type QuestionNodeData = {
 };
 
 /**
- * QuestionNode — pergunta simples (sem rota por botão). Categoria
- * salesbot (violet). Enunciado em balão de mensagem; opções como
- * pílulas decorativas. Roteamento único: "answered" (à direita) vs
- * "timeout" (abaixo). IDs de handle preservados.
+ * QuestionNode — pergunta simples (sem rota por botão). Ícone/cor do
+ * tipo `question` (igual ao seletor). Enunciado em balão de mensagem;
+ * opções como pílulas decorativas. Roteamento único: "answered" (à
+ * direita) vs "timeout" (abaixo). IDs de handle preservados.
  */
 export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
   const buttons = data.buttons ?? [];
-  const tone = categoryTone.salesbot;
+  const { Icon, tone } = stepVisual("question");
 
   return (
     <NodeShell tone={tone} selected={selected} className="min-w-[230px] max-w-[290px]">
@@ -39,7 +38,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
 
       <CategoryHeader
         tone={tone}
-        icon={HelpCircle}
+        icon={Icon!}
         title={data.label}
         onDelete={data.onDelete}
         deleteLabel="Remover pergunta"

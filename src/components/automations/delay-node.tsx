@@ -1,14 +1,13 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { Timer } from "lucide-react";
 
 import {
   CategoryHeader,
   NodeShell,
   StepBadge,
   TargetHandle,
-  categoryTone,
+  stepVisual,
 } from "./node-kit";
 
 export type DelayNodeData = {
@@ -19,11 +18,11 @@ export type DelayNodeData = {
 };
 
 /**
- * DelayNode — pausa controlada entre passos. Categoria lógica (orange,
- * família "tempo"), saída linear única.
+ * DelayNode — pausa controlada entre passos. Ícone/cor seguem o tipo
+ * `delay` do seletor (relógio, laranja), saída linear única.
  */
 export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
-  const tone = categoryTone.logic;
+  const { Icon, tone } = stepVisual("delay");
 
   return (
     <NodeShell tone={tone} selected={selected} className="min-w-[210px] max-w-[270px]">
@@ -33,7 +32,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
 
       <CategoryHeader
         tone={tone}
-        icon={Timer}
+        icon={Icon!}
         title={data.label}
         summary={data.summary}
         onDelete={data.onDelete}

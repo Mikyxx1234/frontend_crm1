@@ -1300,7 +1300,7 @@ function WorkflowCanvasInner({
       </div>
 
       {/* Palette */}
-      <NodePalette className="w-[240px] shrink-0" />
+      <NodePalette />
 
       {/* Step config */}
       <StepConfigPanel

@@ -2,15 +2,24 @@
 
 import * as React from "react";
 import { Loader2 } from "lucide-react";
+import { IconClipboardList } from "@tabler/icons-react";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
+import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
+import { SearchInput } from "@/components/crm/search-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { TabsGlass } from "@/components/crm/tabs-glass";
+import { EmptyState } from "@/components/crm/empty-state";
 import {
-  FeedDayHeader,
-  FeedRow,
+  EVENT_CONFIG,
+  FALLBACK_CONFIG,
+  actorDisplay,
+  eventDescription,
   groupFeedByDay,
+  type FeedEvent,
 } from "@/components/crm/feed";
 import { useActivityFeed } from "@/features/activity-feed/use-activity-feed";
 import type { ActivityFeedFilters } from "@/features/activity-feed/api";
@@ -35,12 +44,47 @@ const ACTOR_OPTIONS = [
   { value: "SYSTEM", label: "Sistema" },
 ];
 
-interface LogsClientPageProps {
-  navRail?: React.ReactNode;
-}
+const ENTITY_LABEL: Record<string, string> = {
+  DEAL: "Negócio",
+  CONTACT: "Contato",
+  CONVERSATION: "Conversa",
+  MESSAGE: "Mensagem",
+  ACTIVITY: "Tarefa",
+  NOTE: "Nota",
+  TAG: "Tag",
+};
 
-export default function LogsClientPage({ navRail }: LogsClientPageProps = {}) {
-  const [tab, setTab] = React.useState<"feed" | "stats">("feed");
+const ACTOR_BADGE: Record<
+  FeedEvent["actorType"] & string,
+  { label: string; className: string }
+> = {
+  HUMAN: {
+    label: "Humano",
+    className:
+      "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+  },
+  AI: {
+    label: "IA",
+    className: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
+  },
+  AUTOMATION: {
+    label: "Automação",
+    className: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+  },
+  INTEGRATION: {
+    label: "Integração",
+    className: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  },
+  SYSTEM: {
+    label: "Sistema",
+    className: "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+  },
+};
+
+export default function LogsClientPage() {
+  const [activeTab, setActiveTab] = React.useState(0);
+  const isFeed = activeTab === 0;
+
   const [entity, setEntity] = React.useState<string>("ALL");
   const [actor, setActor] = React.useState<string>("ALL");
   const [q, setQ] = React.useState<string>("");
@@ -77,7 +121,6 @@ export default function LogsClientPage({ navRail }: LogsClientPageProps = {}) {
 
   const groups = React.useMemo(() => groupFeedByDay(allItems), [allItems]);
 
-  // IntersectionObserver para scroll infinito
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
     const el = sentinelRef.current;
@@ -96,206 +139,333 @@ export default function LogsClientPage({ navRail }: LogsClientPageProps = {}) {
     return () => io.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const { data: stats, isLoading: statsLoading } = useActivityStats(tab === "stats");
+  const { data: stats, isLoading: statsLoading } = useActivityStats(!isFeed);
+
+  const hasFilters = entity !== "ALL" || actor !== "ALL" || Boolean(q);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {navRail && <aside className="shrink-0 p-3">{navRail}</aside>}
-      <main className="flex-1 overflow-hidden flex flex-col">
+    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+      <NavRailV2 />
+
+      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
+          icon={<IconClipboardList size={22} />}
           title="Logs"
           description="Histórico completo da operação — humanos, IA, automações e integrações."
         />
 
-        <div className="flex items-center gap-2 px-6 pb-2 pt-1">
-          <Button
-            variant={tab === "feed" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setTab("feed")}
-          >
-            Feed
-          </Button>
-          <Button
-            variant={tab === "stats" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setTab("stats")}
-          >
-            Estatísticas (30d)
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TabsGlass
+            tabs={["Feed", "Estatísticas (30d)"]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            className="max-w-[320px]"
+          />
         </div>
 
-        {tab === "stats" ? (
-          <div className="scrollbar-thin flex-1 overflow-y-auto px-6 pb-10">
-            {statsLoading || !stats ? (
-              <div className="flex items-center justify-center py-16 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                Calculando estatísticas…
+        {isFeed ? (
+          <>
+            <div className="flex flex-wrap items-center gap-3">
+              <SearchInput
+                value={q}
+                onChange={setQ}
+                placeholder="Buscar evento, lead, ator..."
+              />
+              <DropdownGlass
+                options={ENTITY_OPTIONS}
+                value={entity}
+                onValueChange={setEntity}
+                menuLabel="Entidade"
+                triggerClassName="min-w-[180px]"
+              />
+              <DropdownGlass
+                options={ACTOR_OPTIONS}
+                value={actor}
+                onValueChange={setActor}
+                menuLabel="Ator"
+                triggerClassName="min-w-[180px]"
+              />
+              {hasFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEntity("ALL");
+                    setActor("ALL");
+                    setQ("");
+                  }}
+                >
+                  Limpar
+                </Button>
+              )}
+            </div>
+
+            {isLoading && allItems.length === 0 ? (
+              <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
+            ) : isError ? (
+              <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
+                Não foi possível carregar o feed.
+              </div>
+            ) : groups.length === 0 ? (
+              <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+                <EmptyState
+                  icon={<IconClipboardList size={28} />}
+                  title="Nenhum evento encontrado"
+                  description={
+                    hasFilters
+                      ? "Sem resultados para os filtros atuais."
+                      : "Os eventos da operação aparecerão aqui."
+                  }
+                />
               </div>
             ) : (
-              <div className="space-y-6 pt-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="rounded-lg border bg-card p-4">
-                    <p className="text-xs text-muted-foreground">Total de eventos</p>
-                    <p className="text-2xl font-semibold mt-1">{stats.totals.total}</p>
-                  </div>
-                  {Object.entries(stats.totals.byActorType).map(([k, v]) => (
-                    <div key={k} className="rounded-lg border bg-card p-4">
-                      <p className="text-xs text-muted-foreground">Por {k}</p>
-                      <p className="text-2xl font-semibold mt-1">{v}</p>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+                <div className="scrollbar-thin min-h-0 flex-1 overflow-auto">
+                  <table className="w-full border-collapse">
+                    <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
+                      <tr className="border-b border-[var(--glass-border-subtle)]">
+                        <Th className="w-[260px]">Evento</Th>
+                        <Th>Detalhe</Th>
+                        <Th className="w-[150px]">Entidade</Th>
+                        <Th className="w-[170px]">Ator</Th>
+                        <Th className="w-[120px] text-right">Data</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groups.map(([dayKey, dayItems]) => (
+                        <React.Fragment key={dayKey}>
+                          <tr className="sticky top-[41px] z-[5]">
+                            <td
+                              colSpan={5}
+                              className="bg-[var(--glass-bg-subtle)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+                            >
+                              {dayLabel(dayItems[0].occurredAt)}
+                            </td>
+                          </tr>
+                          {dayItems.map((ev) => (
+                            <EventRow key={ev.id} event={ev} />
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div ref={sentinelRef} className="h-10" />
+                  {isFetchingNextPage && (
+                    <div className="flex items-center justify-center py-4 text-[13px] text-[var(--text-muted)]">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Carregando mais...
                     </div>
+                  )}
+                  {!hasNextPage && allItems.length > 0 && (
+                    <p className="pb-6 pt-2 text-center text-[11px] text-[var(--text-muted)]/70">
+                      Fim do histórico.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto pr-1">
+            {statsLoading || !stats ? (
+              <div className="flex items-center justify-center py-16 text-[13px] text-[var(--text-muted)]">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Calculando estatísticas...
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <StatCard label="Total de eventos" value={stats.totals.total} />
+                  {Object.entries(stats.totals.byActorType).map(([k, v]) => (
+                    <StatCard key={k} label={`Por ${k}`} value={v} />
                   ))}
                 </div>
 
-                <section>
-                  <h3 className="text-sm font-semibold mb-2">Top tipos de evento</h3>
-                  <ul className="rounded-lg border bg-card divide-y">
-                    {stats.totals.byType.map((r) => (
-                      <li
-                        key={r.type}
-                        className="px-4 py-2 flex justify-between text-sm"
-                      >
-                        <span className="font-mono text-xs">{r.type}</span>
-                        <span className="tabular-nums">{r.count}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <StatTable
+                  title="Top tipos de evento"
+                  rows={stats.totals.byType.map((r) => ({
+                    label: EVENT_CONFIG[r.type]?.label ?? r.type,
+                    value: r.count,
+                  }))}
+                />
 
-                <section>
-                  <h3 className="text-sm font-semibold mb-2">Por entidade</h3>
-                  <ul className="rounded-lg border bg-card divide-y">
-                    {Object.entries(stats.totals.byEntityType).map(([k, v]) => (
-                      <li key={k} className="px-4 py-2 flex justify-between text-sm">
-                        <span>{k}</span>
-                        <span className="tabular-nums">{v}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <StatTable
+                  title="Por entidade"
+                  rows={Object.entries(stats.totals.byEntityType).map(
+                    ([k, v]) => ({ label: ENTITY_LABEL[k] ?? k, value: v }),
+                  )}
+                />
 
-                <section>
-                  <h3 className="text-sm font-semibold mb-2">Eventos por dia</h3>
-                  <ul className="rounded-lg border bg-card divide-y">
-                    {stats.timeline.map((r) => (
-                      <li
-                        key={r.day}
-                        className="px-4 py-2 flex items-center gap-3 text-sm"
-                      >
-                        <span className="font-mono text-xs w-24">{r.day}</span>
-                        <div className="flex-1 h-2 bg-muted rounded">
-                          <div
-                            className="h-2 bg-primary rounded"
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                (r.count /
-                                  Math.max(
-                                    1,
-                                    ...stats.timeline.map((x) => x.count),
-                                  )) *
-                                  100,
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="tabular-nums w-12 text-right">
-                          {r.count}
-                        </span>
-                      </li>
-                    ))}
+                <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+                  <h3 className="border-b border-[var(--glass-border-subtle)] px-4 py-3 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                    Eventos por dia
+                  </h3>
+                  <ul>
+                    {stats.timeline.map((r) => {
+                      const max = Math.max(
+                        1,
+                        ...stats.timeline.map((x) => x.count),
+                      );
+                      return (
+                        <li
+                          key={r.day}
+                          className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-2 text-[13px] last:border-0"
+                        >
+                          <span className="w-24 font-mono text-[11px] text-[var(--text-muted)]">
+                            {r.day}
+                          </span>
+                          <div className="h-2 flex-1 rounded bg-[var(--glass-bg-overlay)]">
+                            <div
+                              className="h-2 rounded bg-[var(--brand-primary)]"
+                              style={{ width: `${(r.count / max) * 100}%` }}
+                            />
+                          </div>
+                          <span className="w-12 text-right font-display tabular-nums text-[var(--text-primary)]">
+                            {r.count}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </section>
               </div>
             )}
           </div>
-        ) : (
-          <>
-        <div className="flex flex-wrap items-center gap-3 px-6 pb-3">
-          <Input
-            placeholder="Buscar evento, lead, ator…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="w-64"
-          />
-          <DropdownGlass
-            options={ENTITY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-            value={entity}
-            onValueChange={setEntity}
-            menuLabel="Entidade"
-            triggerClassName="min-w-[180px]"
-          />
-          <DropdownGlass
-            options={ACTOR_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-            value={actor}
-            onValueChange={setActor}
-            menuLabel="Ator"
-            triggerClassName="min-w-[180px]"
-          />
-          {(entity !== "ALL" || actor !== "ALL" || q) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setEntity("ALL");
-                setActor("ALL");
-                setQ("");
-              }}
-            >
-              Limpar
-            </Button>
-          )}
-        </div>
-
-        <div className="scrollbar-thin flex-1 overflow-y-auto px-6 pb-10">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              Carregando feed…
-            </div>
-          ) : isError ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">
-              Não foi possível carregar o feed.
-            </div>
-          ) : groups.length === 0 ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">
-              Nenhum evento encontrado com os filtros atuais.
-            </div>
-          ) : (
-            <div className="space-y-8 pt-2">
-              {groups.map(([dayKey, dayItems]) => (
-                <div key={dayKey}>
-                  <FeedDayHeader isoDate={dayItems[0].occurredAt} />
-                  <ul>
-                    {dayItems.map((ev, idx) => (
-                      <FeedRow
-                        key={ev.id}
-                        event={ev}
-                        withRail
-                        isLast={idx === dayItems.length - 1}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              ))}
-
-              <div ref={sentinelRef} className="h-10" />
-              {isFetchingNextPage && (
-                <div className="flex items-center justify-center py-4 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Carregando mais…
-                </div>
-              )}
-              {!hasNextPage && allItems.length > 0 && (
-                <p className="pt-2 pb-6 text-center text-xs text-muted-foreground/70">
-                  Fim do histórico.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-          </>
         )}
       </main>
     </div>
+  );
+}
+
+function EventRow({ event }: { event: FeedEvent }) {
+  const cfg = EVENT_CONFIG[event.type] ?? FALLBACK_CONFIG;
+  const Icon = cfg.Icon;
+  const detail = eventDescription(event);
+  const actor = actorDisplay(event);
+  const badge = ACTOR_BADGE[actor.type] ?? ACTOR_BADGE.SYSTEM;
+
+  return (
+    <tr className="border-b border-[var(--glass-border-subtle)] last:border-0 hover:bg-[var(--glass-bg-overlay)]">
+      <td className="px-3 py-2.5">
+        <div className="flex items-center gap-2.5">
+          <span
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
+          >
+            <Icon size={15} />
+          </span>
+          <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+            {cfg.label}
+          </span>
+        </div>
+      </td>
+      <td className="px-3 py-2.5">
+        <span className="line-clamp-2 font-body text-[13px] text-[var(--text-secondary)]">
+          {detail || "—"}
+        </span>
+      </td>
+      <td className="px-3 py-2.5">
+        {event.entityLabel || event.entityType ? (
+          <span className="flex flex-col">
+            {event.entityType && (
+              <span className="font-display text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                {ENTITY_LABEL[event.entityType] ?? event.entityType}
+              </span>
+            )}
+            {event.entityLabel && (
+              <span className="truncate font-body text-[12px] text-[var(--text-secondary)]">
+                {event.entityLabel}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="text-[13px] text-[var(--text-muted)]">—</span>
+        )}
+      </td>
+      <td className="px-3 py-2.5">
+        <span
+          className={`inline-flex items-center rounded-full px-2 py-0.5 font-display text-[11px] font-bold ${badge.className}`}
+        >
+          {actor.label}
+        </span>
+      </td>
+      <td className="px-3 py-2.5 text-right">
+        <span className="font-display tabular-nums text-[12px] text-[var(--text-muted)]">
+          {format(parseISO(event.occurredAt), "HH:mm", { locale: ptBR })}
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+function dayLabel(iso: string): string {
+  const d = parseISO(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+  if (sameDay(d, today)) return "Hoje";
+  if (sameDay(d, yesterday)) return "Ontem";
+  return format(d, "EEEE, dd 'de' MMMM", { locale: ptBR });
+}
+
+function Th({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <th
+      className={`px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)] ${className ?? ""}`}
+    >
+      {children}
+    </th>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <p className="font-body text-[12px] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-1 font-display text-[24px] font-bold tabular-nums text-[var(--text-primary)]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function StatTable({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; value: number }[];
+}) {
+  return (
+    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <h3 className="border-b border-[var(--glass-border-subtle)] px-4 py-3 font-display text-[13px] font-bold text-[var(--text-primary)]">
+        {title}
+      </h3>
+      <ul>
+        {rows.map((r) => (
+          <li
+            key={r.label}
+            className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-4 py-2 text-[13px] last:border-0"
+          >
+            <span className="font-body text-[var(--text-secondary)]">
+              {r.label}
+            </span>
+            <span className="font-display tabular-nums text-[var(--text-primary)]">
+              {r.value}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

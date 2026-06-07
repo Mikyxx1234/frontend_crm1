@@ -5,8 +5,8 @@ import {
   IconClipboardList,
   IconFilter,
   IconLayoutDashboard,
-  IconLayoutGrid,
   IconMessageCircle,
+  IconPlugConnected,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
@@ -102,7 +102,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "widgets",
     title: "Widgets",
     href: "/widgets",
-    icon: IconLayoutGrid,
+    icon: IconPlugConnected,
     description: "Central de extensões da organização.",
     locked: false,
   },

@@ -43,7 +43,9 @@
   --color-success-text:     #047857;
   --color-danger:           #ef4444;
   --color-danger-text:      #b91c1c;
+  --color-danger-bg:        rgba(239, 68, 68, 0.12);
   --color-warning:          #f59e0b;
+  --color-warning-bg:       rgba(245, 158, 11, 0.14);
   --color-info:             #3b82f6;
   --color-teal:             #10D8D8;
 
@@ -130,7 +132,9 @@
   --color-success-bg:    rgba(16, 185, 129, 0.12);
   --color-danger:        #ef4444;
   --color-danger-text:   #b91c1c;
+  --color-danger-bg:     rgba(239, 68, 68, 0.12);
   --color-warning:       #f59e0b;
+  --color-warning-bg:    rgba(245, 158, 11, 0.14);
   --color-info:          #3b82f6;
   --color-online:        #10b981;
   --color-enterprise-bg: rgba(91, 111, 245, 0.15);

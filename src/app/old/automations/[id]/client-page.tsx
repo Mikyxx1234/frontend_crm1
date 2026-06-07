@@ -703,7 +703,7 @@ export default function AutomationDetailPage() {
   }
 
   return (
-    <div className="-m-6 flex h-[calc(100dvh-0px)] flex-col overflow-hidden md:-m-8">
+    <div className="-m-6 flex h-full flex-col overflow-hidden md:-m-8">
       {/* ═══ Top bar premium ═══
           glassmorphism + pill buttons + glow no Salvar — alinhado ao
           design system EduIT Premium. ActiveSwitch local mantido pra

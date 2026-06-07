@@ -5,6 +5,7 @@ import { Handle, Position } from "reactflow";
 import { AlertTriangle, CheckCircle2, Trash2 } from "lucide-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
+import { canonicalStepType } from "@/lib/automation-workflow";
 import { cn } from "@/lib/utils";
 
 /** Assinatura comum dos ícones (lucide) usados pelos nós. */
@@ -108,7 +109,7 @@ const MESSAGE_STEP_TYPES = new Set([
 ]);
 
 export function categoryOf(stepType: string): NodeCategory {
-  return STEP_CATEGORY[stepType] ?? "action";
+  return STEP_CATEGORY[stepType] ?? STEP_CATEGORY[canonicalStepType(stepType)] ?? "action";
 }
 
 export function stepTone(stepType: string): Tone {
@@ -116,7 +117,7 @@ export function stepTone(stepType: string): Tone {
 }
 
 export function isMessageStep(stepType: string): boolean {
-  return MESSAGE_STEP_TYPES.has(stepType);
+  return MESSAGE_STEP_TYPES.has(stepType) || MESSAGE_STEP_TYPES.has(canonicalStepType(stepType));
 }
 
 /* ────────────────────────────────────────────────────────────────────

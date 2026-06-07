@@ -27,6 +27,7 @@ import {
   isMessageStep,
   stepTone,
 } from "./node-kit";
+import { canonicalStepType } from "@/lib/automation-workflow";
 
 export type ActionNodeData = {
   stepType: string;
@@ -64,7 +65,7 @@ const iconMap: Record<string, ComponentType<{ className?: string; strokeWidth?: 
  */
 export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   const tone = stepTone(data.stepType);
-  const Icon = iconMap[data.stepType] ?? Activity;
+  const Icon = iconMap[data.stepType] ?? iconMap[canonicalStepType(data.stepType)] ?? Activity;
   const asMessage = isMessageStep(data.stepType);
 
   return (

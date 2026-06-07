@@ -4,28 +4,22 @@ import { motion } from "framer-motion";
 import {
   IconCheck,
   IconCircleCheckFilled,
-  IconLayoutGrid,
   IconLoader2,
   IconPlus,
-  IconRobot,
-  IconRoute,
   IconTrash,
-  type IconProps,
 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import type { WidgetDto } from "@/features/widgets/types";
-
-/** Mapeia a chave de icone do catalogo para um componente tabler. */
-const ICON_BY_KEY: Record<string, React.ComponentType<IconProps>> = {
-  route: IconRoute,
-  bot: IconRobot,
-};
+import {
+  resolveWidgetAccent,
+  resolveWidgetIcon,
+} from "../_config/widget-presentation";
 
 function WidgetIcon({ icon, className }: { icon: string; className?: string }) {
-  const Cmp = ICON_BY_KEY[icon] ?? IconLayoutGrid;
+  const Cmp = resolveWidgetIcon(icon);
   return <Cmp className={className} />;
 }
 
@@ -49,6 +43,8 @@ export function WidgetCard({
 }: WidgetCardProps) {
   const installed = widget.installed;
   const comingSoon = widget.availability === "coming_soon";
+  const accent = resolveWidgetAccent(widget.category);
+  const accentVar = `var(${accent.token})`;
 
   return (
     <motion.div
@@ -56,20 +52,32 @@ export function WidgetCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       whileHover={{ y: -4 }}
+      style={{ "--widget-accent": accentVar } as React.CSSProperties}
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-6 shadow-[var(--glass-shadow-sm)] backdrop-blur-[16px] transition-shadow duration-300 hover:shadow-[var(--glass-shadow)]",
         featured && "sm:col-span-2 sm:flex-row sm:items-stretch sm:gap-6",
       )}
     >
-      {/* Glow decorativo no hover */}
+      {/* Glow decorativo no hover (usa o accent do widget) */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[var(--brand-primary)]/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
+        className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
+        style={{
+          backgroundColor:
+            "color-mix(in srgb, var(--widget-accent) 14%, transparent)",
+        }}
       />
 
       <div className={cn("flex flex-col", featured && "sm:w-1/2 sm:shrink-0")}>
         <div className="flex items-start justify-between gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-transform duration-300 group-hover:scale-105">
+          <div
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)] transition-transform duration-300 group-hover:scale-105"
+            style={{
+              backgroundColor:
+                "color-mix(in srgb, var(--widget-accent) 12%, var(--glass-bg-overlay))",
+              color: "var(--widget-accent)",
+            }}
+          >
             <WidgetIcon icon={widget.icon} className="size-6" />
           </div>
 
@@ -94,7 +102,10 @@ export function WidgetCard({
               key={feature}
               className="flex items-center gap-2 font-body text-[12.5px] text-[var(--text-secondary)]"
             >
-              <IconCheck className="size-3.5 shrink-0 text-[var(--brand-primary)]" />
+              <IconCheck
+                className="size-3.5 shrink-0"
+                style={{ color: "var(--widget-accent)" }}
+              />
               <span>{feature}</span>
             </li>
           ))}

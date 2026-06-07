@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { IconLayoutGrid } from "@tabler/icons-react";
+import { IconPlugConnected } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { NavRail } from "@/components/crm/nav-rail";
@@ -70,7 +70,7 @@ export default function WidgetsClientPage({
 
       <main className="flex min-w-0 flex-col gap-4 overflow-y-auto pr-1">
         <PageHeader
-          icon={<IconLayoutGrid size={22} />}
+          icon={<IconPlugConnected size={22} />}
           title="Widgets"
           description="Central de extensões — instale recursos extras na sua organização"
         />
@@ -119,7 +119,7 @@ function ErrorState({ message }: { message: string }) {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-12 text-center">
-      <IconLayoutGrid size={32} className="text-[var(--text-muted)]" />
+      <IconPlugConnected size={32} className="text-[var(--text-muted)]" />
       <p className="font-display text-[15px] font-semibold text-[var(--text-primary)]">
         Nenhum widget disponível
       </p>

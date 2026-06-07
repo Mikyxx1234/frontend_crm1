@@ -201,46 +201,52 @@ function CardVariantB({ widget }: { widget: MockWidget }) {
       style={{ "--wa": accent } as React.CSSProperties}
       className="group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow-sm)] backdrop-blur-[16px] transition-shadow duration-300 hover:shadow-[var(--glass-shadow)]"
     >
-      {/* Barra de accent vertical */}
+      {/* Barra de accent vertical (grossa) */}
       <div
         aria-hidden
-        className="absolute inset-y-0 left-0 w-1"
+        className="absolute inset-y-0 left-0 w-1.5"
         style={{ backgroundColor: "var(--wa)" }}
       />
-      <div className="flex flex-col p-6 pl-7">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-transform duration-300 group-hover:scale-105"
-            style={{
-              backgroundColor: "color-mix(in srgb, var(--wa) 14%, transparent)",
-              color: "var(--wa)",
-            }}
-          >
-            <widget.Icon className="size-[22px]" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate font-display text-[16px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
-              {widget.name}
-            </h3>
-            <p
-              className="mt-0.5 font-body text-[11px] font-semibold uppercase tracking-wide"
-              style={{ color: "var(--wa)" }}
-            >
-              {widget.category}
-            </p>
-          </div>
-          <StatusBadge installed={widget.installed} />
+      {/* Cabeçalho em faixa com fundo de accent */}
+      <div
+        className="flex items-center gap-3 px-6 py-4 pl-7"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--wa) 8%, transparent)",
+          borderBottom:
+            "1px solid color-mix(in srgb, var(--wa) 20%, transparent)",
+        }}
+      >
+        <div
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] shadow-[var(--glass-shadow-sm)] transition-transform duration-300 group-hover:scale-105"
+          style={{
+            backgroundColor: "var(--wa)",
+            color: "var(--text-on-brand, #fff)",
+          }}
+        >
+          <widget.Icon className="size-[22px]" />
         </div>
-        <p className="mt-3 font-body text-[13px] leading-relaxed text-[var(--text-muted)]">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-display text-[16px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
+            {widget.name}
+          </h3>
+          <p
+            className="mt-0.5 font-body text-[11px] font-semibold uppercase tracking-wide"
+            style={{ color: "var(--wa)" }}
+          >
+            {widget.category}
+          </p>
+        </div>
+        <StatusBadge installed={widget.installed} />
+      </div>
+      <div className="flex flex-1 flex-col p-6 pl-7">
+        <p className="font-body text-[13px] leading-relaxed text-[var(--text-muted)]">
           {widget.description}
         </p>
-        <div
-          className="my-4 h-px w-full"
-          style={{ backgroundColor: "var(--glass-border-subtle)" }}
-        />
-        <FeatureList features={widget.features} accent="var(--wa)" />
-        <div className="mt-5">
-          <ActionButton installed={widget.installed} />
+        <div className="mt-4 flex flex-1 flex-col">
+          <FeatureList features={widget.features} accent="var(--wa)" />
+          <div className="mt-auto pt-5">
+            <ActionButton installed={widget.installed} />
+          </div>
         </div>
       </div>
     </motion.div>
@@ -259,23 +265,26 @@ function CardVariantC({ widget }: { widget: MockWidget }) {
       style={{ "--wa": accent } as React.CSSProperties}
       className="group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow-sm)] backdrop-blur-[16px] transition-shadow duration-300 hover:shadow-[var(--glass-shadow)]"
     >
-      {/* Banner com accent suave */}
+      {/* Banner com accent forte */}
       <div
-        className="relative flex items-start justify-between gap-3 px-6 pb-8 pt-6"
+        className="relative flex items-start justify-end gap-3 px-6 pb-10 pt-5"
         style={{
           background:
-            "linear-gradient(135deg, color-mix(in srgb, var(--wa) 16%, transparent), transparent 70%)",
+            "linear-gradient(135deg, color-mix(in srgb, var(--wa) 38%, transparent), color-mix(in srgb, var(--wa) 12%, transparent))",
         }}
       >
         <StatusBadge installed={widget.installed} />
       </div>
       {/* Ícone sobreposto na borda do banner */}
-      <div className="-mt-7 px-6">
+      <div className="-mt-8 px-6">
         <div
-          className="flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow)] transition-transform duration-300 group-hover:scale-105"
-          style={{ color: "var(--wa)" }}
+          className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-lg)] border-2 border-[var(--glass-bg-modal)] shadow-[var(--glass-shadow)] transition-transform duration-300 group-hover:scale-105"
+          style={{
+            backgroundColor: "var(--wa)",
+            color: "var(--text-on-brand, #fff)",
+          }}
         >
-          <widget.Icon className="size-7" />
+          <widget.Icon className="size-8" />
         </div>
       </div>
       <div className="flex flex-1 flex-col px-6 pb-6 pt-3">

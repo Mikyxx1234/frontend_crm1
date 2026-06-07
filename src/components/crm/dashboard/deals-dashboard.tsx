@@ -248,7 +248,8 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
 
 // ── Funil por etapa ──────────────────────────────────────────────────
 
-function FunnelSection({ funnel }: { funnel: DashboardData["funnel"] }) {
+function FunnelSection({ funnel: funnelProp }: { funnel: DashboardData["funnel"] }) {
+  const funnel = funnelProp ?? [];
   const scrollRef = useRef<HTMLDivElement>(null);
   const maxCount = Math.max(1, ...funnel.map((s) => s.count));
 
@@ -378,7 +379,7 @@ function Metric({
 
 // ── Negócios por origem ──────────────────────────────────────────────
 
-function SourceSection({ rows }: { rows: DashboardData["bySource"] }) {
+function SourceSection({ rows = [] }: { rows: DashboardData["bySource"] }) {
   return (
     <ChartCard
       title="Negócios por origem"
@@ -432,7 +433,7 @@ function SourceSection({ rows }: { rows: DashboardData["bySource"] }) {
 
 // ── Ranking de consultores ───────────────────────────────────────────
 
-function OwnerSection({ rows }: { rows: DashboardData["byOwner"] }) {
+function OwnerSection({ rows = [] }: { rows: DashboardData["byOwner"] }) {
   return (
     <ChartCard
       title="Ranking de consultores"
@@ -599,7 +600,7 @@ function DailyEvolutionSection({
 
 // ── Performance por tags ─────────────────────────────────────────────
 
-function TagSection({ rows }: { rows: DashboardData["byTag"] }) {
+function TagSection({ rows = [] }: { rows: DashboardData["byTag"] }) {
   return (
     <ChartCard
       title="Performance por tags"
@@ -656,7 +657,7 @@ function TagSection({ rows }: { rows: DashboardData["byTag"] }) {
 
 // ── Motivos de perda ─────────────────────────────────────────────────
 
-function LossReasonSection({ rows }: { rows: DashboardData["lossReasons"] }) {
+function LossReasonSection({ rows = [] }: { rows: DashboardData["lossReasons"] }) {
   const total = rows.reduce((acc, r) => acc + r.count, 0);
   return (
     <ChartCard
@@ -711,7 +712,7 @@ function LossReasonSection({ rows }: { rows: DashboardData["lossReasons"] }) {
 
 // ── Leads parados por etapa ──────────────────────────────────────────
 
-function StalledSection({ rows }: { rows: DashboardData["stalled"] }) {
+function StalledSection({ rows = [] }: { rows: DashboardData["stalled"] }) {
   return (
     <ChartCard
       title="Leads parados por etapa"

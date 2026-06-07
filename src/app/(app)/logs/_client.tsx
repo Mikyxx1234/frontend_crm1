@@ -248,7 +248,7 @@ export default function LogsClientPage() {
             ) : (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
                 <div className="scrollbar-thin min-h-0 flex-1 overflow-auto">
-                  <table className="w-full border-collapse">
+                  <table className="w-full table-fixed border-collapse">
                     <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
                       <tr className="border-b border-[var(--glass-border-subtle)]">
                         <Th className="w-[260px]">Evento</Th>
@@ -387,15 +387,15 @@ function EventRow({ event }: { event: FeedEvent }) {
         </div>
       </td>
       <td className="px-3 py-2.5">
-        <span className="line-clamp-2 font-body text-[13px] text-[var(--text-secondary)]">
+        <span className="block truncate font-body text-[13px] text-[var(--text-secondary)]">
           {detail || "—"}
         </span>
       </td>
       <td className="px-3 py-2.5">
         {event.entityLabel || event.entityType ? (
-          <span className="flex flex-col">
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
             {event.entityType && (
-              <span className="font-display text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                 {ENTITY_LABEL[event.entityType] ?? event.entityType}
               </span>
             )}

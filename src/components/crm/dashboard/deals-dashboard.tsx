@@ -115,7 +115,24 @@ export function DealsDashboard({
 
 // ── Cards ────────────────────────────────────────────────────────────
 
+const EMPTY_SUMMARY: DashboardData["summary"] = {
+  totalValue: 0,
+  openDeals: 0,
+  winRate: 0,
+  avgTicket: 0,
+  newContacts: 0,
+  wonCount: 0,
+  lostCount: 0,
+  wonValue: 0,
+  lostValue: 0,
+  leadsWithoutOwner: 0,
+  avgTimeToWinDays: 0,
+  deltas: { winRate: 0, avgTicket: 0, wonCount: 0, wonValue: 0 },
+};
+
 function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
+  const s = summary ?? EMPTY_SUMMARY;
+  const deltas = s.deltas ?? EMPTY_SUMMARY.deltas;
   return (
     <HoverEffectGroup>
       <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-4">
@@ -123,7 +140,7 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconCurrencyReal size={18} />}
             label="Valor total"
-            value={formatCurrency(summary.totalValue)}
+            value={formatCurrency(s.totalValue)}
             accent="brand"
             caption="no funil ativo"
           />
@@ -132,7 +149,7 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconBriefcase size={18} />}
             label="Em andamento"
-            value={formatNumber(summary.openDeals)}
+            value={formatNumber(s.openDeals)}
             accent="teal"
             caption="negócios abertos"
           />
@@ -141,8 +158,8 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconTargetArrow size={18} />}
             label="Taxa de ganho"
-            value={`${summary.winRate}%`}
-            delta={summary.deltas.winRate}
+            value={`${s.winRate}%`}
+            delta={deltas.winRate}
             accent="success"
             caption="vs. período anterior"
           />
@@ -151,8 +168,8 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconReceipt size={18} />}
             label="Ticket médio"
-            value={formatCurrency(summary.avgTicket)}
-            delta={summary.deltas.avgTicket}
+            value={formatCurrency(s.avgTicket)}
+            delta={deltas.avgTicket}
             accent="purple"
             caption="por negócio ganho"
           />
@@ -162,8 +179,8 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconTrophy size={18} />}
             label="Ganhos"
-            value={formatNumber(summary.wonCount)}
-            delta={summary.deltas.wonCount}
+            value={formatNumber(s.wonCount)}
+            delta={deltas.wonCount}
             accent="success"
             caption="no período"
           />
@@ -172,7 +189,7 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconCircleX size={18} />}
             label="Perdidos"
-            value={formatNumber(summary.lostCount)}
+            value={formatNumber(s.lostCount)}
             accent="danger"
             caption="no período"
           />
@@ -181,8 +198,8 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconCurrencyReal size={18} />}
             label="Valor ganho"
-            value={formatCurrency(summary.wonValue)}
-            delta={summary.deltas.wonValue}
+            value={formatCurrency(s.wonValue)}
+            delta={deltas.wonValue}
             accent="success"
             caption="no período"
           />
@@ -191,7 +208,7 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconTrendingDown size={18} />}
             label="Valor perdido"
-            value={formatCurrency(summary.lostValue)}
+            value={formatCurrency(s.lostValue)}
             accent="danger"
             caption="no período"
           />
@@ -201,7 +218,7 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconUserPlus size={18} />}
             label="Novos contatos"
-            value={formatNumber(summary.newContacts)}
+            value={formatNumber(s.newContacts)}
             accent="brand"
             caption="criados no período"
           />
@@ -210,7 +227,7 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconUserQuestion size={18} />}
             label="Sem responsável"
-            value={formatNumber(summary.leadsWithoutOwner)}
+            value={formatNumber(s.leadsWithoutOwner)}
             accent="warning"
             caption="negócios abertos"
           />
@@ -219,7 +236,7 @@ function SummaryCards({ summary }: { summary: DashboardData["summary"] }) {
           <StatCard
             icon={<IconClockHour4 size={18} />}
             label="Tempo até ganho"
-            value={summary.avgTimeToWinDays > 0 ? `${summary.avgTimeToWinDays}d` : "—"}
+            value={s.avgTimeToWinDays > 0 ? `${s.avgTimeToWinDays}d` : "—"}
             accent="purple"
             caption="da criação ao ganho"
           />

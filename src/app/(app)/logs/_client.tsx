@@ -278,12 +278,11 @@ export default function LogsClientPage() {
                 <div className="scrollbar-thin min-h-0 flex-1 overflow-auto">
                   <table className="w-full table-fixed border-collapse">
                     <colgroup>
-                      <col className="w-[240px]" />
-                      <col className="w-[300px]" />
-                      <col className="w-[200px]" />
-                      <col className="w-[150px]" />
-                      <col className="w-[90px]" />
-                      <col />
+                      <col className="w-[22%]" />
+                      <col className="w-[30%]" />
+                      <col className="w-[28%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[8%]" />
                     </colgroup>
                     <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
                       <tr className="border-b border-[var(--glass-border)]">
@@ -291,10 +290,9 @@ export default function LogsClientPage() {
                         <Th variant={variant}>Detalhe</Th>
                         <Th variant={variant}>Entidade</Th>
                         <Th variant={variant}>Ator</Th>
-                        <Th variant={variant} className="text-right">
+                        <Th variant={variant} last className="text-right">
                           Data
                         </Th>
-                        <Th variant={variant} last className="hidden md:table-cell" />
                       </tr>
                     </thead>
                     <tbody>
@@ -302,7 +300,7 @@ export default function LogsClientPage() {
                         <React.Fragment key={dayKey}>
                           <tr className="sticky top-[41px] z-[5]">
                             <td
-                              colSpan={6}
+                              colSpan={5}
                               className="border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
                             >
                               {dayLabel(dayItems[0].occurredAt)}
@@ -488,12 +486,11 @@ function EventRow({
           {actor.label}
         </span>
       </td>
-      <td className={`px-3 py-2.5 text-right ${colDivider}`}>
+      <td className="px-3 py-2.5 text-right">
         <span className="font-display tabular-nums text-[12px] text-[var(--text-muted)]">
           {format(parseISO(event.occurredAt), "HH:mm", { locale: ptBR })}
         </span>
       </td>
-      <td className="hidden px-3 py-2.5 md:table-cell" />
     </tr>
   );
 }

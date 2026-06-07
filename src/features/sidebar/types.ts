@@ -7,7 +7,4 @@ export interface SidebarPreferencesResponse {
   sidebar: {
     items: SidebarItemPreference[];
   };
-  /** Keys liberadas para o usuario (gating por permission + widgets ativos).
-   *  Ausente em respostas antigas — trate como "catalogo inteiro". */
-  availableKeys?: string[];
 }

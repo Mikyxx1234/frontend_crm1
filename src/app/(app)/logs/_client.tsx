@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
 import { Button } from "@/components/ui/button";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { DateRangePicker, type DateRange } from "@/components/crm/date-range-picker";
 import { TabsGlass } from "@/components/crm/tabs-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import {
@@ -24,6 +25,7 @@ import {
 import { useActivityFeed } from "@/features/activity-feed/use-activity-feed";
 import type { ActivityFeedFilters } from "@/features/activity-feed/api";
 import { useActivityStats } from "@/features/activity-feed/use-activity-stats";
+import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
 
 const ENTITY_OPTIONS = [
   { value: "ALL", label: "Todas as entidades" },
@@ -81,6 +83,14 @@ const ACTOR_BADGE: Record<
   },
 };
 
+type TableVariant = "grid" | "divided" | "zebra";
+
+const VARIANT_OPTIONS: { value: TableVariant; label: string; hint: string }[] = [
+  { value: "grid", label: "Grade", hint: "Bordas em linhas e colunas" },
+  { value: "divided", label: "Divisores", hint: "Linhas verticais sutis" },
+  { value: "zebra", label: "Zebra", hint: "Faixas alternadas, sem grade" },
+];
+
 export default function LogsClientPage() {
   const [activeTab, setActiveTab] = React.useState(0);
   const isFeed = activeTab === 0;
@@ -89,6 +99,9 @@ export default function LogsClientPage() {
   const [actor, setActor] = React.useState<string>("ALL");
   const [q, setQ] = React.useState<string>("");
   const [qDebounced, setQDebounced] = React.useState<string>("");
+  const [demo, setDemo] = React.useState<boolean>(false);
+  const [variant, setVariant] = React.useState<TableVariant>("grid");
+  const [range, setRange] = React.useState<DateRange>({ from: null, to: null });
 
   React.useEffect(() => {
     const t = setTimeout(() => setQDebounced(q), 350);
@@ -100,9 +113,11 @@ export default function LogsClientPage() {
       entityType: entity === "ALL" ? undefined : [entity],
       actorType: actor === "ALL" ? undefined : [actor],
       q: qDebounced || undefined,
+      dateFrom: range.from ? format(range.from, "yyyy-MM-dd") : undefined,
+      dateTo: range.to ? format(range.to, "yyyy-MM-dd") : undefined,
       limit: 80,
     }),
-    [entity, actor, qDebounced],
+    [entity, actor, qDebounced, range],
   );
 
   const {
@@ -114,10 +129,20 @@ export default function LogsClientPage() {
     isFetchingNextPage,
   } = useActivityFeed(filters);
 
-  const allItems = React.useMemo(
+  const realItems = React.useMemo(
     () => (data?.pages ?? []).flatMap((p) => p.items),
     [data],
   );
+
+  const hasFilters =
+    entity !== "ALL" || actor !== "ALL" || Boolean(q) || Boolean(range.from);
+
+  // Modo demonstração: ativo manualmente OU automaticamente quando não há
+  // eventos reais e nenhum filtro aplicado (para visualizar todos os tipos).
+  const isDemo =
+    demo || (!isLoading && !isError && realItems.length === 0 && !hasFilters);
+
+  const allItems = isDemo ? MOCK_FEED : realItems;
 
   const groups = React.useMemo(() => groupFeedByDay(allItems), [allItems]);
 
@@ -141,8 +166,6 @@ export default function LogsClientPage() {
 
   const { data: stats, isLoading: statsLoading } = useActivityStats(!isFeed);
 
-  const hasFilters = entity !== "ALL" || actor !== "ALL" || Boolean(q);
-
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
@@ -161,6 +184,34 @@ export default function LogsClientPage() {
             onChange={setActiveTab}
             className="max-w-[320px]"
           />
+          {isFeed && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-0.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-0.5 backdrop-blur-md">
+                {VARIANT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    title={opt.hint}
+                    onClick={() => setVariant(opt.value)}
+                    className={`rounded-[var(--radius-md)] px-2.5 py-1 font-display text-[12px] font-bold transition-colors ${
+                      variant === opt.value
+                        ? "bg-[var(--brand-primary)] text-[var(--brand-on-primary,#fff)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant={isDemo ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDemo((v) => !v)}
+              >
+                {isDemo ? "Modo demonstração ativo" : "Ver dados de exemplo"}
+              </Button>
+            </div>
+          )}
         </div>
 
         {isFeed ? (
@@ -185,6 +236,7 @@ export default function LogsClientPage() {
                 menuLabel="Ator"
                 triggerClassName="min-w-[180px]"
               />
+              <DateRangePicker value={range} onChange={setRange} />
               {hasFilters && (
                 <Button
                   variant="ghost"
@@ -193,12 +245,22 @@ export default function LogsClientPage() {
                     setEntity("ALL");
                     setActor("ALL");
                     setQ("");
+                    setRange({ from: null, to: null });
                   }}
                 >
                   Limpar
                 </Button>
               )}
             </div>
+
+            {isDemo && (
+              <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--color-enterprise-bg)] px-3 py-2 font-body text-[12px] text-[var(--brand-primary)]">
+                <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[var(--brand-primary)]" />
+                Dados de exemplo — um evento de cada tipo para visualizar as
+                variações visuais. Os eventos reais aparecerão aqui assim que
+                ocorrerem.
+              </div>
+            )}
 
             {isLoading && allItems.length === 0 ? (
               <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
@@ -221,14 +283,23 @@ export default function LogsClientPage() {
             ) : (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
                 <div className="scrollbar-thin min-h-0 flex-1 overflow-auto">
-                  <table className="w-full border-collapse">
-                    <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
-                      <tr className="border-b border-[var(--glass-border-subtle)]">
-                        <Th className="w-[260px]">Evento</Th>
-                        <Th>Detalhe</Th>
-                        <Th className="w-[150px]">Entidade</Th>
-                        <Th className="w-[170px]">Ator</Th>
-                        <Th className="w-[120px] text-right">Data</Th>
+                  <table className="w-full table-fixed border-collapse">
+                    <colgroup>
+                      <col className="w-[22%]" />
+                      <col className="w-[30%]" />
+                      <col className="w-[28%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[8%]" />
+                    </colgroup>
+                    <thead className="sticky top-0 z-10 bg-[var(--bg-base)] shadow-[0_1px_0_var(--glass-border)]">
+                      <tr className="border-b border-[var(--glass-border)]">
+                        <Th variant={variant}>Evento</Th>
+                        <Th variant={variant}>Detalhe</Th>
+                        <Th variant={variant}>Entidade</Th>
+                        <Th variant={variant}>Ator</Th>
+                        <Th variant={variant} last className="text-right">
+                          Data
+                        </Th>
                       </tr>
                     </thead>
                     <tbody>
@@ -237,13 +308,18 @@ export default function LogsClientPage() {
                           <tr className="sticky top-[41px] z-[5]">
                             <td
                               colSpan={5}
-                              className="bg-[var(--glass-bg-subtle)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+                              className="border-y border-[var(--glass-border-subtle)] bg-[var(--bg-base)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
                             >
                               {dayLabel(dayItems[0].occurredAt)}
                             </td>
                           </tr>
-                          {dayItems.map((ev) => (
-                            <EventRow key={ev.id} event={ev} />
+                          {dayItems.map((ev, i) => (
+                            <EventRow
+                              key={ev.id}
+                              event={ev}
+                              variant={variant}
+                              index={i}
+                            />
                           ))}
                         </React.Fragment>
                       ))}
@@ -338,16 +414,44 @@ export default function LogsClientPage() {
   );
 }
 
-function EventRow({ event }: { event: FeedEvent }) {
+function EventRow({
+  event,
+  variant,
+  index,
+}: {
+  event: FeedEvent;
+  variant: TableVariant;
+  index: number;
+}) {
   const cfg = EVENT_CONFIG[event.type] ?? FALLBACK_CONFIG;
   const Icon = cfg.Icon;
   const detail = eventDescription(event);
   const actor = actorDisplay(event);
   const badge = ACTOR_BADGE[actor.type] ?? ACTOR_BADGE.SYSTEM;
 
+  // Borda vertical entre colunas para "grid" e "divided".
+  const colDivider =
+    variant === "zebra"
+      ? ""
+      : "border-r border-[var(--glass-border-subtle)]";
+  // Borda horizontal entre linhas apenas em "grid".
+  const rowDivider =
+    variant === "grid"
+      ? "border-b border-[var(--glass-border-subtle)]"
+      : variant === "divided"
+        ? "border-b border-[var(--glass-border-subtle)]/60"
+        : "";
+  // Faixas alternadas em "zebra".
+  const zebra =
+    variant === "zebra" && index % 2 === 1
+      ? "bg-[var(--glass-bg-subtle)]/50"
+      : "";
+
   return (
-    <tr className="border-b border-[var(--glass-border-subtle)] last:border-0 hover:bg-[var(--glass-bg-overlay)]">
-      <td className="px-3 py-2.5">
+    <tr
+      className={`${rowDivider} ${zebra} last:border-b-0 transition-colors hover:bg-[var(--glass-bg-overlay)]`}
+    >
+      <td className={`px-3 py-2.5 ${colDivider}`}>
         <div className="flex items-center gap-2.5">
           <span
             className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
@@ -359,16 +463,16 @@ function EventRow({ event }: { event: FeedEvent }) {
           </span>
         </div>
       </td>
-      <td className="px-3 py-2.5">
-        <span className="line-clamp-2 font-body text-[13px] text-[var(--text-secondary)]">
+      <td className={`px-3 py-2.5 ${colDivider}`}>
+        <span className="block truncate font-body text-[13px] text-[var(--text-secondary)]">
           {detail || "—"}
         </span>
       </td>
-      <td className="px-3 py-2.5">
+      <td className={`px-3 py-2.5 ${colDivider}`}>
         {event.entityLabel || event.entityType ? (
-          <span className="flex flex-col">
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
             {event.entityType && (
-              <span className="font-display text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+              <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
                 {ENTITY_LABEL[event.entityType] ?? event.entityType}
               </span>
             )}
@@ -382,7 +486,7 @@ function EventRow({ event }: { event: FeedEvent }) {
           <span className="text-[13px] text-[var(--text-muted)]">—</span>
         )}
       </td>
-      <td className="px-3 py-2.5">
+      <td className={`px-3 py-2.5 ${colDivider}`}>
         <span
           className={`inline-flex items-center rounded-full px-2 py-0.5 font-display text-[11px] font-bold ${badge.className}`}
         >
@@ -415,13 +519,21 @@ function dayLabel(iso: string): string {
 function Th({
   children,
   className,
+  variant,
+  last,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
+  variant: TableVariant;
+  last?: boolean;
 }) {
+  const colDivider =
+    variant === "zebra" || last
+      ? ""
+      : "border-r border-[var(--glass-border-subtle)]";
   return (
     <th
-      className={`px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)] ${className ?? ""}`}
+      className={`px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)] ${colDivider} ${className ?? ""}`}
     >
       {children}
     </th>

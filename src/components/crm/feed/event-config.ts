@@ -24,7 +24,6 @@ import {
   Phone,
   PhoneMissed,
   Send,
-  Shuffle,
   StickyNote,
   Tag,
   Trash2,
@@ -336,20 +335,6 @@ export const EVENT_CONFIG: Record<string, EventVisualConfig> = {
     bg: "bg-fuchsia-50 dark:bg-fuchsia-950/40",
     label: "Ação do agente IA",
   },
-
-  // ── Distribuição Inteligente ─────────────────────────────────────
-  LEAD_DISTRIBUTED: {
-    Icon: Shuffle,
-    ring: "ring-emerald-500/30 text-emerald-700",
-    bg: "bg-emerald-50 dark:bg-emerald-950/40",
-    label: "Lead distribuído",
-  },
-  LEAD_DISTRIBUTION_FAILED: {
-    Icon: AlertTriangle,
-    ring: "ring-amber-500/30 text-amber-700",
-    bg: "bg-amber-50 dark:bg-amber-950/40",
-    label: "Distribuição sem responsável",
-  },
 };
 
 export const FALLBACK_CONFIG: EventVisualConfig = {
@@ -550,10 +535,6 @@ export function eventDescription(ev: FeedEvent): string {
       const st = m.status === "COMPLETED_WITH_ERRORS" ? " (com erros)" : "";
       return `${name}${evt}${st}`;
     }
-    case "LEAD_DISTRIBUTED":
-      return ev.newValue ? `Para ${ev.newValue}` : "Lead atribuído";
-    case "LEAD_DISTRIBUTION_FAILED":
-      return "Nenhum responsável elegível — enviado para a fila de espera";
     case "AI_AGENT_ACTION": {
       const actionMap: Record<string, string> = {
         created_deal: "criou negócio",

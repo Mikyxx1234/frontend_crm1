@@ -30,14 +30,8 @@ interface LocalItem {
   enabled: boolean;
 }
 
-function toLocalItems(
-  pref: SidebarItemPreference[] | undefined,
-  availableKeys?: string[] | null,
-): LocalItem[] {
-  return resolveSidebarItems(pref, availableKeys).map((i) => ({
-    key: i.key,
-    enabled: i.enabled,
-  }));
+function toLocalItems(pref: SidebarItemPreference[] | undefined): LocalItem[] {
+  return resolveSidebarItems(pref).map((i) => ({ key: i.key, enabled: i.enabled }));
 }
 
 function signature(items: LocalItem[]): string {
@@ -49,21 +43,16 @@ export function SidebarCustomizationCard() {
   const saveMutation = useSaveSidebarPreferences();
 
   const prefItems = data?.sidebar.items;
-  const availableKeys = data?.availableKeys;
 
-  const [items, setItems] = React.useState<LocalItem[]>(() =>
-    toLocalItems(prefItems, availableKeys),
-  );
-  const [baseline, setBaseline] = React.useState<string>(() =>
-    signature(toLocalItems(prefItems, availableKeys)),
-  );
+  const [items, setItems] = React.useState<LocalItem[]>(() => toLocalItems(prefItems));
+  const [baseline, setBaseline] = React.useState<string>(() => signature(toLocalItems(prefItems)));
   const dragIndex = React.useRef<number | null>(null);
 
   // Sincroniza o estado local quando a preferencia carrega/muda — mas so
   // quando nao ha alteracoes nao salvas (evita sobrescrever edicoes do user).
   React.useEffect(() => {
     if (prefItems === undefined) return;
-    const next = toLocalItems(prefItems, availableKeys);
+    const next = toLocalItems(prefItems);
     const nextSig = signature(next);
     setItems((current) =>
       signature(current) === baseline ? next : current,
@@ -104,14 +93,8 @@ export function SidebarCustomizationCard() {
   };
 
   const handleReset = () => {
-    // Ordem do catalogo, todos habilitados — apenas itens disponiveis para o
-    // usuario (gating por permission + widgets). Marca como nao-salvo.
-    const available = availableKeys ? new Set(availableKeys) : null;
-    setItems(
-      SIDEBAR_CATALOG.filter((i) => !available || available.has(i.key)).map(
-        (i) => ({ key: i.key, enabled: true }),
-      ),
-    );
+    // Ordem do catalogo, todos habilitados — marca como nao-salvo.
+    setItems(SIDEBAR_CATALOG.map((i) => ({ key: i.key, enabled: true })));
     toast.message("Padrão restaurado — clique em Salvar para aplicar.");
   };
 

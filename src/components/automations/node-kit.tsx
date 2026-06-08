@@ -153,6 +153,26 @@ export function isMessageStep(stepType: string): boolean {
   return MESSAGE_STEP_TYPES.has(stepType) || MESSAGE_STEP_TYPES.has(canonicalStepType(stepType));
 }
 
+/**
+ * Para passos de mensagem editáveis na própria bolha (estilo Kommo),
+ * mapeia o tipo → chave do `config` que guarda o texto principal. Quando
+ * retorna null, a bolha fica somente-leitura (ex.: template não tem texto
+ * livre; interativos/perguntas abrem painel ancorado).
+ */
+const MESSAGE_PRIMARY_FIELD: Record<string, string> = {
+  send_whatsapp_message: "content",
+  send_email: "body",
+  send_whatsapp_media: "caption",
+};
+
+export function messagePrimaryField(stepType: string): string | null {
+  return (
+    MESSAGE_PRIMARY_FIELD[stepType] ??
+    MESSAGE_PRIMARY_FIELD[canonicalStepType(stepType)] ??
+    null
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────
    Identidade por passo — ícone + cor sólida POR TIPO (não por categoria).
    Espelha exatamente o seletor "O que deseja automatizar?"
@@ -504,20 +524,93 @@ export function OutcomeGroup({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * ErrorOutcome — saída de fallback "passo B" (estilo Kommo). Renderiza
+ * uma pílula vermelha com handle dedicado `id="error"` que o canvas usa
+ * pra ligar ao passo executado em caso de falha. Só deve ser renderizada
+ * para passos falháveis (ver `supportsErrorBranch`).
+ */
+export function ErrorOutcome({ label }: { label: string }) {
+  return (
+    <div className="border-t border-[color:var(--color-danger-bg)] bg-[color:var(--color-danger-bg)]/40">
+      <div className="relative flex h-9 items-center gap-2 px-3.5">
+        <AlertTriangle
+          className="size-3.5 shrink-0"
+          strokeWidth={2.4}
+          style={{ color: "var(--color-danger)" }}
+        />
+        <span
+          className="flex-1 truncate text-[11px] font-bold tracking-tight"
+          style={{ color: "var(--color-danger)" }}
+        >
+          {label}
+        </span>
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="error"
+          className="size-3! border-2! border-[color:var(--glass-bg-base)]!"
+          style={{ backgroundColor: "var(--color-danger)" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────
    Balão de mensagem (estilo chat) no corpo
    ──────────────────────────────────────────────────────────────────── */
 
-export function MessageBubble({ text, tone }: { text: string; tone: Tone }) {
+export function MessageBubble({
+  text,
+  tone,
+  editable,
+  placeholder = "Escreva a mensagem…",
+  onCommit,
+}: {
+  text: string;
+  tone: Tone;
+  /** Habilita edição in-place (vira textarea ao focar). */
+  editable?: boolean;
+  placeholder?: string;
+  /** Autosave: chamado ao sair do campo (onBlur) com o novo texto. */
+  onCommit?: (next: string) => void;
+}) {
+  if (!editable) {
+    return (
+      <div className="px-3.5 pb-3 pt-1">
+        <div
+          className="relative max-w-full rounded-[var(--radius-lg)] rounded-tl-[4px] px-3 py-2"
+          style={{ backgroundColor: tone.bg, boxShadow: `inset 0 0 0 1px ${tone.ring}` }}
+        >
+          <p className="line-clamp-3 whitespace-pre-line text-[12px] font-medium leading-relaxed tracking-tight text-[var(--text-secondary)]">
+            {text}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="px-3.5 pb-3 pt-1">
+    <div
+      className="nodrag nopan px-3.5 pb-3 pt-1"
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+    >
       <div
         className="relative max-w-full rounded-[var(--radius-lg)] rounded-tl-[4px] px-3 py-2"
         style={{ backgroundColor: tone.bg, boxShadow: `inset 0 0 0 1px ${tone.ring}` }}
       >
-        <p className="line-clamp-3 whitespace-pre-line text-[12px] font-medium leading-relaxed tracking-tight text-[var(--text-secondary)]">
-          {text}
-        </p>
+        <textarea
+          defaultValue={text}
+          placeholder={placeholder}
+          rows={Math.min(6, Math.max(2, text.split("\n").length))}
+          onBlur={(e) => {
+            const next = e.target.value;
+            if (next !== text) onCommit?.(next);
+          }}
+          className="w-full resize-none bg-transparent text-[12px] font-medium leading-relaxed tracking-tight text-[var(--text-secondary)] outline-none placeholder:text-[var(--text-muted)]"
+        />
       </div>
     </div>
   );

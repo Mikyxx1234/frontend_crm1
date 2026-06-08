@@ -34,6 +34,7 @@ export type AnimatedEdgeVariant =
   | "button"
   | "else"
   | "timeout"
+  | "error"
   | "add";
 
 export type AnimatedEdgeData = {
@@ -46,6 +47,7 @@ const VARIANT_STROKE: Record<AnimatedEdgeVariant, string> = {
   button: "url(#edge-grad-button)",
   else: "var(--color-warning)",
   timeout: "#94a3b8",
+  error: "var(--color-danger)",
   add: "rgba(91,111,245,0.35)",
 };
 
@@ -55,6 +57,7 @@ const VARIANT_PULSE: Record<AnimatedEdgeVariant, string> = {
   button: "#16a34a",
   else: "var(--color-warning)",
   timeout: "#94a3b8",
+  error: "var(--color-danger)",
   add: "rgba(91,111,245,0.5)",
 };
 
@@ -63,6 +66,7 @@ const VARIANT_WIDTH: Record<AnimatedEdgeVariant, number> = {
   button: 2.2,
   else: 1.8,
   timeout: 1.8,
+  error: 1.8,
   add: 1.5,
 };
 
@@ -71,6 +75,7 @@ const VARIANT_DASH: Record<AnimatedEdgeVariant, string | undefined> = {
   button: undefined,
   else: "6 4",
   timeout: "6 4",
+  error: "6 4",
   add: "5 4",
 };
 

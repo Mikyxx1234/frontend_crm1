@@ -392,6 +392,7 @@ export function StepConfigForm({
     const orig = (step.config ?? {}) as Record<string, unknown>;
     const preserved: Record<string, unknown> = {};
     if (orig.nextStepId !== undefined) preserved.nextStepId = orig.nextStepId;
+    if (orig.onErrorGotoStepId !== undefined) preserved.onErrorGotoStepId = orig.onErrorGotoStepId;
     if (orig.__rfPos !== undefined) preserved.__rfPos = orig.__rfPos;
     if (orig.__hasExplicitEdges !== undefined) preserved.__hasExplicitEdges = orig.__hasExplicitEdges;
 

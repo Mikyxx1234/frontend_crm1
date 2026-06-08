@@ -75,6 +75,52 @@ export const ACTION_STEP_TYPES = [
 export type ActionStepType = (typeof ACTION_STEP_TYPES)[number];
 
 /**
+ * Passos "falháveis" — operações que dependem de I/O externo (envio de
+ * mensagem/e-mail, webhook, integrações, escrita de dados) e portanto
+ * podem falhar em runtime. Para esses, o editor oferece uma SAÍDA DE ERRO
+ * opcional (`config.onErrorGotoStepId`) que leva ao "passo B" — o ramo de
+ * fallback estilo Kommo ("Falha ao enviar a mensagem").
+ *
+ * Modelado puramente como config + edge no canvas (igual a else/timeout).
+ * O efeito de runtime só ocorre quando o backend honrar a chave.
+ */
+export const FALLIBLE_STEP_TYPES = new Set<string>([
+  "send_whatsapp_message",
+  "send_whatsapp_template",
+  "send_whatsapp_media",
+  "send_whatsapp_interactive",
+  "send_email",
+  "webhook",
+  "transfer_automation",
+  "ask_ai_agent",
+  "transfer_to_ai_agent",
+  "create_deal",
+  "consume_stock",
+  "update_field",
+  "create_activity",
+]);
+
+/** True quando o passo aceita um ramo de fallback/erro ("passo B"). */
+export function supportsErrorBranch(stepType: string): boolean {
+  return (
+    FALLIBLE_STEP_TYPES.has(stepType) ||
+    FALLIBLE_STEP_TYPES.has(canonicalStepType(stepType))
+  );
+}
+
+/**
+ * Label da saída de erro por tipo. Mensagens usam o texto do Kommo
+ * ("Falha ao enviar a mensagem"); demais passos usam "Em caso de falha".
+ */
+export function errorBranchLabel(stepType: string): string {
+  const t = canonicalStepType(stepType);
+  if (t.startsWith("send_whatsapp") || t === "send_email") {
+    return "Falha ao enviar a mensagem";
+  }
+  return "Em caso de falha";
+}
+
+/**
  * Normaliza tipos de passo legados (ex.: importação estilo Kommo, que
  * salva em MAIÚSCULO/genérico: "SEND_MESSAGE", "WAIT", "FILTER") para o
  * tipo canônico minúsculo usado pelo app (categoria, ícone, label).

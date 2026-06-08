@@ -27,6 +27,7 @@ import {
   stepTypeLabel,
   summarizeStepConfig,
   summarizeTriggerConfig,
+  supportsErrorBranch,
   triggerTypeLabel,
 } from "@/lib/automation-workflow";
 import {
@@ -191,6 +192,7 @@ const EDGE_DATA_DEFAULT: AnimatedEdgeData = { variant: "default", energized: tru
 const EDGE_DATA_BUTTON: AnimatedEdgeData = { variant: "button", energized: true };
 const EDGE_DATA_ELSE: AnimatedEdgeData = { variant: "else", energized: false };
 const EDGE_DATA_TIMEOUT: AnimatedEdgeData = { variant: "timeout", energized: false };
+const EDGE_DATA_ERROR: AnimatedEdgeData = { variant: "error", energized: false };
 const EDGE_DATA_ADD: AnimatedEdgeData = { variant: "add", energized: false };
 
 const NONE = "__none__";
@@ -239,6 +241,27 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
   for (let i = 0; i < steps.length; i++) {
     const a = steps[i];
     const cfg = a.config as Record<string, unknown>;
+
+    // Ramo de fallback/erro ("passo B") — saída opcional pros passos
+    // falháveis (envios, webhook, integrações). Handle dedicado "error".
+    if (
+      supportsErrorBranch(a.type) &&
+      typeof cfg.onErrorGotoStepId === "string" &&
+      cfg.onErrorGotoStepId &&
+      stepIds.has(cfg.onErrorGotoStepId)
+    ) {
+      out.push({
+        id: `${a.id}-error-${cfg.onErrorGotoStepId}`,
+        source: a.id,
+        target: cfg.onErrorGotoStepId,
+        sourceHandle: "error",
+        animated: false,
+        data: EDGE_DATA_ERROR,
+        type: EDGE_TYPE,
+        interactionWidth: INTERACT_W,
+        ...DELETE_LABEL_PROPS,
+      });
+    }
 
     if (isInteractiveStep(a.type)) {
       const buttons = Array.isArray(cfg.buttons)
@@ -696,6 +719,7 @@ function WorkflowCanvasInner({
         if (cfg.elseStepId === id) { delete cfg.elseStepId; changed = true; }
         if (cfg.timeoutGotoStepId === id) { delete cfg.timeoutGotoStepId; changed = true; }
         if (cfg.receivedGotoStepId === id) { delete cfg.receivedGotoStepId; changed = true; }
+        if (cfg.onErrorGotoStepId === id) { delete cfg.onErrorGotoStepId; changed = true; }
 
         if (Array.isArray(cfg.buttons)) {
           const btns = (cfg.buttons as Record<string, unknown>[]).map((b) => {
@@ -883,6 +907,12 @@ function WorkflowCanvasInner({
           onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
           return;
         }
+
+        if (sourceHandle === "error" && supportsErrorBranch(srcStep.type)) {
+          const cfg = { ...srcStep.config, onErrorGotoStepId: target };
+          onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
+          return;
+        }
       }
 
       // Condition multi-branch não aceita `nextStepId` raiz — os
@@ -1040,6 +1070,15 @@ function WorkflowCanvasInner({
           onStepsChange([...updated, step]);
           return;
         }
+
+        if (sourceHandle === "error" && supportsErrorBranch(srcStep.type)) {
+          const cfg = { ...srcStep.config, onErrorGotoStepId: id };
+          const updated = cur.map((s) =>
+            s.id === sourceId ? { ...s, config: cfg } : s
+          );
+          onStepsChange([...updated, step]);
+          return;
+        }
       }
 
       const srcStepForNext = cur.find((s) => s.id === sourceId);
@@ -1183,6 +1222,13 @@ function WorkflowCanvasInner({
       if (sourceHandle === "received" && srcStep.type === "wait_for_reply") {
         const cfg = { ...srcStep.config } as Record<string, unknown>;
         delete cfg.receivedGotoStepId;
+        onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
+        return;
+      }
+
+      if (sourceHandle === "error" && supportsErrorBranch(srcStep.type)) {
+        const cfg = { ...srcStep.config } as Record<string, unknown>;
+        delete cfg.onErrorGotoStepId;
         onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));
         return;
       }

@@ -43,7 +43,7 @@ const nodeTypes = {
 const edgeTypes = { animated: AnimatedEdge };
 
 /* edge helper -------------------------------------------------------- */
-type V = "default" | "button" | "else" | "timeout" | "error";
+type V = "default" | "button" | "else" | "timeout";
 function edge(
   id: string,
   source: string,
@@ -76,9 +76,8 @@ function styleNodes(): Node[] {
   return [
     { id: "trigger", type: "trigger", position: { x: 0, y: 60 }, data: { label: "Lead entrou no funil", summary: "Novo lead via WhatsApp." } },
     { id: "action", type: "action", position: { x: 340, y: 0 }, data: { stepType: "move_stage", label: "Mover para Qualificação", summary: "Avança o negócio.", stepIndex: 1 } },
-    { id: "message", type: "action", position: { x: 340, y: 150 }, data: { stepType: "send_whatsapp_message", label: "Boas-vindas", summary: "Olá! Que bom ter você por aqui. Posso ajudar a achar o plano ideal?", stepIndex: 2, hasErrorBranch: true, errorLabel: "Falha ao enviar a mensagem" } },
+    { id: "message", type: "action", position: { x: 340, y: 150 }, data: { stepType: "send_whatsapp_message", label: "Boas-vindas", summary: "Olá! Que bom ter você por aqui. Posso ajudar a achar o plano ideal?", stepIndex: 2 } },
     { id: "interactive", type: "interactive", position: { x: 720, y: 0 }, data: { stepType: "send_whatsapp_interactive", label: "Qual seu interesse?", summary: "Escolha uma opção:", stepIndex: 3, buttons: [{ id: "b0", title: "Comprar" }, { id: "b1", title: "Dúvidas" }], hasElse: true, hasTimeout: true } },
-    { id: "fallback", type: "action", position: { x: 720, y: 230 }, data: { stepType: "create_activity", label: "Notificar equipe", summary: "Registrar falha de envio para acompanhamento.", stepIndex: 9 } },
     { id: "delay", type: "delay", position: { x: 1100, y: 70 }, data: { label: "Aguardar 1 dia", summary: "Pausa de 24h.", stepIndex: 4 } },
     { id: "finish", type: "finish", position: { x: 1100, y: 210 }, data: { label: "Encerrar fluxo", summary: "Nenhum passo posterior." } },
   ];
@@ -88,7 +87,6 @@ function styleEdges(): Edge[] {
     edge("s1", "trigger", "action", { energized: true }),
     edge("s2", "trigger", "message", { energized: true }),
     edge("s3", "action", "interactive"),
-    edge("s3b", "message", "fallback", { handle: "error", variant: "error" }),
     edge("s4", "interactive", "delay", { handle: "btn_0", variant: "button", energized: true }),
     edge("s5", "interactive", "finish", { handle: "timeout", variant: "timeout" }),
     edge("s6", "delay", "finish"),

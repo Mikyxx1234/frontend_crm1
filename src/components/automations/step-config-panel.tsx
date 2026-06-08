@@ -75,12 +75,6 @@ type Props = {
    * - `panel`: painel ancorado mais largo (tipos densos).
    */
   variant?: "inline" | "panel";
-  /**
-   * Oculta o campo de texto principal da mensagem (content/caption/body).
-   * Usado no modo inline, onde a bolha editável do card já cuida desse
-   * texto — evita campo duplicado.
-   */
-  hidePrimaryMessageField?: boolean;
 };
 
 /** Tipos densos demais p/ caber bem inline — usam painel ancorado. */
@@ -268,7 +262,6 @@ export function StepConfigForm({
   onComplete,
   onCancel,
   variant = "inline",
-  hidePrimaryMessageField = false,
 }: Props) {
   // O form só monta quando o card está expandido, então as queries
   // (que usavam `enabled: open && ...`) já podem rodar sempre que o
@@ -895,23 +888,21 @@ export function StepConfigForm({
 
           {step.type === "send_whatsapp_message" && (
             <>
-              {!hidePrimaryMessageField && (
-                <div className="space-y-2">
-                  <Label htmlFor="sc-cw-msg">Conteúdo da mensagem</Label>
-                  <VariableShortcutTextarea
-                    id="sc-cw-msg"
-                    rows={4}
-                    value={String(draft.content ?? "")}
-                    onChange={(next) => setDraft((d) => ({ ...d, content: next }))}
-                    placeholder="Ex.: Olá, tudo bem?"
-                    options={variableShortcutOptions}
-                  />
-                  <VariableShortcutHint />
-                  <p className="text-[11px] text-muted-foreground">
-                    O destinatário é resolvido automaticamente pelo telefone do contato.
-                  </p>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="sc-cw-msg">Conteúdo da mensagem</Label>
+                <VariableShortcutTextarea
+                  id="sc-cw-msg"
+                  rows={4}
+                  value={String(draft.content ?? "")}
+                  onChange={(next) => setDraft((d) => ({ ...d, content: next }))}
+                  placeholder="Ex.: Olá, tudo bem?"
+                  options={variableShortcutOptions}
+                />
+                <VariableShortcutHint />
+                <p className="text-[11px] text-muted-foreground">
+                  O destinatário é resolvido automaticamente pelo telefone do contato.
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-cw-fb">Template fallback (sessão expirada)</Label>
                 <Input

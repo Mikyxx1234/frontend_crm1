@@ -5,7 +5,6 @@ import { Clock, HelpCircle, MessageCircleQuestion, MousePointerClick } from "luc
 
 import {
   CategoryHeader,
-  ErrorOutcome,
   IncompleteBadge,
   MessageBubble,
   NodeShell,
@@ -34,10 +33,6 @@ export type InteractiveNodeData = {
   buttons: InteractiveButton[];
   hasElse: boolean;
   hasTimeout: boolean;
-  /** Passo falível → renderiza a saída de fallback ("passo B"). */
-  hasErrorBranch?: boolean;
-  /** Label da pílula de erro (ex.: "Falha ao enviar a mensagem"). */
-  errorLabel?: string;
   onDelete?: () => void;
   stats?: { success: number; failed: number; skipped: number };
   onStatsClick?: () => void;
@@ -110,10 +105,6 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
       )}
 
       {data.stats && <StatsBar stats={data.stats} onClick={data.onStatsClick} />}
-
-      {data.hasErrorBranch && (
-        <ErrorOutcome label={data.errorLabel ?? "Em caso de falha"} />
-      )}
     </NodeShell>
   );
 }

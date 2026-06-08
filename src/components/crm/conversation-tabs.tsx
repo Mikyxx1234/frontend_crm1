@@ -34,10 +34,17 @@ export function ConversationTabs({
   activeTab,
   onChange,
   tabs = DEFAULT_CONVERSATION_TABS,
+  rightSlot,
 }: {
   activeTab: ConversationTabId
   onChange: (id: ConversationTabId) => void
   tabs?: ConversationTabConfig[]
+  /**
+   * Conteúdo opcional alinhado à direita, na MESMA linha das abas
+   * (ex.: nome do contato + menu de ações no Inbox). Evita empilhar
+   * a barra de abas e o cabeçalho do chat em duas linhas separadas.
+   */
+  rightSlot?: React.ReactNode
 }) {
   return (
     <header className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3">
@@ -75,6 +82,11 @@ export function ConversationTabs({
           )
         })}
       </div>
+      {rightSlot && (
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          {rightSlot}
+        </div>
+      )}
     </header>
   )
 }

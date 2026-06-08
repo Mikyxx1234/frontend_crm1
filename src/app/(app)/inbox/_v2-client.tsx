@@ -332,12 +332,10 @@ export default function InboxV2ClientPage({
         stages={stagePillsView}
         showSessionAlert={sessionExpired}
         onUseTemplate={() => setTemplateOpen(true)}
-        headerActionsSlot={
-          <ConversationActionsMenu
-            conversationId={activeId}
-            isResolved={activeRow.status === "RESOLVED"}
-          />
-        }
+        // O nome do contato + menu de ações sobem para a MESMA linha da
+        // barra de abas (rightSlot do ConversationTabs), então o header
+        // interno do ChatArea é ocultado para não duplicar.
+        hideHeader
         composerSlot={
           <Composer
             conversationId={activeId}
@@ -492,7 +490,21 @@ export default function InboxV2ClientPage({
         aria-label={centerTab}
         className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
       >
-        <ConversationTabs activeTab={centerTab} onChange={setCenterTab} />
+        <ConversationTabs
+          activeTab={centerTab}
+          onChange={setCenterTab}
+          rightSlot={
+            <>
+              <h2 className="truncate font-display text-[15px] font-bold text-[var(--text-primary)]">
+                {chatContact.name}
+              </h2>
+              <ConversationActionsMenu
+                conversationId={activeId}
+                isResolved={activeRow.status === "RESOLVED"}
+              />
+            </>
+          }
+        />
         {centerTab === "conversa" ? (
           chatNode
         ) : centerTab === "atividades" ? (

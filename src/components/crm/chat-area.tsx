@@ -65,6 +65,12 @@ interface ChatAreaProps {
   composerSlot?: React.ReactNode
   /** Slot opcional que substitui os botoes do canto direito do header. */
   headerActionsSlot?: React.ReactNode
+  /**
+   * Oculta o header interno (nome do contato + ações). Usado quando o
+   * pai já exibe esse cabeçalho em outro lugar (ex.: Inbox, onde o nome
+   * e o menu vivem na MESMA linha da barra de abas).
+   */
+  hideHeader?: boolean
   /** Handler do botao "Usar Template" do SessionAlert. */
   onUseTemplate?: () => void
 }
@@ -89,6 +95,7 @@ export function ChatArea({
   inputDisabled,
   composerSlot,
   headerActionsSlot,
+  hideHeader = false,
   onUseTemplate,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
@@ -124,38 +131,40 @@ export function ChatArea({
       )}
     >
       {/* HEADER — minimalista */}
-      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-[18px]">
-        <div className="flex flex-1 items-center gap-2.5">
-          <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
-            {contact.name}
-          </h2>
-          {contact.badge && (
-            <BadgeGlass variant={contact.badge}>
-              {contact.badgeLabel ??
-                (contact.badge === "enterprise"
-                  ? "ENTERPRISE"
-                  : contact.badge === "lead"
-                    ? "LEAD"
-                    : "CLIENTE")}
-            </BadgeGlass>
-          )}
-        </div>
-        <div className="flex gap-1">
-          {headerActionsSlot ?? (
-            <>
-              <IconBtn title="Ligar" onClick={onPhoneClick}>
-                <IconPhone size={18} />
-              </IconBtn>
-              <IconBtn title="Vídeo chamada" onClick={onVideoClick}>
-                <IconVideo size={18} />
-              </IconBtn>
-              <IconBtn title="Mais opções" onClick={onMoreClick}>
-                <IconDotsVertical size={18} />
-              </IconBtn>
-            </>
-          )}
-        </div>
-      </header>
+      {!hideHeader && (
+        <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-[18px]">
+          <div className="flex flex-1 items-center gap-2.5">
+            <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
+              {contact.name}
+            </h2>
+            {contact.badge && (
+              <BadgeGlass variant={contact.badge}>
+                {contact.badgeLabel ??
+                  (contact.badge === "enterprise"
+                    ? "ENTERPRISE"
+                    : contact.badge === "lead"
+                      ? "LEAD"
+                      : "CLIENTE")}
+              </BadgeGlass>
+            )}
+          </div>
+          <div className="flex gap-1">
+            {headerActionsSlot ?? (
+              <>
+                <IconBtn title="Ligar" onClick={onPhoneClick}>
+                  <IconPhone size={18} />
+                </IconBtn>
+                <IconBtn title="Vídeo chamada" onClick={onVideoClick}>
+                  <IconVideo size={18} />
+                </IconBtn>
+                <IconBtn title="Mais opções" onClick={onMoreClick}>
+                  <IconDotsVertical size={18} />
+                </IconBtn>
+              </>
+            )}
+          </div>
+        </header>
+      )}
 
       {/* MESSAGES */}
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">

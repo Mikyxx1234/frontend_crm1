@@ -163,7 +163,7 @@ export function NavRailV2({ className }: { className?: string }) {
     <DockProvider
       aria-label="Navegação principal"
       className={cn(
-        "flex h-full flex-col items-center gap-2 bg-[var(--glass-bg-panel)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-xl)] px-3 py-4 shadow-[var(--glass-shadow)]",
+        "flex h-full flex-col items-center gap-2 bg-[var(--glass-bg-panel)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -175,21 +175,28 @@ export function NavRailV2({ className }: { className?: string }) {
         EL
       </Link>
 
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        return (
-          <DockButton
-            key={item.key}
-            href={item.href}
-            title={item.title}
-            active={isActiveFor(pathname, item.href)}
-          >
-            <Icon size={20} />
-          </DockButton>
-        );
-      })}
-
-      <div className="flex-1" />
+      {/* Área rolável dos itens de navegação. Com zoom alto a rail não cabe
+          inteira na viewport; em vez de transbordar e cortar os ícones de
+          baixo + avatar (parent .v2-screen tem overflow-hidden), o miolo
+          rola. `overflow-x-clip` permite o scroll vertical sem forçar
+          overflow-x:auto (que cortaria a magnificação) — os DockButton aqui
+          usam `disablePop` para a escala caber dentro do padding. */}
+      <div className="flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto overflow-x-clip px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <DockButton
+              key={item.key}
+              href={item.href}
+              title={item.title}
+              active={isActiveFor(pathname, item.href)}
+              disablePop
+            >
+              <Icon size={20} />
+            </DockButton>
+          );
+        })}
+      </div>
 
       <DockButton
         href="/settings"

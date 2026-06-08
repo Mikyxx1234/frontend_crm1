@@ -80,6 +80,14 @@ export interface DockButtonProps {
   onClick?: () => void;
   active?: boolean;
   className?: string;
+  /**
+   * Desativa o "pop" horizontal (POP_X) no pico da magnificação. Usado nos
+   * itens dentro da área rolável da NavRail: ali o container tem
+   * `overflow-x: clip` (para permitir scroll vertical sem quebrar a rail no
+   * zoom), então o ícone não pode saltar para fora do trilho — senão seria
+   * cortado. A magnificação por `scale` continua e cabe dentro do padding.
+   */
+  disablePop?: boolean;
 }
 
 export function DockButton({
@@ -89,6 +97,7 @@ export function DockButton({
   onClick,
   active,
   className,
+  disablePop,
 }: DockButtonProps) {
   const mouseY = React.useContext(DockMouseYContext);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -110,7 +119,9 @@ export function DockButton({
   const scale = useSpring(scaleTarget, SPRING);
   // Salto horizontal: no pico o ícone avança `POP_X` para fora do trilho,
   // reforçando a sensação de "dock" e evitando clipping nas bordas.
-  const xTarget = useTransform(distance, [-INFLUENCE, 0, INFLUENCE], [0, POP_X, 0]);
+  // `disablePop` zera o salto para itens em containers com overflow-x clip.
+  const peakX = disablePop ? 0 : POP_X;
+  const xTarget = useTransform(distance, [-INFLUENCE, 0, INFLUENCE], [0, peakX, 0]);
   const x = useSpring(xTarget, SPRING);
   // z-index sobe junto com a escala para o ícone magnificado ficar por cima
   // dos vizinhos (que ele passa a sobrepor ao crescer via transform).

@@ -7,7 +7,7 @@
  *   POST  /api/campaigns                          -> cria rascunho
  *   POST  /api/campaigns/[id]/{launch|pause|resume|cancel}
  *   POST  /api/campaigns/preview                  -> contagem + amostra
- *   GET   /api/channels | /api/segments | /api/whatsapp-templates
+ *   GET   /api/channels | /api/segments | /api/meta/whatsapp/message-templates
  *   GET   /api/kanban/filter-options              -> tags/pipelines/responsáveis
  */
 
@@ -189,8 +189,10 @@ export function fetchSegments(): Promise<SegmentRow[]> {
 }
 
 export function fetchTemplates(): Promise<TemplateRow[]> {
+  // Templates aprovados vem direto da WABA via Graph (message_templates).
+  // A resposta da Meta tem o formato { data: [ { name, status, language, ... } ] }.
   return getJson<{ templates?: TemplateRow[]; data?: TemplateRow[] }>(
-    "/api/whatsapp-templates",
+    "/api/meta/whatsapp/message-templates",
     "Erro ao carregar templates.",
   ).then((d) => d.templates ?? d.data ?? []);
 }

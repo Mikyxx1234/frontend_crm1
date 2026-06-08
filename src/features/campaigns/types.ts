@@ -1,0 +1,154 @@
+/*
+ * Tipos da área de Campanhas v2 (frontend). Espelham as respostas das rotas
+ * /api/campaigns/* já existentes no backend. Mantidos copiados de propósito —
+ * não compartilhamos types entre repositórios.
+ */
+
+export type CampaignStatus =
+  | "DRAFT"
+  | "SCHEDULED"
+  | "PROCESSING"
+  | "SENDING"
+  | "PAUSED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "FAILED";
+
+export type CampaignType = "TEMPLATE" | "TEXT" | "AUTOMATION";
+
+export type RecipientStatus =
+  | "PENDING"
+  | "SENDING"
+  | "SENT"
+  | "DELIVERED"
+  | "READ"
+  | "FAILED";
+
+export interface CampaignListItem {
+  id: string;
+  name: string;
+  type: CampaignType;
+  status: CampaignStatus;
+  totalRecipients: number;
+  sentCount: number;
+  deliveredCount: number;
+  failedCount: number;
+  readCount: number;
+  repliedCount?: number;
+  scheduledAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+  channel: { id: string; name: string; provider: string };
+  segment?: { id: string; name: string } | null;
+  createdBy?: { id: string; name: string };
+}
+
+export interface CampaignsListResponse {
+  items: CampaignListItem[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+}
+
+export interface CampaignDetail extends CampaignListItem {
+  templateName?: string | null;
+  templateLanguage?: string | null;
+  textContent?: string | null;
+  sendRate: number;
+  automation?: { id: string; name: string } | null;
+}
+
+export interface CampaignStats {
+  totalRecipients: number;
+  sentCount: number;
+  deliveredCount: number;
+  failedCount: number;
+  readCount: number;
+  repliedCount: number;
+  pendingCount: number;
+  deliveryRate: number;
+  readRate: number;
+  replyRate: number;
+  status: CampaignStatus;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  failureReasons: { reason: string; count: number }[];
+}
+
+export interface CampaignRecipient {
+  id: string;
+  status: RecipientStatus;
+  errorMessage?: string | null;
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
+  repliedAt?: string | null;
+  contact: { id: string; name: string; phone: string | null };
+}
+
+export interface RecipientsResponse {
+  items: CampaignRecipient[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+}
+
+/** Filtros de audiência aceitos por /api/campaigns/preview e createCampaign. */
+export interface CampaignFilters {
+  search?: string;
+  lifecycleStage?: string;
+  tagIds?: string[];
+  assignedToId?: string;
+  dealOwnerId?: string;
+  pipelineId?: string;
+  stageIds?: string[];
+  dealStatus?: "OPEN" | "WON" | "LOST";
+  createdAfter?: string;
+  hasPhone?: boolean;
+}
+
+export interface PreviewResponse {
+  count: number;
+  sample: { id: string; name: string; phone: string }[];
+}
+
+export interface ChannelRow {
+  id: string;
+  name: string;
+  type: string;
+  provider: string;
+  status: string;
+}
+
+export interface SegmentRow {
+  id: string;
+  name: string;
+  filters: Record<string, unknown>;
+}
+
+export interface TemplateRow {
+  id?: string;
+  name: string;
+  language: string;
+  category?: string;
+  status: string;
+}
+
+export interface CreateCampaignBody {
+  name: string;
+  type: CampaignType;
+  channelId: string;
+  segmentId?: string;
+  filters?: CampaignFilters;
+  templateName?: string;
+  templateLanguage?: string;
+  textContent?: string;
+  automationId?: string;
+  sendRate?: number;
+  scheduledAt?: string;
+}
+
+export type CampaignAction = "launch" | "pause" | "resume" | "cancel";

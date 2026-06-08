@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
@@ -24,9 +24,13 @@ import {
   type SlashItem,
 } from "@/components/inbox/slash-command-menu";
 import { sendMessage, sendTemplate } from "@/features/inbox-v2/api";
+import { getContact } from "@/features/inbox-v2/api/misc";
 import { messagesKey, useMessages } from "@/features/inbox-v2/hooks";
 import type { InboxMessageDto } from "@/features/inbox-v2/api/types";
-import { interpolateInternalTemplate } from "@/lib/internal-template-variables";
+import {
+  interpolateInternalTemplate,
+  type InternalTemplateContext,
+} from "@/lib/internal-template-variables";
 
 import { AudioRecorderButton } from "./audio-recorder-button";
 import { ComposerMenu } from "./composer-menu";
@@ -69,6 +73,16 @@ export function Composer({
   const [noteMode, setNoteMode] = useState(false);
   const qc = useQueryClient();
 
+  // ── Contexto para interpolação de templates internos ─────────────
+  // Busca dados do contato quando contactId está disponível, para
+  // substituir tokens {{contato.nome}}, {{negocio.valor}} etc.
+  const { data: contactData } = useQuery({
+    queryKey: ["contact-for-template", contactId],
+    queryFn: () => getContact(contactId!),
+    enabled: !!contactId,
+    staleTime: 2 * 60_000,
+  });
+
   // Ref para o textarea — exigido pelo useSlashMenu para movimentar o cursor
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Container do composer — usado para detectar clique-fora do slash menu.
@@ -80,6 +94,34 @@ export function Composer({
   // Quando ligada e fora do modo nota, prefixa `*Nome*: ` na mensagem.
   const { data: session } = useSession();
   const agentName = (session?.user?.name ?? "").trim();
+
+  // Contexto de interpolação: contact + deal + atendente atual
+  const templateContext = useMemo<InternalTemplateContext>(() => {
+    const firstDeal = contactData?.deals?.[0];
+    return {
+      contact: contactData
+        ? {
+            name: contactData.name,
+            phone: contactData.phone,
+            email: contactData.email,
+            cpf: contactData.cpf,
+            tags: contactData.tags ?? [],
+          }
+        : undefined,
+      deal: firstDeal
+        ? {
+            id: firstDeal.id,
+            title: firstDeal.title,
+            value: firstDeal.value,
+            stageName: firstDeal.stageName ?? undefined,
+            productName: firstDeal.productName ?? undefined,
+          }
+        : undefined,
+      agent: session?.user
+        ? { name: session.user.name ?? undefined, email: session.user.email ?? undefined }
+        : undefined,
+    };
+  }, [contactData, session]);
   const [sigEnabled, setSigEnabled] = useState(true);
   const [sigValue, setSigValue] = useState("");
   const [sigEditing, setSigEditing] = useState(false);
@@ -172,7 +214,7 @@ export function Composer({
     mutationFn: (item: SlashItem) => {
       if (!conversationId) throw new Error("Nenhuma conversa selecionada");
       if (item.kind === "internal-template") {
-        const text = applySignature(interpolateInternalTemplate(item.content, {}));
+        const text = applySignature(interpolateInternalTemplate(item.content, templateContext));
         return sendMessage(conversationId, { content: text });
       }
       return sendTemplate(conversationId, {
@@ -431,6 +473,7 @@ export function Composer({
           onToggleNote={onSendNote ? () => setNoteMode((v) => !v) : undefined}
           isResolved={isResolved}
           contactId={contactId}
+          templateContext={templateContext}
         />
         <ButtonGlass
           type="button"

@@ -229,6 +229,12 @@ function VariableShortcutTextarea({
   );
 }
 
+const MESSAGING_STEP_TYPES = new Set([
+  "send_whatsapp_message",
+  "send_whatsapp_interactive",
+  "question",
+]);
+
 export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [] }: Props) {
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [updateFieldFilter, setUpdateFieldFilter] = useState("");
@@ -236,8 +242,34 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
     () => collectDeclaredVariables(allSteps, step?.id ?? ""),
     [allSteps, step?.id],
   );
+
+  // Busca custom fields quando o passo é de mensagem (alimenta o atalho "[")
+  const customFieldsShortcutQuery = useQuery({
+    queryKey: ["custom-fields-for-shortcut"],
+    enabled: open && !!step?.type && MESSAGING_STEP_TYPES.has(step.type),
+    staleTime: 2 * 60_000,
+    queryFn: async () => {
+      const [contactRes, dealRes] = await Promise.all([
+        fetch(apiUrl("/api/custom-fields?entity=contact")),
+        fetch(apiUrl("/api/custom-fields?entity=deal")),
+      ]);
+      const contacts: CustomFieldOption[] = contactRes.ok ? await contactRes.json() : [];
+      const deals: CustomFieldOption[] = dealRes.ok ? await dealRes.json() : [];
+      return { contacts, deals };
+    },
+  });
+
   const variableShortcutOptions = useMemo<VariableShortcutOption[]>(() => {
     const out: VariableShortcutOption[] = [
+      // Dados do contato
+      { label: "Nome do contato", token: "{{contact.name}}" },
+      { label: "Primeiro nome do contato", token: "{{contact.name|first_name}}", hint: "Filtra só o primeiro nome" },
+      { label: "Telefone do contato", token: "{{contact.phone}}" },
+      { label: "E-mail do contato", token: "{{contact.email}}" },
+      // Dados do negócio
+      { label: "Título do negócio", token: "{{deal.title}}" },
+      { label: "Valor do negócio", token: "{{deal.value}}" },
+      // Resposta anterior
       {
         label: "Mensagem do cliente (passo anterior)",
         token: "{{lastResponse}}",
@@ -249,6 +281,26 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         hint: "Aplica filtro de primeiro nome",
       },
     ];
+
+    // Custom fields do contato
+    for (const cf of customFieldsShortcutQuery.data?.contacts ?? []) {
+      out.push({
+        label: `Contato: ${cf.label || cf.name}`,
+        token: `{{contactCustomFields.${cf.name}}}`,
+        hint: "Campo personalizado do contato",
+      });
+    }
+
+    // Custom fields do negócio
+    for (const cf of customFieldsShortcutQuery.data?.deals ?? []) {
+      out.push({
+        label: `Negócio: ${cf.label || cf.name}`,
+        token: `{{dealCustomFields.${cf.name}}}`,
+        hint: "Campo personalizado do negócio",
+      });
+    }
+
+    // Variáveis declaradas no fluxo
     for (const v of declaredVariables) {
       const rawName = v.value.startsWith("variables.")
         ? v.value.slice("variables.".length)
@@ -265,7 +317,7 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       });
     }
     return out;
-  }, [declaredVariables]);
+  }, [declaredVariables, customFieldsShortcutQuery.data]);
 
   const pipelinesQuery = useQuery({
     queryKey: ["pipelines-for-steps"],

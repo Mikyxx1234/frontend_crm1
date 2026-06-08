@@ -16,6 +16,7 @@ import {
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
+import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
 import { FilePickerButton } from "./file-picker-button";
 import { TemplatePickerList, InternalTemplatePickerList } from "./template-picker-popover";
@@ -40,6 +41,7 @@ export function ComposerMenu({
   onToggleNote,
   isResolved,
   contactId,
+  templateContext,
 }: {
   conversationId: string | null;
   className?: string;
@@ -47,6 +49,7 @@ export function ComposerMenu({
   onToggleNote?: () => void;
   isResolved?: boolean;
   contactId?: string | null;
+  templateContext?: InternalTemplateContext;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"root" | "template" | "internal" | "automation">("root");
@@ -217,6 +220,7 @@ export function ComposerMenu({
           ) : view === "internal" ? (
             <InternalTemplatePickerList
               conversationId={conversationId}
+              templateContext={templateContext}
               onClose={closeMenu}
             />
           ) : view === "automation" ? (

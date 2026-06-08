@@ -480,6 +480,12 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
     if (step.type === "finish_conversation") {
       config = {};
     }
+    if (step.type === "execute_distribution") {
+      config = {
+        distributionType: config.distributionType ?? "",
+        elseStepId: config.elseStepId ?? "",
+      };
+    }
     if (step.type === "consume_stock") {
       config = {};
     }
@@ -1383,6 +1389,49 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
               </p>
             </div>
           )}
+
+          {step.type === "execute_distribution" && (() => {
+            const otherSteps = allSteps.filter((s) => s.id !== step.id);
+            return (
+              <>
+                <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+                  <p>
+                    Distribui o contato/negócio entre os responsáveis elegíveis usando a{" "}
+                    <strong className="text-foreground">Distribuição Inteligente</strong>.
+                  </p>
+                  <p>
+                    Saída <strong className="text-emerald-700">Distribuído</strong>: distribuiu com sucesso → fluxo linear.
+                  </p>
+                  <p>
+                    Saída <strong className="text-rose-700">Sem agente</strong>: nenhum responsável elegível → conecte ao ramo alternativo no canvas.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sc-dist-type">Tipo de distribuição <span className="text-muted-foreground">(opcional)</span></Label>
+                  <Input
+                    id="sc-dist-type"
+                    value={String(draft.distributionType ?? "")}
+                    onChange={(e) => setDraft((d) => ({ ...d, distributionType: e.target.value }))}
+                    placeholder="ex: vendas, suporte (deixe em branco para qualquer)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sem agente → ir para</Label>
+                  <SelectNative
+                    value={String(draft.elseStepId ?? "")}
+                    onChange={(e) => setDraft((d) => ({ ...d, elseStepId: e.target.value }))}
+                  >
+                    <option value="">Encerrar fluxo</option>
+                    {otherSteps.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
+                      </option>
+                    ))}
+                  </SelectNative>
+                </div>
+              </>
+            );
+          })()}
 
           {step.type === "business_hours" && (() => {
             const schedule = Array.isArray(draft.schedule)

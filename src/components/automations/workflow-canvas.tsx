@@ -40,6 +40,7 @@ import type { ActionStepType } from "@/lib/automation-workflow";
 import { ActionNode } from "./action-node";
 import { AddStepNode } from "./add-step-node";
 import { BusinessHoursNode } from "./business-hours-node";
+import { DistributionNode } from "./distribution-node";
 import { StepPickerModal } from "./step-picker-modal";
 import { ConditionNode } from "./condition-node";
 import { DelayNode } from "./delay-node";
@@ -60,6 +61,7 @@ const nodeTypes = {
   action: ActionNode,
   condition: ConditionNode,
   businessHours: BusinessHoursNode,
+  distribution: DistributionNode,
   delay: DelayNode,
   question: QuestionNode,
   interactive: InteractiveNode,
@@ -92,6 +94,7 @@ function readRfPos(config: unknown): RfPos | null {
 function rfNodeType(stepType: string): keyof typeof nodeTypes {
   if (stepType === "condition") return "condition";
   if (stepType === "business_hours") return "businessHours";
+  if (stepType === "execute_distribution") return "distribution";
   if (stepType === "delay") return "delay";
   if (stepType === "question") return "interactive";
   if (stepType === "send_whatsapp_interactive") return "interactive";
@@ -130,6 +133,7 @@ const BRANCHING_STEP_TYPES = new Set([
   "condition",
   "wait_for_reply",
   "business_hours",
+  "execute_distribution",
   "question",
   "send_whatsapp_interactive",
 ]);
@@ -312,7 +316,7 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
       }
     }
 
-    if (a.type === "business_hours") {
+    if (a.type === "business_hours" || a.type === "execute_distribution") {
       if (typeof cfg.elseStepId === "string" && cfg.elseStepId && stepIds.has(cfg.elseStepId)) {
         out.push({
           id: `${a.id}-else-${cfg.elseStepId}`,
@@ -845,7 +849,7 @@ function WorkflowCanvasInner({
           return;
         }
 
-        if (sourceHandle === "false" && srcStep.type === "business_hours") {
+        if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
           const cfg = { ...srcStep.config, elseStepId: target };
           onStepsChange(cur.map((s) => s.id === source ? { ...s, config: cfg } : s));
           return;
@@ -1145,7 +1149,7 @@ function WorkflowCanvasInner({
         return;
       }
 
-      if (sourceHandle === "false" && srcStep.type === "business_hours") {
+      if (sourceHandle === "false" && (srcStep.type === "business_hours" || srcStep.type === "execute_distribution")) {
         const cfg = { ...srcStep.config } as Record<string, unknown>;
         delete cfg.elseStepId;
         onStepsChange(cur.map((s) => s.id === sourceId ? { ...s, config: cfg } : s));

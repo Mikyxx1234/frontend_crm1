@@ -1339,7 +1339,7 @@ function PipelineKebabMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)]"
+      className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
     >
       {/* Seção: ordenar */}
       <div className="px-3 pb-1 pt-2.5">

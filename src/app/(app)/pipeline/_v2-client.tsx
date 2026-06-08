@@ -1110,8 +1110,8 @@ function DroppableColumn({
               <AddDealDialog
                 open={true}
                 onOpenChange={(o) => { if (!o) onCloseAddDeal?.(); }}
-                stageId={column.stageId}
-                stageName={column.title}
+                stages={stages.map((s) => ({ id: s.id, name: s.name }))}
+                defaultStageId={column.stageId}
                 pipelineId={pipelineId}
                 statusFilter={statusFilter}
               />

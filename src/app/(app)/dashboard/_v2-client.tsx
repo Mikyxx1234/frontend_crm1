@@ -12,6 +12,9 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { DealsDashboard } from "@/components/crm/dashboard/deals-dashboard";
 import { DashboardLayoutEditor } from "@/components/crm/dashboard/dashboard-layout-editor";
 import { ServiceOverview } from "@/components/crm/dashboard/service-overview";
+import { AgentsOnlineWidget } from "@/components/dashboard/widgets/agents-online-widget";
+import { useUserRole } from "@/hooks/use-user-role";
+import { IconUsers } from "@tabler/icons-react";
 
 import { DashboardFilters } from "@/features/dashboard-v2/components/dashboard-filters";
 import {
@@ -43,6 +46,7 @@ export default function DashboardV2ClientPage({
 }: DashboardV2ClientPageProps = {}) {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
+  const { isManagerUp } = useUserRole();
 
   const [activeTab, setActiveTab] = useState(0);
   const isDeals = activeTab === 0;
@@ -115,6 +119,25 @@ export default function DashboardV2ClientPage({
             effectivePipelineId={effectivePipelineId}
             showStructural={isDeals}
           />
+        )}
+
+        {isManagerUp && !editing && (
+          <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 shadow-[var(--glass-shadow)] backdrop-blur-[16px]">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex size-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+                <IconUsers size={17} />
+              </span>
+              <div>
+                <h3 className="font-display text-[15px] font-bold text-foreground">
+                  Equipe online
+                </h3>
+                <p className="text-[12px] text-muted-foreground">
+                  Disponibilidade dos agentes para distribuição de leads
+                </p>
+              </div>
+            </div>
+            <AgentsOnlineWidget />
+          </section>
         )}
 
         {isDeals ? (

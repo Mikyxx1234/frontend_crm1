@@ -22,10 +22,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DockButton, DockProvider } from "@/components/crm/floating-dock";
+import {
+  AGENT_STATUS_META,
+  AgentStatusPopup,
+  useAgentStatus,
+  useAgentStatusAutoPrompt,
+} from "@/components/crm/agent-status";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
+import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
-import { toNavItems, type SidebarItemPreference } from "@/lib/sidebar-catalog";
+import {
+  filterNavItemsByRole,
+  toNavItems,
+  type SidebarItemPreference,
+} from "@/lib/sidebar-catalog";
 import { useSidebarPreferences } from "@/features/sidebar/hooks";
 
 /**
@@ -79,7 +90,14 @@ export function NavRailV2({ className }: { className?: string }) {
   const router = useRouter();
   const { theme, toggle } = useThemeV2();
   const { data: session } = useSession();
+  const { role, isSuperAdmin } = useUserRole();
   const { data: prefs } = useSidebarPreferences();
+
+  const agentStatus = useAgentStatus();
+  const [statusPopupOpen, setStatusPopupOpen] = useState(false);
+  useAgentStatusAutoPrompt(agentStatus, () => setStatusPopupOpen(true));
+  const statusMeta = AGENT_STATUS_META[agentStatus.status];
+  const StatusIcon = statusMeta.icon;
 
   // Cache lido uma unica vez (lazy). So e USADO apos o mount, entao o 1o
   // render (SSR e client) continua usando a ordem padrao do catalogo —
@@ -123,7 +141,10 @@ export function NavRailV2({ className }: { className?: string }) {
   // eliminando o flash de "itens diferentes" ao recarregar.
   const effectiveItems =
     prefs?.sidebar?.items ?? (mounted ? cachedItems : undefined);
-  const navItems = toNavItems(effectiveItems);
+  const navItems = filterNavItemsByRole(toNavItems(effectiveItems), {
+    role,
+    isSuperAdmin,
+  });
   useEffect(() => {
     const preview = isPreviewMode();
     const sessUser = session?.user;
@@ -178,6 +199,20 @@ export function NavRailV2({ className }: { className?: string }) {
         <IconSettings size={20} />
       </DockButton>
 
+      {/* Status do agente (Online / Ausente / Offline) — define a distribuição */}
+      <DockButton
+        title={`Status: ${statusMeta.label}`}
+        onClick={() => setStatusPopupOpen(true)}
+      >
+        <span className="relative inline-flex">
+          <StatusIcon size={20} style={{ color: statusMeta.color }} />
+          <span
+            className="absolute -bottom-0.5 -right-0.5 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-panel)]"
+            style={{ backgroundColor: statusMeta.color }}
+          />
+        </span>
+      </DockButton>
+
       {/* Tema: lua / sol */}
       <DockButton
         title={theme === "light" ? "Modo escuro" : "Modo claro"}
@@ -205,7 +240,10 @@ export function NavRailV2({ className }: { className?: string }) {
             )}
           >
             {initials}
-            <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
+            <span
+              className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)]"
+              style={{ backgroundColor: statusMeta.color }}
+            />
           </div>
         </button>
       ) : (
@@ -224,7 +262,10 @@ export function NavRailV2({ className }: { className?: string }) {
             )}
           >
             {initials}
-            <span className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
+            <span
+              className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)]"
+              style={{ backgroundColor: statusMeta.color }}
+            />
           </div>
         </DropdownMenuTrigger>
 
@@ -245,6 +286,19 @@ export function NavRailV2({ className }: { className?: string }) {
 
           <DropdownMenuSeparator />
 
+          <DropdownMenuItem onClick={() => setStatusPopupOpen(true)}>
+            <span
+              className="inline-flex h-4 w-4 items-center justify-center"
+              aria-hidden
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: statusMeta.color }}
+              />
+            </span>
+            <span className="font-medium">Status: {statusMeta.label}</span>
+          </DropdownMenuItem>
+
           <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
             <IconUserCircle size={16} className="text-muted-foreground" />
             <span className="font-medium">Meu perfil</span>
@@ -262,6 +316,13 @@ export function NavRailV2({ className }: { className?: string }) {
         </DropdownMenuContent>
       </DropdownMenu>
       )}
+
+      <AgentStatusPopup
+        open={statusPopupOpen}
+        current={agentStatus.status}
+        onClose={() => setStatusPopupOpen(false)}
+        onSelect={(s) => agentStatus.setStatus(s)}
+      />
     </DockProvider>
   );
 }

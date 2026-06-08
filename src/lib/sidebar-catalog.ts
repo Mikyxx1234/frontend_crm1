@@ -13,6 +13,8 @@ import {
   type Icon,
 } from "@tabler/icons-react";
 
+import type { AppUserRole } from "@/lib/auth-types";
+
 /**
  * Catalogo oficial dos itens customizaveis da sidebar (nav rail) — frontend.
  *
@@ -32,6 +34,11 @@ export interface SidebarCatalogItem {
   description: string;
   /** Item essencial: pode ser reordenado, mas nao ocultado. */
   locked: boolean;
+  /**
+   * Papéis que podem ver este item. Ausente = visível para todos.
+   * Super-admin sempre vê tudo (ver `filterNavItemsByRole`).
+   */
+  allowedRoles?: readonly AppUserRole[];
 }
 
 /** Ordem do array = ordem padrao da sidebar. */
@@ -91,6 +98,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconBolt,
     description: "Fluxos automáticos e gatilhos.",
     locked: false,
+    allowedRoles: ["ADMIN", "MANAGER"],
   },
   {
     key: "campaigns",
@@ -107,6 +115,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconRoute,
     description: "Distribuição inteligente de leads entre consultores.",
     locked: false,
+    allowedRoles: ["ADMIN", "MANAGER"],
   },
   {
     key: "logs",
@@ -115,6 +124,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconClipboardList,
     description: "Feed unificado de atividades e eventos.",
     locked: false,
+    allowedRoles: ["ADMIN", "MANAGER"],
   },
   {
     key: "widgets",
@@ -194,6 +204,23 @@ export function toNavItems(
   pref: SidebarItemPreference[] | undefined | null,
 ): ResolvedSidebarItem[] {
   return resolveSidebarItems(pref).filter((i) => i.enabled);
+}
+
+/**
+ * Filtra itens da nav por papel do usuário. Itens sem `allowedRoles` são
+ * visíveis para todos; itens restritos só aparecem para os papéis listados.
+ * Super-admin (EduIT) sempre vê tudo. Enquanto o papel ainda não resolveu
+ * (`role == null`), itens restritos ficam ocultos para não vazar acesso.
+ */
+export function filterNavItemsByRole<T extends SidebarCatalogItem>(
+  items: T[],
+  viewer: { role: AppUserRole | null; isSuperAdmin?: boolean },
+): T[] {
+  if (viewer.isSuperAdmin) return items;
+  return items.filter((item) => {
+    if (!item.allowedRoles || item.allowedRoles.length === 0) return true;
+    return viewer.role != null && item.allowedRoles.includes(viewer.role);
+  });
 }
 
 /** Preferencia padrao (catalogo, todos habilitados) — para "Restaurar padrão". */

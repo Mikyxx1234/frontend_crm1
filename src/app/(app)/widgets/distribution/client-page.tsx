@@ -17,6 +17,8 @@ import {
 import { toast } from "sonner";
 
 import { NavRail } from "@/components/crm/nav-rail";
+import { RestrictedScreen } from "@/components/crm/restricted-screen";
+import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
 import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
@@ -45,6 +47,7 @@ export default function DistributionClientPage({
   navRail,
 }: DistributionClientPageProps = {}) {
   const { data: session, status: sessionStatus } = useSession();
+  const { ready: roleReady, isManagerUp } = useRequireManager();
   const isAuthenticated = sessionStatus === "authenticated";
   const currentUserId = session?.user?.id ?? null;
   const role = session?.user?.role;
@@ -98,6 +101,8 @@ export default function DistributionClientPage({
       onError: (e) => toast.error(e.message || "Erro ao simular distribuição."),
     });
   };
+
+  if (roleReady && !isManagerUp) return <RestrictedScreen />;
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">

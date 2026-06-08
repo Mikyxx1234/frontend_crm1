@@ -583,8 +583,7 @@ export function StepConfigForm({
         : [];
       const errors = validateWebhookEntries(entries);
       if (errors.length > 0) {
-        toast.error(`Body do webhook: ${errors[0].message}`);
-        return;
+        return fail(`Body do webhook: ${errors[0].message}`);
       }
       // `__webhookBodyEntries` é estado de UI — não persiste no config
       // do step. O `body` (string JSON) é o que o backend consome.
@@ -593,7 +592,21 @@ export function StepConfigForm({
       config = rest;
     }
     // Preserva o `type` original (pode ser legado UPPERCASE) ao salvar.
-    onComplete({ ...step, type: rawStep!.type, config: { ...config, ...preserved } });
+    return { ...step, type: rawStep!.type, config: { ...config, ...preserved } };
+  };
+
+  // Botão "Concluir"/"Salvar": valida (com toast) e aplica.
+  const save = () => {
+    const built = buildStep(false);
+    if (built) onComplete(built);
+  };
+
+  // Autosave inline (onBlur): aplica silenciosamente quando válido. Não
+  // fecha o card (o handleCompleteStep do canvas só fecha quando há um
+  // `expandedStepId` manual — cards sempre-abertos permanecem abertos).
+  const autoSave = () => {
+    const built = buildStep(true);
+    if (built) onComplete(built);
   };
 
   return (
@@ -623,7 +636,21 @@ export function StepConfigForm({
         </div>
       )}
 
-      <div className="flex max-h-[420px] flex-col gap-4 overflow-y-auto py-1 pr-0.5">
+      <div
+        className="flex max-h-[420px] flex-col gap-4 overflow-y-auto py-1 pr-0.5"
+        // Autosave estilo Kommo: ao sair de qualquer campo no modo inline
+        // (cards sempre abertos), aplica silenciosamente se válido. O
+        // botão "Salvar" abaixo é reforço explícito.
+        onBlur={
+          variant === "inline"
+            ? (e) => {
+                // Só dispara quando o foco sai do bloco inteiro, não ao
+                // pular de um input pro outro dentro do mesmo form.
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) autoSave();
+              }
+            : undefined
+        }
+      >
         {step.type === "send_email" && (
             <>
               <div className="space-y-2">
@@ -1613,12 +1640,23 @@ export function StepConfigForm({
         </div>
 
       <div className="flex items-center justify-end gap-2 border-t border-[color:var(--glass-border-subtle)] pt-2">
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="button" size="sm" onClick={save}>
-          Concluir
-        </Button>
+        {variant === "panel" ? (
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button type="button" size="sm" onClick={save}>
+              Concluir
+            </Button>
+          </>
+        ) : (
+          // Inline (cards sempre abertos): autosave onBlur já persiste; o
+          // "Salvar" é reforço explícito, sem "Cancelar" (não há modo de
+          // edição separado pra descartar).
+          <Button type="button" size="sm" onClick={save}>
+            Salvar
+          </Button>
+        )}
       </div>
     </div>
   );

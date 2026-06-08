@@ -277,7 +277,7 @@ export function NodeShell({
   return (
     <div
       className={cn(
-        "group/node relative overflow-hidden rounded-[var(--radius-xl)] border bg-[var(--glass-bg-base)] backdrop-blur-[10px] transition-all duration-200",
+        "group/node relative rounded-[var(--radius-xl)] border bg-[var(--glass-bg-base)] backdrop-blur-[10px] transition-all duration-200",
         selected ? "-translate-y-px" : "hover:-translate-y-px",
         className
       )}
@@ -378,7 +378,7 @@ export function CategoryHeader({
     : { backgroundColor: tone.bg };
 
   return (
-    <div className="relative flex items-start gap-3 px-3.5 py-3" style={headerStyle}>
+    <div className="relative flex items-start gap-3 overflow-hidden rounded-t-[var(--radius-xl)] px-3.5 py-3" style={headerStyle}>
       {gradient && (
         <>
           <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(to_right,transparent,rgba(255,255,255,0.7),transparent)]" />

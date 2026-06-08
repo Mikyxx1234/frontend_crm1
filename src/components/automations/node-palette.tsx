@@ -33,7 +33,6 @@ const GROUPS: { title: string; items: PaletteItem[] }[] = [
       { type: "update_field" },
       { type: "create_activity" },
       { type: "update_lead_score" },
-      { type: "execute_distribution" },
     ],
   },
   {

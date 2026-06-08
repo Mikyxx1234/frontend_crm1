@@ -133,7 +133,6 @@ const BRANCHING_STEP_TYPES = new Set([
   "condition",
   "wait_for_reply",
   "business_hours",
-  "execute_distribution",
   "question",
   "send_whatsapp_interactive",
 ]);
@@ -316,7 +315,22 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
       }
     }
 
-    if (a.type === "business_hours" || a.type === "execute_distribution") {
+    // execute_distribution = IF de 2 saídas (estilo n8n):
+    //   • SIM (handle "true") = fluxo linear via nextStepId (bloco genérico abaixo).
+    //   • NÃO (handle "false") = ramo `elseStepId` (sem agente elegível).
+    if (a.type === "execute_distribution") {
+      if (typeof cfg.elseStepId === "string" && cfg.elseStepId && stepIds.has(cfg.elseStepId)) {
+        out.push({
+          id: `${a.id}-else-${cfg.elseStepId}`,
+          source: a.id, target: cfg.elseStepId,
+          sourceHandle: "false",
+          animated: false, data: EDGE_DATA_ELSE, type: EDGE_TYPE,
+          interactionWidth: INTERACT_W, ...DELETE_LABEL_PROPS,
+        });
+      }
+    }
+
+    if (a.type === "business_hours") {
       if (typeof cfg.elseStepId === "string" && cfg.elseStepId && stepIds.has(cfg.elseStepId)) {
         out.push({
           id: `${a.id}-else-${cfg.elseStepId}`,

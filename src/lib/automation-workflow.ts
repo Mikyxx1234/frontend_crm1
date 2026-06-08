@@ -483,7 +483,7 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
         target: "deal",
       };
     case "execute_distribution":
-      return { distributionType: "", elseStepId: "" };
+      return { distributionType: "" };
     default:
       return {};
   }

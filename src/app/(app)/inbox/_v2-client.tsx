@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
 import { IconChevronDown } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -313,11 +314,13 @@ export default function InboxV2ClientPage({
           />
         ),
         assigneeSlot: (
-          <AssigneePopover
-            conversationId={c.id}
-            currentAssigneeName={c.assignee}
-            currentAssigneeId={c.assigneeId ?? null}
-          />
+          <RequirePermission permission="conversation:assign">
+            <AssigneePopover
+              conversationId={c.id}
+              currentAssigneeName={c.assignee}
+              currentAssigneeId={c.assigneeId ?? null}
+            />
+          </RequirePermission>
         ),
       })}
     />
@@ -467,11 +470,13 @@ export default function InboxV2ClientPage({
       <ContactAside
         contact={contactAsideViewWithSlots}
         headerActionsNode={
-          <AssigneePopover
-            conversationId={activeId}
-            currentAssigneeName={activeRow.assignedTo?.name}
-            currentAssigneeId={activeRow.assignedTo?.id ?? null}
-          />
+          <RequirePermission permission="conversation:reassign">
+            <AssigneePopover
+              conversationId={activeId}
+              currentAssigneeName={activeRow.assignedTo?.name}
+              currentAssigneeId={activeRow.assignedTo?.id ?? null}
+            />
+          </RequirePermission>
         }
         tagsNode={tagsNode}
         collapsed={asideCollapsed}

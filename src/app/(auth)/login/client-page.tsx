@@ -111,25 +111,27 @@ function LoginForm() {
 
   if (loginSuccess) {
     return (
-      <div
-        className="fixed inset-0 z-[200] flex min-h-dvh w-screen flex-col items-center justify-center gap-4 bg-primary p-6 text-primary-foreground"
-        role="status"
-        aria-live="polite"
-        aria-label="Login concluído, carregando o CRM"
-      >
-        <div className="relative">
-          <div className="flex size-20 items-center justify-center rounded-full bg-primary-foreground/20">
-            <div className="flex size-16 items-center justify-center rounded-full bg-primary-foreground">
-              <Check className="size-8 text-primary" strokeWidth={2.5} />
+      <HeroGeometric color1="#a78bfa" color2="#f472b6" speed={1}>
+        <div
+          className="flex min-h-screen w-full flex-col items-center justify-center gap-4 p-6 text-white"
+          role="status"
+          aria-live="polite"
+          aria-label="Login concluído, carregando o CRM"
+        >
+          <div className="relative">
+            <div className="flex size-20 items-center justify-center rounded-full bg-white/20 backdrop-blur">
+              <div className="flex size-16 items-center justify-center rounded-full bg-white shadow-[0_8px_24px_-6px_rgba(0,0,0,0.35)]">
+                <Check className="size-8 text-primary" strokeWidth={2.5} />
+              </div>
             </div>
           </div>
+          <h2 className="font-display text-[22px] font-bold tracking-tight text-white">Acesso liberado</h2>
+          <p className="text-[14px] text-white/80">Carregando o CRM…</p>
+          <div className="mt-2 h-0.5 w-32 overflow-hidden rounded-full bg-white/20">
+            <div className="h-full rounded-full bg-white/60 animate-[loading_1.5s_ease-in-out_forwards]" />
+          </div>
         </div>
-        <h2 className="font-display text-[22px] font-bold tracking-tight">Acesso liberado</h2>
-        <p className="text-[14px] text-primary-foreground/80">Carregando o CRM…</p>
-        <div className="mt-2 h-0.5 w-32 overflow-hidden rounded-full bg-primary-foreground/20">
-          <div className="h-full rounded-full bg-primary-foreground/60 animate-[loading_1.5s_ease-in-out_forwards]" />
-        </div>
-      </div>
+      </HeroGeometric>
     );
   }
 

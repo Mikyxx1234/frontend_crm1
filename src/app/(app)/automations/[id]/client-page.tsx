@@ -23,20 +23,23 @@ import OldAutomationEditor from "@/app/old/automations/[id]/client-page";
  * pro canvas glass nativo é tarefa do v0 (componente novo de node que
  * entenda o formato do backend). Até lá, isto entrega 100% funcional.
  *
- * Layout: NavRailV2 (72px) + área do editor. O editor usa margens
- * negativas (-m-6/md:-m-8) pra escapar do padding do pai; por isso
- * envolvemos num container com p-6/md:p-8 que ele cancela, preenchendo
- * a célula.
+ * Layout: segue o padrão canônico das telas v2
+ * (`grid-cols-[72px_1fr] gap-4 p-4` + `<NavRailV2 />`). O editor é
+ * envolvido num card glass arredondado que ocupa a célula 1fr e alinha
+ * verticalmente com a nav rail. O editor usa `-m-6/md:-m-8` pra escapar
+ * de paddings; aqui o card NÃO tem padding (o editor preenche full-bleed)
+ * e o `rounded-[var(--radius-xl)] overflow-hidden` recorta a topbar/canvas
+ * pra casar com o respiro da nav rail.
  */
 export default function V2AutomationDetailClientPage() {
   return (
-    <div className="v2-screen grid h-[100dvh] grid-cols-[72px_1fr] overflow-hidden">
-      <div className="py-4 pl-4">
-        <NavRailV2 />
-      </div>
-      <div className="relative min-h-0 overflow-hidden p-6 md:p-8">
-        <OldAutomationEditor />
-      </div>
+    <div className="v2-screen grid h-[100dvh] grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+      <NavRailV2 />
+      <main className="relative min-h-0 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)]">
+        <div className="absolute inset-0 p-6 md:p-8">
+          <OldAutomationEditor />
+        </div>
+      </main>
     </div>
   );
 }

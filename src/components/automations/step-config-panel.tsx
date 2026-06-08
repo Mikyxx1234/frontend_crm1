@@ -1,26 +1,29 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectNative,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { AutomationStep } from "@/lib/automation-workflow";
-import { stepTypeLabel, summarizeStepConfig } from "@/lib/automation-workflow";
+import { canonicalStepType, stepTypeLabel, summarizeStepConfig } from "@/lib/automation-workflow";
 import {
   newBranchId,
   normalizeConditionConfig,
@@ -58,12 +61,36 @@ const UPDATE_FIELD_BUILTINS: Record<"contact" | "deal", Array<{ value: string; l
 };
 
 type Props = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  /** Passo em edição. */
   step: AutomationStep | null;
-  onSave: (step: AutomationStep) => void;
+  /** Demais passos do fluxo (p/ variáveis, goto, condition else, etc.). */
   allSteps?: AutomationStep[];
+  /** Chamado ao concluir — recebe o passo já normalizado. */
+  onComplete: (step: AutomationStep) => void;
+  /** Chamado ao cancelar/fechar a edição. */
+  onCancel: () => void;
+  /**
+   * Densidade visual do formulário:
+   * - `inline`: embutido no card (mais estreito).
+   * - `panel`: painel ancorado mais largo (tipos densos).
+   */
+  variant?: "inline" | "panel";
 };
+
+/** Tipos densos demais p/ caber bem inline — usam painel ancorado. */
+export const ANCHORED_STEP_TYPES = new Set<string>([
+  "condition",
+  "webhook",
+  "send_whatsapp_interactive",
+  "question",
+  "wait_for_reply",
+]);
+
+/** True quando o tipo do passo deve abrir em painel ancorado, não inline. */
+export function isAnchoredStepType(stepType: string): boolean {
+  // Aceita tipos legados (UPPERCASE) normalizando p/ canônico.
+  return ANCHORED_STEP_TYPES.has(canonicalStepType(stepType));
+}
 
 const CONDITION_OPS = [
   { value: "equals", worker: "eq" as const, label: "Igual a" },
@@ -229,7 +256,26 @@ function VariableShortcutTextarea({
   );
 }
 
-export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [] }: Props) {
+export function StepConfigForm({
+  step: rawStep,
+  allSteps = [],
+  onComplete,
+  onCancel,
+  variant = "inline",
+}: Props) {
+  // O form só monta quando o card está expandido, então as queries
+  // (que usavam `enabled: open && ...`) já podem rodar sempre que o
+  // tipo casar. Mantemos `open` como `true` para preservar a lógica.
+  const open = true;
+  // Os passos podem chegar com tipos legados em UPPERCASE (ex.: WAIT,
+  // SEND_MESSAGE, ADD_TAG). Toda a lógica de render/normalização abaixo
+  // usa os tipos canônicos em minúsculo, então normalizamos aqui e
+  // restauramos o `type` original ao concluir (save).
+  const step = useMemo(() => {
+    if (!rawStep) return null;
+    const canonical = canonicalStepType(rawStep.type);
+    return canonical === rawStep.type ? rawStep : { ...rawStep, type: canonical };
+  }, [rawStep]);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [updateFieldFilter, setUpdateFieldFilter] = useState("");
   const declaredVariables = useMemo(
@@ -544,20 +590,39 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       void _drop;
       config = rest;
     }
-    onSave({ ...step, config: { ...config, ...preserved } });
-    onOpenChange(false);
+    // Preserva o `type` original (pode ser legado UPPERCASE) ao salvar.
+    onComplete({ ...step, type: rawStep!.type, config: { ...config, ...preserved } });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Ajuste os parâmetros deste passo do fluxo.</DialogDescription>
-        </DialogHeader>
+    <div
+      className={cn(
+        "flex flex-col gap-3 text-left",
+        variant === "panel"
+          ? "w-[380px] max-w-[90vw] rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--glass-bg-overlay)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-xl"
+          : // Inline: o wrapper no node-kit já dá superfície, divisor e padding.
+            "w-full",
+      )}
+    >
+      {variant === "panel" && (
+        <div className="flex items-start justify-between gap-2 border-b border-[color:var(--glass-border-subtle)] pb-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">{title}</p>
+            <p className="text-[11px] text-muted-foreground">Ajuste os parâmetros deste passo.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Fechar edição"
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-[color:var(--glass-bg-subtle)] hover:text-foreground"
+          >
+            <X className="size-4" strokeWidth={2} />
+          </button>
+        </div>
+      )}
 
-        <div className="flex flex-col gap-4 py-2">
-          {step.type === "send_email" && (
+      <div className="flex max-h-[420px] flex-col gap-4 overflow-y-auto py-1 pr-0.5">
+        {step.type === "send_email" && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-to">Para (campo / e-mail)</Label>
@@ -609,11 +674,9 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                     />
                   </>
                 ) : (
-                  <SelectNative
-                    id="sc-stage"
+                  <Select
                     value={String(draft.stageId ?? "")}
-                    onChange={(e) => {
-                      const sid = e.target.value;
+                    onValueChange={(sid) => {
                       const stage = allStages.find((s) => s.id === sid);
                       setDraft((d) => ({
                         ...d,
@@ -622,17 +685,22 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                       }));
                     }}
                   >
-                    <option value="">Selecione…</option>
-                    {pipelines.map((p) => (
-                      <optgroup key={p.id} label={p.name}>
-                        {p.stages.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </SelectNative>
+                    <SelectTrigger id="sc-stage">
+                      <SelectValue placeholder="Selecione…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pipelines.map((p) => (
+                        <SelectGroup key={p.id}>
+                          <SelectLabel>{p.name}</SelectLabel>
+                          {p.stages.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             );
@@ -661,20 +729,24 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-uf-entity">Entidade</Label>
-                <SelectNative
-                  id="sc-uf-entity"
+                <Select
                   value={String(draft.entity ?? "contact")}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setDraft((d) => ({
                       ...d,
-                      entity: e.target.value,
+                      entity: value,
                       field: "",
                     }))
                   }
                 >
-                  <option value="contact">Contato</option>
-                  <option value="deal">Negócio</option>
-                </SelectNative>
+                  <SelectTrigger id="sc-uf-entity">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contact">Contato</SelectItem>
+                    <SelectItem value="deal">Negócio</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-field-filter">Localizar campo</Label>
@@ -687,42 +759,47 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-field">Campo</Label>
-                <SelectNative
-                  id="sc-field"
+                <Select
                   value={String(draft.field ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, field: e.target.value }))}
+                  onValueChange={(value) => setDraft((d) => ({ ...d, field: value }))}
                 >
-                  <option value="">Selecione um campo…</option>
-                  <optgroup label="Campos nativos">
-                    {(UPDATE_FIELD_BUILTINS[
-                      String(draft.entity ?? "contact") === "deal" ? "deal" : "contact"
-                    ] ?? [])
-                      .filter((o) =>
-                        `${o.label} ${o.value}`
-                          .toLowerCase()
-                          .includes(updateFieldFilter.trim().toLowerCase()),
-                      )
-                      .map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                  </optgroup>
-                  <optgroup label="Campos personalizados">
-                    {(customFieldsQuery.data ?? [])
-                      .filter((f) => f.entity === String(draft.entity ?? "contact"))
-                      .filter((f) =>
-                        `${f.label} ${f.name}`
-                          .toLowerCase()
-                          .includes(updateFieldFilter.trim().toLowerCase()),
-                      )
-                      .map((f) => (
-                        <option key={f.id} value={f.name}>
-                          {f.label} ({f.name})
-                        </option>
-                      ))}
-                  </optgroup>
-                </SelectNative>
+                  <SelectTrigger id="sc-field">
+                    <SelectValue placeholder="Selecione um campo…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Campos nativos</SelectLabel>
+                      {(UPDATE_FIELD_BUILTINS[
+                        String(draft.entity ?? "contact") === "deal" ? "deal" : "contact"
+                      ] ?? [])
+                        .filter((o) =>
+                          `${o.label} ${o.value}`
+                            .toLowerCase()
+                            .includes(updateFieldFilter.trim().toLowerCase()),
+                        )
+                        .map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Campos personalizados</SelectLabel>
+                      {(customFieldsQuery.data ?? [])
+                        .filter((f) => f.entity === String(draft.entity ?? "contact"))
+                        .filter((f) =>
+                          `${f.label} ${f.name}`
+                            .toLowerCase()
+                            .includes(updateFieldFilter.trim().toLowerCase()),
+                        )
+                        .map((f) => (
+                          <SelectItem key={f.id} value={f.name}>
+                            {f.label} ({f.name})
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-val">Valor</Label>
@@ -742,19 +819,23 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-act-type">Tipo</Label>
-                <SelectNative
-                  id="sc-act-type"
+                <Select
                   value={String(draft.type ?? "TASK")}
-                  onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
+                  onValueChange={(value) => setDraft((d) => ({ ...d, type: value }))}
                 >
-                  <option value="CALL">Ligação</option>
-                  <option value="EMAIL">E-mail</option>
-                  <option value="MEETING">Reunião</option>
-                  <option value="TASK">Tarefa</option>
-                  <option value="NOTE">Nota</option>
-                  <option value="WHATSAPP">WhatsApp</option>
-                  <option value="OTHER">Outro</option>
-                </SelectNative>
+                  <SelectTrigger id="sc-act-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CALL">Ligação</SelectItem>
+                    <SelectItem value="EMAIL">E-mail</SelectItem>
+                    <SelectItem value="MEETING">Reunião</SelectItem>
+                    <SelectItem value="TASK">Tarefa</SelectItem>
+                    <SelectItem value="NOTE">Nota</SelectItem>
+                    <SelectItem value="WHATSAPP">WhatsApp</SelectItem>
+                    <SelectItem value="OTHER">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-act-title">Título</Label>
@@ -872,21 +953,29 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                             <span className="text-lg text-destructive">×</span>
                           </Button>
                         </div>
-                        <SelectNative
-                          value={btn.gotoStepId ?? ""}
-                          onChange={(e) => {
+                        <Select
+                          value={btn.gotoStepId ? btn.gotoStepId : "__next__"}
+                          onValueChange={(value) => {
                             const next = [...buttons];
-                            next[idx] = { ...next[idx], gotoStepId: e.target.value };
+                            next[idx] = {
+                              ...next[idx],
+                              gotoStepId: value === "__next__" ? "" : value,
+                            };
                             setDraft((d) => ({ ...d, buttons: next }));
                           }}
                         >
-                          <option value="">→ Próximo passo (linear)</option>
-                          {otherSteps.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                            </option>
-                          ))}
-                        </SelectNative>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__next__">→ Próximo passo (linear)</SelectItem>
+                            {otherSteps.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     ))}
                   </div>
@@ -965,15 +1054,19 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sc-delay-u">Unidade</Label>
-                  <SelectNative
-                    id="sc-delay-u"
+                  <Select
                     value={unit}
-                    onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))}
+                    onValueChange={(value) => setDraft((d) => ({ ...d, unit: value }))}
                   >
-                    <option value="minutes">Minutos</option>
-                    <option value="hours">Horas</option>
-                    <option value="days">Dias</option>
-                  </SelectNative>
+                    <SelectTrigger id="sc-delay-u">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutes">Minutos</SelectItem>
+                      <SelectItem value="hours">Horas</SelectItem>
+                      <SelectItem value="days">Dias</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
             );
@@ -1144,21 +1237,29 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                             <span className="text-lg text-destructive">×</span>
                           </Button>
                         </div>
-                        <SelectNative
-                          value={btn.gotoStepId ?? ""}
-                          onChange={(e) => {
+                        <Select
+                          value={btn.gotoStepId ? btn.gotoStepId : "__next__"}
+                          onValueChange={(value) => {
                             const next = [...buttons];
-                            next[idx] = { ...next[idx], gotoStepId: e.target.value };
+                            next[idx] = {
+                              ...next[idx],
+                              gotoStepId: value === "__next__" ? "" : value,
+                            };
                             setDraft((d) => ({ ...d, buttons: next }));
                           }}
                         >
-                          <option value="">→ Próximo passo (linear)</option>
-                          {otherSteps.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                            </option>
-                          ))}
-                        </SelectNative>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__next__">→ Próximo passo (linear)</SelectItem>
+                            {otherSteps.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     ))}
                   </div>
@@ -1509,16 +1610,15 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
           )}
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button type="button" onClick={save}>
-            Salvar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="flex items-center justify-end gap-2 border-t border-[color:var(--glass-border-subtle)] pt-2">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="button" size="sm" onClick={save}>
+          Concluir
+        </Button>
+      </div>
+    </div>
   );
 }
 

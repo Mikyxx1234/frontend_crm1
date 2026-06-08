@@ -23,9 +23,10 @@ import {
  * Label "✕" continua sendo passada via `label` no `buildEdges()` — só
  * estilizamos visualmente como pílula clicável de excluir.
  *
- * NOTE: o "pulso elétrico" (animateMotion) foi removido por feedback
- * dos usuários — era ruído visual e consumia CPU com muitas edges.
- * `data.energized` segue no tipo só por compatibilidade e é ignorado.
+ * Pulso elétrico (animateMotion): um dot percorre a curva pra dar
+ * sensação de "fluxo vivo". É opt-in via `data.energized` (default
+ * desligado) pra não pesar com muitas edges — quem renderiza decide,
+ * ex.: edges conectadas ao gatilho ou no hover/seleção.
  */
 
 export type AnimatedEdgeVariant =
@@ -43,9 +44,18 @@ export type AnimatedEdgeData = {
 const VARIANT_STROKE: Record<AnimatedEdgeVariant, string> = {
   default: "url(#edge-grad-default)",
   button: "url(#edge-grad-button)",
-  else: "#f59e0b",
+  else: "var(--color-warning)",
   timeout: "#94a3b8",
-  add: "#cbd5e1",
+  add: "rgba(91,111,245,0.35)",
+};
+
+/** Cor do "pulso" (dot animado) por variante — segue o stroke. */
+const VARIANT_PULSE: Record<AnimatedEdgeVariant, string> = {
+  default: "var(--brand-primary)",
+  button: "#16a34a",
+  else: "var(--color-warning)",
+  timeout: "#94a3b8",
+  add: "rgba(91,111,245,0.5)",
 };
 
 const VARIANT_WIDTH: Record<AnimatedEdgeVariant, number> = {
@@ -74,12 +84,12 @@ export function AnimatedEdgeDefs() {
     <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden>
       <defs>
         <linearGradient id="edge-grad-default" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="var(--color-primary)" />
-          <stop offset="100%" stopColor="#06b6d4" />
+          <stop offset="0%" stopColor="var(--brand-primary)" />
+          <stop offset="100%" stopColor="var(--brand-secondary)" />
         </linearGradient>
         <linearGradient id="edge-grad-button" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="var(--color-primary)" />
-          <stop offset="100%" stopColor="#22c55e" />
+          <stop offset="0%" stopColor="var(--brand-primary)" />
+          <stop offset="100%" stopColor="#16a34a" />
         </linearGradient>
       </defs>
     </svg>
@@ -118,6 +128,7 @@ function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
     ? VARIANT_WIDTH[variant] + 0.6
     : VARIANT_WIDTH[variant];
   const dash = VARIANT_DASH[variant];
+  const energized = (data?.energized ?? false) || selected;
 
   return (
     <>
@@ -134,10 +145,13 @@ function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
         }}
       />
 
-      {/* NOTE: pulso elétrico animado (animateMotion) foi removido —
-          consumia CPU com muitas edges e trazia mais ruído do que valor
-          visual. Se um dia quisermos reativar, usar condicional a
-          `data.energized` + preferência do usuário. */}
+      {/* Pulso elétrico — dot percorrendo a curva. Opt-in (energized)
+          pra não pesar com muitas edges. */}
+      {energized && variant !== "add" && (
+        <circle r={3} fill={VARIANT_PULSE[variant]}>
+          <animateMotion dur="1.6s" repeatCount="indefinite" path={path} />
+        </circle>
+      )}
 
       {label != null && label !== "" && (
         <EdgeLabelRenderer>

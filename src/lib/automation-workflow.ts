@@ -74,6 +74,66 @@ export const ACTION_STEP_TYPES = [
 
 export type ActionStepType = (typeof ACTION_STEP_TYPES)[number];
 
+/**
+ * Normaliza tipos de passo legados (ex.: importação estilo Kommo, que
+ * salva em MAIÚSCULO/genérico: "SEND_MESSAGE", "WAIT", "FILTER") para o
+ * tipo canônico minúsculo usado pelo app (categoria, ícone, label).
+ *
+ * É puramente para DISPLAY — o `type` original do passo continua
+ * intacto no estado e no payload de salvar, preservando o contrato com
+ * o backend.
+ */
+const LEGACY_STEP_ALIASES: Record<string, ActionStepType> = {
+  send_message: "send_whatsapp_message",
+  send_whatsapp: "send_whatsapp_message",
+  whatsapp_message: "send_whatsapp_message",
+  send_template: "send_whatsapp_template",
+  send_media: "send_whatsapp_media",
+  send_interactive: "send_whatsapp_interactive",
+  email: "send_email",
+  tag: "add_tag",
+  untag: "remove_tag",
+  stage: "move_stage",
+  move: "move_stage",
+  owner: "assign_owner",
+  assign: "assign_owner",
+  field: "update_field",
+  activity: "create_activity",
+  task: "create_activity",
+  wait: "delay",
+  sleep: "delay",
+  pause: "delay",
+  filter: "condition",
+  branch: "condition",
+  if: "condition",
+  reply: "wait_for_reply",
+  await_reply: "wait_for_reply",
+  ask: "question",
+  variable: "set_variable",
+  jump: "goto",
+  hours: "business_hours",
+  schedule: "delay",
+  score: "update_lead_score",
+  lead_score: "update_lead_score",
+  ai_agent: "transfer_to_ai_agent",
+  ai: "ask_ai_agent",
+  stock: "consume_stock",
+  deal: "create_deal",
+  stop: "stop_automation",
+  end: "finish",
+};
+
+const CANONICAL_STEP_SET = new Set<string>(ACTION_STEP_TYPES);
+
+export function canonicalStepType(type: string): string {
+  if (!type) return type;
+  // Já é canônico (minúsculo conhecido).
+  if (CANONICAL_STEP_SET.has(type)) return type;
+  const lower = type.toLowerCase();
+  if (CANONICAL_STEP_SET.has(lower)) return lower;
+  return LEGACY_STEP_ALIASES[lower] ?? lower;
+}
+
 export function triggerTypeLabel(t: string): string {
   const map: Record<string, string> = {
     stage_changed: "Estágio alterado",
@@ -90,7 +150,7 @@ export function triggerTypeLabel(t: string): string {
     message_sent: "Mensagem enviada",
     manual: "Manual (executar pela conversa)",
   };
-  return map[t] ?? t;
+  return map[t] ?? map[t?.toLowerCase()] ?? t;
 }
 
 export function stepTypeLabel(t: string): string {
@@ -124,7 +184,7 @@ export function stepTypeLabel(t: string): string {
     transfer_to_ai_agent: "Transferir para agente IA",
     consume_stock: "Baixar estoque",
   };
-  return map[t] ?? t;
+  return map[t] ?? map[canonicalStepType(t)] ?? t;
 }
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -139,7 +199,7 @@ export function summarizeTriggerConfig(
   lookup?: Record<string, string>,
 ): string {
   const c = asRecord(triggerConfig);
-  switch (triggerType) {
+  switch (triggerType?.toLowerCase()) {
     case "stage_changed": {
       const parts: string[] = [];
       if (c.fromStageId) {
@@ -235,7 +295,7 @@ export function summarizeTriggerConfig(
 
 export function summarizeStepConfig(stepType: string, config: unknown, lookup?: Record<string, string>): string {
   const c = asRecord(config);
-  switch (stepType) {
+  switch (canonicalStepType(stepType)) {
     case "send_email":
       return c.subject ? String(c.subject) : c.to ? `Para: ${String(c.to)}` : "Configurar e-mail";
     case "move_stage": {

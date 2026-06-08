@@ -49,7 +49,7 @@ import { InteractiveNode } from "./interactive-node";
 import { NodePalette, readPaletteDragType } from "./node-palette";
 import { QuestionNode } from "./question-node";
 import { WaitNode } from "./wait-node";
-import { StepConfigPanel } from "./step-config-panel";
+import { StepConfigForm, isAnchoredStepType } from "./step-config-panel";
 import { TriggerNode } from "./trigger-node";
 import { VariableNode } from "./variable-node";
 
@@ -426,8 +426,8 @@ function WorkflowCanvasInner({
   className,
 }: InnerProps) {
   const { screenToFlowPosition, fitView } = useReactFlow();
-  const [configOpen, setConfigOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<AutomationStep | null>(null);
+  // Edição inline: id do passo cujo card está expandido (um por vez).
+  const [expandedStepId, setExpandedStepId] = useState<string | null>(null);
   const stepsRef = useRef(steps);
   stepsRef.current = steps;
 
@@ -459,6 +459,12 @@ function WorkflowCanvasInner({
 
   const onStepLogsOpenRef = useRef(onStepLogsOpen);
   onStepLogsOpenRef.current = onStepLogsOpen;
+
+  // Refs estáveis p/ os callbacks de edição inline injetados em cada nó.
+  // Evitam recriar `buildNodes` a cada render e mantêm a lógica de
+  // aplicar/fechar centralizada.
+  const completeStepRef = useRef<(s: AutomationStep) => void>(() => {});
+  const closeExpandedRef = useRef<() => void>(() => {});
 
   type PendingConnection = {
     sourceId: string;
@@ -558,6 +564,13 @@ function WorkflowCanvasInner({
           onDelete: () => onDelete(step.id),
           stats: ss ? { success: ss.success, failed: ss.failed, skipped: ss.skipped } : undefined,
           onStatsClick: () => onStepLogsOpenRef.current?.(step.id),
+          // Edição inline — injetada em todo nó. O slot só renderiza
+          // quando `expanded` e o tipo não é ancorado.
+          expanded: step.id === expandedStepId,
+          step,
+          allSteps: list,
+          onComplete: (s: AutomationStep) => completeStepRef.current(s),
+          onCancel: () => closeExpandedRef.current(),
         };
 
         if (isInteractiveStep(step.type)) {
@@ -665,7 +678,7 @@ function WorkflowCanvasInner({
 
       return [triggerNode, ...stepNodes, ...addStepNodes];
     },
-    [triggerConfig, triggerType, stats, stageNameLookup]
+    [triggerConfig, triggerType, stats, stageNameLookup, expandedStepId]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -778,6 +791,14 @@ function WorkflowCanvasInner({
   }, [autoAlignVersion, fitView]);
 
   const edges = useMemo(() => buildEdges(steps), [steps]);
+
+  // Passo expandido que é de tipo "denso" — editado em painel ancorado
+  // à direita, não embutido no card.
+  const anchoredStep = useMemo(() => {
+    if (!expandedStepId) return null;
+    const st = steps.find((s) => s.id === expandedStepId);
+    return st && isAnchoredStepType(st.type) ? st : null;
+  }, [expandedStepId, steps]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -1080,8 +1101,8 @@ function WorkflowCanvasInner({
     }
     const st = stepsRef.current.find((s) => s.id === node.id);
     if (st) {
-      setSelectedStep(st);
-      setConfigOpen(true);
+      // Clique alterna a edição inline do card (um aberto por vez).
+      setExpandedStepId((cur) => (cur === node.id ? null : node.id));
     }
   }, []);
 
@@ -1227,16 +1248,19 @@ function WorkflowCanvasInner({
     e.dataTransfer.dropEffect = "copy";
   }, []);
 
-  const handleSaveStep = useCallback(
+  const handleCompleteStep = useCallback(
     (updated: AutomationStep) => {
       const next = stepsRef.current.map((s) =>
         s.id === updated.id ? updated : s
       );
       onStepsChange(next);
-      setSelectedStep(updated);
+      // Concluir aplica e fecha a edição inline.
+      setExpandedStepId(null);
     },
     [onStepsChange]
   );
+  completeStepRef.current = handleCompleteStep;
+  closeExpandedRef.current = () => setExpandedStepId(null);
 
   return (
     <div className={cn("flex w-full", className)}>
@@ -1297,19 +1321,24 @@ function WorkflowCanvasInner({
           onSelect={handlePendingStepSelect}
           onClose={() => setPendingConn(null)}
         />
+
+        {/* Tipos densos (condition, webhook, etc.) editam num painel
+            ancorado à direita do canvas, em vez de inflar o card. */}
+        {anchoredStep && (
+          <div className="absolute right-4 top-4 bottom-4 z-20 flex">
+            <StepConfigForm
+              variant="panel"
+              step={anchoredStep}
+              allSteps={steps}
+              onComplete={handleCompleteStep}
+              onCancel={() => setExpandedStepId(null)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Palette */}
-      <NodePalette className="w-[240px] shrink-0" />
-
-      {/* Step config */}
-      <StepConfigPanel
-        open={configOpen}
-        onOpenChange={setConfigOpen}
-        step={selectedStep}
-        onSave={handleSaveStep}
-        allSteps={steps}
-      />
+      <NodePalette />
     </div>
   );
 }

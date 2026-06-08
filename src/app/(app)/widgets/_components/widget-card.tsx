@@ -4,28 +4,22 @@ import { motion } from "framer-motion";
 import {
   IconCheck,
   IconCircleCheckFilled,
-  IconLayoutGrid,
   IconLoader2,
   IconPlus,
-  IconRobot,
-  IconRoute,
   IconTrash,
-  type IconProps,
 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import type { WidgetDto } from "@/features/widgets/types";
-
-/** Mapeia a chave de icone do catalogo para um componente tabler. */
-const ICON_BY_KEY: Record<string, React.ComponentType<IconProps>> = {
-  route: IconRoute,
-  bot: IconRobot,
-};
+import {
+  resolveWidgetAccent,
+  resolveWidgetIcon,
+} from "../_config/widget-presentation";
 
 function WidgetIcon({ icon, className }: { icon: string; className?: string }) {
-  const Cmp = ICON_BY_KEY[icon] ?? IconLayoutGrid;
+  const Cmp = resolveWidgetIcon(icon);
   return <Cmp className={className} />;
 }
 
@@ -49,58 +43,77 @@ export function WidgetCard({
 }: WidgetCardProps) {
   const installed = widget.installed;
   const comingSoon = widget.availability === "coming_soon";
+  const accent = resolveWidgetAccent(widget.category);
+  const accentVar = `var(${accent.token})`;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -3 }}
+      style={{ "--widget-accent": accentVar } as React.CSSProperties}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-6 shadow-[var(--glass-shadow-sm)] backdrop-blur-[16px] transition-shadow duration-300 hover:shadow-[var(--glass-shadow)]",
-        featured && "sm:col-span-2 sm:flex-row sm:items-stretch sm:gap-6",
+        "group flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-sm)] transition-all duration-300 hover:border-[color-mix(in_srgb,var(--widget-accent)_40%,transparent)] hover:shadow-[var(--glass-shadow)]",
+        featured && "sm:col-span-2",
       )}
     >
-      {/* Glow decorativo no hover */}
+      {/* Cabecalho realcado: icone + titulo + badge na mesma linha */}
       <div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[var(--brand-primary)]/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
-      />
-
-      <div className={cn("flex flex-col", featured && "sm:w-1/2 sm:shrink-0")}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-transform duration-300 group-hover:scale-105">
-            <WidgetIcon icon={widget.icon} className="size-6" />
-          </div>
-
-          <StatusBadge installed={installed} comingSoon={comingSoon} />
+        className="flex items-center gap-3 px-4 py-3"
+        style={{
+          backgroundColor:
+            "color-mix(in srgb, var(--widget-accent) 7%, transparent)",
+          borderBottom:
+            "1px solid color-mix(in srgb, var(--widget-accent) 16%, transparent)",
+        }}
+      >
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-transform duration-300 group-hover:scale-105"
+          style={{
+            backgroundColor:
+              "color-mix(in srgb, var(--widget-accent) 16%, transparent)",
+            color: "var(--widget-accent)",
+          }}
+        >
+          <WidgetIcon icon={widget.icon} className="size-[18px]" />
         </div>
-
-        <h3 className="mt-4 font-display text-[17px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
-          {widget.name}
-        </h3>
-        <p className="mt-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-          {widget.category}
-        </p>
-        <p className="mt-2 font-body text-[13px] leading-relaxed text-[var(--text-muted)]">
-          {widget.description}
-        </p>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-display text-[14px] font-bold leading-tight text-[var(--text-primary)]">
+            {widget.name}
+          </h3>
+          <p
+            className="truncate font-body text-[10.5px] font-semibold uppercase tracking-wide"
+            style={{ color: "var(--widget-accent)" }}
+          >
+            {widget.category}
+          </p>
+        </div>
+        <StatusBadge installed={installed} comingSoon={comingSoon} />
       </div>
 
-      <div className={cn("mt-5 flex flex-1 flex-col", featured && "sm:mt-0")}>
-        <ul className="flex flex-col gap-2">
+      {/* Corpo */}
+      <div className="flex flex-1 flex-col p-4">
+        <p className="font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">
+          {widget.description}
+        </p>
+
+        <ul className="mt-3 flex flex-col gap-2">
           {widget.features.map((feature) => (
             <li
               key={feature}
               className="flex items-center gap-2 font-body text-[12.5px] text-[var(--text-secondary)]"
             >
-              <IconCheck className="size-3.5 shrink-0 text-[var(--brand-primary)]" />
+              <IconCheck
+                className="size-3.5 shrink-0"
+                style={{ color: "var(--widget-accent)" }}
+              />
               <span>{feature}</span>
             </li>
           ))}
         </ul>
 
-        <div className="mt-auto pt-5">
+        <div className="mt-auto pt-4">
           {comingSoon ? (
             <Button variant="ghost" size="sm" disabled className="w-full">
               Em breve

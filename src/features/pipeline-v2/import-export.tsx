@@ -333,12 +333,9 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
   // Campos personalizados da entidade (contact/deal) — alimentam o dropdown
   // de mapeamento e o auto-map. Falha silenciosa (ex.: sem permissão) cai
   // num array vazio, mantendo só os campos padrão.
-  // Por enquanto só Contatos: a importação de negócios ainda não grava
-  // campos personalizados no backend (evita mapeamento que seria ignorado).
-  const customFieldsEnabled = entity === "contacts";
+  // Contatos e Negócios: ambos gravam campos personalizados no backend.
   const { data: customFields = [] } = useQuery<CustomFieldLite[]>({
     queryKey: ["custom-fields", CUSTOM_FIELD_ENTITY[entity]],
-    enabled: customFieldsEnabled,
     queryFn: async () => {
       const res = await fetch(
         apiUrl(`/api/custom-fields?entity=${CUSTOM_FIELD_ENTITY[entity]}`),

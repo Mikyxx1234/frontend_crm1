@@ -514,16 +514,16 @@ export default function InboxV2ClientPage({
           chatNode
         ) : centerTab === "atividades" ? (
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <DealActivitiesTab />
+            {firstDealId ? (
+              <DealActivitiesTab dealId={firstDealId} />
+            ) : (
+              <NoDealTabState label="Sem negócio vinculado para exibir atividades." />
+            )}
           </div>
         ) : centerTab === "notas" ? (
           <div className="min-h-0 flex-1 overflow-y-auto">
             {firstDealId ? (
-              <DealNotesTab
-                dealId={firstDealId}
-                notes={firstDealDetail?.notes ?? null}
-                pipelineId={firstDealPipelineId}
-              />
+              <DealNotesTab dealId={firstDealId} />
             ) : (
               <NoDealTabState label="Sem negócio vinculado para exibir notas." />
             )}

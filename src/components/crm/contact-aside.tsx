@@ -1,5 +1,7 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
+import { apiUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
@@ -133,7 +135,22 @@ function DealInline({
   course: string | undefined
   contact: ContactDetails
 }) {
-  const fields = deal.customFields ?? []
+  // Busca todos os campos personalizados via API (ignora o campo estático
+  // que pode estar desatualizado ou vazio quando vindo do contact-sidebar).
+  const { data: fetchedFields } = useQuery<
+    { fieldId: string; label: string; value: string | null }[]
+  >({
+    queryKey: ["deal-custom-fields", deal.id],
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/deals/${deal.id}/custom-fields`))
+      if (!res.ok) throw new Error("Erro ao carregar campos")
+      return res.json()
+    },
+    staleTime: 30_000,
+  })
+  // Usa os campos buscados da API; cai nos estáticos (deal.customFields)
+  // enquanto carrega para evitar flash de tela vazia.
+  const fields = fetchedFields ?? deal.customFields ?? []
 
   const segments = deal.funnelSegments
   const sortedSegments = segments ? [...segments].sort((a, b) => a.position - b.position) : null
@@ -215,10 +232,10 @@ function DealInline({
         </div>
       )}
 
-      {/* Campos personalizados do negocio */}
+      {/* Campos personalizados do negócio */}
       {fields.length > 0 && (
         <div className="px-5 pb-4">
-          <SubLabel>Campos do negocio</SubLabel>
+          <SubLabel>Campos do Negócio</SubLabel>
           <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
             {fields.map((f, i) => (
               <div
@@ -325,10 +342,10 @@ export function ContactAside({
             {isFilled(contact.birthDate) && <Row label="Data de Nascimento" value={contact.birthDate} isLast />}
           </div>
 
-          {/* Campos personalizados do contato */}
+          {/* Campos personalizados do contato (apenas campos de contato, não de negócio) */}
           {panelFields.length > 0 && (
             <div className="mt-4">
-              <SubLabel>Campos personalizados</SubLabel>
+              <SubLabel>Campos de Contato</SubLabel>
               <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
                 {panelFields.map((f, i) => (
                   <div

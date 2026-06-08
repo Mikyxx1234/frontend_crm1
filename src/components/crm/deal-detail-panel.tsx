@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { apiUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
@@ -10,6 +12,8 @@ import {
   IconSearch,
   IconPlus,
   IconPencil,
+  IconX,
+  IconCheck,
   IconMessageCircle,
   IconChecklist,
   IconNote,
@@ -82,8 +86,15 @@ interface DealDetailPanelProps {
    * Campos personalizados reais do negócio.
    * Quando fornecido, substitui os rótulos hardcoded (FIELD_GROUPS).
    * Cada item: { fieldId, label, value } — value nulo exibe "—".
+   * @deprecated Prefira `dealId` que busca todos os campos diretamente.
    */
   customFieldsSlot?: { fieldId: string; label: string; value: string | null }[]
+  /**
+   * ID do negócio ativo. Quando fornecido, busca os campos personalizados
+   * via GET /api/deals/:id/custom-fields e os exibe usando o estilo glass
+   * do painel (prioridade sobre customFieldsSlot).
+   */
+  dealId?: string
   /**
    * Dropdown de troca de fase montado externamente (ex.: StagePicker glass).
    * Quando fornecido, substitui o bloco "Funil de vendas / nome da fase" da sidebar.
@@ -95,6 +106,11 @@ interface DealDetailPanelProps {
    * Se ausente, cai nos STAGES/FUNNEL_PALETTE hardcoded.
    */
   funnelSegments?: { id: string; name: string; color: string; position: number }[]
+  /**
+   * Contadores dinâmicos por tab. Substitui os valores hardcoded de TABS.
+   * Ex.: { atividades: 5, notas: 2 }
+   */
+  tabCounts?: Partial<Record<TabId, number>>
 }
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
@@ -102,11 +118,11 @@ const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fech
 // Paleta do funil segmentado (estilo Kommo) — uma cor por etapa.
 const FUNNEL_PALETTE = ["#94a3b8", "#5b6ff5", "#a78bfa", "#f59e0b", "#ec4899", "#10b981"]
 
-const TABS: ConversationTabConfig[] = [
-  { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
-  { id: "atividades", label: "Atividades", icon: IconChecklist, count: 3 },
-  { id: "notas", label: "Notas", icon: IconNote },
-  { id: "timeline", label: "Timeline", icon: IconClock },
+const BASE_TABS: ConversationTabConfig[] = [
+  { id: "conversa",   label: "Conversa",    icon: IconMessageCircle },
+  { id: "atividades", label: "Atividades",  icon: IconChecklist },
+  { id: "notas",      label: "Notas",       icon: IconNote },
+  { id: "timeline",   label: "Timeline",    icon: IconClock },
 ]
 
 export function DealDetailPanel({
@@ -125,8 +141,15 @@ export function DealDetailPanel({
   customFieldsSlot,
   stageDropdownSlot,
   funnelSegments,
+  tabCounts,
+  dealId,
 }: DealDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
+
+  const TABS: ConversationTabConfig[] = BASE_TABS.map((t) => ({
+    ...t,
+    count: tabCounts?.[t.id] ?? undefined,
+  }))
 
   // ESC fecha o painel quando esta aberto. Ignora se algum input/
   // textarea/contenteditable estiver focado para nao atrapalhar
@@ -365,8 +388,10 @@ export function DealDetailPanel({
                   <FieldRow label="Email" value={deal.email ?? undefined} isLast />
                 </FieldCard>
 
-                {/* Campos do negócio — dados reais via customFieldsSlot */}
-                {customFieldsSlot && customFieldsSlot.length > 0 && (
+                {/* Campos do negócio — busca via dealId (prioridade) ou slot estático */}
+                {dealId ? (
+                  <GlassCustomFields dealId={dealId} />
+                ) : customFieldsSlot && customFieldsSlot.length > 0 ? (
                   <FieldCard title="Campos do negócio">
                     {customFieldsSlot.map((field, i) => (
                       <FieldRow
@@ -377,7 +402,7 @@ export function DealDetailPanel({
                       />
                     ))}
                   </FieldCard>
-                )}
+                ) : null}
               </div>
             </div>
           </aside>
@@ -388,7 +413,7 @@ export function DealDetailPanel({
               aria-label={activeTab}
               className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
             >
-              <TabsBar activeTab={activeTab} onChange={setActiveTab} />
+              <TabsBar activeTab={activeTab} onChange={setActiveTab} tabs={TABS} />
               {tabContentOverride[activeTab]}
             </main>
           ) : messagesSlot || composerSlot || sessionAlertSlot ? (
@@ -399,7 +424,7 @@ export function DealDetailPanel({
               aria-label="Conversa"
               className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
             >
-              <TabsBar activeTab={activeTab} onChange={setActiveTab} />
+              <TabsBar activeTab={activeTab} onChange={setActiveTab} tabs={TABS} />
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
@@ -415,7 +440,7 @@ export function DealDetailPanel({
               aria-label="Conversa"
               className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
             >
-              <TabsBar activeTab={activeTab} onChange={setActiveTab} />
+              <TabsBar activeTab={activeTab} onChange={setActiveTab} tabs={TABS} />
               <div className="min-h-0 flex-1">
                 <ChatArea
                   contact={{ name: deal.name }}
@@ -434,6 +459,153 @@ export function DealDetailPanel({
 
 /* ─── Subcomponentes locais ─── */
 
+type CustomFieldItem = {
+  fieldId: string
+  label: string
+  value: string | null
+  type?: string
+  options?: string[]
+}
+
+/** Busca, exibe e permite editar os campos personalizados do negócio (estilo glass). */
+function GlassCustomFields({ dealId }: { dealId: string }) {
+  const queryClient = useQueryClient()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<Record<string, string>>({})
+
+  const { data: fields = [], isLoading } = useQuery<CustomFieldItem[]>({
+    queryKey: ["deal-custom-fields", dealId],
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/deals/${dealId}/custom-fields`))
+      if (!res.ok) throw new Error("Erro ao carregar campos")
+      return res.json()
+    },
+    staleTime: 30_000,
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: async (values: { fieldId: string; value: string }[]) => {
+      const res = await fetch(apiUrl(`/api/deals/${dealId}/custom-fields`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ values }),
+      })
+      if (!res.ok) throw new Error("Erro ao salvar campos")
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deal-custom-fields", dealId] })
+      setEditing(false)
+    },
+  })
+
+  const startEdit = () => {
+    const d: Record<string, string> = {}
+    fields.forEach((f) => { d[f.fieldId] = f.value ?? "" })
+    setDraft(d)
+    setEditing(true)
+  }
+
+  const onSave = () => {
+    const values = Object.entries(draft).map(([fieldId, value]) => ({ fieldId, value }))
+    saveMutation.mutate(values)
+  }
+
+  if (isLoading) {
+    return (
+      <FieldCard title="Campos do negócio">
+        <div className="py-2 text-[12px] italic text-[var(--text-muted)]">Carregando…</div>
+      </FieldCard>
+    )
+  }
+  if (fields.length === 0) return null
+
+  return (
+    <FieldCard
+      title="Campos do negócio"
+      action={
+        !editing ? (
+          <button
+            type="button"
+            onClick={startEdit}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            aria-label="Editar campos"
+          >
+            <IconPencil size={13} />
+          </button>
+        ) : (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+              aria-label="Cancelar"
+            >
+              <IconX size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saveMutation.isPending}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--color-success,#059669)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
+              aria-label="Salvar"
+            >
+              <IconCheck size={13} />
+            </button>
+          </div>
+        )
+      }
+    >
+      {fields.map((f, i) => (
+        <div
+          key={f.fieldId}
+          className={cn(
+            "flex min-w-0 items-center justify-between gap-3 py-2.5",
+            i < fields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+          )}
+        >
+          <span className="min-w-0 shrink truncate text-[12.5px] font-medium text-[var(--text-muted)]">
+            {f.label}
+          </span>
+          {editing ? (
+            f.type === "SELECT" && (f.options?.length ?? 0) > 0 ? (
+              <select
+                value={draft[f.fieldId] ?? ""}
+                onChange={(e) => setDraft((p) => ({ ...p, [f.fieldId]: e.target.value }))}
+                className="ml-auto max-w-[60%] rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 py-1 text-[12.5px] font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+              >
+                <option value="">—</option>
+                {f.options!.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : f.type === "BOOLEAN" ? (
+              <select
+                value={draft[f.fieldId] ?? ""}
+                onChange={(e) => setDraft((p) => ({ ...p, [f.fieldId]: e.target.value }))}
+                className="ml-auto max-w-[60%] rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 py-1 text-[12.5px] font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+              >
+                <option value="">—</option>
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+              </select>
+            ) : (
+              <input
+                type={f.type === "NUMBER" ? "number" : f.type === "EMAIL" ? "email" : f.type === "URL" ? "url" : "text"}
+                value={draft[f.fieldId] ?? ""}
+                onChange={(e) => setDraft((p) => ({ ...p, [f.fieldId]: e.target.value }))}
+                className="ml-auto max-w-[60%] rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 py-1 text-right text-[12.5px] font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+              />
+            )
+          ) : (
+            <span className="min-w-0 max-w-[65%] truncate text-right font-display text-[13px] font-bold text-[var(--text-primary)]">
+              {f.value || "—"}
+            </span>
+          )}
+        </div>
+      ))}
+    </FieldCard>
+  )
+}
+
 /**
  * Barra de abas (Conversa / Atividades / Notas / Timeline) renderizada
  * no header do container de conteúdo. Usa o componente compartilhado
@@ -442,11 +614,13 @@ export function DealDetailPanel({
 function TabsBar({
   activeTab,
   onChange,
+  tabs = BASE_TABS,
 }: {
   activeTab: TabId
   onChange: (id: TabId) => void
+  tabs?: ConversationTabConfig[]
 }) {
-  return <ConversationTabs activeTab={activeTab} onChange={onChange} tabs={TABS} />
+  return <ConversationTabs activeTab={activeTab} onChange={onChange} tabs={tabs} />
 }
 
 function PanelIconBtn({
@@ -469,25 +643,32 @@ function PanelIconBtn({
 }
 
 /** Rótulo de seção (uppercase tracking) acima de cada cartão de campos. */
-function SubLabel({ children }: { children: React.ReactNode }) {
+function SubLabel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="mb-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+    <div className={cn("mb-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]", className)}>
       {children}
     </div>
   )
 }
 
-/** Cartão branco que agrupa uma lista densa de FieldRow (estilo Kommo). */
+/** Cartão que agrupa uma lista densa de FieldRow (estilo Kommo glass). */
 function FieldCard({
   title,
+  action,
   children,
 }: {
   title?: string
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section>
-      {title && <SubLabel>{title}</SubLabel>}
+      {(title || action) && (
+        <div className="mb-2 flex items-center justify-between">
+          {title && <SubLabel className="mb-0">{title}</SubLabel>}
+          {action}
+        </div>
+      )}
       <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4">
         {children}
       </div>

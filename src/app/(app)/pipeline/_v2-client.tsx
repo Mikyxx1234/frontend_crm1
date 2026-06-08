@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   DragDropContext,
@@ -116,18 +117,57 @@ interface KanbanV2ClientPageProps {
    * lista fica inerte (legado `(v2)/pipeline/kanban-v2`).
    */
   listHref?: string;
+  /**
+   * ID do negócio a abrir imediatamente ao montar (vem de ?deal=<id>
+   * lido pelo Server Component em page.tsx). Permite deep-link:
+   *   /pipeline?deal=abc123  →  painel do negócio já aberto.
+   */
+  initialDealId?: string | null;
 }
 
 export default function KanbanV2ClientPage({
   navRail,
   listHref,
+  initialDealId = null,
 }: KanbanV2ClientPageProps = {}) {
   const router = useRouter();
+  const pathname = usePathname();
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
   const [activeTab, setActiveTab] = useState<TabId>("abertos");
-  const [activeDealId, setActiveDealId] = useState<string | null>(null);
+
+  // ?deal= aceita número sequencial (ex: "101") OU CUID legado.
+  // Se numérico, inicializa com null e resolve o CUID após o board carregar.
+  const isNumericDealParam =
+    initialDealId != null && /^\d+$/.test(initialDealId);
+
+  const [activeDealId, setActiveDealIdState] = useState<string | null>(
+    isNumericDealParam ? null : initialDealId,
+  );
+
+  // Ref para acessar os dados do board no callback sem dependency ordering issues
+  // (board é declarado depois via useBoard). boardDataRef ≠ boardRef (DOM).
+  const boardDataRef = useRef<BoardStageDto[]>([]);
+
+  const setActiveDealId = useCallback(
+    (id: string | null) => {
+      setActiveDealIdState(id);
+      if (id) {
+        // Usa o número sequencial do deal na URL (legível e compartilhável).
+        // Fallback para o CUID se o deal ainda não estiver no board carregado.
+        const dealNumber = boardDataRef.current
+          .flatMap((stage) => stage.deals)
+          .find((d) => d.id === id)?.number;
+        const urlParam =
+          dealNumber != null ? String(dealNumber) : encodeURIComponent(id);
+        router.replace(`${pathname}?deal=${urlParam}`, { scroll: false });
+      } else {
+        router.replace(pathname, { scroll: false });
+      }
+    },
+    [router, pathname],
+  );
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
   );
@@ -165,8 +205,20 @@ export default function KanbanV2ClientPage({
     status,
     enabled: isAuthenticated,
   });
+  // Mantém a ref atualizada para uso no setActiveDealId (resolve número → CUID).
+  boardDataRef.current = board;
 
   const moveDeal = useMoveDeal(pipelineId, status);
+
+  // Resolve número sequencial (?deal=101) → CUID assim que o board carrega.
+  useEffect(() => {
+    if (!isNumericDealParam || !initialDealId || activeDealId || !board.length) return;
+    const target = parseInt(initialDealId, 10);
+    const found = board.flatMap((s) => s.deals).find((d) => d.number === target);
+    if (found) setActiveDealIdState(found.id);
+  // Só re-executa quando board muda ou quando o estado muda de null → resolvido
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board]);
 
   // ── Seleção em massa (resgatada da versão antiga) ────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -311,6 +363,29 @@ export default function KanbanV2ClientPage({
   }, [board]);
 
   const { data: dealDetail } = useDealDetail(activeDealId);
+
+  // Contagens para os badges das tabs — mesmas query keys usadas pelas tabs,
+  // então TanStack Query deduplica os fetches quando a tab já está montada.
+  const { data: activitiesCountData } = useQuery<{ items: unknown[]; total: number }>({
+    queryKey: ["deal-activities-v2", activeDealId],
+    queryFn: async () => {
+      const res = await fetch(`/api/activities?dealId=${activeDealId}&perPage=50`);
+      if (!res.ok) return { items: [], total: 0 };
+      return res.json();
+    },
+    enabled: !!activeDealId,
+    staleTime: 15_000,
+  });
+  const { data: notesCountData } = useQuery<unknown[]>({
+    queryKey: ["deal-notes-v2", activeDealId],
+    queryFn: async () => {
+      const res = await fetch(`/api/deals/${activeDealId}/notes`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!activeDealId,
+    staleTime: 15_000,
+  });
 
   // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
   // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
@@ -510,6 +585,7 @@ export default function KanbanV2ClientPage({
         isOpen={!!activeDealId}
         onClose={() => setActiveDealId(null)}
         deal={dealDetailVm ?? undefined}
+        dealId={activeDealId ?? undefined}
         stageRibbonSlot={
           activeDealId && activeDealStageId ? (
             <div className="flex items-center gap-1">
@@ -692,39 +768,23 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        customFieldsSlot={(() => {
-          // Mesma lógica do toContactAside: mescla inboxLeadPanelFields (contato) +
-          // dealInboxPanelFields[activeDealId] (campos do negócio ativo),
-          // deduplicando por fieldId e filtrando vazios.
-          const contactFields = dealContact?.inboxLeadPanelFields ?? [];
-          const dealFields = activeDealId
-            ? (dealContact?.dealInboxPanelFields?.[activeDealId] ?? [])
-            : [];
-          const seen = new Set<string>();
-          return [...contactFields, ...dealFields]
-            .filter((f) => {
-              if (!f.value?.trim() || seen.has(f.fieldId)) return false;
-              seen.add(f.fieldId);
-              return true;
-            })
-            .map((f) => ({ fieldId: f.fieldId, label: f.label || f.name, value: f.value }));
-        })()}
         messagesSlot={messagesNode}
         composerSlot={composerNode}
         sessionAlertSlot={sessionAlertNode ?? null}
         tabContentOverride={
           activeDealId
             ? {
-                notas: (
-                  <DealNotesTab
-                    dealId={activeDealId}
-                    notes={dealDetail?.notes ?? null}
-                    pipelineId={pipelineId}
-                    statusFilter={status}
-                  />
-                ),
-                timeline: <DealTimelineTab dealId={activeDealId} />,
-                atividades: <DealActivitiesTab />,
+                notas:      <DealNotesTab dealId={activeDealId} />,
+                timeline:   <DealTimelineTab dealId={activeDealId} />,
+                atividades: <DealActivitiesTab dealId={activeDealId} />,
+              }
+            : undefined
+        }
+        tabCounts={
+          activeDealId
+            ? {
+                atividades: activitiesCountData?.total ?? undefined,
+                notas: Array.isArray(notesCountData) ? notesCountData.length : undefined,
               }
             : undefined
         }

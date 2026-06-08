@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconRobot,
   IconClipboardList,
@@ -133,6 +134,8 @@ export interface Message {
   createdAt?: string
   type: "incoming" | "outgoing"
   senderInitials?: string
+  /** Nome completo do remetente — usado no tooltip do avatar. */
+  senderName?: string
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
   isBot?: boolean
   /** Campos parseados de resposta de formulário Meta Flow */
@@ -182,6 +185,8 @@ interface MessageBubbleProps {
   message: Message
   /** Iniciais do agente logado — exibidas no avatar das mensagens outgoing. */
   agentInitials?: string
+  /** Nome completo do agente logado — exibido no tooltip do avatar. */
+  agentName?: string
   className?: string
 }
 
@@ -509,7 +514,7 @@ function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boo
   )
 }
 
-export function MessageBubble({ message, agentInitials, className }: MessageBubbleProps) {
+export function MessageBubble({ message, agentInitials, agentName, className }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
   const isNote = message.isNote === true
@@ -524,11 +529,14 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
   // mensagem enviada ao cliente). Mantém `senderInitials`/avatar do
   // agente, mas em circle neutro pra não competir com a cor da nota.
   if (isNote) {
+    const noteAvatarLabel = message.senderName || agentName || "Agente"
     return (
       <div className={cn("flex w-full items-start gap-2.5", className)}>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 font-display text-[10px] font-bold text-amber-700">
-          {message.senderInitials || agentInitials || "·"}
-        </div>
+        <TooltipGlass label={noteAvatarLabel} side="left">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 font-display text-[10px] font-bold text-amber-700">
+            {message.senderInitials || agentInitials || "·"}
+          </div>
+        </TooltipGlass>
         <div
           className="relative min-w-0 flex-1 rounded-[var(--radius-md)] border-l-[3px] border-amber-400 bg-amber-50/80 px-3.5 py-2 text-sm leading-[1.45] text-[var(--text-primary)] shadow-[0_2px_8px_rgba(180,150,80,0.10)]"
         >
@@ -557,14 +565,19 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
     >
       {/* Avatar: robô para bot, iniciais para agente */}
       {isOutgoing && (
-        <div className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
-          isBot
-            ? "bg-[#475569]"
-            : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
-        )}>
-          {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
-        </div>
+        <TooltipGlass
+          label={isBot ? "Automação" : (message.senderName || agentName || "Agente")}
+          side="left"
+        >
+          <div className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
+            isBot
+              ? "bg-[#475569]"
+              : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
+          )}>
+            {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
+          </div>
+        </TooltipGlass>
       )}
       <div
         className={cn(

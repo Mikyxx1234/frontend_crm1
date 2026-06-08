@@ -102,13 +102,15 @@ export function ChatArea({
   const isControlled = onSendMessage !== undefined
   const { data: session } = useSession()
 
-  // Iniciais do agente nas bolhas outgoing. Prioridade: usuário
+  // Nome e iniciais do agente nas bolhas outgoing. Prioridade: usuário
   // autenticado (NextAuth) > usuário de preview > genérico.
   const [agentInitials, setAgentInitials] = useState("·")
+  const [agentName, setAgentName] = useState("Agente")
   useEffect(() => {
     const sessionName = session?.user?.name?.trim()
     const name =
       sessionName || (isPreviewMode() ? PREVIEW_USER.name : "Agente")
+    setAgentName(name)
     setAgentInitials(getInitials(name) || "?")
   }, [session])
   const effectiveDisabled = inputDisabled ?? showSessionAlert
@@ -193,7 +195,7 @@ export function ChatArea({
             return (
               <Fragment key={message.id || index}>
                 {separator && <DaySeparator date={separator} />}
-                <MessageBubble message={message} agentInitials={agentInitials} />
+                <MessageBubble message={message} agentInitials={agentInitials} agentName={agentName} />
               </Fragment>
             )
           })

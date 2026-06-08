@@ -378,6 +378,7 @@ export function toMessageBubble(
     createdAt: dto.createdAt ?? undefined,
     type: isInbound ? "incoming" : "outgoing",
     senderInitials: isInbound ? avatarInitials(contactName) : undefined,
+    senderName: isInbound ? contactName : (dto.senderName ?? undefined),
     isBot: isBot || undefined,
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
@@ -515,6 +516,20 @@ export interface ContactAsideView {
   note?: string;
   activities: { text: string; time: string; color?: string }[];
   /**
+   * Negócios vinculados ao contato.
+   * Populado por toContactAside a partir de ContactDetail.deals.
+   */
+  deals: {
+    id: string;
+    title: string;
+    value: number;
+    stageName?: string | null;
+    stageId?: string | null;
+    pipelineId?: string | null;
+    productName?: string | null;
+    customFields?: { fieldId: string; label: string; value: string | null }[];
+  }[];
+  /**
    * Campos personalizados mesclados: inboxLeadPanelFields (contato) +
    * dealInboxPanelFields do primeiro deal ativo, deduplicados por fieldId,
    * com valores nulos/vazios filtrados.
@@ -581,13 +596,10 @@ export function toContactAside(
     customFields: (d as { customFields?: { fieldId: string; label: string; value: string | null }[] }).customFields ?? [],
   }));
 
-  // ── panelFields: mescla inboxLeadPanelFields (contato) + dealInboxPanelFields
-  // do deal ativo, deduplicando por fieldId e filtrando valores nulos/vazios.
-  const activeDealId = firstDeal?.id;
+  // ── panelFields: SOMENTE campos do CONTATO (inboxLeadPanelFields).
+  // Campos do deal são exibidos diretamente em DealInline via
+  // GET /api/deals/:id/custom-fields — evita duplicação no sidebar.
   const contactPanelFields = contact?.inboxLeadPanelFields ?? [];
-  const dealPanelFields = activeDealId
-    ? (contact?.dealInboxPanelFields?.[activeDealId] ?? [])
-    : [];
 
   /** Remove prefixo "n_" e troca "_" por espaço de uma opção do Meta Flow. */
   function cleanFlowOption(s: string): string {
@@ -603,7 +615,7 @@ export function toContactAside(
   }
 
   const seenFieldIds = new Set<string>();
-  const panelFields: PanelField[] = [...contactPanelFields, ...dealPanelFields]
+  const panelFields: PanelField[] = contactPanelFields
     .filter((f) => {
       if (!f.value?.trim() || seenFieldIds.has(f.fieldId)) return false;
       seenFieldIds.add(f.fieldId);

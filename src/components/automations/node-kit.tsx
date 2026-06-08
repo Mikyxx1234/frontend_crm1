@@ -156,13 +156,14 @@ export function isMessageStep(stepType: string): boolean {
 /**
  * Para passos de mensagem editáveis na própria bolha (estilo Kommo),
  * mapeia o tipo → chave do `config` que guarda o texto principal. Quando
- * retorna null, a bolha fica somente-leitura (ex.: template não tem texto
- * livre; interativos/perguntas abrem painel ancorado).
+ * retorna null, a bolha fica somente-leitura.
+ *
+ * Restrito ao texto simples de WhatsApp: mídia (legenda + arquivo) e
+ * e-mail (assunto + corpo) têm múltiplos campos e continuam editando no
+ * formulário inline, evitando edição parcial confusa na bolha.
  */
 const MESSAGE_PRIMARY_FIELD: Record<string, string> = {
   send_whatsapp_message: "content",
-  send_email: "body",
-  send_whatsapp_media: "caption",
 };
 
 export function messagePrimaryField(stepType: string): string | null {
@@ -362,6 +363,9 @@ export function InlineConfigSlot({ data }: { data: InlineEditData }) {
         allSteps={data.allSteps}
         onComplete={data.onComplete}
         onCancel={data.onCancel}
+        // A bolha do card já edita o texto principal desse tipo — some
+        // com o campo duplicado no form inline.
+        hidePrimaryMessageField={!!messagePrimaryField(data.step.type)}
       />
     </div>
   );

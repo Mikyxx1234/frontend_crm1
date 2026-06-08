@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings2, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import {
+  Settings2,
+  ChevronRight,
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+} from "lucide-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
@@ -16,6 +23,21 @@ import {
 
 export default function SettingsClientPageV2() {
   const pathname = usePathname();
+
+  // Estado de colapso por seção (apenas visual — não altera rotas/dados).
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const allIds = SETTINGS_NAV.map((g) => g.id);
+  const allCollapsed = collapsed.size >= allIds.length;
+
+  const toggleGroup = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const toggleAll = () =>
+    setCollapsed(allCollapsed ? new Set() : new Set(allIds));
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
@@ -39,55 +61,137 @@ export default function SettingsClientPageV2() {
             ))}
           </section>
 
+          {/* Barra de seções + ação de expandir/recolher tudo */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span
+                className="h-4 w-1 rounded-full"
+                style={{ background: "var(--brand-primary)" }}
+              />
+              <h2
+                className="font-display text-[13px] font-bold uppercase tracking-[0.08em]"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Seções
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors duration-150"
+              style={{
+                borderColor: "var(--glass-border)",
+                background: "var(--glass-bg-base)",
+                color: "var(--text-muted)",
+              }}
+            >
+              {allCollapsed ? (
+                <ChevronsUpDown size={13} />
+              ) : (
+                <ChevronsDownUp size={13} />
+              )}
+              {allCollapsed ? "Expandir tudo" : "Recolher tudo"}
+            </button>
+          </div>
+
           {/* Grupos de configuração */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
             {SETTINGS_NAV.map((group) => {
               const GroupIcon = group.icon;
+              const isCollapsed = collapsed.has(group.id);
               return (
                 <section
                   key={group.id}
-                  className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm"
+                  className={cn(
+                    "group/section overflow-hidden rounded-[var(--radius-xl)] border bg-[var(--glass-bg-base)] backdrop-blur-sm transition-[border-color,box-shadow] duration-200",
+                    isCollapsed
+                      ? "border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]"
+                      : "border-[rgba(91,111,245,0.28)] shadow-[var(--glass-shadow)]",
+                  )}
                   aria-labelledby={`group-v2-${group.id}`}
                   style={{ backdropFilter: "blur(12px)" }}
                 >
-                  {/* Header do grupo */}
-                  <header className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3">
+                  {/* Header do grupo — agora clicável para colapsar */}
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    aria-expanded={!isCollapsed}
+                    aria-controls={`group-body-${group.id}`}
+                    className="relative flex w-full items-center gap-3 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3 text-left transition-colors duration-150 hover:bg-[var(--glass-bg-strong)]"
+                  >
+                    {/* Faixa de destaque lateral */}
                     <span
-                      className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
+                      className="absolute inset-y-0 left-0 w-1 rounded-r-full transition-opacity duration-200"
+                      style={{
+                        background: "var(--brand-primary)",
+                        opacity: isCollapsed ? 0 : 1,
+                      }}
+                    />
+                    <span
+                      className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-transform duration-150 group-hover/section:scale-105"
                       style={{
                         background: "var(--color-enterprise-bg)",
                         color: "var(--brand-primary)",
                       }}
                     >
-                      <GroupIcon className="size-4" />
+                      <GroupIcon className="size-[18px]" />
                     </span>
-                    <div className="min-w-0">
-                      <h2
-                        id={`group-v2-${group.id}`}
-                        className="text-[13px] font-semibold leading-tight"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {group.label}
-                      </h2>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3
+                          id={`group-v2-${group.id}`}
+                          className="truncate font-display text-[14px] font-bold leading-tight"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {group.label}
+                        </h3>
+                        <span
+                          className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
+                          style={{
+                            background: "var(--glass-border-subtle)",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          {group.items.length}
+                        </span>
+                      </div>
                       {group.description && (
                         <p
-                          className="mt-0.5 text-[11px] leading-tight"
+                          className="mt-0.5 truncate text-[11px] leading-tight"
                           style={{ color: "var(--text-muted)" }}
                         >
                           {group.description}
                         </p>
                       )}
                     </div>
-                  </header>
+                    <ChevronDown
+                      size={16}
+                      className="shrink-0 transition-transform duration-300"
+                      style={{
+                        color: "var(--text-muted)",
+                        transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                      }}
+                    />
+                  </button>
 
-                  {/* Itens do grupo */}
-                  <ul className="divide-y divide-[var(--glass-border-subtle)]">
-                    {group.items.map((item) => (
-                      <li key={item.id}>
-                        <SettingsRow item={item} pathname={pathname} />
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Itens do grupo — colapsável com animação de altura */}
+                  <div
+                    id={`group-body-${group.id}`}
+                    className={cn(
+                      "grid transition-[grid-template-rows] duration-300 ease-out",
+                      isCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <ul className="divide-y divide-[var(--glass-border-subtle)]">
+                        {group.items.map((item) => (
+                          <li key={item.id}>
+                            <SettingsRow item={item} pathname={pathname} />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
                 </section>
               );
             })}

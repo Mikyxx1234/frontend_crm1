@@ -90,3 +90,6 @@ Studioia/
 arquivos_modificados/
 
 *.tsx.bak
+
+# CSVs de teste de importação gerados localmente
+import-teste-*.csv

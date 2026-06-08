@@ -790,8 +790,154 @@ const DEALS_OVERVIEW = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════
+   RBAC v2 FIXTURES
+══════════════════════════════════════════════════════════════════ */
+
+const ROLES = [
+  {
+    id: "role-admin",   name: "ADMIN",   description: "Acesso total à plataforma", isSystem: true,  systemPreset: "ADMIN",
+    permissions: ["*"],
+    _count: { assignments: 1, groups: 0 },
+    _members: [{ id: "u-marcelo", name: "Marcelo Santos", email: "marcelo@eduit.com.br", avatarUrl: null }],
+  },
+  {
+    id: "role-manager", name: "MANAGER", description: "Gestão de times e negócios", isSystem: true,  systemPreset: "MANAGER",
+    permissions: ["deal:view_all","deal:create","deal:edit","deal:import","deal:export","conversation:view_all","conversation:assign","conversation:close","contact:view","contact:create","contact:edit","group:view","report:view"],
+    _count: { assignments: 0, groups: 0 },
+    _members: [],
+  },
+  {
+    id: "role-member",  name: "MEMBER",  description: "Atendimento e negócios próprios", isSystem: true,  systemPreset: "MEMBER",
+    permissions: ["deal:view_own","deal:create","deal:edit","conversation:view_own","conversation:view_unassigned","conversation:assign","contact:view","contact:create"],
+    _count: { assignments: 3, groups: 1 },
+    _members: [
+      { id: "u-juliana", name: "Juliana Costa",  email: "juliana@eduit.com.br", avatarUrl: null },
+      { id: "u-rafael",  name: "Rafael Almeida", email: "rafael@eduit.com.br",  avatarUrl: null },
+      { id: "u-camila",  name: "Camila Souza",   email: "camila@eduit.com.br",  avatarUrl: null },
+    ],
+  },
+  {
+    id: "role-supervisor", name: "Supervisor SP", description: "Acesso restrito a WhatsApp e fases iniciais", isSystem: false, systemPreset: null,
+    permissions: ["deal:view_group","deal:create","deal:edit","conversation:view_group","conversation:view_unassigned","conversation:assign","conversation:close","contact:view","contact:create"],
+    _count: { assignments: 1, groups: 1 },
+    _members: [{ id: "u-juliana", name: "Juliana Costa", email: "juliana@eduit.com.br", avatarUrl: null }],
+  },
+];
+
+const GROUPS = [
+  {
+    id: "grp-sp",    name: "Time SP",     description: "Equipe de São Paulo", color: "#3b82f6", isActive: true,
+    roleId: "role-supervisor", role: ROLES.find((r) => r.id === "role-supervisor"),
+    channelGrants: ["whatsapp"], stageGrants: [],
+    _count: { members: 2 },
+    _members: [
+      { id: "mem-1", userId: "u-juliana", user: { id: "u-juliana", name: "Juliana Costa",  email: "juliana@eduit.com.br", avatarUrl: null }, roleId: null, role: null, joinedAt: "2026-05-01T00:00:00Z" },
+      { id: "mem-2", userId: "u-rafael",  user: { id: "u-rafael",  name: "Rafael Almeida", email: "rafael@eduit.com.br",  avatarUrl: null }, roleId: null, role: null, joinedAt: "2026-05-15T00:00:00Z" },
+    ],
+  },
+  {
+    id: "grp-vendas", name: "Time Vendas", description: "Equipe comercial geral", color: "#10b981", isActive: true,
+    roleId: "role-member", role: ROLES.find((r) => r.id === "role-member"),
+    channelGrants: [], stageGrants: [],
+    _count: { members: 1 },
+    _members: [
+      { id: "mem-3", userId: "u-camila", user: { id: "u-camila", name: "Camila Souza", email: "camila@eduit.com.br", avatarUrl: null }, roleId: null, role: null, joinedAt: "2026-06-01T00:00:00Z" },
+    ],
+  },
+];
+
+const PERMISSION_CATALOG_MOCK = [
+  {
+    resource: "deal", label: "Negócios",
+    permissions: [
+      { key: "deal:view_all",   label: "Ver todos os negócios" },
+      { key: "deal:view_own",   label: "Ver apenas os próprios" },
+      { key: "deal:view_group", label: "Ver negócios do grupo" },
+      { key: "deal:create",     label: "Criar negócio" },
+      { key: "deal:edit",       label: "Editar negócio" },
+      { key: "deal:delete",     label: "Excluir negócio",        destructive: true },
+      { key: "deal:import",     label: "Importar via CSV" },
+      { key: "deal:export",     label: "Exportar negócios" },
+    ],
+  },
+  {
+    resource: "conversation", label: "Conversas",
+    permissions: [
+      { key: "conversation:view_all",         label: "Ver todas as conversas" },
+      { key: "conversation:view_own",         label: "Ver apenas as próprias" },
+      { key: "conversation:view_group",       label: "Ver conversas do grupo" },
+      { key: "conversation:view_unassigned",  label: "Ver conversas sem atribuição" },
+      { key: "conversation:assign",           label: "Atribuir conversa" },
+      { key: "conversation:reassign",         label: "Reatribuir conversa" },
+      { key: "conversation:close",            label: "Fechar conversa" },
+      { key: "conversation:transfer",         label: "Transferir conversa" },
+    ],
+  },
+  {
+    resource: "contact", label: "Contatos",
+    permissions: [
+      { key: "contact:view",    label: "Visualizar contatos" },
+      { key: "contact:create",  label: "Criar contato" },
+      { key: "contact:edit",    label: "Editar contato" },
+      { key: "contact:delete",  label: "Excluir contato",   destructive: true },
+      { key: "contact:import",  label: "Importar contatos" },
+      { key: "contact:export",  label: "Exportar contatos" },
+    ],
+  },
+  {
+    resource: "settings", label: "Configurações",
+    permissions: [
+      { key: "settings:roles",    label: "Gerenciar roles e permissões" },
+      { key: "settings:users",    label: "Gerenciar usuários" },
+      { key: "settings:channels", label: "Gerenciar canais" },
+      { key: "settings:billing",  label: "Gerenciar planos e faturamento" },
+      { key: "settings:security", label: "Configurações de segurança" },
+    ],
+  },
+  {
+    resource: "report", label: "Relatórios",
+    permissions: [
+      { key: "report:view",   label: "Visualizar relatórios" },
+      { key: "report:export", label: "Exportar relatórios" },
+    ],
+  },
+  {
+    resource: "group", label: "Grupos",
+    permissions: [
+      { key: "group:view",   label: "Visualizar grupos" },
+      { key: "group:manage", label: "Criar e editar grupos" },
+    ],
+  },
+];
+
+const EFFECTIVE_PERMISSIONS_MOCK = {
+  permissions: ["*"],
+  channelGrants: [],
+  stageGrants: [],
+  roles: [{ id: "role-admin", name: "ADMIN", systemPreset: "ADMIN" }],
+  groups: [],
+};
+
+const FEATURE_FLAGS_MOCK = {
+  flags: [
+    {
+      key: "permissions_v2_enabled",
+      label: "Permissões v2 (RBAC dinâmico)",
+      description: "Ativa visibilidade de deals e conversas controlada por roles e grupos configurados. Certifique-se de configurar os grupos antes de ativar.",
+      enabled: false,
+    },
+    {
+      key: "rbac_granular_scope_v1",
+      label: "Escopo granular v1 (legado)",
+      description: "Controle de visibilidade por enum de role (ADMIN/MANAGER/MEMBER). Desativado quando permissions_v2 estiver ativo.",
+      enabled: false,
+    },
+  ],
+};
+
+/* ═══════════════════════════════════════════════════════════════════
    ROUTER
-════════════════════════════════════════���═════════════════════════ */
+══════════════════════════════════════════════════════════════════ */
 
 function enrichDeal(d: typeof DEALS[number]) {
   const stage   = STAGES.find((s) => s.id === d.stageId)  ?? STAGES[0];
@@ -1085,6 +1231,68 @@ const ROUTES: { test: (url: URL, method: string) => boolean; handler: MockHandle
   {
     test: (u) => /^\/api\/ai-agents\/drafts\/[^/]+\/(approve|discard)$/.test(u.pathname),
     handler: () => ({ ok: true }),
+  },
+
+  /* ── RBAC v2: Roles ── */
+  {
+    test: (u) => u.pathname === "/api/roles",
+    handler: () => ROLES,
+  },
+  {
+    test: (u) => /^\/api\/roles\/[^/]+\/assignments$/.test(u.pathname),
+    handler: (u) => {
+      const roleId = u.pathname.split("/")[3];
+      const role = ROLES.find((r) => r.id === roleId) ?? ROLES[0];
+      return role._members ?? [];
+    },
+  },
+  {
+    test: (u) => /^\/api\/roles\/[^/]+\/assignments\/[^/]+$/.test(u.pathname),
+    handler: () => ({ ok: true }),
+  },
+  {
+    test: (u) => /^\/api\/roles\/[^/]+$/.test(u.pathname),
+    handler: (u) => ROLES.find((r) => r.id === u.pathname.split("/")[3]) ?? ROLES[0],
+  },
+
+  /* ── RBAC v2: Groups ── */
+  {
+    test: (u) => u.pathname === "/api/groups",
+    handler: () => GROUPS,
+  },
+  {
+    test: (u) => /^\/api\/groups\/[^/]+\/members$/.test(u.pathname),
+    handler: (u) => {
+      const groupId = u.pathname.split("/")[3];
+      const group = GROUPS.find((g) => g.id === groupId) ?? GROUPS[0];
+      return group._members ?? [];
+    },
+  },
+  {
+    test: (u) => /^\/api\/groups\/[^/]+\/members\/[^/]+$/.test(u.pathname),
+    handler: () => ({ ok: true }),
+  },
+  {
+    test: (u) => /^\/api\/groups\/[^/]+$/.test(u.pathname),
+    handler: (u) => GROUPS.find((g) => g.id === u.pathname.split("/")[3]) ?? GROUPS[0],
+  },
+
+  /* ── RBAC v2: Permissions catalog ── */
+  {
+    test: (u) => u.pathname === "/api/permissions/catalog",
+    handler: () => ({ resources: PERMISSION_CATALOG_MOCK }),
+  },
+
+  /* ── RBAC v2: Effective permissions ── */
+  {
+    test: (u) => /^\/api\/users\/[^/]+\/effective-permissions$/.test(u.pathname),
+    handler: () => EFFECTIVE_PERMISSIONS_MOCK,
+  },
+
+  /* ── Settings: Feature flags ── */
+  {
+    test: (u) => u.pathname === "/api/settings/feature-flags",
+    handler: () => FEATURE_FLAGS_MOCK,
   },
 ];
 

@@ -1,6 +1,16 @@
 /** Normaliza cabeçalhos CSV para chaves estáveis (snake_case). */
 export function normalizeCsvHeader(h: string): string {
-  return h.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+  return h
+    .trim()
+    .toLowerCase()
+    // Remove acentos: "título" → "titulo".
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    // Qualquer caractere não alfanumérico vira "_" (engloba espaços, hífens,
+    // parênteses, pontos etc.) — útil para headers Kommo como "Telefone
+    // comercial (contato)" → "telefone_comercial_contato".
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 export type CsvDelimiter = "," | ";" | "\t";

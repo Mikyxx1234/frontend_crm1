@@ -58,6 +58,8 @@ import {
   usePipelines,
   useTeamUsers,
 } from "@/features/pipeline-v2/hooks";
+import { useMyPermissions } from "@/hooks/use-my-permissions";
+import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
 import type { BoardDealDto, BoardStageDto, StatusFilter } from "@/features/pipeline-v2/api";
 import {
@@ -281,9 +283,18 @@ export default function KanbanV2ClientPage({
     });
   }, [board, filters, search, sortKey]);
 
+  // Filtrar stages por stageGrants do usuário (Permissions v2).
+  // stageGrants vazio = todas as fases visíveis (sem restrição).
+  const { data: myPerms } = useMyPermissions();
+  const stageGrantsFiltered = useMemo(() => {
+    const stageGrants = myPerms?.stageGrants ?? [];
+    if (stageGrants.length === 0) return filteredBoard;
+    return filteredBoard.filter((s) => stageGrants.includes(s.id));
+  }, [filteredBoard, myPerms?.stageGrants]);
+
   const columns: KanbanColumnView[] = useMemo(
-    () => toKanbanColumns(filteredBoard),
-    [filteredBoard],
+    () => toKanbanColumns(stageGrantsFiltered),
+    [stageGrantsFiltered],
   );
 
   // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
@@ -1394,22 +1405,26 @@ function PipelineKebabMenu({
           Dados
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onImport}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-      >
-        <IconUpload size={13} className="shrink-0" />
-        Importar CSV
-      </button>
-      <button
-        type="button"
-        onClick={onExport}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-      >
-        <IconDownload size={13} className="shrink-0" />
-        Exportar CSV
-      </button>
+      <RequirePermission permission="deal:import">
+        <button
+          type="button"
+          onClick={onImport}
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+        >
+          <IconUpload size={13} className="shrink-0" />
+          Importar CSV
+        </button>
+      </RequirePermission>
+      <RequirePermission permission="deal:export">
+        <button
+          type="button"
+          onClick={onExport}
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+        >
+          <IconDownload size={13} className="shrink-0" />
+          Exportar CSV
+        </button>
+      </RequirePermission>
 
       <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
 
@@ -1455,11 +1470,11 @@ function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps)
             </div>
             <div>
               <h2 className="font-display text-[17px] font-bold text-[var(--text-primary)]">
-                {activeTab === "import" ? "Importar dados" : "Exportar dados"}
+                {activeTab === "import" ? "Importar negócios" : "Exportar dados"}
               </h2>
               <p className="mt-0.5 font-body text-[13px] text-[var(--text-muted)]">
                 {activeTab === "import"
-                  ? "CSV de contatos ou negócios"
+                  ? "CSV de negócios — contatos são criados automaticamente quando nome + email/telefone são informados"
                   : "Baixar base em CSV"}
               </p>
             </div>
@@ -1478,7 +1493,7 @@ function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps)
         {/* Conteúdo */}
         <div className="p-6 sm:p-8">
           {activeTab === "import"
-            ? <ImportPanel onDone={() => { bump(); onClose(); }} />
+            ? <ImportPanel fixedEntity="deals" onDone={() => { bump(); onClose(); }} />
             : <ExportPanel />
           }
         </div>

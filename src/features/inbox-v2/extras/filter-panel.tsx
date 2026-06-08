@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { IconChevronDown, IconFilter, IconX } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
@@ -141,17 +142,29 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
     staleTime: 5 * 60_000,
   });
 
-  // Só mostra tipos de canal que existem na org (+ "Todos"). Cai no
-  // catálogo completo se /api/channels não trouxer kinds reconhecidos.
+  // channelGrants do usuário (Permissions v2) — [] = sem restrição.
+  const { data: myPerms } = useMyPermissions();
+  const channelGrants = myPerms?.channelGrants ?? [];
+
+  // Só mostra tipos de canal que existem na org (+ "Todos").
+  // Se channelGrants não-vazio, filtra apenas os canais autorizados.
   const channelOptions = useMemo(() => {
     const kinds = new Set(
       channels.map((c) => (c.kind ?? "").toLowerCase()).filter(Boolean),
     );
-    const filtered = CHANNEL_OPTIONS.filter(
-      (o) => o.value === "" || kinds.size === 0 || kinds.has(o.value),
-    );
+    const filtered = CHANNEL_OPTIONS.filter((o) => {
+      if (o.value === "") return true; // "Todos" sempre visível
+      if (kinds.size > 0 && !kinds.has(o.value)) return false; // canal não existe na org
+      // Permissions v2: se há restrição de canal, ocultar opções não autorizadas
+      if (channelGrants.length > 0) {
+        return channelGrants.some(
+          (g) => g === o.value || g.startsWith(`${o.value}:`),
+        );
+      }
+      return true;
+    });
     return filtered.length > 1 ? filtered : CHANNEL_OPTIONS;
-  }, [channels]);
+  }, [channels, channelGrants]);
 
   const selectedTagIds = draft.tagIds ?? [];
   const selectedTagsLabel =

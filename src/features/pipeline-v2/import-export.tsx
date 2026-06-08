@@ -81,17 +81,28 @@ Juliana Oliveira,juliana.oliveira@empresa.com,+5531999990008,SUBSCRIBER,Newslett
 Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,SQL,Indicação,Iota Marketing,,admin@empresa.com
 Carla Mendes,carla.mendes@outlook.com,+5541999990010,MQL,Google Ads,Kappa Logistica,,admin@empresa.com`;
 
-const DEAL_TEMPLATE = `Número do negócio,Título,Valor,Status,Pipeline,Etapa,Nome do contato,E-mail do contato,Telefone do contato,Responsável,E-mail do responsável,Previsão de fechamento,Motivo da perda
-,Implantação CRM - Acme,12500.00,OPEN,Pipeline Principal,Qualificado,João Silva,joao.silva@empresa.com,+5511999990001,,admin@empresa.com,2026-07-15,
-,Pacote Premium - Beta Solutions,8900.50,OPEN,Pipeline Principal,Proposta,Maria Souza,maria.souza@email.com,+5511999990002,,admin@empresa.com,2026-07-22,
-,Renovação Anual - Gamma Group,24000.00,OPEN,Pipeline Principal,Negociação,Pedro Costa,pedro.costa@gmail.com,+5511999990003,,admin@empresa.com,2026-08-01,
-,Consultoria Onboarding - Delta,4500.00,WON,Pipeline Principal,Fechamento,Ana Lima,ana.lima@delta.com.br,+5521999990004,,admin@empresa.com,2026-06-30,
-,Treinamento Equipe - Epsilon,3200.00,OPEN,Pipeline Principal,Novo,Bruno Alves,bruno.alves@epsilon.io,+5521999990005,,admin@empresa.com,2026-08-10,
-,Pacote Enterprise - Zeta,55000.00,OPEN,Pipeline Principal,Proposta,Camila Dias,camila.dias@zeta.tech,+5531999990006,,admin@empresa.com,2026-09-05,
-,Upgrade Plano - Eta,1800.00,LOST,Pipeline Principal,Fechamento,Diego Nunes,diego.nunes@eta.app,+5531999990007,,admin@empresa.com,2026-06-15,Preço acima do orçamento
-,Plataforma EAD - Theta,18750.00,OPEN,Pipeline Principal,Qualificado,Fernanda Reis,fernanda.reis@theta.edu,+5511999990008,,admin@empresa.com,2026-08-20,
-,Campanha Trimestral - Iota,6700.00,OPEN,Pipeline Principal,Negociação,Marcos Rocha,marcos.rocha@gmail.com,+5541999990009,,admin@empresa.com,2026-07-30,
-,Migração Sistema - Kappa,32000.00,WON,Pipeline Principal,Fechamento,Carla Mendes,carla.mendes@outlook.com,+5541999990010,,admin@empresa.com,2026-06-20,`;
+/**
+ * Template Kommo PT-BR — espelha o CSV oficial de exportação do Kommo
+ * (delimitador `;`, headers longos em PT-BR). Auto-mapping reconhece todos
+ * os campos relevantes; colunas sem equivalente no CRM (IM, endereço, fax)
+ * ficam não mapeadas e são ignoradas. Valor e datas aceitam tanto formato
+ * BR ("100.000,00", "23/03/2012") quanto ISO.
+ *
+ * Regra do CRM: cada deal exige UM dos três — Nome do contato, E-mail do
+ * contato ou Telefone do contato. Linhas que não atendem são reportadas
+ * como erro no resultado do import.
+ */
+const DEAL_TEMPLATE = `Título do lead;Venda do lead;Usuário responsável;Status do lead;Tags do lead;Nome completo do contato;Nome da empresa;Email comercial (contato);Email privado (contato);Telefone comercial (contato);Telefone residencial (contato);Outro telefone (contato)
+Implantação CRM - Acme;"12.500,00";admin@empresa.com;Qualificado;importacao;João Silva;Acme Tecnologia;joao.silva@acme.com.br;;+55 11 98888-0001;;
+Pacote Premium - Beta;"8.900,50";admin@empresa.com;Proposta;importacao;Maria Souza;Beta Solutions;maria.souza@beta.com.br;maria.s@gmail.com;+55 11 98888-0002;+55 11 3000-0002;
+Renovação - Gamma Group;"24.000,00";admin@empresa.com;Negociação;importacao,renovacao;Pedro Costa;Gamma Group;pedro@gamma.com.br;;;+55 11 3000-0003;
+Onboarding - Delta;"4.500,00";admin@empresa.com;Fechamento;importacao;Ana Lima;Delta Comércio;ana.lima@delta.com.br;;+55 21 98888-0004;;
+Treinamento - Epsilon;"3.200,00";admin@empresa.com;Novo;importacao;Bruno Alves;Epsilon Serviços;bruno@epsilon.io;;+55 21 98888-0005;;
+Enterprise - Zeta;"55.000,00";admin@empresa.com;Proposta;importacao,vip;Camila Dias;Zeta Indústria;camila@zeta.tech;;+55 31 98888-0006;;
+Plataforma EAD - Theta;"18.750,00";admin@empresa.com;Qualificado;importacao;Fernanda Reis;Theta Educação;fernanda@theta.edu;;+55 11 98888-0008;;
+Campanha - Iota;"6.700,00";admin@empresa.com;Negociação;importacao;Marcos Rocha;Iota Marketing;marcos.rocha@iota.com;;+55 41 98888-0009;;
+Migração - Kappa;"32.000,00";admin@empresa.com;Fechamento;importacao,enterprise;Carla Mendes;Kappa Tech;carla@kappa.com.br;;;+55 41 3000-0010;
+Suporte Anual - Lambda;"9.800,00";admin@empresa.com;Novo;importacao;Rafael Santos;Lambda Cloud;rafael@lambda.com.br;;+55 51 98888-0011;;`;
 
 // ─── Campos do sistema (mapeamento) ──────────────────────────────────────────
 
@@ -129,9 +140,11 @@ const SYSTEM_FIELDS: Record<ImportEntity, SystemField[]> = {
     { key: "contact_name", label: "Nome do contato (criar se não existir)" },
     { key: "contact_email", label: "E-mail do contato" },
     { key: "contact_phone", label: "Telefone do contato" },
+    { key: "company_name", label: "Nome da empresa" },
     { key: "owner_name", label: "Responsável" },
     { key: "owner_email", label: "E-mail do responsável" },
     { key: "expected_close", label: "Previsão de fechamento" },
+    { key: "tags", label: "Tags do negócio (separadas por , ou ;)" },
     { key: "lost_reason", label: "Motivo da perda" },
   ],
 };
@@ -195,6 +208,34 @@ const ALIAS_OVERRIDES_BY_ENTITY: Record<ImportEntity, Record<string, string>> = 
     e_mail_do_responsavel: "owner_email",
     email_do_responsavel: "owner_email",
     email_responsavel: "owner_email",
+
+    // ── Aliases Kommo PT-BR (template oficial) ──
+    // Lead/negócio
+    titulo_do_lead: "title",
+    venda_do_lead: "value",
+    status_do_lead: "stage_name",
+    tags_do_lead: "tags",
+    usuario_responsavel: "owner_name",
+    criado_em_lead: "expected_close", // sem campo "criado_em" no schema; usamos só se vier
+
+    // Contato (campos múltiplos do Kommo são consolidados no buildRemappedCsv;
+    // aqui apontamos cada um para o canônico apropriado — o consolidador
+    // escolhe o primeiro não-vazio entre todos os mapeados para a mesma chave).
+    nome_completo_do_contato: "contact_name",
+
+    // E-mails (3 colunas Kommo → consolidam em contact_email)
+    email_comercial_contato: "contact_email",
+    email_privado_contato: "contact_email",
+    outro_email_contato: "contact_email",
+
+    // Telefones (4 colunas Kommo → consolidam em contact_phone)
+    telefone_comercial_contato: "contact_phone",
+    telefone_residencial_contato: "contact_phone",
+    fax_contato: "contact_phone",
+    outro_telefone_contato: "contact_phone",
+
+    // Empresa
+    nome_da_empresa: "company_name",
   },
 };
 
@@ -265,20 +306,72 @@ export async function downloadFromApi(url: string, fallbackName: string): Promis
   URL.revokeObjectURL(objUrl);
 }
 
+/**
+ * Constrói o CSV final a ser enviado ao backend.
+ *
+ * Consolida múltiplos headers de origem que apontam para o mesmo target.
+ * Importante para templates estilo Kommo onde existem várias colunas de
+ * telefone (Comercial / Residencial / Fax / Outro) e e-mail (Comercial /
+ * Privado / Outro) que precisam ser reduzidas aos campos canônicos do CRM
+ * (`contact_phone`, `contact_email`).
+ *
+ * Estratégia: para cada target key, escolhe o PRIMEIRO valor não-vazio entre
+ * os headers de origem (na ordem em que aparecem no CSV original). Saída tem
+ * exatamente 1 coluna por target key — sem duplicação.
+ *
+ * Suporta também valores extras injetados por linha (`extraValues`), úteis
+ * para campos que vêm de UI (ex: pipeline alvo selecionado no dropdown).
+ */
 function buildRemappedCsv(
   headers: string[],
   rows: Record<string, string>[],
   columnMapping: Record<string, string>,
+  extraValues: Record<string, string> = {},
 ): string {
-  const usedColumns = headers.filter((h) => columnMapping[h] && columnMapping[h] !== "");
-  const targetKeys = usedColumns.map((h) => columnMapping[h]);
+  // Agrupa source headers por target key, preservando a ordem do CSV original.
+  const sourcesByTarget = new Map<string, string[]>();
+  for (const h of headers) {
+    const target = columnMapping[h];
+    if (!target) continue;
+    const list = sourcesByTarget.get(target);
+    if (list) list.push(h);
+    else sourcesByTarget.set(target, [h]);
+  }
+
+  // Targets adicionais (injetados via UI) não estão no mapping, mas devem
+  // aparecer no CSV final. Se já existem no mapping, o valor do CSV PREVALECE
+  // (linha-a-linha): só usamos o extra como fallback quando a linha vier vazia.
+  for (const k of Object.keys(extraValues)) {
+    if (!sourcesByTarget.has(k)) sourcesByTarget.set(k, []);
+  }
+
+  const targetKeys = Array.from(sourcesByTarget.keys());
+
   const escape = (v: string) => {
     if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
     return v;
   };
+
   const lines = [targetKeys.join(",")];
   for (const row of rows) {
-    lines.push(usedColumns.map((h) => escape(row[h] ?? "")).join(","));
+    const cols = targetKeys.map((target) => {
+      const sources = sourcesByTarget.get(target) ?? [];
+      // Primeiro valor não-vazio entre os headers de origem
+      let v = "";
+      for (const src of sources) {
+        const cell = row[src]?.trim() ?? "";
+        if (cell !== "") {
+          v = cell;
+          break;
+        }
+      }
+      // Fallback: valor injetado via UI (ex: pipeline alvo do dropdown)
+      if (v === "" && extraValues[target]) {
+        v = extraValues[target];
+      }
+      return escape(v);
+    });
+    lines.push(cols.join(","));
   }
   return lines.join("\n");
 }
@@ -306,8 +399,19 @@ interface ImportResult {
 
 // ─── ImportPanel ──────────────────────────────────────────────────────────────
 
-export function ImportPanel({ onDone }: { onDone: () => void }) {
-  const [entity, setEntity] = React.useState<ImportEntity>("contacts");
+export function ImportPanel({
+  onDone,
+  fixedEntity,
+}: {
+  onDone: () => void;
+  /**
+   * Quando informado, trava o painel em uma única entidade (contacts | deals)
+   * e oculta o seletor de abas. Usado no kebab do /pipeline para expor apenas
+   * a importação de deals — contatos serão importados em /contacts.
+   */
+  fixedEntity?: ImportEntity;
+}) {
+  const [entity, setEntity] = React.useState<ImportEntity>(fixedEntity ?? "contacts");
 
   // Estado do fluxo (independente por aba)
   const [step, setStep] = React.useState<ImportStep>("upload");
@@ -327,6 +431,31 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
   // Fluxo assíncrono (ETL worker): import de contatos retorna 202 { operationId }.
   const [etlOperationId, setEtlOperationId] = React.useState<string | null>(null);
   const [etlTotal, setEtlTotal] = React.useState<number | undefined>(undefined);
+
+  // Pipeline alvo opcional (apenas para entity="deals"). Quando definido,
+  // injeta `pipeline_name` nas linhas que NÃO trouxeram a coluna (CSVs estilo
+  // Kommo só têm "Status do lead" = nome do estágio, sem pipeline). Se a
+  // linha já trouxer `pipeline_name`, o valor do CSV prevalece.
+  const [targetPipelineName, setTargetPipelineName] = React.useState<string>("");
+
+  // Lista de pipelines da org para o dropdown opcional. Só faz fetch quando
+  // o painel é renderizado em modo "deals" — para "contacts" não há custo.
+  const { data: pipelines = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["pipelines"],
+    enabled: entity === "deals",
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/api/pipelines"));
+      if (!res.ok) return [];
+      const data = (await res.json()) as unknown;
+      if (!Array.isArray(data)) return [];
+      return data
+        .filter(
+          (p): p is { id: string; name: string } =>
+            !!p && typeof (p as { id?: string }).id === "string",
+        )
+        .map((p) => ({ id: p.id, name: p.name }));
+    },
+  });
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -396,6 +525,7 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
   }, []);
 
   const handleEntityChange = (next: string) => {
+    if (fixedEntity) return;
     if (next !== "contacts" && next !== "deals") return;
     if (next === entity) return;
     reset();
@@ -516,7 +646,12 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
 
     setBusy(true);
     try {
-      const remapped = buildRemappedCsv(headers, allRows, columnMapping);
+      // Pipeline alvo (entity=deals): fallback para linhas sem `pipeline_name`.
+      const extraValues: Record<string, string> =
+        entity === "deals" && targetPipelineName.trim()
+          ? { pipeline_name: targetPipelineName.trim() }
+          : {};
+      const remapped = buildRemappedCsv(headers, allRows, columnMapping, extraValues);
       const fd = new FormData();
       fd.append("file", new Blob([remapped], { type: "text/csv;charset=utf-8" }), "import.csv");
       fd.append("delimiter", ",");
@@ -617,11 +752,39 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
   // ── Render ──
   return (
     <div className="flex w-full flex-col gap-4">
-      <TabsGlass
-        tabs={["Contatos", "Negócios (leads)"]}
-        activeTab={tabIndex}
-        onChange={(i) => handleEntityChange(i === 0 ? "contacts" : "deals")}
-      />
+      {!fixedEntity && (
+        <TabsGlass
+          tabs={["Contatos", "Negócios (leads)"]}
+          activeTab={tabIndex}
+          onChange={(i) => handleEntityChange(i === 0 ? "contacts" : "deals")}
+        />
+      )}
+
+      {/* Pipeline alvo: exibido apenas durante o mapeamento de deals. CSVs
+          estilo Kommo só têm "Status do lead" (= nome da etapa) — sem indicar
+          o pipeline. O dropdown serve como FALLBACK: se a linha já trouxer
+          `pipeline_name`, o valor da linha prevalece. */}
+      {entity === "deals" && step === "mapping" && (
+        <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.04] p-4">
+          <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Pipeline alvo (opcional)
+          </label>
+          <SelectGlass
+            value={targetPipelineName}
+            onChange={setTargetPipelineName}
+            className="h-10 text-[13px]"
+          >
+            <option value="">— Usar pipeline do CSV (coluna Pipeline) —</option>
+            {pipelines.map((p) => (
+              <option key={p.id} value={p.name}>{p.name}</option>
+            ))}
+          </SelectGlass>
+          <p className="font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
+            Use quando o arquivo só trouxer a etapa (ex.: <span className="font-medium">Status do lead</span> do Kommo) sem indicar o pipeline. Se a linha já tiver coluna <span className="font-medium">Pipeline</span> preenchida, ela prevalece.
+          </p>
+        </div>
+      )}
+
       <ImportFlow
         entity={entity}
         template={entity === "contacts" ? CONTACT_TEMPLATE : DEAL_TEMPLATE}

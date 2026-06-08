@@ -97,6 +97,15 @@ const DEAL_TEMPLATE = `Número do negócio,Título,Valor,Status,Pipeline,Etapa,N
 
 type SystemField = { key: string; label: string };
 
+/** Campo personalizado (entity contact/deal) usado no mapeamento de import. */
+type CustomFieldLite = { id: string; name: string; label: string };
+
+/** Mapeia a entidade do import para a entidade dos campos personalizados. */
+const CUSTOM_FIELD_ENTITY: Record<ImportEntity, string> = {
+  contacts: "contact",
+  deals: "deal",
+};
+
 const SYSTEM_FIELDS: Record<ImportEntity, SystemField[]> = {
   contacts: [
     { key: "name", label: "Nome" },
@@ -321,10 +330,61 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Campos personalizados da entidade (contact/deal) — alimentam o dropdown
+  // de mapeamento e o auto-map. Falha silenciosa (ex.: sem permissão) cai
+  // num array vazio, mantendo só os campos padrão.
+  // Por enquanto só Contatos: a importação de negócios ainda não grava
+  // campos personalizados no backend (evita mapeamento que seria ignorado).
+  const customFieldsEnabled = entity === "contacts";
+  const { data: customFields = [] } = useQuery<CustomFieldLite[]>({
+    queryKey: ["custom-fields", CUSTOM_FIELD_ENTITY[entity]],
+    enabled: customFieldsEnabled,
+    queryFn: async () => {
+      const res = await fetch(
+        apiUrl(`/api/custom-fields?entity=${CUSTOM_FIELD_ENTITY[entity]}`),
+      );
+      if (!res.ok) return [];
+      const data = (await res.json()) as unknown;
+      if (!Array.isArray(data)) return [];
+      return data
+        .filter(
+          (f): f is CustomFieldLite =>
+            !!f && typeof (f as CustomFieldLite).id === "string",
+        )
+        .map((f) => ({ id: f.id, name: f.name, label: f.label }));
+    },
+    staleTime: 60_000,
+  });
+
   // Carregar modelos salvos quando a aba muda
   React.useEffect(() => {
     setSavedModels(getImportModels(entity));
   }, [entity]);
+
+  // Auto-map de campos personalizados: quando os campos chegam (async) e há
+  // colunas ainda não mapeadas que casam com nome/label de um custom field,
+  // preenche com `cf:<id>` sem sobrescrever escolhas existentes.
+  React.useEffect(() => {
+    if (headers.length === 0 || customFields.length === 0) return;
+    setColumnMapping((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const h of headers) {
+        if (next[h]) continue;
+        const norm = normalizeCsvHeader(h);
+        const cf = customFields.find(
+          (f) =>
+            normalizeCsvHeader(f.name) === norm ||
+            normalizeCsvHeader(f.label) === norm,
+        );
+        if (cf) {
+          next[h] = `cf:${cf.id}`;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [headers, customFields]);
 
   const reset = React.useCallback(() => {
     setStep("upload");
@@ -530,6 +590,7 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
     headers,
     rows: allRows,
     columnMapping,
+    customFields,
     tag,
     updateExisting,
     modelName,
@@ -601,6 +662,7 @@ interface ImportFlowProps {
   headers: string[];
   rows: Record<string, string>[];
   columnMapping: Record<string, string>;
+  customFields: CustomFieldLite[];
   tag: string;
   updateExisting: boolean;
   modelName: string;
@@ -788,6 +850,7 @@ function MappingStep({
   headers,
   rows,
   columnMapping,
+  customFields,
   tag,
   updateExisting,
   modelName,
@@ -958,6 +1021,15 @@ function MappingStep({
                         {fields.map((f) => (
                           <option key={f.key} value={f.key}>{f.label}</option>
                         ))}
+                        {customFields.length > 0 && (
+                          <optgroup label="Campos personalizados">
+                            {customFields.map((cf) => (
+                              <option key={cf.id} value={`cf:${cf.id}`}>
+                                {cf.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </SelectGlass>
                     </td>
                   );

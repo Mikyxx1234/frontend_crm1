@@ -588,25 +588,29 @@ export function StepConfigForm({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-2xl border p-3 text-left",
-        "border-[color:var(--glass-border)] bg-[color:var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] backdrop-blur-xl",
-        variant === "panel" ? "w-[380px] max-w-[90vw]" : "w-full",
+        "flex flex-col gap-3 text-left",
+        variant === "panel"
+          ? "w-[380px] max-w-[90vw] rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--glass-bg-overlay)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-xl"
+          : // Inline: funde-se ao card, sem chrome próprio — só um divisor.
+            "w-full border-t border-[color:var(--glass-border-subtle)] pt-3",
       )}
     >
-      <div className="flex items-start justify-between gap-2 border-b border-[color:var(--glass-border-subtle)] pb-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">{title}</p>
-          <p className="text-[11px] text-muted-foreground">Ajuste os parâmetros deste passo.</p>
+      {variant === "panel" && (
+        <div className="flex items-start justify-between gap-2 border-b border-[color:var(--glass-border-subtle)] pb-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">{title}</p>
+            <p className="text-[11px] text-muted-foreground">Ajuste os parâmetros deste passo.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Fechar edição"
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-[color:var(--glass-bg-subtle)] hover:text-foreground"
+          >
+            <X className="size-4" strokeWidth={2} />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          aria-label="Fechar edição"
-          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-[color:var(--glass-bg-subtle)] hover:text-foreground"
-        >
-          <X className="size-4" strokeWidth={2} />
-        </button>
-      </div>
+      )}
 
       <div className="flex max-h-[420px] flex-col gap-4 overflow-y-auto py-1 pr-0.5">
         {step.type === "send_email" && (

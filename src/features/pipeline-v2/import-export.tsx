@@ -40,6 +40,7 @@ import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { TabsGlass } from "@/components/crm/tabs-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { BulkOperationProgressDialog } from "@/components/pipeline/bulk-operation-progress-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -106,6 +107,15 @@ Suporte Anual - Lambda;"9.800,00";admin@empresa.com;Novo;importacao;Rafael Santo
 // ─── Campos do sistema (mapeamento) ──────────────────────────────────────────
 
 type SystemField = { key: string; label: string };
+
+/** Campo personalizado (entity contact/deal) usado no mapeamento de import. */
+type CustomFieldLite = { id: string; name: string; label: string };
+
+/** Mapeia a entidade do import para a entidade dos campos personalizados. */
+const CUSTOM_FIELD_ENTITY: Record<ImportEntity, string> = {
+  contacts: "contact",
+  deals: "deal",
+};
 
 const SYSTEM_FIELDS: Record<ImportEntity, SystemField[]> = {
   contacts: [
@@ -418,6 +428,9 @@ export function ImportPanel({
   const [savedModels, setSavedModels] = React.useState<ImportModel[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState<ImportResult | null>(null);
+  // Fluxo assíncrono (ETL worker): import de contatos retorna 202 { operationId }.
+  const [etlOperationId, setEtlOperationId] = React.useState<string | null>(null);
+  const [etlTotal, setEtlTotal] = React.useState<number | undefined>(undefined);
 
   // Pipeline alvo opcional (apenas para entity="deals"). Quando definido,
   // injeta `pipeline_name` nas linhas que NÃO trouxeram a coluna (CSVs estilo
@@ -446,10 +459,58 @@ export function ImportPanel({
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Campos personalizados da entidade (contact/deal) — alimentam o dropdown
+  // de mapeamento e o auto-map. Falha silenciosa (ex.: sem permissão) cai
+  // num array vazio, mantendo só os campos padrão.
+  // Contatos e Negócios: ambos gravam campos personalizados no backend.
+  const { data: customFields = [] } = useQuery<CustomFieldLite[]>({
+    queryKey: ["custom-fields", CUSTOM_FIELD_ENTITY[entity]],
+    queryFn: async () => {
+      const res = await fetch(
+        apiUrl(`/api/custom-fields?entity=${CUSTOM_FIELD_ENTITY[entity]}`),
+      );
+      if (!res.ok) return [];
+      const data = (await res.json()) as unknown;
+      if (!Array.isArray(data)) return [];
+      return data
+        .filter(
+          (f): f is CustomFieldLite =>
+            !!f && typeof (f as CustomFieldLite).id === "string",
+        )
+        .map((f) => ({ id: f.id, name: f.name, label: f.label }));
+    },
+    staleTime: 60_000,
+  });
+
   // Carregar modelos salvos quando a aba muda
   React.useEffect(() => {
     setSavedModels(getImportModels(entity));
   }, [entity]);
+
+  // Auto-map de campos personalizados: quando os campos chegam (async) e há
+  // colunas ainda não mapeadas que casam com nome/label de um custom field,
+  // preenche com `cf:<id>` sem sobrescrever escolhas existentes.
+  React.useEffect(() => {
+    if (headers.length === 0 || customFields.length === 0) return;
+    setColumnMapping((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const h of headers) {
+        if (next[h]) continue;
+        const norm = normalizeCsvHeader(h);
+        const cf = customFields.find(
+          (f) =>
+            normalizeCsvHeader(f.name) === norm ||
+            normalizeCsvHeader(f.label) === norm,
+        );
+        if (cf) {
+          next[h] = `cf:${cf.id}`;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [headers, customFields]);
 
   const reset = React.useCallback(() => {
     setStep("upload");
@@ -599,11 +660,22 @@ export function ImportPanel({
 
       const endpoint = entity === "contacts" ? "/api/contacts/import" : "/api/deals/import";
       const res = await fetch(apiUrl(endpoint), { method: "POST", body: fd });
-      const json = (await res.json().catch(() => ({}))) as ImportResult | { message?: string };
+      const json = (await res.json().catch(() => ({}))) as
+        | ImportResult
+        | { operationId?: string; total?: number; message?: string };
 
       if (!res.ok) {
         const msg = "message" in json && typeof json.message === "string" ? json.message : "Falha na importação";
         toast.error(msg);
+        return;
+      }
+
+      // Fluxo assíncrono (ETL): contatos retornam 202 { operationId }. Abre o
+      // dialog de progresso (polling) em vez do ResultStep síncrono.
+      if (res.status === 202 && "operationId" in json && json.operationId) {
+        setEtlOperationId(json.operationId);
+        setEtlTotal(typeof json.total === "number" ? json.total : undefined);
+        toast.info("Importação enfileirada. Acompanhe o progresso.");
         return;
       }
 
@@ -650,6 +722,7 @@ export function ImportPanel({
     headers,
     rows: allRows,
     columnMapping,
+    customFields,
     tag,
     updateExisting,
     modelName,
@@ -717,6 +790,23 @@ export function ImportPanel({
         template={entity === "contacts" ? CONTACT_TEMPLATE : DEAL_TEMPLATE}
         {...sharedFlowProps}
       />
+
+      {/* Progresso da importação assíncrona (ETL worker) — contatos. */}
+      <BulkOperationProgressDialog
+        operationId={etlOperationId}
+        optimisticTotal={etlTotal}
+        title="Importação de contatos"
+        onOpenChange={(open) => {
+          if (!open) {
+            setEtlOperationId(null);
+            setEtlTotal(undefined);
+            reset();
+          }
+        }}
+        onFinished={() => {
+          onDone();
+        }}
+      />
     </div>
   );
 }
@@ -732,6 +822,7 @@ interface ImportFlowProps {
   headers: string[];
   rows: Record<string, string>[];
   columnMapping: Record<string, string>;
+  customFields: CustomFieldLite[];
   tag: string;
   updateExisting: boolean;
   modelName: string;
@@ -919,6 +1010,7 @@ function MappingStep({
   headers,
   rows,
   columnMapping,
+  customFields,
   tag,
   updateExisting,
   modelName,
@@ -1089,6 +1181,15 @@ function MappingStep({
                         {fields.map((f) => (
                           <option key={f.key} value={f.key}>{f.label}</option>
                         ))}
+                        {customFields.length > 0 && (
+                          <optgroup label="Campos personalizados">
+                            {customFields.map((cf) => (
+                              <option key={cf.id} value={`cf:${cf.id}`}>
+                                {cf.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </SelectGlass>
                     </td>
                   );

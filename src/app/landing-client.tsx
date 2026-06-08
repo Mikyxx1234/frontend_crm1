@@ -235,10 +235,10 @@ function SignupCard() {
         <div className="absolute -inset-2 rounded-3xl bg-linear-to-br from-primary/20 via-primary/5 to-transparent blur-2xl" />
       <form
         onSubmit={submit}
-        className="relative flex flex-col gap-4 rounded-2xl border border-border bg-background p-6 shadow-xl md:p-8"
+        className="relative flex flex-col gap-4 rounded-2xl border border-border bg-background p-6 text-foreground shadow-xl md:p-8"
       >
         <div>
-          <h2 className="text-xl font-bold">Crie sua conta grátis</h2>
+          <h2 className="text-xl font-bold text-foreground">Crie sua conta grátis</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             Você vira o admin da organização. Sem cartão de crédito.
           </p>

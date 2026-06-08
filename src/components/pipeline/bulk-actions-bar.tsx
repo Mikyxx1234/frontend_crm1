@@ -22,6 +22,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import { useThemeV2 } from "@/hooks/use-theme-v2";
 
 type StageOption = { id: string; name: string; color?: string };
 type UserOption = { id: string; name: string };
@@ -107,6 +109,12 @@ export function BulkActionsBar({
   users,
 }: BulkActionsBarProps) {
   const queryClient = useQueryClient();
+  // O CRM aplica `.v2-dark` no <html> (useThemeV2), mas os utilitários
+  // `dark:` desta barra só disparam sob `.dark`. Espelhamos a classe `dark`
+  // na raiz do componente quando o tema v2 está escuro, ativando de uma vez
+  // todos os overrides `dark:` e os tokens shadcn (--card, --popover, etc.).
+  const { theme } = useThemeV2();
+  const isDark = theme === "dark";
   const [moveOpen, setMoveOpen] = React.useState(false);
   const [ownerOpen, setOwnerOpen] = React.useState(false);
   const [lostOpen, setLostOpen] = React.useState(false);
@@ -165,7 +173,7 @@ export function BulkActionsBar({
   return (
     <>
       {showBar && (
-      <div className="fixed inset-x-0 bottom-6 z-50 flex items-center justify-center px-4 transition-all animate-in slide-in-from-bottom-4 fade-in">
+      <div className={cn("fixed inset-x-0 bottom-6 z-50 flex items-center justify-center px-4 transition-all animate-in slide-in-from-bottom-4 fade-in", isDark && "dark")}>
         {/* Em dark, `bg-card/95` resolve a `rgba(255,255,255,0.05)*0.95` ≈ invisível.
             Forçamos um fundo sólido navy + borda visível em dark para a barra
             ficar legível sobre o body/board. `!` necessário pra vencer o

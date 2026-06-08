@@ -7,6 +7,8 @@ import {
   IconLayoutDashboard,
   IconMessageCircle,
   IconPlugConnected,
+  IconRoute,
+  IconSend,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
@@ -88,6 +90,22 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     href: "/automations",
     icon: IconBolt,
     description: "Fluxos automáticos e gatilhos.",
+    locked: false,
+  },
+  {
+    key: "campaigns",
+    title: "Campanhas",
+    href: "/campaigns",
+    icon: IconSend,
+    description: "Disparos em massa via WhatsApp com rastreamento.",
+    locked: false,
+  },
+  {
+    key: "distribution",
+    title: "Distribuição",
+    href: "/widgets/distribution",
+    icon: IconRoute,
+    description: "Distribuição inteligente de leads entre consultores.",
     locked: false,
   },
   {

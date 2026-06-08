@@ -21,6 +21,11 @@
    controlado pelo usuário via toggle. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Variant dedicado ao tema v2 do CRM, que aplica `.v2-dark` no <html>
+   (ver `useThemeV2`) — diferente do `.dark` do next-themes. Permite
+   ajustes pontuais "só no modo escuro do CRM" sem mexer no `dark:` global. */
+@custom-variant v2-dark (&:where(.v2-dark, .v2-dark *));
+
 /* ══════════════════════════════════════════════════════════════════
    GLASS DESIGN SYSTEM v2 — CRM EduIT
    Glassmorphism-first · Plus Jakarta Sans (display) + DM Sans (body)

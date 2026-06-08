@@ -106,33 +106,35 @@ export default function SettingsClientPageV2() {
                     "group/section overflow-hidden rounded-[var(--radius-xl)] border bg-[var(--glass-bg-base)] backdrop-blur-sm transition-[border-color,box-shadow] duration-200",
                     isCollapsed
                       ? "border-[var(--glass-border)] shadow-[var(--glass-shadow-sm)]"
-                      : "border-[rgba(91,111,245,0.28)] shadow-[var(--glass-shadow)]",
+                      : "border-[rgba(91,111,245,0.30)] shadow-[var(--shadow-indigo-glow)]",
                   )}
                   aria-labelledby={`group-v2-${group.id}`}
                   style={{ backdropFilter: "blur(12px)" }}
                 >
-                  {/* Header do grupo — agora clicável para colapsar */}
+                  {/* Header do grupo — clicável para colapsar. Destaque por
+                      fundo tintado de marca (design system) quando aberto. */}
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.id)}
                     aria-expanded={!isCollapsed}
                     aria-controls={`group-body-${group.id}`}
-                    className="relative flex w-full items-center gap-3 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3 text-left transition-colors duration-150 hover:bg-[var(--glass-bg-strong)]"
+                    className={cn(
+                      "flex w-full items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3.5 text-left transition-colors duration-200",
+                      isCollapsed
+                        ? "bg-[var(--glass-bg-panel)] hover:bg-[var(--glass-bg-strong)]"
+                        : "bg-[var(--color-enterprise-bg)] hover:brightness-[1.03]",
+                    )}
                   >
-                    {/* Faixa de destaque lateral */}
                     <span
-                      className="absolute inset-y-0 left-0 w-1 rounded-r-full transition-opacity duration-200"
-                      style={{
-                        background: "var(--brand-primary)",
-                        opacity: isCollapsed ? 0 : 1,
-                      }}
-                    />
-                    <span
-                      className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-transform duration-150 group-hover/section:scale-105"
-                      style={{
-                        background: "var(--color-enterprise-bg)",
-                        color: "var(--brand-primary)",
-                      }}
+                      className={cn(
+                        "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-all duration-200 group-hover/section:scale-105",
+                        !isCollapsed && "shadow-[var(--shadow-indigo-glow)]",
+                      )}
+                      style={
+                        isCollapsed
+                          ? { background: "var(--color-enterprise-bg)", color: "var(--brand-primary)" }
+                          : { background: "var(--brand-primary)", color: "#fff" }
+                      }
                     >
                       <GroupIcon className="size-[18px]" />
                     </span>
@@ -140,7 +142,7 @@ export default function SettingsClientPageV2() {
                       <div className="flex items-center gap-2">
                         <h3
                           id={`group-v2-${group.id}`}
-                          className="truncate font-display text-[14px] font-bold leading-tight"
+                          className="truncate font-display text-base font-bold leading-tight"
                           style={{ color: "var(--text-primary)" }}
                         >
                           {group.label}

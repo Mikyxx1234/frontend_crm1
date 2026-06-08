@@ -11,7 +11,6 @@ import {
   IconCircleCheck,
   IconRotateClockwise,
   IconMessageCode,
-  IconBolt,
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
@@ -19,7 +18,6 @@ import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
 
 import { FilePickerButton } from "./file-picker-button";
 import { TemplatePickerList, InternalTemplatePickerList } from "./template-picker-popover";
-import { AutomationPickerList } from "./automation-picker-list";
 import { ScheduleDialog } from "./schedule-dialog";
 import { TaskDialog } from "./task-dialog";
 
@@ -49,7 +47,7 @@ export function ComposerMenu({
   contactId?: string | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"root" | "template" | "internal" | "automation">("root");
+  const [view, setView] = useState<"root" | "template" | "internal">("root");
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -145,14 +143,6 @@ export function ComposerMenu({
                 <IconFileText size={15} /> Templates WhatsApp
               </button>
 
-              <button
-                type="button"
-                onClick={() => setView("automation")}
-                className={itemClass}
-              >
-                <IconBolt size={15} /> Executar automação
-              </button>
-
               {onToggleNote ? (
                 <>
                   <div className="my-1 h-px bg-border/60" />
@@ -217,12 +207,6 @@ export function ComposerMenu({
           ) : view === "internal" ? (
             <InternalTemplatePickerList
               conversationId={conversationId}
-              onClose={closeMenu}
-            />
-          ) : view === "automation" ? (
-            <AutomationPickerList
-              conversationId={conversationId}
-              contactId={contactId}
               onClose={closeMenu}
             />
           ) : (

@@ -46,12 +46,6 @@ export interface AutomationListItemDto {
   createdAt: string;
   updatedAt: string;
   stepCount: number;
-  // Métricas reais agregadas no backend (listagem). Opcionais por
-  // compat com o detalhe (que estende este DTO sem agregar stats).
-  runs?: number;
-  runsToday?: number;
-  successRate?: number;
-  lastRunAt?: string | null;
 }
 
 export interface AutomationListPage {

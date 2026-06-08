@@ -18,10 +18,10 @@ export default function SettingsClientPageV2() {
   const pathname = usePathname();
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] overflow-hidden">
+    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
-      <main className="flex min-w-0 flex-col overflow-hidden">
+      <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         {/* Header fixo */}
         <PageHeader
           title="Configurações"
@@ -30,7 +30,7 @@ export default function SettingsClientPageV2() {
         />
 
         {/* Área scrollável */}
-        <div className="flex flex-col gap-6 overflow-auto px-6 py-5 pb-8">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto pb-8 pr-2">
 
           {/* Atalhos pessoais */}
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">

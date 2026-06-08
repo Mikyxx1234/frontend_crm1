@@ -2,9 +2,9 @@
  * Adapter entre `AutomationListItemDto` do backend e o tipo `Automation`
  * usado pela UI v2 (`@/lib/automations-data`).
  *
- * As métricas (`runs`, `runsToday`, `successRate`, `lastRun`) agora vêm
- * agregadas da listagem do backend a partir dos logs de execução. Quando
- * ausentes (ex.: payload antigo), caímos em valores neutros (0/—).
+ * Métricas como `runs`, `runsToday`, `successRate`, `lastRun` ainda não
+ * existem na listagem do backend — usamos valores neutros (0/—) até que
+ * o endpoint de stats seja agregado na listagem.
  */
 
 import type { Automation, AutomationTrigger } from "@/lib/automations-data";
@@ -39,29 +39,6 @@ function formatDate(iso: string): string {
   });
 }
 
-/**
- * "Última execução" compacta pro card (coluna estreita): relativo pra
- * eventos recentes, "hoje HH:mm" no mesmo dia, senão dd/mm.
- */
-function formatLastRun(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const now = Date.now();
-  const diffMs = now - d.getTime();
-  const min = Math.floor(diffMs / 60_000);
-  if (min < 1) return "agora";
-  if (min < 60) return `há ${min} min`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `há ${h}h`;
-  const sameYear = d.getFullYear() === new Date().getFullYear();
-  return d.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    ...(sameYear ? {} : { year: "2-digit" }),
-  });
-}
-
 export function dtoToAutomation(dto: AutomationListItemDto): Automation {
   return {
     id: dto.id,
@@ -71,10 +48,10 @@ export function dtoToAutomation(dto: AutomationListItemDto): Automation {
     steps: dto.stepCount,
     updatedAt: formatDate(dto.updatedAt),
     active: dto.active,
-    runs: dto.runs ?? 0,
-    runsToday: dto.runsToday ?? 0,
-    successRate: dto.successRate ?? 0,
-    lastRun: formatLastRun(dto.lastRunAt),
+    runs: 0,
+    runsToday: 0,
+    successRate: 0,
+    lastRun: "—",
     accent: pickAccent(dto.id),
   };
 }

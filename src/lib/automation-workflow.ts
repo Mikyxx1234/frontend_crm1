@@ -70,7 +70,6 @@ export const ACTION_STEP_TYPES = [
   "ask_ai_agent",
   "transfer_to_ai_agent",
   "consume_stock",
-  "execute_distribution",
 ] as const;
 
 export type ActionStepType = (typeof ACTION_STEP_TYPES)[number];
@@ -124,7 +123,6 @@ export function stepTypeLabel(t: string): string {
     ask_ai_agent: "Perguntar ao agente IA",
     transfer_to_ai_agent: "Transferir para agente IA",
     consume_stock: "Baixar estoque",
-    execute_distribution: "Executar distribuição",
   };
   return map[t] ?? t;
 }
@@ -344,10 +342,6 @@ export function summarizeStepConfig(stepType: string, config: unknown, lookup?: 
         ? `ID: ${String(c.agentUserId).slice(0, 8)}…`
         : "Selecionar agente IA";
     }
-    case "execute_distribution": {
-      const t = c.distributionType ? String(c.distributionType) : "";
-      return t ? `Distribuição: ${t}` : "Distribuição padrão";
-    }
     default:
       return "—";
   }
@@ -482,8 +476,6 @@ export function defaultStepConfig(stepType: string): Record<string, unknown> {
         // olha pra decidir se assume a conversa.
         target: "deal",
       };
-    case "execute_distribution":
-      return { distributionType: "" };
     default:
       return {};
   }

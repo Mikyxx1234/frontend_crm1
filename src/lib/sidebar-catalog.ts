@@ -5,8 +5,8 @@ import {
   IconClipboardList,
   IconFilter,
   IconLayoutDashboard,
-  IconLayoutGrid,
   IconMessageCircle,
+  IconPlugConnected,
   IconRoute,
   IconSend,
   IconUsers,
@@ -120,7 +120,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "widgets",
     title: "Widgets",
     href: "/widgets",
-    icon: IconLayoutGrid,
+    icon: IconPlugConnected,
     description: "Central de extensões da organização.",
     locked: false,
   },
@@ -154,33 +154,18 @@ export interface ResolvedSidebarItem extends SidebarCatalogItem {
  *  - ignora keys que nao existem mais no catalogo;
  *  - forca itens `locked` a ficarem enabled.
  *
- * `availableKeys` (vindo do backend, gating por permission + widgets ativos):
- *  quando fornecido, itens fora desse conjunto sao ignorados — nem entram nas
- *  prefs salvas, nem sao auto-anexados. Quando omitido, considera o catalogo
- *  inteiro (compatibilidade / preview).
- *
- * Retorna TODOS os itens disponiveis do catalogo (inclusive desabilitados) em
- * ordem — util para a tela de personalizacao. Para a sidebar real, filtre por
+ * Retorna TODOS os itens do catalogo (inclusive desabilitados) em ordem —
+ * util para a tela de personalizacao. Para a sidebar real, filtre por
  * `enabled` (ver `toNavItems`).
  */
 export function resolveSidebarItems(
   pref: SidebarItemPreference[] | undefined | null,
-  availableKeys?: ReadonlySet<string> | string[] | null,
 ): ResolvedSidebarItem[] {
-  const available =
-    availableKeys == null
-      ? null
-      : availableKeys instanceof Set
-        ? availableKeys
-        : new Set(availableKeys);
-  const isAvailable = (key: string) =>
-    SIDEBAR_CATALOG_KEYS.has(key) && (available === null || available.has(key));
-
   const saved = Array.isArray(pref) ? pref : [];
   const savedMap = new Map<string, SidebarItemPreference>();
   for (const it of saved) {
     if (!it || typeof it.key !== "string") continue;
-    if (!isAvailable(it.key)) continue;
+    if (!SIDEBAR_CATALOG_KEYS.has(it.key)) continue;
     if (savedMap.has(it.key)) continue;
     savedMap.set(it.key, it);
   }
@@ -190,9 +175,7 @@ export function resolveSidebarItems(
     .map((it) => it.key);
 
   for (const item of SIDEBAR_CATALOG) {
-    if (isAvailable(item.key) && !orderedKeys.includes(item.key)) {
-      orderedKeys.push(item.key);
-    }
+    if (!orderedKeys.includes(item.key)) orderedKeys.push(item.key);
   }
 
   return orderedKeys.map((key, idx) => {
@@ -209,9 +192,8 @@ export function resolveSidebarItems(
 /** Apenas os itens visiveis (enabled) em ordem — para renderizar a nav. */
 export function toNavItems(
   pref: SidebarItemPreference[] | undefined | null,
-  availableKeys?: ReadonlySet<string> | string[] | null,
 ): ResolvedSidebarItem[] {
-  return resolveSidebarItems(pref, availableKeys).filter((i) => i.enabled);
+  return resolveSidebarItems(pref).filter((i) => i.enabled);
 }
 
 /** Preferencia padrao (catalogo, todos habilitados) — para "Restaurar padrão". */

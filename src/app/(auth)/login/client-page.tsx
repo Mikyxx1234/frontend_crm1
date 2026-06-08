@@ -1,19 +1,14 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Suspense, useEffect, useState } from "react";
-import { Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { HeroGeometric } from "@/components/ui/hero-geometric";
 import { isPreviewMode, isV0PreviewHost } from "@/lib/preview-mode";
-import loginAnimation from "./login-animation.json";
-
-// Lottie usa `document` — carregado só no client p/ evitar SSR mismatch.
-const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
 function LoginShellFallback() {
   return (
@@ -57,7 +52,7 @@ function LoginForm() {
     const id = window.setTimeout(() => {
       // Navegação completa: o cookie definido na resposta do `signIn` segue no próximo pedido HTTP.
       window.location.assign(`${window.location.origin}${callbackUrl}`);
-    }, 2400);
+    }, 1500);
     return () => window.clearTimeout(id);
   }, [loginSuccess, callbackUrl]);
 
@@ -116,24 +111,25 @@ function LoginForm() {
 
   if (loginSuccess) {
     return (
-      <HeroGeometric color1="#a78bfa" color2="#f472b6" speed={1}>
-        <div
-          className="flex min-h-screen w-full flex-col items-center justify-center gap-4 p-6 text-white"
-          role="status"
-          aria-live="polite"
-          aria-label="Login concluído, carregando o CRM"
-        >
-          {/* Animação de validação (toca uma vez) antes de carregar o CRM. */}
-          <div className="size-40">
-            <Lottie animationData={loginAnimation} loop={false} className="size-40" />
-          </div>
-          <h2 className="font-display text-[22px] font-bold tracking-tight text-white">Acesso liberado</h2>
-          <p className="text-[14px] text-white/80">Carregando o CRM…</p>
-          <div className="mt-2 h-0.5 w-32 overflow-hidden rounded-full bg-white/20">
-            <div className="h-full rounded-full bg-white/60 animate-[loading_2.4s_ease-in-out_forwards]" />
+      <div
+        className="fixed inset-0 z-[200] flex min-h-dvh w-screen flex-col items-center justify-center gap-4 bg-primary p-6 text-primary-foreground"
+        role="status"
+        aria-live="polite"
+        aria-label="Login concluído, carregando o CRM"
+      >
+        <div className="relative">
+          <div className="flex size-20 items-center justify-center rounded-full bg-primary-foreground/20">
+            <div className="flex size-16 items-center justify-center rounded-full bg-primary-foreground">
+              <Check className="size-8 text-primary" strokeWidth={2.5} />
+            </div>
           </div>
         </div>
-      </HeroGeometric>
+        <h2 className="font-display text-[22px] font-bold tracking-tight">Acesso liberado</h2>
+        <p className="text-[14px] text-primary-foreground/80">Carregando o CRM…</p>
+        <div className="mt-2 h-0.5 w-32 overflow-hidden rounded-full bg-primary-foreground/20">
+          <div className="h-full rounded-full bg-primary-foreground/60 animate-[loading_1.5s_ease-in-out_forwards]" />
+        </div>
+      </div>
     );
   }
 

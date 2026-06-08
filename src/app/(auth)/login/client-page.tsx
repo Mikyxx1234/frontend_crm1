@@ -4,7 +4,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Suspense, useEffect, useState } from "react";
-import { Check, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 import { HeroGeometric } from "@/components/ui/hero-geometric";
@@ -113,22 +114,82 @@ function LoginForm() {
     return (
       <HeroGeometric color1="#a78bfa" color2="#f472b6" speed={1}>
         <div
-          className="flex min-h-screen w-full flex-col items-center justify-center gap-4 p-6 text-white"
+          className="flex min-h-screen w-full flex-col items-center justify-center gap-5 p-6 text-white"
           role="status"
           aria-live="polite"
           aria-label="Login concluído, carregando o CRM"
         >
-          <div className="relative">
-            <div className="flex size-20 items-center justify-center rounded-full bg-white/20 backdrop-blur">
-              <div className="flex size-16 items-center justify-center rounded-full bg-white shadow-[0_8px_24px_-6px_rgba(0,0,0,0.35)]">
-                <Check className="size-8 text-primary" strokeWidth={2.5} />
-              </div>
-            </div>
+          <div className="relative flex size-28 items-center justify-center">
+            {/* Anéis pulsantes (efeito de "validação" tipo Lottie) */}
+            {[0, 1, 2].map((i) => (
+              <motion.span
+                key={i}
+                className="absolute size-20 rounded-full border border-white/40"
+                initial={{ scale: 0.7, opacity: 0.6 }}
+                animate={{ scale: [0.7, 1.7], opacity: [0.6, 0] }}
+                transition={{
+                  duration: 2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  delay: i * 0.55,
+                  ease: "easeOut",
+                }}
+              />
+            ))}
+
+            {/* Halo de vidro com pop elástico */}
+            <motion.div
+              className="relative flex size-24 items-center justify-center rounded-full bg-white/15 backdrop-blur-md"
+              initial={{ scale: 0, rotate: -25 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 220, damping: 14 }}
+            >
+              {/* Disco branco interno */}
+              <motion.div
+                className="flex size-16 items-center justify-center rounded-full bg-white shadow-[0_12px_30px_-8px_rgba(0,0,0,0.45)]"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.12, type: "spring", stiffness: 280, damping: 16 }}
+              >
+                {/* Check desenhado (path animado) */}
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                  <motion.path
+                    d="M4 12.5l5 5L20 6.5"
+                    stroke="#5b6ff5"
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ delay: 0.32, duration: 0.5, ease: "easeInOut" }}
+                  />
+                </svg>
+              </motion.div>
+            </motion.div>
           </div>
-          <h2 className="font-display text-[22px] font-bold tracking-tight text-white">Acesso liberado</h2>
-          <p className="text-[14px] text-white/80">Carregando o CRM…</p>
-          <div className="mt-2 h-0.5 w-32 overflow-hidden rounded-full bg-white/20">
-            <div className="h-full rounded-full bg-white/60 animate-[loading_1.5s_ease-in-out_forwards]" />
+
+          <motion.h2
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+            className="font-display text-[24px] font-bold tracking-tight text-white"
+          >
+            Acesso liberado
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7, duration: 0.4 }}
+            className="text-[14px] text-white/80"
+          >
+            Carregando o CRM…
+          </motion.p>
+          <div className="mt-1 h-1 w-40 overflow-hidden rounded-full bg-white/15">
+            <motion.div
+              className="h-full rounded-full bg-white"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+            />
           </div>
         </div>
       </HeroGeometric>

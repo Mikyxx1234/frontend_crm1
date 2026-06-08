@@ -11,7 +11,16 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectNative,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { AutomationStep } from "@/lib/automation-workflow";
 import { canonicalStepType, stepTypeLabel, summarizeStepConfig } from "@/lib/automation-workflow";
@@ -591,8 +600,8 @@ export function StepConfigForm({
         "flex flex-col gap-3 text-left",
         variant === "panel"
           ? "w-[380px] max-w-[90vw] rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--glass-bg-overlay)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-xl"
-          : // Inline: funde-se ao card, sem chrome próprio — só um divisor.
-            "w-full border-t border-[color:var(--glass-border-subtle)] pt-3",
+          : // Inline: o wrapper no node-kit já dá superfície, divisor e padding.
+            "w-full",
       )}
     >
       {variant === "panel" && (
@@ -665,11 +674,9 @@ export function StepConfigForm({
                     />
                   </>
                 ) : (
-                  <SelectNative
-                    id="sc-stage"
+                  <Select
                     value={String(draft.stageId ?? "")}
-                    onChange={(e) => {
-                      const sid = e.target.value;
+                    onValueChange={(sid) => {
                       const stage = allStages.find((s) => s.id === sid);
                       setDraft((d) => ({
                         ...d,
@@ -678,17 +685,22 @@ export function StepConfigForm({
                       }));
                     }}
                   >
-                    <option value="">Selecione…</option>
-                    {pipelines.map((p) => (
-                      <optgroup key={p.id} label={p.name}>
-                        {p.stages.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </SelectNative>
+                    <SelectTrigger id="sc-stage">
+                      <SelectValue placeholder="Selecione…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pipelines.map((p) => (
+                        <SelectGroup key={p.id}>
+                          <SelectLabel>{p.name}</SelectLabel>
+                          {p.stages.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             );
@@ -717,20 +729,24 @@ export function StepConfigForm({
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-uf-entity">Entidade</Label>
-                <SelectNative
-                  id="sc-uf-entity"
+                <Select
                   value={String(draft.entity ?? "contact")}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setDraft((d) => ({
                       ...d,
-                      entity: e.target.value,
+                      entity: value,
                       field: "",
                     }))
                   }
                 >
-                  <option value="contact">Contato</option>
-                  <option value="deal">Negócio</option>
-                </SelectNative>
+                  <SelectTrigger id="sc-uf-entity">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contact">Contato</SelectItem>
+                    <SelectItem value="deal">Negócio</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-field-filter">Localizar campo</Label>
@@ -743,42 +759,47 @@ export function StepConfigForm({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-field">Campo</Label>
-                <SelectNative
-                  id="sc-field"
+                <Select
                   value={String(draft.field ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, field: e.target.value }))}
+                  onValueChange={(value) => setDraft((d) => ({ ...d, field: value }))}
                 >
-                  <option value="">Selecione um campo…</option>
-                  <optgroup label="Campos nativos">
-                    {(UPDATE_FIELD_BUILTINS[
-                      String(draft.entity ?? "contact") === "deal" ? "deal" : "contact"
-                    ] ?? [])
-                      .filter((o) =>
-                        `${o.label} ${o.value}`
-                          .toLowerCase()
-                          .includes(updateFieldFilter.trim().toLowerCase()),
-                      )
-                      .map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                  </optgroup>
-                  <optgroup label="Campos personalizados">
-                    {(customFieldsQuery.data ?? [])
-                      .filter((f) => f.entity === String(draft.entity ?? "contact"))
-                      .filter((f) =>
-                        `${f.label} ${f.name}`
-                          .toLowerCase()
-                          .includes(updateFieldFilter.trim().toLowerCase()),
-                      )
-                      .map((f) => (
-                        <option key={f.id} value={f.name}>
-                          {f.label} ({f.name})
-                        </option>
-                      ))}
-                  </optgroup>
-                </SelectNative>
+                  <SelectTrigger id="sc-field">
+                    <SelectValue placeholder="Selecione um campo…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Campos nativos</SelectLabel>
+                      {(UPDATE_FIELD_BUILTINS[
+                        String(draft.entity ?? "contact") === "deal" ? "deal" : "contact"
+                      ] ?? [])
+                        .filter((o) =>
+                          `${o.label} ${o.value}`
+                            .toLowerCase()
+                            .includes(updateFieldFilter.trim().toLowerCase()),
+                        )
+                        .map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Campos personalizados</SelectLabel>
+                      {(customFieldsQuery.data ?? [])
+                        .filter((f) => f.entity === String(draft.entity ?? "contact"))
+                        .filter((f) =>
+                          `${f.label} ${f.name}`
+                            .toLowerCase()
+                            .includes(updateFieldFilter.trim().toLowerCase()),
+                        )
+                        .map((f) => (
+                          <SelectItem key={f.id} value={f.name}>
+                            {f.label} ({f.name})
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-val">Valor</Label>
@@ -798,19 +819,23 @@ export function StepConfigForm({
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-act-type">Tipo</Label>
-                <SelectNative
-                  id="sc-act-type"
+                <Select
                   value={String(draft.type ?? "TASK")}
-                  onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
+                  onValueChange={(value) => setDraft((d) => ({ ...d, type: value }))}
                 >
-                  <option value="CALL">Ligação</option>
-                  <option value="EMAIL">E-mail</option>
-                  <option value="MEETING">Reunião</option>
-                  <option value="TASK">Tarefa</option>
-                  <option value="NOTE">Nota</option>
-                  <option value="WHATSAPP">WhatsApp</option>
-                  <option value="OTHER">Outro</option>
-                </SelectNative>
+                  <SelectTrigger id="sc-act-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CALL">Ligação</SelectItem>
+                    <SelectItem value="EMAIL">E-mail</SelectItem>
+                    <SelectItem value="MEETING">Reunião</SelectItem>
+                    <SelectItem value="TASK">Tarefa</SelectItem>
+                    <SelectItem value="NOTE">Nota</SelectItem>
+                    <SelectItem value="WHATSAPP">WhatsApp</SelectItem>
+                    <SelectItem value="OTHER">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-act-title">Título</Label>
@@ -928,21 +953,29 @@ export function StepConfigForm({
                             <span className="text-lg text-destructive">×</span>
                           </Button>
                         </div>
-                        <SelectNative
-                          value={btn.gotoStepId ?? ""}
-                          onChange={(e) => {
+                        <Select
+                          value={btn.gotoStepId ? btn.gotoStepId : "__next__"}
+                          onValueChange={(value) => {
                             const next = [...buttons];
-                            next[idx] = { ...next[idx], gotoStepId: e.target.value };
+                            next[idx] = {
+                              ...next[idx],
+                              gotoStepId: value === "__next__" ? "" : value,
+                            };
                             setDraft((d) => ({ ...d, buttons: next }));
                           }}
                         >
-                          <option value="">→ Próximo passo (linear)</option>
-                          {otherSteps.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                            </option>
-                          ))}
-                        </SelectNative>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__next__">→ Próximo passo (linear)</SelectItem>
+                            {otherSteps.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     ))}
                   </div>
@@ -1021,15 +1054,19 @@ export function StepConfigForm({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sc-delay-u">Unidade</Label>
-                  <SelectNative
-                    id="sc-delay-u"
+                  <Select
                     value={unit}
-                    onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))}
+                    onValueChange={(value) => setDraft((d) => ({ ...d, unit: value }))}
                   >
-                    <option value="minutes">Minutos</option>
-                    <option value="hours">Horas</option>
-                    <option value="days">Dias</option>
-                  </SelectNative>
+                    <SelectTrigger id="sc-delay-u">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutes">Minutos</SelectItem>
+                      <SelectItem value="hours">Horas</SelectItem>
+                      <SelectItem value="days">Dias</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
             );
@@ -1200,21 +1237,29 @@ export function StepConfigForm({
                             <span className="text-lg text-destructive">×</span>
                           </Button>
                         </div>
-                        <SelectNative
-                          value={btn.gotoStepId ?? ""}
-                          onChange={(e) => {
+                        <Select
+                          value={btn.gotoStepId ? btn.gotoStepId : "__next__"}
+                          onValueChange={(value) => {
                             const next = [...buttons];
-                            next[idx] = { ...next[idx], gotoStepId: e.target.value };
+                            next[idx] = {
+                              ...next[idx],
+                              gotoStepId: value === "__next__" ? "" : value,
+                            };
                             setDraft((d) => ({ ...d, buttons: next }));
                           }}
                         >
-                          <option value="">→ Próximo passo (linear)</option>
-                          {otherSteps.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                            </option>
-                          ))}
-                        </SelectNative>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__next__">→ Próximo passo (linear)</SelectItem>
+                            {otherSteps.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     ))}
                   </div>

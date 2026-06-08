@@ -332,7 +332,7 @@ export function InlineConfigSlot({ data }: { data: InlineEditData }) {
   if (isAnchoredStepType(data.step.type)) return null;
   return (
     <div
-      className="nodrag nopan mt-2 cursor-default"
+      className="nodrag nopan -mx-px -mb-px mt-2 cursor-default rounded-b-[var(--radius-xl)] border-t border-[color:var(--glass-border-subtle)] bg-[color:var(--glass-bg-modal)] px-3.5 pb-3.5 pt-3"
       onClick={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
     >

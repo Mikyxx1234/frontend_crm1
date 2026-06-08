@@ -304,7 +304,17 @@ export default function InboxV2ClientPage({
           />
         ),
         assigneeSlot: (
-          <RequirePermission permission="conversation:assign">
+          <RequirePermission
+            permission="conversation:reassign_others"
+            fallback={
+              <AssigneePopover
+                conversationId={c.id}
+                currentAssigneeName={c.assignee}
+                currentAssigneeId={c.assigneeId ?? null}
+                disabled
+              />
+            }
+          >
             <AssigneePopover
               conversationId={c.id}
               currentAssigneeName={c.assignee}

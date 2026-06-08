@@ -61,6 +61,15 @@ export default function CampaignDetailClientPage() {
 
   const [recipientFilter, setRecipientFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [expandedErrors, setExpandedErrors] = useState<Set<string>>(new Set());
+
+  const toggleError = (recipientId: string) =>
+    setExpandedErrors((prev) => {
+      const next = new Set(prev);
+      if (next.has(recipientId)) next.delete(recipientId);
+      else next.add(recipientId);
+      return next;
+    });
 
   const campaignQuery = useCampaign(id, isAuth);
   const campaign = campaignQuery.data;
@@ -298,35 +307,44 @@ export default function CampaignDetailClientPage() {
                 {(recipientsQuery.data?.items ?? []).map((r) => {
                   const rmeta = RECIPIENT_META[r.status] ?? RECIPIENT_META.PENDING;
                   return (
-                    <div
-                      key={r.id}
-                      className="flex items-center justify-between gap-3 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
-                          {r.contact.name}
-                        </p>
-                        <p className="truncate font-body text-[11px] text-[var(--text-muted)]">
-                          {r.contact.phone ?? "—"}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {r.errorMessage ? (
-                          <span className="max-w-[180px] truncate font-body text-[10.5px] text-red-600">
-                            {r.errorMessage}
+                    <div key={r.id} className="px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
+                            {r.contact.name}
+                          </p>
+                          <p className="truncate font-body text-[11px] text-[var(--text-muted)]">
+                            {r.contact.phone ?? "—"}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {r.errorMessage ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleError(r.id)}
+                              title={r.errorMessage}
+                              className="max-w-[180px] truncate font-body text-[10.5px] text-red-600 underline-offset-2 hover:underline"
+                            >
+                              {r.errorMessage}
+                            </button>
+                          ) : null}
+                          {r.repliedAt ? (
+                            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-display text-[10px] font-bold text-sky-600">
+                              Respondeu
+                            </span>
+                          ) : null}
+                          <span
+                            className={`rounded-full border px-2 py-0.5 font-display text-[10px] font-bold ${TONE_CLASSES[rmeta.tone]}`}
+                          >
+                            {rmeta.label}
                           </span>
-                        ) : null}
-                        {r.repliedAt ? (
-                          <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-display text-[10px] font-bold text-sky-600">
-                            Respondeu
-                          </span>
-                        ) : null}
-                        <span
-                          className={`rounded-full border px-2 py-0.5 font-display text-[10px] font-bold ${TONE_CLASSES[rmeta.tone]}`}
-                        >
-                          {rmeta.label}
-                        </span>
+                        </div>
                       </div>
+                      {r.errorMessage && expandedErrors.has(r.id) ? (
+                        <p className="mt-1.5 whitespace-pre-wrap break-words rounded-[var(--radius-md)] border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 font-body text-[11px] leading-relaxed text-red-600">
+                          {r.errorMessage}
+                        </p>
+                      ) : null}
                     </div>
                   );
                 })}

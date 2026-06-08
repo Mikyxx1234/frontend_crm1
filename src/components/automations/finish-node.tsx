@@ -3,9 +3,9 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { StopCircle } from "lucide-react";
 
-import { CategoryHeader, NodeShell, StepBadge, categoryTone } from "./node-kit";
+import { CategoryHeader, InlineConfigSlot, type InlineEditData, NodeShell, StepBadge, categoryTone } from "./node-kit";
 
-export type FinishNodeData = {
+export type FinishNodeData = InlineEditData & {
   label: string;
   summary: string;
   stepIndex?: number;
@@ -21,7 +21,11 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
   const tone = categoryTone.final;
 
   return (
-    <NodeShell tone={tone} selected={selected} className="min-w-[200px] max-w-[260px]">
+    <NodeShell
+      tone={tone}
+      selected={selected}
+      className={data.expanded ? "w-[320px]" : "min-w-[200px] max-w-[260px]"}
+    >
       {data.stepIndex != null && <StepBadge index={data.stepIndex} />}
 
       <Handle
@@ -41,6 +45,8 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
         variant="gradient"
         onDelete={data.onDelete}
       />
+
+      <InlineConfigSlot data={data} />
     </NodeShell>
   );
 }

@@ -1,20 +1,14 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import type { Dispatch, SetStateAction } from "react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
@@ -58,12 +52,35 @@ const UPDATE_FIELD_BUILTINS: Record<"contact" | "deal", Array<{ value: string; l
 };
 
 type Props = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  /** Passo em edição. */
   step: AutomationStep | null;
-  onSave: (step: AutomationStep) => void;
+  /** Demais passos do fluxo (p/ variáveis, goto, condition else, etc.). */
   allSteps?: AutomationStep[];
+  /** Chamado ao concluir — recebe o passo já normalizado. */
+  onComplete: (step: AutomationStep) => void;
+  /** Chamado ao cancelar/fechar a edição. */
+  onCancel: () => void;
+  /**
+   * Densidade visual do formulário:
+   * - `inline`: embutido no card (mais estreito).
+   * - `panel`: painel ancorado mais largo (tipos densos).
+   */
+  variant?: "inline" | "panel";
 };
+
+/** Tipos densos demais p/ caber bem inline — usam painel ancorado. */
+export const ANCHORED_STEP_TYPES = new Set<string>([
+  "condition",
+  "webhook",
+  "send_whatsapp_interactive",
+  "question",
+  "wait_for_reply",
+]);
+
+/** True quando o tipo do passo deve abrir em painel ancorado, não inline. */
+export function isAnchoredStepType(stepType: string): boolean {
+  return ANCHORED_STEP_TYPES.has(stepType);
+}
 
 const CONDITION_OPS = [
   { value: "equals", worker: "eq" as const, label: "Igual a" },
@@ -229,7 +246,17 @@ function VariableShortcutTextarea({
   );
 }
 
-export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [] }: Props) {
+export function StepConfigForm({
+  step,
+  allSteps = [],
+  onComplete,
+  onCancel,
+  variant = "inline",
+}: Props) {
+  // O form só monta quando o card está expandido, então as queries
+  // (que usavam `enabled: open && ...`) já podem rodar sempre que o
+  // tipo casar. Mantemos `open` como `true` para preservar a lógica.
+  const open = true;
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [updateFieldFilter, setUpdateFieldFilter] = useState("");
   const declaredVariables = useMemo(
@@ -544,20 +571,34 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       void _drop;
       config = rest;
     }
-    onSave({ ...step, config: { ...config, ...preserved } });
-    onOpenChange(false);
+    onComplete({ ...step, config: { ...config, ...preserved } });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Ajuste os parâmetros deste passo do fluxo.</DialogDescription>
-        </DialogHeader>
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-2xl border p-3 text-left",
+        "border-[color:var(--glass-border)] bg-[color:var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] backdrop-blur-xl",
+        variant === "panel" ? "w-[380px] max-w-[90vw]" : "w-full",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2 border-b border-[color:var(--glass-border-subtle)] pb-2">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">{title}</p>
+          <p className="text-[11px] text-muted-foreground">Ajuste os parâmetros deste passo.</p>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Fechar edição"
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-[color:var(--glass-bg-subtle)] hover:text-foreground"
+        >
+          <X className="size-4" strokeWidth={2} />
+        </button>
+      </div>
 
-        <div className="flex flex-col gap-4 py-2">
-          {step.type === "send_email" && (
+      <div className="flex max-h-[420px] flex-col gap-4 overflow-y-auto py-1 pr-0.5">
+        {step.type === "send_email" && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-to">Para (campo / e-mail)</Label>
@@ -1509,16 +1550,15 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
           )}
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button type="button" onClick={save}>
-            Salvar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="flex items-center justify-end gap-2 border-t border-[color:var(--glass-border-subtle)] pt-2">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="button" size="sm" onClick={save}>
+          Concluir
+        </Button>
+      </div>
+    </div>
   );
 }
 

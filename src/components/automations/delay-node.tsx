@@ -4,13 +4,15 @@ import { Handle, Position, type NodeProps } from "reactflow";
 
 import {
   CategoryHeader,
+  InlineConfigSlot,
+  type InlineEditData,
   NodeShell,
   StepBadge,
   TargetHandle,
   stepVisual,
 } from "./node-kit";
 
-export type DelayNodeData = {
+export type DelayNodeData = InlineEditData & {
   label: string;
   summary: string;
   stepIndex?: number;
@@ -25,7 +27,11 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
   const { Icon, tone } = stepVisual("delay");
 
   return (
-    <NodeShell tone={tone} selected={selected} className="min-w-[210px] max-w-[270px]">
+    <NodeShell
+      tone={tone}
+      selected={selected}
+      className={data.expanded ? "w-[320px]" : "min-w-[210px] max-w-[270px]"}
+    >
       {data.stepIndex != null && <StepBadge index={data.stepIndex} />}
 
       <TargetHandle />
@@ -38,6 +44,8 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
         onDelete={data.onDelete}
         deleteLabel="Remover atraso"
       />
+
+      <InlineConfigSlot data={data} />
 
       <Handle
         type="source"

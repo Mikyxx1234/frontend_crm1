@@ -36,8 +36,10 @@ import {
 } from "lucide-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
+import type { AutomationStep } from "@/lib/automation-workflow";
 import { canonicalStepType } from "@/lib/automation-workflow";
 import { cn } from "@/lib/utils";
+import { StepConfigForm, isAnchoredStepType } from "./step-config-panel";
 
 /** Assinatura comum dos ícones (lucide) usados pelos nós. */
 type IconType = ComponentType<{ className?: string; strokeWidth?: number; style?: CSSProperties }>;
@@ -294,8 +296,56 @@ export function NodeShell({
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   Header colorido por categoria
+   Edição inline — slot embutido no card
    ──────────────────────────────────────────────────────────────────── */
+
+/**
+ * Campos que o canvas injeta no `data` de cada nó para habilitar a
+ * edição inline. Compartilhado por todos os tipos de nó.
+ */
+export type InlineEditData = {
+  /** Card expandido (em edição) no momento. */
+  expanded?: boolean;
+  /** Passo completo (com config) para hidratar o formulário. */
+  step?: AutomationStep;
+  /** Demais passos do fluxo (variáveis, goto, condition else, etc.). */
+  allSteps?: AutomationStep[];
+  /** Aplica o passo normalizado e fecha a edição. */
+  onComplete?: (step: AutomationStep) => void;
+  /** Fecha a edição sem aplicar. */
+  onCancel?: () => void;
+};
+
+/**
+ * InlineConfigSlot — renderiza o `StepConfigForm` embutido no card,
+ * abaixo do conteúdo. Só aparece quando `expanded` e o tipo NÃO é
+ * ancorado (tipos densos abrem painel ancorado no canvas).
+ *
+ * O wrapper recebe `nodrag nopan` para que interações com inputs não
+ * arrastem o canvas do React Flow, e `onClick stopPropagation` para
+ * não disparar o toggle de seleção do nó.
+ */
+export function InlineConfigSlot({ data }: { data: InlineEditData }) {
+  if (!data.expanded || !data.step || !data.onComplete || !data.onCancel) return null;
+  // Tipos densos abrem em painel ancorado (renderizado pelo canvas),
+  // não embutidos no card.
+  if (isAnchoredStepType(data.step.type)) return null;
+  return (
+    <div
+      className="nodrag nopan mt-2 cursor-default"
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+    >
+      <StepConfigForm
+        variant="inline"
+        step={data.step}
+        allSteps={data.allSteps}
+        onComplete={data.onComplete}
+        onCancel={data.onCancel}
+      />
+    </div>
+  );
+}
 
 export function CategoryHeader({
   tone,

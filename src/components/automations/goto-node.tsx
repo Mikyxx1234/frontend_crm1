@@ -4,13 +4,15 @@ import { type NodeProps } from "reactflow";
 
 import {
   CategoryHeader,
+  InlineConfigSlot,
+  type InlineEditData,
   NodeShell,
   StepBadge,
   TargetHandle,
   stepVisual,
 } from "./node-kit";
 
-export type GotoNodeData = {
+export type GotoNodeData = InlineEditData & {
   label: string;
   summary: string;
   stepIndex?: number;
@@ -26,7 +28,11 @@ export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
   const { Icon, tone } = stepVisual("goto");
 
   return (
-    <NodeShell tone={tone} selected={selected} className="min-w-[210px] max-w-[270px]">
+    <NodeShell
+      tone={tone}
+      selected={selected}
+      className={data.expanded ? "w-[320px]" : "min-w-[210px] max-w-[270px]"}
+    >
       {data.stepIndex != null && <StepBadge index={data.stepIndex} />}
 
       <TargetHandle />
@@ -38,6 +44,8 @@ export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
         summary={data.summary}
         onDelete={data.onDelete}
       />
+
+      <InlineConfigSlot data={data} />
     </NodeShell>
   );
 }

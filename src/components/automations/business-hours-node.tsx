@@ -5,6 +5,8 @@ import { CircleCheckBig, CircleSlash } from "lucide-react";
 
 import {
   CategoryHeader,
+  InlineConfigSlot,
+  type InlineEditData,
   NodeShell,
   OutcomeGroup,
   OutcomePill,
@@ -13,7 +15,7 @@ import {
   stepVisual,
 } from "./node-kit";
 
-export type BusinessHoursNodeData = {
+export type BusinessHoursNodeData = InlineEditData & {
   label: string;
   summary: string;
   stepIndex?: number;
@@ -31,7 +33,11 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
   const { Icon, tone } = stepVisual("business_hours");
 
   return (
-    <NodeShell tone={tone} selected={selected} className="min-w-[244px] max-w-[300px]">
+    <NodeShell
+      tone={tone}
+      selected={selected}
+      className={data.expanded ? "w-[320px]" : "min-w-[244px] max-w-[300px]"}
+    >
       {data.stepIndex != null && <StepBadge index={data.stepIndex} />}
 
       <TargetHandle />
@@ -43,6 +49,8 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
         summary={data.summary}
         onDelete={data.onDelete}
       />
+
+      <InlineConfigSlot data={data} />
 
       <OutcomeGroup>
         <OutcomePill

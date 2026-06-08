@@ -6,6 +6,8 @@ import { Activity } from "lucide-react";
 import {
   CategoryHeader,
   IncompleteBadge,
+  InlineConfigSlot,
+  type InlineEditData,
   MessageBubble,
   NodeShell,
   StatsBar,
@@ -15,7 +17,7 @@ import {
   stepVisual,
 } from "./node-kit";
 
-export type ActionNodeData = {
+export type ActionNodeData = InlineEditData & {
   stepType: string;
   label: string;
   summary: string;
@@ -32,6 +34,7 @@ export type ActionNodeData = {
  * tipo do passo (mesma identidade do seletor "O que deseja automatizar?"),
  * via `stepVisual` do node-kit. Passos de mensagem exibem o conteúdo num
  * balão de chat no corpo; caso contrário, o resumo fica no header.
+ * Quando `expanded`, embute o formulário de configuração inline.
  */
 export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   const { Icon, tone } = stepVisual(data.stepType);
@@ -42,7 +45,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
       tone={tone}
       selected={selected}
       incomplete={data.incomplete}
-      className="min-w-[230px] max-w-[290px]"
+      className={data.expanded ? "w-[320px]" : "min-w-[230px] max-w-[290px]"}
     >
       {data.stepIndex != null && <StepBadge index={data.stepIndex} />}
       {data.incomplete && <IncompleteBadge />}
@@ -60,6 +63,8 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
       {asMessage && data.summary && <MessageBubble text={data.summary} tone={tone} />}
 
       {data.stats && <StatsBar stats={data.stats} onClick={data.onStatsClick} />}
+
+      <InlineConfigSlot data={data} />
 
       <Handle
         type="source"

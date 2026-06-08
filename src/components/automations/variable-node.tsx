@@ -4,13 +4,15 @@ import { Handle, Position, type NodeProps } from "reactflow";
 
 import {
   CategoryHeader,
+  InlineConfigSlot,
+  type InlineEditData,
   NodeShell,
   StepBadge,
   TargetHandle,
   stepVisual,
 } from "./node-kit";
 
-export type VariableNodeData = {
+export type VariableNodeData = InlineEditData & {
   label: string;
   summary: string;
   stepIndex?: number;
@@ -25,7 +27,11 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
   const { Icon, tone } = stepVisual("set_variable");
 
   return (
-    <NodeShell tone={tone} selected={selected} className="min-w-[210px] max-w-[270px]">
+    <NodeShell
+      tone={tone}
+      selected={selected}
+      className={data.expanded ? "w-[320px]" : "min-w-[210px] max-w-[270px]"}
+    >
       {data.stepIndex != null && <StepBadge index={data.stepIndex} />}
 
       <TargetHandle />
@@ -38,6 +44,8 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
         onDelete={data.onDelete}
         deleteLabel="Remover variável"
       />
+
+      <InlineConfigSlot data={data} />
 
       <Handle
         type="source"

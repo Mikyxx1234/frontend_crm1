@@ -30,14 +30,18 @@ import { cn } from "@/lib/utils";
 
 const DockMouseYContext = React.createContext<MotionValue<number> | null>(null);
 
-/** Escala no pico da magnificação (1 = sem efeito). Sutil para não
- *  "estourar" o item ativo dentro do trilho de 72px (1.5x quase encostava
- *  nas bordas do painel). */
-const MAX_SCALE = 1.18;
-/** Raio (px) de influência do cursor em torno do centro do botão. */
-const INFLUENCE = 80;
+/** Escala no pico da magnificação (1 = sem efeito). Efeito forte estilo
+ *  dock macOS — o ícone também salta para fora do trilho (ver `POP_X`) para
+ *  não estourar nas bordas do painel ao crescer. */
+const MAX_SCALE = 1.55;
+/** Raio (px) de influência do cursor em torno do centro do botão. Maior =
+ *  mais vizinhos acompanham o pico (efeito "onda"). */
+const INFLUENCE = 120;
+/** Deslocamento horizontal (px) no pico — empurra o ícone para fora do
+ *  trilho (à direita, em direção ao conteúdo) como no dock do macOS. */
+const POP_X = 12;
 
-const SPRING = { mass: 0.1, stiffness: 170, damping: 14 } as const;
+const SPRING = { mass: 0.1, stiffness: 210, damping: 13 } as const;
 
 interface DockProviderProps {
   children: React.ReactNode;
@@ -58,7 +62,7 @@ export function DockProvider({
         aria-label={ariaLabel}
         onMouseMove={(e) => mouseY.set(e.clientY)}
         onMouseLeave={() => mouseY.set(Number.POSITIVE_INFINITY)}
-        className={className}
+        className={cn("relative z-50", className)}
       >
         {children}
       </nav>
@@ -104,6 +108,10 @@ export function DockButton({
     [1, MAX_SCALE, 1],
   );
   const scale = useSpring(scaleTarget, SPRING);
+  // Salto horizontal: no pico o ícone avança `POP_X` para fora do trilho,
+  // reforçando a sensação de "dock" e evitando clipping nas bordas.
+  const xTarget = useTransform(distance, [-INFLUENCE, 0, INFLUENCE], [0, POP_X, 0]);
+  const x = useSpring(xTarget, SPRING);
   // z-index sobe junto com a escala para o ícone magnificado ficar por cima
   // dos vizinhos (que ele passa a sobrepor ao crescer via transform).
   const zIndex = useTransform(scale, (s) => Math.round(s * 20));
@@ -119,14 +127,13 @@ export function DockButton({
   );
 
   const content = href ? (
-    <Link href={href} title={title} aria-label={title} className={innerClasses}>
+    <Link href={href} aria-label={title} className={innerClasses}>
       {children}
     </Link>
   ) : (
     <button
       type="button"
       onClick={onClick}
-      title={title}
       aria-label={title}
       className={innerClasses}
     >
@@ -137,14 +144,28 @@ export function DockButton({
   return (
     <div
       ref={ref}
-      className="flex h-11 w-11 shrink-0 items-center justify-center"
+      className="group relative flex h-11 w-11 shrink-0 items-center justify-center"
     >
       <motion.div
-        style={{ scale, zIndex, transformOrigin: "center" }}
+        style={{ scale, x, zIndex, transformOrigin: "center" }}
         className="h-full w-full"
       >
         {content}
       </motion.div>
+
+      {/* Rótulo no hover — aparece à direita do trilho. Resolve a falta de
+          legenda dos ícones sem ocupar espaço fixo. */}
+      <span
+        className={cn(
+          "pointer-events-none absolute left-full top-1/2 z-[60] ml-3 -translate-y-1/2 translate-x-[-8px]",
+          "whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--glass-border)]",
+          "bg-[var(--dropdown-solid-bg)] px-2.5 py-1 text-[12px] font-semibold text-[var(--text-primary)]",
+          "opacity-0 shadow-[var(--glass-shadow)] transition-all duration-150 ease-out",
+          "group-hover:translate-x-0 group-hover:opacity-100",
+        )}
+      >
+        {title}
+      </span>
     </div>
   );
 }

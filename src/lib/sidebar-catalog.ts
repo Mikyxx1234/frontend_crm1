@@ -8,7 +8,7 @@ import {
   IconLayoutGrid,
   IconMessageCircle,
   IconRoute,
-  IconSpeakerphone,
+  IconSend,
   IconUsers,
   type Icon,
 } from "@tabler/icons-react";
@@ -96,7 +96,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     key: "campaigns",
     title: "Campanhas",
     href: "/campaigns",
-    icon: IconSpeakerphone,
+    icon: IconSend,
     description: "Disparos em massa via WhatsApp com rastreamento.",
     locked: false,
   },

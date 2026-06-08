@@ -46,6 +46,15 @@ export interface AutomationListItemDto {
   createdAt: string;
   updatedAt: string;
   stepCount: number;
+  /**
+   * Métricas reais agregadas pelo backend (buildAutomationListStats).
+   * Opcionais porque o endpoint de detalhe (GET /api/automations/:id) não
+   * as retorna — apenas a listagem (GET /api/automations).
+   */
+  runs?: number;
+  runsToday?: number;
+  successRate?: number;
+  lastRunAt?: string | null;
 }
 
 export interface AutomationListPage {

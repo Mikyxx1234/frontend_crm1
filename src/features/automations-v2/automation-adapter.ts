@@ -2,9 +2,10 @@
  * Adapter entre `AutomationListItemDto` do backend e o tipo `Automation`
  * usado pela UI v2 (`@/lib/automations-data`).
  *
- * Métricas como `runs`, `runsToday`, `successRate`, `lastRun` ainda não
- * existem na listagem do backend — usamos valores neutros (0/—) até que
- * o endpoint de stats seja agregado na listagem.
+ * Métricas (`runs`, `runsToday`, `successRate`, `lastRunAt`) são agregadas
+ * pelo backend em `buildAutomationListStats` (logs com `stepId = null`).
+ * O `lastRunAt` (ISO ou null) é convertido aqui para texto relativo
+ * pt-BR exibido no card.
  */
 
 import type { Automation, AutomationTrigger } from "@/lib/automations-data";
@@ -39,6 +40,27 @@ function formatDate(iso: string): string {
   });
 }
 
+/** Converte um ISO (ou null) na "última execução" em texto relativo pt-BR. */
+function formatRelative(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const diffMs = Date.now() - d.getTime();
+  if (diffMs < 0) return "agora";
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `há ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `há ${days} d`;
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 export function dtoToAutomation(dto: AutomationListItemDto): Automation {
   return {
     id: dto.id,
@@ -48,10 +70,10 @@ export function dtoToAutomation(dto: AutomationListItemDto): Automation {
     steps: dto.stepCount,
     updatedAt: formatDate(dto.updatedAt),
     active: dto.active,
-    runs: 0,
-    runsToday: 0,
-    successRate: 0,
-    lastRun: "—",
+    runs: dto.runs ?? 0,
+    runsToday: dto.runsToday ?? 0,
+    successRate: dto.successRate ?? 0,
+    lastRun: formatRelative(dto.lastRunAt),
     accent: pickAccent(dto.id),
   };
 }

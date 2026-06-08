@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { AutomationStep } from "@/lib/automation-workflow";
-import { stepTypeLabel, summarizeStepConfig } from "@/lib/automation-workflow";
+import { canonicalStepType, stepTypeLabel, summarizeStepConfig } from "@/lib/automation-workflow";
 import {
   newBranchId,
   normalizeConditionConfig,
@@ -79,7 +79,8 @@ export const ANCHORED_STEP_TYPES = new Set<string>([
 
 /** True quando o tipo do passo deve abrir em painel ancorado, não inline. */
 export function isAnchoredStepType(stepType: string): boolean {
-  return ANCHORED_STEP_TYPES.has(stepType);
+  // Aceita tipos legados (UPPERCASE) normalizando p/ canônico.
+  return ANCHORED_STEP_TYPES.has(canonicalStepType(stepType));
 }
 
 const CONDITION_OPS = [
@@ -247,7 +248,7 @@ function VariableShortcutTextarea({
 }
 
 export function StepConfigForm({
-  step,
+  step: rawStep,
   allSteps = [],
   onComplete,
   onCancel,
@@ -257,6 +258,15 @@ export function StepConfigForm({
   // (que usavam `enabled: open && ...`) já podem rodar sempre que o
   // tipo casar. Mantemos `open` como `true` para preservar a lógica.
   const open = true;
+  // Os passos podem chegar com tipos legados em UPPERCASE (ex.: WAIT,
+  // SEND_MESSAGE, ADD_TAG). Toda a lógica de render/normalização abaixo
+  // usa os tipos canônicos em minúsculo, então normalizamos aqui e
+  // restauramos o `type` original ao concluir (save).
+  const step = useMemo(() => {
+    if (!rawStep) return null;
+    const canonical = canonicalStepType(rawStep.type);
+    return canonical === rawStep.type ? rawStep : { ...rawStep, type: canonical };
+  }, [rawStep]);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [updateFieldFilter, setUpdateFieldFilter] = useState("");
   const declaredVariables = useMemo(
@@ -571,7 +581,8 @@ export function StepConfigForm({
       void _drop;
       config = rest;
     }
-    onComplete({ ...step, config: { ...config, ...preserved } });
+    // Preserva o `type` original (pode ser legado UPPERCASE) ao salvar.
+    onComplete({ ...step, type: rawStep!.type, config: { ...config, ...preserved } });
   };
 
   return (

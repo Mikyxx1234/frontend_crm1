@@ -388,7 +388,15 @@ export function StepConfigForm({
 
   if (!step) return null;
 
-  const save = () => {
+  // Normaliza + valida o draft num AutomationStep pronto pra persistir.
+  // `silent` suprime os toasts (usado pelo autosave inline onBlur, que
+  // não deve gritar com o usuário enquanto ele ainda preenche). Retorna
+  // null quando a validação falha.
+  const buildStep = (silent = false): AutomationStep | null => {
+    const fail = (msg: string): null => {
+      if (!silent) toast.error(msg);
+      return null;
+    };
     const orig = (step.config ?? {}) as Record<string, unknown>;
     const preserved: Record<string, unknown> = {};
     if (orig.nextStepId !== undefined) preserved.nextStepId = orig.nextStepId;
@@ -409,10 +417,7 @@ export function StepConfigForm({
         const rules = Array.isArray(b.rules) ? b.rules : [];
         const hasAny = rules.some((r) => r.field?.trim());
         if (!hasAny) {
-          toast.error(
-            `Condição ${bIdx + 1}: selecione ao menos um campo para avaliar.`,
-          );
-          return;
+          return fail(`Condição ${bIdx + 1}: selecione ao menos um campo para avaliar.`);
         }
         for (let rIdx = 0; rIdx < rules.length; rIdx++) {
           const r = rules[rIdx];
@@ -422,10 +427,9 @@ export function StepConfigForm({
           const valStr =
             r.value === null || r.value === undefined ? "" : String(r.value);
           if (!valStr.trim()) {
-            toast.error(
+            return fail(
               `Condição ${bIdx + 1}, regra ${rIdx + 1}: informe um valor para comparar com "${r.field}".`,
             );
-            return;
           }
         }
       }
@@ -440,8 +444,7 @@ export function StepConfigForm({
         .filter((b) => b.rules.length > 0);
 
       if (branches.length === 0) {
-        toast.error("Adicione pelo menos uma condição válida antes de salvar.");
-        return;
+        return fail("Adicione pelo menos uma condição válida antes de salvar.");
       }
 
       const elseStepId =
@@ -548,8 +551,7 @@ export function StepConfigForm({
     if (step.type === "transfer_to_ai_agent") {
       const agentUserId = String(config.agentUserId ?? "");
       if (!agentUserId) {
-        toast.error("Selecione o agente IA que vai assumir a conversa.");
-        return;
+        return fail("Selecione o agente IA que vai assumir a conversa.");
       }
       config = {
         agentUserId,
@@ -560,8 +562,7 @@ export function StepConfigForm({
     if (step.type === "assign_owner") {
       const userId = String(config.userId ?? "");
       if (!userId) {
-        toast.error("Selecione um responsável.");
-        return;
+        return fail("Selecione um responsável.");
       }
       config = {
         userId,

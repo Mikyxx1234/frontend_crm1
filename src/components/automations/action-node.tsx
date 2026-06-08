@@ -3,8 +3,11 @@
 import { Handle, Position, type NodeProps } from "reactflow";
 import { Activity } from "lucide-react";
 
+import type { AutomationStep } from "@/lib/automation-workflow";
+
 import {
   CategoryHeader,
+  ErrorOutcome,
   IncompleteBadge,
   InlineConfigSlot,
   type InlineEditData,
@@ -14,6 +17,7 @@ import {
   StepBadge,
   TargetHandle,
   isMessageStep,
+  messagePrimaryField,
   stepVisual,
 } from "./node-kit";
 
@@ -24,6 +28,10 @@ export type ActionNodeData = InlineEditData & {
   stepIndex?: number;
   /** Step sem config mínima pra executar — destaca em âmbar. */
   incomplete?: boolean;
+  /** Passo falível → renderiza a saída de fallback ("passo B"). */
+  hasErrorBranch?: boolean;
+  /** Label da pílula de erro (ex.: "Falha ao enviar a mensagem"). */
+  errorLabel?: string;
   onDelete?: () => void;
   stats?: { success: number; failed: number; skipped: number };
   onStatsClick?: () => void;
@@ -39,6 +47,24 @@ export type ActionNodeData = InlineEditData & {
 export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   const { Icon, tone } = stepVisual(data.stepType);
   const asMessage = isMessageStep(data.stepType);
+  // Campo do config que guarda o texto da bolha (null = bolha read-only).
+  const msgField = asMessage ? messagePrimaryField(data.stepType) : null;
+  const bubbleEditable = !!(msgField && data.step && data.onComplete);
+  // Editável → mostra o texto cru do config (round-trip correto). Caso
+  // contrário, usa o resumo formatado já calculado pelo canvas.
+  const rawMsg =
+    msgField && data.step
+      ? String((data.step.config as Record<string, unknown>)?.[msgField] ?? "")
+      : "";
+  const bubbleText = bubbleEditable ? rawMsg : data.summary;
+
+  // Autosave da bolha: grava o texto no campo primário e reaproveita o
+  // pipeline de normalização/persistência do StepConfigForm (onComplete).
+  const commitMessage = (next: string) => {
+    if (!msgField || !data.step || !data.onComplete) return;
+    const cfg = { ...(data.step.config as Record<string, unknown>), [msgField]: next };
+    data.onComplete({ ...data.step, config: cfg } as AutomationStep);
+  };
 
   return (
     <NodeShell
@@ -60,11 +86,22 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
         onDelete={data.onDelete}
       />
 
-      {asMessage && data.summary && <MessageBubble text={data.summary} tone={tone} />}
+      {asMessage && (bubbleText || bubbleEditable) && (
+        <MessageBubble
+          text={bubbleText}
+          tone={tone}
+          editable={bubbleEditable}
+          onCommit={commitMessage}
+        />
+      )}
 
       {data.stats && <StatsBar stats={data.stats} onClick={data.onStatsClick} />}
 
       <InlineConfigSlot data={data} />
+
+      {data.hasErrorBranch && (
+        <ErrorOutcome label={data.errorLabel ?? "Em caso de falha"} />
+      )}
 
       <Handle
         type="source"

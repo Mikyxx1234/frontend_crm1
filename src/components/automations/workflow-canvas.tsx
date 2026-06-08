@@ -22,6 +22,7 @@ import { AnimatedEdge, AnimatedEdgeDefs, type AnimatedEdgeData } from "./animate
 import {
   type AutomationStep,
   defaultStepConfig,
+  errorBranchLabel,
   isStepIncomplete,
   newStepId,
   stepTypeLabel,
@@ -39,6 +40,7 @@ import { cn } from "@/lib/utils";
 import type { ActionStepType } from "@/lib/automation-workflow";
 
 import { ActionNode } from "./action-node";
+import { isMessageStep } from "./node-kit";
 import { AddStepNode } from "./add-step-node";
 import { BusinessHoursNode } from "./business-hours-node";
 import { StepPickerModal } from "./step-picker-modal";
@@ -584,12 +586,24 @@ function WorkflowCanvasInner({
           stepType: step.type,
           stepIndex: index + 1,
           incomplete: isStepIncomplete(step.type, step.config),
+          // Saída de fallback ("passo B") pros passos falháveis. O
+          // ActionNode renderiza a pílula de erro com handle `id="error"`.
+          hasErrorBranch: supportsErrorBranch(step.type),
+          errorLabel: errorBranchLabel(step.type),
           onDelete: () => onDelete(step.id),
           stats: ss ? { success: ss.success, failed: ss.failed, skipped: ss.skipped } : undefined,
           onStatsClick: () => onStepLogsOpenRef.current?.(step.id),
           // Edição inline — injetada em todo nó. O slot só renderiza
           // quando `expanded` e o tipo não é ancorado.
-          expanded: step.id === expandedStepId,
+          //
+          // Estilo Kommo: cards simples (não-ancorados, não-mensagem)
+          // ficam SEMPRE abertos e editáveis inline — sem toggle. Tipos
+          // de mensagem usam a bolha como editor primário sempre visível
+          // (canal/botões abrem no clique); tipos densos ancorados abrem
+          // em painel lateral.
+          expanded:
+            step.id === expandedStepId ||
+            (!isAnchoredStepType(step.type) && !isMessageStep(step.type)),
           step,
           allSteps: list,
           onComplete: (s: AutomationStep) => completeStepRef.current(s),

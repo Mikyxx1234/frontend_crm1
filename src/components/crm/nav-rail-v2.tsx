@@ -25,8 +25,29 @@ import { DockButton, DockProvider } from "@/components/crm/floating-dock";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
-import { toNavItems } from "@/lib/sidebar-catalog";
+import { toNavItems, type SidebarItemPreference } from "@/lib/sidebar-catalog";
 import { useSidebarPreferences } from "@/features/sidebar/hooks";
+
+/**
+ * Cache local da preferencia da sidebar. O react-query perde o cache a cada
+ * F5, entao sem isso a nav pisca: renderiza a ordem padrao do catalogo e so
+ * troca para a ordem do usuario quando o GET volta (latencia de rede visivel).
+ * Guardamos a ultima preferencia conhecida no localStorage e aplicamos
+ * assim que o componente monta (sincrono), antes da resposta da API.
+ */
+const SIDEBAR_PREFS_CACHE = "crm:sidebar-prefs-items";
+
+function readCachedSidebarItems(): SidebarItemPreference[] | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem(SIDEBAR_PREFS_CACHE);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as SidebarItemPreference[]) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * NavRail dedicado ao segmento REAL `/*`.
@@ -59,7 +80,13 @@ export function NavRailV2({ className }: { className?: string }) {
   const { theme, toggle } = useThemeV2();
   const { data: session } = useSession();
   const { data: prefs } = useSidebarPreferences();
-  const navItems = toNavItems(prefs?.sidebar?.items);
+
+  // Cache lido uma unica vez (lazy). So e USADO apos o mount, entao o 1o
+  // render (SSR e client) continua usando a ordem padrao do catalogo —
+  // preservando a hidratacao sem mismatch.
+  const [cachedItems] = useState<SidebarItemPreference[] | undefined>(
+    readCachedSidebarItems,
+  );
 
   // Iniciais resolvidas apenas no client para evitar hydration mismatch —
   // isPreviewMode() depende de NEXT_PUBLIC_PREVIEW_MODE que pode diferir entre SSR e client.
@@ -78,6 +105,25 @@ export function NavRailV2({ className }: { className?: string }) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Persiste a preferencia assim que a API responde, para o proximo F5 ja
+  // abrir com a ordem certa sem esperar a rede.
+  useEffect(() => {
+    const items = prefs?.sidebar?.items;
+    if (!items) return;
+    try {
+      window.localStorage.setItem(SIDEBAR_PREFS_CACHE, JSON.stringify(items));
+    } catch {
+      /* localStorage indisponivel — ignora */
+    }
+  }, [prefs]);
+
+  // Fonte dos itens: 1o render usa o padrao (mounted=false). Apos montar,
+  // aplica a preferencia da API; se ainda nao chegou, usa o cache local —
+  // eliminando o flash de "itens diferentes" ao recarregar.
+  const effectiveItems =
+    prefs?.sidebar?.items ?? (mounted ? cachedItems : undefined);
+  const navItems = toNavItems(effectiveItems);
   useEffect(() => {
     const preview = isPreviewMode();
     const sessUser = session?.user;

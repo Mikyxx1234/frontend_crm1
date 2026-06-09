@@ -95,9 +95,14 @@ export function useAddRoleAssignment() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
       }),
-    onSuccess: (_, { roleId }) => {
+    onSuccess: (_, { roleId, userId }) => {
       void qc.invalidateQueries({ queryKey: ["roles", roleId] });
       void qc.invalidateQueries({ queryKey: ["roles"] });
+      // Invalida o efetivo do usuário pra refletir as novas roles na UI sem refresh.
+      // `my-permissions` é o cache da sessão corrente — invalidado também caso o
+      // admin esteja editando a própria conta (cenário comum em setup inicial).
+      void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
   });
 }
@@ -107,9 +112,11 @@ export function useRemoveRoleAssignment() {
   return useMutation({
     mutationFn: ({ roleId, userId }: { roleId: string; userId: string }) =>
       apiFetch(`/api/roles/${roleId}/assignments/${userId}`, { method: "DELETE" }),
-    onSuccess: (_, { roleId }) => {
+    onSuccess: (_, { roleId, userId }) => {
       void qc.invalidateQueries({ queryKey: ["roles", roleId] });
       void qc.invalidateQueries({ queryKey: ["roles"] });
+      void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
   });
 }

@@ -37,8 +37,27 @@ export interface SidebarCatalogItem {
   /**
    * Papéis que podem ver este item. Ausente = visível para todos.
    * Super-admin sempre vê tudo (ver `filterNavItemsByRole`).
+   *
+   * NOTA: agora é só o "1º filtro" (gross). O 2º filtro é o
+   * `requiredPermission` (granular por role customizada) — ver
+   * `filterNavItemsByPermissions` mais abaixo.
    */
   allowedRoles?: readonly AppUserRole[];
+  /**
+   * Permission key canônica (`nav:<key>`) que o usuário precisa ter
+   * para ver este item na sidebar. Espelha o catálogo backend em
+   * `src/lib/authz/permissions.ts` (resource `nav`).
+   *
+   * Semântica: fail-closed — se a role não tem essa chave (nem `*` /
+   * `nav:*`), o item fica oculto. ADMIN preset (`["*"]`) e super-admin
+   * sempre passam.
+   *
+   * Por que duplicar com `allowedRoles`? `allowedRoles` é um default
+   * estático de produto (ex.: "automations só pra gestão"); a
+   * permission é o override por role customizada via /settings/permissions.
+   * Os dois rodam juntos — basta UM esconder o item.
+   */
+  requiredPermission?: string;
 }
 
 /** Ordem do array = ordem padrao da sidebar. */
@@ -50,6 +69,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconLayoutDashboard,
     description: "Visão geral de negócios e atendimento.",
     locked: true,
+    requiredPermission: "nav:dashboard",
   },
   {
     key: "pipeline",
@@ -58,6 +78,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconFilter,
     description: "Funil de vendas e oportunidades.",
     locked: false,
+    requiredPermission: "nav:pipeline",
   },
   {
     key: "contacts",
@@ -66,6 +87,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconUsers,
     description: "Sua base de contatos e leads.",
     locked: false,
+    requiredPermission: "nav:contacts",
   },
   {
     key: "companies",
@@ -74,6 +96,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconBuilding,
     description: "Organizações vinculadas aos contatos.",
     locked: false,
+    requiredPermission: "nav:companies",
   },
   {
     key: "inbox",
@@ -82,6 +105,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconMessageCircle,
     description: "Central de conversas e atendimento.",
     locked: false,
+    requiredPermission: "nav:inbox",
   },
   {
     key: "activities",
@@ -90,6 +114,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconChecklist,
     description: "Tarefas, follow-ups e agenda.",
     locked: false,
+    requiredPermission: "nav:activities",
   },
   {
     key: "automations",
@@ -99,6 +124,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     description: "Fluxos automáticos e gatilhos.",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],
+    requiredPermission: "nav:automations",
   },
   {
     key: "campaigns",
@@ -107,6 +133,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconSend,
     description: "Disparos em massa via WhatsApp com rastreamento.",
     locked: false,
+    requiredPermission: "nav:campaigns",
   },
   {
     key: "distribution",
@@ -116,6 +143,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     description: "Distribuição inteligente de leads entre consultores.",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],
+    requiredPermission: "nav:distribution",
   },
   {
     key: "logs",
@@ -125,6 +153,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     description: "Feed unificado de atividades e eventos.",
     locked: false,
     allowedRoles: ["ADMIN", "MANAGER"],
+    requiredPermission: "nav:logs",
   },
   {
     key: "widgets",
@@ -133,6 +162,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     icon: IconPlugConnected,
     description: "Central de extensões da organização.",
     locked: false,
+    requiredPermission: "nav:widgets",
   },
 ] as const;
 
@@ -220,6 +250,42 @@ export function filterNavItemsByRole<T extends SidebarCatalogItem>(
   return items.filter((item) => {
     if (!item.allowedRoles || item.allowedRoles.length === 0) return true;
     return viewer.role != null && item.allowedRoles.includes(viewer.role);
+  });
+}
+
+/**
+ * 2º filtro: aplica `requiredPermission` (granular por role customizada).
+ *
+ * Semântica:
+ *  - Super-admin EduIT bypassa tudo (visualiza todos os itens).
+ *  - `permissions === undefined` (ainda carregando): mantém os itens
+ *    intocados — o `filterNavItemsByRole` já é defensivo o suficiente
+ *    pro 1º render, e esconder aqui faria a sidebar "piscar" enquanto
+ *    o GET de effective-permissions chega.
+ *  - Item sem `requiredPermission`: sempre passa (legado / locked).
+ *  - Item com `requiredPermission`: passa se o array contém `*` ou a
+ *    chave exata. Wildcard `nav:*` também passa (paridade com a
+ *    semântica do `can()` backend).
+ *
+ * Combine com `filterNavItemsByRole` em série — qualquer um dos dois
+ * pode esconder o item (fail-closed agregado).
+ */
+export function filterNavItemsByPermissions<T extends SidebarCatalogItem>(
+  items: T[],
+  viewer: { isSuperAdmin?: boolean; permissions?: readonly string[] },
+): T[] {
+  if (viewer.isSuperAdmin) return items;
+  const perms = viewer.permissions;
+  if (perms === undefined) return items;
+  if (perms.includes("*")) return items;
+  const permSet = new Set(perms);
+  return items.filter((item) => {
+    if (!item.requiredPermission) return true;
+    if (permSet.has(item.requiredPermission)) return true;
+    // Suporte a wildcard por resource (ex.: `nav:*`).
+    const [resource] = item.requiredPermission.split(":");
+    if (resource && permSet.has(`${resource}:*`)) return true;
+    return false;
   });
 }
 

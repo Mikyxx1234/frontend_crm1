@@ -126,13 +126,13 @@ export function UsersTab() {
         )}
       </div>
 
-      {/* Sheet de permissões efetivas */}
+      {/* Sheet de permissões efetivas + editor inline de roles */}
       <Sheet open={!!viewUserId} onOpenChange={(open) => !open && setViewUserId(null)}>
         <SheetContent side="right" className="w-[380px] overflow-auto">
           <SheetHeader className="mb-4">
             <SheetTitle className="flex items-center gap-2 text-sm">
               <ShieldCheck className="size-4" style={{ color: "var(--brand-primary)" }} />
-              Permissões efetivas
+              Permissões e roles
             </SheetTitle>
           </SheetHeader>
           {viewUserId && (
@@ -140,6 +140,7 @@ export function UsersTab() {
               userId={viewUserId}
               userName={viewUser?.name ?? undefined}
               userEmail={viewUser?.email ?? undefined}
+              editable
             />
           )}
         </SheetContent>
@@ -189,7 +190,7 @@ function UserRow({
         className="h-7 shrink-0 gap-1 text-[11px]"
       >
         <ShieldCheck className="size-3" />
-        Ver permissões
+        Gerenciar
       </Button>
     </div>
   );

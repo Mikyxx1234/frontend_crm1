@@ -1,20 +1,49 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, Radio, Shield, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Plus,
+  Radio,
+  Shield,
+  Users,
+  X,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { useEffectivePermissions } from "./hooks";
+import {
+  useAddRoleAssignment,
+  useEffectivePermissions,
+  useRemoveRoleAssignment,
+  useRoles,
+} from "./hooks";
 
 interface UserPermissionsViewProps {
   userId: string;
   userName?: string;
   userEmail?: string;
+  /**
+   * Quando true, exibe o editor inline de roles (botão remover ao lado de
+   * cada role + dropdown pra adicionar nova). Quando false (default),
+   * a sheet fica somente leitura — preserva o uso histórico do componente.
+   * O backend (`POST/DELETE /api/roles/[id]/assignments`) só exige
+   * `settings:permissions`, então quem tem acesso a `/settings/permissions`
+   * já tem acesso ao editor.
+   */
+  editable?: boolean;
 }
 
-export function UserPermissionsView({ userId, userName, userEmail }: UserPermissionsViewProps) {
+export function UserPermissionsView({
+  userId,
+  userName,
+  userEmail,
+  editable = false,
+}: UserPermissionsViewProps) {
   const { data, isLoading, error } = useEffectivePermissions(userId);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
 
@@ -62,29 +91,36 @@ export function UserPermissionsView({ userId, userName, userEmail }: UserPermiss
         </div>
       )}
 
-      {/* Roles diretas */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5">
-          <Shield className="size-3.5" style={{ color: "var(--text-muted)" }} />
-          <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-            Roles
-          </span>
+      {/* Roles diretas — read-only ou com editor inline conforme `editable` */}
+      {editable ? (
+        <UserRolesEditor
+          userId={userId}
+          currentRoles={data.roles}
+        />
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <Shield className="size-3.5" style={{ color: "var(--text-muted)" }} />
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+              Roles
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.roles.length === 0 ? (
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>Nenhum role atribuído</span>
+            ) : (
+              data.roles.map((r) => (
+                <Badge key={r.id} variant="outline" className="text-xs">
+                  {r.name}
+                  {r.systemPreset && (
+                    <span className="ml-1 opacity-60">· sistema</span>
+                  )}
+                </Badge>
+              ))
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {data.roles.length === 0 ? (
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>Nenhum role atribuído</span>
-          ) : (
-            data.roles.map((r) => (
-              <Badge key={r.id} variant="outline" className="text-xs">
-                {r.name}
-                {r.systemPreset && (
-                  <span className="ml-1 opacity-60">· sistema</span>
-                )}
-              </Badge>
-            ))
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Grupos */}
       <div className="flex flex-col gap-1.5">
@@ -180,6 +216,168 @@ export function UserPermissionsView({ userId, userName, userEmail }: UserPermiss
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── UserRolesEditor ─────────────────────────────────────────────────────── */
+
+/**
+ * Editor inline das roles atribuídas ao usuário. Renderizado dentro da
+ * `UserPermissionsView` quando `editable=true`.
+ *
+ * Modelo: lista as roles atuais como `Badge`s removíveis (× ao lado de
+ * cada uma) e oferece um `<select>` com as roles ainda não atribuídas +
+ * botão "Adicionar". Cada mutação invalida `effective-permissions` e
+ * `my-permissions` no React Query (ver hooks) — UI reflete sem F5.
+ *
+ * Erros: capturados localmente e exibidos como linha curta vermelha
+ * abaixo do editor (sem toast — sheet é compacta, evita ruído).
+ */
+function UserRolesEditor({
+  userId,
+  currentRoles,
+}: {
+  userId: string;
+  currentRoles: { id: string; name: string; systemPreset: string | null }[];
+}) {
+  const { data: allRoles = [], isLoading: rolesLoading } = useRoles();
+  const addAssignment = useAddRoleAssignment();
+  const removeAssignment = useRemoveRoleAssignment();
+
+  const [selectedToAdd, setSelectedToAdd] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const currentRoleIds = useMemo(
+    () => new Set(currentRoles.map((r) => r.id)),
+    [currentRoles],
+  );
+  const availableRoles = useMemo(
+    () => allRoles.filter((r) => !currentRoleIds.has(r.id)),
+    [allRoles, currentRoleIds],
+  );
+
+  async function handleAdd() {
+    if (!selectedToAdd) return;
+    setError(null);
+    try {
+      await addAssignment.mutateAsync({ roleId: selectedToAdd, userId });
+      setSelectedToAdd("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao atribuir role.");
+    }
+  }
+
+  async function handleRemove(roleId: string) {
+    setError(null);
+    try {
+      await removeAssignment.mutateAsync({ roleId, userId });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao remover role.");
+    }
+  }
+
+  const adding = addAssignment.isPending;
+  const removingRoleId = removeAssignment.isPending
+    ? removeAssignment.variables?.roleId
+    : null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1.5">
+        <Shield className="size-3.5" style={{ color: "var(--text-muted)" }} />
+        <span
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: "var(--text-muted)" }}
+        >
+          Roles
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {currentRoles.length === 0 ? (
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            Nenhuma role atribuída
+          </span>
+        ) : (
+          currentRoles.map((r) => {
+            const isRemoving = removingRoleId === r.id;
+            return (
+              <Badge
+                key={r.id}
+                variant="outline"
+                className="gap-1 pr-1 text-xs"
+              >
+                <span>{r.name}</span>
+                {r.systemPreset && (
+                  <span className="opacity-60">· sistema</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleRemove(r.id)}
+                  disabled={isRemoving}
+                  className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
+                  title={`Remover role "${r.name}"`}
+                  aria-label={`Remover role ${r.name}`}
+                >
+                  {isRemoving ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <X className="size-3" />
+                  )}
+                </button>
+              </Badge>
+            );
+          })
+        )}
+      </div>
+
+      {/* Adicionar role nova */}
+      <div className="mt-1 flex items-center gap-2">
+        <select
+          value={selectedToAdd}
+          onChange={(e) => setSelectedToAdd(e.target.value)}
+          disabled={rolesLoading || availableRoles.length === 0 || adding}
+          className="h-7 flex-1 rounded-[var(--radius-md)] border px-2 text-xs"
+          style={{
+            borderColor: "var(--glass-border)",
+            background: "var(--glass-bg-base)",
+            color: "var(--text-secondary)",
+          }}
+        >
+          <option value="">
+            {rolesLoading
+              ? "Carregando roles..."
+              : availableRoles.length === 0
+                ? "Todas as roles já atribuídas"
+                : "Atribuir role..."}
+          </option>
+          {availableRoles.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+              {r.systemPreset ? " · sistema" : ""}
+            </option>
+          ))}
+        </select>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void handleAdd()}
+          disabled={!selectedToAdd || adding}
+          className="h-7 shrink-0 gap-1 text-[11px]"
+        >
+          {adding ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <Plus className="size-3" />
+          )}
+          Adicionar
+        </Button>
+      </div>
+
+      {error && (
+        <p className="text-[11px] text-red-600">{error}</p>
+      )}
     </div>
   );
 }

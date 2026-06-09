@@ -33,11 +33,13 @@ import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode";
 import {
+  filterNavItemsByPermissions,
   filterNavItemsByRole,
   toNavItems,
   type SidebarItemPreference,
 } from "@/lib/sidebar-catalog";
 import { useSidebarPreferences } from "@/features/sidebar/hooks";
+import { useMyPermissions } from "@/hooks/use-my-permissions";
 
 /**
  * Cache local da preferencia da sidebar. O react-query perde o cache a cada
@@ -92,6 +94,7 @@ export function NavRailV2({ className }: { className?: string }) {
   const { data: session } = useSession();
   const { role, isSuperAdmin } = useUserRole();
   const { data: prefs } = useSidebarPreferences();
+  const { data: myPerms } = useMyPermissions();
 
   const agentStatus = useAgentStatus();
   const [statusPopupOpen, setStatusPopupOpen] = useState(false);
@@ -141,10 +144,10 @@ export function NavRailV2({ className }: { className?: string }) {
   // eliminando o flash de "itens diferentes" ao recarregar.
   const effectiveItems =
     prefs?.sidebar?.items ?? (mounted ? cachedItems : undefined);
-  const navItems = filterNavItemsByRole(toNavItems(effectiveItems), {
-    role,
-    isSuperAdmin,
-  });
+  const navItems = filterNavItemsByPermissions(
+    filterNavItemsByRole(toNavItems(effectiveItems), { role, isSuperAdmin }),
+    { isSuperAdmin, permissions: myPerms?.permissions },
+  );
   useEffect(() => {
     const preview = isPreviewMode();
     const sessUser = session?.user;

@@ -144,7 +144,9 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         icon: Tag,
         href: "/settings/tags",
         allowedRoles: GESTAO,
-        requiredPermission: "tag:view",
+        // tag:edit (e nao tag:view): membro comum ve tags no CRM, mas so
+        // quem pode edita-las precisa da tela de administracao.
+        requiredPermission: "tag:edit",
       },
       {
         id: "products",
@@ -171,7 +173,8 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         icon: Kanban,
         href: "/settings/pipeline",
         allowedRoles: GESTAO,
-        requiredPermission: "pipeline:view",
+        // manage_stages (e nao pipeline:view): a tela administra estagios.
+        requiredPermission: "pipeline:manage_stages",
       },
       {
         id: "loss-reasons",
@@ -180,7 +183,8 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         icon: ThumbsDown,
         href: "/old/settings/loss-reasons",
         allowedRoles: GESTAO,
-        requiredPermission: "deal:edit",
+        // Configuracao do funil — mesma permission da tela de Pipeline.
+        requiredPermission: "pipeline:manage_stages",
       },
       {
         id: "distribution",

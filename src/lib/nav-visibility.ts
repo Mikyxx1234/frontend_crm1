@@ -7,13 +7,17 @@ import type { SettingsNavGroup } from "./settings-nav";
  * React/Next, serve tanto no cliente quanto no server.
  *
  * Regra de ouro:
- *  - Super-admin (EduIT) enxerga TUDO — bypass total.
- *  - Item sem `allowedRoles` eh visivel pra qualquer role.
- *  - Item com `allowedRoles` so aparece se o role do user estiver na lista.
+ *  - Super-admin (EduIT) e ADMIN da org enxergam TUDO — bypass total.
+ *  - Item com `requiredPermission`: a permission MANDA. Se a role
+ *    (customizada ou preset) concede a chave, o item aparece —
+ *    independente do enum legado `User.role`. Sem a chave, some.
+ *  - Item SEM `requiredPermission`: cai no filtro legado por
+ *    `allowedRoles` (ausente = visivel pra todos).
  *
- * Quando o backend ganhar uma tabela `RolePermission` (override por
- * organizacao), a unica alteracao necessaria sera a fonte dos
- * `allowedRoles` — essas funcoes continuam identicas.
+ * Por que permission > allowedRoles: roles customizadas (RBAC granular)
+ * precisam conseguir liberar/bloquear itens sem depender do enum legado
+ * ADMIN/MANAGER/MEMBER — senao um user MEMBER com role customizada que
+ * concede `settings:channels` nunca veria o item.
  */
 
 export type Viewer = {
@@ -29,17 +33,18 @@ export function canSeeItem(
   viewer: Viewer,
 ): boolean {
   if (viewer.isSuperAdmin) return true;
-  const isAdminRole = viewer.role === UserRole.ADMIN;
-  const perms =
-    viewer.permissions instanceof Set
-      ? viewer.permissions
-      : new Set(viewer.permissions ?? []);
-  if (
-    item.requiredPermission &&
-    !isAdminRole &&
-    !perms.has("*") &&
-    !perms.has(item.requiredPermission)
-  ) {
+  if (viewer.role === UserRole.ADMIN) return true;
+  if (item.requiredPermission) {
+    const perms =
+      viewer.permissions instanceof Set
+        ? viewer.permissions
+        : new Set(viewer.permissions ?? []);
+    if (perms.has("*") || perms.has(item.requiredPermission)) return true;
+    // Wildcard de recurso ("settings:*" cobre "settings:channels").
+    const colonIdx = item.requiredPermission.indexOf(":");
+    if (colonIdx > 0) {
+      return perms.has(`${item.requiredPermission.slice(0, colonIdx)}:*`);
+    }
     return false;
   }
   if (!item.allowedRoles || item.allowedRoles.length === 0) return true;

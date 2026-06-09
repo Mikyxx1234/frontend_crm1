@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Settings2,
   ChevronRight,
@@ -13,7 +13,10 @@ import {
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
+import { useMyPermissions } from "@/hooks/use-my-permissions";
+import { useUserRole } from "@/hooks/use-user-role";
 import { cn } from "@/lib/utils";
+import { filterSettingsNav, type Viewer } from "@/lib/nav-visibility";
 import {
   SETTINGS_NAV,
   SETTINGS_PERSONAL,
@@ -23,10 +26,26 @@ import {
 
 export default function SettingsClientPageV2() {
   const pathname = usePathname();
+  const { role, isSuperAdmin } = useUserRole();
+  const { data: myPerms } = useMyPermissions();
+
+  const viewer: Viewer = useMemo(
+    () => ({
+      role: role ?? undefined,
+      isSuperAdmin,
+      permissions: myPerms?.permissions ?? [],
+    }),
+    [role, isSuperAdmin, myPerms?.permissions],
+  );
+
+  const settingsGroups = useMemo(
+    () => filterSettingsNav(SETTINGS_NAV, viewer),
+    [viewer],
+  );
 
   // Estado de colapso por seção (apenas visual — não altera rotas/dados).
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const allIds = SETTINGS_NAV.map((g) => g.id);
+  const allIds = settingsGroups.map((g) => g.id);
   const allCollapsed = collapsed.size >= allIds.length;
 
   const toggleGroup = (id: string) =>
@@ -96,7 +115,7 @@ export default function SettingsClientPageV2() {
 
           {/* Grupos de configuração */}
           <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {SETTINGS_NAV.map((group) => {
+            {settingsGroups.map((group) => {
               const GroupIcon = group.icon;
               const isCollapsed = collapsed.has(group.id);
               return (

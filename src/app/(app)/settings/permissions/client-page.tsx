@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Plus, RefreshCw, Shield, Users } from "lucide-react";
 
+import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { Button } from "@/components/ui/button";
+import { useUserRole } from "@/hooks/use-user-role";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GroupEditor } from "@/features/permissions/group-editor";
@@ -20,8 +22,19 @@ type ActiveSheet =
   | null;
 
 export function PermissionsClientPage() {
+  const { role, isSuperAdmin, ready } = useUserRole();
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
   const [activeTab, setActiveTab] = useState("roles");
+
+  const isOrgAdmin = isSuperAdmin || role === "ADMIN";
+  if (ready && !isOrgAdmin) {
+    return (
+      <RestrictedScreen
+        title="Acesso restrito"
+        description="Permissões e roles são gerenciados apenas por administradores da organização."
+      />
+    );
+  }
 
   return (
     <SettingsV2Shell
@@ -238,10 +251,19 @@ function RoleGroup({
 /* ── GroupsTab ───────────────────────────────────────────────────────────── */
 
 function GroupsTab({ onEdit }: { onEdit: (id: string) => void }) {
-  const { data: groups = [], isLoading, refetch } = useGroups();
+  const { data: groups = [], isLoading, isError, error, refetch } = useGroups();
 
   if (isLoading) {
     return <TabSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <EmptyState
+        message={error instanceof Error ? error.message : "Erro ao carregar grupos."}
+        onRefresh={() => void refetch()}
+      />
+    );
   }
 
   if (groups.length === 0) {

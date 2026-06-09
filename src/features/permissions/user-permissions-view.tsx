@@ -34,12 +34,18 @@ export function UserPermissionsView({ userId, userName, userEmail }: UserPermiss
     );
   }
 
+  const hasFullAccess = data.permissions.includes("*");
+
   // Agrupar permissions por resource
   const grouped = new Map<string, string[]>();
-  for (const key of data.permissions) {
-    const [resource, action] = key.split(":");
-    if (!grouped.has(resource)) grouped.set(resource, []);
-    grouped.get(resource)!.push(action);
+  if (hasFullAccess) {
+    grouped.set("acesso", ["total (*)"]);
+  } else {
+    for (const key of data.permissions) {
+      const [resource, action] = key.split(":");
+      if (!grouped.has(resource)) grouped.set(resource, []);
+      grouped.get(resource)!.push(action);
+    }
   }
 
   return (

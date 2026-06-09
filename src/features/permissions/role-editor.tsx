@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Shield } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -40,13 +40,25 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
+  const allCatalogKeys = useMemo(
+    () =>
+      (catalog?.resources ?? []).flatMap((r) =>
+        r.actions.map((a) => `${r.resource}:${a.action}`),
+      ),
+    [catalog?.resources],
+  );
+
   useEffect(() => {
     if (role) {
       setName(role.name);
       setDescription(role.description ?? "");
-      setChecked(new Set(role.permissions));
+      if (role.permissions.includes("*")) {
+        setChecked(new Set(allCatalogKeys));
+      } else {
+        setChecked(new Set(role.permissions));
+      }
     }
-  }, [role]);
+  }, [role, allCatalogKeys]);
 
   const isSystem = role?.isSystem ?? false;
   const loading = roleLoading || catalogLoading;
@@ -64,7 +76,10 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
 
   async function handleSave() {
     setError(null);
-    const permissions = Array.from(checked);
+    const isAdminPreset = role?.systemPreset === "ADMIN";
+    const permissions = isAdminPreset
+      ? ["*"]
+      : Array.from(checked);
     try {
       if (isNew) {
         const created = await createRole.mutateAsync({ name: name.trim(), description: description.trim(), permissions });

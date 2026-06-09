@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { apiUrl } from "@/lib/api";
+
 import type {
   EffectivePermissions,
   GroupMember,
@@ -8,8 +10,8 @@ import type {
   RoleSummary,
 } from "./types";
 
-async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(apiUrl(path), options);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { message?: string }).message ?? `Erro ${res.status}`);

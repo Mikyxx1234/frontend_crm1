@@ -9,6 +9,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 
+import { apiUrl } from "@/lib/api";
+
 export type MyPermissionsData = {
   permissions: string[];
   channelGrants: string[];
@@ -32,7 +34,7 @@ export function useMyPermissions() {
   return useQuery({
     queryKey: ["my-permissions", userId],
     queryFn: async (): Promise<MyPermissionsData> => {
-      const res = await fetch(`/api/users/${userId}/effective-permissions`);
+      const res = await fetch(apiUrl(`/api/users/${userId}/effective-permissions`));
       if (!res.ok) return EMPTY_PERMISSIONS;
       return res.json();
     },

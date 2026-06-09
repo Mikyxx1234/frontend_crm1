@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
+import { apiUrl } from "@/lib/api";
+
 import { useGroups, useRoles } from "./hooks";
 import { UserPermissionsView } from "./user-permissions-view";
 import type { RoleUser } from "./types";
@@ -23,7 +25,7 @@ function useUsers() {
   return useQuery<UserWithMeta[]>({
     queryKey: ["users-list"],
     queryFn: async () => {
-      const res = await fetch("/api/users");
+      const res = await fetch(apiUrl("/api/users"));
       if (!res.ok) throw new Error("Erro ao carregar usuários");
       return res.json() as Promise<UserWithMeta[]>;
     },

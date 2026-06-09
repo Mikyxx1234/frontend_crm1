@@ -270,7 +270,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         icon: Shield,
         href: "/settings/permissions",
         allowedRoles: SO_ADMIN,
-        requiredPermission: "settings:roles",
+        requiredPermission: "settings:permissions",
         eyebrow: "Novo",
       },
       {

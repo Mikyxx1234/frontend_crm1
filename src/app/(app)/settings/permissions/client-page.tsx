@@ -146,10 +146,19 @@ function NewEntityButton({
 /* ── RolesTab ────────────────────────────────────────────────────────────── */
 
 function RolesTab({ onEdit }: { onEdit: (id: string) => void }) {
-  const { data: roles = [], isLoading, refetch } = useRoles();
+  const { data: roles = [], isLoading, isError, error, refetch } = useRoles();
 
   if (isLoading) {
     return <TabSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <EmptyState
+        message={error instanceof Error ? error.message : "Erro ao carregar roles."}
+        onRefresh={() => void refetch()}
+      />
+    );
   }
 
   const systemRoles = roles.filter((r) => r.isSystem);

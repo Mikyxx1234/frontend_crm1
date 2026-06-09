@@ -19,6 +19,7 @@ import {
   CreatedAtSection,
   DealCustomFieldsSection,
   FilterHeaderActions,
+  LossReasonsSection,
   OtherDatesSection,
   OwnersSection,
   QuickFiltersList,
@@ -116,6 +117,7 @@ export function FilterModalThreeCol({
               <div className="space-y-3">
                 <SearchSection {...section} />
                 <StatusSection {...section} />
+                <LossReasonsSection {...section} />
                 <StagesSection {...section} />
                 <SourcesSection {...section} />
                 <ValueSection {...section} />

@@ -143,6 +143,7 @@ export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
   let users = Array.isArray(data?.users) ? data.users : [];
   let tags = Array.isArray(data?.tags) ? data.tags : [];
   const sources = Array.isArray(data?.sources) ? data.sources : [];
+  const lossReasons = Array.isArray(data?.lossReasons) ? data.lossReasons : [];
 
   // 2) Fallback: chama endpoints individuais (que existem há mais tempo) p/
   //    preencher campos faltantes. Ocorre quando o primário falhou (404/etc)
@@ -218,6 +219,7 @@ export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
     dealCustomFields,
     contactCustomFields,
     sources,
+    lossReasons,
   } as FilterOptionsResponse;
 }
 

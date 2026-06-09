@@ -46,6 +46,8 @@ export type AdvancedDealFilters = {
   withoutOwner?: boolean;
   withoutContact?: boolean;
   sources?: string[];
+  /** Motivos de perda (Deal.lostReason) — match exato com a tabulação. */
+  lostReasons?: string[];
   tagIds?: string[];
   tagMode?: TagMode;
   withoutTags?: boolean;
@@ -69,6 +71,8 @@ export type FilterOptionsResponse = {
   dealCustomFields: CustomField[];
   contactCustomFields: CustomField[];
   sources: string[];
+  /** Motivos de perda: catálogo ativo + motivos livres já usados. */
+  lossReasons?: string[];
 };
 
 export type CustomField = {
@@ -123,6 +127,7 @@ export function countActiveFilters(f: AdvancedDealFilters | null | undefined): n
   if (f.ownerIds?.length || f.withoutOwner) n++;
   if (f.withoutContact) n++;
   if (f.sources?.length) n++;
+  if (f.lostReasons?.length) n++;
   if (f.tagIds?.length || f.withoutTags) n++;
   if (f.contactSearch?.trim()) n++;
   if (f.contactHasPhone === true || f.contactHasPhone === false) n++;

@@ -141,6 +141,11 @@ export function toDealCard(deal: BoardDealDto): Deal {
       name: ownerName,
       avatarColor: colorFromName(ownerName),
     },
+    // Motivo da perda visível no card (e filtrável) — só pra deals LOST.
+    lostReason:
+      deal.status === "LOST" && deal.lostReason?.trim()
+        ? deal.lostReason.trim()
+        : undefined,
   };
 }
 

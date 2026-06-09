@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { IconClock, IconMessage } from "@tabler/icons-react"
+import { IconCircleX, IconClock, IconMessage } from "@tabler/icons-react"
 import { Chip } from "./chip"
 
 export type AvatarColor =
@@ -36,6 +36,8 @@ export interface Deal {
     name: string
     avatarColor: AvatarColor
   }
+  /** Motivo da perda — exibido em destaque quando o deal está perdido. */
+  lostReason?: string
 }
 
 interface DealCardProps {
@@ -175,6 +177,22 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         <div className="mt-1 inline-flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
           <IconClock size={11} />
           {deal.timeAgo}
+        </div>
+      )}
+
+      {/* Motivo da perda — destaque vermelho suave em deals perdidos,
+          permite bater o olho e saber por que o negócio foi perdido. */}
+      {deal.lostReason && (
+        <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.08)] px-2.5 py-1 text-[11px] leading-[1.35]">
+          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[#dc2626]">
+            <IconCircleX size={12} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-display text-[9.5px] font-bold uppercase tracking-wide text-[#dc2626]">
+              Motivo da perda
+            </span>
+            <span className="line-clamp-2 block text-[#991b1b]">{deal.lostReason}</span>
+          </span>
         </div>
       )}
 

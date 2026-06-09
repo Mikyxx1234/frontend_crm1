@@ -13,6 +13,8 @@ export interface BoardDealDto {
   title: string;
   value: number | string;
   status: string;
+  /** Motivo da perda (tabulação) — preenchido quando status = LOST. */
+  lostReason?: string | null;
   position: number;
   expectedClose: string | null;
   createdAt: string;

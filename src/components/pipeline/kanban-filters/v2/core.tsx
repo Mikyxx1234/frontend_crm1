@@ -368,6 +368,30 @@ export function SourcesSection({ draft, options, setDraftField, toggleArray }: S
   );
 }
 
+export function LossReasonsSection({ draft, options, setDraftField, toggleArray }: SectionProps) {
+  const reasons = options?.lossReasons ?? [];
+  if (reasons.length === 0) return null;
+  return (
+    <FieldCard
+      label="Motivo da perda"
+      active={!!draft.lostReasons?.length}
+      onClear={() => setDraftField("lostReasons", undefined)}
+    >
+      <div className="flex flex-wrap gap-1.5">
+        {reasons.map((r) => (
+          <ChipToggle
+            key={r}
+            active={(draft.lostReasons ?? []).includes(r)}
+            onClick={() => setDraftField("lostReasons", toggleArray(draft.lostReasons, r))}
+          >
+            {r}
+          </ChipToggle>
+        ))}
+      </div>
+    </FieldCard>
+  );
+}
+
 export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
   const users = options?.users ?? [];
   const [search, setSearch] = React.useState("");

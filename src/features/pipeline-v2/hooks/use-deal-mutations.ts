@@ -27,11 +27,13 @@ import {
 import { boardKey } from "./use-board";
 import { dealDetailKey } from "./use-deal-detail";
 
-interface MoveVars {
+export interface MoveVars {
   dealId: string;
   fromStageId: string;
   toStageId: string;
   toIndex?: number;
+  /** Motivo da perda — obrigatório no fluxo de mover para o estágio Perdido. */
+  lostReason?: string;
 }
 
 /**
@@ -60,7 +62,11 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
           (target?.deals.length ?? 0) - (hasSelf ? 1 : 0),
         );
       }
-      return moveDeal(vars.dealId, { stageId: vars.toStageId, position: pos });
+      return moveDeal(vars.dealId, {
+        stageId: vars.toStageId,
+        position: pos,
+        lostReason: vars.lostReason,
+      });
     },
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: key });

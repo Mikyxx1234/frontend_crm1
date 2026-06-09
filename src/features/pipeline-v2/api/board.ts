@@ -22,13 +22,40 @@ export async function listPipelines(): Promise<PipelineListItemDto[]> {
   return Array.isArray(data) ? data : data.pipelines ?? data.items ?? [];
 }
 
-/** GET /api/pipelines/:id/board?status=OPEN */
+/**
+ * Ordenação opcional dos cards dentro de cada coluna. Quando omitida,
+ * o backend cai no default histórico (`position asc` = ordem manual
+ * de drag-and-drop). Espelha os params aceitos pelo route handler em
+ * `backend_crm1/src/app/api/pipelines/[id]/board/route.ts`.
+ *
+ * Hoje o frontend usa dois campos server-side:
+ *   - `field: "createdAt"` — opções `created_newest`/`created_oldest`
+ *     do kebab "Ordenar cards".
+ *   - `field: "lastInteraction"` — opções `interaction_newest`/
+ *     `interaction_oldest` (última atualização da conversa do contato).
+ *
+ * Para os demais sorts (`name_*`) a ordenação continua client-side
+ * porque o backend ainda não suporta esses campos.
+ */
+export interface BoardSortParam {
+  field: "createdAt" | "lastInteraction";
+  direction: "asc" | "desc";
+}
+
+/** GET /api/pipelines/:id/board?status=OPEN[&sort=createdAt&direction=desc] */
 export async function getBoard(
   pipelineId: string,
   status: StatusFilter = "OPEN",
+  sort?: BoardSortParam,
 ): Promise<BoardStageDto[]> {
-  const q = status === "OPEN" ? "" : `?status=${status}`;
-  const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/board${q}`));
+  const params = new URLSearchParams();
+  if (status !== "OPEN") params.set("status", status);
+  if (sort) {
+    params.set("sort", sort.field);
+    params.set("direction", sort.direction);
+  }
+  const q = params.toString();
+  const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/board${q ? `?${q}` : ""}`));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(

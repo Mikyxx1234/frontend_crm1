@@ -33,6 +33,9 @@ export type BoardStage = {
   rottingDays: number;
   pipelineId?: string;
   isIncoming?: boolean;
+  /** Estágios terminais fixos (estilo Kommo) — sempre os 2 últimos. */
+  isWon?: boolean;
+  isLost?: boolean;
   conversionRate?: number;
   avgDaysInStage?: number;
   /** Total real de cards na etapa (independente do limit do board). */

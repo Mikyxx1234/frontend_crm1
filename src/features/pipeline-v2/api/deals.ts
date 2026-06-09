@@ -7,10 +7,11 @@ import { apiUrl } from "@/lib/api";
 
 import type { BoardDealDto } from "./types";
 
-/** POST /api/deals/:id/move — move o deal entre estágios. */
+/** POST /api/deals/:id/move — move o deal entre estágios.
+ *  `lostReason` acompanha moves para o estágio Perdido (tabulação). */
 export async function moveDeal(
   dealId: string,
-  payload: { stageId: string; position?: number },
+  payload: { stageId: string; position?: number; lostReason?: string },
 ): Promise<{ deal: BoardDealDto }> {
   const res = await fetch(apiUrl(`/api/deals/${dealId}/move`), {
     method: "POST",

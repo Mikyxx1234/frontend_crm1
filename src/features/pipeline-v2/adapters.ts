@@ -160,10 +160,17 @@ export function toKanbanColumn(stage: BoardStageDto): KanbanColumnView {
     (acc, d) => acc + dealValueNumber(d.value),
     0,
   );
+  // Terminais fixos têm cor determinística pelas flags (verde/vermelho);
+  // os demais seguem a heurística por nome.
+  const color: ColumnColor = stage.isWon
+    ? "quali"
+    : stage.isLost
+      ? "fecha"
+      : stageColorFromName(stage.name);
   return {
     stageId: stage.id,
     title: stage.name,
-    color: stageColorFromName(stage.name),
+    color,
     count: stage.totalCount ?? stage.deals.length,
     total: formatCurrencyBR(totalValue),
     deals: stage.deals.map(toDealCard),

@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
+import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import { useDeleteDeal, useSetDealStatus } from "@/features/pipeline-v2/hooks";
 import type { DealStatus, StatusFilter } from "@/features/pipeline-v2/api";
 
@@ -30,6 +31,7 @@ export function DealActionsMenu({
   onDeleted,
 }: DealActionsMenuProps) {
   const [open, setOpen] = useState(false);
+  const [lostDialogOpen, setLostDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const setStatus = useSetDealStatus(pipelineId, statusFilter);
@@ -80,9 +82,8 @@ export function DealActionsMenu({
               type="button"
               disabled={setStatus.isPending}
               onClick={() => {
-                const reason = window.prompt("Motivo da perda?") ?? "";
-                if (!reason.trim()) return;
-                apply("LOST", reason.trim());
+                setOpen(false);
+                setLostDialogOpen(true);
               }}
               className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8 disabled:opacity-50"
             >
@@ -135,6 +136,17 @@ export function DealActionsMenu({
           </button>
         </div>
       )}
+
+      {/* Tabulação do motivo da perda (catálogo + "Outro") */}
+      <LossReasonDialog
+        open={lostDialogOpen}
+        onOpenChange={setLostDialogOpen}
+        isPending={setStatus.isPending}
+        onConfirm={(reason) => {
+          apply("LOST", reason);
+          setLostDialogOpen(false);
+        }}
+      />
     </div>
   );
 }

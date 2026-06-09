@@ -57,11 +57,18 @@ import {
   useMoveDeal,
   usePipelines,
   useTeamUsers,
+  type MoveVars,
 } from "@/features/pipeline-v2/hooks";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
-import type { BoardDealDto, BoardStageDto, StatusFilter } from "@/features/pipeline-v2/api";
+import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
+import type {
+  BoardDealDto,
+  BoardSortParam,
+  BoardStageDto,
+  StatusFilter,
+} from "@/features/pipeline-v2/api";
 import {
   AddDealDialog,
   AssigneePopover,
@@ -84,23 +91,22 @@ import {
   type AdvancedDealFilters,
 } from "@/components/pipeline/kanban-filters/types";
 
-type TabId = "abertos" | "ganhos" | "perdidos" | "todos";
-
 type SortKey =
   | "default"
-  | "value_desc"
-  | "value_asc"
+  | "interaction_newest"
+  | "interaction_oldest"
   | "name_az"
   | "name_za"
   | "created_newest"
   | "created_oldest";
 
-const TAB_TO_STATUS: Record<TabId, StatusFilter> = {
-  abertos: "OPEN",
-  ganhos: "WON",
-  perdidos: "LOST",
-  todos: "ALL",
-};
+/**
+ * Modelo Kommo: ganho/perdido são ESTÁGIOS fixos no fim do funil (não
+ * mais um filtro por aba). O board sempre carrega com status "ALL" —
+ * deals fechados vivem nas colunas Ganho/Perdido e os abertos nas demais
+ * (Deal.status é sincronizado pelo backend ao mover entre colunas).
+ */
+const BOARD_STATUS: StatusFilter = "ALL";
 
 /**
  * Props opcionais — usadas para reaproveitar o Kanban dentro do
@@ -126,7 +132,6 @@ export default function KanbanV2ClientPage({
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
-  const [activeTab, setActiveTab] = useState<TabId>("abertos");
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
@@ -146,10 +151,16 @@ export default function KanbanV2ClientPage({
   const [importExportOpen, setImportExportOpen] = useState<"import" | "export" | null>(null);
   const bump = useImportExportBump();
 
-  // Ordenação client-side dos cards dentro de cada etapa
+  // Ordenação dos cards dentro de cada etapa. Os sorts `created_*` e
+  // `interaction_*` são delegados ao backend (ver `boardSort` abaixo),
+  // porque ordenar só os deals já carregados (default 100/coluna)
+  // deixava cards "presos" em páginas posteriores quando a coluna tem
+  // >100 registros. Os sorts `name_*` continuam client-side (o backend
+  // ainda não expõe esses campos como sort) — limitação conhecida e
+  // documentada no AGENT.md.
   const [sortKey, setSortKey] = useState<SortKey>("default");
 
-  const status = TAB_TO_STATUS[activeTab];
+  const status = BOARD_STATUS;
   const { data: pipelines } = usePipelines(isAuthenticated);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
 
@@ -160,13 +171,44 @@ export default function KanbanV2ClientPage({
     }
   }, [pipelines, pipelineId]);
 
+  const boardSort = useMemo<BoardSortParam | undefined>(() => {
+    if (sortKey === "created_newest") return { field: "createdAt", direction: "desc" };
+    if (sortKey === "created_oldest") return { field: "createdAt", direction: "asc" };
+    if (sortKey === "interaction_newest") return { field: "lastInteraction", direction: "desc" };
+    if (sortKey === "interaction_oldest") return { field: "lastInteraction", direction: "asc" };
+    return undefined;
+  }, [sortKey]);
+
   const { data: board = [] } = useBoard({
     pipelineId,
     status,
+    sort: boardSort,
     enabled: isAuthenticated,
   });
 
   const moveDeal = useMoveDeal(pipelineId, status);
+
+  // ── Tabulação de motivo da perda ─────────────────────────────────
+  // Mover para o estágio Perdido exige motivo: o move fica pendente até
+  // o usuário confirmar no LossReasonDialog (cancelar = não move).
+  const [pendingLostMove, setPendingLostMove] = useState<MoveVars | null>(null);
+
+  const requestMove = useCallback(
+    (vars: MoveVars) => {
+      const target = board.find((s) => s.id === vars.toStageId);
+      if (target?.isLost) {
+        const deal = board
+          .flatMap((s) => s.deals)
+          .find((d) => d.id === vars.dealId);
+        if (deal?.status !== "LOST") {
+          setPendingLostMove(vars);
+          return;
+        }
+      }
+      moveDeal.mutate(vars);
+    },
+    [board, moveDeal],
+  );
 
   // ── Seleção em massa (resgatada da versão antiga) ────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -207,11 +249,11 @@ export default function KanbanV2ClientPage({
     });
   }, []);
 
-  // Limpa a seleção ao trocar de pipeline ou aba — os IDs não fazem
+  // Limpa a seleção ao trocar de pipeline — os IDs não fazem
   // sentido entre boards diferentes.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [pipelineId, activeTab]);
+  }, [pipelineId]);
 
   // Carrega options de filtro quando o painel é aberto pela primeira vez
   useEffect(() => {
@@ -262,22 +304,34 @@ export default function KanbanV2ClientPage({
             }),
           }));
 
-    // Ordenação client-side dos cards dentro de cada coluna
-    if (sortKey === "default") return filtered;
+    // Ordenação dos cards dentro de cada coluna.
+    //
+    // `default` / `created_*` / `interaction_*` → não fazem nada aqui:
+    //   - `default` mantém a ordem `position asc` que veio do backend.
+    //   - `created_newest` / `created_oldest` JÁ vêm ordenados do
+    //     servidor (param `sort=createdAt&direction=...` em `useBoard`).
+    //   - `interaction_newest` / `interaction_oldest` JÁ vêm ordenados
+    //     do servidor (param `sort=lastInteraction&direction=...`),
+    //     cobrindo todos os deals da coluna e não só os 100 carregados.
+    //
+    // `name_*` continua client-side porque o backend ainda não expõe
+    // esse campo como sort do board. Limitação conhecida: ordena só os
+    // deals carregados na coluna.
+    if (
+      sortKey === "default" ||
+      sortKey === "created_newest" ||
+      sortKey === "created_oldest" ||
+      sortKey === "interaction_newest" ||
+      sortKey === "interaction_oldest"
+    ) {
+      return filtered;
+    }
     return filtered.map((stage) => {
       const deals = [...stage.deals];
-      if (sortKey === "value_desc") {
-        deals.sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0));
-      } else if (sortKey === "value_asc") {
-        deals.sort((a, b) => (Number(a.value) || 0) - (Number(b.value) || 0));
-      } else if (sortKey === "name_az") {
+      if (sortKey === "name_az") {
         deals.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? "", "pt-BR"));
       } else if (sortKey === "name_za") {
         deals.sort((a, b) => (b.title ?? "").localeCompare(a.title ?? "", "pt-BR"));
-      } else if (sortKey === "created_newest") {
-        deals.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
-      } else if (sortKey === "created_oldest") {
-        deals.sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime());
       }
       return { ...stage, deals };
     });
@@ -374,7 +428,7 @@ export default function KanbanV2ClientPage({
     ) {
       return;
     }
-    moveDeal.mutate({
+    requestMove({
       dealId: draggableId,
       fromStageId: source.droppableId,
       toStageId: destination.droppableId,
@@ -391,8 +445,7 @@ export default function KanbanV2ClientPage({
         style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)", overflow: "clip" }}
       >
         <PipelineHeader
-          activeTab={activeTab}
-          onTabChange={(t) => setActiveTab(t)}
+          tabsOverride={<></>}
           activeView="kanban"
           onViewChange={(view) => {
             if (view === "list" && listHref) router.push(listHref);
@@ -482,6 +535,7 @@ export default function KanbanV2ClientPage({
                 selectionMode={selectionMode}
                 onToggleSelect={toggleSelect}
                 onToggleSelectAllInColumn={toggleSelectMany}
+                onRequestMove={requestMove}
                 onAddDeal={() =>
                   setAddStage({ id: col.stageId, name: col.title })
                 }
@@ -557,6 +611,7 @@ export default function KanbanV2ClientPage({
               currentStageId={activeDealStageId}
               pipelineId={pipelineId}
               statusFilter={status}
+              onRequestMove={requestMove}
             >
               {({ onSelectStage, isPending }) => (
                 <StageDropdown
@@ -771,6 +826,23 @@ export default function KanbanV2ClientPage({
         statusFilter={status}
       />
 
+      {/* Tabulação do motivo da perda — abre sempre que um deal vai
+          para o estágio Perdido (drag, menu do card ou drawer). */}
+      <LossReasonDialog
+        open={!!pendingLostMove}
+        onOpenChange={(o) => {
+          if (!o) setPendingLostMove(null);
+        }}
+        isPending={moveDeal.isPending}
+        title="Mover para Perdido"
+        description="Informe o motivo da perda para concluir a movimentação."
+        onConfirm={(reason) => {
+          if (!pendingLostMove) return;
+          moveDeal.mutate({ ...pendingLostMove, lostReason: reason });
+          setPendingLostMove(null);
+        }}
+      />
+
       {pipelineId ? (
         <BulkActionsBar
           selectedCount={selectedIds.size}
@@ -781,6 +853,7 @@ export default function KanbanV2ClientPage({
             id: s.id,
             name: s.name,
             color: s.color ?? undefined,
+            isLost: s.isLost,
           }))}
           users={teamUsers.map((u) => ({ id: u.id, name: u.name }))}
         />
@@ -912,12 +985,14 @@ function CardMoveMenu({
   pipelineId,
   statusFilter,
   stages,
+  onRequestMove,
 }: {
   dealId: string;
   currentStageId: string;
   pipelineId: string | null;
   statusFilter: StatusFilter;
   stages: BoardStageDto[];
+  onRequestMove?: (vars: { dealId: string; fromStageId: string; toStageId: string }) => void;
 }) {
   return (
     <StagePicker
@@ -925,6 +1000,7 @@ function CardMoveMenu({
       currentStageId={currentStageId}
       pipelineId={pipelineId}
       statusFilter={statusFilter}
+      onRequestMove={onRequestMove}
     >
       {({ onSelectStage, isPending }) => (
         <CardMoveDropdown
@@ -1066,6 +1142,7 @@ function DroppableColumn({
   selectionMode,
   onToggleSelect,
   onToggleSelectAllInColumn,
+  onRequestMove,
 }: {
   column: KanbanColumnView;
   onDealClick: (id: string) => void;
@@ -1080,6 +1157,7 @@ function DroppableColumn({
   selectionMode: boolean;
   onToggleSelect: (id: string) => void;
   onToggleSelectAllInColumn: (ids: string[]) => void;
+  onRequestMove?: (vars: { dealId: string; fromStageId: string; toStageId: string }) => void;
 }) {
   // Estado de seleção em massa restrito aos deals JÁ CARREGADOS desta
   // coluna. Replica o comportamento do kanban antigo.
@@ -1223,6 +1301,7 @@ function DroppableColumn({
                           pipelineId={pipelineId}
                           statusFilter={statusFilter}
                           stages={stages}
+                          onRequestMove={onRequestMove}
                         />
                       }
                     />
@@ -1293,13 +1372,13 @@ function avatarColorSlugFromName(name: string | null | undefined): string {
 // ─── PipelineKebabMenu ─────────────────────────────────────���──────
 
 const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ReactNode }[] = [
-  { key: "default",        label: "Padrão (posição)",      icon: <IconArrowsSort size={13} /> },
-  { key: "value_desc",     label: "Valor: maior primeiro", icon: <IconArrowNarrowDown size={13} /> },
-  { key: "value_asc",      label: "Valor: menor primeiro", icon: <IconArrowNarrowUp size={13} /> },
-  { key: "name_az",        label: "Nome: A → Z",           icon: <IconAbc size={13} /> },
-  { key: "name_za",        label: "Nome: Z → A",           icon: <IconAbc size={13} /> },
-  { key: "created_newest", label: "Criação: mais recente", icon: <IconClock size={13} /> },
-  { key: "created_oldest", label: "Criação: mais antigo",  icon: <IconClock size={13} /> },
+  { key: "default",             label: "Padrão (posição)",            icon: <IconArrowsSort size={13} /> },
+  { key: "interaction_newest",  label: "Última interação: mais recente", icon: <IconArrowNarrowDown size={13} /> },
+  { key: "interaction_oldest",  label: "Última interação: mais antiga",  icon: <IconArrowNarrowUp size={13} /> },
+  { key: "name_az",             label: "Nome: A → Z",                 icon: <IconAbc size={13} /> },
+  { key: "name_za",             label: "Nome: Z → A",                 icon: <IconAbc size={13} /> },
+  { key: "created_newest",      label: "Criação: mais recente",       icon: <IconClock size={13} /> },
+  { key: "created_oldest",      label: "Criação: mais antigo",        icon: <IconClock size={13} /> },
 ];
 
 interface PipelineKebabMenuProps {

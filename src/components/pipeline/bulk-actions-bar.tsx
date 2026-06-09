@@ -25,7 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
 
-type StageOption = { id: string; name: string; color?: string };
+type StageOption = { id: string; name: string; color?: string; isLost?: boolean };
 type UserOption = { id: string; name: string };
 
 type BulkActionsBarProps = {
@@ -119,6 +119,10 @@ export function BulkActionsBar({
   const [ownerOpen, setOwnerOpen] = React.useState(false);
   const [lostOpen, setLostOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  // Mover em massa para o estágio Perdido exige tabulação do motivo —
+  // guarda o stage alvo até o usuário confirmar no dialog.
+  const [pendingLostMoveStage, setPendingLostMoveStage] =
+    React.useState<StageOption | null>(null);
 
   // ID e total da BulkOperation atualmente acompanhada. Quando setado,
   // o `BulkOperationProgressDialog` abre e faz polling no backend.
@@ -168,7 +172,7 @@ export function BulkActionsBar({
   // progresso visual. A barra fica oculta quando `selectedCount === 0`
   // mas os Dialogs (em particular o de progresso) seguem no DOM.
   const showBar = selectedCount > 0;
-  if (!showBar && !progressOperationId && !lostOpen && !deleteOpen) return null;
+  if (!showBar && !progressOperationId && !lostOpen && !deleteOpen && !pendingLostMoveStage) return null;
 
   return (
     <>
@@ -215,7 +219,12 @@ export function BulkActionsBar({
                     type="button"
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-medium text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
-                      mutation.mutate({ dealIds, action: "move_stage", stageId: s.id });
+                      // Estágio Perdido: pede a tabulação do motivo antes.
+                      if (s.isLost) {
+                        setPendingLostMoveStage(s);
+                      } else {
+                        mutation.mutate({ dealIds, action: "move_stage", stageId: s.id });
+                      }
                       setMoveOpen(false);
                     }}
                   >
@@ -323,6 +332,27 @@ export function BulkActionsBar({
         }}
         isPending={mutation.isPending}
         title={`Marcar ${selectedCount} negócio(s) como perdido`}
+      />
+
+      {/* Tabulação ao mover em massa para o estágio Perdido */}
+      <LossReasonDialog
+        open={!!pendingLostMoveStage}
+        onOpenChange={(o) => {
+          if (!o) setPendingLostMoveStage(null);
+        }}
+        onConfirm={(reason) => {
+          if (!pendingLostMoveStage) return;
+          mutation.mutate({
+            dealIds,
+            action: "move_stage",
+            stageId: pendingLostMoveStage.id,
+            lostReason: reason,
+          });
+          setPendingLostMoveStage(null);
+        }}
+        isPending={mutation.isPending}
+        title={`Mover ${selectedCount} negócio(s) para Perdido`}
+        description="Informe o motivo da perda para concluir a movimentação."
       />
 
       {/* Delete confirm */}

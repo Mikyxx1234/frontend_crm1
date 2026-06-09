@@ -12,6 +12,7 @@ import {
   IconCopy,
   IconDots,
   IconExternalLink,
+  IconLock,
   IconPalette,
   IconPencil,
   IconPlus,
@@ -78,6 +79,14 @@ interface StageConfig {
   color: string;
   position: number;
   automations: Automation[];
+  /** Estágios terminais fixos (Ganho/Perdido) — sem drag/rename/reorder. */
+  isWon?: boolean;
+  isLost?: boolean;
+}
+
+/** Terminal fixo (Ganho/Perdido): travado na configuração. */
+function isTerminalStage(stage: Pick<StageConfig, "isWon" | "isLost"> | undefined): boolean {
+  return Boolean(stage?.isWon || stage?.isLost);
 }
 
 // ─── CopyToStageModal ─────────────────────────────────────────────
@@ -707,10 +716,11 @@ function StageColumn({
   onDrop,
   onDragEnd,
 }: StageColumnProps) {
+  const locked = isTerminalStage(stage);
   return (
     <section
       aria-label={`Estágio ${stage.name}`}
-      draggable
+      draggable={!locked}
       onDragStart={() => onDragStart(stage.id)}
       onDragOver={(e) => { e.preventDefault(); onDragOver(stage.id); }}
       onDrop={(e) => { e.preventDefault(); onDrop(stage.id); }}
@@ -725,17 +735,25 @@ function StageColumn({
       {/* Header */}
       <div className="flex items-center justify-between px-1 pb-2.5">
         <div className="flex items-center gap-2.5">
-          {/* Handle de drag */}
-          <TooltipGlass label="Arrastar para reordenar" side="top">
-            <span className="flex cursor-grab flex-col gap-[3px] active:cursor-grabbing">
-              {[0,1,2].map((i) => (
-              <span key={i} className="flex gap-[3px]">
-                <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
-                <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
+          {/* Handle de drag — terminais fixos não reordenam */}
+          {locked ? (
+            <TooltipGlass label="Estágio fixo do funil" side="top">
+              <span className="flex items-center text-[var(--text-muted)]/60">
+                <IconLock size={14} />
               </span>
-            ))}
-            </span>
-          </TooltipGlass>
+            </TooltipGlass>
+          ) : (
+            <TooltipGlass label="Arrastar para reordenar" side="top">
+              <span className="flex cursor-grab flex-col gap-[3px] active:cursor-grabbing">
+                {[0,1,2].map((i) => (
+                <span key={i} className="flex gap-[3px]">
+                  <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
+                  <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
+                </span>
+              ))}
+              </span>
+            </TooltipGlass>
+          )}
           <span
             className="h-[18px] w-[3px] rounded-full"
             style={{ background: stage.color }}
@@ -747,16 +765,22 @@ function StageColumn({
             {stage.automations.length}
           </span>
         </div>
-        <StageOptionsMenu
-          stageId={stage.id}
-          isFirst={isFirst}
-          isLast={isLast}
-          currentColor={stage.color}
-          onMoveForward={() => onMoveForward(stage.id)}
-          onMoveBackward={() => onMoveBackward(stage.id)}
-          onRename={() => onRename(stage.id)}
-          onChangeColor={(color) => onChangeColor(stage.id, color)}
-        />
+        {locked ? (
+          <span className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+            Fixo
+          </span>
+        ) : (
+          <StageOptionsMenu
+            stageId={stage.id}
+            isFirst={isFirst}
+            isLast={isLast}
+            currentColor={stage.color}
+            onMoveForward={() => onMoveForward(stage.id)}
+            onMoveBackward={() => onMoveBackward(stage.id)}
+            onRename={() => onRename(stage.id)}
+            onChangeColor={(color) => onChangeColor(stage.id, color)}
+          />
+        )}
       </div>
 
       {/* Subtítulo */}
@@ -1171,6 +1195,8 @@ export default function PipelineSettingsClientPage() {
             color: stageColorOverrides[s.id] ?? s.color ?? "#5B6FF5",
             position: s.position,
             automations: stageAutomationsMap[s.id] ?? [],
+            isWon: s.isWon,
+            isLost: s.isLost,
           } satisfies StageConfig;
         }
         // Etapa criada localmente (não está no board do backend ainda)
@@ -1200,19 +1226,29 @@ export default function PipelineSettingsClientPage() {
 
   // ─── Handlers de estágio ────────────────────────────────────────
 
+  // Terminais fixos (Ganho/Perdido): não arrastam, não recebem drop e
+  // nenhum estágio comum pode passar pra depois deles.
+  const terminalStageIds = useMemo(
+    () => new Set(board.filter((s) => s.isWon || s.isLost).map((s) => s.id)),
+    [board],
+  );
+
   const handleDragStart = useCallback((stageId: string) => {
+    if (terminalStageIds.has(stageId)) return;
     dragSourceId.current = stageId;
-  }, []);
+  }, [terminalStageIds]);
 
   const handleDragOver = useCallback((stageId: string) => {
+    if (terminalStageIds.has(stageId)) return;
     if (dragSourceId.current && dragSourceId.current !== stageId) {
       setDragOverId(stageId);
     }
-  }, []);
+  }, [terminalStageIds]);
 
   const handleDrop = useCallback((targetId: string) => {
     const sourceId = dragSourceId.current;
     if (!sourceId || sourceId === targetId) return;
+    if (terminalStageIds.has(sourceId) || terminalStageIds.has(targetId)) return;
     setStageOrder((prev) => {
       const arr = [...prev];
       const fromIdx = arr.indexOf(sourceId);
@@ -1224,7 +1260,7 @@ export default function PipelineSettingsClientPage() {
     });
     dragSourceId.current = null;
     setDragOverId(null);
-  }, []);
+  }, [terminalStageIds]);
 
   const handleDragEnd = useCallback(() => {
     dragSourceId.current = null;
@@ -1232,24 +1268,28 @@ export default function PipelineSettingsClientPage() {
   }, []);
 
   const handleMoveForward = useCallback((stageId: string) => {
+    if (terminalStageIds.has(stageId)) return;
     setStageOrder((prev) => {
       const idx = prev.indexOf(stageId);
       if (idx <= 0) return prev;
+      if (terminalStageIds.has(prev[idx - 1])) return prev;
       const next = [...prev];
       [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
       return next;
     });
-  }, []);
+  }, [terminalStageIds]);
 
   const handleMoveBackward = useCallback((stageId: string) => {
+    if (terminalStageIds.has(stageId)) return;
     setStageOrder((prev) => {
       const idx = prev.indexOf(stageId);
       if (idx === -1 || idx >= prev.length - 1) return prev;
+      if (terminalStageIds.has(prev[idx + 1])) return prev;
       const next = [...prev];
       [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
       return next;
     });
-  }, []);
+  }, [terminalStageIds]);
 
   const handleRenameConfirm = useCallback((name: string) => {
     if (!renamingStageId) return;
@@ -1263,18 +1303,20 @@ export default function PipelineSettingsClientPage() {
 
   const handleAddStage = useCallback((name: string) => {
     const newId = `local-stage-${Date.now()}`;
-    const newStage: StageConfig = {
-      id: newId,
-      name,
-      color: "#5B6FF5",
-      position: stages.length,
-      automations: [],
-    };
-    setStageOrder((prev) => [...prev, newId]);
+    const color = "#5B6FF5";
+    // Insere ANTES dos terminais fixos (Ganho/Perdido) — eles sempre
+    // fecham o pipeline. O backend aplica a mesma regra no POST.
+    setStageOrder((prev) => {
+      const firstTerminalIdx = prev.findIndex((id) => terminalStageIds.has(id));
+      if (firstTerminalIdx === -1) return [...prev, newId];
+      const next = [...prev];
+      next.splice(firstTerminalIdx, 0, newId);
+      return next;
+    });
     setStageNameOverrides((prev) => ({ ...prev, [newId]: name }));
-    setStageColorOverrides((prev) => ({ ...prev, [newId]: newStage.color }));
+    setStageColorOverrides((prev) => ({ ...prev, [newId]: color }));
     setAddStageOpen(false);
-  }, [stages.length]);
+  }, [terminalStageIds]);
 
   // ─── Handlers de automação ──────────────────────────────────────
 
@@ -1430,7 +1472,7 @@ export default function PipelineSettingsClientPage() {
                   key={stage.id}
                   stage={stage}
                   isFirst={idx === 0}
-                  isLast={idx === stages.length - 1}
+                  isLast={idx === stages.length - 1 || isTerminalStage(stages[idx + 1])}
                   isDragOver={dragOverId === stage.id}
                   allStages={stages}
                   onAddAutomation={handleAddAutomation}

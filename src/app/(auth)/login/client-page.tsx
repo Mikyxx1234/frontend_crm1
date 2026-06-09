@@ -3,8 +3,8 @@
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { Suspense, useEffect, useState } from "react";
-import { Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { AlertCircle, Eye, EyeOff, Loader2, Lock, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
@@ -43,6 +43,15 @@ function LoginForm() {
   // do v0.dev onde a env var NEXT_PUBLIC_PREVIEW_MODE não foi inlinada no build.
   // Em SSR fica `false` → sem hydration mismatch.
   const [previewAllowed, setPreviewAllowed] = useState(false);
+  /**
+   * Bump incrementado a cada novo erro pra forçar o `<motion.p role="alert">`
+   * a refazer a animação de entrada mesmo quando a string do erro é igual à
+   * tentativa anterior (ex.: usuário erra senha 2x seguidas). React não
+   * re-monta um node só porque o texto mudou de "X" pra "X" — usamos a
+   * `key={errorBump}` no nó pra forçar remount + animação.
+   */
+  const [errorBump, setErrorBump] = useState(0);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setPreviewAllowed(isPreviewMode() || isV0PreviewHost());
@@ -57,6 +66,24 @@ function LoginForm() {
     return () => window.clearTimeout(id);
   }, [loginSuccess, callbackUrl]);
 
+  /**
+   * Bug fix: em algumas situações o `signIn("credentials", { redirect: false })`
+   * retorna `{ ok: true, error: "..." }` mesmo quando o `authorize` rejeita
+   * a credencial (depende da versão de `next-auth/react`). Centralizamos a
+   * checagem aqui pra que toda nova ramificação que detectar falha caia
+   * NUNCA no branch de `setLoginSuccess(true)` (que mostra "Acesso liberado").
+   *
+   * Critério rígido de sucesso: `ok === true` E sem `error`.
+   */
+  function showError(message: string) {
+    setError(message);
+    setLoginSuccess(false);
+    setErrorBump((n) => n + 1);
+    // Devolve foco pro campo de senha pra reentrada rápida; SR anuncia o
+    // alerta via `aria-live="assertive"` no nó do erro.
+    requestAnimationFrame(() => passwordRef.current?.focus());
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -69,38 +96,44 @@ function LoginForm() {
       });
 
       if (result === undefined) {
-        setError(
+        showError(
           "Não foi possível iniciar o login. Recarregue a página ou verifique se /api/auth está acessível.",
         );
         return;
       }
 
-      if (!result.ok) {
+      // Checagem estrita: ok=true E sem error. Cobre o caso (raro mas
+      // documentado) de o `next-auth/react` retornar `ok: true` com
+      // `error` setado quando o callback responde 200 mas o authorize
+      // recusou — exatamente o sintoma reportado ("aparece como sucedido,
+      // mas volta pra preencher").
+      const hasError = !result.ok || Boolean(result.error);
+
+      if (hasError) {
         if (result.code === "database_unavailable") {
-          setError(
+          showError(
             "Não foi possível conectar ao banco de dados. Inicie o PostgreSQL (ex.: docker compose up -d) e confira o DATABASE_URL no .env.",
           );
         } else if (result.code === "account_locked") {
-          setError(
+          showError(
             "Conta temporariamente bloqueada por várias tentativas. Aguarde alguns minutos ou peça a um admin para revisar o bloqueio.",
           );
         } else if (result.code === "mfa_required") {
-          setError(
+          showError(
             "Esta conta exige MFA. Use o fluxo de código de autenticação (em desenvolvimento no login web).",
           );
-        } else if (result.error) {
-          setError("E-mail ou senha incorretos.");
         } else {
-          setError(
-            `Não foi possível entrar${result.code ? ` (${result.code})` : ""}. Tente de novo.`,
-          );
+          // Default: credenciais inválidas (CredentialsSignin) ou qualquer
+          // outro erro genérico. Mensagem única evita user-enumeration
+          // (não revela se o e-mail existe).
+          showError("E-mail ou senha incorretos.");
         }
         return;
       }
 
       setLoginSuccess(true);
     } catch (err) {
-      setError(
+      showError(
         err instanceof Error && err.message.includes("URL")
           ? "Resposta inválida do servidor de autenticação. Atualize as dependências do Auth.js ou abra um issue com o log do Network em /api/auth/callback/credentials."
           : "Erro ao contactar o servidor. Verifique PostgreSQL, NEXTAUTH_URL (ex.: http://localhost:3000) e o console (F12).",
@@ -246,6 +279,7 @@ function LoginForm() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6b7280]" aria-hidden />
               <input
+                ref={passwordRef}
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
@@ -255,7 +289,14 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-9 pr-11 text-[14px] text-[#1f2937] placeholder:text-[#6b7280] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                aria-invalid={!!error}
+                aria-describedby={error ? "login-error" : undefined}
+                className={cn(
+                  "h-11 w-full rounded-full border bg-white/80 pl-9 pr-11 text-[14px] text-[#1f2937] placeholder:text-[#6b7280] backdrop-blur transition-all focus:outline-none focus:ring-2 disabled:opacity-50",
+                  error
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                    : "border-white/70 focus:border-primary focus:ring-primary/20",
+                )}
               />
               <button
                 type="button"
@@ -270,14 +311,21 @@ function LoginForm() {
           </div>
 
           {error ? (
-            <p
+            <motion.div
+              key={errorBump}
               role="alert"
+              aria-live="assertive"
+              id="login-error"
+              initial={{ opacity: 0, x: 0 }}
+              animate={{ opacity: 1, x: [0, -8, 8, -6, 6, -3, 3, 0] }}
+              transition={{ duration: 0.45, ease: "easeInOut" }}
               className={cn(
-                "mb-4 rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive backdrop-blur",
+                "mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50/90 px-3 py-2 text-[13px] font-medium leading-snug text-red-700 backdrop-blur shadow-[0_4px_12px_-4px_rgba(220,38,38,0.18)]",
               )}
             >
-              {error}
-            </p>
+              <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden />
+              <span className="flex-1">{error}</span>
+            </motion.div>
           ) : null}
 
           <button

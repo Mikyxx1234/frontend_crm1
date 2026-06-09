@@ -23,7 +23,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[200px] max-w-[260px] rounded-2xl border bg-white transition-all duration-200",
+        "group/node relative min-w-[200px] max-w-[260px] rounded-lg border bg-white transition-all duration-200",
         selected
           ? "border-rose-400/60 ring-2 ring-rose-300/30 shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)]"
           : "border-white/60 shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[0_10px_30px_-10px_rgba(244,63,94,0.3)]"
@@ -42,7 +42,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
           {data.stepIndex}
         </span>
       )}
-      <div className="overflow-hidden rounded-2xl">
+      <div className="overflow-hidden rounded-lg">
         {/* Header rose distinto, igual em estrutura ao TriggerNode pra
             fechar o fluxo visualmente */}
         <div className="relative overflow-hidden bg-linear-to-br from-rose-500 via-rose-500 to-rose-600 px-4 py-3 text-white">

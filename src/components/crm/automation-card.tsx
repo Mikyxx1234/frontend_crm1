@@ -9,8 +9,8 @@ import {
   IconClock,
 } from "@tabler/icons-react"
 import { SwitchGlass } from "./switch-glass"
-import { MiniFlow } from "./mini-flow"
-import { getFlow } from "@/lib/automation-flow"
+import { MiniFlow, type MiniFlowStep } from "./mini-flow"
+import { blockKeyForStepType } from "./flow-block-icon"
 import type { Automation } from "@/lib/automations-data"
 
 const accentBar: Record<Automation["accent"], string> = {
@@ -27,8 +27,18 @@ interface AutomationCardProps {
 }
 
 export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
-  const flow = getFlow(automation.id)
-  const steps = flow.map((n) => ({ blockType: n.blockType }))
+  // Mini-fluxo a partir do workflow REAL: nó de gatilho + passos reais
+  // (tipos vindos da API, normalizados para as chaves de ícone). Sem
+  // `stepTypes` (mock/legado) usamos `steps` (contagem) como nós genéricos
+  // — nunca mais um fluxo fixo de outra automação.
+  const stepTypes =
+    automation.stepTypes && automation.stepTypes.length > 0
+      ? automation.stepTypes
+      : Array.from({ length: automation.steps }, () => "action")
+  const steps: MiniFlowStep[] = [
+    { blockType: "trigger" },
+    ...stepTypes.map((t) => ({ blockType: blockKeyForStepType(t) })),
+  ]
 
   return (
     <div className="group relative flex items-center gap-4 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-3.5 pl-5 pr-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:shadow-[var(--glass-shadow)]">

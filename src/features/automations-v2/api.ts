@@ -46,6 +46,8 @@ export interface AutomationListItemDto {
   createdAt: string;
   updatedAt: string;
   stepCount: number;
+  /** Tipos dos passos na ordem (vocabulário backend, ex.: "send_email"). */
+  stepTypes?: string[];
   /**
    * Métricas reais agregadas pelo backend (buildAutomationListStats).
    * Opcionais porque o endpoint de detalhe (GET /api/automations/:id) não

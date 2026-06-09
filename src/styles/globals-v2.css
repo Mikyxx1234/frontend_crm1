@@ -203,6 +203,12 @@
    ────────────────────────────────────────────────────────────────── */
 .v2-root {
   --v2-scale: 0.88;
+  /* Recíproco da escala — usado para NEUTRALIZAR o zoom em subtrees que
+     precisam de coordenadas reais da viewport (ex.: canvas do React Flow,
+     que não compensa CSS `zoom` ao mapear cursor→fluxo). calc() num custom
+     property resolve pra número, então `zoom: var(--v2-unscale)` é a forma
+     unitless suportada em todo Chromium/Safari. */
+  --v2-unscale: calc(1 / var(--v2-scale));
   zoom: var(--v2-scale);
 }
 
@@ -439,4 +445,118 @@
 @keyframes addDealExpand {
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Editor de automações — alinhamento da LINHA DE CONEXÃO com o cursor.
+   As rotas v2 vivem sob `.v2-root { zoom: 0.88 }`. O React Flow v11 mapeia
+   cursor→fluxo via getBoundingClientRect + clientX/Y e NÃO compensa CSS
+   `zoom`, então a ponta da linha de conexão "escorrega" do mouse (erro
+   proporcional à distância do ponto de origem).
+   Correção: neutralizamos o zoom SÓ no `.react-flow` (zoom = 1/0.88 →
+   cumulativo 1.0 = coordenadas reais), e como `zoom` também escala a CAIXA
+   de layout, encolhemos width/height pra var(--v2-scale) → 88% × 1.1364 =
+   100% do contêiner. Controls/MiniMap (filhos do .react-flow) levam
+   counter-zoom pra não ficarem maiores que o resto da UI. O menu de
+   contexto e o seletor de passos ficam FORA do .react-flow (no
+   .automation-canvas), então seguem na escala normal da UI.
+   ══════════════════════════════════════════════════════════════════ */
+.automation-editor .react-flow {
+  zoom: var(--v2-unscale);
+  width: calc(100% * var(--v2-scale));
+  height: calc(100% * var(--v2-scale));
+}
+.automation-editor .react-flow__controls,
+.automation-editor .react-flow__minimap {
+  zoom: var(--v2-scale);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Editor de automações — alinhamento dos handles (conectores).
+   Os nós aumentam o handle (size-2/size-3) mas o React Flow v11 usa um
+   offset fixo (~-4px, calibrado pro handle padrão de 6px), então o
+   círculo fica fora de centro na borda. Centralizamos via transform
+   independente do tamanho — assim qualquer handle fica colado no meio
+   da borda, não importa o diâmetro. Vale nos dois temas.
+   ══════════════════════════════════════════════════════════════════ */
+.automation-editor .react-flow__handle-left {
+  left: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+.automation-editor .react-flow__handle-right {
+  right: 0 !important;
+  transform: translate(50%, -50%) !important;
+}
+.automation-editor .react-flow__handle-top {
+  top: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+.automation-editor .react-flow__handle-bottom {
+  bottom: 0 !important;
+  transform: translate(-50%, 50%) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Editor de automações (React Flow v11) — modo escuro.
+   O editor foi construído com cores claras fixas (bg-white, slate-*).
+   Em vez de reescrever ~13 componentes de nó, remapeamos as cores
+   "neutras" (superfície/texto/borda) dentro do container
+   `.automation-editor` quando `.v2-dark` está ativo. As cores
+   semânticas dos ícones (azul/verde/âmbar...) são preservadas.
+   (Abordagem documentada pelo React Flow para dark mode na v11.)
+   ══════════════════════════════════════════════════════════════════ */
+.v2-dark .automation-canvas {
+  background-color: #0e1524 !important;
+  background-image:
+    radial-gradient(ellipse at top left, rgba(123, 141, 247, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(6, 182, 212, 0.09) 0%, transparent 55%) !important;
+}
+
+/* Superfícies neutras (cartões de nó, itens da palette) */
+.v2-dark .automation-editor .bg-white,
+.v2-dark .automation-editor .bg-white\/85,
+.v2-dark .automation-editor .bg-white\/80 {
+  background-color: #1a2336 !important;
+}
+.v2-dark .automation-editor .bg-slate-50 {
+  background-color: #141d2e !important;
+}
+
+/* Texto neutro */
+.v2-dark .automation-editor .text-slate-900,
+.v2-dark .automation-editor .text-slate-800 { color: #e7ecf6 !important; }
+.v2-dark .automation-editor .text-slate-700,
+.v2-dark .automation-editor .text-slate-600 { color: #c2cce0 !important; }
+.v2-dark .automation-editor .text-slate-500,
+.v2-dark .automation-editor .text-slate-400 { color: #93a1b8 !important; }
+
+/* Bordas e anéis neutros */
+.v2-dark .automation-editor .border-slate-100,
+.v2-dark .automation-editor .border-slate-200,
+.v2-dark .automation-editor .ring-slate-100 { border-color: rgba(148, 163, 184, 0.20) !important; }
+.v2-dark .automation-editor .ring-slate-100 { --tw-ring-color: rgba(148, 163, 184, 0.20) !important; }
+/* Anéis brancos dos badges → casar com o tom escuro do cartão */
+.v2-dark .automation-editor .ring-white { --tw-ring-color: #1a2336 !important; }
+.v2-dark .automation-editor .border-white { border-color: #1a2336 !important; }
+
+/* Pílula "✕" de remover conexão (renderizada fora do node) */
+.v2-dark .automation-editor .react-flow__edgelabel-renderer .bg-white {
+  background-color: #1a2336 !important;
+}
+
+/* Controles (zoom/fit) e MiniMap — sobrepõem os utilitários `!` do JSX
+   por especificidade maior (mesma flag !important). */
+.v2-dark .automation-editor .react-flow__controls {
+  background: rgba(20, 28, 45, 0.88) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+.v2-dark .automation-editor .react-flow__controls button { color: #c2cce0 !important; }
+.v2-dark .automation-editor .react-flow__controls button:hover {
+  background: rgba(123, 141, 247, 0.20) !important;
+  color: #ffffff !important;
+}
+.v2-dark .automation-editor .react-flow__controls button path { fill: currentColor !important; }
+.v2-dark .automation-editor .react-flow__minimap {
+  background: rgba(20, 28, 45, 0.75) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
 }

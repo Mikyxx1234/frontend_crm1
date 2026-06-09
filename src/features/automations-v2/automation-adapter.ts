@@ -68,6 +68,7 @@ export function dtoToAutomation(dto: AutomationListItemDto): Automation {
     description: dto.description ?? "",
     trigger: TRIGGER_LABEL[dto.triggerType] ?? ("Negócio criado" as AutomationTrigger),
     steps: dto.stepCount,
+    stepTypes: dto.stepTypes ?? [],
     updatedAt: formatDate(dto.updatedAt),
     active: dto.active,
     runs: dto.runs ?? 0,

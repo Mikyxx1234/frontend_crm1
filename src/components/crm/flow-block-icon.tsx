@@ -124,6 +124,47 @@ export const blockMeta: Record<string, BlockMeta> = {
   "ai-ask": def("Perguntar ao agente IA", IconRobot, "violet", "ai"),
 }
 
+/**
+ * Vocabulário do backend (snake_case, ex.: "send_email") → chave do catálogo
+ * de blocos da UI (hífen, ex.: "send-email"). O mini-fluxo dos cards recebe os
+ * tipos reais dos passos vindos da API; sem este mapa todos cairiam no ícone
+ * padrão (Bolt). Tipos sem bloco dedicado (business_hours, create_deal, etc.)
+ * caem no fallback do `getBlockMeta`.
+ */
+const apiTypeToBlockKey: Record<string, string> = {
+  send_email: "send-email",
+  move_stage: "move-stage",
+  assign_owner: "assign",
+  add_tag: "add-tag",
+  remove_tag: "remove-tag",
+  update_field: "update-field",
+  create_activity: "create-activity",
+  update_lead_score: "lead-score",
+  send_whatsapp_message: "wa-message",
+  send_whatsapp_template: "wa-template",
+  send_whatsapp_media: "wa-media",
+  send_whatsapp_interactive: "wa-buttons",
+  webhook: "webhook",
+  delay: "delay",
+  condition: "condition",
+  question: "ask-lead",
+  wait_for_reply: "wait-reply",
+  set_variable: "set-variable",
+  goto: "goto",
+  transfer_automation: "transfer-automation",
+  stop_automation: "finish-flow",
+  finish: "final",
+  finish_conversation: "end-conversation",
+  ask_ai_agent: "ai-ask",
+  transfer_to_ai_agent: "ai-agent",
+}
+
+/** Normaliza um tipo de passo (snake_case do backend OU já em hífen) para a
+ *  chave do catálogo usada pelos ícones. */
+export function blockKeyForStepType(type: string): string {
+  return apiTypeToBlockKey[type] ?? type
+}
+
 export function getBlockMeta(type: string): BlockMeta {
   return blockMeta[type] ?? def(type, IconBolt, "indigo", "action")
 }

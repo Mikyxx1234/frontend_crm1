@@ -34,6 +34,8 @@ import {
   type ConditionConfig,
 } from "@/lib/automation-condition";
 import { cn } from "@/lib/utils";
+import { useThemeV2 } from "@/hooks/use-theme-v2";
+import { Copy, Trash2 } from "lucide-react";
 
 import type { ActionStepType } from "@/lib/automation-workflow";
 
@@ -212,7 +214,7 @@ function readNextStepId(config: unknown): string | null {
   return typeof c.nextStepId === "string" ? c.nextStepId : null;
 }
 
-function buildEdges(steps: AutomationStep[]): Edge[] {
+function buildEdges(steps: AutomationStep[], triggerDisconnected = false): Edge[] {
   const out: Edge[] = [];
 
   if (steps.length === 0) {
@@ -229,15 +231,21 @@ function buildEdges(steps: AutomationStep[]): Edge[] {
 
   const stepIds = new Set(steps.map((s) => s.id));
 
-  out.push({
-    id: `${TRIGGER_ID}-${steps[0].id}`,
-    source: TRIGGER_ID,
-    target: steps[0].id,
-    animated: false,
-    data: EDGE_DATA_DEFAULT,
-    type: EDGE_TYPE,
-    interactionWidth: INTERACT_W,
-  });
+  // Conector gatilho→1º passo. Agora com "✕" (DELETE_LABEL_PROPS) pra
+  // poder apagar; ao apagar, marcamos triggerConfig.__entryDisconnected
+  // e este edge deixa de ser emitido (até reconectar arrastando do gatilho).
+  if (!triggerDisconnected) {
+    out.push({
+      id: `${TRIGGER_ID}-${steps[0].id}`,
+      source: TRIGGER_ID,
+      target: steps[0].id,
+      animated: false,
+      data: EDGE_DATA_DEFAULT,
+      type: EDGE_TYPE,
+      interactionWidth: INTERACT_W,
+      ...DELETE_LABEL_PROPS,
+    });
+  }
 
   for (let i = 0; i < steps.length; i++) {
     const a = steps[i];
@@ -444,10 +452,31 @@ function WorkflowCanvasInner({
   className,
 }: InnerProps) {
   const { screenToFlowPosition, fitView } = useReactFlow();
+  const { theme } = useThemeV2();
+  const isDark = theme === "dark";
   const [configOpen, setConfigOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState<AutomationStep | null>(null);
   const stepsRef = useRef(steps);
   stepsRef.current = steps;
+
+  // Posição inicial do nó ao começar um arraste — usada pra distinguir
+  // clique (sem movimento) de arraste real na pílula "+ adicionar passo".
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Refs pra ler triggerConfig / callback dentro dos handlers sem recriar
+  // os useCallback a cada mudança de config.
+  const triggerConfigRef = useRef(triggerConfig);
+  triggerConfigRef.current = triggerConfig;
+  const onTriggerConfigChangeRef = useRef(onTriggerConfigChange);
+  onTriggerConfigChangeRef.current = onTriggerConfigChange;
+
+  // Entrada do gatilho desconectada? (flag em triggerConfig.__entryDisconnected)
+  // Quando true, suprimimos a edge gatilho→1º passo e o operador pode
+  // re-arrastar do gatilho pra qualquer bloco.
+  const triggerDisconnected =
+    typeof triggerConfig === "object" &&
+    triggerConfig !== null &&
+    (triggerConfig as Record<string, unknown>).__entryDisconnected === true;
 
   const migratedRef = useRef(false);
   useEffect(() => {
@@ -648,7 +677,10 @@ function WorkflowCanvasInner({
           id: ADD_STEP_ID,
           type: "addStep",
           position: { x: START_X, y: NODE_Y + 20 },
-          draggable: false,
+          // Arrastável: ao soltar, o canvas abre o seletor de tipo na
+          // posição final (ver onNodeDragStop). Clique continua abrindo
+          // o seletor "no lugar padrão".
+          draggable: true,
           selectable: false,
           data: {
             afterStepId: null,
@@ -672,7 +704,7 @@ function WorkflowCanvasInner({
           id: `${ADD_STEP_ID}:${step.id}`,
           type: "addStep",
           position: { x, y },
-          draggable: false,
+          draggable: true,
           selectable: false,
           data: {
             afterStepId: step.id,
@@ -724,6 +756,46 @@ function WorkflowCanvasInner({
       });
 
       onStepsChange(cleaned);
+    },
+    [onStepsChange]
+  );
+
+  // Duplica um passo como nó INDEPENDENTE: copia a config (textos,
+  // opções, etc.) mas zera todas as saídas (nextStepId/else/timeout/
+  // received/buttons/branches) pra não recriar as conexões do original.
+  // Posiciona o clone deslocado pra não ficar exatamente sobreposto.
+  const duplicateStep = useCallback(
+    (id: string) => {
+      const cur = stepsRef.current;
+      const orig = cur.find((s) => s.id === id);
+      if (!orig) return;
+      const newId = newStepId();
+      const cfg = { ...(orig.config as Record<string, unknown>) };
+
+      if (orig.type !== "condition") cfg.nextStepId = NONE;
+      delete cfg.elseGotoStepId;
+      delete cfg.elseStepId;
+      delete cfg.timeoutGotoStepId;
+      delete cfg.receivedGotoStepId;
+      if (Array.isArray(cfg.buttons)) {
+        cfg.buttons = (cfg.buttons as Record<string, unknown>[]).map((b) => ({
+          ...b,
+          gotoStepId: undefined,
+        }));
+      }
+      if (orig.type === "condition" && Array.isArray(cfg.branches)) {
+        cfg.branches = (cfg.branches as Record<string, unknown>[]).map((b) => ({
+          ...b,
+          nextStepId: undefined,
+        }));
+      }
+
+      const pos = readRfPos(orig.config);
+      cfg.__rfPos = { x: (pos?.x ?? START_X) + 48, y: (pos?.y ?? NODE_Y) + 72 };
+      cfg.__hasExplicitEdges = true;
+
+      const clone: AutomationStep = { id: newId, type: orig.type, config: cfg };
+      onStepsChange([...cur, clone]);
     },
     [onStepsChange]
   );
@@ -795,7 +867,10 @@ function WorkflowCanvasInner({
     return () => clearTimeout(timer);
   }, [autoAlignVersion, fitView]);
 
-  const edges = useMemo(() => buildEdges(steps), [steps]);
+  const edges = useMemo(
+    () => buildEdges(steps, triggerDisconnected),
+    [steps, triggerDisconnected]
+  );
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -808,6 +883,18 @@ function WorkflowCanvasInner({
       if (source === TRIGGER_ID) {
         const without = cur.filter((s) => s.id !== target);
         onStepsChange([tgt, ...without]);
+        // Reconectou o gatilho → limpa o flag de "entrada desconectada".
+        const cb = onTriggerConfigChangeRef.current;
+        if (cb) {
+          const tc =
+            typeof triggerConfigRef.current === "object" && triggerConfigRef.current !== null
+              ? { ...(triggerConfigRef.current as Record<string, unknown>) }
+              : {};
+          if (tc.__entryDisconnected) {
+            delete tc.__entryDisconnected;
+            cb(tc);
+          }
+        }
         return;
       }
 
@@ -951,6 +1038,25 @@ function WorkflowCanvasInner({
       const step: AutomationStep = { id, type: stepType, config };
       const cur = stepsRef.current;
 
+      // Origem = GATILHO: o novo bloco vira a ENTRADA (1º passo) e
+      // reconecta o gatilho (limpa __entryDisconnected). Cobre tanto o
+      // fluxo vazio quanto "apaguei o conector do gatilho e arrastei".
+      if (sourceId === TRIGGER_ID) {
+        onStepsChange([step, ...cur]);
+        const cb = onTriggerConfigChangeRef.current;
+        if (cb) {
+          const tc =
+            typeof triggerConfigRef.current === "object" && triggerConfigRef.current !== null
+              ? { ...(triggerConfigRef.current as Record<string, unknown>) }
+              : {};
+          if (tc.__entryDisconnected) {
+            delete tc.__entryDisconnected;
+            cb(tc);
+          }
+        }
+        return;
+      }
+
       const srcStep = cur.find((s) => s.id === sourceId);
       if (srcStep) {
         const btnMatch = sourceHandle.match(/^btn_(\d+)$/);
@@ -1052,12 +1158,32 @@ function WorkflowCanvasInner({
     [pendingConn, onStepsChange]
   );
 
-  const onTriggerConfigChangeRef = useRef(onTriggerConfigChange);
-  onTriggerConfigChangeRef.current = onTriggerConfigChange;
-
   const onNodeDragStop = useCallback(
     (_: unknown, node: Node) => {
-      if (isAddStepNodeId(node.id)) return;
+      if (isAddStepNodeId(node.id)) {
+        // Distingue clique (sem movimento → o onClick do botão abre o
+        // seletor no lugar) de arraste real (abre o seletor na posição
+        // solta). Sem isso, o clique dispararia os dois seletores.
+        const start = dragStartPosRef.current;
+        const moved = start
+          ? Math.hypot(node.position.x - start.x, node.position.y - start.y)
+          : 999;
+        dragStartPosRef.current = null;
+        if (moved < 6) return;
+
+        // Arrastou a pílula "+ Adicionar próximo passo": abre o seletor
+        // de tipo na posição solta e conecta ao passo de origem (reusa o
+        // fluxo de `pendingConn`). Id `__addStep__:<stepId>` carrega o
+        // afterStepId; `__addStep__` puro = sair do gatilho (fluxo vazio).
+        const afterStepId =
+          node.id === ADD_STEP_ID ? null : node.id.slice(ADD_STEP_ID.length + 1);
+        setPendingConn({
+          sourceId: afterStepId ?? TRIGGER_ID,
+          sourceHandle: "",
+          position: node.position,
+        });
+        return;
+      }
       if (node.id === TRIGGER_ID) {
         // Persist da nova posição do trigger no próprio triggerConfig
         // (mesmo lugar onde já guardamos channel/pipelineId/stageId).
@@ -1090,6 +1216,27 @@ function WorkflowCanvasInner({
   const onTriggerClickRef = useRef(onTriggerClick);
   onTriggerClickRef.current = onTriggerClick;
 
+  // Menu de contexto (clique-direito) por nó — "Duplicar"/"Remover".
+  // Padrão do exemplo Context Menu do React Flow. Gatilho e nós
+  // "+ adicionar" não entram (trigger é único; addStep não é um passo).
+  const [nodeMenu, setNodeMenu] = useState<{ id: string; x: number; y: number } | null>(
+    null
+  );
+  const closeNodeMenu = useCallback(() => setNodeMenu(null), []);
+  const onNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
+    if (isAddStepNodeId(node.id) || node.id === TRIGGER_ID) return;
+    e.preventDefault();
+    setNodeMenu({ id: node.id, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const onNodeDragStart = useCallback(
+    (_: unknown, node: Node) => {
+      setNodeMenu(null);
+      dragStartPosRef.current = { x: node.position.x, y: node.position.y };
+    },
+    []
+  );
+
   const onNodeClick = useCallback((_e: unknown, node: Node) => {
     if (isAddStepNodeId(node.id)) return;
     if (node.id === TRIGGER_ID) {
@@ -1111,7 +1258,21 @@ function WorkflowCanvasInner({
       if (edgeData?.variant === "add") return;
       const sourceHandle = edge.sourceHandle;
       const sourceId = edge.source;
-      if (!sourceId || sourceId === TRIGGER_ID) return;
+      // Apagar o conector do GATILHO: marca a entrada como desconectada
+      // (triggerConfig.__entryDisconnected). Reaparece ao re-arrastar do
+      // gatilho pra um bloco (ver onConnect).
+      if (sourceId === TRIGGER_ID) {
+        const cb = onTriggerConfigChangeRef.current;
+        if (!cb) return;
+        const tc =
+          typeof triggerConfigRef.current === "object" && triggerConfigRef.current !== null
+            ? { ...(triggerConfigRef.current as Record<string, unknown>) }
+            : {};
+        tc.__entryDisconnected = true;
+        cb(tc);
+        return;
+      }
+      if (!sourceId) return;
 
       const cur = stepsRef.current;
       const srcStep = cur.find((s) => s.id === sourceId);
@@ -1257,11 +1418,11 @@ function WorkflowCanvasInner({
   );
 
   return (
-    <div className={cn("flex w-full", className)}>
+    <div className={cn("automation-editor flex w-full", className)}>
       {/* Canvas area — radial gradients no fundo dão profundidade
           "engenharia premium" sem competir com os nodes. */}
       <div
-        className="relative min-h-0 min-w-0 flex-1 bg-white bg-[radial-gradient(ellipse_at_top_left,rgba(80,125,241,0.07)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.06)_0%,transparent_55%)]"
+        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[#eef1f7] bg-[radial-gradient(ellipse_at_top_left,rgba(80,125,241,0.08)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.06)_0%,transparent_55%)]"
         onDrop={onDrop}
         onDragOver={onDragOver}
       >
@@ -1278,6 +1439,10 @@ function WorkflowCanvasInner({
           onConnectEnd={onConnectEnd as unknown as (event: MouseEvent | TouchEvent) => void}
           onNodeDragStop={onNodeDragStop}
           onNodeClick={onNodeClick}
+          onNodeContextMenu={onNodeContextMenu}
+          onNodeDragStart={onNodeDragStart}
+          onPaneClick={closeNodeMenu}
+          onMoveStart={closeNodeMenu}
           onEdgeClick={onEdgeClick}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
@@ -1291,20 +1456,20 @@ function WorkflowCanvasInner({
             variant={BackgroundVariant.Dots}
             gap={24}
             size={1.4}
-            color="#cbd5e1"
+            color={isDark ? "#33405c" : "#cbd5e1"}
           />
           <Controls
             className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/85! shadow-[var(--shadow-lg)]! backdrop-blur-xl! [&>button]:border-0! [&>button]:bg-transparent! [&>button]:text-[var(--color-ink-soft)]! [&>button:hover]:bg-primary/10! [&>button:hover]:text-primary!"
           />
           <MiniMap
             className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/70! shadow-[var(--shadow-lg)]! backdrop-blur-xl!"
-            maskColor="rgba(13,27,62,0.06)"
+            maskColor={isDark ? "rgba(0,0,0,0.30)" : "rgba(13,27,62,0.06)"}
             nodeColor={(n) => {
               if (isAddStepNodeId(n.id)) return "transparent";
               if (n.id === TRIGGER_ID) return "var(--color-primary)";
-              return "#94a3b8";
+              return isDark ? "#64748b" : "#94a3b8";
             }}
-            nodeStrokeColor="rgba(255,255,255,0.7)"
+            nodeStrokeColor={isDark ? "rgba(15,22,35,0.8)" : "rgba(255,255,255,0.7)"}
             nodeStrokeWidth={2}
             nodeBorderRadius={6}
           />
@@ -1313,8 +1478,54 @@ function WorkflowCanvasInner({
         <StepPickerModal
           open={!!pendingConn}
           onSelect={handlePendingStepSelect}
-          onClose={() => setPendingConn(null)}
+          onClose={() => {
+            setPendingConn(null);
+            // Recoloca a pílula arrastada na posição padrão se o operador
+            // cancelar (senão ela fica "solta" onde foi largada).
+            setNodes(buildNodes(stepsRef.current, removeStep, addStepAfter));
+          }}
         />
+
+        {/* Menu de contexto do nó (clique-direito) */}
+        {nodeMenu && (
+          <>
+            <div
+              className="fixed inset-0 z-[55]"
+              onClick={closeNodeMenu}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                closeNodeMenu();
+              }}
+            />
+            <div
+              className="fixed z-[60] min-w-[168px] overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[var(--glass-shadow)] backdrop-blur-md"
+              style={{ top: nodeMenu.y, left: nodeMenu.x }}
+            >
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--brand-primary)]/12"
+                onClick={() => {
+                  duplicateStep(nodeMenu.id);
+                  closeNodeMenu();
+                }}
+              >
+                <Copy className="size-4 text-[var(--text-secondary)]" strokeWidth={2.2} />
+                Duplicar
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/12"
+                onClick={() => {
+                  removeStep(nodeMenu.id);
+                  closeNodeMenu();
+                }}
+              >
+                <Trash2 className="size-4" strokeWidth={2.2} />
+                Remover
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Palette */}

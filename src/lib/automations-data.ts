@@ -12,6 +12,12 @@ export interface Automation {
   description: string
   trigger: AutomationTrigger
   steps: number
+  /**
+   * Tipos dos passos na ordem do workflow (vocabulário do backend, ex.:
+   * "send_email"). Usado pelo mini-fluxo do card para mostrar os ícones
+   * reais. Opcional: dados mock/legados não preenchem.
+   */
+  stepTypes?: string[]
   updatedAt: string
   active: boolean
   /** Total de execuções acumuladas */

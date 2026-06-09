@@ -75,7 +75,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
 
       <div
         className={cn(
-          "relative w-[300px] overflow-hidden rounded-2xl border bg-white transition-all duration-200",
+          "relative w-[300px] overflow-hidden rounded-lg border bg-white transition-all duration-200",
           selected
             ? "border-cyan-400 shadow-[var(--shadow-lavender-glow)] ring-2 ring-cyan-300/30"
             : "border-cyan-200/80 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-cyan-300 hover:shadow-[var(--shadow-lavender-glow)]"

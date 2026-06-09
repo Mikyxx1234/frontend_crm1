@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   motion,
@@ -104,6 +105,26 @@ export function DockButton({
   const fallback = useMotionValue(Number.POSITIVE_INFINITY);
   const source = mouseY ?? fallback;
 
+  // Rótulo (tooltip) renderizado via PORTAL no <body>. A área rolável da
+  // NavRail usa `overflow-x: clip` (necessário para o scroll vertical sem
+  // cortar a magnificação), o que também cortava o rótulo que aparece à
+  // direita do trilho — por isso a legenda "sumia". O portal escapa de
+  // qualquer overflow do ancestral; posicionamos por coordenadas de viewport
+  // (position: fixed) calculadas a partir do retângulo do container.
+  const [labelPos, setLabelPos] = React.useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
+  const showLabel = React.useCallback(() => {
+    const b = ref.current?.getBoundingClientRect();
+    if (!b) return;
+    setLabelPos({ top: b.top + b.height / 2, left: b.right });
+  }, []);
+  const hideLabel = React.useCallback(() => setLabelPos(null), []);
+
   // Distância (px) do cursor ao centro vertical do CONTAINER (tamanho fixo).
   const distance = useTransform(source, (y) => {
     const bounds = ref.current?.getBoundingClientRect();
@@ -155,6 +176,8 @@ export function DockButton({
   return (
     <div
       ref={ref}
+      onMouseEnter={showLabel}
+      onMouseLeave={hideLabel}
       className="group relative flex h-11 w-11 shrink-0 items-center justify-center"
     >
       <motion.div
@@ -164,19 +187,30 @@ export function DockButton({
         {content}
       </motion.div>
 
-      {/* Rótulo no hover — aparece à direita do trilho. Resolve a falta de
-          legenda dos ícones sem ocupar espaço fixo. */}
-      <span
-        className={cn(
-          "pointer-events-none absolute left-full top-1/2 z-[60] ml-3 -translate-y-1/2 translate-x-[-8px]",
-          "whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--glass-border)]",
-          "bg-[var(--dropdown-solid-bg)] px-2.5 py-1 text-[12px] font-semibold text-[var(--text-primary)]",
-          "opacity-0 shadow-[var(--glass-shadow)] transition-all duration-150 ease-out",
-          "group-hover:translate-x-0 group-hover:opacity-100",
+      {/* Rótulo no hover — portaled no <body> para não ser cortado pelo
+          `overflow-x: clip` do container rolável da NavRail. Aparece à
+          direita do trilho, centralizado verticalmente no ícone. */}
+      {mounted &&
+        labelPos &&
+        createPortal(
+          <span
+            style={{
+              position: "fixed",
+              top: labelPos.top,
+              left: labelPos.left + 12,
+              transform: "translateY(-50%)",
+            }}
+            className={cn(
+              "pointer-events-none z-[9999] whitespace-nowrap rounded-[var(--radius-md)]",
+              "border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] backdrop-blur-md",
+              "px-2.5 py-1 text-[12px] font-semibold text-[var(--text-primary)]",
+              "shadow-[var(--glass-shadow)]",
+            )}
+          >
+            {title}
+          </span>,
+          document.body,
         )}
-      >
-        {title}
-      </span>
     </div>
   );
 }

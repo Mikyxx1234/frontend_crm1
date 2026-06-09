@@ -33,7 +33,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
       />
       <div
         className={cn(
-          "relative mx-auto flex h-[120px] w-[120px] rotate-45 items-center justify-center rounded-2xl border-2 bg-white transition-all duration-200",
+          "relative mx-auto flex h-[120px] w-[120px] rotate-45 items-center justify-center rounded-lg border-2 bg-white transition-all duration-200",
           selected
             ? "border-amber-400 shadow-[0_0_24px_-4px_rgba(245,158,11,0.5)] ring-2 ring-amber-300/30"
             : "border-amber-300/60 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-amber-400"

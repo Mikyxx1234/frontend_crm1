@@ -22,7 +22,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[210px] max-w-[270px] rounded-2xl border bg-white transition-all duration-200",
+        "group/node relative min-w-[210px] max-w-[270px] rounded-lg border bg-white transition-all duration-200",
         selected
           ? "border-orange-400/60 ring-2 ring-orange-300/30 shadow-[0_10px_30px_-10px_rgba(249,115,22,0.4)]"
           : "border-slate-100 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"

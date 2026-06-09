@@ -29,7 +29,7 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
         // `cursor-pointer` + grupo `group/trigger` pra revelar a pílula
         // "Editar" no hover. O click handler real fica no canvas
         // (onNodeClick), que chama `onTriggerClick` da page.
-        "group/trigger relative min-w-[230px] max-w-[280px] cursor-pointer overflow-hidden rounded-2xl border bg-white transition-all duration-200",
+        "group/trigger relative min-w-[230px] max-w-[280px] cursor-pointer overflow-hidden rounded-lg border bg-white transition-all duration-200",
         selected
           ? "border-primary/50 shadow-[var(--shadow-indigo-glow)] ring-2 ring-primary/30"
           : "border-white/60 shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[var(--shadow-indigo-glow)]"

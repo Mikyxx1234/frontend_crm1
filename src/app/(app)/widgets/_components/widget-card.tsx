@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
+  IconArrowUpRight,
   IconCheck,
   IconCircleCheckFilled,
   IconLayoutGrid,
   IconLoader2,
   IconPlus,
+  IconPuzzle,
   IconRobot,
   IconRoute,
   IconTrash,
@@ -18,16 +22,46 @@ import { cn } from "@/lib/utils";
 
 import type { WidgetDto } from "@/features/widgets/types";
 
-/** Mapeia a chave de icone do catalogo para um componente tabler. */
+/** Mapeia chave de icone (widgets INTERNAL) para componente tabler.
+ *  Widgets PARTNER usam `icon` como URL de imagem — vide `WidgetIcon`. */
 const ICON_BY_KEY: Record<string, React.ComponentType<IconProps>> = {
   route: IconRoute,
   bot: IconRobot,
 };
 
-function WidgetIcon({ icon, className }: { icon: string; className?: string }) {
-  const Cmp = ICON_BY_KEY[icon] ?? IconLayoutGrid;
+function WidgetIcon({ widget, className }: { widget: WidgetDto; className?: string }) {
+  const [imgError, setImgError] = useState(false);
+  // PARTNER: `icon` eh URL de imagem (http/https). Se a URL falhar
+  // (404, CORS, content-type errado, parceiro fora do ar), caimos no
+  // IconPuzzle pra nao quebrar o layout do card.
+  // `referrerPolicy=no-referrer` impede que o parceiro saiba que origem
+  // do CRM esta listando o widget (privacidade do tenant).
+  if (widget.ownerType === "PARTNER") {
+    const looksLikeUrl = /^https?:\/\//i.test(widget.icon);
+    if (looksLikeUrl && !imgError) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return (
+        <img
+          src={widget.icon}
+          alt=""
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          onError={() => setImgError(true)}
+          className={cn("object-contain", className)}
+        />
+      );
+    }
+    return <IconPuzzle className={className} />;
+  }
+  const Cmp = ICON_BY_KEY[widget.icon] ?? IconLayoutGrid;
   return <Cmp className={className} />;
 }
+
+/** Rota interna pra widgets INTERNAL — quando o slug nao esta no mapa,
+ *  cai na rota generica `/widgets/[slug]` (que sabe redirecionar). */
+const INTERNAL_ROUTE_BY_SLUG: Record<string, string> = {
+  smart_distribution: "/widgets/distribution",
+};
 
 interface WidgetCardProps {
   widget: WidgetDto;
@@ -49,6 +83,7 @@ export function WidgetCard({
 }: WidgetCardProps) {
   const installed = widget.installed;
   const comingSoon = widget.availability === "coming_soon";
+  const disabled = Boolean(widget.disabled);
 
   return (
     <motion.div
@@ -69,11 +104,18 @@ export function WidgetCard({
 
       <div className={cn("flex flex-col", featured && "sm:w-1/2 sm:shrink-0")}>
         <div className="flex items-start justify-between gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-transform duration-300 group-hover:scale-105">
-            <WidgetIcon icon={widget.icon} className="size-6" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-transform duration-300 group-hover:scale-105">
+            <WidgetIcon widget={widget} className="size-6" />
           </div>
 
-          <StatusBadge installed={installed} comingSoon={comingSoon} />
+          <div className="flex flex-col items-end gap-1">
+            <StatusBadge installed={installed} comingSoon={comingSoon} disabled={disabled} />
+            {widget.ownerType === "PARTNER" && widget.partnerName && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold text-[var(--text-muted)]">
+                Parceiro: {widget.partnerName}
+              </span>
+            )}
+          </div>
         </div>
 
         <h3 className="mt-4 font-display text-[17px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
@@ -106,20 +148,47 @@ export function WidgetCard({
               Em breve
             </Button>
           ) : installed ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={!canManage || pending}
-              onClick={() => onUninstall(widget.slug)}
-              className="w-full text-[var(--color-danger-text)] hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]"
-            >
-              {pending ? (
-                <IconLoader2 className="animate-spin" />
-              ) : (
-                <IconTrash />
+            <div className="space-y-2">
+              {disabled && widget.disabledReason && (
+                <div className="rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2.5 py-1.5 text-[11px] text-[var(--text-muted)]">
+                  {widget.disabledReason}
+                </div>
               )}
-              Remover
-            </Button>
+              <div className="flex gap-2">
+                {!disabled && (
+                  <Button asChild variant="default" size="sm" className="flex-1">
+                    <Link
+                      href={
+                        widget.ownerType === "PARTNER"
+                          ? `/widgets/${widget.slug}`
+                          : INTERNAL_ROUTE_BY_SLUG[widget.slug] ?? `/widgets/${widget.slug}`
+                      }
+                    >
+                      <IconArrowUpRight />
+                      Abrir
+                    </Link>
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!canManage || pending}
+                  onClick={() => onUninstall(widget.slug)}
+                  aria-label="Remover widget"
+                  className={cn(
+                    "text-[var(--color-danger-text)] hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]",
+                    disabled && "flex-1",
+                  )}
+                >
+                  {pending ? (
+                    <IconLoader2 className="animate-spin" />
+                  ) : (
+                    <IconTrash />
+                  )}
+                  {disabled && <span>Remover</span>}
+                </Button>
+              </div>
+            </div>
           ) : (
             <Button
               variant="default"
@@ -147,10 +216,19 @@ export function WidgetCard({
 function StatusBadge({
   installed,
   comingSoon,
+  disabled,
 }: {
   installed: boolean;
   comingSoon: boolean;
+  disabled?: boolean;
 }) {
+  if (disabled) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.08)] px-2.5 py-1 font-display text-[11px] font-semibold text-[#dc2626]">
+        Indisponível
+      </span>
+    );
+  }
   if (comingSoon) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2.5 py-1 font-display text-[11px] font-semibold text-[var(--text-muted)]">

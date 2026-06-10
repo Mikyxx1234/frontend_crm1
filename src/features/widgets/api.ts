@@ -89,4 +89,19 @@ export function uninstallWidget(slug: string): Promise<{ slug: string; installed
   );
 }
 
+export interface WidgetSsoResponse {
+  token: string;
+  iframeUrl: string;
+  /** Epoch seconds quando o token expira (TTL 5 min). */
+  exp: number;
+}
+
+/** Solicita um token SSO curto pra abrir o iframe do widget de parceiro. */
+export function fetchWidgetSso(slug: string): Promise<WidgetSsoResponse> {
+  return getJson<WidgetSsoResponse>(
+    `/api/widgets/${encodeURIComponent(slug)}/sso-token`,
+    "Erro ao abrir widget.",
+  );
+}
+
 export type { WidgetDto };

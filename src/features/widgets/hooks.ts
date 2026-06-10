@@ -3,9 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  fetchWidgetSso,
   fetchWidgets,
   installWidget,
   uninstallWidget,
+  type WidgetSsoResponse,
 } from "./api";
 import type { WidgetsResponse } from "./types";
 
@@ -40,5 +42,18 @@ export function useUninstallWidget() {
   return useMutation<{ slug: string; installed: boolean }, Error, string>({
     mutationFn: uninstallWidget,
     onSuccess: () => qc.invalidateQueries({ queryKey: WIDGETS_KEY }),
+  });
+}
+
+/** Busca um token SSO para abrir o iframe de um widget PARTNER. */
+export function useWidgetSso(slug: string | null | undefined, enabled = true) {
+  return useQuery<WidgetSsoResponse>({
+    queryKey: ["widget-sso", slug],
+    queryFn: () => fetchWidgetSso(slug!),
+    enabled: Boolean(slug) && resolveEnabled(enabled),
+    // Token vive 5min — re-fetch automatico antes de expirar (4min).
+    staleTime: 4 * 60 * 1000,
+    refetchInterval: 4 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }

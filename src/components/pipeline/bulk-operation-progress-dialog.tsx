@@ -77,17 +77,17 @@ function HeroIcon({ status }: { status: BulkOperationStatus | undefined }) {
   const ringClass = cn(
     "relative flex size-16 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition-colors",
     tone === "pending" &&
-      "border-slate-300/40 bg-slate-200/40 text-slate-500 dark:border-slate-500/30 dark:bg-slate-700/30 dark:text-slate-300",
+      "border-black/15/40 bg-subtle/40 text-ink-muted dark:border-slate-500/30 dark:bg-slate-700/30 dark:text-ink-subtle",
     tone === "processing" &&
       "border-primary/40 bg-primary/15 text-primary",
     tone === "success" &&
-      "border-emerald-300/50 bg-emerald-100/60 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-300",
+      "border-success/40/50 bg-success-soft/60 text-success dark:border-success/40/40 dark:bg-success/15 dark:text-emerald-300",
     tone === "warning" &&
-      "border-amber-300/50 bg-amber-100/60 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-300",
+      "border-warning/40/50 bg-warning-soft/60 text-warning dark:border-warning/40/40 dark:bg-warning/15 dark:text-amber-300",
     tone === "danger" &&
-      "border-rose-300/50 bg-rose-100/60 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/15 dark:text-rose-300",
+      "border-destructive/40/50 bg-destructive-soft/60 text-destructive dark:border-destructive/40/40 dark:bg-destructive/15 dark:text-rose-300",
     tone === "muted" &&
-      "border-slate-300/40 bg-slate-200/40 text-slate-500 dark:border-slate-600/40 dark:bg-slate-800/40 dark:text-slate-400",
+      "border-black/15/40 bg-subtle/40 text-ink-muted dark:border-slate-600/40 dark:bg-ink-soft/40 dark:text-ink-subtle",
   );
 
   return (
@@ -99,7 +99,7 @@ function HeroIcon({ status }: { status: BulkOperationStatus | undefined }) {
           className={cn(
             "absolute inset-0 rounded-full",
             tone === "pending"
-              ? "bg-slate-300/30 dark:bg-slate-600/20"
+              ? "bg-ink-subtle/40/30 dark:bg-slate-600/20"
               : "bg-primary/20",
           )}
           style={{
@@ -161,7 +161,7 @@ function PhaseStepper({ status }: { status: BulkOperationStatus | undefined }) {
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors",
                 isDone &&
-                  "border-emerald-300/50 bg-emerald-100/60 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-300",
+                  "border-success/40/50 bg-success-soft/60 text-success dark:border-success/40/30 dark:bg-success/10 dark:text-emerald-300",
                 isCurrent &&
                   "border-primary/40 bg-primary/15 text-primary",
                 !isDone &&
@@ -172,7 +172,7 @@ function PhaseStepper({ status }: { status: BulkOperationStatus | undefined }) {
               <span
                 className={cn(
                   "size-1.5 rounded-full",
-                  isDone && "bg-emerald-500",
+                  isDone && "bg-success",
                   isCurrent && "bg-primary",
                   !isDone &&
                     !isCurrent &&
@@ -544,7 +544,7 @@ export function BulkOperationProgressDialog({
 
           {/* Erro no fetch do status (não erro da operação em si) */}
           {error && (
-            <div className="flex items-start gap-2 rounded-xl border border-rose-200/70 bg-rose-50/70 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+            <div className="flex items-start gap-2 rounded-xl border border-destructive/20/70 bg-destructive-soft/70 px-3 py-2 text-xs text-destructive dark:border-rose-500/30 dark:bg-destructive/10 dark:text-rose-300">
               <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={2} />
               <span>
                 Não foi possível consultar o progresso:{" "}
@@ -555,7 +555,7 @@ export function BulkOperationProgressDialog({
 
           {/* Lista de falhas por item — colapsável */}
           {data && data.errors.length > 0 && (
-            <details className="group rounded-xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            <details className="group rounded-xl border border-warning/30/70 bg-warning-soft/70 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-warning/10 dark:text-amber-200">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold">
                 <span className="flex items-center gap-1.5">
                   <AlertCircle className="size-3.5" strokeWidth={2} />
@@ -576,9 +576,9 @@ export function BulkOperationProgressDialog({
                 {data.errors.map((err, i) => (
                   <li
                     key={`${err.itemId}-${i}`}
-                    className="rounded-md border border-amber-200/40 bg-[var(--glass-bg-strong)] px-2 py-1.5 text-[var(--color-ink-soft)] backdrop-blur-sm dark:border-amber-500/20"
+                    className="rounded-md border border-warning/30/40 bg-[var(--glass-bg-strong)] px-2 py-1.5 text-[var(--color-ink-soft)] backdrop-blur-sm dark:border-amber-500/20"
                   >
-                    <span className="font-mono text-[10px] text-amber-700 dark:text-amber-300">
+                    <span className="font-mono text-[10px] text-warning dark:text-amber-300">
                       {err.itemId}
                     </span>
                     <span className="mx-1 opacity-50">·</span>
@@ -594,7 +594,7 @@ export function BulkOperationProgressDialog({
             data.status === "COMPLETED" &&
             data.errors.length === 0 &&
             data.failed === 0 && (
-              <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-success/20/70 bg-success-soft/70 px-3 py-2 text-xs font-medium text-success dark:border-emerald-500/30 dark:bg-success/10 dark:text-emerald-300">
                 <CheckCircle2 className="size-4" strokeWidth={2} />
                 <span>
                   Tudo certo — {data.succeeded}{" "}
@@ -648,8 +648,8 @@ function Counter({
       className={cn(
         "flex flex-col items-center gap-0.5 rounded-xl border bg-[var(--glass-bg-strong)] px-2 py-2.5 backdrop-blur-md transition-colors",
         tone === "success" &&
-          "border-emerald-200/70 dark:border-emerald-400/30",
-        tone === "danger" && "border-rose-200/70 dark:border-rose-400/30",
+          "border-success/20/70 dark:border-success/40/30",
+        tone === "danger" && "border-destructive/20/70 dark:border-destructive/40/30",
         tone === "muted" && "border-[var(--glass-border-subtle)]",
         tone === "default" && "border-[var(--glass-border-subtle)]",
       )}
@@ -661,8 +661,8 @@ function Counter({
         key={animateUp ? value : undefined}
         className={cn(
           "font-display text-2xl font-bold tabular-nums",
-          tone === "success" && "text-emerald-700 dark:text-emerald-300",
-          tone === "danger" && "text-rose-700 dark:text-rose-300",
+          tone === "success" && "text-success dark:text-emerald-300",
+          tone === "danger" && "text-destructive dark:text-rose-300",
           tone === "muted" && "text-[var(--color-ink-muted)]",
           tone === "default" && "text-foreground",
         )}

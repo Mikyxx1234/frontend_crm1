@@ -130,17 +130,17 @@ function AutomationCard({
   return (
     <div className={cn(
       "group relative rounded-lg border bg-white p-2.5 shadow-sm transition-all hover:shadow-md",
-      automation.active ? "border-indigo-200/80" : "border-border opacity-60",
+      automation.active ? "border-primary/20/80" : "border-border opacity-60",
     )}>
       <div className="flex items-start gap-2">
         <div className={cn(
           "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md",
-          automation.active ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-[var(--color-ink-muted)]",
+          automation.active ? "bg-primary-soft text-primary" : "bg-muted text-[var(--color-ink-muted)]",
         )}>
           <Bot className="size-3.5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-semibold leading-tight text-slate-800">
+          <p className="truncate text-[12px] font-semibold leading-tight text-foreground">
             {automation.name}
           </p>
           <div className="mt-0.5 flex items-center gap-1.5">
@@ -155,23 +155,23 @@ function AutomationCard({
       </div>
       <div className="mt-1.5 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
         <TooltipHost label={automation.active ? "Desativar" : "Ativar"} side="top">
-          <button type="button" onClick={onToggle} className="rounded p-1 hover:bg-slate-100" aria-label={automation.active ? "Desativar" : "Ativar"}>
-            <Power className={cn("size-3", automation.active ? "text-emerald-500" : "text-[var(--color-ink-muted)]")} />
+          <button type="button" onClick={onToggle} className="rounded p-1 hover:bg-muted" aria-label={automation.active ? "Desativar" : "Ativar"}>
+            <Power className={cn("size-3", automation.active ? "text-success" : "text-[var(--color-ink-muted)]")} />
           </button>
         </TooltipHost>
         <TooltipHost label="Editar gatilho" side="top">
-          <button type="button" onClick={onEdit} className="rounded p-1 hover:bg-slate-100" aria-label="Editar gatilho">
-            <Pencil className="size-3 text-slate-500" />
+          <button type="button" onClick={onEdit} className="rounded p-1 hover:bg-muted" aria-label="Editar gatilho">
+            <Pencil className="size-3 text-ink-muted" />
           </button>
         </TooltipHost>
         <TooltipHost label="Abrir editor de fluxo" side="top">
-          <NextLink href={`/automations/${automation.id}`} className="rounded p-1 hover:bg-slate-100" aria-label="Abrir editor de fluxo">
-            <ExternalLink className="size-3 text-indigo-500" />
+          <NextLink href={`/automations/${automation.id}`} className="rounded p-1 hover:bg-muted" aria-label="Abrir editor de fluxo">
+            <ExternalLink className="size-3 text-primary" />
           </NextLink>
         </TooltipHost>
         <TooltipHost label="Excluir" side="top">
-          <button type="button" onClick={onDelete} className="rounded p-1 hover:bg-red-50" aria-label="Excluir">
-            <Trash2 className="size-3 text-red-400" />
+          <button type="button" onClick={onDelete} className="rounded p-1 hover:bg-destructive-soft" aria-label="Excluir">
+            <Trash2 className="size-3 text-destructive" />
           </button>
         </TooltipHost>
       </div>
@@ -226,7 +226,7 @@ function FunnelColumn({
       <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-2 py-2" style={{ maxHeight: 320 }}>
         {automations.length === 0 ? (
           <div className="flex flex-1 items-center justify-center py-6">
-            <Zap className="size-6 text-slate-200" />
+            <Zap className="size-6 text-ink-subtle" />
           </div>
         ) : (
           automations.map((a) => (
@@ -246,7 +246,7 @@ function FunnelColumn({
         <button
           type="button"
           onClick={onAddRule}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300/80 py-2 text-[11px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-600"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-black/15/80 py-2 text-[11px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-primary/40 hover:bg-primary-soft/50 hover:text-primary"
         >
           <Plus className="size-3" />
           Adicionar
@@ -448,11 +448,11 @@ function QuickRuleForm({
         {actions.map((action, idx) => (
           <div key={idx} className="rounded-md border border-border bg-white p-2 space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[8px] font-bold text-white">{idx + 1}</span>
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-white">{idx + 1}</span>
               <SelectNative value={action.type} onChange={(e) => updateAction(idx, { type: e.target.value })} className="h-7 flex-1 text-xs">
                 {ACTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </SelectNative>
-              <button type="button" onClick={() => removeAction(idx)} className="p-0.5 text-[var(--color-ink-muted)] hover:text-red-500">
+              <button type="button" onClick={() => removeAction(idx)} className="p-0.5 text-[var(--color-ink-muted)] hover:text-destructive">
                 <Trash2 className="size-3" />
               </button>
             </div>
@@ -581,8 +581,8 @@ function LinkExistingForm({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 px-3 py-2">
-        <p className="text-[11px] text-indigo-700">
+      <div className="rounded-lg border border-primary/20 bg-primary-soft/50 px-3 py-2">
+        <p className="text-[11px] text-primary-dark">
           Vincular automação existente ao gatilho{" "}
           <strong>{TRIGGER_LABELS[targetTrigger] ?? targetTrigger}</strong>
           {stageName && <> na etapa <strong>{stageName}</strong></>}.
@@ -607,18 +607,18 @@ function LinkExistingForm({
               type="button"
               disabled={isPending}
               onClick={() => linkAutomation(a)}
-              className="flex w-full items-center gap-3 rounded-lg border border-border bg-white px-3 py-2.5 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50/50 disabled:opacity-50"
+              className="flex w-full items-center gap-3 rounded-lg border border-border bg-white px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-primary-soft/50 disabled:opacity-50"
             >
-              <div className={cn("flex size-7 shrink-0 items-center justify-center rounded-md", a.active ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-[var(--color-ink-muted)]")}>
+              <div className={cn("flex size-7 shrink-0 items-center justify-center rounded-md", a.active ? "bg-primary-soft text-primary" : "bg-muted text-[var(--color-ink-muted)]")}>
                 <Bot className="size-3.5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-slate-800">{a.name}</p>
-                <div className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-500">
+                <p className="truncate text-xs font-semibold text-foreground">{a.name}</p>
+                <div className="mt-0.5 flex items-center gap-2 text-[10px] text-ink-muted">
                   <span>{TRIGGER_LABELS[a.triggerType] ?? a.triggerType}</span>
                   <span>·</span>
                   <span>{a.stepCount} ação{a.stepCount !== 1 ? "ões" : ""}</span>
-                  <span className={cn("size-1.5 rounded-full", a.active ? "bg-emerald-500" : "bg-slate-300")} />
+                  <span className={cn("size-1.5 rounded-full", a.active ? "bg-success" : "bg-ink-subtle/40")} />
                 </div>
               </div>
               <Link2 className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" />
@@ -680,7 +680,7 @@ function AddAutomationDialog({
         <DialogClose />
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Bot className="size-4 text-indigo-600" />
+            <Bot className="size-4 text-primary" />
             {editingRule
               ? "Editar Automação"
               : mode === "choose"
@@ -696,8 +696,8 @@ function AddAutomationDialog({
             {stageName && (
               <div className="rounded-lg border border-border bg-[var(--color-bg-subtle)] px-3 py-2">
                 <p className="text-[11px] text-[var(--color-ink-soft)]">
-                  Etapa: <strong className="text-slate-800">{stageName}</strong>
-                  {" · "}Gatilho: <strong className="text-slate-800">{triggerLabel}</strong>
+                  Etapa: <strong className="text-foreground">{stageName}</strong>
+                  {" · "}Gatilho: <strong className="text-foreground">{triggerLabel}</strong>
                 </p>
               </div>
             )}
@@ -706,14 +706,14 @@ function AddAutomationDialog({
               <button
                 type="button"
                 onClick={() => setMode("create")}
-                className="flex items-center gap-3 rounded-xl border-2 border-border bg-white px-4 py-4 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50/30 hover:shadow-sm"
+                className="flex items-center gap-3 rounded-xl border-2 border-border bg-white px-4 py-4 text-left transition-all hover:border-primary/40 hover:bg-primary-soft/30 hover:shadow-sm"
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100">
-                  <Plus className="size-5 text-indigo-600" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft">
+                  <Plus className="size-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Criar nova automação</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
+                  <p className="text-sm font-semibold text-foreground">Criar nova automação</p>
+                  <p className="mt-0.5 text-[11px] text-ink-muted">
                     Configure gatilho e ações do zero para esta etapa.
                   </p>
                 </div>
@@ -722,14 +722,14 @@ function AddAutomationDialog({
               <button
                 type="button"
                 onClick={() => setMode("link")}
-                className="flex items-center gap-3 rounded-xl border-2 border-border bg-white px-4 py-4 text-left transition-all hover:border-emerald-400 hover:bg-emerald-50/30 hover:shadow-sm"
+                className="flex items-center gap-3 rounded-xl border-2 border-border bg-white px-4 py-4 text-left transition-all hover:border-success/40 hover:bg-success-soft/30 hover:shadow-sm"
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-                  <Link2 className="size-5 text-emerald-600" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-success-soft">
+                  <Link2 className="size-5 text-success" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Vincular automação existente</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
+                  <p className="text-sm font-semibold text-foreground">Vincular automação existente</p>
+                  <p className="mt-0.5 text-[11px] text-ink-muted">
                     Conecte uma automação já criada a esta etapa do funil.
                   </p>
                 </div>
@@ -737,14 +737,14 @@ function AddAutomationDialog({
 
               <NextLink
                 href="/automations/new"
-                className="flex items-center gap-3 rounded-xl border-2 border-border bg-white px-4 py-4 text-left transition-all hover:border-violet-400 hover:bg-violet-50/30 hover:shadow-sm"
+                className="flex items-center gap-3 rounded-xl border-2 border-border bg-white px-4 py-4 text-left transition-all hover:border-violet-400 hover:bg-lavender-soft/30 hover:shadow-sm"
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-                  <ExternalLink className="size-5 text-violet-600" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-lavender-soft">
+                  <ExternalLink className="size-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">Abrir editor visual</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
+                  <p className="text-sm font-semibold text-foreground">Abrir editor visual</p>
+                  <p className="mt-0.5 text-[11px] text-ink-muted">
                     Construa um fluxo completo no editor de automações.
                   </p>
                 </div>
@@ -851,16 +851,16 @@ export function FunnelAutomations({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Bot className="size-5 text-indigo-600" />
+        <Bot className="size-5 text-primary" />
         <div>
-          <h2 className="text-base font-bold text-slate-800">Funil de Automações</h2>
-          <p className="text-[11px] text-slate-500">
+          <h2 className="text-base font-bold text-foreground">Funil de Automações</h2>
+          <p className="text-[11px] text-ink-muted">
             Visualize e configure robôs de automação em cada fase do pipeline.
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/80 bg-white px-3 py-2 text-[10px] text-slate-500">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/80 bg-white px-3 py-2 text-[10px] text-ink-muted">
         <span className="font-semibold text-foreground">Legenda:</span>
         {Object.entries(TRIGGER_ICON).map(([key, icon]) => (
           <span key={key} className="inline-flex items-center gap-1">
@@ -883,7 +883,7 @@ export function FunnelAutomations({
           />
 
           <div className="flex items-center">
-            <ChevronRight className="size-5 text-slate-300" />
+            <ChevronRight className="size-5 text-ink-subtle" />
           </div>
 
           {orderedStages.map((stage, idx) => (
@@ -899,14 +899,14 @@ export function FunnelAutomations({
               />
               {idx < orderedStages.length - 1 && (
                 <div className="flex items-center">
-                  <ChevronRight className="size-4 text-slate-200" />
+                  <ChevronRight className="size-4 text-ink-subtle" />
                 </div>
               )}
             </React.Fragment>
           ))}
 
           <div className="flex items-center">
-            <ChevronRight className="size-5 text-slate-300" />
+            <ChevronRight className="size-5 text-ink-subtle" />
           </div>
 
           <FunnelColumn
@@ -935,24 +935,24 @@ export function FunnelAutomations({
 
       <div className="flex items-center gap-6 rounded-lg border border-border/80 bg-white px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100">
-            <Bot className="size-4 text-indigo-600" />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary-soft">
+            <Bot className="size-4 text-primary" />
           </div>
           <div>
-            <p className="text-lg font-bold text-slate-800">{automations.length}</p>
-            <p className="text-[10px] text-slate-500">Automações totais</p>
+            <p className="text-lg font-bold text-foreground">{automations.length}</p>
+            <p className="text-[10px] text-ink-muted">Automações totais</p>
           </div>
         </div>
         <Separator orientation="vertical" className="h-8" />
         <div className="flex items-center gap-2">
-          <div className="size-2.5 rounded-full bg-emerald-500" />
+          <div className="size-2.5 rounded-full bg-success" />
           <span className="text-xs text-[var(--color-ink-soft)]">{automations.filter((a) => a.active).length} ativas</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="size-2.5 rounded-full bg-slate-300" />
+          <div className="size-2.5 rounded-full bg-ink-subtle/40" />
           <span className="text-xs text-[var(--color-ink-soft)]">{automations.filter((a) => !a.active).length} inativas</span>
         </div>
-        <div className="ml-auto flex items-center gap-4 text-[11px] text-slate-500">
+        <div className="ml-auto flex items-center gap-4 text-[11px] text-ink-muted">
           {["deal_created", "stage_changed", "deal_won", "deal_lost"].map((t) => (
             <Badge key={t} variant="outline" className="gap-1 text-[10px]">
               {TRIGGER_ICON[t]} {automationsForEvent(t).length}

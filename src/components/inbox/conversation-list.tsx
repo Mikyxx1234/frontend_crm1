@@ -270,7 +270,7 @@ export function InboxListHeader({
                       e.stopPropagation();
                       onTabChange("esperando");
                     }}
-                    className="relative inline-flex h-7 items-center justify-center rounded-[4px] px-2 text-[var(--color-destructive)] lumen-transition hover:bg-slate-50"
+                    className="relative inline-flex h-7 items-center justify-center rounded-[4px] px-2 text-[var(--color-destructive)] lumen-transition hover:bg-muted"
                     aria-label={`Esperando: ${counts.esperando}`}
                   >
                     <Clock className="size-3.5" strokeWidth={2.5} />
@@ -457,7 +457,7 @@ function InboxCategorySelect({
 
         {selectOpen ? (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-[70] overflow-hidden rounded-lg border border-slate-200 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-slate-700 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-[70] overflow-hidden rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-slate-700 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
             style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
             role="listbox"
             aria-label="Categoria da inbox"
@@ -550,7 +550,7 @@ function describePreview(preview: ConversationLastMessagePreview | null): Previe
 
   // Template (identificado pelo marker no content)
   if (/\[TEMPLATE:/i.test(raw)) {
-    return { icon: LayoutTemplate, iconClass: "text-violet-500", label: "Template" };
+    return { icon: LayoutTemplate, iconClass: "text-accent", label: "Template" };
   }
 
   // Nota interna — sinalização explícita: ícone `StickyNote` (post-it,
@@ -564,7 +564,7 @@ function describePreview(preview: ConversationLastMessagePreview | null): Previe
     const noteText = raw.replace(/^"+|"+$/g, "").trim();
     return {
       icon: StickyNote,
-      iconClass: "text-slate-500",
+      iconClass: "text-ink-muted",
       label: noteText ? `Nota: ${noteText}` : "Nota interna",
     };
   }
@@ -588,26 +588,26 @@ function describePreview(preview: ConversationLastMessagePreview | null): Previe
     else label = "Chamada";
     return {
       icon: Phone,
-      iconClass: isFailed ? "text-rose-500" : "text-primary",
+      iconClass: isFailed ? "text-destructive" : "text-primary",
       label,
     };
   }
 
   // Bracketed markers ([imagem], [áudio], etc.)
   if (/^\[(imagem|image|sticker)\]$/i.test(raw) || mt === "image" || mt === "sticker") {
-    return { icon: ImageIcon, iconClass: "text-pink-500", label: "Imagem" };
+    return { icon: ImageIcon, iconClass: "text-pink", label: "Imagem" };
   }
   if (mt === "whatsapp_call_recording") {
     return { icon: Phone, iconClass: "text-primary", label: "Gravação de chamada" };
   }
   if (/^\[(áudio|audio|ptt)\]$/i.test(raw) || mt === "audio" || mt === "ptt") {
-    return { icon: Mic, iconClass: "text-cyan-500", label: "Áudio" };
+    return { icon: Mic, iconClass: "text-cyan", label: "Áudio" };
   }
   if (/^\[(vídeo|video)\]$/i.test(raw) || mt === "video") {
-    return { icon: Film, iconClass: "text-rose-500", label: "Vídeo" };
+    return { icon: Film, iconClass: "text-destructive", label: "Vídeo" };
   }
   if (/^\[(documento|document)\]$/i.test(raw) || mt === "document") {
-    return { icon: FileText, iconClass: "text-indigo-500", label: extractDocLabel(raw) };
+    return { icon: FileText, iconClass: "text-primary", label: extractDocLabel(raw) };
   }
 
   // Prefixo 📎 → anexo com nome
@@ -615,18 +615,18 @@ function describePreview(preview: ConversationLastMessagePreview | null): Previe
     const name = raw.replace(/^📎\s*/, "").trim();
     const ext = extractExtension(name);
     if (/^(mp3|wav|ogg|m4a|aac|amr|opus|webm)$/i.test(ext)) {
-      return { icon: Mic, iconClass: "text-cyan-500", label: "Áudio" };
+      return { icon: Mic, iconClass: "text-cyan", label: "Áudio" };
     }
     if (/^(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(ext)) {
-      return { icon: ImageIcon, iconClass: "text-pink-500", label: "Imagem" };
+      return { icon: ImageIcon, iconClass: "text-pink", label: "Imagem" };
     }
     if (/^(mp4|mov|avi|3gp|mkv)$/i.test(ext)) {
-      return { icon: Film, iconClass: "text-rose-500", label: "Vídeo" };
+      return { icon: Film, iconClass: "text-destructive", label: "Vídeo" };
     }
     // Documento — tenta mostrar nome curto
     return {
       icon: FileText,
-      iconClass: ext === "pdf" ? "text-rose-600" : /^(doc|docx)$/.test(ext) ? "text-blue-600" : /^(xls|xlsx|csv)$/.test(ext) ? "text-emerald-600" : "text-indigo-500",
+      iconClass: ext === "pdf" ? "text-destructive" : /^(doc|docx)$/.test(ext) ? "text-primary" : /^(xls|xlsx|csv)$/.test(ext) ? "text-success" : "text-primary",
       label: truncateFileName(name, 28),
     };
   }
@@ -634,26 +634,26 @@ function describePreview(preview: ConversationLastMessagePreview | null): Previe
   // Attachment type sem prefixo
   if (mt === "attachment" || mt === "file") {
     const u = mediaUrl ?? "";
-    if (/\.(jpg|jpeg|png|gif|webp)($|\?)/i.test(u)) return { icon: ImageIcon, iconClass: "text-pink-500", label: "Imagem" };
-    if (/\.(mp3|wav|ogg|m4a|aac|amr|opus|webm)($|\?)/i.test(u)) return { icon: Mic, iconClass: "text-cyan-500", label: "Áudio" };
-    if (/\.(mp4|mov|avi|3gp|mkv)($|\?)/i.test(u)) return { icon: Film, iconClass: "text-rose-500", label: "Vídeo" };
-    return { icon: Paperclip, iconClass: "text-slate-500", label: "Anexo" };
+    if (/\.(jpg|jpeg|png|gif|webp)($|\?)/i.test(u)) return { icon: ImageIcon, iconClass: "text-pink", label: "Imagem" };
+    if (/\.(mp3|wav|ogg|m4a|aac|amr|opus|webm)($|\?)/i.test(u)) return { icon: Mic, iconClass: "text-cyan", label: "Áudio" };
+    if (/\.(mp4|mov|avi|3gp|mkv)($|\?)/i.test(u)) return { icon: Film, iconClass: "text-destructive", label: "Vídeo" };
+    return { icon: Paperclip, iconClass: "text-ink-muted", label: "Anexo" };
   }
 
   if (mt === "location" || /\[(localização|location)\]/i.test(raw)) {
-    return { icon: MessageSquare, iconClass: "text-emerald-600", label: "Localização" };
+    return { icon: MessageSquare, iconClass: "text-success", label: "Localização" };
   }
   if (mt === "contacts" || /\[(contato|contacts)\]/i.test(raw)) {
-    return { icon: UserRound, iconClass: "text-sky-600", label: "Cartão de contato" };
+    return { icon: UserRound, iconClass: "text-info", label: "Cartão de contato" };
   }
   if (mt === "reaction") {
-    return { icon: MessageCircle, iconClass: "text-rose-500", label: "Reação" };
+    return { icon: MessageCircle, iconClass: "text-destructive", label: "Reação" };
   }
   if (mt === "interactive" || mt === "button" || mt === "list") {
-    return { icon: ListChecks, iconClass: "text-violet-600", label: mt === "list" ? "Lista" : "Botões" };
+    return { icon: ListChecks, iconClass: "text-accent", label: mt === "list" ? "Lista" : "Botões" };
   }
   if (mt === "order" || mt === "product") {
-    return { icon: FileText, iconClass: "text-amber-700", label: "Pedido / catálogo" };
+    return { icon: FileText, iconClass: "text-warning", label: "Pedido / catálogo" };
   }
 
   // Texto comum
@@ -1023,7 +1023,7 @@ function ConversationItem({
         key: "read",
         label: "Lida",
         icon: <Check className="size-5" strokeWidth={2.6} />,
-        bg: "bg-blue-500",
+        bg: "bg-primary",
         onTrigger: onMarkRead,
       });
     }
@@ -1032,7 +1032,7 @@ function ConversationItem({
         key: "resolve",
         label: "Fim",
         icon: <CheckCheck className="size-5" strokeWidth={2.6} />,
-        bg: "bg-emerald-500",
+        bg: "bg-success",
         onTrigger: onResolve,
       });
     }
@@ -1075,14 +1075,14 @@ function ConversationItem({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="min-w-0 truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+          <p className="min-w-0 truncate text-[13px] font-semibold text-foreground dark:text-white">
             {row.contact.name || row.contact.phone || "Sem nome"}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {/* Timer de sessão — ícone + tempo ao lado da hora */}
             {timer?.label === "Expirada" ? (
               <TooltipHost label="Sessão de 24h encerrada" side="top">
-                <Clock className="size-3 text-red-400 shrink-0" strokeWidth={2.5} />
+                <Clock className="size-3 text-destructive shrink-0" strokeWidth={2.5} />
               </TooltipHost>
             ) : timer ? (
               <TooltipHost label="Tempo restante de sessão WhatsApp" side="top">
@@ -1090,18 +1090,18 @@ function ConversationItem({
                   <Clock
                     className={cn(
                       "size-3 shrink-0",
-                      timer.color === "var(--color-destructive)" && "text-red-400",
-                      timer.color === "var(--color-warning)" && "text-amber-400",
-                      timer.color === "var(--color-status-online)" && "text-emerald-400",
+                      timer.color === "var(--color-destructive)" && "text-destructive",
+                      timer.color === "var(--color-warning)" && "text-warning",
+                      timer.color === "var(--color-status-online)" && "text-success",
                     )}
                     strokeWidth={2.5}
                   />
                   <span
                     className={cn(
                       "text-[10px] font-semibold tabular-nums",
-                      timer.color === "var(--color-destructive)" && "text-red-400",
-                      timer.color === "var(--color-warning)" && "text-amber-500",
-                      timer.color === "var(--color-status-online)" && "text-emerald-500",
+                      timer.color === "var(--color-destructive)" && "text-destructive",
+                      timer.color === "var(--color-warning)" && "text-warning",
+                      timer.color === "var(--color-status-online)" && "text-success",
                     )}
                   >
                     {timer.label}
@@ -1112,8 +1112,8 @@ function ConversationItem({
             {time ? (
               <span
                 className={cn(
-                  "shrink-0 text-[10px] tabular-nums text-slate-400 dark:text-slate-500",
-                  unread && "font-semibold text-blue-600",
+                  "shrink-0 text-[10px] tabular-nums text-ink-subtle dark:text-ink-muted",
+                  unread && "font-semibold text-primary",
                 )}
               >
                 {time}
@@ -1137,7 +1137,7 @@ function ConversationItem({
 
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
           {row.lastMessageDirection === "out" && (
-            <CheckCheck size={15} className={cn("shrink-0", active ? "text-blue-600" : "text-slate-300 dark:text-slate-600")} />
+            <CheckCheck size={15} className={cn("shrink-0", active ? "text-primary" : "text-ink-subtle dark:text-ink-soft")} />
           )}
           {(() => {
             const { icon: PreviewIcon, iconClass, label } = describePreview(row.lastMessagePreview);
@@ -1146,8 +1146,8 @@ function ConversationItem({
                 {PreviewIcon ? <PreviewIcon size={14} className={cn("shrink-0", iconClass)} /> : null}
                 <p
                   className={cn(
-                    "min-w-0 flex-1 truncate text-[12px] text-slate-400 dark:text-slate-500",
-                    unread && "font-medium text-slate-700 dark:text-slate-200",
+                    "min-w-0 flex-1 truncate text-[12px] text-ink-subtle dark:text-ink-muted",
+                    unread && "font-medium text-ink-soft dark:text-ink-subtle",
                   )}
                 >
                   {label}
@@ -1167,7 +1167,7 @@ function ConversationItem({
               </TooltipHost>
             ))}
             {extraTagCount > 0 ? (
-              <span className="text-[10px] text-slate-400 dark:text-slate-500">+{extraTagCount}</span>
+              <span className="text-[10px] text-ink-subtle dark:text-ink-muted">+{extraTagCount}</span>
             ) : null}
           </div>
         ) : null}
@@ -1211,7 +1211,7 @@ function ConversationItem({
           </TooltipHost>
         ) : (
           <TooltipHost label="Sem responsável atribuído" side="left">
-            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600">
+            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-white dark:bg-ink-soft text-ink-subtle dark:text-ink-soft">
               <UserRound size={12} />
             </div>
           </TooltipHost>

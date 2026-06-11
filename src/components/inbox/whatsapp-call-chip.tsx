@@ -532,7 +532,7 @@ export function WhatsappCallChip({
 
   if (isLoading) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[12px] font-semibold text-slate-400">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-subtle">
         <Loader2 className="size-3.5 animate-spin" />
         Voz…
       </span>
@@ -556,12 +556,12 @@ export function WhatsappCallChip({
               hasActiveCall ||
               outbound.phase === "live" ||
               outbound.phase === "need_answer"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              ? "border-success/20 bg-success-soft text-success hover:bg-success-soft"
               : cs === "DENIED" || effectivelyExpired
-                ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                ? "border-destructive/20 bg-destructive-soft text-destructive hover:bg-destructive-soft"
                 : cs === "REQUESTED"
-                  ? "border-sky-200 bg-sky-50 text-sky-600 hover:bg-sky-100"
-                  : "border-slate-200 bg-white text-slate-400 hover:bg-slate-50",
+                  ? "border-primary/20 bg-primary-soft text-info hover:bg-primary-soft"
+                  : "border-black/10 bg-white text-ink-subtle hover:bg-muted",
           )}
           aria-label="Estado da sessão de voz"
         >
@@ -571,12 +571,12 @@ export function WhatsappCallChip({
               (cs === "GRANTED" && !effectivelyExpired) ||
                 hasActiveCall ||
                 outbound.phase === "live"
-                ? "text-emerald-500"
+                ? "text-success"
                 : cs === "DENIED" || effectivelyExpired
-                  ? "text-red-400"
+                  ? "text-destructive"
                   : cs === "REQUESTED"
                     ? "text-sky-400"
-                    : "text-slate-400",
+                    : "text-ink-subtle",
             )}
             strokeWidth={2.2}
           />
@@ -585,9 +585,9 @@ export function WhatsappCallChip({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="z-50 min-w-[280px] rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
+          className="z-50 min-w-[280px] rounded-xl border border-black/5 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
         >
-          <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+          <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">
             Sessão de voz
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="my-1" />
@@ -595,7 +595,7 @@ export function WhatsappCallChip({
           {canInitiate && (
             <DropdownMenuItem
               onClick={initiate}
-              className="gap-2 px-2 py-1.5 text-[13px] text-emerald-700 hover:bg-slate-50 focus:bg-slate-50"
+              className="gap-2 px-2 py-1.5 text-[13px] text-success hover:bg-muted focus:bg-muted"
             >
               <Phone className="size-3.5" />
               Ligar agora
@@ -605,7 +605,7 @@ export function WhatsappCallChip({
           {canTerminate && (
             <DropdownMenuItem
               onClick={handleTerminate}
-              className="gap-2 px-2 py-1.5 text-[13px] text-red-700 hover:bg-slate-50 focus:bg-slate-50"
+              className="gap-2 px-2 py-1.5 text-[13px] text-destructive hover:bg-muted focus:bg-muted"
             >
               <PhoneOff className="size-3.5" />
               Encerrar chamada
@@ -617,12 +617,12 @@ export function WhatsappCallChip({
             <div className="px-2 pb-1 pt-0.5 text-[11px] leading-snug text-[var(--color-ink-soft)]">
               {expiry.isPermanent ? (
                 <>
-                  <span className="font-semibold text-emerald-700">Permissão permanente.</span>{" "}
+                  <span className="font-semibold text-success">Permissão permanente.</span>{" "}
                   Cliente pode revogar a qualquer momento nas configurações do WhatsApp.
                 </>
               ) : (
                 <>
-                  <span className="font-semibold text-emerald-700">
+                  <span className="font-semibold text-success">
                     Permissão temporária (7 dias).
                   </span>{" "}
                   Atender ligação <em>não</em> estende o prazo.
@@ -637,7 +637,7 @@ export function WhatsappCallChip({
               <DropdownMenuItem
                 onClick={() => requestPermission.mutate(undefined)}
                 disabled={requestPermission.isPending}
-                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
               >
                 {requestPermission.isPending ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -650,7 +650,7 @@ export function WhatsappCallChip({
               {/* Submenu: escolher template */}
               <button
                 type="button"
-                className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-slate-50 focus:bg-slate-50"
+                className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-muted focus:bg-muted"
                 onClick={(e) => {
                   e.preventDefault();
                   setTemplatePickerOpen((v) => !v);
@@ -682,9 +682,9 @@ export function WhatsappCallChip({
                       <p className="mt-1">Carregando…</p>
                     </div>
                   ) : (templatesQuery.data ?? []).length === 0 ? (
-                    <div className="px-2 py-2 text-[11px] text-slate-500">
+                    <div className="px-2 py-2 text-[11px] text-ink-muted">
                       Nenhum template aprovado do tipo{" "}
-                      <code className="rounded bg-slate-100 px-1">call_permission</code>{" "}
+                      <code className="rounded bg-muted px-1">call_permission</code>{" "}
                       encontrado. Cadastre em{" "}
                       <a
                         href="/old/settings/message-models?tab=whatsapp"
@@ -705,10 +705,10 @@ export function WhatsappCallChip({
                           setMenuOpen(false);
                           requestPermission.mutate(tpl.name);
                         }}
-                        className="block w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-50"
+                        className="block w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted focus:bg-muted disabled:opacity-50"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate font-mono font-medium text-slate-800">
+                          <span className="truncate font-mono font-medium text-foreground">
                             {tpl.name}
                           </span>
                           <span className="shrink-0 text-[10px] uppercase text-[var(--color-ink-muted)]">
@@ -716,7 +716,7 @@ export function WhatsappCallChip({
                           </span>
                         </div>
                         {tpl.bodyText ? (
-                          <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-500">
+                          <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-ink-muted">
                             {tpl.bodyText}
                           </p>
                         ) : null}
@@ -736,12 +736,12 @@ export function WhatsappCallChip({
           {cs === "DENIED" && denyCooldown.active && (
             <DropdownMenuItem
               disabled
-              className="gap-2 px-2 py-1.5 text-[13px] text-red-700 opacity-100 hover:bg-slate-50 focus:bg-slate-50"
+              className="gap-2 px-2 py-1.5 text-[13px] text-destructive opacity-100 hover:bg-muted focus:bg-muted"
             >
               <PhoneOff className="size-3.5" />
               <span className="flex flex-col gap-0.5">
                 <span>Cliente recusou · bloqueio de 24h</span>
-                <span className="text-[10px] font-normal text-slate-500">
+                <span className="text-[10px] font-normal text-ink-muted">
                   Novo pedido liberado em {formatRemaining(denyCooldown.remainingMs)}
                 </span>
               </span>
@@ -752,15 +752,15 @@ export function WhatsappCallChip({
             <>
               <DropdownMenuItem
                 disabled
-                className="gap-2 px-2 py-1.5 text-[13px] text-slate-500 opacity-100 hover:bg-slate-50 focus:bg-slate-50"
+                className="gap-2 px-2 py-1.5 text-[13px] text-ink-muted opacity-100 hover:bg-muted focus:bg-muted"
               >
-                <Loader2 className="size-3.5 animate-spin text-sky-500" />
+                <Loader2 className="size-3.5 animate-spin text-info" />
                 Aguardando cliente autorizar
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => requestPermission.mutate(undefined)}
                 disabled={requestPermission.isPending}
-                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
               >
                 <RefreshCw
                   className={cn(
@@ -778,7 +778,7 @@ export function WhatsappCallChip({
               <DropdownMenuSeparator className="my-1" />
               <DropdownMenuItem
                 onClick={activateAudio}
-                className="gap-2 px-2 py-1.5 text-[13px] text-amber-800 hover:bg-slate-50 focus:bg-slate-50"
+                className="gap-2 px-2 py-1.5 text-[13px] text-warning hover:bg-muted focus:bg-muted"
               >
                 <Mic className="size-3.5" />
                 Ativar som da chamada
@@ -789,7 +789,7 @@ export function WhatsappCallChip({
           {outbound.errorMsg && (
             <>
               <DropdownMenuSeparator className="my-1" />
-              <div className="px-2 py-1.5 text-[11px] leading-snug text-red-600">
+              <div className="px-2 py-1.5 text-[11px] leading-snug text-destructive">
                 {outbound.errorMsg}
               </div>
             </>
@@ -803,7 +803,7 @@ export function WhatsappCallChip({
               e.preventDefault();
               setHistoryOpen((v) => !v);
             }}
-            className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-slate-50 focus:bg-slate-50"
+            className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-muted focus:bg-muted"
           >
             <History className="size-3.5" />
             <span>Últimas chamadas</span>
@@ -812,7 +812,7 @@ export function WhatsappCallChip({
             ) : (
               <span className="ml-auto flex items-center gap-1.5">
                 {recentCallsQuery.data?.items?.length ? (
-                  <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-500">
+                  <span className="rounded-full bg-muted px-1.5 text-[10px] font-bold text-ink-muted">
                     {recentCallsQuery.data.items.length}
                   </span>
                 ) : null}
@@ -833,7 +833,7 @@ export function WhatsappCallChip({
                   <p className="mt-1">Carregando…</p>
                 </div>
               ) : (recentCallsQuery.data?.items ?? []).length === 0 ? (
-                <div className="px-2 py-2 text-[11px] text-slate-500">
+                <div className="px-2 py-2 text-[11px] text-ink-muted">
                   Nenhuma chamada registrada nesta conversa.
                 </div>
               ) : (
@@ -841,7 +841,7 @@ export function WhatsappCallChip({
                   const isOut = call.direction === "BUSINESS_INITIATED";
                   const Icon = isOut ? PhoneOutgoing : PhoneIncoming;
                   const sideLabel = isOut ? "Saída" : "Entrada";
-                  const sideClass = isOut ? "text-primary" : "text-emerald-600";
+                  const sideClass = isOut ? "text-primary" : "text-success";
                   const statusLabel = (() => {
                     if (call.status === "completed") return "completada";
                     if (call.status === "failed") return "falhou";
@@ -849,22 +849,22 @@ export function WhatsappCallChip({
                     return "tocando";
                   })();
                   const statusTint = (() => {
-                    if (call.status === "completed") return "text-emerald-600";
-                    if (call.status === "failed") return "text-rose-500";
-                    if (call.status === "rejected") return "text-amber-600";
-                    return "text-sky-500";
+                    if (call.status === "completed") return "text-success";
+                    if (call.status === "failed") return "text-destructive";
+                    if (call.status === "rejected") return "text-warning";
+                    return "text-info";
                   })();
                   const isPlaying = playingRecordingUrl === call.recordingUrl;
                   return (
                     <div
                       key={call.callId}
-                      className="rounded-md px-2 py-1.5 hover:bg-slate-50 focus:bg-slate-50"
+                      className="rounded-md px-2 py-1.5 hover:bg-muted focus:bg-muted"
                     >
                       <div className="flex items-center gap-2">
                         <Icon className={cn("size-3.5 shrink-0", sideClass)} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-[11px] font-bold text-slate-800">
+                            <span className="text-[11px] font-bold text-foreground">
                               {sideLabel}
                             </span>
                             <span className="text-[10px] text-[var(--color-ink-muted)]">·</span>
@@ -872,11 +872,11 @@ export function WhatsappCallChip({
                               {statusLabel}
                             </span>
                           </div>
-                          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-500">
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-ink-muted">
                             <span className="tabular-nums">
                               {formatTimeAgo(call.endedAt ?? call.startedAt)}
                             </span>
-                            <span className="text-slate-300">·</span>
+                            <span className="text-ink-subtle">·</span>
                             <span className="tabular-nums">
                               {formatCallDuration(call.durationSec)}
                             </span>
@@ -895,8 +895,8 @@ export function WhatsappCallChip({
                             className={cn(
                               "shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide transition-all",
                               isPlaying
-                                ? "bg-emerald-500 text-white shadow-sm"
-                                : "bg-slate-900 text-white hover:bg-slate-800",
+                                ? "bg-success text-white shadow-sm"
+                                : "bg-foreground text-white hover:bg-ink-soft",
                             )}
                             aria-label={isPlaying ? "Parar gravação" : "Ouvir gravação"}
                           >
@@ -907,7 +907,7 @@ export function WhatsappCallChip({
                           </button>
                         ) : (
                           <TooltipHost label="Sem gravação disponível" side="left">
-                            <span className="shrink-0 text-[10px] font-medium text-slate-300">
+                            <span className="shrink-0 text-[10px] font-medium text-ink-subtle">
                               sem áudio
                             </span>
                           </TooltipHost>
@@ -934,7 +934,7 @@ export function WhatsappCallChip({
               e.preventDefault();
               setHowItWorksOpen((v) => !v);
             }}
-            className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-slate-50 focus:bg-slate-50"
+            className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-none hover:bg-muted focus:bg-muted"
           >
             <Info className="size-3.5" />
             <span>Como funciona a permissão</span>
@@ -948,16 +948,16 @@ export function WhatsappCallChip({
           {howItWorksOpen && (
             <div className="space-y-1.5 px-3 pb-2 text-[11px] leading-snug text-[var(--color-ink-soft)]">
               <p>
-                <span className="font-semibold text-emerald-700">Sempre permitir:</span>{" "}
+                <span className="font-semibold text-success">Sempre permitir:</span>{" "}
                 permanente, vale até o cliente revogar manualmente no WhatsApp.
               </p>
               <p>
-                <span className="font-semibold text-emerald-700">Temporária:</span>{" "}
+                <span className="font-semibold text-success">Temporária:</span>{" "}
                 <strong>7 dias</strong> corridos. Ligações atendidas <em>não estendem</em>{" "}
                 o prazo.
               </p>
               <p>
-                <span className="font-semibold text-red-700">Recusa:</span> Meta bloqueia
+                <span className="font-semibold text-destructive">Recusa:</span> Meta bloqueia
                 novo pedido por <strong>24h</strong>.
               </p>
               <a

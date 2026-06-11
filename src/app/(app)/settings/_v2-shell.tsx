@@ -19,10 +19,18 @@ export function SettingsV2Shell({
   title,
   description,
   children,
+  backHref = "/settings",
+  backLabel = "Voltar",
+  icon = <IconSettings size={22} />,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
+  /** Destino do botão "Voltar". Default: home das configurações. */
+  backHref?: string;
+  backLabel?: string;
+  /** Ícone do cabeçalho. Default: engrenagem (configurações). */
+  icon?: React.ReactNode;
 }) {
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
@@ -30,13 +38,13 @@ export function SettingsV2Shell({
 
       <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         <PageHeader
-          icon={<IconSettings size={22} />}
+          icon={icon}
           title={title}
           description={description ?? "Configurações"}
           actions={
-            <Link href="/settings">
+            <Link href={backHref}>
               <ButtonGlass variant="glass">
-                <IconArrowLeft size={16} /> Voltar
+                <IconArrowLeft size={16} /> {backLabel}
               </ButtonGlass>
             </Link>
           }

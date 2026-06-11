@@ -1415,14 +1415,54 @@ export default function PipelineSettingsClientPage() {
 
   // ─── Outros handlers ────────────────────────────────────────────
 
-  const handleNewPipeline = useCallback((name: string) => {
-    setNewPipelineOpen(false);
-    alert(`Pipeline "${name}" será criado em breve.`);
-  }, []);
+  const handleNewPipeline = useCallback(
+    async (name: string) => {
+      try {
+        const res = await fetch(apiUrl("/api/pipelines"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.message ?? "Falha ao criar pipeline.");
+        }
+        const created = (await res.json()) as { id: string; name: string };
+        await queryClient.invalidateQueries({ queryKey: ["pipelines-v2"] });
+        setNewPipelineOpen(false);
+        setPipelineId(created.id);
+        setStageOrder([]);
+        setStageNameOverrides({});
+        setStageColorOverrides({});
+        setStageAutomationsMap({});
+        toast.success(`Pipeline "${created.name}" criado.`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Erro ao criar pipeline.");
+      }
+    },
+    [queryClient],
+  );
 
-  const handleSetDefault = useCallback(() => {
-    alert("Funcionalidade em desenvolvimento.");
-  }, []);
+  const handleSetDefault = useCallback(async () => {
+    if (!pipelineId) return;
+    try {
+      const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ isDefault: true }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.message ?? "Falha ao definir pipeline padrão.");
+      }
+      await queryClient.invalidateQueries({ queryKey: ["pipelines-v2"] });
+      toast.success("Pipeline definido como padrão.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao definir pipeline padrão.");
+    }
+  }, [pipelineId, queryClient]);
 
   return (
     <>

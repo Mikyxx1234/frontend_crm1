@@ -5,6 +5,127 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-09 — Editor de escopo por usuário (funis e canais)
+
+**Decisão.** `UserPermissionsView` (sheet "Gerenciar" de cada usuário em
+`/settings/permissions`) ganhou um editor de escopo: a quais **funis** o
+usuário tem acesso e em quais **canais** pode **ver** / **enviar** mensagens.
+Renderiza só quando `editable`.
+
+**Por quê aqui.** O escopo é por usuário (não por papel/grupo), então o lugar
+natural é a sheet do usuário, ao lado do editor de roles. Reaproveita
+`/api/pipelines` e `/api/channels` para as opções.
+
+**Modelo.** `null` = sem restrição (toggle "Todos"); array de IDs = restrito.
+Lê/grava via `GET/PUT /api/users/[id]/scope-grants` (read-merge-write no
+backend, não apaga regras de outros). Hooks novos em `features/permissions/hooks.ts`
+(`useUserScopeGrants`, `useUpdateUserScopeGrants`, `useScopePipelineOptions`,
+`useScopeChannelOptions`). `["*"]` vindo do backend é tratado como "Todos".
+
+**Enforcement é no backend** (flag `rbac_granular_scope_v1`); a UI só
+configura. Detalhes do modelo em `backend/AGENT.md` (mesma data).
+
+---
+
+### 2026-06-10 — /settings/permissions unificada (sem tabs)
+
+**Decisão.** A tela `/settings/permissions` deixou de usar `Tabs`
+(Roles / Grupos / Usuários) e passou a um **layout único** que mostra tudo
+ao mesmo tempo: grid `xl:grid-cols-[minmax(0,1fr)_360px]` com **Usuários**
+na coluna principal (o `UsersTab` intacto: busca + filtros + lista + sheet)
+e um **trilho lateral** com dois cards empilhados — **Roles** (presets do
+sistema + customizados, navega para a página dedicada do editor) e
+**Grupos** (abre o `GroupEditor` em Sheet). Abaixo de `xl`, empilha.
+Blueprint gerado no v0 MCP (model v0-max), adaptado ao DS v2 em Tailwind +
+tokens (`--glass-*`, `--text-*`, `--brand-*`, `font-display`, ícones
+`@tabler/icons-react`).
+
+**Por quê.** Trocar de tab pra cruzar usuário ↔ role ↔ grupo era atrito no
+fluxo de administração. Com tudo na mesma tela o admin vê o catálogo de
+roles/grupos enquanto gerencia usuários. **Nenhuma rota de backend mudou** —
+só os mesmos hooks (`useRoles`, `useGroups`, `useUsers`) reorganizados.
+`RolesTab`/`GroupsTab` (funções locais antigas do client-page) foram
+substituídas por `RolesCard`/`GroupsCard` com header próprio + botão "Novo".
+
+**Ajustes 2026-06-11.** Ícone da tela passou de engrenagem para escudo
+(`SettingsV2Shell` ganhou prop opcional `icon`, default = engrenagem). Os
+cards de Roles e Grupos saíram do trilho lateral e ficam **sempre abaixo**
+dos usuários (grid `md:grid-cols-2`, nunca migram pra lateral). Cards usam
+`bg-white` (padrão "card branco" do dashboard) com hover/badges em tom
+neutro (`black/[0.04-0.05]`) por causa do fundo branco. **Rótulo:** o card
+"Roles" é exibido como **"Regras"** (e a página do editor como "Nova/Editar
+regra"); o entity/rota/hook continua sendo role — mudou só o label. "Grupos"
+permanece "Grupos".
+
+---
+
+### 2026-06-10 — Matriz de permissões em grid de cards (full-screen real)
+
+**Decisão.** Dentro do `RolePermissionsEditor`, a lista vertical de recursos
+(coluna única) virou **grid responsivo de cards**
+(`grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3`) nos dois modos (Simplificado e
+Granular). Cada recurso é um card próprio (`rounded-lg` + `glass-bg-base`):
+no modo Simplificado o segmented de 4 níveis ocupa a **largura total do card**
+(`flex-1` por botão); no Granular o card traz ícone + contador + "tudo" +
+expandir. O wrapper da página perdeu o `max-w-[1400px]` (agora `w-full`).
+
+**Por quê.** Mesmo com a coluna direita larga, as linhas single-column
+deixavam um vão horizontal grande (label à esquerda, controle à direita). O
+grid de cards preenche a tela de fato e mantém densidade/legibilidade. Em
+telas estreitas degrada para 1 coluna sem quebrar. `items-start` evita que
+um card expandido estique os vizinhos da mesma linha.
+
+---
+
+### 2026-06-10 — Editor de role: Sheet → página dedicada full-screen (2 colunas)
+
+**Decisão.** A edição/criação de role saiu do `Sheet` lateral (560px, que
+cortava a matriz) para a rota dedicada
+`/settings/permissions/roles/[roleId]` (`roleId="new"` = criação). O
+layout segue o blueprint gerado no v0 MCP (chat tqb…), adaptado ao DS v2
+em Tailwind + tokens: grid `lg:grid-cols-[320px_minmax(0,1fr)]` com
+**coluna esquerda fixa** (`sticky`) de identidade (ícone, nome, descrição,
+resumo de contagem, ações Salvar/Cancelar/Excluir) e **coluna direita
+larga** com o `RolePermissionsEditor`.
+
+**Por quê.** A matriz de permissões (segmented de 4 níveis + grid 2-col de
+settings) precisa de largura; num Sheet estreito ficava espremida. Página
+dedicada dá URL própria (deep-link, refresh, botão voltar do browser) e
+espaço real. Grupos seguem no Sheet por ora (escopo do pedido foi role).
+
+**Notas de integração.** `SettingsV2Shell` ganhou props opcionais
+`backHref`/`backLabel` (default `/settings`) para o "Voltar" apontar para
+`/settings/permissions`. O `RoleEditor` virou full-page (não é mais usado
+em Sheet). O `RolePermissionsEditor` permaneceu intacto (header/toggle/
+settings/footer internos) — só foi reposicionado na coluna direita.
+
+---
+
+### 2026-06-10 — Editor de permissões em 2 modos (níveis + granular) com `level-matrix`
+
+**Decisão.** A matriz de permissões do RoleEditor (`/settings/permissions`)
+foi substituída pelo `RolePermissionsEditor` (UI gerada via v0 MCP, adaptada
+ao DS v2), com a lógica de negócio isolada em
+`src/features/permissions/level-matrix.tsx` — único dono de `LEVELS`,
+`actionTier()`, `applyLevel()`, `levelOf()`, `deriveNav()` e
+`withDerivedNav()`.
+
+**Por quê.** O modo "Simplificado" (Nenhum · Ver · Operar · Total) precisa de
+uma classificação estável de actions por tier. Em vez de hardcodar listas na
+UI, o tier é resolvido por: campo explícito `ActionDef.tier` (novo, opcional)
+> heurística (`view`=1; `destructive`/`transfer_owner`/`*_others`=3; resto=2).
+Assim, novas actions do catálogo backend caem num tier razoável sem mudança
+no frontend.
+
+**Derivação de `nav:*`.** No modo simplificado, `nav:*` nunca é editado
+direto — `withDerivedNav()` recalcula a partir do `:view` de cada módulo
+(espelha `requiredPermission` de `sidebar-catalog.ts`). Mapeamentos sem
+módulo 1:1: `nav:dashboard` = acesso básico (sempre que há ≥1 permissão),
+`nav:logs` ← `report:view`, `nav:widgets` ← `distribution:view`. No modo
+granular, `nav` aparece como seção editável normal.
+
+---
+
 ### 2026-06-02 — Migração do novo design (frontend novo → branch `feature/migracao-novo-design`)
 
 **Decisão.** Trazido o estado completo do frontend novo

@@ -49,6 +49,11 @@ import {
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import {
+  DealActivitiesTab,
+  DealNotesTab,
+  DealTimelineTab,
+} from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 const DEFAULT_FILTERS: InboxFilters = {};
@@ -326,38 +331,6 @@ export default function InboxV2ClientPage({
     />
   );
 
-  const chatNode =
-    chatContact && activeRow ? (
-      <ChatArea
-        contact={chatContact}
-        messages={messageBubbles}
-        stages={stagePillsView}
-        showSessionAlert={sessionExpired}
-        onUseTemplate={() => setTemplateOpen(true)}
-        headerActionsSlot={
-          <ConversationActionsMenu
-            conversationId={activeId}
-            isResolved={activeRow.status === "RESOLVED"}
-          />
-        }
-        composerSlot={
-          <Composer
-            conversationId={activeId}
-            value={draft}
-            onChange={setDraft}
-            onSend={handleSend}
-            onSendNote={handleSendNote}
-            sending={sendMessage.isPending}
-            disabled={sessionExpired}
-            isResolved={activeRow.status === "RESOLVED"}
-            contactId={activeContactId}
-          />
-        }
-      />
-    ) : (
-      <EmptyChatArea />
-    );
-
   // Tags da conversa ativa — até 2 chips + "+N" para o restante.
   const activeTags = activeRow?.tags ?? [];
   const MAX_ASIDE_TAGS = 2;
@@ -466,6 +439,63 @@ export default function InboxV2ClientPage({
     ? { ...contactAsideView, deals: dealsWithSlots }
     : null;
 
+  // ── Slots das abas do card da conversa ──────────────────────────
+  // Notas/Timeline sao escopados ao 1o negocio do contato (mesmo
+  // padrao do DealDetailPanel). Sem negocio vinculado, mostra um
+  // placeholder amigavel. Atividades ainda e' placeholder global.
+  const dealNotes =
+    (firstDealDetail as { notes?: string | null } | undefined)?.notes ?? null;
+  const notesSlot = firstDealId ? (
+    <DealNotesTab
+      dealId={firstDealId}
+      notes={dealNotes}
+      pipelineId={firstDealPipelineId}
+    />
+  ) : (
+    <NoDealTab message="Vincule um negocio a este contato para registrar notas." />
+  );
+  const timelineSlot = firstDealId ? (
+    <DealTimelineTab dealId={firstDealId} />
+  ) : (
+    <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
+  );
+  const activitiesSlot = <DealActivitiesTab />;
+
+  const chatNode =
+    chatContact && activeRow ? (
+      <ChatArea
+        contact={chatContact}
+        messages={messageBubbles}
+        stages={stagePillsView}
+        showSessionAlert={sessionExpired}
+        onUseTemplate={() => setTemplateOpen(true)}
+        headerActionsSlot={
+          <ConversationActionsMenu
+            conversationId={activeId}
+            isResolved={activeRow.status === "RESOLVED"}
+          />
+        }
+        composerSlot={
+          <Composer
+            conversationId={activeId}
+            value={draft}
+            onChange={setDraft}
+            onSend={handleSend}
+            onSendNote={handleSendNote}
+            sending={sendMessage.isPending}
+            disabled={sessionExpired}
+            isResolved={activeRow.status === "RESOLVED"}
+            contactId={activeContactId}
+          />
+        }
+        notesSlot={notesSlot}
+        activitiesSlot={activitiesSlot}
+        timelineSlot={timelineSlot}
+      />
+    ) : (
+      <EmptyChatArea />
+    );
+
   const asideNode =
     contactAsideViewWithSlots && activeRow ? (
       <ContactAside
@@ -572,6 +602,17 @@ function EmptyChatArea() {
         Escolha uma conversa na lista para visualizar mensagens e detalhes do contato.
       </p>
     </main>
+  );
+}
+
+function NoDealTab({ message }: { message: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-[var(--text-muted)]">
+      <div className="font-display text-[13px] font-semibold">
+        Nenhum negocio vinculado
+      </div>
+      <p className="max-w-xs text-[12px]">{message}</p>
+    </div>
   );
 }
 

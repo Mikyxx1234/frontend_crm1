@@ -122,7 +122,7 @@ export default function DashboardV2ClientPage({
         )}
 
         {isManagerUp && !editing && (
-          <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 shadow-[var(--glass-shadow)] backdrop-blur-[16px]">
+          <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-2">
               <span className="flex size-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
                 <IconUsers size={17} />

@@ -16,7 +16,20 @@ import {
   IconPaperclip,
   IconMoodSmile,
   IconSend,
+  IconMessageCircle,
+  IconChecklist,
+  IconNote,
+  IconClock,
 } from "@tabler/icons-react"
+
+type ChatTabId = "conversa" | "notas" | "atividades" | "timeline"
+
+const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+  { id: "conversa", label: "Conversa", icon: IconMessageCircle },
+  { id: "atividades", label: "Atividades", icon: IconChecklist },
+  { id: "notas", label: "Notas", icon: IconNote },
+  { id: "timeline", label: "Timeline", icon: IconClock },
+]
 
 /**
  * Tipo legado mantido para retro-compatibilidade com `toChatContact`
@@ -67,6 +80,16 @@ interface ChatAreaProps {
   headerActionsSlot?: React.ReactNode
   /** Handler do botao "Usar Template" do SessionAlert. */
   onUseTemplate?: () => void
+
+  /**
+   * Conteudo das abas opcionais do card. Quando ao menos um e' provido, o
+   * card ganha uma barra de abas (Conversa / Atividades / Notas / Timeline).
+   * "Conversa" mostra as mensagens + composer; as demais mostram o slot.
+   * Sem nenhum slot, o card mantem o comportamento legado (sem abas).
+   */
+  notesSlot?: React.ReactNode
+  activitiesSlot?: React.ReactNode
+  timelineSlot?: React.ReactNode
 }
 
 export function ChatArea({
@@ -90,10 +113,18 @@ export function ChatArea({
   composerSlot,
   headerActionsSlot,
   onUseTemplate,
+  notesSlot,
+  activitiesSlot,
+  timelineSlot,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
   const { data: session } = useSession()
+
+  // Abas opt-in: so aparecem quando ha conteudo para pelo menos uma aba
+  // alem de "Conversa".
+  const tabsEnabled = Boolean(notesSlot || activitiesSlot || timelineSlot)
+  const [activeTab, setActiveTab] = useState<ChatTabId>("conversa")
 
   // Iniciais do agente nas bolhas outgoing. Prioridade: usuário
   // autenticado (NextAuth) > usuário de preview > genérico.
@@ -123,9 +154,9 @@ export function ChatArea({
         className,
       )}
     >
-      {/* HEADER — minimalista */}
-      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-[18px]">
-        <div className="flex flex-1 items-center gap-2.5">
+      {/* HEADER — minimalista (nome + abas inline + acoes) */}
+      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-3.5">
+        <div className="flex items-center gap-2.5">
           <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
             {contact.name}
           </h2>
@@ -140,7 +171,12 @@ export function ChatArea({
             </BadgeGlass>
           )}
         </div>
-        <div className="flex gap-1">
+
+        {tabsEnabled && (
+          <ChatTabsBar activeTab={activeTab} onChange={setActiveTab} />
+        )}
+
+        <div className="ml-auto flex gap-1">
           {headerActionsSlot ?? (
             <>
               <IconBtn title="Ligar" onClick={onPhoneClick}>
@@ -157,6 +193,16 @@ export function ChatArea({
         </div>
       </header>
 
+      {tabsEnabled && activeTab !== "conversa" ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          {activeTab === "notas"
+            ? notesSlot
+            : activeTab === "atividades"
+              ? activitiesSlot
+              : timelineSlot}
+        </div>
+      ) : (
+        <>
       {/* MESSAGES */}
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
         {(() => {
@@ -249,7 +295,46 @@ export function ChatArea({
           </TooltipGlass>
         </form>
       )}
+        </>
+      )}
     </main>
+  )
+}
+
+/**
+ * Barra de abas do card de conversa (Conversa / Atividades / Notas /
+ * Timeline). Mesmo visual do DealDetailPanel para consistencia.
+ */
+function ChatTabsBar({
+  activeTab,
+  onChange,
+}: {
+  activeTab: ChatTabId
+  onChange: (id: ChatTabId) => void
+}) {
+  return (
+    <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+      {CHAT_TABS.map((tab) => {
+        const Icon = tab.icon
+        const isActive = activeTab === tab.id
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onChange(tab.id)}
+            className={cn(
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+              isActive
+                ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+            )}
+          >
+            <Icon size={14} />
+            {tab.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

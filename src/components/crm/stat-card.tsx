@@ -42,7 +42,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-shadow hover:shadow-[var(--glass-shadow)]",
+        "flex flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-4 shadow-sm transition-shadow hover:shadow-md",
         className,
       )}
     >

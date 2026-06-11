@@ -25,6 +25,7 @@ import {
   IconPencil,
   IconPlus,
   IconSettings,
+  IconTrash,
   IconTrophy,
   IconUpload,
   IconX,
@@ -73,6 +74,7 @@ import {
   AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
+  DealDeleteButton,
   DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
@@ -133,6 +135,42 @@ export default function KanbanV2ClientPage({
   const isAuthenticated = sessionStatus === "authenticated";
 
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
+
+  // Deep-link: o negócio aberto é refletido na URL (?deal=<id>). Usamos
+  // a History API direto (em vez de router.push) para NÃO disparar um
+  // refetch do server component a cada abrir/fechar. O estado React é a
+  // fonte de renderização; a URL apenas espelha (e habilita compartilhar
+  // o link + voltar/avançar do navegador via popstate).
+  const setActiveDeal = useCallback((id: string | null) => {
+    setActiveDealId(id);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (id) {
+      if (url.searchParams.get("deal") === id) return;
+      url.searchParams.set("deal", id);
+      window.history.pushState(window.history.state, "", url.toString());
+    } else {
+      if (!url.searchParams.has("deal")) return;
+      url.searchParams.delete("deal");
+      window.history.replaceState(window.history.state, "", url.toString());
+    }
+  }, []);
+
+  // Inicializa a partir da URL no mount (abrir via link direto).
+  useEffect(() => {
+    const d = new URL(window.location.href).searchParams.get("deal");
+    if (d) setActiveDealId(d);
+  }, []);
+
+  // Voltar/avançar do navegador atualiza o negócio aberto.
+  useEffect(() => {
+    function onPop() {
+      setActiveDealId(new URL(window.location.href).searchParams.get("deal"));
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const [addStage, setAddStage] = useState<{ id: string; name: string } | null>(
     null,
   );
@@ -525,7 +563,7 @@ export default function KanbanV2ClientPage({
               <DroppableColumn
                 key={col.stageId}
                 column={col}
-                onDealClick={setActiveDealId}
+                onDealClick={setActiveDeal}
                 dealById={dealById}
                 pipelineId={pipelineId}
                 statusFilter={status}
@@ -561,7 +599,7 @@ export default function KanbanV2ClientPage({
 
       <DealDetailPanel
         isOpen={!!activeDealId}
-        onClose={() => setActiveDealId(null)}
+        onClose={() => setActiveDeal(null)}
         deal={dealDetailVm ?? undefined}
         stageRibbonSlot={
           activeDealId && activeDealStageId ? (
@@ -655,6 +693,28 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
+        deleteSlot={
+          activeDealId ? (
+            <DealDeleteButton
+              dealId={activeDealId}
+              pipelineId={pipelineId}
+              statusFilter={status}
+              onDeleted={() => setActiveDeal(null)}
+              trigger={
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8"
+                  style={{
+                    background: "var(--glass-bg-strong)",
+                    borderColor: "var(--glass-border)",
+                    boxShadow: "var(--glass-shadow-sm)",
+                  }}
+                >
+                  <IconTrash size={16} />
+                </span>
+              }
+            />
+          ) : undefined
+        }
         moreActionsSlot={
           activeDealId ? (
             <DealActionsMenu
@@ -662,7 +722,7 @@ export default function KanbanV2ClientPage({
               currentStatus={dealDetail?.status ?? "OPEN"}
               pipelineId={pipelineId}
               statusFilter={status}
-              onDeleted={() => setActiveDealId(null)}
+              onDeleted={() => setActiveDeal(null)}
               trigger={
                 <TooltipGlass label="Mais opções" side="bottom">
                   <span

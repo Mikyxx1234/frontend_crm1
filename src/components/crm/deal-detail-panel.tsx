@@ -53,6 +53,8 @@ interface DealDetailPanelProps {
   stageRibbonSlot?: React.ReactNode
   winButtonSlot?: React.ReactNode
   moreActionsSlot?: React.ReactNode
+  /** Botão dedicado de excluir negócio (atalho visível no header). */
+  deleteSlot?: React.ReactNode
   ownerSlot?: React.ReactNode
   sourceSlot?: React.ReactNode
   forecastSlot?: React.ReactNode
@@ -108,6 +110,7 @@ export function DealDetailPanel({
   onClose,
   deal,
   moreActionsSlot,
+  deleteSlot,
   ownerSlot,
   sourceSlot,
   forecastSlot,
@@ -223,6 +226,7 @@ export function DealDetailPanel({
             <PanelIconBtn title="Buscar">
               <IconSearch size={16} />
             </PanelIconBtn>
+            {deleteSlot}
             {moreActionsSlot ?? (
               <PanelIconBtn title="Mais">
                 <IconDotsVertical size={16} />

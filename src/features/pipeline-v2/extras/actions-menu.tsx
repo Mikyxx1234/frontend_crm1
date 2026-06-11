@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { IconTrash } from "@tabler/icons-react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
@@ -148,6 +149,55 @@ export function DealActionsMenu({
         }}
       />
     </div>
+  );
+}
+
+interface DealDeleteButtonProps {
+  dealId: string | null;
+  pipelineId: string | null;
+  statusFilter?: StatusFilter;
+  /** Notifica o caller para fechar o detail panel apos exclusao. */
+  onDeleted?: () => void;
+  trigger: React.ReactNode;
+}
+
+/**
+ * Botão dedicado "Excluir negócio" do header — atalho direto (sem
+ * abrir o menu "..."). Reusa useDeleteDeal e pede confirmação.
+ */
+export function DealDeleteButton({
+  dealId,
+  pipelineId,
+  statusFilter = "OPEN",
+  onDeleted,
+  trigger,
+}: DealDeleteButtonProps) {
+  const deleteDealMut = useDeleteDeal(pipelineId, statusFilter);
+
+  function handleClick() {
+    if (!dealId) return;
+    const ok = window.confirm(
+      "Excluir este negócio? Esta ação não pode ser desfeita.",
+    );
+    if (!ok) return;
+    deleteDealMut.mutate(
+      { dealId },
+      { onSuccess: () => onDeleted?.() },
+    );
+  }
+
+  return (
+    <TooltipGlass label="Excluir negócio" side="bottom">
+      <button
+        type="button"
+        disabled={!dealId || deleteDealMut.isPending}
+        onClick={handleClick}
+        className="inline-flex disabled:opacity-60"
+        aria-label="Excluir negócio"
+      >
+        {trigger}
+      </button>
+    </TooltipGlass>
   );
 }
 

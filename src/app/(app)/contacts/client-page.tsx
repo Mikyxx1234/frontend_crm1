@@ -4,15 +4,17 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 
-import { IconUsers, IconPlus } from "@tabler/icons-react";
+import { IconUsers, IconPlus, IconTrash, IconAlertTriangle } from "@tabler/icons-react";
+import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 
-import { useContacts, useCreateContact } from "@/features/directory-v2/hooks";
+import { useContacts, useCreateContact, useDeleteContact } from "@/features/directory-v2/hooks";
 
 const PER_PAGE = 30;
 
@@ -31,6 +33,9 @@ export default function V2ContactsClientPage() {
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const deleteMut = useDeleteContact();
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -39,6 +44,10 @@ export default function V2ContactsClientPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    setSelected(new Set());
+  }, [debounced, page]);
 
   const query = useContacts({
     search: debounced || undefined,
@@ -50,6 +59,51 @@ export default function V2ContactsClientPage() {
   const items = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+
+  const allChecked = items.length > 0 && items.every((c) => selected.has(c.id));
+  const someChecked = items.some((c) => selected.has(c.id));
+
+  function toggleAll() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allChecked) items.forEach((c) => next.delete(c.id));
+      else items.forEach((c) => next.add(c.id));
+      return next;
+    });
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleConfirmDelete() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    let ok = 0;
+    let fail = 0;
+    for (const id of ids) {
+      try {
+        await deleteMut.mutateAsync(id);
+        ok += 1;
+      } catch {
+        fail += 1;
+      }
+    }
+    setConfirmOpen(false);
+    setSelected(new Set());
+    if (fail === 0) {
+      toast.success(ok === 1 ? "Contato excluído." : `${ok} contatos excluídos.`);
+    } else if (ok === 0) {
+      toast.error("Não foi possível excluir os contatos selecionados.");
+    } else {
+      toast.error(`${ok} excluído(s), ${fail} falharam.`);
+    }
+  }
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
@@ -78,6 +132,30 @@ export default function V2ContactsClientPage() {
           }
         />
 
+        {selected.size > 0 && (
+          <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-2.5 backdrop-blur-md">
+            <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+              {selected.size} selecionado{selected.size > 1 ? "s" : ""}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelected(new Set())}
+                className="rounded-full px-3 py-1.5 font-display text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-black/5"
+              >
+                Limpar
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(true)}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-danger,#e11d48)] px-3.5 py-1.5 font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px"
+              >
+                <IconTrash size={14} /> Excluir
+              </button>
+            </div>
+          </div>
+        )}
+
         {query.isLoading && items.length === 0 ? (
           <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
         ) : query.error ? (
@@ -102,6 +180,14 @@ export default function V2ContactsClientPage() {
               <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
                   <tr className="border-b border-[var(--glass-border-subtle)]">
+                    <th className="w-12 px-3 py-3 text-left">
+                      <CheckboxGlass
+                        checked={allChecked}
+                        indeterminate={!allChecked && someChecked}
+                        onChange={toggleAll}
+                        aria-label="Selecionar todos"
+                      />
+                    </th>
                     <Th>Nome</Th>
                     <Th>E-mail</Th>
                     <Th>Telefone</Th>
@@ -114,8 +200,17 @@ export default function V2ContactsClientPage() {
                   {items.map((c) => (
                     <tr
                       key={c.id}
-                      className="border-b border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-overlay)]"
+                      className={`border-b border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-overlay)] ${
+                        selected.has(c.id) ? "bg-[var(--glass-bg-overlay)]" : ""
+                      }`}
                     >
+                      <td className="px-3 py-3">
+                        <CheckboxGlass
+                          checked={selected.has(c.id)}
+                          onChange={() => toggleOne(c.id)}
+                          aria-label={`Selecionar ${c.name}`}
+                        />
+                      </td>
                       <Td>
                         <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
                           {c.name}
@@ -164,7 +259,93 @@ export default function V2ContactsClientPage() {
       </main>
 
       <CreateContactDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <ConfirmDeleteDialog
+        open={confirmOpen}
+        count={selected.size}
+        pending={deleteMut.isPending}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
+  );
+}
+
+function ConfirmDeleteDialog({
+  open,
+  count,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  count: number;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    if (open) {
+      window.addEventListener("keydown", onEsc);
+      return () => window.removeEventListener("keydown", onEsc);
+    }
+  }, [open, onCancel]);
+
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[440px] max-w-[90vw] rounded-[var(--radius-xl)] border p-5 shadow-2xl"
+        style={{
+          background: "rgba(255, 255, 255, 0.98)",
+          borderColor: "var(--glass-border, rgba(0,0,0,0.08))",
+        }}
+      >
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger,#e11d48)_12%,transparent)] text-[var(--color-danger,#e11d48)]">
+            <IconAlertTriangle size={18} />
+          </span>
+          <h3 className="font-display text-base font-bold text-[var(--text-primary,#1a202c)]">
+            Excluir {count === 1 ? "contato" : `${count} contatos`}?
+          </h3>
+        </div>
+        <p className="mb-4 font-body text-[13px] leading-relaxed text-[var(--text-secondary,#4a5568)]">
+          Esta ação não pode ser desfeita.{" "}
+          {count === 1 ? "O contato será removido" : "Os contatos serão removidos"} junto com as
+          conversas, mensagens, notas e atividades vinculadas. Negócios associados são preservados
+          (ficam sem contato).
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary,#4a5568)] hover:bg-black/5 disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={pending}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 font-display text-xs font-semibold text-white disabled:opacity-60"
+            style={{ background: "var(--color-danger, #e11d48)" }}
+          >
+            <IconTrash size={14} />
+            {pending ? "Excluindo..." : "Excluir"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

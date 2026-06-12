@@ -16,6 +16,9 @@ export type ApiChannel = {
   lastConnectedAt: string | null;
   qrCode: string | null;
   sessionData: unknown;
+  /// Funil de destino do inbound deste canal. `null` = usa o funil padrão
+  /// da org (comportamento legado).
+  defaultPipelineId: string | null;
   createdAt: string;
   updatedAt: string;
   /// Slug da Organization dona deste canal — usado pra montar a URL

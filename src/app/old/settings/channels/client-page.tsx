@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ChannelCard } from "@/components/channels/channel-card";
+import { ChannelPipelineSelect } from "@/components/channels/channel-pipeline-select";
 import { CreateChannelDialog } from "@/components/channels/create-channel-dialog";
 import { MetaConfigPanel } from "@/components/channels/meta-config-panel";
 import type { ApiChannel } from "@/components/channels/types";
@@ -72,6 +73,7 @@ export default function SettingsChannelsPage({
   const [simpleChannel, setSimpleChannel] = useState<ApiChannel | null>(null);
   const [simpleName, setSimpleName] = useState("");
   const [simplePhone, setSimplePhone] = useState("");
+  const [simplePipelineId, setSimplePipelineId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const { data: channels = [], isLoading, isError, error } = useQuery({
@@ -149,6 +151,7 @@ export default function SettingsChannelsPage({
         body: JSON.stringify({
           name: simpleName.trim(),
           phoneNumber: simplePhone.trim() || null,
+          defaultPipelineId: simplePipelineId,
         }),
       });
       const data = (await res.json()) as { message?: string };
@@ -169,6 +172,7 @@ export default function SettingsChannelsPage({
     }
     setSimpleName(ch.name);
     setSimplePhone(ch.phoneNumber ?? "");
+    setSimplePipelineId(ch.defaultPipelineId ?? null);
     setSimpleChannel(ch);
   }
 
@@ -352,6 +356,11 @@ export default function SettingsChannelsPage({
                 onChange={(e) => setSimplePhone(e.target.value)}
               />
             </div>
+            <ChannelPipelineSelect
+              id="simp-pipeline"
+              value={simplePipelineId}
+              onChange={setSimplePipelineId}
+            />
           </div>
           <DialogFooter>
             <Button

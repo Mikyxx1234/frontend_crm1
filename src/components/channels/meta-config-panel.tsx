@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useEmbeddedSignup } from "@/hooks/use-embedded-signup";
 
+import { ChannelPipelineSelect } from "./channel-pipeline-select";
 import type { ApiChannel } from "./types";
 import { parseChannelConfigRecord } from "./types";
 
@@ -77,6 +78,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   const wasEmbeddedSignup = cfg.embeddedSignup === true;
 
   const [channelName, setChannelName] = useState(channel.name);
+  const [defaultPipelineId, setDefaultPipelineId] = useState<string | null>(
+    channel.defaultPipelineId ?? null,
+  );
   const [accessToken, setAccessToken] = useState("");
   const [appSecret, setAppSecret] = useState("");
   const [verifyToken, setVerifyToken] = useState(initialVerifyToken);
@@ -95,6 +99,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
 
   useEffect(() => {
     setChannelName(channel.name);
+    setDefaultPipelineId(channel.defaultPipelineId ?? null);
     setPhoneNumberId(initialPnId);
     setBusinessAccountId(initialWaba);
     setAppName(initialAppName);
@@ -102,7 +107,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
     setAppSecret("");
     setVerifyToken(initialVerifyToken);
     setShowTokenHint(!!initialToken);
-  }, [channel.id, channel.name, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret, initialVerifyToken]);
+  }, [channel.id, channel.name, channel.defaultPipelineId, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret, initialVerifyToken]);
 
   // A URL do webhook PRECISA apontar para o backend (não para o frontend).
   // A Meta entrega o callback HTTP direto no backend — o frontend não tem
@@ -150,7 +155,11 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
       const res = await fetch(apiUrl(`/api/channels/${channel.id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: channelName.trim(), config: nextConfig }),
+        body: JSON.stringify({
+          name: channelName.trim(),
+          config: nextConfig,
+          defaultPipelineId,
+        }),
       });
       const data = (await res.json()) as { message?: string };
       if (!res.ok) {
@@ -440,6 +449,11 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
             Identificação interna do canal. Exibido nas conversas para o agente saber a origem.
           </p>
         </div>
+        <ChannelPipelineSelect
+          id="meta-default-pipeline"
+          value={defaultPipelineId}
+          onChange={setDefaultPipelineId}
+        />
         <div className="space-y-2">
           <Label htmlFor="meta-app-name">Nome do App (fonte do contato)</Label>
           <Input

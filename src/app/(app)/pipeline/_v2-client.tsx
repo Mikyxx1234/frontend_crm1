@@ -13,6 +13,7 @@ import {
 
 import {
   IconAbc,
+  IconAntenna,
   IconArrowNarrowDown,
   IconArrowNarrowUp,
   IconArrowsExchange,
@@ -88,6 +89,7 @@ import {
   WinButton,
   useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
+import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-channels-modal";
 import { FilterModalThreeCol } from "@/components/pipeline/kanban-filters/v2";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import {
@@ -190,6 +192,7 @@ export default function KanbanV2ClientPage({
   // Kebab menu e modal de import/export
   const [kebabOpen, setKebabOpen] = useState(false);
   const [importExportOpen, setImportExportOpen] = useState<"import" | "export" | null>(null);
+  const [channelsModalOpen, setChannelsModalOpen] = useState(false);
   const bump = useImportExportBump();
 
   // Ordenação dos cards dentro de cada etapa. Os sorts `created_*` e
@@ -517,6 +520,7 @@ export default function KanbanV2ClientPage({
                 onSortChange={(k) => { setSortKey(k); setKebabOpen(false); }}
                 onImport={() => { setImportExportOpen("import"); setKebabOpen(false); }}
                 onExport={() => { setImportExportOpen("export"); setKebabOpen(false); }}
+                onChannels={() => { setChannelsModalOpen(true); setKebabOpen(false); }}
                 onSettings={() => { router.push("/settings/pipeline"); setKebabOpen(false); }}
                 selectionMode={selectionMode}
                 onToggleSelectionMode={() => {
@@ -597,6 +601,15 @@ export default function KanbanV2ClientPage({
           activeTab={importExportOpen}
           onClose={() => setImportExportOpen(null)}
           bump={bump}
+        />
+      )}
+
+      {channelsModalOpen && pipelineId && (
+        <PipelineChannelsModal
+          pipelineId={pipelineId}
+          pipelineName={pipelines?.find((p) => p.id === pipelineId)?.name}
+          open={channelsModalOpen}
+          onClose={() => setChannelsModalOpen(false)}
         />
       )}
 
@@ -1467,6 +1480,7 @@ interface PipelineKebabMenuProps {
   onSortChange: (k: SortKey) => void;
   onImport: () => void;
   onExport: () => void;
+  onChannels: () => void;
   onSettings: () => void;
   selectionMode: boolean;
   onToggleSelectionMode: () => void;
@@ -1480,6 +1494,7 @@ function PipelineKebabMenu({
   onSortChange,
   onImport,
   onExport,
+  onChannels,
   onSettings,
   selectionMode,
   onToggleSelectionMode,
@@ -1587,6 +1602,14 @@ function PipelineKebabMenu({
       <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
 
       {/* Seção: pipeline */}
+      <button
+        type="button"
+        onClick={onChannels}
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+      >
+        <IconAntenna size={13} className="shrink-0" />
+        Canais do funil
+      </button>
       <button
         type="button"
         onClick={onSettings}

@@ -68,10 +68,20 @@ export function DropdownGlass({
 
   return (
     <DropdownPrimitive.Root>
-      <DropdownPrimitive.Trigger asChild disabled={disabled}>
+      {/*
+       * suppressHydrationWarning: o Radix usa useId internamente para
+       * o atributo id="radix-..." do trigger. Em árvores onde algo acima
+       * (ex.: useSession do NextAuth, queries que resolvem entre SSR e
+       * mount) reordena os contadores de useId do React 19, o servidor
+       * e o cliente geram IDs diferentes — atributos não-determinísticos
+       * são exatamente o caso de uso recomendado p/ suppressHydrationWarning.
+       * Nenhum impacto funcional: o ID final é o do cliente.
+       */}
+      <DropdownPrimitive.Trigger asChild disabled={disabled} suppressHydrationWarning>
         {trigger ?? (
           <button
             type="button"
+            suppressHydrationWarning
             className={cn(
               "group inline-flex h-10 items-center gap-2 rounded-[var(--radius-md)] px-3.5",
               "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-sm",

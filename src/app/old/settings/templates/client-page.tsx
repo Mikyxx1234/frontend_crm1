@@ -53,7 +53,7 @@ async function fetchTemplates(): Promise<TemplateRow[]> {
   return res.json();
 }
 
-export default function TemplatesSettingsPage() {
+export default function TemplatesSettingsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -124,39 +124,52 @@ export default function TemplatesSettingsPage() {
   });
 
   return (
-    <div className="w-full space-y-6">
-      <Link
-        href="/old/settings"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Configurações
-      </Link>
-
-      <PageHeader
-        title="Modelos internos de mensagem"
-        icon={<FileText />}
-        description={
-          <>
+    <div className={embedded ? "w-full space-y-4" : "w-full space-y-6"}>
+      {embedded ? (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <p className="max-w-2xl text-sm text-[var(--text-muted)]">
             Mensagens prontas guardadas no CRM, usadas como atalho de resposta nas conversas. Use{" "}
-            <code className="rounded bg-muted px-1 text-xs">{"{{variável}}"}</code> para campos dinâmicos
-            (ex.: <code className="rounded bg-muted px-1 text-xs">{"{{nome}}"}</code>).
-          </>
-        }
-        actions={
-          <Button onClick={() => { setEditing(null); setFormOpen(true); }} className={`gap-2 ${pageHeaderPrimaryCtaClass}`}>
-            <Plus className="size-4" /> Novo modelo
-          </Button>
-        }
-      />
+            <code className="rounded-[var(--radius-sm)] bg-[var(--glass-bg-strong)] px-1 text-xs">{"{{variável}}"}</code>{" "}
+            para campos dinâmicos (ex.:{" "}
+            <code className="rounded-[var(--radius-sm)] bg-[var(--glass-bg-strong)] px-1 text-xs">{"{{nome}}"}</code>).
+          </p>
+        </div>
+      ) : (
+        <>
+          <Link
+            href="/old/settings"
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          >
+            <ArrowLeft className="size-4" /> Configurações
+          </Link>
+
+          <PageHeader
+            title="Modelos internos de mensagem"
+            icon={<FileText />}
+            description={
+              <>
+                Mensagens prontas guardadas no CRM, usadas como atalho de resposta nas conversas. Use{" "}
+                <code className="rounded bg-muted px-1 text-xs">{"{{variável}}"}</code> para campos dinâmicos
+                (ex.: <code className="rounded bg-muted px-1 text-xs">{"{{nome}}"}</code>).
+              </>
+            }
+            actions={
+              <Button onClick={() => { setEditing(null); setFormOpen(true); }} className={`gap-2 ${pageHeaderPrimaryCtaClass}`}>
+                <Plus className="size-4" /> Novo modelo
+              </Button>
+            }
+          />
+        </>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-[var(--radius-lg)]" />)}
         </div>
       ) : templates.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/80 py-16 text-center">
-          <FileText className="mx-auto mb-3 size-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">Nenhum modelo cadastrado.</p>
+        <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] py-16 text-center">
+          <FileText className="mx-auto mb-3 size-10 text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-muted)]">Nenhum modelo cadastrado.</p>
           <Button onClick={() => { setEditing(null); setFormOpen(true); }} variant="outline" className="mt-4 gap-2">
             <Plus className="size-4" /> Criar primeiro modelo
           </Button>
@@ -166,24 +179,24 @@ export default function TemplatesSettingsPage() {
           {templates.map((t) => (
             <div
               key={t.id}
-              className="rounded-xl border border-border/80 bg-card p-4 shadow-sm transition-colors hover:bg-muted/20"
+              className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4 shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold">{t.name}</span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{t.name}</span>
                     {t.channelType && (
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                      <span className="rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-medium text-[var(--brand-primary)]">
                         {CHANNEL_LABELS[t.channelType] ?? t.channelType}
                       </span>
                     )}
                     {t.category && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                      <span className="rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 text-[10px] text-[var(--text-muted)]">
                         {t.category}
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground line-clamp-3">
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-secondary)] line-clamp-3">
                     {t.content}
                   </p>
                 </div>
@@ -195,7 +208,7 @@ export default function TemplatesSettingsPage() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="size-8 text-destructive/70 hover:text-destructive"
+                    className="size-8 text-[var(--color-danger)]/70 hover:text-[var(--color-danger)]"
                     onClick={() => deleteMutation.mutate(t.id)}
                     disabled={deleteMutation.isPending}
                   >
@@ -288,7 +301,7 @@ function TemplateForm({
           placeholder="ex.: Boas-vindas, Pedido de orçamento, Pós-venda"
           required
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-[var(--text-muted)]">
           Nome curto e descritivo para encontrar rápido na hora de responder.
         </p>
       </div>
@@ -302,9 +315,9 @@ function TemplateForm({
           placeholder="Olá {{contato.primeiroNome}}, tudo bem? Vi seu interesse no negócio {{negocio.titulo}}..."
           rows={6}
           required
-          className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="resize-none rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-[var(--text-muted)]">
           Clique em uma variável abaixo para inseri-la na posição do cursor. Na hora de
           enviar, o CRM substitui automaticamente pelo valor real do contato e do negócio.
         </p>

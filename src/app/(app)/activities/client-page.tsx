@@ -9,6 +9,12 @@ import { EmptyState } from "@/components/crm/empty-state"
 import { ActivityCalendar } from "@/components/crm/activities/activity-calendar"
 import { ActivityRow } from "@/components/crm/activities/activity-row"
 import { ActivityComposer } from "@/components/crm/activities/activity-composer"
+import { ActivitiesUrgentCard } from "@/components/crm/activities/activities-urgent-card"
+import { ActivitiesWeeklySummary } from "@/components/crm/activities/activities-weekly-summary"
+import {
+  OperationsBaseCard,
+  ProductivityTipCard,
+} from "@/components/crm/activities/activities-static-cards"
 import {
   ACTIVITY_KINDS,
   ACTIVITY_KIND_ORDER,
@@ -143,14 +149,33 @@ export default function V2ActivitiesClientPage() {
           title="Atividades"
           description="Agende e acompanhe tarefas, reuniões, ligações e eventos."
           actions={
-            <ButtonGlass variant="primary" onClick={() => setComposerOpen(true)}>
-              <IconPlus size={16} /> Nova atividade
-            </ButtonGlass>
+            <div className="flex items-center gap-2">
+              <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5 shadow-[var(--glass-shadow-sm)]">
+                {STATUS_FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setStatusFilter(f.key)}
+                    className={cn(
+                      "cursor-pointer rounded-full px-3 py-1 font-display text-[11px] font-bold transition-colors",
+                      statusFilter === f.key
+                        ? "bg-[var(--brand-primary)] text-white"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <ButtonGlass variant="primary" onClick={() => setComposerOpen(true)}>
+                <IconPlus size={16} /> Nova atividade
+              </ButtonGlass>
+            </div>
           }
         />
 
-        {/* Layout de 2 colunas: calendário + lista */}
-        <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr] gap-3.5 overflow-hidden">
+        {/* Layout de 3 colunas: calendário + lista + urgentes/resumo */}
+        <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr] gap-3.5 overflow-hidden xl:grid-cols-[280px_1fr_300px]">
           {/* Coluna esquerda: calendário + resumo por tipo */}
           <div className="flex min-h-0 flex-col gap-3.5 overflow-auto">
             <GlassCard className="p-4">
@@ -239,10 +264,10 @@ export default function V2ActivitiesClientPage() {
             </GlassCard>
           </div>
 
-          {/* Coluna direita: lista de atividades do dia */}
+          {/* Coluna do meio: lista de atividades do dia */}
           <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
-            {/* Cabeçalho do dia + filtros de status */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Cabeçalho do dia */}
+            <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="font-display text-[15px] font-bold capitalize text-[var(--text-primary)]">
                   {longDateLabel(selectedDate)}
@@ -255,25 +280,6 @@ export default function V2ActivitiesClientPage() {
                 <p className="font-body text-[12px] text-[var(--text-muted)]">
                   {dayItems.length} {dayItems.length === 1 ? "atividade" : "atividades"}
                 </p>
-              </div>
-
-              {/* Status filter pills */}
-              <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5 shadow-[var(--glass-shadow-sm)]">
-                {STATUS_FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => setStatusFilter(f.key)}
-                    className={cn(
-                      "cursor-pointer rounded-full px-3 py-1 font-display text-[11px] font-bold transition-colors",
-                      statusFilter === f.key
-                        ? "bg-[var(--brand-primary)] text-white"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -298,7 +304,21 @@ export default function V2ActivitiesClientPage() {
                   />
                 ))
               )}
+
+              <div className="mt-1">
+                <ProductivityTipCard />
+              </div>
             </div>
+          </div>
+
+          {/* Coluna direita: urgentes + resumo semanal + mini-mapa (xl+) */}
+          <div className="hidden min-h-0 flex-col gap-3.5 overflow-auto xl:flex">
+            <ActivitiesUrgentCard items={items} onSelect={(d) => {
+              setSelectedDate(d)
+              setViewDate(d)
+            }} />
+            <ActivitiesWeeklySummary items={items} />
+            <OperationsBaseCard />
           </div>
         </div>
       </main>

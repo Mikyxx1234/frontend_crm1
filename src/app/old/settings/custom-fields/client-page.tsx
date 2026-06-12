@@ -2,8 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, LayoutList, Pencil, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { LayoutList, Pencil, Plus, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 
@@ -22,7 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
 import { SelectNative } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -147,19 +145,7 @@ export default function CustomFieldsPage() {
 
   return (
     <div className="w-full">
-      <div className="mb-6 flex items-start gap-3">
-        <Link href="/old/settings" className="mt-1 rounded-lg p-1.5 text-muted-foreground hover:bg-muted/60">
-          <ArrowLeft className="size-5" />
-        </Link>
-        <PageHeader
-          title="Campos Personalizados"
-          description="Crie campos customizados para contatos, negócios e produtos/serviços."
-          icon={<LayoutList />}
-          className="flex-1"
-        />
-      </div>
-
-      <div className="mb-6 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="flex gap-1 rounded-lg border border-border/60 bg-muted/20 p-0.5">
           {([
             { val: "all" as const, label: `Todos (${fields.length})` },
@@ -174,8 +160,8 @@ export default function CustomFieldsPage() {
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                 entityFilter === opt.val
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-background text-[var(--text-primary)] shadow-sm"
+                  : "text-muted-foreground hover:text-[var(--text-primary)]"
               )}
             >
               {opt.label}
@@ -503,7 +489,7 @@ function FieldFormDialog({
 
           {supportsInboxPanel && (
             <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-3">
-              <p className="text-xs font-medium text-foreground">Painel lateral na Inbox</p>
+              <p className="text-xs font-medium text-[var(--text-primary)]">Painel lateral na Inbox</p>
               <p className="text-[11px] text-muted-foreground leading-snug">
                 Marque os campos que o agente deve ver ao atender no chat.
                 {entity === "contact" && <> Ex.: CPF, matrícula, adimplente.</>}

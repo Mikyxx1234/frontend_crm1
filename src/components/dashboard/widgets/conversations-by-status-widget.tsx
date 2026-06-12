@@ -43,7 +43,7 @@ export function ConversationsByStatusWidget() {
 
       {total > 0 ? (
         <>
-          <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/50">
+          <div className="flex h-3 w-full overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
             {rows.map((r) =>
               r.count > 0 ? (
                 <div

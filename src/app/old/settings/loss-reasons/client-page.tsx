@@ -3,12 +3,11 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GripVertical, Plus, ThumbsDown, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
+import { GripVertical, Plus, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -110,24 +109,18 @@ export default function LossReasonsPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 p-6">
-      <PageHeader
-        title="Motivos de perda"
-        description="Configure os motivos disponíveis ao marcar um negócio como perdido."
-        icon={<ThumbsDown />}
-      />
-
+    <div className="space-y-4">
       {/* Toggle obrigatório */}
-      <div className="flex items-center justify-between rounded-xl border border-border bg-white px-5 py-4 shadow-sm">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-[var(--glass-bg-overlay)] px-5 py-4 shadow-sm">
         <div>
-          <p className="text-sm font-semibold text-slate-800">Motivo obrigatório</p>
-          <p className="text-xs text-slate-500">Exigir um motivo ao marcar negócio como perdido</p>
+          <p className="text-sm font-semibold text-[var(--text-secondary)]">Motivo obrigatório</p>
+          <p className="text-xs text-[var(--text-muted)]">Exigir um motivo ao marcar negócio como perdido</p>
         </div>
         <button
           type="button"
           onClick={() => toggleRequired.mutate(!isRequired)}
           disabled={toggleRequired.isPending}
-          className="text-[var(--color-ink-soft)] transition hover:text-slate-900"
+          className="text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
         >
           {isRequired ? (
             <ToggleRight className="size-8 text-cyan-600" />
@@ -170,7 +163,7 @@ export default function LossReasonsPage() {
           ))
         ) : reasons.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 py-10 text-center">
-            <p className="text-sm text-slate-500">Nenhum motivo cadastrado</p>
+            <p className="text-sm text-[var(--text-muted)]">Nenhum motivo cadastrado</p>
             <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
               Adicione motivos para padronizar a análise de negócios perdidos.
             </p>
@@ -215,7 +208,7 @@ function ReasonRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-border bg-white px-4 py-3 transition",
+        "flex items-center gap-3 rounded-lg border border-border bg-[var(--glass-bg-overlay)] px-4 py-3 transition",
         !reason.isActive && "opacity-50",
       )}
     >
@@ -240,7 +233,7 @@ function ReasonRow({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="min-w-0 flex-1 truncate text-left text-sm font-medium text-slate-800 hover:text-cyan-700"
+          className="min-w-0 flex-1 truncate text-left text-sm font-medium text-[var(--text-secondary)] hover:text-cyan-700"
         >
           {reason.label}
         </button>
@@ -251,7 +244,7 @@ function ReasonRow({
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          className="shrink-0 rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-red-50 hover:text-red-600"
+          className="shrink-0 rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)]"
           aria-label="Remover"
         >
           <Trash2 className="size-4" />

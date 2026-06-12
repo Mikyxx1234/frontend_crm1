@@ -119,21 +119,21 @@ export function FilterModalTwoCol({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onMouseDown={() => onOpenChange(false)} aria-hidden />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onMouseDown={() => onOpenChange(false)} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Filtros avançados"
-        className="relative flex h-[min(82vh,720px)] w-[min(1000px,100%)] overflow-hidden rounded-2xl border border-black/6 bg-white shadow-[0_24px_64px_-12px_rgba(15,23,42,0.35)]"
+        className="relative flex h-[min(82vh,720px)] w-[min(1000px,100%)] overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
       >
         {/* Coluna nav */}
-        <aside className="flex w-[248px] shrink-0 flex-col border-r border-black/6 bg-slate-50/70">
+        <aside className="flex w-[248px] shrink-0 flex-col border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]">
           <div className="flex items-center gap-2.5 px-4 py-4">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
               <SlidersHorizontal className="size-4" />
             </span>
             <div className="flex items-center gap-2">
-              <h2 className="text-[15px] font-semibold tracking-tight text-slate-900">Filtros</h2>
+              <h2 className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">Filtros</h2>
               <ActiveCountBadge draft={draft} />
             </div>
           </div>
@@ -149,25 +149,25 @@ export function FilterModalTwoCol({
                   onClick={() => setGroup(g.id)}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
-                    active ? "bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]" : "hover:bg-white/70",
+                    active ? "bg-[var(--color-enterprise-bg)]" : "hover:bg-[var(--glass-bg-overlay)]",
                   )}
                 >
                   <span
                     className={cn(
                       "flex size-7 shrink-0 items-center justify-center rounded-lg",
-                      active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500",
+                      active ? "bg-[var(--brand-primary)] text-white" : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
                     )}
                   >
                     <Icon className="size-3.5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className={cn("block text-[13px] font-medium", active ? "text-slate-900" : "text-slate-700")}>
+                    <span className={cn("block text-[13px] font-medium", active ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]")}>
                       {g.label}
                     </span>
-                    <span className="block truncate text-[11px] text-slate-400">{g.hint}</span>
+                    <span className="block truncate text-[11px] text-[var(--text-muted)]">{g.hint}</span>
                   </span>
                   {count > 0 && (
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[11px] font-semibold text-white">
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1.5 text-[11px] font-semibold text-white">
                       {count}
                     </span>
                   )}
@@ -175,7 +175,7 @@ export function FilterModalTwoCol({
               );
             })}
           </nav>
-          <div className="border-t border-black/6 p-3">
+          <div className="border-t border-[var(--glass-border-subtle)] p-3">
             <FilterHeaderActions
               draft={draft}
               onClear={() => {
@@ -189,17 +189,17 @@ export function FilterModalTwoCol({
 
         {/* Coluna conteúdo */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between border-b border-black/6 px-6 py-4">
+          <header className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-6 py-4">
             <div>
-              <h3 className="text-[16px] font-semibold tracking-tight text-slate-900">
+              <h3 className="text-[16px] font-semibold tracking-tight text-[var(--text-primary)]">
                 {GROUPS.find((g) => g.id === group)?.label}
               </h3>
-              <p className="text-[12px] text-slate-400">{GROUPS.find((g) => g.id === group)?.hint}</p>
+              <p className="text-[12px] text-[var(--text-muted)]">{GROUPS.find((g) => g.id === group)?.hint}</p>
             </div>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="flex size-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
               aria-label="Fechar"
             >
               <X className="size-4" />
@@ -208,7 +208,7 @@ export function FilterModalTwoCol({
 
           <div className="flex-1 space-y-3 overflow-y-auto px-6 py-5">
             {group === "quick" && (
-              <div className="rounded-xl border border-black/6 bg-white p-3">
+              <div className="rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-3">
                 <QuickFiltersList draft={draft} onApply={applyWhole} onRequestSave={onRequestSave} orientation="vertical" />
               </div>
             )}
@@ -242,11 +242,11 @@ export function FilterModalTwoCol({
             )}
           </div>
 
-          <footer className="flex items-center justify-end gap-2 border-t border-black/6 px-6 py-3">
+          <footer className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] px-6 py-3">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-5 text-[13px] font-medium text-white transition-colors hover:bg-blue-700"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-5 text-[13px] font-medium text-white transition-colors hover:bg-[var(--brand-primary-dark)]"
             >
               Aplicar filtros
             </button>

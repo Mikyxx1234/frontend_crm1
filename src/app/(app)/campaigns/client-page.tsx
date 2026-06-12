@@ -11,6 +11,7 @@ import {
   IconX,
   IconRocket,
   IconChevronRight,
+  IconBrandWhatsapp,
 } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
@@ -162,13 +163,18 @@ function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
       className="group flex flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:-translate-y-px hover:border-[var(--brand-primary)]/35 hover:shadow-[var(--glass-shadow)]"
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate font-display text-[15px] font-bold text-[var(--text-primary)]">
-            {campaign.name}
-          </p>
-          <p className="mt-0.5 truncate font-body text-[11.5px] text-[var(--text-muted)]">
-            {campaign.channel?.name ?? "—"} · {fmtDateBR(campaign.createdAt)}
-          </p>
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--color-success)_25%,transparent)] bg-[var(--color-success-bg)] text-[var(--color-success-text)]">
+            <IconBrandWhatsapp size={18} />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate font-display text-[15px] font-bold text-[var(--text-primary)]">
+              {campaign.name}
+            </p>
+            <p className="mt-0.5 truncate font-body text-[11.5px] text-[var(--text-muted)]">
+              {campaign.channel?.name ?? "—"} · {fmtDateBR(campaign.createdAt)}
+            </p>
+          </div>
         </div>
         <span
           className={`shrink-0 rounded-full border px-2 py-0.5 font-display text-[10.5px] font-bold ${TONE_CLASSES[meta.tone]}`}
@@ -179,26 +185,41 @@ function CampaignCard({ campaign }: { campaign: CampaignListItem }) {
 
       {total > 0 ? (
         <>
-          <div className="flex h-2 overflow-hidden rounded-full bg-[var(--glass-bg-subtle)]">
-            <div
-              className="bg-emerald-500 transition-all duration-500"
-              style={{ width: `${pctSent}%` }}
-            />
-            <div
-              className="bg-red-500 transition-all duration-500"
-              style={{ width: `${pctFailed}%` }}
-            />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between font-body text-[10.5px] text-[var(--text-muted)]">
+              <span>
+                <span className="font-display font-bold text-[var(--text-secondary)]">
+                  {pctSent}%
+                </span>{" "}
+                enviado
+              </span>
+              {pctFailed > 0 ? (
+                <span className="text-[var(--color-danger-text)]">
+                  {pctFailed}% falha
+                </span>
+              ) : null}
+            </div>
+            <div className="flex h-2 overflow-hidden rounded-full bg-[var(--glass-bg-subtle)]">
+              <div
+                className="bg-[var(--color-success)] transition-all duration-500"
+                style={{ width: `${pctSent}%` }}
+              />
+              <div
+                className="bg-[var(--color-danger)] transition-all duration-500"
+                style={{ width: `${pctFailed}%` }}
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-5 gap-1 text-center">
+          <div className="grid grid-cols-5 overflow-hidden rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] text-center">
             <Mini label="Total" value={total} />
-            <Mini label="Enviado" value={sent} tone="text-emerald-600" />
+            <Mini label="Enviado" value={sent} tone="text-[var(--color-success-text)]" />
             <Mini label="Lido" value={campaign.readCount} tone="text-[var(--brand-primary)]" />
             <Mini
               label="Resp."
               value={campaign.repliedCount ?? 0}
-              tone="text-sky-600"
+              tone="text-[var(--color-info)]"
             />
-            <Mini label="Falha" value={failed} tone="text-red-600" />
+            <Mini label="Falha" value={failed} tone="text-[var(--color-danger-text)]" />
           </div>
         </>
       ) : (
@@ -259,7 +280,7 @@ function Mini({
   tone?: string;
 }) {
   return (
-    <div>
+    <div className="border-l border-[var(--glass-border-subtle)] py-1.5 first:border-l-0">
       <p className={`font-display text-[14px] font-bold ${tone ?? "text-[var(--text-primary)]"}`}>
         {value.toLocaleString("pt-BR")}
       </p>
@@ -288,7 +309,7 @@ function ActionBtn({
       disabled={disabled}
       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-display text-[11px] font-semibold transition-colors disabled:opacity-50 ${
         danger
-          ? "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20"
+          ? "border-[color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] text-[var(--color-danger-text)] hover:bg-[color-mix(in_srgb,var(--color-danger)_18%,transparent)]"
           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/35"
       }`}
     >

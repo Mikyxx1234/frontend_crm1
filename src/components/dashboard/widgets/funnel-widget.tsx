@@ -82,7 +82,7 @@ export function FunnelWidget() {
                 )}
               </div>
             </div>
-            <div className="h-6 w-full overflow-hidden rounded-lg bg-muted/30">
+            <div className="h-6 w-full overflow-hidden rounded-lg bg-[var(--glass-bg-overlay)]">
               <div
                 className="h-full rounded-lg transition-all duration-500"
                 style={{

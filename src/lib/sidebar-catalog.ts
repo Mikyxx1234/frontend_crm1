@@ -1,5 +1,6 @@
 import {
   IconBolt,
+  IconBriefcase,
   IconBuilding,
   IconChecklist,
   IconClipboardList,
@@ -163,6 +164,15 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
     description: "Central de extensões da organização.",
     locked: false,
     requiredPermission: "nav:widgets",
+  },
+  {
+    key: "job-openings",
+    title: "Vagas",
+    href: "/job-openings",
+    icon: IconBriefcase,
+    description: "Processos seletivos com alocação de posições.",
+    locked: false,
+    requiredPermission: "job_opening:view",
   },
 ] as const;
 

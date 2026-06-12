@@ -2,7 +2,6 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";import {
-  ArrowLeft,
   GitBranch,
   Hand,
   Loader2,
@@ -12,7 +11,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";im
   Trash2,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
+import { pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -170,26 +168,13 @@ export default function DistributionSettingsPage() {
   const canSubmitCreate = newName.trim().length > 0 && !createMutation.isPending;
 
   return (
-    <div className="w-full space-y-6">
-      <Link
-        href="/old/settings"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        Voltar
-      </Link>
-
-      <PageHeader
-        title="Distribuição de Leads"
-        description="Defina como novos leads são atribuídos à equipe por pipeline ou de forma global."
-        icon={<Shuffle />}
-        actions={
-          <Button type="button" className={`gap-2 ${pageHeaderPrimaryCtaClass}`} onClick={openCreate}>
-            <Plus className="size-4" />
-            Nova regra
-          </Button>
-        }
-      />
+    <div className="w-full space-y-4">
+      <div className="flex justify-end">
+        <Button type="button" className={`gap-2 ${pageHeaderPrimaryCtaClass}`} onClick={openCreate}>
+          <Plus className="size-4" />
+          Nova regra
+        </Button>
+      </div>
 
       {rulesError ? (
         <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">

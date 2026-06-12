@@ -94,7 +94,7 @@ function countActive(f: InboxFilters): number {
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-1 block font-display text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+    <span className="mb-1 block font-display text-[9.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
       {children}
     </span>
   );
@@ -175,7 +175,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
         : `${selectedTagIds.length} selecionadas`;
 
   const activeCount = countActive(value);
-  const pos = computePopoverPosition(rect, 580, 300);
+  const pos = computePopoverPosition(rect, 540, 280);
 
   function toggleTag(id: string) {
     setDraft((d) => {
@@ -233,14 +233,14 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 position: "fixed",
                 top: pos.top,
                 left: pos.left,
-                width: 300,
+                width: 280,
                 isolation: "isolate",
               }}
-              className="z-[10000] flex max-h-[80vh] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.20)]"
+              className="z-[10000] flex max-h-[80vh] flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-4 py-3">
-                <span className="font-display text-[14px] font-bold text-[var(--text-primary)]">
+              <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3.5 py-2.5">
+                <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
                   Filtros
                 </span>
                 <button
@@ -254,12 +254,12 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
               </div>
 
               {/* Corpo rolável */}
-              <div className="flex-1 space-y-3.5 overflow-y-auto px-4 py-3.5">
+              <div className="flex-1 space-y-2.5 overflow-y-auto px-3.5 py-3">
                 {/* Atendentes */}
                 <div>
                   <FieldLabel>Atendentes</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full"
+                    triggerClassName="w-full h-9 px-3 text-[12.5px]"
                     value={draft.ownerId ?? ""}
                     onValueChange={(v) =>
                       setDraft((d) => ({ ...d, ownerId: v || undefined }))
@@ -275,7 +275,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Canal</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full"
+                    triggerClassName="w-full h-9 px-3 text-[12.5px]"
                     value={draft.channel ?? ""}
                     onValueChange={(v) =>
                       setDraft((d) => ({ ...d, channel: v || undefined }))
@@ -288,7 +288,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Negócio na etapa</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full"
+                    triggerClassName="w-full h-9 px-3 text-[12.5px]"
                     value={draft.stageId ?? ""}
                     onValueChange={(v) =>
                       setDraft((d) => ({ ...d, stageId: v || undefined }))
@@ -305,7 +305,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Janela de conversa</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full"
+                    triggerClassName="w-full h-9 px-3 text-[12.5px]"
                     value={draft.windowState ?? ""}
                     onValueChange={(v) =>
                       setDraft((d) => ({
@@ -324,7 +324,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                     type="button"
                     onClick={() => setTagsOpen((v) => !v)}
                     aria-expanded={tagsOpen}
-                    className="group inline-flex h-10 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 font-display text-[13px] font-semibold shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors hover:bg-[var(--glass-bg-strong)] data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40"
+                    className="group inline-flex h-9 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-display text-[12.5px] font-semibold shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors hover:bg-[var(--glass-bg-strong)] data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40"
                   >
                     <span
                       className={cn(
@@ -344,7 +344,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                   </button>
 
                   {tagsOpen && (
-                    <div className="mt-1 max-h-44 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white p-1">
+                    <div className="mt-1 max-h-44 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white p-1 v2-dark:bg-[var(--glass-bg-modal)]">
                       {tags.length === 0 ? (
                         <p className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
                           Nenhuma tag cadastrada.
@@ -392,7 +392,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Ordem</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full"
+                    triggerClassName="w-full h-9 px-3 text-[12.5px]"
                     value={sortIdFromFilters(draft)}
                     onValueChange={(v) => {
                       const opt = SORT_OPTIONS.find((o) => o.id === v);
@@ -408,18 +408,18 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center gap-2 border-t border-[var(--glass-border-subtle)] px-4 py-3">
+              <div className="flex items-center gap-2 border-t border-[var(--glass-border-subtle)] px-3.5 py-2.5">
                 <button
                   type="button"
                   onClick={clear}
-                  className="flex-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white px-3 py-2 font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
+                  className="flex-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
                 >
                   Limpar filtros
                 </button>
                 <button
                   type="button"
                   onClick={apply}
-                  className="flex-1 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-3 py-2 font-display text-[13px] font-bold text-white transition-opacity hover:opacity-90"
+                  className="flex-1 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-3 py-1.5 font-display text-[12.5px] font-bold text-white transition-opacity hover:opacity-90"
                 >
                   Aplicar filtros
                 </button>

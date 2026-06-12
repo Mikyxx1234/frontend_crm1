@@ -261,7 +261,7 @@ function FunnelSection({ funnel: funnelProp }: { funnel: DashboardData["funnel"]
   };
 
   return (
-    <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+    <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
       <header className="mb-3.5 flex items-center justify-between gap-3">
         <div className="flex flex-col gap-0.5">
           <h3 className="font-display text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
@@ -294,7 +294,7 @@ function FunnelSection({ funnel: funnelProp }: { funnel: DashboardData["funnel"]
           <HoverEffectGroup>
             {funnel.map((stage) => (
               <HoverEffectItem key={stage.id} itemKey={stage.id} className="shrink-0">
-                <article className="flex h-full w-[252px] flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3.5 shadow-[var(--glass-shadow-sm)]">
+                <article className="flex h-full w-[252px] flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3.5 shadow-[var(--glass-shadow-sm)]">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: stage.color }} />

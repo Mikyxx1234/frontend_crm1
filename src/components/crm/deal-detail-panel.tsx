@@ -55,6 +55,8 @@ interface DealDetailPanelProps {
   moreActionsSlot?: React.ReactNode
   /** Botão dedicado de excluir negócio (atalho visível no header). */
   deleteSlot?: React.ReactNode
+  /** Botão de edição do contato (ex.: ContactEditDialog), ao lado do nome. */
+  contactEditSlot?: React.ReactNode
   ownerSlot?: React.ReactNode
   sourceSlot?: React.ReactNode
   forecastSlot?: React.ReactNode
@@ -111,6 +113,7 @@ export function DealDetailPanel({
   deal,
   moreActionsSlot,
   deleteSlot,
+  contactEditSlot,
   ownerSlot,
   sourceSlot,
   forecastSlot,
@@ -211,6 +214,7 @@ export function DealDetailPanel({
               <div className="flex items-center gap-2 font-display text-[18px] font-bold text-[var(--text-primary)]">
                 {deal.name}
                 <BadgeGlass variant="enterprise">ENTERPRISE</BadgeGlass>
+                {contactEditSlot}
               </div>
               <div className="mt-px font-display text-xs text-[var(--text-muted)]">
                 #{deal.id} · {deal.phone || "+55 11 98702-3902"}

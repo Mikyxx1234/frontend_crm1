@@ -86,7 +86,7 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
       </HoverEffectGroup>
 
       {/* Carrossel de etapas */}
-      <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md shadow-[var(--glass-shadow-sm)]">
+      <section className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 backdrop-blur-md shadow-[var(--glass-shadow-sm)]">
         <header className="mb-3.5 flex items-center justify-between gap-3">
           <div className="flex flex-col gap-0.5">
             <h3 className="font-display text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
@@ -117,7 +117,7 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
                 no CRM na janela selecionada. Escopo: organização inteira
                 (não depende do pipeline). Respeita o range do calendário. */}
             <HoverEffectItem itemKey="novos-periodo" className="shrink-0">
-            <article className="flex h-full w-[200px] flex-col justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/35 bg-[color-mix(in_srgb,var(--brand-primary)_9%,var(--glass-bg-overlay))] p-3.5 shadow-[var(--glass-shadow-sm)]">
+            <article className="flex h-full w-[200px] flex-col justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/35 bg-[color-mix(in_srgb,var(--brand-primary)_9%,var(--glass-bg-base))] p-3.5 shadow-[var(--glass-shadow-sm)]">
               <div className="flex items-center gap-2">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]">
                   <IconSparkles size={15} />
@@ -143,7 +143,7 @@ export function DealsOverview({ data }: { data: DealsOverviewData }) {
             {stages.map((stage) => (
               <HoverEffectItem key={stage.id} itemKey={stage.id} className="shrink-0">
               <article
-                className="flex h-full w-[252px] flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3.5 shadow-[var(--glass-shadow-sm)]"
+                className="flex h-full w-[252px] flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-3.5 shadow-[var(--glass-shadow-sm)]"
               >
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">

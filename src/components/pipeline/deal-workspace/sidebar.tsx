@@ -439,22 +439,22 @@ export function WorkspaceSidebar({
     <div className="space-y-3">
       <WorkspaceCard compact={false}>
         <div className="mb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Negócio</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle">Negócio</span>
         </div>
         <TooltipHost label={deal.title} side="top">
-          <p className="mt-1 line-clamp-2 text-[15px] font-bold leading-snug tracking-tight text-slate-900">
+          <p className="mt-1 line-clamp-2 text-[15px] font-bold leading-snug tracking-tight text-foreground">
             {deal.title}
           </p>
         </TooltipHost>
         {value > 0 ? (
-        <div className="mt-4 border-t border-slate-100 pt-4">
+        <div className="mt-4 border-t border-black/5 pt-4">
           <WorkspaceLabel>Valor do negocio</WorkspaceLabel>
-          <p className="mt-1 text-[22px] font-extrabold tabular-nums tracking-tight text-slate-900">
+          <p className="mt-1 text-[22px] font-extrabold tabular-nums tracking-tight text-foreground">
             {formatCurrency(value)}
           </p>
         </div>
         ) : null}
-        <div className="mt-4 border-t border-slate-100 pt-4">
+        <div className="mt-4 border-t border-black/5 pt-4">
           <WorkspaceLabel>{deal.stage.pipeline.name}</WorkspaceLabel>
           <div className="mt-2">
             <StageDropdown
@@ -490,7 +490,7 @@ export function WorkspaceSidebar({
                 aria-label="Adicionar tag"
                 className={cn(
                   "inline-flex size-6 items-center justify-center rounded-md",
-                  "text-[var(--color-ink-muted)] transition-colors hover:bg-slate-50 hover:text-foreground active:scale-95",
+                  "text-[var(--color-ink-muted)] transition-colors hover:bg-muted hover:text-foreground active:scale-95",
                 )}
               >
                 <Plus className="size-3.5" strokeWidth={2.4} />
@@ -552,7 +552,7 @@ export function WorkspaceSidebar({
                 aria-label="Editar contato"
                 className={cn(
                   "inline-flex size-6 items-center justify-center rounded-md",
-                  "text-[var(--color-ink-muted)] transition-colors hover:bg-slate-50 hover:text-foreground active:scale-95",
+                  "text-[var(--color-ink-muted)] transition-colors hover:bg-muted hover:text-foreground active:scale-95",
                 )}
               >
                 <Pencil className="size-3.5" strokeWidth={2.2} />
@@ -565,7 +565,7 @@ export function WorkspaceSidebar({
                   type="button"
                   onClick={() => setEditingBasic(false)}
                   aria-label="Cancelar"
-                  className="inline-flex size-6 items-center justify-center rounded-md border border-border bg-white text-slate-500 hover:bg-slate-50"
+                  className="inline-flex size-6 items-center justify-center rounded-md border border-border bg-white text-ink-muted hover:bg-muted"
                 >
                   <X className="size-3" />
                 </button>
@@ -576,7 +576,7 @@ export function WorkspaceSidebar({
                   onClick={saveBasic}
                   disabled={isUpdating}
                   aria-label="Salvar"
-                  className="inline-flex size-6 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                  className="inline-flex size-6 items-center justify-center rounded-md border border-success/20 bg-success-soft text-success hover:bg-success-soft disabled:opacity-50"
                 >
                   <Check className="size-3" strokeWidth={2.4} />
                 </button>
@@ -595,7 +595,7 @@ export function WorkspaceSidebar({
               ] as const
             ).map(([label, key, type]) => (
               <div key={key} className="grid gap-1">
-                <label className="text-[10px] font-medium text-slate-400">
+                <label className="text-[10px] font-medium text-ink-subtle">
                   {label}
                 </label>
                 <Input
@@ -609,7 +609,7 @@ export function WorkspaceSidebar({
           </div>
         ) : (
           <div className="mt-2 space-y-1.5">
-            <div className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-slate-900">
+            <div className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-foreground">
               <ChatAvatar
                 user={{ id: contact.id, name: contact.name, imageUrl: contact.avatarUrl ?? null }}
                 phone={contact.phone ?? undefined}
@@ -650,7 +650,7 @@ export function WorkspaceSidebar({
                 <div
                   key={d.id}
                   className={cn(
-                    "flex items-center justify-between rounded-xl border border-slate-100 bg-[var(--color-bg-subtle)]/60",
+                    "flex items-center justify-between rounded-xl border border-black/5 bg-[var(--color-bg-subtle)]/60",
                     "px-3 py-2 tracking-tight",
                   )}
                 >
@@ -720,7 +720,7 @@ function WorkspaceCard({
       className={cn(
         compact
           ? "rounded-xl border border-black/6 bg-white shadow-[var(--shadow-card)] transition-colors hover:border-black/10"
-          : "rounded-xl border border-slate-100 bg-white shadow-[var(--shadow-card)] transition-colors hover:border-slate-200",
+          : "rounded-xl border border-black/5 bg-white shadow-[var(--shadow-card)] transition-colors hover:border-black/10",
         pad,
         className,
       )}
@@ -732,7 +732,7 @@ function WorkspaceCard({
 
 function WorkspaceLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-1 text-[12px] font-medium text-slate-400">
+    <p className="mb-1 text-[12px] font-medium text-ink-subtle">
       {children}
     </p>
   );
@@ -830,8 +830,8 @@ function StageDropdown({
             : !petroleumHeader
               ? "rounded-lg border border-black/6 bg-white px-2 py-1.5 hover:border-black/10"
               : "",
-          !inlineMinimal && !petroleumHeader && open && "border-blue-300 shadow-[0_0_0_3px_rgba(37,99,235,0.10)]",
-          inlineMinimal && open && !petroleumHeader && "text-blue-700",
+          !inlineMinimal && !petroleumHeader && open && "border-primary/40 shadow-[0_0_0_3px_rgba(37,99,235,0.10)]",
+          inlineMinimal && open && !petroleumHeader && "text-primary-dark",
           isPending && "cursor-wait opacity-70",
           className,
         )}
@@ -853,17 +853,17 @@ function StageDropdown({
         ) : inlineMinimal ? (
           <>
             {current ? (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-emerald-100 text-[9px] font-bold text-emerald-700">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-success/20 bg-success-soft text-[9px] font-bold text-success">
                 {getInitials(current.name ?? "")}
               </span>
             ) : null}
-            <span className="min-w-0 truncate text-[13px] font-medium text-slate-700">
+            <span className="min-w-0 truncate text-[13px] font-medium text-ink-soft">
               {current?.name ?? "—"}
             </span>
             <ChevronDown
               className={cn(
-                "size-3 shrink-0 text-slate-300 transition-transform group-hover:text-slate-400",
-                open && "rotate-180 text-blue-600",
+                "size-3 shrink-0 text-ink-subtle transition-transform group-hover:text-ink-subtle",
+                open && "rotate-180 text-primary",
               )}
               strokeWidth={2.5}
             />
@@ -907,7 +907,7 @@ function StageDropdown({
             ds.popover.base,
           )}
         >
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+          <div className="flex items-center justify-between border-b border-black/5 px-3 py-2">
             <span className={ds.text.label}>Mover para</span>
             <span className="text-[10px] font-medium tabular-nums text-[var(--color-ink-muted)]">
               {stages.length} etapas
@@ -928,7 +928,7 @@ function StageDropdown({
                     className={cn(
                       "flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-[13px] font-bold",
                       "tracking-tight text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
-                      isActive && "cursor-default bg-blue-50/60 text-blue-700",
+                      isActive && "cursor-default bg-primary-soft/60 text-primary-dark",
                     )}
                   >
                     <span
@@ -939,7 +939,7 @@ function StageDropdown({
                     <span className="min-w-0 flex-1 truncate">{stage.name}</span>
                     {isActive ? (
                       <Check
-                        className="size-3.5 shrink-0 text-blue-600"
+                        className="size-3.5 shrink-0 text-primary"
                         strokeWidth={2.5}
                       />
                     ) : null}
@@ -998,7 +998,7 @@ function OwnerSelector({
           inlineMinimal
             ? "max-w-none border-0 bg-transparent p-0 shadow-none hover:border-transparent justify-end"
             : "max-w-[200px] gap-2 rounded-lg border border-black/6 bg-white px-2 py-1 hover:border-black/10",
-          !inlineMinimal && open && "border-blue-300 shadow-[0_0_0_3px_rgba(37,99,235,0.10)]",
+          !inlineMinimal && open && "border-primary/40 shadow-[0_0_0_3px_rgba(37,99,235,0.10)]",
           className,
         )}
       >
@@ -1016,15 +1016,15 @@ function OwnerSelector({
                   channel={null}
                   hideCartoon
                 />
-                <span className="truncate text-[13px] font-medium text-slate-700">{currentOwner.name}</span>
+                <span className="truncate text-[13px] font-medium text-ink-soft">{currentOwner.name}</span>
               </>
             ) : (
-              <span className="text-[12px] italic text-slate-300">Sem responsável</span>
+              <span className="text-[12px] italic text-ink-subtle">Sem responsável</span>
             )}
             <ChevronDown
               className={cn(
-                "size-3 shrink-0 text-slate-300 transition-transform group-hover:text-slate-400",
-                open && "rotate-180 text-blue-600",
+                "size-3 shrink-0 text-ink-subtle transition-transform group-hover:text-ink-subtle",
+                open && "rotate-180 text-primary",
               )}
               strokeWidth={2.5}
             />
@@ -1047,13 +1047,13 @@ function OwnerSelector({
                   <PresenceDot status={currentStatus} size="sm" />
                 </>
               ) : (
-                <span className="flex size-5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-muted-foreground">
+                <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
                   ?
                 </span>
               )}
             </div>
             <div className="flex min-w-0 flex-1 items-center gap-1">
-              <span className="truncate text-[14px] font-bold tracking-tight text-slate-800">
+              <span className="truncate text-[14px] font-bold tracking-tight text-foreground">
                 {currentOwner?.name ?? "Sem responsável"}
               </span>
               {currentOwner?.name ? (
@@ -1065,7 +1065,7 @@ function OwnerSelector({
             <ChevronDown
               className={cn(
                 "size-3.5 shrink-0 text-[var(--color-ink-muted)] transition-transform group-hover:text-[var(--color-ink-soft)]",
-                open && "rotate-180 text-blue-600",
+                open && "rotate-180 text-primary",
               )}
               strokeWidth={2.5}
             />
@@ -1080,16 +1080,16 @@ function OwnerSelector({
             ds.popover.base,
           )}
         >
-          <div className="border-b border-slate-100 px-3 py-2">
+          <div className="border-b border-black/5 px-3 py-2">
             <span className={ds.text.label}>Responsável</span>
           </div>
           <div className="py-1">
             <button
               type="button"
               onClick={() => { onChange(null); setOpen(false); }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium text-slate-500 transition-colors hover:bg-[var(--color-bg-subtle)]"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium text-ink-muted transition-colors hover:bg-[var(--color-bg-subtle)]"
             >
-              <span className="flex size-7 items-center justify-center rounded-full border border-dashed border-slate-300 text-[var(--color-ink-muted)]">?</span>
+              <span className="flex size-7 items-center justify-center rounded-full border border-dashed border-black/15 text-[var(--color-ink-muted)]">?</span>
               Sem responsável
             </button>
             {users.map((u) => {
@@ -1101,7 +1101,7 @@ function OwnerSelector({
                   onClick={() => { onChange(u.id); setOpen(false); }}
                   className={cn(
                     "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-colors",
-                    isCurrent ? "bg-blue-50/60" : "hover:bg-[var(--color-bg-subtle)]",
+                    isCurrent ? "bg-primary-soft/60" : "hover:bg-[var(--color-bg-subtle)]",
                   )}
                 >
                   <div className="relative shrink-0">
@@ -1114,7 +1114,7 @@ function OwnerSelector({
                     <PresenceDot status={u.agentStatus?.status ?? "OFFLINE"} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-semibold tracking-tight text-slate-800">
+                    <span className="block truncate text-[14px] font-semibold tracking-tight text-foreground">
                       {u.name}
                     </span>
                     <span className="text-[12px] text-[var(--color-ink-muted)]">
@@ -1122,7 +1122,7 @@ function OwnerSelector({
                     </span>
                   </div>
                   {isCurrent && (
-                    <Check className="size-3.5 shrink-0 text-blue-600" strokeWidth={2.5} />
+                    <Check className="size-3.5 shrink-0 text-primary" strokeWidth={2.5} />
                   )}
                 </button>
               );
@@ -1147,7 +1147,7 @@ function PresenceDot({
         "absolute -bottom-0.5 -right-0.5 inline-flex rounded-full ring-white",
         size === "sm" ? "size-1.5 ring-[1.5px]" : "size-2.5 ring-2",
         status === "ONLINE" && "bg-[#22c55e]",
-        status === "AWAY" && "bg-amber-400",
+        status === "AWAY" && "bg-warning",
         status === "OFFLINE" && "bg-slate-400",
       )}
       aria-hidden
@@ -1261,7 +1261,7 @@ function TagComposer({
           <Button
             type="button"
             variant="ghost"
-            className="h-7 rounded-md px-2.5 text-xs font-bold text-[var(--color-ink-soft)] hover:bg-slate-100"
+            className="h-7 rounded-md px-2.5 text-xs font-bold text-[var(--color-ink-soft)] hover:bg-muted"
             onClick={onSubmit}
             disabled={!draft.trim() || isPending}
           >
@@ -1272,7 +1272,7 @@ function TagComposer({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-6 rounded-md text-slate-500 hover:bg-slate-100"
+          className="size-6 rounded-md text-ink-muted hover:bg-muted"
           onClick={onClose}
           aria-label="Fechar"
         >
@@ -1303,7 +1303,7 @@ function TagComposer({
               onClick={() => setColor(c)}
               className={cn(
                 "size-3.5 rounded-full border transition",
-                color === c ? "scale-110 border-slate-500 ring-2 ring-slate-200" : "border-white",
+                color === c ? "scale-110 border-slate-500 ring-2 ring-black/10" : "border-white",
               )}
               style={{ backgroundColor: c }}
               aria-label={`Selecionar cor ${c}`}
@@ -1428,7 +1428,7 @@ function ProductsCard({
               aria-label={showAdd ? "Fechar" : "Adicionar produto"}
                 className={cn(
                   "inline-flex size-6 items-center justify-center rounded-md",
-                  "text-[var(--color-ink-muted)] transition-colors hover:bg-slate-50 hover:text-foreground active:scale-95",
+                  "text-[var(--color-ink-muted)] transition-colors hover:bg-muted hover:text-foreground active:scale-95",
                 )}
               >
                 <Plus className={cn("size-3.5 transition-transform", showAdd && "rotate-45")} strokeWidth={2.4} />
@@ -1467,7 +1467,7 @@ function ProductsCard({
                   <span className="min-w-0 flex-1 truncate font-semibold tracking-tight text-foreground">
                     {p.name}
                   </span>
-                  <span className="shrink-0 font-bold tabular-nums text-emerald-600">
+                  <span className="shrink-0 font-bold tabular-nums text-success">
                     {formatCurrency(Number(p.price))}
                   </span>
                 </button>
@@ -1502,7 +1502,7 @@ function ProductsCard({
               )}
             >
               <span className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500",
+                "flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-ink-muted",
                 dense && "size-6 rounded-md",
               )}>
                 <Package className="size-4" strokeWidth={2} />
@@ -1514,7 +1514,7 @@ function ProductsCard({
                     dense && "text-[13px]",
                   )}
                 >
-                  <span className="truncate font-bold tracking-tight text-slate-800">
+                  <span className="truncate font-bold tracking-tight text-foreground">
                     {item.productName}
                   </span>
                   <span className="shrink-0 tabular-nums text-[var(--color-ink-soft)]">
@@ -1543,7 +1543,7 @@ function ProductsCard({
                   });
                   if (ok) removeMutation.mutate(item.id);
                 }}
-                className="mt-0.5 shrink-0 self-start rounded-md p-0.5 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-rose-50 hover:text-rose-500"
+                className="mt-0.5 shrink-0 self-start rounded-md p-0.5 text-ink-subtle opacity-0 transition group-hover:opacity-100 hover:bg-destructive-soft hover:text-destructive"
                 aria-label="Remover"
               >
                 <X className="size-3" />

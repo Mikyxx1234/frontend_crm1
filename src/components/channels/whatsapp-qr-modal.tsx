@@ -228,7 +228,7 @@ export function WhatsappQrModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         panelClassName={cn(
-          "max-w-md overflow-hidden border-2 border-[#25D366]/20 bg-gradient-to-b from-background to-[#25D366]/[0.04] p-0 shadow-2xl sm:max-w-md"
+          "max-w-md overflow-hidden border-2 border-[#25D366]/20 bg-gradient-to-b from-[var(--glass-bg-overlay)] to-[#25D366]/[0.04] p-0 shadow-2xl sm:max-w-md"
         )}
       >
         <div className="relative px-6 pb-6 pt-8">
@@ -244,7 +244,7 @@ export function WhatsappQrModal({
             </DialogDescription>
           </DialogHeader>
 
-          <ol className="mx-auto mt-6 max-w-xs space-y-3 text-left text-sm text-muted-foreground">
+          <ol className="mx-auto mt-6 max-w-xs space-y-3 text-left text-sm text-[var(--text-muted)]">
             <li className="flex gap-3">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#25D366]/15 text-xs font-bold text-[#25D366]">
                 1
@@ -260,8 +260,8 @@ export function WhatsappQrModal({
               </span>
               <span className="flex items-center gap-2 pt-0.5">
                 <Menu className="size-4 text-[#25D366]" />
-                Toque em <strong className="text-foreground">Mais opções</strong> ou{" "}
-                <strong className="text-foreground">Configurações</strong>
+                Toque em <strong className="text-[var(--text-primary)]">Mais opções</strong> ou{" "}
+                <strong className="text-[var(--text-primary)]">Configurações</strong>
               </span>
             </li>
             <li className="flex gap-3">
@@ -284,14 +284,14 @@ export function WhatsappQrModal({
                 <p className="text-center text-lg font-semibold text-[#22c55e]">
                   WhatsApp conectado com sucesso!
                 </p>
-                <p className="text-center text-sm text-muted-foreground">
+                <p className="text-center text-sm text-[var(--text-muted)]">
                   Fechando em instantes…
                 </p>
               </div>
             ) : null}
 
             {!success && showSkeleton ? (
-              <div className="flex size-[300px] items-center justify-center rounded-2xl border bg-muted/50">
+              <div className="flex size-[300px] items-center justify-center rounded-2xl border bg-[var(--glass-bg-overlay)]">
                 <div className="flex w-[260px] flex-col items-center gap-3 p-4">
                   <Skeleton className="size-[220px] rounded-xl" />
                   <Skeleton className="h-4 w-40" />
@@ -301,7 +301,7 @@ export function WhatsappQrModal({
 
             {!success && !showSkeleton && qrError ? (
               <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 px-4 text-center">
-                <p className="text-sm text-destructive">
+                <p className="text-sm text-[var(--color-danger-text)]">
                   {qrErr instanceof Error ? qrErr.message : "Erro ao carregar QR Code."}
                 </p>
                 <Button
@@ -320,7 +320,7 @@ export function WhatsappQrModal({
               <div className="relative">
                 <div
                   className={cn(
-                    "rounded-2xl border-4 border-white bg-white p-3 shadow-xl",
+                    "rounded-2xl border-4 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3 shadow-xl",
                     "ring-4 ring-[#25D366]/20"
                   )}
                 >
@@ -342,10 +342,10 @@ export function WhatsappQrModal({
 
             {!success && showExpired ? (
               <div className="flex min-h-[280px] flex-col items-center justify-center gap-4 text-center">
-                <p className="text-base font-medium text-foreground">
+                <p className="text-base font-medium text-[var(--text-primary)]">
                   QR Code expirado
                 </p>
-                <p className="max-w-xs text-sm text-muted-foreground">
+                <p className="max-w-xs text-sm text-[var(--text-muted)]">
                   Gere um novo código e escaneie novamente no aplicativo.
                 </p>
                 <Button
@@ -367,12 +367,12 @@ export function WhatsappQrModal({
 
           {!success && qrCode && !showExpired && !qrLoading ? (
             <div className="mt-6 text-center">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-xs font-medium text-[var(--text-muted)]">
                 Válido por{" "}
-                <span className="tabular-nums text-foreground">{secondsLeft}s</span>{" "}
+                <span className="tabular-nums text-[var(--text-primary)]">{secondsLeft}s</span>{" "}
                 — depois atualize o código
               </p>
-              <div className="mx-auto mt-2 h-1.5 max-w-[200px] overflow-hidden rounded-full bg-muted">
+              <div className="mx-auto mt-2 h-1.5 max-w-[200px] overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
                 <div
                   className="h-full rounded-full bg-[#25D366] transition-all duration-1000 ease-linear"
                   style={{

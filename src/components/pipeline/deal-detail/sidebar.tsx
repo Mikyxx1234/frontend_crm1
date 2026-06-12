@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { dt } from "@/lib/design-tokens";
+import { AvailabilityBadge } from "@/features/products-v2/availability-badge";
 import { cn, formatCurrency, getInitials, tagPillStyle } from "@/lib/utils";
 
 import {
@@ -165,7 +166,7 @@ export function DealSidebar({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-7 rounded-xl text-emerald-600"
+                className="size-7 rounded-xl text-success"
                 onClick={saveBasic}
                 disabled={isUpdating}
               >
@@ -185,7 +186,7 @@ export function DealSidebar({
               ] as const
             ).map(([label, key, type]) => (
               <div key={key} className="grid gap-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</Label>
+                <Label className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">{label}</Label>
                 <Input
                   type={type}
                   value={draft[key]}
@@ -196,8 +197,8 @@ export function DealSidebar({
             ))}
             {contact.source && (
               <div className="grid gap-1.5">
-                <Label className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Fonte</Label>
-                <div className="flex h-9 items-center rounded-lg border border-border bg-slate-100 px-3 text-sm text-slate-500">
+                <Label className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Fonte</Label>
+                <div className="flex h-9 items-center rounded-lg border border-border bg-muted px-3 text-sm text-ink-muted">
                   {contact.source}
                 </div>
               </div>
@@ -383,10 +384,10 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
                     <span className="font-medium">{p.name}</span>
                     {p.sku && <span className="ml-1 text-muted-foreground">({p.sku})</span>}
                     {p.type === "SERVICE" && (
-                      <span className="ml-1.5 rounded bg-violet-100 px-1.5 py-0.5 text-[11px] font-semibold text-violet-700">Serviço</span>
+                      <span className="ml-1.5 rounded bg-lavender-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">Serviço</span>
                     )}
                   </div>
-                  <span className="shrink-0 font-semibold tabular-nums text-emerald-600">
+                  <span className="shrink-0 font-semibold tabular-nums text-success">
                     {formatCurrency(Number(p.price))}
                   </span>
                 </button>
@@ -406,16 +407,16 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
             <div
               key={item.id}
               className={cn(
-                "rounded-2xl border border-blue-100 bg-linear-to-br from-blue-50 to-white px-4 py-3.5 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+                "rounded-2xl border border-primary/20 bg-linear-to-br from-blue-50 to-white px-4 py-3.5 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
                 compact && "py-3",
               )}
             >
               {editingItem === item.id && item.productType !== "SERVICE" ? (
                   <div className="space-y-2.5">
-                  <div className="text-sm font-medium text-slate-800">{item.productName}</div>
+                  <div className="text-sm font-medium text-foreground">{item.productName}</div>
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Qtd</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Qtd</span>
                       <Input
                         type="number"
                         step="0.01"
@@ -426,7 +427,7 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
                       />
                     </div>
                     <div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Desc %</span>
+                      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Desc %</span>
                       <Input
                         type="number"
                         step="0.01"
@@ -446,7 +447,7 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-7 rounded-lg text-emerald-600"
+                      className="size-7 rounded-lg text-success"
                       onClick={() => saveEdit(item.id)}
                       disabled={updateMutation.isPending}
                     >
@@ -457,21 +458,22 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
               ) : (
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 text-sm text-slate-900">
-                      <Package className="size-4 shrink-0 text-blue-700" />
+                    <div className="flex items-center gap-2 text-sm text-foreground">
+                      <Package className="size-4 shrink-0 text-primary-dark" />
                       <span className="truncate font-medium">{item.productName}</span>
                       {item.productType === "SERVICE" && (
-                        <span className="rounded bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                        <span className="rounded bg-lavender-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
                           Serviço
                         </span>
                       )}
+                      <AvailabilityBadge productId={item.productId} />
                     </div>
                     {item.productType === "SERVICE" ? (
                       <div className="mt-1 text-[var(--color-ink-soft)]">Valor fixo</div>
                     ) : (
                       <div className="mt-1 text-[var(--color-ink-soft)]">
                         {item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}
-                        {item.discount > 0 && <span className="ml-1 text-amber-600">-{item.discount}%</span>}
+                        {item.discount > 0 && <span className="ml-1 text-warning">-{item.discount}%</span>}
                       </div>
                     )}
                     <ProductCustomFieldsInline productId={item.productId} />
@@ -504,8 +506,8 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
             </div>
           ))}
           <div className="flex items-center justify-between pt-2 text-sm">
-            <span className="font-medium text-slate-500">Total</span>
-            <span className="font-semibold tabular-nums text-slate-900">{formatCurrency(totalValue)}</span>
+            <span className="font-medium text-ink-muted">Total</span>
+            <span className="font-semibold tabular-nums text-foreground">{formatCurrency(totalValue)}</span>
           </div>
         </div>
       )}
@@ -571,7 +573,7 @@ function SidebarDealSummaryCard({
       />
 
       <div className="mt-3 border-t border-border/90 pt-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Responsável</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Responsável</div>
         <CompactOwnerSelector
           currentOwner={deal.owner}
           users={users}
@@ -581,7 +583,7 @@ function SidebarDealSummaryCard({
       </div>
 
       <div className="mt-3 border-t border-border/90 pt-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Tags</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Tags</div>
         <div className="flex flex-wrap items-center gap-1.5">
           {dealTags.length > 0 ? (
             dealTags.map(({ tag }) => (
@@ -663,7 +665,7 @@ function StageDropdown({
 
   return (
     <div ref={ref} className="relative">
-      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">
         {pipelineName}
       </div>
 
@@ -673,7 +675,7 @@ function StageDropdown({
         disabled={isPending}
         className={cn(
           "flex w-full items-center justify-between rounded-xl px-3.5 py-3 text-left transition-colors",
-          "border border-border bg-white hover:border-slate-300",
+          "border border-border bg-white hover:border-black/15",
           isPending && "cursor-wait opacity-70",
         )}
       >
@@ -683,7 +685,7 @@ function StageDropdown({
             style={{ backgroundColor: current?.color ?? "#cbd5e1" }}
             aria-hidden
           />
-          <span className="truncate text-sm font-semibold text-slate-900">
+          <span className="truncate text-sm font-semibold text-foreground">
             {current?.name ?? "—"}
           </span>
           <span className="text-xs text-[var(--color-ink-muted)]">
@@ -693,7 +695,7 @@ function StageDropdown({
         <ChevronDown className={cn("size-4 shrink-0 text-[var(--color-ink-muted)] transition-transform", open && "rotate-180")} />
       </button>
 
-      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
         {stages.map((stage, i) => {
           const isPast = i <= currentIdx;
           return (
@@ -712,7 +714,7 @@ function StageDropdown({
 
       {open && (
         <div className="absolute left-0 right-0 top-[calc(100%-4px)] z-50 mt-1 overflow-hidden rounded-xl border border-border bg-white shadow-lg">
-          <div className="border-b border-slate-100 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+          <div className="border-b border-black/5 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">
             {pipelineName}
           </div>
           <div className="max-h-[320px] overflow-y-auto">
@@ -735,7 +737,7 @@ function StageDropdown({
                   }}
                 >
                   {isActive ? (
-                    <Check className="size-4 shrink-0 text-slate-800" strokeWidth={2.5} />
+                    <Check className="size-4 shrink-0 text-foreground" strokeWidth={2.5} />
                   ) : (
                     <span className="size-4 shrink-0" />
                   )}
@@ -846,7 +848,7 @@ function TagComposerInline({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-7 rounded-md px-2.5 text-xs font-medium text-[var(--color-ink-soft)] hover:bg-slate-100"
+                className="h-7 rounded-md px-2.5 text-xs font-medium text-[var(--color-ink-soft)] hover:bg-muted"
                 onClick={onSubmit}
                 disabled={!draft.trim() || isPending}
               >
@@ -857,7 +859,7 @@ function TagComposerInline({
               type="button"
               variant="ghost"
               size="icon"
-              className="size-6 rounded-md text-slate-500 hover:bg-slate-100"
+              className="size-6 rounded-md text-ink-muted hover:bg-muted"
               onClick={() => onOpenChange(false)}
               aria-label="Fechar"
             >
@@ -888,7 +890,7 @@ function TagComposerInline({
                   onClick={() => setColor(paletteColor)}
                   className={cn(
                     "size-3.5 rounded-full border transition",
-                    color === paletteColor ? "scale-110 border-slate-500 ring-2 ring-slate-200" : "border-white",
+                    color === paletteColor ? "scale-110 border-slate-500 ring-2 ring-black/10" : "border-white",
                   )}
                   style={{ backgroundColor: paletteColor }}
                   aria-label={`Selecionar cor ${paletteColor}`}
@@ -939,19 +941,19 @@ function CompactOwnerSelector({
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={isPending}
-        className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3.5 py-3 text-left shadow-none transition-colors hover:border-slate-300 hover:bg-[var(--color-bg-subtle)]"
+        className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3.5 py-3 text-left shadow-none transition-colors hover:border-black/15 hover:bg-[var(--color-bg-subtle)]"
       >
-        <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-foreground">
+        <div className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-foreground">
           {currentOwner?.name ? getInitials(currentOwner.name) : "?"}
           {currentOwner?.name ? <PresenceDot status={currentOwnerStatus} className="absolute -bottom-0.5 -right-0.5" /> : null}
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate text-sm font-medium text-slate-800">{currentOwner?.name ?? "Sem responsável"}</span>
+          <span className="truncate text-sm font-medium text-foreground">{currentOwner?.name ?? "Sem responsável"}</span>
           {currentOwner?.name ? (
             <span className="shrink-0 text-xs text-[var(--color-ink-muted)]">· {presenceLabel(currentOwnerStatus)}</span>
           ) : null}
         </div>
-        <ChevronDown className={cn("size-4 shrink-0 text-slate-500 transition-transform", open && "rotate-180")} />
+        <ChevronDown className={cn("size-4 shrink-0 text-ink-muted transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
@@ -964,7 +966,7 @@ function CompactOwnerSelector({
             }}
             className="flex w-full items-center gap-2 rounded-lg px-3.5 py-2.5 text-left text-sm hover:bg-[var(--color-bg-subtle)]"
           >
-            <span className="text-slate-500">Sem responsável</span>
+            <span className="text-ink-muted">Sem responsável</span>
           </button>
           {users.map((u) => (
             <button
@@ -979,12 +981,12 @@ function CompactOwnerSelector({
                 currentOwner?.id === u.id && "bg-[var(--color-bg-subtle)]",
               )}
             >
-              <div className="flex size-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+              <div className="flex size-7 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary-dark">
                 {getInitials(u.name)}
               </div>
               <div className="min-w-0">
                 <span className="block truncate font-medium text-foreground">{u.name}</span>
-                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-muted">
                   <PresenceDot status={u.agentStatus?.status ?? "OFFLINE"} />
                   <span>{presenceLabel(u.agentStatus?.status ?? "OFFLINE")}</span>
                 </div>
@@ -1008,8 +1010,8 @@ function PresenceDot({
     <span
       className={cn(
         "inline-flex size-2.5 rounded-full ring-2 ring-white",
-        status === "ONLINE" && "bg-emerald-500",
-        status === "AWAY" && "bg-amber-400",
+        status === "ONLINE" && "bg-success",
+        status === "AWAY" && "bg-warning",
         status === "OFFLINE" && "bg-slate-400",
         className,
       )}
@@ -1039,7 +1041,7 @@ function ProductCustomFieldsInline({ productId }: { productId: string }) {
   if (filled.length === 0) return null;
 
   return (
-    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-muted">
       {filled.map((v) => (
         <span key={v.fieldId}>
           <span className="font-medium text-[var(--color-ink-soft)]">{v.label}:</span> {v.value}

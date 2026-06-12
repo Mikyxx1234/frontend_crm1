@@ -3,7 +3,6 @@
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   Eye,
   EyeOff,
   KeyRound,
@@ -12,9 +11,7 @@ import {
   Plus,
   Shield,
   Trash2,
-  Users,
 } from "lucide-react";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 import * as React from "react";
 import { toast } from "sonner";
@@ -30,7 +27,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
 import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -61,7 +57,7 @@ const ROLE_PT: Record<UserRole, string> = {
 
 const ROLE_BADGE: Record<UserRole, string> = {
   ADMIN: "border-transparent bg-violet-500/15 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
-  MANAGER: "border-transparent bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
+  MANAGER: "border-transparent bg-[color-mix(in_srgb,var(--color-info)_10%,transparent)]0/15 text-blue-700 dark:bg-[color-mix(in_srgb,var(--color-info)_10%,transparent)]0/20 dark:text-blue-300",
   MEMBER: "border-transparent bg-muted text-muted-foreground",
 };
 
@@ -251,22 +247,8 @@ export default function TeamSettingsPage() {
   });
 
   return (
-    <div className="flex w-full flex-col gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <Link
-            href="/old/settings"
-            className="mb-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            Voltar às configurações
-          </Link>
-          <PageHeader
-            title="Equipe"
-            description="Gerencie membros e permissões"
-            icon={<Users />}
-          />
-        </div>
+    <div className="flex w-full flex-col gap-4">
+      <div className="flex justify-end">
         <Button className="shrink-0 gap-2" onClick={() => setInviteOpen(true)}>
           <Plus className="size-4" />
           Novo usuário
@@ -292,7 +274,7 @@ export default function TeamSettingsPage() {
             >
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-foreground">{u.name}</span>
+                  <span className="font-medium text-[var(--text-primary)]">{u.name}</span>
                   <Badge
                     variant="outline"
                     className={cn("font-medium", ROLE_BADGE[u.role])}
@@ -459,7 +441,7 @@ export default function TeamSettingsPage() {
                         inviteRole !== "ADMIN" && "hover:border-border",
                       )}
                     >
-                      <span className="min-w-0 truncate text-foreground">
+                      <span className="min-w-0 truncate text-[var(--text-primary)]">
                         {CRM_ACTION_LABELS[action]}
                       </span>
                       <button
@@ -481,7 +463,7 @@ export default function TeamSettingsPage() {
                       >
                         <span
                           className={cn(
-                            "inline-block size-4 rounded-full bg-white shadow-sm transition-transform",
+                            "inline-block size-4 rounded-full bg-[var(--glass-bg-overlay)] shadow-sm transition-transform",
                             checked ? "translate-x-4" : "translate-x-0.5",
                           )}
                         />
@@ -526,7 +508,7 @@ export default function TeamSettingsPage() {
               {passwordTarget ? (
                 <>
                   Defina uma nova senha para{" "}
-                  <span className="font-medium text-foreground">
+                  <span className="font-medium text-[var(--text-primary)]">
                     {passwordTarget.name}
                   </span>{" "}
                   <span className="text-muted-foreground">
@@ -556,7 +538,7 @@ export default function TeamSettingsPage() {
                   type="button"
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground"
+                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-[var(--text-primary)]"
                   tabIndex={-1}
                 >
                   {showPassword ? (
@@ -642,7 +624,7 @@ export default function TeamSettingsPage() {
               {deleteTarget ? (
                 <>
                   Esta ação remove o acesso de{" "}
-                  <span className="font-medium text-foreground">{deleteTarget.name}</span>{" "}
+                  <span className="font-medium text-[var(--text-primary)]">{deleteTarget.name}</span>{" "}
                   (<span className="text-muted-foreground">{deleteTarget.email}</span>).
                 </>
               ) : null}

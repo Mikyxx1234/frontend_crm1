@@ -68,11 +68,11 @@ const LIFECYCLE_LABELS: Record<string, string> = {
 };
 
 function getEngagement(lastInboundAt?: string | null) {
-  if (!lastInboundAt) return { label: "Sem interação", icon: Snowflake, color: "text-blue-400", bg: "bg-blue-50" } as const;
+  if (!lastInboundAt) return { label: "Sem interação", icon: Snowflake, color: "text-blue-400", bg: "bg-primary-soft" } as const;
   const hours = (Date.now() - new Date(lastInboundAt).getTime()) / 3_600_000;
-  if (hours < 1) return { label: "Alto", icon: Flame, color: "text-red-500", bg: "bg-red-50" } as const;
-  if (hours < 24) return { label: "Médio", icon: Sun, color: "text-amber-500", bg: "bg-amber-50" } as const;
-  return { label: "Baixo", icon: Snowflake, color: "text-blue-400", bg: "bg-blue-50" } as const;
+  if (hours < 1) return { label: "Alto", icon: Flame, color: "text-destructive", bg: "bg-destructive-soft" } as const;
+  if (hours < 24) return { label: "Médio", icon: Sun, color: "text-warning", bg: "bg-warning-soft" } as const;
+  return { label: "Baixo", icon: Snowflake, color: "text-blue-400", bg: "bg-primary-soft" } as const;
 }
 
 function parseStoredBoolean(raw: string | null): boolean | null {
@@ -121,12 +121,12 @@ const LIFECYCLE_DEAL_BAR_PCT: Record<string, number> = {
 function EngagementBadge({ value }: { value: string }) {
   const tone =
     value === "Alto"
-      ? "bg-emerald-100 text-emerald-800"
+      ? "bg-success-soft text-success"
       : value === "Médio"
-        ? "bg-amber-100 text-amber-900"
+        ? "bg-warning-soft text-amber-900"
         : value === "Baixo"
-          ? "bg-blue-50 text-blue-700"
-          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 dark:text-slate-600";
+          ? "bg-primary-soft text-primary-dark"
+          : "bg-muted dark:bg-ink-soft text-ink-soft dark:text-ink-subtle dark:text-ink-soft";
   return (
     <span className={cn("inline-flex items-center rounded-[4px] px-2 py-0.5 text-[10px] font-semibold leading-tight", tone)}>
       {value}
@@ -194,28 +194,28 @@ export function ContactDealSidebar(props: Props) {
         return (
           <div key="negocio">
             <div className="px-4 pb-1 pt-3">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Negócio</span>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle dark:text-ink-muted">Negócio</span>
             </div>
             {activeDeal ? (
               <>
-                <div className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 px-4 py-3">
-                  <p className="mb-1.5 text-[10px] font-bold text-slate-900 dark:text-slate-100">Negócio ativo</p>
-                  <Link href={`/leads/${activeDeal.id}`} className="mb-1.5 block w-full truncate text-left text-[12px] font-medium text-blue-600 hover:underline">{activeDeal.title}</Link>
+                <div className="border-b border-black/5 dark:border-slate-800 bg-muted dark:bg-ink-soft/40 px-4 py-3">
+                  <p className="mb-1.5 text-[10px] font-bold text-foreground dark:text-white">Negócio ativo</p>
+                  <Link href={`/leads/${activeDeal.id}`} className="mb-1.5 block w-full truncate text-left text-[12px] font-medium text-primary hover:underline">{activeDeal.title}</Link>
                   <div className="flex items-center gap-2">
-                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+                    <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-subtle">
                       <div className="absolute inset-y-0 left-0 rounded-full transition-all" style={{ width: `${dealBarPct}%`, backgroundColor: dealBarColor }} />
                     </div>
-                    <span className="whitespace-nowrap text-[11px] font-medium text-blue-600">{activeDeal.stage?.name}</span>
+                    <span className="whitespace-nowrap text-[11px] font-medium text-primary">{activeDeal.stage?.name}</span>
                   </div>
                 </div>
                 {activeDeal.owner ? (
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-2">
-                    <span className="text-[12px] text-slate-400 dark:text-slate-500">Responsável</span>
-                    <span className="text-[12px] font-medium text-slate-700 dark:text-slate-200">{activeDeal.owner.name}</span>
+                  <div className="flex items-center justify-between border-b border-black/5 dark:border-slate-800 px-4 py-2">
+                    <span className="text-[12px] text-ink-subtle dark:text-ink-muted">Responsável</span>
+                    <span className="text-[12px] font-medium text-ink-soft dark:text-ink-subtle">{activeDeal.owner.name}</span>
                   </div>
                 ) : null}
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-2">
-                  <span className="text-[12px] text-slate-400 dark:text-slate-500">Estágio</span>
+                <div className="flex items-center justify-between border-b border-black/5 dark:border-slate-800 px-4 py-2">
+                  <span className="text-[12px] text-ink-subtle dark:text-ink-muted">Estágio</span>
                   <span
                     className="rounded-[4px] px-2 py-0.5 text-[11px] font-semibold"
                     style={{
@@ -227,16 +227,16 @@ export function ContactDealSidebar(props: Props) {
                     {activeDeal.stage?.name}
                   </span>
                 </div>
-                <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+                <div className="border-b border-black/5 px-4 py-3 dark:border-slate-800">
                   <DealProductsSection dealId={activeDeal.id} compact />
                 </div>
               </>
             ) : (
-              <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-3">
-                <p className="mb-2 text-[10px] font-bold text-slate-900 dark:text-slate-100">Negócio ativo</p>
+              <div className="border-b border-black/5 dark:border-slate-800 px-4 py-3">
+                <p className="mb-2 text-[10px] font-bold text-foreground dark:text-white">Negócio ativo</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] text-slate-400 dark:text-slate-500">Nenhum negócio</span>
-                  <button type="button" onClick={onCreateDeal} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-600 transition-colors hover:bg-blue-100">+ Criar</button>
+                  <span className="text-[12px] text-ink-subtle dark:text-ink-muted">Nenhum negócio</span>
+                  <button type="button" onClick={onCreateDeal} className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-primary-soft px-2.5 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary-soft">+ Criar</button>
                 </div>
               </div>
             )}
@@ -246,7 +246,7 @@ export function ContactDealSidebar(props: Props) {
         return (
           <div key="contato">
             <div className="px-4 pb-1 pt-3">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Contato</span>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle dark:text-ink-muted">Contato</span>
             </div>
             {displayPhone ? <SidebarField label="Telefone" icon="Phone" value={displayPhone} href={`tel:${displayPhone.replace(/\s/g, "")}`} /> : null}
             {displayEmail ? <SidebarField label="E-mail" icon="Mail" value={displayEmail} href={`mailto:${displayEmail}`} /> : null}
@@ -268,8 +268,8 @@ export function ContactDealSidebar(props: Props) {
           <div key="campos_contato">
             {visibleCustomFields.length > 0 ? (
               <>
-                <div className="mt-1 border-t border-slate-100 dark:border-slate-800 px-4 pb-1 pt-3">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Campos do contato</span>
+                <div className="mt-1 border-t border-black/5 dark:border-slate-800 px-4 pb-1 pt-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle dark:text-ink-muted">Campos do contato</span>
                 </div>
                 {(extraFieldsOpen ? visibleCustomFields : visibleCustomFields.slice(0, 3)).map((f) => {
                   const fieldDisplay = formatInboxPanelValue(f);
@@ -280,7 +280,7 @@ export function ContactDealSidebar(props: Props) {
                   <button
                     type="button"
                     onClick={() => setExtraFieldsOpen((v) => !v)}
-                    className="px-4 py-2 text-left text-[11px] font-medium text-blue-600 hover:text-blue-700"
+                    className="px-4 py-2 text-left text-[11px] font-medium text-primary hover:text-primary-dark"
                   >
                     {extraFieldsOpen ? "Mostrar menos" : `+ ${visibleCustomFields.length - 3} campos ocultos`}
                   </button>
@@ -288,8 +288,8 @@ export function ContactDealSidebar(props: Props) {
               </>
             ) : (
               <div className="px-4 py-4 text-center">
-                <Tag className="mx-auto mb-1.5 size-4 text-slate-200" />
-                <p className="text-[12px] text-slate-300 dark:text-slate-600">Nenhum campo configurado</p>
+                <Tag className="mx-auto mb-1.5 size-4 text-ink-subtle" />
+                <p className="text-[12px] text-ink-subtle dark:text-ink-soft">Nenhum campo configurado</p>
               </div>
             )}
           </div>
@@ -299,13 +299,13 @@ export function ContactDealSidebar(props: Props) {
           <div key="todos_negocios">
             {allDeals.length > 0 ? (
               <>
-                <div className="mt-1 border-t border-slate-100 dark:border-slate-800 px-4 pb-1 pt-3">
-                  <p className="text-[10px] font-bold text-slate-900 dark:text-slate-100">Todos os negócios</p>
+                <div className="mt-1 border-t border-black/5 dark:border-slate-800 px-4 pb-1 pt-3">
+                  <p className="text-[10px] font-bold text-foreground dark:text-white">Todos os negócios</p>
                 </div>
                 {allDeals.map((d) => (
                   <Link key={d.id} href={`/leads/${d.id}`} className={cn(dt.card.row, "block w-full cursor-pointer text-left")}>
                     <span className={cn(dt.text.value, "truncate")}>{d.title}</span>
-                    <span className="ml-2 shrink-0 text-[11px] text-slate-400 dark:text-slate-500">{d.stage.name}</span>
+                    <span className="ml-2 shrink-0 text-[11px] text-ink-subtle dark:text-ink-muted">{d.stage.name}</span>
                   </Link>
                 ))}
               </>
@@ -326,18 +326,18 @@ export function ContactDealSidebar(props: Props) {
         // pai, evitando o body gradient vazar embaixo quando o conteúdo
         // interno é curto (bug do refactor de width: `h-full` dependia
         // de altura explícita do pai, que não vinha do `lg:flex` puro).
-        "flex min-h-0 w-full flex-1 shrink-0 flex-col overflow-hidden bg-white dark:bg-slate-900",
-        side === "right" ? "border-l border-slate-100 dark:border-slate-800" : "border-r border-slate-100 dark:border-slate-800",
+        "flex min-h-0 w-full flex-1 shrink-0 flex-col overflow-hidden bg-white dark:bg-foreground",
+        side === "right" ? "border-l border-black/5 dark:border-slate-800" : "border-r border-black/5 dark:border-slate-800",
       )}
     >
-      <div className="relative flex h-8 shrink-0 items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-3">
-        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">CRM</span>
+      <div className="relative flex h-8 shrink-0 items-center justify-between border-b border-black/5 dark:border-slate-800 bg-white dark:bg-foreground px-3">
+        <span className="text-[11px] font-medium text-ink-subtle dark:text-ink-muted">CRM</span>
         <div className="flex items-center gap-0.5">
           {onCollapse ? (
             <button
               type="button"
               onClick={onCollapse}
-              className="inline-flex size-6 items-center justify-center rounded text-slate-300 dark:text-slate-600 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-500 dark:hover:text-slate-300"
+              className="inline-flex size-6 items-center justify-center rounded text-ink-subtle dark:text-ink-soft transition-colors hover:bg-muted dark:hover:bg-ink-soft/60 hover:text-ink-muted dark:hover:text-ink-subtle"
               aria-label="Recolher"
             >
               {side === "right" ? (
@@ -350,13 +350,13 @@ export function ContactDealSidebar(props: Props) {
         </div>
       </div>
 
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-white dark:bg-slate-900">
-        <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-3">
-          <p className="text-[14px] font-semibold text-slate-900 dark:text-slate-100">{displayName}</p>
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-white dark:bg-foreground">
+        <div className="border-b border-black/5 dark:border-slate-800 px-4 py-3">
+          <p className="text-[14px] font-semibold text-foreground dark:text-white">{displayName}</p>
           {contact?.company?.name ? (
-            <p className="mt-0.5 truncate text-[11px] text-slate-400 dark:text-slate-500">{contact.company.name}</p>
+            <p className="mt-0.5 truncate text-[11px] text-ink-subtle dark:text-ink-muted">{contact.company.name}</p>
           ) : null}
-          {displayPhone ? <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{displayPhone}</p> : null}
+          {displayPhone ? <p className="mt-0.5 text-[11px] text-ink-subtle dark:text-ink-muted">{displayPhone}</p> : null}
         </div>
         <SortableSidebar
           sections={sections}
@@ -374,7 +374,7 @@ export function ContactDealSidebar(props: Props) {
         <Link
           href={`/contacts/${contactId}`}
           className={cn(
-            "mt-auto flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3 text-[12px] font-medium transition-colors hover:text-blue-700",
+            "mt-auto flex items-center justify-between border-t border-black/5 dark:border-slate-800 px-4 py-3 text-[12px] font-medium transition-colors hover:text-primary-dark",
             dt.text.link,
           )}
         >

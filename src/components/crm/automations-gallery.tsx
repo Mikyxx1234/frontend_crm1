@@ -24,8 +24,8 @@ export function AutomationsGallery({ automations, onToggle }: AutomationsGallery
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto pb-2">
-      <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
         {automations.map((a) => (
           <AutomationCard key={a.id} automation={a} onToggle={onToggle} />
         ))}

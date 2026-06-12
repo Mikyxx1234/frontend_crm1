@@ -65,6 +65,9 @@ interface DealListTableProps {
   className?: string;
 }
 
+const DEAL_GRID =
+  "grid-cols-[42px_1.6fr_1.6fr_0.9fr_1.2fr_1.1fr_1fr_0.9fr]";
+
 const statusToTab: Record<DealListStatus, Exclude<DealListTab, "todos">> = {
   OPEN: "abertos",
   WON: "ganhos",
@@ -141,7 +144,7 @@ export function DealListTable({ deals, onRowClick, className }: DealListTablePro
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+        "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] backdrop-blur-md shadow-[var(--glass-shadow)]",
         className,
       )}
     >
@@ -179,142 +182,90 @@ export function DealListTable({ deals, onRowClick, className }: DealListTablePro
         })}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-collapse">
-          <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
-            <tr className="border-b border-[var(--glass-border-subtle)]">
-              <th className="w-12 px-4 py-3 text-left">
-                <CheckboxGlass
-                  checked={allChecked}
-                  indeterminate={!allChecked && someChecked}
-                  onChange={toggleAll}
-                  aria-label="Selecionar todos"
-                />
-              </th>
-              <th className="px-3 py-3 text-left">
-                <SortableHeader
-                  label="Negócio"
-                  sort={sortFor("dealTitle")}
-                  onSort={() => handleSort("dealTitle")}
-                />
-              </th>
-              <th className="px-3 py-3 text-left">
-                <SortableHeader
-                  label="Contato"
-                  sort={sortFor("contactName")}
-                  onSort={() => handleSort("contactName")}
-                />
-              </th>
-              <th className="px-3 py-3 text-left">
-                <SortableHeader
-                  label="Valor"
-                  sort={sortFor("value")}
-                  onSort={() => handleSort("value")}
-                />
-              </th>
-              <th className="px-3 py-3 text-left">
-                <SortableHeader
-                  label="Etapa"
-                  sort={sortFor("stageName")}
-                  onSort={() => handleSort("stageName")}
-                />
-              </th>
-              <th className="px-3 py-3 text-left">
-                <SortableHeader
-                  label="Responsável"
-                  sort={sortFor("ownerName")}
-                  onSort={() => handleSort("ownerName")}
-                />
-              </th>
-              <th className="px-3 py-3 text-left">
-                <SortableHeader
-                  label="Criado em"
-                  sort={sortFor("createdAt")}
-                  onSort={() => handleSort("createdAt")}
-                />
-              </th>
-              <th className="px-3 py-3 text-left">
-                <SortableHeader
-                  label="Status"
-                  sort={sortFor("status")}
-                  onSort={() => handleSort("status")}
-                />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((d) => {
-              const badge = statusBadge[d.status];
-              const isChecked = selected.has(d.id);
-              return (
-                <tr
-                  key={d.id}
-                  onClick={() => onRowClick?.(d.id)}
-                  className={cn(
-                    "cursor-pointer border-b border-[var(--glass-border-subtle)] transition-colors",
-                    isChecked ? "bg-[var(--color-enterprise-bg)]" : "hover:bg-[var(--glass-bg-overlay)]",
-                  )}
-                >
-                  <td className="px-4 py-3">
-                    <CheckboxGlass
-                      checked={isChecked}
-                      onChange={() => toggleOne(d.id)}
-                      aria-label={`Selecionar ${d.dealTitle}`}
-                    />
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-                      {d.dealTitle}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="relative">
-                        <div
-                          className={cn(
-                            d.avatarColor,
-                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--glass-bg-strong)] font-display text-[10px] font-bold text-white",
-                          )}
-                        >
-                          {d.contactInitials}
-                        </div>
-                        {d.channel === "whatsapp" && (
-                          <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-[1.5px] border-[var(--glass-bg-strong)] bg-[#25D366]">
-                            <IconBrandWhatsapp size={8} className="text-white" />
-                          </span>
-                        )}
-                      </div>
-                      <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
-                        {d.contactName}
-                      </span>
+      <div className="flex min-h-0 flex-1 flex-col p-4">
+        <div className={cn("mb-2.5 grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5", DEAL_GRID)}>
+          <span>
+            <CheckboxGlass
+              checked={allChecked}
+              indeterminate={!allChecked && someChecked}
+              onChange={toggleAll}
+              aria-label="Selecionar todos"
+            />
+          </span>
+          <SortableHeader label="Negócio" sort={sortFor("dealTitle")} onSort={() => handleSort("dealTitle")} />
+          <SortableHeader label="Contato" sort={sortFor("contactName")} onSort={() => handleSort("contactName")} />
+          <SortableHeader label="Valor" sort={sortFor("value")} onSort={() => handleSort("value")} />
+          <SortableHeader label="Etapa" sort={sortFor("stageName")} onSort={() => handleSort("stageName")} />
+          <SortableHeader label="Responsável" sort={sortFor("ownerName")} onSort={() => handleSort("ownerName")} />
+          <SortableHeader label="Criado em" sort={sortFor("createdAt")} onSort={() => handleSort("createdAt")} />
+          <SortableHeader label="Status" sort={sortFor("status")} onSort={() => handleSort("status")} />
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+          {filtered.map((d) => {
+            const badge = statusBadge[d.status];
+            const isChecked = selected.has(d.id);
+            return (
+              <div
+                key={d.id}
+                onClick={() => onRowClick?.(d.id)}
+                className={cn(
+                  "grid cursor-pointer items-center gap-3 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]",
+                  DEAL_GRID,
+                  isChecked
+                    ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
+                    : "border-[var(--glass-border-subtle)]",
+                )}
+              >
+                <span onClick={(e) => e.stopPropagation()}>
+                  <CheckboxGlass
+                    checked={isChecked}
+                    onChange={() => toggleOne(d.id)}
+                    aria-label={`Selecionar ${d.dealTitle}`}
+                  />
+                </span>
+                <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+                  {d.dealTitle}
+                </span>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="relative shrink-0">
+                    <div
+                      className={cn(
+                        d.avatarColor,
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[var(--glass-bg-base)] font-display text-[10px] font-bold text-white",
+                      )}
+                    >
+                      {d.contactInitials}
                     </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className="font-display text-[13px] font-semibold text-[var(--text-secondary)]">
-                      {d.value}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <StageDot color={d.stageColor} label={d.stageName} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className="font-display text-[13px] text-[var(--text-muted)]">
-                      {d.ownerName ?? "—"}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className="font-display text-[13px] text-[var(--text-muted)]">
-                      {d.createdAt}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <BadgeGlass variant={badge.variant}>{badge.label}</BadgeGlass>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    {d.channel === "whatsapp" && (
+                      <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-[1.5px] border-[var(--glass-bg-base)] bg-[#25D366]">
+                        <IconBrandWhatsapp size={8} className="text-white" />
+                      </span>
+                    )}
+                  </div>
+                  <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                    {d.contactName}
+                  </span>
+                </div>
+                <span className="truncate font-display text-[13px] font-semibold text-[var(--text-secondary)]">
+                  {d.value}
+                </span>
+                <div className="min-w-0">
+                  <StageDot color={d.stageColor} label={d.stageName} />
+                </div>
+                <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
+                  {d.ownerName ?? "—"}
+                </span>
+                <span className="truncate font-display text-[13px] text-[var(--text-muted)]">
+                  {d.createdAt}
+                </span>
+                <div>
+                  <BadgeGlass variant={badge.variant}>{badge.label}</BadgeGlass>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

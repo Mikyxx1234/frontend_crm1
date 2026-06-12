@@ -93,6 +93,7 @@ import {
 } from "@/lib/whatsapp-outbound-template-label";
 import { dt } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
+import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog";
 
 /** Texto da nota em uma linha (banner fixado estilo WhatsApp). */
 function notePreviewOneLine(content: string, maxChars = 140): string {
@@ -353,14 +354,14 @@ function AttachPopover({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--color-ink-soft)] shadow-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-[var(--color-ink-soft)] shadow-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label="Anexos e mais opções"
       >
         <Plus className="size-5" strokeWidth={2} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="z-[60] min-w-[208px] rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
+      <DropdownMenuContent className="z-[60] min-w-[208px] rounded-xl border border-black/5 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           onClick={onFile}
         >
           <Paperclip className="size-3.5 shrink-0" />
@@ -368,7 +369,7 @@ function AttachPopover({
         </DropdownMenuItem>
         {!isBaileysChannel ? (
           <DropdownMenuItem
-            className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+            className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
             onClick={onTemplate}
           >
             <FileText className="size-3.5 shrink-0" />
@@ -377,21 +378,21 @@ function AttachPopover({
         ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           onClick={onTask}
         >
           <CheckSquare className="size-3.5 shrink-0" />
           Nova tarefa
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           onClick={onSchedule}
         >
           <Clock className="size-3.5 shrink-0" />
           Agendar mensagem
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           onClick={onNote}
         >
           <Lock className="size-3.5 shrink-0" />
@@ -399,13 +400,13 @@ function AttachPopover({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           onClick={onToggleSignature}
         >
           {signatureEnabled ? "Desligar assinatura" : "Ligar assinatura"}
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           onClick={onEditSignature}
         >
           <Pencil className="size-3.5 shrink-0" />
@@ -413,7 +414,7 @@ function AttachPopover({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           disabled={statusPending}
           onClick={onToggleResolve}
         >
@@ -1717,7 +1718,7 @@ export function ChatWindow({
     if (kind === "image") {
       return (
         <div className="w-full">
-          <div className="relative overflow-hidden rounded-xl border border-slate-100 bg-white">
+          <div className="relative overflow-hidden rounded-xl border border-black/5 bg-white">
             {isUploading ? (
               <img
                 src={url}
@@ -1766,9 +1767,9 @@ export function ChatWindow({
             ? `Arquivo ${ext.toUpperCase()}`
             : "Arquivo";
     const iconColor = isPdf
-      ? "bg-indigo-600"
+      ? "bg-primary"
       : isAudioFile
-        ? "bg-orange-500"
+        ? "bg-warning"
         : "bg-[var(--color-bg-subtle)]0";
 
     return (
@@ -1789,7 +1790,7 @@ export function ChatWindow({
           <p
             className={cn(
               "truncate text-sm font-bold",
-              isUploading ? "text-slate-500" : "text-slate-800",
+              isUploading ? "text-ink-muted" : "text-foreground",
             )}
           >
             {fileName}
@@ -1863,10 +1864,10 @@ export function ChatWindow({
             <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
               <Upload className="size-6" />
             </span>
-            <p className="font-sans text-[15px] font-semibold text-slate-800">
+            <p className="font-sans text-[15px] font-semibold text-foreground">
               Solte o arquivo para anexar
             </p>
-            <p className="font-sans text-[12px] text-slate-600">
+            <p className="font-sans text-[12px] text-ink-soft">
               Imagens, vídeos, áudios ou documentos · até 16 MB
             </p>
           </div>
@@ -1911,7 +1912,7 @@ export function ChatWindow({
       )}
 
       {searchOpen ? (
-        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-white dark:bg-slate-900/70 px-3">
+        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-white dark:bg-foreground/70 px-3">
           <Search
             className="size-3.5 shrink-0 text-[var(--color-ink-soft)]"
             strokeWidth={2}
@@ -2006,7 +2007,7 @@ export function ChatWindow({
             descricao font-medium slate-400. */}
         {!isLoading && conversationId && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
-            <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-slate-100">
+            <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-muted">
               <Send
                 className="size-5 text-[var(--color-ink-muted)]"
                 strokeWidth={2.2}
@@ -2249,7 +2250,7 @@ export function ChatWindow({
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               className={cn(
-                                "flex size-7 items-center justify-center rounded-full border border-border bg-white text-slate-500 shadow-[var(--shadow-sm)] outline-none transition-colors hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-offset-1",
+                                "flex size-7 items-center justify-center rounded-full border border-border bg-white text-ink-muted shadow-[var(--shadow-sm)] outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-offset-1",
                                 out
                                   ? "focus-visible:ring-info/50"
                                   : "focus-visible:ring-border",
@@ -2260,10 +2261,10 @@ export function ChatWindow({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
-                              className="z-50 min-w-44 rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
+                              className="z-50 min-w-44 rounded-xl border border-black/5 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
                             >
                               <DropdownMenuItem
-                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
                                 onClick={() => {
                                   setReplyTo(m);
                                   textareaRef.current?.focus();
@@ -2273,7 +2274,7 @@ export function ChatWindow({
                                 Responder
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
                                 onClick={() => setForwardingMessage(m)}
                               >
                                 <Share2 className="size-3.5 shrink-0 opacity-70" />
@@ -2281,7 +2282,7 @@ export function ChatWindow({
                               </DropdownMenuItem>
                               {detectMediaKind(m) === "audio" && m.mediaUrl ? (
                                 <DropdownMenuItem
-                                  className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                                  className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
                                   onClick={() =>
                                     audioTranscribeRefs.current.get(msgId)?.()
                                   }
@@ -2296,7 +2297,7 @@ export function ChatWindow({
                               ) : null}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+                                className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
                                 onClick={() => setReactionPickerMsgId(m.id)}
                               >
                                 <Smile className="size-3.5 shrink-0 opacity-70" />
@@ -2326,7 +2327,7 @@ export function ChatWindow({
                               "line-clamp-2 text-[11px] md:text-[12px]",
                               out && !isNote
                                 ? "text-[color:var(--chat-bubble-sent-text)]/70"
-                                : "text-slate-500",
+                                : "text-ink-muted",
                             )}
                           >
                             {m.replyToPreview}
@@ -2408,14 +2409,14 @@ export function ChatWindow({
                         ) : out ? (
                           // Mensagens enviadas: quando geradas por automação,
                           // carimbamos um chip compacto "Automação" com ícone
-                          // de robô. Antes era `bg-slate-200/70` (cinza claro
+                          // de robô. Antes era `bg-subtle/70` (cinza claro
                           // semitransparente) — porem na bolha out (bg-chat-sent
                           // `#f0f9fa` cyan ultra-claro) o chip se dissolvia no
-                          // fundo. Migrado pra `bg-white ring-1 ring-slate-200`
+                          // fundo. Migrado pra `bg-white ring-1 ring-black/10`
                           // que cria contraste real (branco vs cyan claro)
                           // sem virar alerta competindo com cores semanticas.
                           isBot && !isAudioOnly ? (
-                            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-slate-200">
+                            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-0.5 ring-1 ring-black/10">
                               <Bot
                                 className="size-3 text-[var(--color-ink-soft)]"
                                 strokeWidth={2.4}
@@ -2489,8 +2490,8 @@ export function ChatWindow({
                             return Date.now() - ts > 5 * 60 * 1_000;
                           })();
                           const checkClassName = cn(
-                            stalePending && out && !isNote && "text-amber-600",
-                            stalePending && !out && "text-amber-500",
+                            stalePending && out && !isNote && "text-warning",
+                            stalePending && !out && "text-warning",
                             !stalePending && isRead && dt.chat.check.read,
                             !stalePending &&
                               !isRead &&
@@ -2535,7 +2536,37 @@ export function ChatWindow({
                             >
                               <span className="cursor-default">{time}</span>
                               {isFailed ? (
-                                <AlertTriangle className="size-3 text-destructive" />
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex cursor-help items-center">
+                                      <AlertTriangle className="size-3 text-destructive" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="top"
+                                    align="end"
+                                    className="w-max max-w-[300px] whitespace-normal [overflow-wrap:anywhere] border border-[color:var(--color-danger)]/30 bg-white px-3 py-2 text-left text-[11px] font-medium leading-snug text-[var(--color-danger-text)] shadow-[var(--shadow-lg)] v2-dark:bg-[var(--glass-bg-modal)]"
+                                  >
+                                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide">
+                                      Erro no envio (Meta)
+                                    </span>
+                                    <span className="block">
+                                      {summarizeSendError(m.sendError)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="pointer-events-auto mt-1.5 inline-flex items-center gap-1 rounded-md border border-[color:var(--color-danger)]/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--color-danger)]/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void navigator.clipboard
+                                          .writeText(translateSendError(m.sendError))
+                                          .then(() => toast.success("Erro copiado"));
+                                      }}
+                                    >
+                                      Copiar erro
+                                    </button>
+                                  </TooltipContent>
+                                </Tooltip>
                               ) : showCheck ? (
                                 isDelivered ? (
                                   <svg
@@ -2556,7 +2587,7 @@ export function ChatWindow({
                                     <TooltipTrigger asChild>
                                       <span className="inline-flex items-center">
                                         <Clock
-                                          className="size-3 text-amber-500"
+                                          className="size-3 text-warning"
                                           strokeWidth={2.5}
                                         />
                                       </span>
@@ -2586,7 +2617,7 @@ export function ChatWindow({
                             </span>
                           );
 
-                          const timeEl = m.createdAt ? (
+                          const timeEl = m.createdAt && !isFailed ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 {timeInner}
@@ -2708,8 +2739,22 @@ export function ChatWindow({
                         <div className="flex items-center gap-2 rounded-b-[16px] border-t border-[rgba(239,68,68,0.2)] bg-destructive/5 px-3.5 py-2">
                           <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
                           <span className="flex-1 truncate text-[11px] text-destructive">
-                            {m.sendError ?? "Falha ao enviar"}
+                            {m.sendError ? summarizeSendError(m.sendError) : "Falha ao enviar"}
                           </span>
+                          {m.sendError ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void navigator.clipboard
+                                  .writeText(translateSendError(m.sendError))
+                                  .then(() => toast.success("Erro copiado"));
+                              }}
+                              className="shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-medium text-destructive lumen-transition hover:bg-destructive/10"
+                            >
+                              Copiar
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -2820,24 +2865,24 @@ export function ChatWindow({
         !isBaileysChannel &&
         (compactChrome ? (
           <div className={cn("shrink-0", dt.chat.sessionExpiredCard)}>
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-50">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive-soft">
               <AlertTriangle
-                className="size-4 text-red-500"
+                className="size-4 text-destructive"
                 strokeWidth={2.25}
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-semibold text-slate-900">
+              <p className="text-[12px] font-semibold text-foreground">
                 Sessão de 24h encerrada
               </p>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-ink-subtle">
                 Só templates aprovados pelo WhatsApp
               </p>
             </div>
             <button
               type="button"
               onClick={() => setActivePanel("templates")}
-              className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:bg-blue-700 active:scale-95"
+              className="shrink-0 rounded-lg bg-primary px-3 py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:bg-primary-dark active:scale-95"
             >
               Usar Template
             </button>
@@ -2878,7 +2923,7 @@ export function ChatWindow({
           Exibe no máximo 2 agendamentos em detalhe e condensa o resto
           num "+N mais" pra não ocupar muito espaço vertical. */}
       {pendingScheduled.length > 0 && (
-        <div className="shrink-0 border-t border-sky-100 bg-sky-50/70 px-3 py-2 sm:px-6">
+        <div className="shrink-0 border-t border-primary/20 bg-primary-soft/70 px-3 py-2 sm:px-6">
           <div className={cn(rowMax, "flex flex-col gap-1.5")}>
             {pendingScheduled.slice(0, 2).map((sm) => {
               const when = new Date(sm.scheduledAt);
@@ -2891,16 +2936,16 @@ export function ChatWindow({
               return (
                 <div
                   key={sm.id}
-                  className="flex items-center gap-2 rounded-xl bg-white/70 px-3 py-1.5 text-[12px] text-sky-900"
+                  className="flex items-center gap-2 rounded-xl bg-white/70 px-3 py-1.5 text-[12px] text-info"
                 >
                   <Clock
-                    className="size-3.5 shrink-0 text-sky-600"
+                    className="size-3.5 shrink-0 text-info"
                     strokeWidth={2.25}
                   />
                   <span className="font-semibold">
                     Agendada para {whenLabel}
                   </span>
-                  <span className="hidden truncate text-sky-800/80 sm:inline">
+                  <span className="hidden truncate text-info/80 sm:inline">
                     —{" "}
                     {sm.content.slice(0, 80) ||
                       (sm.fallbackTemplateName
@@ -2911,7 +2956,7 @@ export function ChatWindow({
                     type="button"
                     onClick={() => cancelScheduledMutation.mutate(sm.id)}
                     disabled={cancelScheduledMutation.isPending}
-                    className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-[11px] font-semibold text-sky-800 transition-colors hover:bg-sky-200 disabled:opacity-50"
+                    className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-info transition-colors hover:bg-sky-200 disabled:opacity-50"
                   >
                     <X className="size-3" /> Cancelar
                   </button>
@@ -2919,7 +2964,7 @@ export function ChatWindow({
               );
             })}
             {pendingScheduled.length > 2 && (
-              <p className="text-[11px] font-medium text-sky-700">
+              <p className="text-[11px] font-medium text-info">
                 +{pendingScheduled.length - 2} outro(s) agendamento(s)
                 pendente(s)
               </p>
@@ -3522,7 +3567,7 @@ export function ChatWindow({
               <div
                 className={cn(
                   rowMax,
-                  "flex h-6 items-center gap-2 border-b border-white/40 bg-amber-50/40 px-2 backdrop-blur",
+                  "flex h-6 items-center gap-2 border-b border-white/40 bg-warning-soft/40 px-2 backdrop-blur",
                 )}
               >
                 <Lock className="size-3 shrink-0 text-[var(--color-ink-soft)]" />
@@ -3612,7 +3657,7 @@ export function ChatWindow({
                   "focus:outline-none",
                   "max-h-[120px] min-h-[24px] self-center",
                   noteMode &&
-                    "italic text-foreground placeholder:text-slate-500",
+                    "italic text-foreground placeholder:text-ink-muted",
                   composeDisabled &&
                     "cursor-not-allowed text-[var(--color-ink-muted)]",
                 )}
@@ -3695,7 +3740,7 @@ export function ChatWindow({
                       onClick={() => persistSignatureEnabled(!signatureEnabled)}
                       className={cn(
                         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
-                        signatureEnabled ? "bg-primary" : "bg-slate-300",
+                        signatureEnabled ? "bg-primary" : "bg-ink-subtle/40",
                       )}
                     >
                       <span
@@ -3712,7 +3757,7 @@ export function ChatWindow({
                     className={cn(
                       "min-w-0 max-w-[160px] truncate text-[14px] font-bold transition-colors sm:max-w-none",
                       signatureEnabled
-                        ? "text-slate-800"
+                        ? "text-foreground"
                         : "text-[var(--color-ink-muted)] line-through",
                     )}
                   >
@@ -3725,7 +3770,7 @@ export function ChatWindow({
                         setSignatureDraft(signature);
                         setSignatureModalOpen(true);
                       }}
-                      className="rounded-md p-1 text-[var(--color-ink-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
+                      className="rounded-md p-1 text-[var(--color-ink-muted)] transition-colors hover:bg-muted hover:text-[var(--color-ink-soft)]"
                       aria-label="Customizar assinatura"
                     >
                       <Pencil className="size-3.5" />
@@ -3774,7 +3819,7 @@ export function ChatWindow({
                   onClick={() => togglePanel("emoji")}
                   className={cn(
                     "inline-flex size-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-subtle)]",
-                    activePanel === "emoji" && "bg-slate-100 text-slate-900",
+                    activePanel === "emoji" && "bg-muted text-foreground",
                   )}
                   aria-label="Emojis"
                 >
@@ -3803,9 +3848,9 @@ export function ChatWindow({
                   rows={1}
                   disabled={composeDisabled}
                   className={cn(
-                    "min-h-[28px] max-h-[200px] min-w-0 flex-1 resize-none bg-transparent text-[15px] leading-relaxed text-slate-800 dark:text-slate-100 outline-none placeholder:text-[var(--color-ink-muted)] focus:outline-none",
+                    "min-h-[28px] max-h-[200px] min-w-0 flex-1 resize-none bg-transparent text-[15px] leading-relaxed text-foreground dark:text-white outline-none placeholder:text-[var(--color-ink-muted)] focus:outline-none",
                     noteMode &&
-                      "italic text-foreground placeholder:text-slate-500",
+                      "italic text-foreground placeholder:text-ink-muted",
                     composeDisabled &&
                       "cursor-not-allowed text-[var(--color-ink-muted)]",
                   )}
@@ -3926,7 +3971,7 @@ export function ChatWindow({
       <Dialog open={signatureModalOpen} onOpenChange={setSignatureModalOpen}>
         <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle className="text-[18px] font-bold text-slate-800">
+            <DialogTitle className="text-[18px] font-bold text-foreground">
               Edição de assinatura
             </DialogTitle>
           </DialogHeader>
@@ -3945,7 +3990,7 @@ export function ChatWindow({
               placeholder={agentName}
               className="h-11 rounded-full border-border px-4 text-[14px]"
             />
-            <DialogDescription className="text-[12px] text-slate-500">
+            <DialogDescription className="text-[12px] text-ink-muted">
               Mantenha vazio se quiser utilizar o nome salvo no seu perfil como
               assinatura.
             </DialogDescription>
@@ -3998,10 +4043,10 @@ function TemplateBadge({ content }: { content: string }) {
   // praticamente ilegível. Marketing/Utility também só tinham variante
   // clara, então em dark mode amber-50/sky-50 sumiam.
   const colors = isMkt
-    ? "border-amber-300/60 bg-amber-50 text-amber-800 dark:border-amber-400/50 dark:bg-amber-400/20 dark:text-amber-100"
+    ? "border-warning/40/60 bg-warning-soft text-warning dark:border-warning/40/50 dark:bg-warning/20 dark:text-amber-100"
     : isUtility
-      ? "border-sky-300/60 bg-sky-50 text-sky-800 dark:border-sky-400/50 dark:bg-sky-400/20 dark:text-sky-100"
-      : "border-indigo-300/60 bg-indigo-50 text-indigo-800 dark:border-indigo-400/50 dark:bg-indigo-400/25 dark:text-indigo-50";
+      ? "border-primary/40/60 bg-primary-soft text-info dark:border-primary/40/50 dark:bg-sky-400/20 dark:text-sky-100"
+      : "border-primary/40/60 bg-primary-soft text-primary-dark dark:border-primary/40/50 dark:bg-indigo-400/25 dark:text-indigo-50";
 
   return (
     <div className="group/tpl relative mb-1.5">
@@ -4174,36 +4219,36 @@ function SystemEventRow({
         transition={{ duration: 0.25 }}
         className="flex w-full justify-center py-2"
       >
-        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-[20px] border border-amber-200/60 bg-amber-50/55 px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-[20px] border border-warning/30/60 bg-warning-soft/55 px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
           <div className="flex items-center gap-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-100">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-warning-soft">
               <Smartphone
-                className="size-3.5 text-amber-700"
+                className="size-3.5 text-warning"
                 strokeWidth={2.4}
               />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-warning">
               Cliente trocou de número
             </p>
             {time && (
-              <span className="ml-auto text-[10px] font-semibold tabular-nums text-amber-600/80">
+              <span className="ml-auto text-[10px] font-semibold tabular-nums text-warning/80">
                 {time}
               </span>
             )}
           </div>
           <div className="flex items-center justify-center gap-2 px-1">
-            <span className="rounded-md bg-white/80 px-2 py-1 text-[12px] font-bold tabular-nums text-slate-500 line-through decoration-slate-400/60">
+            <span className="rounded-md bg-white/80 px-2 py-1 text-[12px] font-bold tabular-nums text-ink-muted line-through decoration-slate-400/60">
               {oldPhone}
             </span>
             <ArrowRight
-              className="size-3.5 shrink-0 text-amber-600"
+              className="size-3.5 shrink-0 text-warning"
               strokeWidth={2.5}
             />
-            <span className="rounded-md bg-white px-2 py-1 text-[12px] font-bold tabular-nums text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+            <span className="rounded-md bg-white px-2 py-1 text-[12px] font-bold tabular-nums text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
               {newPhone}
             </span>
           </div>
-          <p className="text-center text-[10px] font-semibold text-amber-700/80">
+          <p className="text-center text-[10px] font-semibold text-warning/80">
             Histórico preservado · Cadastro atualizado automaticamente
           </p>
         </div>
@@ -4219,14 +4264,14 @@ function SystemEventRow({
       transition={{ duration: 0.25 }}
       className="flex w-full justify-center py-2"
     >
-      <div className="flex max-w-[420px] items-center gap-2 rounded-full border border-amber-200/60 bg-amber-50/55 px-3 py-1.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      <div className="flex max-w-[420px] items-center gap-2 rounded-full border border-warning/30/60 bg-warning-soft/55 px-3 py-1.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
         <AlertCircle
-          className="size-3.5 shrink-0 text-amber-600"
+          className="size-3.5 shrink-0 text-warning"
           strokeWidth={2.4}
         />
-        <p className="text-[11px] font-semibold text-amber-800">{body}</p>
+        <p className="text-[11px] font-semibold text-warning">{body}</p>
         {time && (
-          <span className="text-[10px] tabular-nums text-amber-600/80">
+          <span className="text-[10px] tabular-nums text-warning/80">
             {time}
           </span>
         )}
@@ -4334,9 +4379,9 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
           : "Evento de chamada";
 
   const accent = isFailed
-    ? "text-rose-500"
+    ? "text-destructive"
     : isIncoming
-      ? "text-emerald-600"
+      ? "text-success"
       : isOutgoing
         ? "text-primary"
         : "text-[var(--color-ink-soft)]";
@@ -4354,8 +4399,8 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
   const sideTint = isOutgoing
     ? "border-[var(--color-chat-sent-border)] bg-[var(--color-chat-sent)]/80"
     : isIncoming
-      ? "border-slate-100 bg-white"
-      : "border-slate-100 bg-[var(--color-bg-subtle)]/70";
+      ? "border-black/5 bg-white"
+      : "border-black/5 bg-[var(--color-bg-subtle)]/70";
 
   return (
     <div className={cn("flex w-full", sideJustify)}>
@@ -4375,7 +4420,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
             <Icon className="size-4" strokeWidth={2.25} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-bold text-slate-900">
+            <p className="truncate text-[12px] font-bold text-foreground">
               {label}
             </p>
             <div className="mt-0.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
@@ -4387,7 +4432,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
               )}
               {timeLabel && <span>{timeLabel}</span>}
               {agentLabel && (
-                <span className="truncate normal-case tracking-normal text-slate-500">
+                <span className="truncate normal-case tracking-normal text-ink-muted">
                   por{" "}
                   <span className="font-bold text-foreground">
                     {agentLabel}
@@ -4400,7 +4445,7 @@ function CallActivityItem({ message }: { message: InboxMessageDto }) {
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="shrink-0 rounded-full bg-slate-900 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white transition-all hover:bg-slate-800 hover:shadow-sm"
+              className="shrink-0 rounded-full bg-foreground px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white transition-all hover:bg-ink-soft hover:shadow-sm"
             >
               {expanded ? "Fechar" : "Ouvir"}
             </button>
@@ -4470,32 +4515,32 @@ function ConsentActivityItem({
           Icon: ShieldCheck,
           label: "Permissão concedida",
           sub: "Sem expiração · ligações permanentes",
-          accent: "text-emerald-600",
-          pillBg: "bg-emerald-50/80 border-emerald-100",
+          accent: "text-success",
+          pillBg: "bg-success-soft/80 border-success/20",
         };
       case "granted_temp":
         return {
           Icon: ShieldCheck,
           label: "Permissão concedida",
           sub: "Válida por 7 dias",
-          accent: "text-emerald-600",
-          pillBg: "bg-emerald-50/80 border-emerald-100",
+          accent: "text-success",
+          pillBg: "bg-success-soft/80 border-success/20",
         };
       case "denied":
         return {
           Icon: PhoneOff,
           label: "Permissão recusada",
           sub: "Meta bloqueia novo pedido por 24h",
-          accent: "text-rose-500",
-          pillBg: "bg-rose-50/70 border-rose-100",
+          accent: "text-destructive",
+          pillBg: "bg-destructive-soft/70 border-destructive/20",
         };
       default:
         return {
           Icon: Phone,
           label: "Resposta de permissão",
           sub: "Cliente respondeu ao pedido",
-          accent: "text-slate-500",
-          pillBg: "bg-[var(--color-bg-subtle)] border-slate-100",
+          accent: "text-ink-muted",
+          pillBg: "bg-[var(--color-bg-subtle)] border-black/5",
         };
     }
   })();
@@ -4518,10 +4563,10 @@ function ConsentActivityItem({
             <Icon className="size-4" strokeWidth={2.25} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-bold text-slate-900">
+            <p className="truncate text-[12px] font-bold text-foreground">
               {label}
             </p>
-            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+            <p className="mt-0.5 truncate text-[11px] font-medium text-ink-muted">
               {sub}
             </p>
           </div>
@@ -4896,7 +4941,7 @@ function AudioMessage({
   return (
     <>
       {senderLabel ? (
-        <span className="mb-1 block text-[11px] text-slate-400">
+        <span className="mb-1 block text-[11px] text-ink-subtle">
           {senderLabel}
         </span>
       ) : null}
@@ -4942,7 +4987,7 @@ function AudioMessage({
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(progress)}
-              className="relative h-[3px] w-full cursor-pointer rounded-full bg-slate-200"
+              className="relative h-[3px] w-full cursor-pointer rounded-full bg-subtle"
             >
               <div
                 className="h-full rounded-full bg-primary transition-[width] duration-150"
@@ -4954,7 +4999,7 @@ function AudioMessage({
                 "text-[10px] tabular-nums",
                 out
                   ? "text-[color:var(--chat-bubble-sent-time)]"
-                  : "text-slate-500",
+                  : "text-ink-muted",
               )}
             >
               {currentLabel}
@@ -5017,7 +5062,7 @@ function AudioMessage({
               "flex justify-end gap-0.5 pr-0.5 text-[10px] font-bold tabular-nums",
               out
                 ? "text-[color:var(--chat-bubble-sent-time)]"
-                : "text-slate-500",
+                : "text-ink-muted",
             )}
           >
             {time ? <span>{time}</span> : null}
@@ -5067,7 +5112,7 @@ function AudioMessage({
           </div>
 
           {transcription === "loading" ? (
-            <div className="flex items-center gap-2 text-[12px] text-slate-500">
+            <div className="flex items-center gap-2 text-[12px] text-ink-muted">
               <Loader2 className="size-3.5 animate-spin" />
               Transcrevendo… pode levar alguns segundos.
             </div>
@@ -5086,7 +5131,7 @@ function AudioMessage({
                   navigator.clipboard.writeText(transcription.text);
                   toast.success("Transcrição copiada.");
                 }}
-                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500 transition-colors hover:bg-white hover:text-foreground"
+                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-ink-muted transition-colors hover:bg-white hover:text-foreground"
               >
                 Copiar
               </button>
@@ -5097,7 +5142,7 @@ function AudioMessage({
           typeof transcription === "object" &&
           "error" in transcription ? (
             <div className="space-y-2">
-              <p className="text-[12px] font-medium text-red-600">
+              <p className="text-[12px] font-medium text-destructive">
                 {transcription.error}
               </p>
               <button

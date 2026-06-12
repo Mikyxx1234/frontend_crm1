@@ -3,6 +3,12 @@ export interface ActionDef {
   label: string;
   description?: string;
   destructive?: boolean;
+  /**
+   * Nível mínimo (modo simplificado) em que a action é concedida:
+   * 1 = Ver, 2 = Operar, 3 = Total (sensível). Quando ausente, é
+   * derivado por heurística em `actionTier()` (level-matrix).
+   */
+  tier?: 1 | 2 | 3;
 }
 
 export interface ResourceDef {

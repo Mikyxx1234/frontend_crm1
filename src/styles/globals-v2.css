@@ -69,6 +69,7 @@
   --glass-bg-panel:         rgba(255, 255, 255, 0.32);   /* nav-rail, colunas — translúcido real */
   --glass-bg-strong:        rgba(255, 255, 255, 0.32);   /* kanban columns — mesmo nível do panel */
   --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais/dialogs — opaco */
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);   /* hovers sutis — realce leve */
   --glass-border:           rgba(180, 200, 230, 0.55);   /* borda padrão */
   --glass-border-subtle:    rgba(180, 200, 230, 0.30);   /* borda sutil */
   --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
@@ -153,6 +154,7 @@
   --glass-bg-panel:         rgba(255, 255, 255, 0.32);
   --glass-bg-strong:        rgba(255, 255, 255, 0.32);
   --glass-bg-modal:         rgba(255, 255, 255, 0.97);
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);
   --glass-border:           rgba(180, 200, 230, 0.55);
   --glass-border-subtle:    rgba(180, 200, 230, 0.30);
   --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
@@ -329,6 +331,7 @@
   --glass-bg-panel:    rgba(15, 23, 42, 0.55);
   --glass-bg-strong:   rgba(15, 23, 42, 0.55);
   --glass-bg-modal:    rgba(15, 23, 42, 0.98);
+  --glass-bg-subtle:   rgba(255, 255, 255, 0.06);   /* hovers sutis — realce leve no escuro */
   --glass-border:      rgba(99, 120, 180, 0.30);
   --glass-border-subtle: rgba(99, 120, 180, 0.18);
   --glass-shadow-sm:   0 1px 6px rgba(0, 0, 0, 0.35);

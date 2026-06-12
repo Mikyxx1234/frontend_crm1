@@ -7,6 +7,7 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import type { OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 
 // ─────────────────────────────────────────────────────────────────
 // Pipelines / Board (usados no dialog "Novo negocio" do /inbox)
@@ -349,6 +350,8 @@ export interface WhatsappTemplate {
   metaTemplateName?: string;
   hasButtons?: boolean;
   hasVariables?: boolean;
+  /** Metadados das variáveis do corpo (rótulos/exemplos) para validação no envio. */
+  operatorVariables?: OperatorVariableMeta[] | null;
 }
 
 /**
@@ -367,6 +370,7 @@ interface AgentEnabledTemplateRaw {
   bodyPreview?: string;
   hasButtons?: boolean;
   hasVariables?: boolean;
+  operatorVariables?: OperatorVariableMeta[] | null;
 }
 
 /** GET /api/whatsapp-template-configs/agent-enabled */
@@ -387,6 +391,7 @@ export async function listAgentEnabledTemplates(): Promise<WhatsappTemplate[]> {
     language: row.language,
     hasButtons: row.hasButtons,
     hasVariables: row.hasVariables,
+    operatorVariables: Array.isArray(row.operatorVariables) ? row.operatorVariables : null,
   }));
 }
 

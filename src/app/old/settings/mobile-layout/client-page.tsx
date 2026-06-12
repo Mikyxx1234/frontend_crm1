@@ -201,7 +201,7 @@ export function MobileLayoutClientPage() {
     });
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] space-y-6 p-4 md:p-8">
+    <div className="w-full space-y-4">
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <Smartphone className="size-5 text-primary" />
@@ -219,13 +219,13 @@ export function MobileLayoutClientPage() {
         {/* COLUNA ESQUERDA — Catalogo de modulos */}
         <div className="space-y-6">
           {/* Bottom nav editor */}
-          <section className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-[var(--shadow-lg)]">
+          <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-6 shadow-[var(--glass-shadow)]">
             <div className="mb-4 flex items-end justify-between gap-2">
               <div>
-                <h2 className="font-display text-lg font-bold text-slate-900">
+                <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
                   Barra inferior do app
                 </h2>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[var(--text-muted)]">
                   Até {BOTTOM_NAV_MAX} módulos · usados {bottomNavCount}
                 </p>
               </div>
@@ -234,7 +234,7 @@ export function MobileLayoutClientPage() {
                 variant="ghost"
                 size="sm"
                 onClick={resetDefaults}
-                className="gap-1.5 text-slate-500 hover:text-slate-900"
+                className="gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
                 <RotateCcw className="size-3.5" />
                 Restaurar padrão
@@ -247,14 +247,14 @@ export function MobileLayoutClientPage() {
                 return (
                   <li
                     key={d.id}
-                    className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-[var(--color-bg-subtle)]/40 p-3"
+                    className="flex items-center gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 p-3"
                   >
                     <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
                       <MobileModuleIcon name={desc.iconName} className="size-[18px]" strokeWidth={2.2} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-display text-sm font-bold text-slate-900">{desc.label}</p>
-                      <p className="truncate text-[12px] text-slate-500">{desc.description}</p>
+                      <p className="font-display text-sm font-bold text-[var(--text-primary)]">{desc.label}</p>
+                      <p className="truncate text-[12px] text-[var(--text-muted)]">{desc.description}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
@@ -262,7 +262,7 @@ export function MobileLayoutClientPage() {
                         onClick={() => moveBottomNav(d.id, -1)}
                         disabled={idx === 0}
                         aria-label={`Mover ${desc.label} para cima`}
-                        className="touch-target flex items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                        className="touch-target flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30"
                       >
                         <ArrowUp className="size-4" />
                       </button>
@@ -271,7 +271,7 @@ export function MobileLayoutClientPage() {
                         onClick={() => moveBottomNav(d.id, 1)}
                         disabled={idx === orderedBottomNav.length - 1}
                         aria-label={`Mover ${desc.label} para baixo`}
-                        className="touch-target flex items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                        className="touch-target flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30"
                       >
                         <ArrowDown className="size-4" />
                       </button>
@@ -300,10 +300,10 @@ export function MobileLayoutClientPage() {
           </section>
 
           {/* Catalogo completo */}
-          <section className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-[var(--shadow-lg)]">
+          <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-6 shadow-[var(--glass-shadow)]">
             <div className="mb-4">
-              <h2 className="font-display text-lg font-bold text-slate-900">Todos os módulos</h2>
-              <p className="text-sm text-slate-500">
+              <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">Todos os módulos</h2>
+              <p className="text-sm text-[var(--text-muted)]">
                 Habilite ou esconda módulos do app. Itens habilitados que não estão na barra ficam
                 no menu &quot;Mais&quot;.
               </p>
@@ -318,20 +318,20 @@ export function MobileLayoutClientPage() {
                     key={d.id}
                     className={cn(
                       "flex items-center gap-3 rounded-2xl border p-3 transition-colors",
-                      d.enabled ? "border-border bg-white" : "border-slate-100 bg-[var(--color-bg-subtle)] opacity-70",
+                      d.enabled ? "border-border bg-[var(--glass-bg-overlay)]" : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] opacity-70",
                     )}
                   >
                     <span
                       className={cn(
                         "flex size-9 shrink-0 items-center justify-center rounded-full",
-                        d.enabled ? "bg-primary/10 text-primary" : "bg-slate-200 text-[var(--color-ink-muted)]",
+                        d.enabled ? "bg-primary/10 text-primary" : "bg-[var(--glass-bg-strong)] text-[var(--color-ink-muted)]",
                       )}
                     >
                       <MobileModuleIcon name={desc.iconName} className="size-[18px]" strokeWidth={2.2} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-display text-sm font-bold text-slate-900">{desc.label}</p>
-                      <p className="truncate text-[12px] text-slate-500">{desc.description}</p>
+                      <p className="font-display text-sm font-bold text-[var(--text-primary)]">{desc.label}</p>
+                      <p className="truncate text-[12px] text-[var(--text-muted)]">{desc.description}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <button
@@ -341,10 +341,10 @@ export function MobileLayoutClientPage() {
                         className={cn(
                           "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors",
                           desc.required
-                            ? "cursor-not-allowed bg-slate-100 text-[var(--color-ink-muted)]"
+                            ? "cursor-not-allowed bg-[var(--glass-bg-subtle)] text-[var(--color-ink-muted)]"
                             : d.enabled
                               ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                              : "bg-slate-200 text-[var(--color-ink-soft)] hover:bg-slate-300",
+                              : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)] hover:bg-slate-300",
                         )}
                       >
                         {desc.required ? "Fixo" : d.enabled ? "Ativo" : "Oculto"}
@@ -359,7 +359,7 @@ export function MobileLayoutClientPage() {
                             "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors",
                             canPromote
                               ? "bg-primary/10 text-primary hover:bg-primary/20"
-                              : "cursor-not-allowed bg-slate-100 text-[var(--color-ink-muted)]",
+                              : "cursor-not-allowed bg-[var(--glass-bg-subtle)] text-[var(--color-ink-muted)]",
                           )}
                         >
                           Pôr no menu
@@ -373,7 +373,7 @@ export function MobileLayoutClientPage() {
           </section>
 
           {/* Save bar (sticky) */}
-          <div className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-2xl border border-slate-100 bg-white/95 p-4 shadow-[var(--shadow-lg)] backdrop-blur">
+          <div className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]/95 p-4 shadow-[var(--glass-shadow)] backdrop-blur">
             {saved && (
               <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-600">
                 <Check className="size-4" />
@@ -428,37 +428,37 @@ function IPhoneMockup({ bottomNav }: { bottomNav: MobileModuleId[] }) {
         Pré-visualização ao vivo
       </p>
       <div
-        className="relative aspect-[9/19.5] w-full max-w-[320px] rounded-[44px] border-[10px] border-slate-900 bg-slate-900 shadow-[var(--shadow-lg)]"
+        className="relative aspect-[9/19.5] w-full max-w-[320px] rounded-[44px] border-[10px] border-slate-900 bg-slate-900 shadow-[var(--glass-shadow)]"
       >
         {/* Tela */}
         <div className="absolute inset-0 overflow-hidden rounded-[34px] bg-[#f4f7fa]">
           {/* Notch */}
           <div className="absolute left-1/2 top-0 z-20 h-6 w-32 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
           {/* Top bar (status bar imitada) */}
-          <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-6 pt-2 text-[10px] font-bold text-slate-900">
+          <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-6 pt-2 text-[10px] font-bold text-[var(--text-primary)]">
             <span>9:41</span>
             <span>•••</span>
           </div>
           {/* Mobile top bar do app */}
           <div className="absolute left-0 right-0 top-7 flex items-center justify-between bg-sidebar border-b border-sidebar-border px-4 py-3 shadow-[var(--shadow-sm)]">
             <div className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-md bg-white">
+              <span className="flex size-7 items-center justify-center rounded-md bg-[var(--glass-bg-overlay)]">
                 <span className="text-[12px] font-bold text-primary">E</span>
               </span>
               <span className="font-display text-[13px] font-extrabold tracking-tight text-white">
                 Inbox
               </span>
             </div>
-            <span className="size-7 rounded-full bg-white/20" />
+            <span className="size-7 rounded-full bg-[var(--glass-bg-overlay)]/20" />
           </div>
           {/* Conteudo placeholder */}
           <div className="absolute left-0 right-0 top-[78px] bottom-[64px] space-y-2 overflow-hidden px-3 py-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-2 rounded-xl bg-white p-2 shadow-sm">
-                <span className="size-8 shrink-0 rounded-full bg-slate-200" />
+              <div key={i} className="flex items-center gap-2 rounded-xl bg-[var(--glass-bg-overlay)] p-2 shadow-sm">
+                <span className="size-8 shrink-0 rounded-full bg-[var(--glass-bg-strong)]" />
                 <div className="min-w-0 flex-1 space-y-1">
-                  <div className="h-2 w-2/3 rounded-full bg-slate-200" />
-                  <div className="h-2 w-full rounded-full bg-slate-100" />
+                  <div className="h-2 w-2/3 rounded-full bg-[var(--glass-bg-strong)]" />
+                  <div className="h-2 w-full rounded-full bg-[var(--glass-bg-subtle)]" />
                 </div>
               </div>
             ))}
@@ -485,7 +485,7 @@ function IPhoneMockup({ bottomNav }: { bottomNav: MobileModuleId[] }) {
                   />
                   <span className="text-[8px] font-semibold tracking-tight">{m.label}</span>
                   {idx === 0 && (
-                    <span className="absolute -top-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-white" />
+                    <span className="absolute -top-0.5 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[var(--glass-bg-overlay)]" />
                   )}
                 </div>
               ))

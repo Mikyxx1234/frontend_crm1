@@ -77,17 +77,17 @@ function HeroIcon({ status }: { status: BulkOperationStatus | undefined }) {
   const ringClass = cn(
     "relative flex size-16 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition-colors",
     tone === "pending" &&
-      "border-slate-300/40 bg-slate-200/40 text-slate-500 dark:border-slate-500/30 dark:bg-slate-700/30 dark:text-slate-300",
+      "border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
     tone === "processing" &&
-      "border-primary/40 bg-primary/15 text-primary",
+      "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]",
     tone === "success" &&
-      "border-emerald-300/50 bg-emerald-100/60 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-300",
+      "border-[var(--color-success)]/40 bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
     tone === "warning" &&
-      "border-amber-300/50 bg-amber-100/60 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-300",
+      "border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 text-[var(--color-warning)]",
     tone === "danger" &&
-      "border-rose-300/50 bg-rose-100/60 text-rose-700 dark:border-rose-400/40 dark:bg-rose-500/15 dark:text-rose-300",
+      "border-[var(--color-danger)]/40 bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
     tone === "muted" &&
-      "border-slate-300/40 bg-slate-200/40 text-slate-500 dark:border-slate-600/40 dark:bg-slate-800/40 dark:text-slate-400",
+      "border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
   );
 
   return (
@@ -99,8 +99,8 @@ function HeroIcon({ status }: { status: BulkOperationStatus | undefined }) {
           className={cn(
             "absolute inset-0 rounded-full",
             tone === "pending"
-              ? "bg-slate-300/30 dark:bg-slate-600/20"
-              : "bg-primary/20",
+              ? "bg-[var(--glass-bg-subtle)]"
+              : "bg-[var(--brand-primary)]/20",
           )}
           style={{
             animation: "pulse-custom 2.4s ease-in-out infinite",
@@ -161,22 +161,22 @@ function PhaseStepper({ status }: { status: BulkOperationStatus | undefined }) {
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors",
                 isDone &&
-                  "border-emerald-300/50 bg-emerald-100/60 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-300",
+                  "border-[var(--color-success)]/40 bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
                 isCurrent &&
-                  "border-primary/40 bg-primary/15 text-primary",
+                  "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]",
                 !isDone &&
                   !isCurrent &&
-                  "border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] text-[var(--color-ink-muted)]",
+                  "border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
               )}
             >
               <span
                 className={cn(
                   "size-1.5 rounded-full",
-                  isDone && "bg-emerald-500",
-                  isCurrent && "bg-primary",
+                  isDone && "bg-[var(--color-success)]",
+                  isCurrent && "bg-[var(--brand-primary)]",
                   !isDone &&
                     !isCurrent &&
-                    "bg-slate-400 dark:bg-slate-600",
+                    "bg-[var(--glass-border)]",
                 )}
                 style={
                   isCurrent
@@ -188,7 +188,7 @@ function PhaseStepper({ status }: { status: BulkOperationStatus | undefined }) {
             </li>
             {i < phases.length - 1 && (
               <ChevronRight
-                className="size-3 shrink-0 text-[var(--color-ink-subtle)]"
+                className="size-3 shrink-0 text-[var(--text-muted)]"
                 strokeWidth={2}
               />
             )}
@@ -415,11 +415,11 @@ export function BulkOperationProgressDialog({
                     {STATUS_LABELS[status]}
                   </Badge>
                 )}
-                <span className="text-[var(--color-ink-soft)] tabular-nums">
+                <span className="text-[var(--text-secondary)] tabular-nums">
                   {processed} / {total || "?"}
                 </span>
               </span>
-              <span className="font-display text-[14px] font-bold tabular-nums text-foreground">
+              <span className="font-display text-[14px] font-bold tabular-nums text-[var(--text-primary)]">
                 {progressPercent}%
               </span>
             </div>
@@ -455,14 +455,14 @@ export function BulkOperationProgressDialog({
                     className={cn(
                       "absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-out",
                       status === "FAILED" &&
-                        "bg-gradient-to-r from-rose-500 to-rose-600",
+                        "bg-[var(--color-danger)]",
                       status === "PARTIAL" &&
-                        "bg-gradient-to-r from-amber-500 to-amber-600",
+                        "bg-[var(--color-warning)]",
                       status === "COMPLETED" &&
-                        "bg-gradient-to-r from-emerald-500 via-emerald-500 to-teal-500",
+                        "bg-[var(--color-success)]",
                       status === "PROCESSING" &&
-                        "bg-gradient-to-r from-primary via-violet-500 to-fuchsia-500",
-                      status === "CANCELLED" && "bg-slate-400 dark:bg-slate-600",
+                        "bg-gradient-to-r from-[var(--brand-primary)] via-violet-500 to-fuchsia-500",
+                      status === "CANCELLED" && "bg-[var(--glass-border)]",
                     )}
                     style={{ width: `${Math.max(2, progressPercent)}%` }}
                   />
@@ -488,7 +488,7 @@ export function BulkOperationProgressDialog({
             </div>
 
             {/* ETA — só aparece com dados pra estimar */}
-            <div className="flex h-4 items-center justify-end text-[11px] tabular-nums text-[var(--color-ink-muted)]">
+            <div className="flex h-4 items-center justify-end text-[11px] tabular-nums text-[var(--text-muted)]">
               {!isFinished && etaSeconds !== null
                 ? formatEta(etaSeconds)
                 : !isFinished && status === "PROCESSING"
@@ -517,7 +517,7 @@ export function BulkOperationProgressDialog({
 
           {/* Loading inicial com 3 dots */}
           {isLoading && !data && (
-            <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-[var(--color-ink-muted)]">
+            <div className="flex items-center justify-center gap-1.5 py-2 text-xs text-[var(--text-muted)]">
               <span>Conectando ao worker</span>
               <span className="flex items-center gap-0.5">
                 <span
@@ -544,7 +544,7 @@ export function BulkOperationProgressDialog({
 
           {/* Erro no fetch do status (não erro da operação em si) */}
           {error && (
-            <div className="flex items-start gap-2 rounded-xl border border-rose-200/70 bg-rose-50/70 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+            <div className="flex items-start gap-2 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] px-3 py-2 text-xs text-[var(--color-danger-text)]">
               <AlertCircle className="mt-0.5 size-4 shrink-0" strokeWidth={2} />
               <span>
                 Não foi possível consultar o progresso:{" "}
@@ -555,7 +555,7 @@ export function BulkOperationProgressDialog({
 
           {/* Lista de falhas por item — colapsável */}
           {data && data.errors.length > 0 && (
-            <details className="group rounded-xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            <details className="group rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-3 py-2 text-xs text-[var(--color-warning)]">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold">
                 <span className="flex items-center gap-1.5">
                   <AlertCircle className="size-3.5" strokeWidth={2} />
@@ -576,9 +576,9 @@ export function BulkOperationProgressDialog({
                 {data.errors.map((err, i) => (
                   <li
                     key={`${err.itemId}-${i}`}
-                    className="rounded-md border border-amber-200/40 bg-[var(--glass-bg-strong)] px-2 py-1.5 text-[var(--color-ink-soft)] backdrop-blur-sm dark:border-amber-500/20"
+                    className="rounded-md border border-[var(--color-warning)]/20 bg-[var(--glass-bg-strong)] px-2 py-1.5 text-[var(--text-secondary)] backdrop-blur-sm"
                   >
-                    <span className="font-mono text-[10px] text-amber-700 dark:text-amber-300">
+                    <span className="font-mono text-[10px] text-[var(--color-warning)]">
                       {err.itemId}
                     </span>
                     <span className="mx-1 opacity-50">·</span>
@@ -594,7 +594,7 @@ export function BulkOperationProgressDialog({
             data.status === "COMPLETED" &&
             data.errors.length === 0 &&
             data.failed === 0 && (
-              <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-[var(--color-success)]/20 bg-[var(--color-success-bg)] px-3 py-2 text-xs font-medium text-[var(--color-success-text)]">
                 <CheckCircle2 className="size-4" strokeWidth={2} />
                 <span>
                   Tudo certo — {data.succeeded}{" "}
@@ -648,23 +648,23 @@ function Counter({
       className={cn(
         "flex flex-col items-center gap-0.5 rounded-xl border bg-[var(--glass-bg-strong)] px-2 py-2.5 backdrop-blur-md transition-colors",
         tone === "success" &&
-          "border-emerald-200/70 dark:border-emerald-400/30",
-        tone === "danger" && "border-rose-200/70 dark:border-rose-400/30",
+          "border-[var(--color-success)]/20",
+        tone === "danger" && "border-[var(--color-danger)]/20",
         tone === "muted" && "border-[var(--glass-border-subtle)]",
         tone === "default" && "border-[var(--glass-border-subtle)]",
       )}
     >
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-ink-muted)]">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
         {label}
       </div>
       <div
         key={animateUp ? value : undefined}
         className={cn(
           "font-display text-2xl font-bold tabular-nums",
-          tone === "success" && "text-emerald-700 dark:text-emerald-300",
-          tone === "danger" && "text-rose-700 dark:text-rose-300",
-          tone === "muted" && "text-[var(--color-ink-muted)]",
-          tone === "default" && "text-foreground",
+          tone === "success" && "text-[var(--color-success-text)]",
+          tone === "danger" && "text-[var(--color-danger-text)]",
+          tone === "muted" && "text-[var(--text-muted)]",
+          tone === "default" && "text-[var(--text-primary)]",
         )}
         style={
           animateUp ? { animation: "scale-in 0.3s ease-out" } : undefined

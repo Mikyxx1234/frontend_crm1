@@ -79,14 +79,14 @@ const SheetTrigger = React.forwardRef<HTMLButtonElement, SheetTriggerProps>(
 SheetTrigger.displayName = "SheetTrigger";
 
 const sheetPanelVariants = cva(
-  "relative z-50 grid gap-4 border border-white/55 bg-white/75 text-foreground shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[transform,opacity] duration-300 ease-out",
+  "relative z-50 grid gap-4 border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] text-[var(--text-primary)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[transform,opacity] duration-300 ease-out",
   {
     variants: {
       side: {
-        top: "w-full max-h-[85vh] rounded-b-[32px]",
-        bottom: "w-full max-h-[85vh] rounded-t-[32px]",
-        left: "h-full max-w-sm rounded-r-[22px]",
-        right: "h-full max-w-sm rounded-l-[22px]",
+        top: "w-full max-h-[85vh] rounded-b-[var(--radius-2xl)]",
+        bottom: "w-full max-h-[85vh] rounded-t-[var(--radius-2xl)]",
+        left: "h-full max-w-sm rounded-r-[var(--radius-2xl)]",
+        right: "h-full max-w-sm rounded-l-[var(--radius-2xl)]",
       },
     },
     defaultVariants: {
@@ -220,7 +220,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h2
     ref={ref}
-    className={cn("font-display text-lg font-bold tracking-tight text-foreground", className)}
+    className={cn("font-display text-lg font-bold tracking-tight text-[var(--text-primary)]", className)}
     {...props}
   />
 ));
@@ -232,7 +232,7 @@ const SheetDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm text-[var(--text-muted)]", className)}
     {...props}
   />
 ));

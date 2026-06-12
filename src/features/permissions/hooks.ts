@@ -277,3 +277,85 @@ export function useEffectivePermissions(userId: string | null) {
     enabled: !!userId,
   });
 }
+
+// ── Escopo por usuário (funis e canais) ────────────────────────────────────
+//
+// `null` = sem restrição (acesso a todos). `string[]` = restrito aos IDs.
+// Lê/grava o `permissions.scope.grants.v1` da org via endpoint dedicado que
+// faz read-merge-write (não apaga regras de outros usuários/papéis).
+
+export type UserScopeGrantsDto = {
+  pipelineIds: string[] | null;
+  channelViewIds: string[] | null;
+  channelSendIds: string[] | null;
+};
+
+export function useUserScopeGrants(userId: string | null) {
+  return useQuery<UserScopeGrantsDto>({
+    queryKey: ["user-scope-grants", userId],
+    queryFn: () => apiFetch(`/api/users/${userId}/scope-grants`),
+    enabled: !!userId,
+  });
+}
+
+export function useUpdateUserScopeGrants(userId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<UserScopeGrantsDto>) =>
+      apiFetch<UserScopeGrantsDto & { ok: boolean }>(
+        `/api/users/${userId}/scope-grants`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["user-scope-grants", userId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
+    },
+  });
+}
+
+export type ScopeEntityOption = { id: string; name: string };
+
+function pickArray(data: unknown, ...keys: string[]): unknown[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    for (const key of keys) {
+      const value = (data as Record<string, unknown>)[key];
+      if (Array.isArray(value)) return value;
+    }
+  }
+  return [];
+}
+
+/** Funis da org (id + nome) para o seletor de escopo. */
+export function useScopePipelineOptions() {
+  return useQuery<ScopeEntityOption[]>({
+    queryKey: ["scope-pipelines"],
+    queryFn: async () => {
+      const data = await apiFetch<unknown>("/api/pipelines");
+      return pickArray(data, "pipelines", "items").map((p) => {
+        const row = p as { id: string; name?: string };
+        return { id: row.id, name: row.name ?? row.id };
+      });
+    },
+    staleTime: 60_000,
+  });
+}
+
+/** Canais da org (id + nome) para o seletor de escopo. */
+export function useScopeChannelOptions() {
+  return useQuery<ScopeEntityOption[]>({
+    queryKey: ["scope-channels"],
+    queryFn: async () => {
+      const data = await apiFetch<unknown>("/api/channels");
+      return pickArray(data, "channels", "items").map((c) => {
+        const row = c as { id: string; name?: string };
+        return { id: row.id, name: row.name ?? row.id };
+      });
+    },
+    staleTime: 60_000,
+  });
+}

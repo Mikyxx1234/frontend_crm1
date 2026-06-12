@@ -47,7 +47,7 @@ const GROUP_VISUAL: Record<
   Salesbot:     { Icon: Bot,           tone: "violet",  bg: "bg-violet-50",  ring: "ring-violet-200/70",  fg: "text-violet-600" },
   Acoes:        { Icon: Zap,           tone: "amber",   bg: "bg-amber-50",   ring: "ring-amber-200/70",   fg: "text-amber-600" },
   Logica:       { Icon: GitBranch,     tone: "cyan",    bg: "bg-cyan-50",    ring: "ring-cyan-200/70",    fg: "text-cyan-600" },
-  Integracoes:  { Icon: Globe,         tone: "slate",   bg: "bg-slate-100",  ring: "ring-slate-200/70",   fg: "text-[var(--color-ink-soft)]" },
+  Integracoes:  { Icon: Globe,         tone: "slate",   bg: "bg-[var(--glass-bg-overlay)]",  ring: "ring-[var(--glass-border)]",   fg: "text-[var(--text-muted)]" },
 };
 
 // Matching tolerante a acento (referenciamos pelos titles do STEP_GROUPS)
@@ -56,9 +56,9 @@ function visualForGroup(title: string) {
   return GROUP_VISUAL[norm] ?? {
     Icon: Sparkles,
     tone: "slate",
-    bg: "bg-slate-100",
-    ring: "ring-slate-200/70",
-    fg: "text-[var(--color-ink-soft)]",
+    bg: "bg-[var(--glass-bg-overlay)]",
+    ring: "ring-[var(--glass-border)]",
+    fg: "text-[var(--text-muted)]",
   };
 }
 
@@ -156,7 +156,7 @@ export function StepPickerModal({
             onClick={onClose}
             onWheel={stopWheel}
             onTouchMove={stopWheel}
-            className="fixed inset-0 z-70 bg-slate-900/30 backdrop-blur-md"
+            className="fixed inset-0 z-70 bg-black/30 backdrop-blur-sm"
             aria-hidden
           />
 
@@ -172,31 +172,31 @@ export function StepPickerModal({
             className={cn(
               "fixed left-1/2 top-1/2 z-71 -translate-x-1/2 -translate-y-1/2",
               "w-[min(720px,calc(100vw-32px))] max-h-[min(80vh,720px)]",
-              "flex flex-col overflow-hidden rounded-[28px] border border-white/60",
-              "bg-white/95 shadow-[var(--shadow-lg)] backdrop-blur-xl",
+              "flex flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)]",
+              "bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
             )}
             onClick={(e) => e.stopPropagation()}
             onWheel={stopWheel}
             onTouchMove={stopWheel}
           >
             {/* Header glass sticky */}
-            <div className="shrink-0 border-b border-slate-100 bg-white/60 px-6 pt-6 pb-5 backdrop-blur-md sm:px-7">
+            <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 pt-6 pb-5 backdrop-blur-md sm:px-7">
               <div className="flex items-start gap-4">
                 <span
                   className={cn(
                     "flex size-11 shrink-0 items-center justify-center rounded-2xl",
-                    "bg-linear-to-br from-primary to-[#7b9bff] text-white",
-                    "shadow-[var(--shadow-indigo-glow)] ring-1 ring-white/40",
+                    "bg-linear-to-br from-[var(--brand-primary)] to-[var(--brand-primary-dark)] text-white",
+                    "shadow-[var(--glass-shadow)] ring-1 ring-white/40",
                   )}
                 >
                   <Zap className="size-5" strokeWidth={2.4} />
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-[20px] font-bold leading-tight tracking-tighter text-slate-950 sm:text-[22px]">
+                  <h2 className="text-[20px] font-bold leading-tight tracking-tighter text-[var(--text-primary)] sm:text-[22px]">
                     {title}
                   </h2>
-                  <p className="mt-0.5 text-[12px] font-medium tracking-tight text-slate-500">
+                  <p className="mt-0.5 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
                     {subtitle}
                   </p>
                 </div>
@@ -227,7 +227,7 @@ export function StepPickerModal({
             {/* Body */}
             <div className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
               {filteredGroups.length === 0 ? (
-                <p className="py-12 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
+                <p className="py-12 text-center text-[13px] tracking-tight text-[var(--text-muted)]">
                   Nenhum passo encontrado para &quot;{query}&quot;.
                 </p>
               ) : (
@@ -297,12 +297,12 @@ function SearchInput({
   return (
     <div
       className={cn(
-        "relative flex h-9 items-center gap-1.5 rounded-full border border-border",
-        "bg-white pl-3 pr-1 transition-colors",
-        "focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20",
+        "relative flex h-9 items-center gap-1.5 rounded-full border border-[var(--glass-border)]",
+        "bg-[var(--input-bg)] pl-3 pr-1 transition-colors",
+        "focus-within:border-[var(--brand-primary)] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20",
       )}
     >
-      <Search className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.2} />
+      <Search className="size-3.5 shrink-0 text-[var(--text-muted)]" strokeWidth={2.2} />
       <input
         ref={inputRef}
         type="text"
@@ -311,8 +311,8 @@ function SearchInput({
         placeholder="Pesquisar passos..."
         className={cn(
           "h-full min-w-0 flex-1 border-0 bg-transparent text-[13px]",
-          "tracking-tight text-foreground outline-none",
-          "placeholder:font-medium placeholder:text-[var(--color-ink-muted)]",
+          "tracking-tight text-[var(--text-primary)] outline-none",
+          "placeholder:font-medium placeholder:text-[var(--text-muted)]",
           "w-[200px]",
         )}
       />
@@ -328,8 +328,8 @@ function CloseButton({ onClose }: { onClose: () => void }) {
       aria-label="Fechar"
       className={cn(
         "inline-flex size-9 items-center justify-center rounded-full",
-        "border border-border bg-white text-slate-500",
-        "transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900 active:scale-95",
+        "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+        "transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] active:scale-95",
       )}
     >
       <X className="size-4" strokeWidth={2.2} />
@@ -347,7 +347,7 @@ function StepCard({
   onClick: () => void;
 }) {
   const Icon = stepIcon[type] ?? Sparkles;
-  const color = stepColor[type] ?? "text-slate-500";
+  const color = stepColor[type] ?? "text-[var(--text-muted)]";
 
   return (
     <motion.button
@@ -356,26 +356,26 @@ function StepCard({
       whileTap={{ scale: 0.98 }}
       whileHover={{ y: -1 }}
       className={cn(
-        "group/card flex w-full items-start gap-3 rounded-2xl border border-slate-100 bg-white",
+        "group/card flex w-full items-start gap-3 rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]",
         "px-3.5 py-3 text-left transition-all duration-150",
-        "hover:border-primary/30 hover:shadow-[var(--shadow-indigo-glow)]",
+        "hover:border-[var(--brand-primary)]/30 hover:shadow-[var(--glass-shadow)]",
       )}
     >
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-xl",
-          "bg-[var(--color-bg-subtle)] ring-1 ring-slate-100 transition-all",
-          "group-hover/card:bg-white group-hover/card:ring-primary/20",
+          "bg-[var(--glass-bg-subtle)] ring-1 ring-[var(--glass-border-subtle)] transition-all",
+          "group-hover/card:bg-[var(--glass-bg-base)] group-hover/card:ring-[var(--brand-primary)]/20",
           color,
         )}
       >
         <Icon className="size-[18px]" strokeWidth={2.2} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13.5px] font-bold tracking-tight text-slate-900">
+        <p className="truncate text-[13.5px] font-bold tracking-tight text-[var(--text-primary)]">
           {stepTypeLabel(type)}
         </p>
-        <p className="mt-0.5 line-clamp-2 text-[11.5px] font-medium leading-snug tracking-tight text-slate-500">
+        <p className="mt-0.5 line-clamp-2 text-[11.5px] font-medium leading-snug tracking-tight text-[var(--text-muted)]">
           {stepDescription[type] ?? ""}
         </p>
       </div>

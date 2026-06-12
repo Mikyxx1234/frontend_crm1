@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 
-import { IconUsers, IconPlus, IconTrash, IconAlertTriangle } from "@tabler/icons-react";
+import { IconUsers, IconPlus, IconTrash, IconAlertTriangle, IconPencil } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
@@ -16,13 +17,33 @@ import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 
 import { useContacts, useCreateContact, useDeleteContact } from "@/features/directory-v2/hooks";
 
-const PER_PAGE = 30;
+const DEFAULT_PER_PAGE = 25;
 
 function fmtDateBR(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("pt-BR");
+}
+
+const AVATAR_COLORS = [
+  "var(--brand-primary)",
+  "var(--brand-secondary)",
+  "var(--color-success)",
+  "var(--brand-primary-light)",
+];
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase() || "?";
+}
+
+function avatarColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 export default function V2ContactsClientPage() {
@@ -32,6 +53,7 @@ export default function V2ContactsClientPage() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -52,13 +74,13 @@ export default function V2ContactsClientPage() {
   const query = useContacts({
     search: debounced || undefined,
     page,
-    perPage: PER_PAGE,
+    perPage,
     enabled: isAuthenticated,
   });
 
   const items = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
-  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
 
   const allChecked = items.length > 0 && items.every((c) => selected.has(c.id));
   const someChecked = items.some((c) => selected.has(c.id));
@@ -175,76 +197,97 @@ export default function V2ContactsClientPage() {
             />
           </div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-            <div className="min-h-0 flex-1 overflow-auto">
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
-                  <tr className="border-b border-[var(--glass-border-subtle)]">
-                    <th className="w-12 px-3 py-3 text-left">
-                      <CheckboxGlass
-                        checked={allChecked}
-                        indeterminate={!allChecked && someChecked}
-                        onChange={toggleAll}
-                        aria-label="Selecionar todos"
-                      />
-                    </th>
-                    <Th>Nome</Th>
-                    <Th>E-mail</Th>
-                    <Th>Telefone</Th>
-                    <Th>Empresa</Th>
-                    <Th>Tags</Th>
-                    <Th>Criado em</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((c) => (
-                    <tr
-                      key={c.id}
-                      className={`border-b border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-overlay)] ${
-                        selected.has(c.id) ? "bg-[var(--glass-bg-overlay)]" : ""
-                      }`}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
+            <div className="mb-2.5 grid grid-cols-[42px_2.4fr_1.4fr_1.1fr_1fr_1fr] items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+              <span>
+                <CheckboxGlass
+                  checked={allChecked}
+                  indeterminate={!allChecked && someChecked}
+                  onChange={toggleAll}
+                  aria-label="Selecionar todos"
+                />
+              </span>
+              <span>Nome / E-mail</span>
+              <span>Telefone</span>
+              <span>Empresa</span>
+              <span>Tags</span>
+              <span>Criado em</span>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+              {items.map((c) => (
+                <div
+                  key={c.id}
+                  className={`grid grid-cols-[42px_2.4fr_1.4fr_1.1fr_1fr_1fr] items-center gap-3.5 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)] ${
+                    selected.has(c.id)
+                      ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
+                      : "border-[var(--glass-border-subtle)]"
+                  }`}
+                >
+                  <span>
+                    <CheckboxGlass
+                      checked={selected.has(c.id)}
+                      onChange={() => toggleOne(c.id)}
+                      aria-label={`Selecionar ${c.name}`}
+                    />
+                  </span>
+
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
+                      style={{ background: avatarColor(c.id) }}
                     >
-                      <td className="px-3 py-3">
-                        <CheckboxGlass
-                          checked={selected.has(c.id)}
-                          onChange={() => toggleOne(c.id)}
-                          aria-label={`Selecionar ${c.name}`}
+                      {initials(c.name)}
+                    </span>
+                    <div className="min-w-0">
+                      <Link
+                        href={`/contacts/${c.id}`}
+                        className="group/name inline-flex max-w-full items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                      >
+                        <span className="truncate">{c.name}</span>
+                        <IconPencil
+                          size={13}
+                          className="flex-shrink-0 opacity-0 transition-opacity group-hover/name:opacity-60"
                         />
-                      </td>
-                      <Td>
-                        <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-                          {c.name}
-                        </span>
-                      </Td>
-                      <Td muted>{c.email ?? "—"}</Td>
-                      <Td muted>{c.phone ?? "—"}</Td>
-                      <Td muted>{c.company?.name ?? "—"}</Td>
-                      <Td>
-                        <div className="flex flex-wrap gap-1">
-                          {(c.tags ?? []).slice(0, 3).map((t) => (
-                            <span
-                              key={t.id}
-                              className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold"
-                              style={{
-                                color: t.color ?? "var(--text-muted)",
-                                borderColor: `${t.color ?? "var(--glass-border)"}33`,
-                              }}
-                            >
-                              {t.name}
-                            </span>
-                          ))}
-                          {(c.tags?.length ?? 0) > 3 && (
-                            <span className="font-display text-[10px] text-[var(--text-muted)]">
-                              +{(c.tags?.length ?? 0) - 3}
-                            </span>
-                          )}
-                        </div>
-                      </Td>
-                      <Td muted>{fmtDateBR(c.createdAt)}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </Link>
+                      <div className="truncate font-body text-[12px] text-[var(--text-muted)]">
+                        {c.email ?? "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                    {c.phone ?? "—"}
+                  </div>
+                  <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                    {c.company?.name ?? "—"}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1">
+                    {(c.tags ?? []).slice(0, 3).map((t) => (
+                      <span
+                        key={t.id}
+                        className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold"
+                        style={{
+                          color: t.color ?? "var(--text-muted)",
+                          borderColor: `${t.color ?? "var(--glass-border)"}33`,
+                        }}
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                    {(c.tags?.length ?? 0) > 3 && (
+                      <span className="font-display text-[10px] text-[var(--text-muted)]">
+                        +{(c.tags?.length ?? 0) - 3}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="font-display text-[13px] text-[var(--text-muted)]">
+                    {fmtDateBR(c.createdAt)}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -255,6 +298,11 @@ export default function V2ContactsClientPage() {
           canNext={page < lastPage}
           onPrev={() => setPage((p) => Math.max(1, p - 1))}
           onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+          perPage={perPage}
+          onPerPageChange={(value) => {
+            setPerPage(value);
+            setPage(1);
+          }}
         />
       </main>
 
@@ -488,27 +536,5 @@ function CreateContactDialog({
       </form>
     </div>,
     document.body,
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-      {children}
-    </th>
-  );
-}
-
-function Td({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
-  return (
-    <td className="px-3 py-3">
-      <span
-        className={`font-display text-[13px] ${
-          muted ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]"
-        }`}
-      >
-        {children}
-      </span>
-    </td>
   );
 }

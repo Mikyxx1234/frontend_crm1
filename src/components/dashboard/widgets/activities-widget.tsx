@@ -48,7 +48,7 @@ export function ActivitiesWidget() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+      <div className="rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-3">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Negócios no Período
         </p>

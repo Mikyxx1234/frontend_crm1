@@ -268,7 +268,7 @@ export function AgentWizard({
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="mt-4 rounded-lg bg-[var(--color-danger-bg)] p-3 text-sm text-[var(--color-danger-text)]">
             {error}
           </div>
         )}
@@ -338,20 +338,20 @@ function StepRail({
                 className={cn(
                   "flex min-w-max items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors md:w-full",
                   active
-                    ? "border-indigo-500 bg-indigo-50 text-indigo-900 dark:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-100"
+                    ? "border-[var(--brand-primary)] bg-[var(--color-enterprise-bg)] text-[var(--text-primary)]"
                     : done
-                      ? "border-border/70 bg-muted/30 text-foreground/80"
-                      : "border-border/50 text-muted-foreground",
+                      ? "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-primary)]/80"
+                      : "border-[var(--glass-border-subtle)] text-[var(--text-muted)]",
                 )}
               >
                 <span
                   className={cn(
                     "flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold",
                     active
-                      ? "border-indigo-500 bg-indigo-500 text-white"
+                      ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
                       : done
-                        ? "border-emerald-500 bg-emerald-500 text-white"
-                        : "border-border bg-background",
+                        ? "border-[var(--color-success)] bg-[var(--color-success)] text-white"
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]",
                   )}
                 >
                   {done ? "✓" : i + 1}
@@ -386,7 +386,7 @@ function IdentityStep({
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold">Como o agente vai se chamar?</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           O nome aparece para os leads no WhatsApp e também nos seletores
           internos do CRM.
         </p>
@@ -408,7 +408,7 @@ function IdentityStep({
           id="w-lang"
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
         >
           {LANGUAGE_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -432,7 +432,7 @@ function ArchetypeStep({
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold">Qual será o papel dele?</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Cada arquétipo já vem com prompt, tom e ferramentas recomendadas.
           Você pode ajustar tudo nas próximas etapas.
         </p>
@@ -446,19 +446,19 @@ function ArchetypeStep({
             className={cn(
               "flex flex-col gap-2 rounded-xl border p-4 text-left text-sm transition-colors",
               value === a.id
-                ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
-                : "border-border hover:bg-muted/40",
+                ? "border-[var(--brand-primary)] bg-[var(--color-enterprise-bg)]"
+                : "border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
             )}
           >
             <div className="font-semibold">{a.label}</div>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-[13px] text-[var(--text-muted)]">
               {a.longDescription}
             </div>
             <div className="mt-1 flex flex-wrap gap-1">
               {a.defaultTools.map((t) => (
                 <span
                   key={t}
-                  className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                  className="rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 text-[10px] text-[var(--text-muted)]"
                 >
                   {t}
                 </span>
@@ -510,7 +510,7 @@ function PersonalityStep({
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold">Personalidade e modelo</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Configure o tom, o modelo LLM e eventuais regras específicas do seu
           negócio.
         </p>
@@ -531,7 +531,7 @@ function PersonalityStep({
                 key={p}
                 type="button"
                 onClick={() => setTone(p)}
-                className="rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted"
+                className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 text-[11px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]"
               >
                 {p}
               </button>
@@ -545,7 +545,7 @@ function PersonalityStep({
             id="w-model"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+            className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
           >
             {MODEL_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -565,9 +565,9 @@ function PersonalityStep({
               step={0.1}
               value={temperature}
               onChange={(e) => setTemperature(parseFloat(e.target.value))}
-              className="w-full accent-indigo-500"
+              className="w-full accent-[var(--brand-primary)]"
             />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
+            <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
               <span>Previsível</span>
               <span>Criativo</span>
             </div>
@@ -583,18 +583,18 @@ function PersonalityStep({
           onChange={(e) => setOverride(e.target.value)}
           rows={4}
           placeholder="Ex.: Nunca mencione nosso concorrente X. Sempre ofereça desconto de 10% pra alunos."
-          className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="resize-none rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
         />
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-[11px] text-[var(--text-muted)]">
           Essas instruções são somadas ao prompt do arquétipo no final.
         </p>
       </div>
 
-      <details className="rounded-xl border border-border bg-muted/20 p-3">
+      <details className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3">
         <summary className="cursor-pointer text-sm font-medium">
           Pré-visualizar prompt completo
         </summary>
-        <pre className="mt-3 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-background p-3 text-[11px] leading-relaxed">
+        <pre className="mt-3 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-[var(--glass-bg-overlay)] p-3 text-[11px] leading-relaxed">
           {preview}
         </pre>
       </details>
@@ -628,7 +628,7 @@ function ToolsStep({
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold">Ferramentas habilitadas</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Defina o que o agente pode fazer. Selecione pelo menos uma ferramenta.
           Recomendamos sempre deixar <strong>transfer_to_human</strong> ativo.
         </p>
@@ -636,7 +636,7 @@ function ToolsStep({
 
       {Object.entries(grouped).map(([cat, tools]) => (
         <div key={cat} className="space-y-2">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             {categoryLabel[cat] ?? cat}
           </h4>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -650,23 +650,23 @@ function ToolsStep({
                   className={cn(
                     "flex items-start gap-3 rounded-xl border p-3 text-left text-sm transition-colors",
                     active
-                      ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
-                      : "border-border hover:bg-muted/40",
+                      ? "border-[var(--brand-primary)] bg-[var(--color-enterprise-bg)]"
+                      : "border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
                   )}
                 >
                   <div
                     className={cn(
                       "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border",
                       active
-                        ? "border-indigo-500 bg-indigo-500 text-white"
-                        : "border-border",
+                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                        : "border-[var(--glass-border)]",
                     )}
                   >
                     {active && <span className="text-[10px]">✓</span>}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="font-medium">{t.label}</div>
-                    <div className="mt-0.5 text-[12px] text-muted-foreground">
+                    <div className="mt-0.5 text-[12px] text-[var(--text-muted)]">
                       {t.description}
                     </div>
                   </div>
@@ -677,11 +677,11 @@ function ToolsStep({
         </div>
       ))}
 
-      <div className="rounded-lg bg-muted/40 p-3 text-[12px] text-muted-foreground">
+      <div className="rounded-lg bg-[var(--glass-bg-overlay)] p-3 text-[12px] text-[var(--text-muted)]">
         {enabledTools.length} ferramenta{enabledTools.length === 1 ? "" : "s"}{" "}
         habilitada{enabledTools.length === 1 ? "" : "s"}
         {enabledTools.length === 0 && (
-          <span className="ml-1 text-destructive">
+          <span className="ml-1 text-[var(--color-danger-text)]">
             — selecione pelo menos uma para continuar.
           </span>
         )}
@@ -703,7 +703,7 @@ function ProductsStep({
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold">Como apresentar produtos</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Quando a tool <strong>Consultar catálogo de produtos</strong> está
           ativa, o agente busca direto na base. Aqui você orienta o formato da
           apresentação — quais campos priorizar, tom pra falar de preço, quando
@@ -720,19 +720,19 @@ function KnowledgeStep() {
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold">Base de conhecimento</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Documentos que o agente pode consultar antes de responder (catálogo,
           política de descontos, FAQ, etc.).
         </p>
       </div>
-      <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
-        <div className="mx-auto mb-3 inline-flex size-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+      <div className="rounded-xl border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-6 text-center">
+        <div className="mx-auto mb-3 inline-flex size-12 items-center justify-center rounded-full bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
           📚
         </div>
         <p className="text-sm font-medium">
           Upload de documentos disponível após a criação
         </p>
-        <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
+        <p className="mx-auto mt-1 max-w-md text-xs text-[var(--text-muted)]">
           Para não atrasar a criação, você sobe os arquivos (PDF, TXT, MD) na
           aba <strong>Conhecimento</strong> da página do agente. A indexação
           acontece em background com pgvector — leva alguns segundos por
@@ -773,12 +773,12 @@ function ReviewStep({
     <div className="space-y-5">
       <div>
         <h3 className="text-base font-semibold">Revisão e modo de operação</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Confira as configurações e escolha como o agente vai trabalhar.
         </p>
       </div>
 
-      <div className="rounded-xl border bg-muted/20 p-4">
+      <div className="rounded-xl border bg-[var(--glass-bg-overlay)] p-4">
         <div className="grid gap-3 text-sm md:grid-cols-2">
           <ReviewField label="Nome" value={name || "—"} />
           <ReviewField label="Arquétipo" value={archDesc?.label ?? archetype} />
@@ -817,7 +817,7 @@ function ReviewStep({
               return (
                 <span
                   key={t}
-                  className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground"
+                  className="rounded-full bg-[var(--glass-bg-overlay)] px-2 py-0.5 text-[11px] text-[var(--text-muted)]"
                 >
                   {tool?.label ?? t}
                 </span>
@@ -836,12 +836,12 @@ function ReviewStep({
             className={cn(
               "rounded-xl border p-3 text-left text-sm transition-colors",
               autonomyMode === "DRAFT"
-                ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
-                : "border-border hover:bg-muted/40",
+                ? "border-[var(--brand-primary)] bg-[var(--color-enterprise-bg)]"
+                : "border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
             )}
           >
             <div className="font-medium">Rascunho</div>
-            <div className="mt-0.5 text-[12px] text-muted-foreground">
+            <div className="mt-0.5 text-[12px] text-[var(--text-muted)]">
               Gera uma sugestão de resposta. O humano aprova/edita antes de
               enviar. Recomendado pra começar.
             </div>
@@ -852,12 +852,12 @@ function ReviewStep({
             className={cn(
               "rounded-xl border p-3 text-left text-sm transition-colors",
               autonomyMode === "AUTONOMOUS"
-                ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
-                : "border-border hover:bg-muted/40",
+                ? "border-[var(--brand-primary)] bg-[var(--color-enterprise-bg)]"
+                : "border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
             )}
           >
             <div className="font-medium">Autônomo</div>
-            <div className="mt-0.5 text-[12px] text-muted-foreground">
+            <div className="mt-0.5 text-[12px] text-[var(--text-muted)]">
               Envia direto pro lead sem supervisão. Requer testes em
               playground e um <code>dailyTokenCap</code> configurado.
             </div>
@@ -871,10 +871,10 @@ function ReviewStep({
 function ReviewField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
         {label}
       </div>
-      <div className="mt-0.5 text-foreground">{value}</div>
+      <div className="mt-0.5 text-[var(--text-primary)]">{value}</div>
     </div>
   );
 }

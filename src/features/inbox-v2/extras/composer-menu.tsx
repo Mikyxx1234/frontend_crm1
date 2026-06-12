@@ -17,6 +17,7 @@ import {
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
+import type { WhatsappTemplate } from "@/features/inbox-v2/api";
 
 import { FilePickerButton } from "./file-picker-button";
 import { TemplatePickerList, InternalTemplatePickerList } from "./template-picker-popover";
@@ -42,6 +43,8 @@ export function ComposerMenu({
   isResolved,
   contactId,
   templateContext,
+  onPickInternal,
+  onPickTemplate,
 }: {
   conversationId: string | null;
   className?: string;
@@ -50,6 +53,10 @@ export function ComposerMenu({
   isResolved?: boolean;
   contactId?: string | null;
   templateContext?: InternalTemplateContext;
+  /** Insere o texto do modelo interno (interpolado) no composer para edição. */
+  onPickInternal?: (text: string) => void;
+  /** Abre o painel de validação do template do WhatsApp no composer. */
+  onPickTemplate?: (tpl: WhatsappTemplate) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"root" | "template" | "internal" | "automation">("root");
@@ -222,6 +229,7 @@ export function ComposerMenu({
               conversationId={conversationId}
               templateContext={templateContext}
               onClose={closeMenu}
+              onPick={onPickInternal}
             />
           ) : view === "automation" ? (
             <AutomationPickerList
@@ -233,6 +241,7 @@ export function ComposerMenu({
             <TemplatePickerList
               conversationId={conversationId}
               onClose={closeMenu}
+              onPick={onPickTemplate}
             />
           )}
         </div>

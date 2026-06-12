@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { dt } from "@/lib/design-tokens";
+import { AvailabilityBadge } from "@/features/products-v2/availability-badge";
 import { cn, formatCurrency, getInitials, tagPillStyle } from "@/lib/utils";
 
 import {
@@ -465,6 +466,7 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
                           Serviço
                         </span>
                       )}
+                      <AvailabilityBadge productId={item.productId} />
                     </div>
                     {item.productType === "SERVICE" ? (
                       <div className="mt-1 text-[var(--color-ink-soft)]">Valor fixo</div>

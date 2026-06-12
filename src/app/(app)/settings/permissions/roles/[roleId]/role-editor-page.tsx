@@ -39,8 +39,6 @@ export function RoleEditorPage({ roleId }: { roleId: string }) {
       title={isNew ? "Nova regra" : "Editar regra"}
       description="Permissões e controle de acesso"
       icon={<IconShieldCheck size={22} />}
-      backHref={PERMISSIONS_HREF}
-      backLabel="Voltar para permissões"
     >
       <div className="w-full">
         <RoleEditor roleId={isNew ? null : roleId} onClose={back} onSaved={back} />

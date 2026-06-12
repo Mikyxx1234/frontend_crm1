@@ -21,7 +21,7 @@ export function ChartCard({ title, subtitle, action, legend, children, className
   return (
     <section
       className={cn(
-        "flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white shadow-sm",
+        "flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md",
         className,
       )}
     >

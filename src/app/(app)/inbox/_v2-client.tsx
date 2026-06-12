@@ -12,6 +12,7 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
 import { ContactAside } from "@/components/crm/contact-aside";
+import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
 import {
@@ -42,6 +43,8 @@ import {
   InboxFilterButton,
   TagsPopover,
   TemplatePickerList,
+  whatsappTemplateToPending,
+  type PendingTemplate,
 } from "@/features/inbox-v2/extras";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
 import {
@@ -116,6 +119,8 @@ export default function InboxV2ClientPage({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
+  // Template escolhido no modal (sessão expirada) → abre o painel no Composer.
+  const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
 
   // Debounce do search (300ms). Evita refetch a cada tecla.
@@ -486,6 +491,8 @@ export default function InboxV2ClientPage({
             disabled={sessionExpired}
             isResolved={activeRow.status === "RESOLVED"}
             contactId={activeContactId}
+            externalTemplate={externalTemplate}
+            onExternalTemplateConsumed={() => setExternalTemplate(null)}
           />
         }
         notesSlot={notesSlot}
@@ -512,6 +519,18 @@ export default function InboxV2ClientPage({
         tagsNode={tagsNode}
         collapsed={asideCollapsed}
         onToggleCollapse={() => setAsideCollapsed((v) => !v)}
+        contactEditNode={
+          activeContactId ? (
+            <ContactEditDialog
+              contactId={activeContactId}
+              initial={{
+                name: contactDetail?.name ?? activeRow.contact?.name ?? "",
+                email: contactDetail?.email ?? null,
+                phone: contactDetail?.phone ?? activeRow.contact?.phone ?? null,
+              }}
+            />
+          ) : undefined
+        }
       />
     ) : (
       <EmptyAside />
@@ -527,6 +546,10 @@ export default function InboxV2ClientPage({
           <TemplatePickerList
             conversationId={activeId}
             onClose={() => setTemplateOpen(false)}
+            onPick={(tpl) => {
+              setExternalTemplate(whatsappTemplateToPending(tpl));
+              setTemplateOpen(false);
+            }}
           />
         </div>
       </div>
@@ -677,7 +700,7 @@ function InboxStageDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
           {[...stages]
             .sort((a, b) => a.position - b.position)
             .map((s) => {

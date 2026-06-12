@@ -158,11 +158,11 @@ const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
         <div
           role="document"
           className={cn(
-            // Painel base glass:
-            // - radius 22-32px alinhado ao design system
-            // - bg branco translúcido + blur forte
+            // Painel base glass (DS v2):
+            // - radius via token --radius-2xl
+            // - superfície via --glass-bg-modal (dark automático)
             // - max-h dinâmico acompanha o viewport mobile (100dvh)
-            "relative z-50 mx-auto my-auto grid max-h-[calc(100dvh-2rem)] w-full gap-4 overflow-y-auto rounded-[22px] border border-white/55 bg-white/75 p-6 text-foreground shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[opacity,transform] duration-200",
+            "relative z-50 mx-auto my-auto grid max-h-[calc(100dvh-2rem)] w-full gap-4 overflow-y-auto rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-6 text-[var(--text-primary)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[opacity,transform] duration-200",
             DIALOG_SIZE_CLASS[size],
             panelClassName
           )}
@@ -208,7 +208,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h2
     ref={ref}
-    className={cn("font-display text-lg font-bold leading-tight tracking-tight text-foreground", className)}
+    className={cn("font-display text-lg font-bold leading-tight tracking-tight text-[var(--text-primary)]", className)}
     {...props}
   />
 ));
@@ -220,7 +220,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm text-[var(--text-muted)]", className)}
     {...props}
   />
 ));

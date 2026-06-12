@@ -43,18 +43,18 @@ export const WidgetCard = React.memo(function WidgetCard({
       animate={{ opacity: 1, y: 0 }}
       transition={SUBTLE_SPRING}
       className={cn(
-        "group/widget flex h-full flex-col overflow-hidden rounded-[22px] border border-white/55 bg-white/45 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
+        "group/widget flex h-full flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--glass-shadow)]",
         editing && "ring-1 ring-primary/30",
         className,
       )}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-white/40 px-5 py-3">
+      <div className="flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-5 py-3">
         {editing && (
           <span
             className={cn(
               dragHandleClass,
-              "cursor-grab rounded p-0.5 text-muted-foreground/70 transition-colors hover:bg-white/40 hover:text-foreground active:cursor-grabbing",
+              "cursor-grab rounded p-0.5 text-muted-foreground/70 transition-colors hover:bg-[var(--glass-bg-base)] hover:text-foreground active:cursor-grabbing",
             )}
             aria-label="Arrastar widget"
           >
@@ -68,7 +68,7 @@ export const WidgetCard = React.memo(function WidgetCard({
           <button
             type="button"
             onClick={onRemove}
-            className="rounded-md p-1 text-muted-foreground/60 transition-colors hover:bg-white/40 hover:text-foreground"
+            className="rounded-md p-1 text-muted-foreground/60 transition-colors hover:bg-[var(--glass-bg-base)] hover:text-foreground"
             aria-label="Remover widget"
           >
             <X className="size-3.5" />
@@ -91,7 +91,7 @@ export const WidgetCard = React.memo(function WidgetCard({
 
       {/* Footer */}
       {footer && !isLoading && (
-        <div className="border-t border-white/40 px-5 py-2.5">
+        <div className="border-t border-[var(--glass-border-subtle)] px-5 py-2.5">
           {footer}
         </div>
       )}

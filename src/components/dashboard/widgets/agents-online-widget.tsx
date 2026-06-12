@@ -77,7 +77,7 @@ export function AgentsOnlineWidget() {
             return (
               <div
                 key={agent.userId}
-                className="flex items-center gap-2.5 rounded-lg border border-border/40 bg-muted/10 px-2.5 py-1.5"
+                className="flex items-center gap-2.5 rounded-lg border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5"
               >
                 <div className="relative shrink-0">
                   <ChatAvatar
@@ -131,7 +131,7 @@ function StatusTile({
   tone: string;
 }) {
   return (
-    <div className="rounded-xl border border-border/40 bg-muted/20 px-2 py-2.5 text-center">
+    <div className="rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-2.5 text-center">
       <Icon className={cn("mx-auto size-4", tone)} />
       <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{count}</p>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">

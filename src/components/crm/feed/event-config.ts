@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { summarizeSendError } from "@/lib/meta-error-catalog";
 
 export type EventVisualConfig = {
   Icon: LucideIcon;
@@ -281,6 +282,12 @@ export const EVENT_CONFIG: Record<string, EventVisualConfig> = {
     bg: "bg-primary-soft",
     label: "Mensagem recebida",
   },
+  MESSAGE_FAILED: {
+    Icon: AlertTriangle,
+    ring: "ring-destructive/30 text-destructive",
+    bg: "bg-destructive-soft",
+    label: "Falha no envio",
+  },
 
   // ── Chamadas ─────────────────────────────────────────────────────
   CALL_COMPLETED: {
@@ -374,6 +381,11 @@ export type FeedEvent = {
   actorSublabel?: string | null;
   actorRef?: string | null;
   actorUser?: { id: string; name: string | null; avatarUrl: string | null } | null;
+  /// Nome do contato relacionado ao evento. Enriquecido pelo backend
+  /// (`/api/activity-feed`) via batch fetch quando `contactId` existe.
+  /// Usado na coluna "Origem" para distinguir Cliente x Agente em
+  /// eventos de mensagem, sem alterar o `entityLabel` semântico.
+  contactName?: string | null;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -519,6 +531,18 @@ export function eventDescription(ev: FeedEvent): string {
       }
       if (m.hasMedia) return "[anexo]";
       return "";
+    }
+    case "MESSAGE_FAILED": {
+      const raw = String(ev.newValue ?? m.error ?? "").trim();
+      // Resumo CURTO (motivo PT-BR + código) — a mensagem crua da Meta é
+      // enorme e poluiria a timeline/logs. O texto completo continua
+      // disponível no tooltip da bolha (com botão "Copiar erro").
+      const err = raw ? summarizeSendError(raw) : "";
+      const code =
+        m.errorCode && !/\bc(?:ode|ód\.)\s/i.test(err)
+          ? ` (cód. ${String(m.errorCode)})`
+          : "";
+      return (err || "Falha no envio") + code;
     }
     case "CONVERSATION_CREATED":
       return String(m.channel ?? "");

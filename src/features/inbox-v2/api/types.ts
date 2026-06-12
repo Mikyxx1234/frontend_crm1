@@ -157,6 +157,14 @@ export interface InboxMessageDto {
    * automation-executor: bot grava `senderName === "Automação"`.
    */
   senderName?: string | null;
+  /** Status bruto de envio (string livre do backend: sent/delivered/read/failed). */
+  sendStatus?: string | null;
+  /**
+   * Texto do erro de envio (traduzido do Meta quando disponível). O GET de
+   * mensagens serializa como `sendError`; o POST imediato usa `metaError`.
+   * Consumir os dois no adapter (`sendError ?? metaError`).
+   */
+  sendError?: string | null;
   metaError?: string | null;
 }
 

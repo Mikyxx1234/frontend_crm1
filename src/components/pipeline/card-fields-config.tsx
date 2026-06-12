@@ -77,16 +77,6 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
   const [pos, setPos] = React.useState<{ top: number; right: number } | null>(
     null,
   );
-  const [isDark, setIsDark] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof document === "undefined") return;
-    const update = () => setIsDark(document.documentElement.classList.contains("dark"));
-    update();
-    const obs = new MutationObserver(update);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
 
   React.useEffect(() => {
     if (!open) return;
@@ -135,7 +125,7 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
           type="button"
           size="sm"
           variant="ghost"
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+          className="h-8 w-8 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           onClick={() => setOpen((v) => !v)}
           aria-label="Configurar campos do card"
         >
@@ -156,12 +146,11 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
               right: pos.right,
               width: 224,
               zIndex: 9999,
-              backgroundColor: isDark ? "#1a2238" : "#ffffff",
               isolation: "isolate",
             }}
-            className="rounded-md border border-border p-2 shadow-lg dark:border-slate-700"
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow)]"
           >
-            <p className="mb-2 text-xs font-semibold text-foreground">
+            <p className="mb-2 text-xs font-semibold text-[var(--text-primary)]">
               Campos visíveis no card
             </p>
             <div className="flex flex-col gap-0.5">
@@ -170,7 +159,7 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
                   key={key}
                   type="button"
                   className={cn(
-                    "flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted",
+                    "flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-[var(--glass-bg-strong)]",
                   )}
                   onClick={() => toggle(key)}
                 >
@@ -178,8 +167,8 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
                     className={cn(
                       "flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
                       fields[key]
-                        ? "border-primary bg-primary text-white"
-                        : "border-border bg-white dark:border-slate-600 dark:bg-slate-800"
+                        ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                        : "border-[var(--glass-border)] bg-[var(--input-bg)]"
                     )}
                   >
                     {fields[key] && (
@@ -188,7 +177,7 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
                       </svg>
                     )}
                   </span>
-                  <span className="text-foreground">{label}</span>
+                  <span className="text-[var(--text-primary)]">{label}</span>
                 </button>
               ))}
             </div>

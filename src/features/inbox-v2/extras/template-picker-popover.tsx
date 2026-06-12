@@ -97,11 +97,15 @@ function TemplateItemWithConfirm({
   tpl,
   conversationId,
   onSend,
+  onPick,
   isPending,
 }: {
   tpl: WhatsappTemplate;
   conversationId: string;
   onSend: () => void;
+  /** Quando fornecido, clicar SELECIONA o template (abre painel de validação)
+   * em vez de enviar direto — a confirmação de reenvio passa a ser o painel. */
+  onPick?: () => void;
   isPending: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -162,7 +166,11 @@ function TemplateItemWithConfirm({
       type="button"
       disabled={isPending}
       onClick={() => {
-        if (prior) {
+        // Com `onPick`, o painel de validação é o próprio passo de confirmação
+        // — não exibimos o confirm inline de reenvio aqui.
+        if (onPick) {
+          onPick();
+        } else if (prior) {
           setConfirming(true);
         } else {
           onSend();
@@ -221,10 +229,16 @@ export function InternalTemplatePickerList({
   conversationId,
   templateContext,
   onClose,
+  onPick,
 }: {
   conversationId: string;
   templateContext?: InternalTemplateContext;
   onClose?: () => void;
+  /**
+   * Quando fornecido, clicar no modelo INSERE o texto interpolado no composer
+   * (editável, envio pelo botão) em vez de enviar na hora.
+   */
+  onPick?: (text: string) => void;
 }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery<InternalTemplate[]>({
@@ -299,7 +313,16 @@ export function InternalTemplatePickerList({
                   key={tpl.id}
                   type="button"
                   disabled={sendMutation.isPending}
-                  onClick={() => sendMutation.mutate(tpl)}
+                  onClick={() => {
+                    if (onPick) {
+                      onPick(
+                        interpolateInternalTemplate(tpl.content, templateContext ?? {}),
+                      );
+                      onClose?.();
+                    } else {
+                      sendMutation.mutate(tpl);
+                    }
+                  }}
                   className="block w-full rounded-[var(--radius-sm)] px-2 py-2 text-left hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
                 >
                   <div className="text-[12px] font-semibold text-[var(--text-primary)]">
@@ -326,9 +349,15 @@ export function InternalTemplatePickerList({
 export function TemplatePickerList({
   conversationId,
   onClose,
+  onPick,
 }: {
   conversationId: string;
   onClose?: () => void;
+  /**
+   * Quando fornecido, clicar no template ABRE o painel de validação no
+   * composer (corpo travado + variáveis) em vez de enviar na hora.
+   */
+  onPick?: (tpl: WhatsappTemplate) => void;
 }) {
   const qc = useQueryClient();
   const { data, isLoading, error, isError } = useQuery<WhatsappTemplate[]>({
@@ -418,6 +447,14 @@ export function TemplatePickerList({
               tpl={tpl}
               conversationId={conversationId}
               onSend={() => sendMutation.mutate(tpl)}
+              onPick={
+                onPick
+                  ? () => {
+                      onPick(tpl);
+                      onClose?.();
+                    }
+                  : undefined
+              }
               isPending={sendMutation.isPending}
             />
           ))}

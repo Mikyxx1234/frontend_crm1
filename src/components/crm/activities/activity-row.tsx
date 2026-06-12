@@ -17,12 +17,19 @@ export function ActivityRow({ activity, overdue, onToggle, onDelete }: ActivityR
   const Icon = meta.icon
   const done = activity.status === "concluida"
 
+  const accentColor = done
+    ? "var(--glass-border)"
+    : overdue
+      ? "var(--color-danger)"
+      : meta.color
+
   return (
     <div
       className={cn(
-        "group flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3 shadow-[var(--glass-shadow-sm)] transition-all duration-150 hover:bg-[var(--glass-bg-strong)]",
+        "group flex items-start gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] border-l-4 bg-[var(--glass-bg-overlay)] p-4 shadow-[var(--glass-shadow-sm)] transition-all duration-150 hover:translate-x-0.5 hover:bg-[var(--glass-bg-strong)]",
         done && "opacity-65",
       )}
+      style={{ borderLeftColor: accentColor }}
     >
       <div className="pt-0.5">
         <CheckboxGlass
@@ -34,10 +41,10 @@ export function ActivityRow({ activity, overdue, onToggle, onDelete }: ActivityR
 
       {/* Ícone do tipo */}
       <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
         style={{ backgroundColor: meta.softBg, color: meta.color }}
       >
-        <Icon size={18} stroke={2} />
+        <Icon size={20} stroke={2} />
       </span>
 
       {/* Conteúdo */}

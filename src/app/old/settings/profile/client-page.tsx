@@ -5,7 +5,7 @@ import { apiUrl } from "@/lib/api";
  * Perfil do usuário logado.
  *
  * Layout inspirado na referência "Umbler Conta" (duas colunas num
- * fundo claro, cards brancos em `rounded-[28px]` com `shadow-[var(--shadow-lg)]`)
+ * fundo claro, cards brancos em `rounded-[var(--radius-xl)]` com `shadow-[var(--glass-shadow)]`)
  * adaptado ao **EduIT Premium Core**:
  *
  *  - ESQUERDA "Dados do seu perfil": avatar editável (upload), nome,
@@ -38,7 +38,6 @@ import {
   RefreshCw,
   Sparkles,
   Trash2,
-  UserCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,7 +52,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
 import { Switch } from "@/components/ui/switch";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -155,7 +153,7 @@ function ChatThemeField({
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           Tema das bolhas (inbox)
         </p>
         <p className="mt-1 text-[11px] leading-snug text-[var(--color-ink-muted)]">
@@ -175,7 +173,7 @@ function ChatThemeField({
                 "flex flex-col items-center gap-2 rounded-xl border-2 p-3 lumen-transition touch-target",
                 selected
                   ? "border-primary bg-[var(--color-primary-soft)] shadow-[var(--shadow-sm)]"
-                  : "border-border bg-white hover:border-primary/30 hover:shadow-[var(--shadow-sm)]",
+                  : "border-border bg-[var(--glass-bg-overlay)] hover:border-primary/30 hover:shadow-[var(--shadow-sm)]",
               )}
               aria-pressed={selected}
               aria-label={`Tema ${theme.label}`}
@@ -205,7 +203,7 @@ function ChatThemeField({
                   </div>
                 </div>
               </div>
-              <span className="text-[11px] font-medium text-[var(--color-ink-soft)]">
+              <span className="text-[11px] font-medium text-[var(--text-muted)]">
                 {theme.label}
               </span>
               {selected ? (
@@ -266,19 +264,19 @@ export default function ProfilePage() {
     const msg =
       error instanceof Error ? error.message : "Não foi possível carregar o perfil.";
     return (
-      <div className="mx-auto mt-10 w-full max-w-xl rounded-[28px] border border-red-100 bg-red-50/50 p-8 text-center shadow-[var(--shadow-lg)]">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+      <div className="w-full rounded-[var(--radius-xl)] border border-[var(--color-danger)]/30 bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] p-8 text-center shadow-[var(--glass-shadow)]">
+        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_18%,transparent)] text-[var(--color-danger)]">
           <AlertTriangle className="size-6" />
         </div>
-        <h2 className="mt-4 font-display text-lg font-bold text-slate-900">
+        <h2 className="mt-4 font-display text-lg font-bold text-[var(--text-primary)]">
           Não foi possível carregar seu perfil
         </h2>
-        <p className="mt-2 text-sm text-[var(--color-ink-soft)]">{msg}</p>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">{msg}</p>
         <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
           Se o erro mencionar coluna inexistente, a migration{" "}
-          <code className="rounded bg-white px-1.5 py-0.5">add_user_profile_fields</code>{" "}
+          <code className="rounded bg-[var(--glass-bg-overlay)] px-1.5 py-0.5">add_user_profile_fields</code>{" "}
           ainda não foi aplicada no servidor (ex.:{" "}
-          <code className="rounded bg-white px-1.5 py-0.5">add_user_chat_theme</code>).
+          <code className="rounded bg-[var(--glass-bg-overlay)] px-1.5 py-0.5">add_user_chat_theme</code>).
         </p>
         <button
           type="button"
@@ -298,14 +296,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
-      <PageHeader
-        title="Perfil"
-        description="Aqui você consegue gerenciar seus dados pessoais e executar configurações básicas do app."
-        icon={<UserCircle2 />}
-      />
-
-      <div className="grid gap-6 lg:grid-cols-2">
+    <div className="w-full space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
         <ProfileCard profile={profile} queryClient={queryClient} update={update} />
         <TokensCard />
       </div>
@@ -415,8 +407,8 @@ function ProfileCard({
   });
 
   return (
-    <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
-      <h2 className="font-display text-lg font-bold text-slate-900">
+    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+      <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
         Dados do seu perfil
       </h2>
 
@@ -452,7 +444,7 @@ function ProfileCard({
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-full border border-border bg-white text-[var(--color-ink-soft)] shadow-md transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900",
+                "inline-flex size-8 items-center justify-center rounded-full border border-border bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-md transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]",
                 uploading && "cursor-wait opacity-80",
               )}
               aria-label="Alterar foto de perfil"
@@ -481,10 +473,10 @@ function ProfileCard({
         </div>
 
         <div className="min-w-0 flex-1 text-right">
-          <p className="truncate font-display text-sm font-bold text-slate-900">
+          <p className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
             {name || profile.name}
           </p>
-          <p className="text-xs text-slate-500">Português (Brasil)</p>
+          <p className="text-xs text-[var(--text-muted)]">Português (Brasil)</p>
           <p className="mt-1.5 text-[11px] leading-snug text-[var(--color-ink-muted)]">
             Gerencie seus dados de acesso, idioma e assinatura pessoal do agente.
           </p>
@@ -506,7 +498,7 @@ function ProfileCard({
             onChange={(e) => setName(e.target.value)}
             required
             autoComplete="name"
-            className="h-11 rounded-xl border-border bg-white text-sm focus-visible:ring-[var(--color-primary)]/30"
+            className="h-11 rounded-xl border-border bg-[var(--glass-bg-overlay)] text-sm focus-visible:ring-[var(--color-primary)]/30"
           />
         </Field>
 
@@ -520,14 +512,14 @@ function ProfileCard({
             value={signature}
             onChange={(e) => setSignature(e.target.value)}
             placeholder="Ex.: Marcelo · EduIT"
-            className="h-11 rounded-xl border-border bg-white text-sm focus-visible:ring-[var(--color-primary)]/30"
+            className="h-11 rounded-xl border-border bg-[var(--glass-bg-overlay)] text-sm focus-visible:ring-[var(--color-primary)]/30"
           />
         </Field>
 
         <Field id="phone" label="Telefone">
-          <div className="flex h-11 items-center gap-2 rounded-xl border border-border bg-white px-3 focus-within:ring-2 focus-within:ring-[var(--color-primary)]/30">
+          <div className="flex h-11 items-center gap-2 rounded-xl border border-border bg-[var(--glass-bg-overlay)] px-3 focus-within:ring-2 focus-within:ring-[var(--color-primary)]/30">
             <span
-              className="inline-flex items-center gap-1 rounded-md bg-[var(--color-bg-subtle)] px-2 py-1 text-xs font-bold text-[var(--color-ink-soft)]"
+              className="inline-flex items-center gap-1 rounded-md bg-[var(--glass-bg-subtle)] px-2 py-1 text-xs font-bold text-[var(--text-muted)]"
               aria-hidden
             >
               <span className="text-sm leading-none">🇧🇷</span>
@@ -556,7 +548,7 @@ function ProfileCard({
             />
             <Label
               htmlFor="closing-toggle"
-              className="cursor-pointer text-sm font-medium text-foreground"
+              className="cursor-pointer text-sm font-medium text-[var(--text-primary)]"
             >
               Mensagem de finalização de conversa
             </Label>
@@ -582,7 +574,7 @@ function ProfileCard({
                   onChange={(e) => setClosingMessage(e.target.value)}
                   placeholder="Sua mensagem de encerramento"
                   rows={4}
-                  className="w-full resize-y rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-foreground placeholder:text-[var(--color-ink-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
+                  className="w-full resize-y rounded-xl border border-border bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--color-ink-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
                 />
               </Field>
             </>
@@ -637,7 +629,7 @@ function Field({
     <div className="space-y-1.5">
       <Label
         htmlFor={id}
-        className="text-xs font-semibold uppercase tracking-wider text-slate-500"
+        className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]"
       >
         {label}
         {required ? <span className="ml-0.5 text-primary">*</span> : null}
@@ -739,13 +731,13 @@ function TokensCard() {
   const hasTokens = tokens.length > 0;
 
   return (
-    <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
+    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-lg font-bold text-slate-900">
+          <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
             Tokens de Acesso
           </h2>
-          <p className="mt-1 max-w-md text-sm leading-snug text-slate-500">
+          <p className="mt-1 max-w-md text-sm leading-snug text-[var(--text-muted)]">
             Token é uma chave temporária usada para conectar apps ou APIs com
             segurança, sem precisar de senha.
           </p>
@@ -774,13 +766,13 @@ function TokensCard() {
           {tokens.map((t) => (
             <li
               key={t.id}
-              className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-[var(--color-bg-subtle)]/40 px-4 py-3"
+              className="flex items-center gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-4 py-3"
             >
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-primary">
                 <Key className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-900">
+                <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                   {t.name}
                 </p>
                 <p className="mt-0.5 font-mono text-[11px] text-[var(--color-ink-muted)]">
@@ -795,7 +787,7 @@ function TokensCard() {
                   type="button"
                   onClick={() => handleRevoke(t)}
                   disabled={revokeMutation.isPending}
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)] disabled:opacity-50"
                   aria-label={`Revogar token ${t.name}`}
                 >
                   <Trash2 className="size-4" />
@@ -830,20 +822,20 @@ function TokensCard() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-[var(--color-bg-subtle)] px-3 py-2.5">
-                  <code className="flex-1 truncate font-mono text-xs text-slate-800">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-[var(--glass-bg-subtle)] px-3 py-2.5">
+                  <code className="flex-1 truncate font-mono text-xs text-[var(--text-secondary)]">
                     {justCreated.token}
                   </code>
                   <button
                     type="button"
                     onClick={() => copyToken(justCreated.token)}
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-900"
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
                     aria-label="Copiar token"
                   >
                     <Copy className="size-4" />
                   </button>
                 </div>
-                <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-800">
+                <div className="flex items-start gap-2 rounded-xl bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-[12px] leading-snug text-[var(--color-warning)]">
                   <Info className="mt-0.5 size-3.5 shrink-0" />
                   <span>
                     Guarde em um gerenciador de segredos. Ao fechar esta janela
@@ -873,7 +865,7 @@ function TokensCard() {
                 className="space-y-4"
               >
                 <div className="space-y-1.5">
-                  <Label htmlFor="token-name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <Label htmlFor="token-name" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Nome
                   </Label>
                   <Input
@@ -887,7 +879,7 @@ function TokensCard() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="token-expires" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <Label htmlFor="token-expires" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Expira em (opcional)
                   </Label>
                   <Input
@@ -932,8 +924,8 @@ function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
           Ilustração minimalista: dois cards sobrepostos + sparkles. Evita
           importar SVG externo, usando apenas Tailwind + ícones lucide.
         */}
-        <div className="absolute -left-3 -top-2 size-14 -rotate-12 rounded-xl border border-border bg-white shadow-sm" />
-        <div className="absolute -right-3 -top-1 size-14 rotate-12 rounded-xl border border-border bg-white shadow-sm" />
+        <div className="absolute -left-3 -top-2 size-14 -rotate-12 rounded-xl border border-border bg-[var(--glass-bg-overlay)] shadow-sm" />
+        <div className="absolute -right-3 -top-1 size-14 rotate-12 rounded-xl border border-border bg-[var(--glass-bg-overlay)] shadow-sm" />
         <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[#eef2ff]">
           <button
             type="button"
@@ -953,7 +945,7 @@ function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
           aria-hidden
         />
       </div>
-      <p className="font-display text-sm font-bold text-foreground">
+      <p className="font-display text-sm font-bold text-[var(--text-primary)]">
         Crie seu primeiro token!
       </p>
     </div>

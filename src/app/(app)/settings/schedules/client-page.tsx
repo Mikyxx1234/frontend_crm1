@@ -12,7 +12,7 @@ export default function SchedulesV2ClientPage() {
       description="Expediente e status dos agentes"
       icon={<IconClock size={22} />}
     >
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
         <OldSchedulesPage />
       </div>
     </SettingsV2Shell>

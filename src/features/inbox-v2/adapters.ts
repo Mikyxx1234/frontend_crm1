@@ -377,7 +377,14 @@ export function toMessageBubble(
     time: formatTime(dto.createdAt),
     createdAt: dto.createdAt ?? undefined,
     type: isInbound ? "incoming" : "outgoing",
-    senderInitials: isInbound ? avatarInitials(contactName) : undefined,
+    // Inbound: iniciais do contato. Outbound humano: iniciais do agente que
+    // enviou (`senderName`) — sem isso o avatar caía em "?" em telas que não
+    // injetam `agentInitials` (ex.: aba Conversa do deal detail).
+    senderInitials: isInbound
+      ? avatarInitials(contactName)
+      : !isBot && dto.senderName
+        ? avatarInitials(dto.senderName)
+        : undefined,
     isBot: isBot || undefined,
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
@@ -395,6 +402,11 @@ export function toMessageBubble(
     mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
     // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.
     status: isInbound ? undefined : toBubbleStatus(dto),
+    // Erro de envio (tooltip no balão). GET serializa `sendError`; POST
+    // imediato usa `metaError` — consumimos os dois.
+    sendError: isInbound
+      ? undefined
+      : (dto.sendError ?? dto.metaError ?? undefined) || undefined,
   };
 }
 

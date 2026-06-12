@@ -1,5 +1,11 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   IconRobot,
   IconClipboardList,
@@ -10,6 +16,7 @@ import {
   IconCheck,
   IconChecks,
   IconClock,
+  IconCopy,
   IconAlertCircle,
   IconPlayerPlay,
   IconPlayerPause,
@@ -155,6 +162,11 @@ export interface Message {
    * lida (✓✓ azul), falha (alerta vermelho).
    */
   status?: "pending" | "sent" | "delivered" | "read" | "failed"
+  /**
+   * Texto do erro de envio (traduzido do Meta quando disponível). Exibido
+   * em tooltip ao passar o mouse sobre o ícone de falha (status `failed`).
+   */
+  sendError?: string
 }
 
 /** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing). */
@@ -175,6 +187,66 @@ function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
       className={cn("shrink-0", status === "read" ? "text-[#7fd4ff]" : "text-white/75")}
       aria-label={status === "read" ? "Lida" : "Entregue"}
     />
+  )
+}
+
+/**
+ * Indicador de status com tooltip de erro. Para `failed`, envolve o ícone
+ * num tooltip que mostra o texto do erro de envio (traduzido do Meta).
+ * Demais status delegam ao `StatusTicks`.
+ */
+function StatusIndicator({
+  status,
+  sendError,
+}: {
+  status: NonNullable<Message["status"]>
+  sendError?: string
+}) {
+  if (status !== "failed") {
+    return <StatusTicks status={status} />
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="pointer-events-auto inline-flex cursor-help items-center">
+          <IconAlertCircle size={13} className="shrink-0 text-[#fca5a5]" aria-label="Falha no envio" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="end"
+        className="w-max max-w-[300px] whitespace-normal [overflow-wrap:anywhere] border border-[color:var(--color-danger)]/30 bg-white px-3 py-2 text-left text-[11px] font-medium normal-case leading-snug text-[var(--color-danger-text)] v2-dark:bg-[var(--glass-bg-modal)]"
+      >
+        <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide">
+          Erro no envio (Meta)
+        </span>
+        <span className="block">
+          {summarizeSendError(sendError)}
+        </span>
+        <CopyErrorButton text={translateSendError(sendError)} />
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** Botão "Copiar" o texto COMPLETO do erro (com a mensagem original da Meta). */
+function CopyErrorButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      className="pointer-events-auto mt-1.5 inline-flex items-center gap-1 rounded-md border border-[color:var(--color-danger)]/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--color-danger)]/10"
+      onClick={(e) => {
+        e.stopPropagation()
+        void navigator.clipboard.writeText(text).then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        })
+      }}
+    >
+      {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+      {copied ? "Copiado" : "Copiar erro"}
+    </button>
   )
 }
 
@@ -526,20 +598,20 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
   if (isNote) {
     return (
       <div className={cn("flex w-full items-start gap-2.5", className)}>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 font-display text-[10px] font-bold text-amber-700">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning-soft font-display text-[10px] font-bold text-warning">
           {message.senderInitials || agentInitials || "·"}
         </div>
         <div
-          className="relative min-w-0 flex-1 rounded-[var(--radius-md)] border-l-[3px] border-amber-400 bg-amber-50/80 px-3.5 py-2 text-sm leading-[1.45] text-[var(--text-primary)] shadow-[0_2px_8px_rgba(180,150,80,0.10)]"
+          className="relative min-w-0 flex-1 rounded-[var(--radius-md)] border border-warning/20 border-l-[3px] border-l-warning bg-warning-soft px-3.5 py-2 text-sm leading-[1.45] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
         >
           <div className="mb-1 flex items-center gap-1.5">
-            <IconLock size={10} className="text-amber-600" />
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-amber-700">
+            <IconLock size={10} className="text-warning" />
+            <span className="inline-flex items-center rounded-full bg-warning/15 px-1.5 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-warning ring-1 ring-inset ring-warning/25">
               Nota interna
             </span>
           </div>
           <MessageContent message={message} isOutgoing={true} />
-          <span className="pointer-events-none mt-1 block select-none text-right text-[10.5px] leading-none text-amber-700/70">
+          <span className="pointer-events-none mt-1 block select-none text-right text-[10.5px] leading-none text-warning/60">
             {message.time}
           </span>
         </div>
@@ -595,7 +667,9 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
           )}
         >
           {message.time}
-          {isOutgoing && message.status && <StatusTicks status={message.status} />}
+          {isOutgoing && message.status && (
+            <StatusIndicator status={message.status} sendError={message.sendError} />
+          )}
         </span>
       </div>
     </div>

@@ -18,7 +18,7 @@ export default function DistributionV2ClientPage() {
       description="Round-robin, priorização e regras de atribuição"
       icon={<IconArrowsShuffle size={22} />}
     >
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
         <OldDistributionPage />
       </div>
     </SettingsV2Shell>

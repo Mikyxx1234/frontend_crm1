@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { toast } from "sonner";
 import {
   IconSend,
   IconMoodSmile,
@@ -12,7 +11,6 @@ import {
   IconPencil,
   IconCheck,
   IconX,
-  IconAlertTriangle,
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
@@ -21,19 +19,17 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import {
   useSlashMenu,
   SlashCommandMenu,
-  type SlashItem,
 } from "@/components/inbox/slash-command-menu";
-import { sendMessage, sendTemplate } from "@/features/inbox-v2/api";
 import { getContact } from "@/features/inbox-v2/api/misc";
-import { messagesKey, useMessages } from "@/features/inbox-v2/hooks";
-import type { InboxMessageDto } from "@/features/inbox-v2/api/types";
-import {
-  interpolateInternalTemplate,
-  type InternalTemplateContext,
-} from "@/lib/internal-template-variables";
+import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
 import { AudioRecorderButton } from "./audio-recorder-button";
 import { ComposerMenu } from "./composer-menu";
+import {
+  TemplateComposePanel,
+  whatsappTemplateToPending,
+  type PendingTemplate,
+} from "./template-compose-panel";
 
 /**
  * Composer completo para o ChatArea. Substitui o footer estático
@@ -41,7 +37,13 @@ import { ComposerMenu } from "./composer-menu";
  *  - ComposerMenu ("+" — anexo, template, nota, agendar, tarefa, resolver)
  *  - input controlado (com modo "nota interna")
  *  - Slash command menu — digitar "/" abre lista de modelos internos e
- *    templates WhatsApp (mesma UX já existente no /inbox legado)
+ *    templates WhatsApp.
+ *
+ * Comportamento de modelos/templates (jun/2026):
+ *  - Modelo interno do CRM → INSERE o texto (interpolado) no campo de
+ *    mensagem para o agente editar/validar; o envio é pelo botão de envio.
+ *  - Template do WhatsApp → abre o `TemplateComposePanel` (corpo travado +
+ *    inputs de variáveis para validação); o envio é pelo botão do painel.
  *  - AudioRecorderButton
  *  - botão de envio
  */
@@ -56,6 +58,8 @@ export function Composer({
   placeholder,
   isResolved,
   contactId,
+  externalTemplate,
+  onExternalTemplateConsumed,
 }: {
   conversationId: string | null;
   value: string;
@@ -69,9 +73,15 @@ export function Composer({
   /** Quando definido, habilita o item Finalizar/Reabrir no menu "+". */
   isResolved?: boolean;
   contactId?: string | null;
+  /**
+   * Template empurrado por um picker externo (ex.: modal de sessão expirada).
+   * Quando muda para não-nulo, abre o painel de validação aqui dentro.
+   */
+  externalTemplate?: PendingTemplate | null;
+  /** Avisado quando o `externalTemplate` foi absorvido (para o pai limpar). */
+  onExternalTemplateConsumed?: () => void;
 }) {
   const [noteMode, setNoteMode] = useState(false);
-  const qc = useQueryClient();
 
   // ── Contexto para interpolação de templates internos ─────────────
   // Busca dados do contato quando contactId está disponível, para
@@ -172,85 +182,55 @@ export function Composer({
     return already ? text : `*${sig}*: ${text}`;
   }
 
-  // ── Verificação de reenvio de template (slash menu meta-template) ──
-  // Quando um operador seleciona pelo "/" um template que já foi enviado
-  // nesta conversa, mostramos um confirm antes de disparar.
-  const [pendingSlashItem, setPendingSlashItem] = useState<SlashItem | null>(null);
-  const { data: messagesData } = useMessages(conversationId);
-  const previousSends = useMemo(() => {
-    const msgs = messagesData?.messages ?? [];
-    const map = new Map<string, { sentAt: string; author: string; repliedAt?: string }>();
-    for (const m of msgs as InboxMessageDto[]) {
-      if (m.direction !== "out" || m.messageType !== "template") continue;
-      const nameMatch = (m.content ?? "").match(/\*([^*]+)\*/);
-      if (!nameMatch) continue;
-      const name = nameMatch[1].trim();
-      const existing = map.get(name);
-      if (!existing || m.createdAt > existing.sentAt) {
-        const author = m.senderName === "Automação" || !m.senderName ? "Automação" : m.senderName;
-        const replied = msgs.find(
-          (r: InboxMessageDto) =>
-            r.direction === "in" &&
-            (r.messageType === "interactive" || (r.content ?? "").includes("Resposta do formulário")) &&
-            r.createdAt > m.createdAt,
-        );
-        map.set(name, { sentAt: m.createdAt, author, repliedAt: replied?.createdAt });
-      }
-    }
-    return map;
-  }, [messagesData?.messages]);
+  // ── Template do WhatsApp pendente de validação/envio ─────────────
+  // Aberto pelo slash menu (meta-template) ou pelo menu "+". O envio é
+  // feito pelo botão do próprio painel após o agente validar as variáveis.
+  const [pendingTemplate, setPendingTemplate] = useState<PendingTemplate | null>(null);
 
-  function fmtDateComposer(iso: string): string {
-    try {
-      const d = new Date(iso);
-      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-    } catch { return iso; }
+  // Template empurrado de fora (modal de sessão expirada) → abre o painel.
+  useEffect(() => {
+    if (externalTemplate) {
+      setPendingTemplate(externalTemplate);
+      onExternalTemplateConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalTemplate]);
+
+  // Insere o texto de um modelo interno no campo (editável) e foca o cursor.
+  function insertTemplateText(text: string) {
+    const base = value;
+    const next = base.trim()
+      ? `${base}${base.endsWith("\n") ? "" : "\n"}${text}`
+      : text;
+    onChange(next);
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(next.length, next.length);
+      el.style.height = "auto";
+      el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+    });
   }
 
-  // ── Envio direto a partir do slash menu ("Mensagens prontas") ────
-  // Igual ao menu "+": clicar/Enter no item ENVIA na hora. Modelos
-  // internos viram mensagem de texto; templates Meta vão via Cloud API.
-  const slashSend = useMutation({
-    mutationFn: (item: SlashItem) => {
-      if (!conversationId) throw new Error("Nenhuma conversa selecionada");
-      if (item.kind === "internal-template") {
-        const text = applySignature(interpolateInternalTemplate(item.content, templateContext));
-        return sendMessage(conversationId, { content: text });
-      }
-      return sendTemplate(conversationId, {
-        templateName: item.name,
-        bodyPreview: item.bodyPreview,
-      });
-    },
-    onSuccess: (_data, item) => {
-      toast.success(
-        item.kind === "meta-template" ? "Template enviado" : "Modelo enviado",
-      );
-      if (conversationId) {
-        qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
-        qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
-      }
-    },
-    onError: (err: Error) => toast.error(err.message || "Falha ao enviar"),
-  });
-
   // ── Slash command (/modelos) ────────────────────────────────────
+  // Modelo interno → o hook insere o texto interpolado no campo (editável).
+  // Template Meta → abre o painel de validação.
   const slash = useSlashMenu({
     draft: value,
     setDraft: onChange,
     textareaRef,
+    templateContext,
     // Desabilita o atalho em modo nota (não faz sentido inserir templates ali)
     disabled: disabled || noteMode,
-    onPickMetaTemplate: () => {},
-    // Override: clique/Enter no item envia direto (o hook já remove o "/").
-    // Para meta-templates já enviados, abre confirm antes.
-    onSelectOverride: (item) => {
-      if (item.kind === "meta-template" && previousSends.has(item.name)) {
-        setPendingSlashItem(item);
-      } else {
-        slashSend.mutate(item);
-      }
-    },
+    onPickMetaTemplate: (item) =>
+      setPendingTemplate({
+        name: item.name,
+        label: item.label || undefined,
+        content: item.bodyPreview,
+        metaTemplateId: item.id,
+        operatorVariables: item.operatorVariables ?? null,
+      }),
   });
 
   // Fechar o slash menu via ESC (mesmo sem foco no textarea) e ao clicar
@@ -304,56 +284,18 @@ export function Composer({
 
   return (
     <div ref={rootRef} className="relative mx-[22px] mb-[22px]">
-      {/* Confirm de reenvio de meta-template já enviado (via slash menu) */}
-      {pendingSlashItem && (() => {
-        const prior = previousSends.get(pendingSlashItem.name);
-        return prior ? (
-          <div className="absolute bottom-full left-0 mb-2 w-full rounded-[var(--radius-lg)] border border-amber-400/40 bg-amber-400/8 p-3 shadow-lg backdrop-blur-md">
-            <div className="mb-2.5 flex items-start gap-2">
-              <IconAlertTriangle size={15} className="mt-px shrink-0 text-amber-500" />
-              <p className="text-[12px] leading-snug text-[var(--text-primary)]">
-                <span className="font-semibold">&ldquo;{pendingSlashItem.name}&rdquo;</span> já foi
-                enviado por <span className="font-semibold">{prior.author}</span> em{" "}
-                {fmtDateComposer(prior.sentAt)}
-                {prior.repliedAt && (
-                  <> e <span className="font-semibold">já foi respondido</span> em{" "}
-                  {fmtDateComposer(prior.repliedAt)}</>
-                )}. Reenviar mesmo assim?
-              </p>
-              <button
-                type="button"
-                onClick={() => setPendingSlashItem(null)}
-                className="ml-auto shrink-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              >
-                <IconX size={14} />
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={slashSend.isPending}
-                onClick={() => {
-                  slashSend.mutate(pendingSlashItem);
-                  setPendingSlashItem(null);
-                }}
-                className="rounded-full bg-amber-500 px-3 py-1 text-[11.5px] font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
-              >
-                Reenviar
-              </button>
-              <button
-                type="button"
-                onClick={() => setPendingSlashItem(null)}
-                className="rounded-full px-3 py-1 text-[11.5px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : null;
-      })()}
+      {/* Painel de validação do template do WhatsApp — flutua acima do composer */}
+      {pendingTemplate && conversationId ? (
+        <TemplateComposePanel
+          conversationId={conversationId}
+          template={pendingTemplate}
+          onCancel={() => setPendingTemplate(null)}
+          onSent={() => setPendingTemplate(null)}
+        />
+      ) : null}
 
       {/* Slash command menu — flutua acima do composer */}
-      {slash.state.open && (
+      {!pendingTemplate && slash.state.open && (
         <div className="absolute bottom-full left-0 mb-2 w-full">
           <SlashCommandMenu
             state={slash.state}
@@ -462,7 +404,7 @@ export function Composer({
         onSubmit={handleSubmit}
         className={`flex items-center gap-2 rounded-[var(--radius-2xl)] border px-[18px] py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)] ${
           noteMode
-            ? "border-amber-400/60 bg-amber-400/10"
+            ? "border-warning/45 bg-warning-soft"
             : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]"
         }`}
       >
@@ -474,6 +416,8 @@ export function Composer({
           isResolved={isResolved}
           contactId={contactId}
           templateContext={templateContext}
+          onPickInternal={insertTemplateText}
+          onPickTemplate={(tpl) => setPendingTemplate(whatsappTemplateToPending(tpl))}
         />
         <ButtonGlass
           type="button"
@@ -488,7 +432,7 @@ export function Composer({
 
         <div className="flex flex-1 flex-col justify-center">
           {noteMode ? (
-            <span className="mb-0.5 inline-flex items-center gap-1 self-start rounded-full bg-amber-400/20 px-2 py-0.5 font-display text-[11px] font-semibold text-amber-600">
+            <span className="mb-0.5 inline-flex items-center gap-1 self-start rounded-full bg-warning/15 px-2 py-0.5 font-display text-[11px] font-semibold text-warning ring-1 ring-inset ring-warning/25">
               <IconLock size={12} /> Nota
             </span>
           ) : null}

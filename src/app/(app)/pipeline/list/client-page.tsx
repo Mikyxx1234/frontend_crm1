@@ -20,7 +20,7 @@ import { toDealListRow } from "@/features/pipeline-v2/adapters";
 
 import { cn } from "@/lib/utils";
 
-const PER_PAGE = 30;
+const DEFAULT_PER_PAGE = 25;
 
 /**
  * Visão "Lista" do pipeline /v2 — cabeada em `GET /api/deals`.
@@ -44,6 +44,7 @@ export default function V2PipelineListClientPage() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
 
   // Debounce 300ms para a busca.
   useEffect(() => {
@@ -69,12 +70,12 @@ export default function V2PipelineListClientPage() {
     pipelineId,
     search: debounced || undefined,
     page,
-    perPage: PER_PAGE,
+    perPage,
     enabled: isAuthenticated && !!pipelineId,
   });
 
   const total = dealsQuery.data?.total ?? 0;
-  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
   const items = dealsQuery.data?.items ?? [];
   const rows = items.map(toDealListRow);
 
@@ -155,6 +156,11 @@ export default function V2PipelineListClientPage() {
           canNext={page < lastPage}
           onPrev={() => setPage((p) => Math.max(1, p - 1))}
           onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+          perPage={perPage}
+          onPerPageChange={(value) => {
+            setPerPage(value);
+            setPage(1);
+          }}
         />
       </main>
     </div>

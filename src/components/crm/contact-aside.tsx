@@ -64,6 +64,12 @@ interface ContactAsideProps {
   tagsNode?: React.ReactNode
   collapsed?: boolean
   onToggleCollapse?: () => void
+  /**
+   * Slot de edição do contato (ex.: ContactEditDialog). Renderizado ao
+   * lado do título "Detalhes de Contato". Componente continua
+   * presentation-only — a mutação vive no caller.
+   */
+  contactEditNode?: React.ReactNode
 }
 
 const PLACEHOLDER = "—"
@@ -250,6 +256,7 @@ export function ContactAside({
   className,
   collapsed = false,
   onToggleCollapse,
+  contactEditNode,
 }: ContactAsideProps) {
   const course = contact.course ?? contact.product
   const deals = contact.deals ?? []
@@ -309,7 +316,10 @@ export function ContactAside({
 
         {/* Detalhes de Contato */}
         <div className="px-5 pb-5">
-          <SubLabel>Detalhes de Contato</SubLabel>
+          <div className="flex items-end justify-between gap-2">
+            <SubLabel>Detalhes de Contato</SubLabel>
+            {contactEditNode ? <div className="mb-1">{contactEditNode}</div> : null}
+          </div>
           <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[18px] py-1">
             <Row label="Nome" value={contact.name} />
             {isFilled(contact.phone) && (

@@ -82,13 +82,15 @@ export default function WidgetsClientPage({
         ) : widgets.length === 0 ? (
           <EmptyState />
         ) : (
-          <WidgetsBento
-            widgets={widgets}
-            canManage={canManage}
-            pendingSlug={pendingSlug}
-            onInstall={handleInstall}
-            onUninstall={handleUninstall}
-          />
+          <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
+            <WidgetsBento
+              widgets={widgets}
+              canManage={canManage}
+              pendingSlug={pendingSlug}
+              onInstall={handleInstall}
+              onUninstall={handleUninstall}
+            />
+          </div>
         )}
       </main>
     </div>
@@ -97,13 +99,15 @@ export default function WidgetsClientPage({
 
 function LoadingState() {
   return (
-    <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-[280px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]"
-        />
-      ))}
+    <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
+      <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-[280px] animate-pulse rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]"
+          />
+        ))}
+      </div>
     </div>
   );
 }

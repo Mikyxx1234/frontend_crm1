@@ -41,7 +41,7 @@ export function SourcesWidget() {
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-border/40 text-left">
+            <tr className="border-b border-[var(--glass-border-subtle)] text-left">
               <th className="pb-2 pr-3 font-semibold text-muted-foreground">Fonte</th>
               <th className="pb-2 pr-3 text-right font-semibold text-muted-foreground">Contatos</th>
               <th className="pb-2 pr-3 text-right font-semibold text-muted-foreground">Deals</th>
@@ -51,7 +51,7 @@ export function SourcesWidget() {
           </thead>
           <tbody>
             {sources.slice(0, 8).map((s) => (
-              <tr key={s.source} className="border-b border-border/20">
+              <tr key={s.source} className="border-b border-[var(--glass-border-subtle)]">
                 <td className="py-2 pr-3 font-medium text-foreground">{s.source}</td>
                 <td className="py-2 pr-3 text-right tabular-nums">{s.contactCount}</td>
                 <td className="py-2 pr-3 text-right tabular-nums">{s.dealCount}</td>

@@ -74,7 +74,7 @@ export function LossReasonDialog({
         <div className="space-y-3">
           {hasReasons ? (
             <>
-              <Label className="text-xs font-semibold text-[var(--color-ink-soft)]">Selecione o motivo</Label>
+              <Label className="text-xs font-semibold text-[var(--text-secondary)]">Selecione o motivo</Label>
               <div className="flex flex-wrap gap-2">
                 {reasons.map((r) => (
                   <button
@@ -84,8 +84,8 @@ export function LossReasonDialog({
                     className={cn(
                       "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
                       selected === r.label
-                        ? "border-red-400 bg-red-50 text-red-700"
-                        : "border-border bg-white text-foreground hover:border-slate-300 hover:bg-[var(--color-bg-subtle)]",
+                        ? "border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]"
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-primary)] hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
                     )}
                   >
                     {r.label}
@@ -97,8 +97,8 @@ export function LossReasonDialog({
                   className={cn(
                     "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
                     isOther
-                      ? "border-red-400 bg-red-50 text-red-700"
-                      : "border-dashed border-slate-300 bg-white text-slate-500 hover:border-slate-400 hover:bg-[var(--color-bg-subtle)]",
+                      ? "border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]"
+                      : "border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
                   )}
                 >
                   Outro…

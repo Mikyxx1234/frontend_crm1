@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { IconArrowLeft, IconSettings } from "@tabler/icons-react";
+import { IconSettings } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { ButtonGlass } from "@/components/crm/button-glass";
 
 /**
  * Shell glass que envolve sub-páginas de settings portadas da v1.
@@ -14,23 +12,27 @@ import { ButtonGlass } from "@/components/crm/button-glass";
  * mas servido sem o DashboardShell antigo — apenas dentro do
  * NavRailV2 + PageHeader v2. O v0 pode reimplementar visualmente
  * cada sub-página depois.
+ *
+ * Não inclui mais o botão "Voltar": a navegação fica na NavRail,
+ * e as páginas internas devem omitir um segundo PageHeader.
  */
 export function SettingsV2Shell({
   title,
   description,
   children,
-  backHref = "/settings",
-  backLabel = "Voltar",
   icon = <IconSettings size={22} />,
+  center,
+  actions,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
-  /** Destino do botão "Voltar". Default: home das configurações. */
-  backHref?: string;
-  backLabel?: string;
   /** Ícone do cabeçalho. Default: engrenagem (configurações). */
   icon?: React.ReactNode;
+  /** Busca opcional, renderizada no centro do PageHeader. */
+  center?: React.ReactNode;
+  /** Controles/ações opcionais, renderizados à direita do PageHeader. */
+  actions?: React.ReactNode;
 }) {
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
@@ -41,13 +43,8 @@ export function SettingsV2Shell({
           icon={icon}
           title={title}
           description={description ?? "Configurações"}
-          actions={
-            <Link href={backHref}>
-              <ButtonGlass variant="glass">
-                <IconArrowLeft size={16} /> {backLabel}
-              </ButtonGlass>
-            </Link>
-          }
+          center={center}
+          actions={actions}
         />
 
         <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-auto pr-2">

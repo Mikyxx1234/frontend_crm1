@@ -225,15 +225,15 @@ class TemplateBoundary extends React.Component<
   }
 }
 
-export default function WhatsappMetaTemplatesPageWrapper() {
+export default function WhatsappMetaTemplatesPageWrapper({ embedded = false }: { embedded?: boolean } = {}) {
   return (
     <TemplateBoundary>
-      <WhatsappMetaTemplatesPage />
+      <WhatsappMetaTemplatesPage embedded={embedded} />
     </TemplateBoundary>
   );
 }
 
-function WhatsappMetaTemplatesPage() {
+function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const confirmDialog = useConfirm();
   const router = useRouter();
@@ -422,20 +422,24 @@ function WhatsappMetaTemplatesPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
-      <Link
-        href="/old/settings"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Configurações
-      </Link>
+    <div className={embedded ? "w-full space-y-4" : "w-full space-y-6"}>
+      {!embedded && (
+        <Link
+          href="/old/settings"
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        >
+          <ArrowLeft className="size-4" /> Configurações
+        </Link>
+      )}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className={pageHeaderTitleClass}>
-            Templates WhatsApp (Meta)
-          </h1>
-          <p className={cn(pageHeaderDescriptionClass, "max-w-2xl")}>
+          {!embedded && (
+            <h1 className={pageHeaderTitleClass}>
+              Templates WhatsApp (Meta)
+            </h1>
+          )}
+          <p className={cn(embedded ? "text-sm text-[var(--text-muted)]" : pageHeaderDescriptionClass, "max-w-2xl")}>
             Lista, criação e exclusão na conta comercial (WABA). Tipos suportados no assistente:{" "}
             <strong>UTILITY</strong>, <strong>MARKETING</strong> e <strong>AUTHENTICATION</strong>. O assistente também
             permite <strong>botão Flow</strong> com <code className="text-xs">flow_id</code> publicado no CRM (aba Flows
@@ -446,7 +450,7 @@ function WhatsappMetaTemplatesPage() {
               href={DOCS_LIST}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 text-[var(--brand-primary)] underline-offset-4 hover:underline"
             >
               <BookOpen className="size-3" /> API message_templates
             </a>
@@ -454,7 +458,7 @@ function WhatsappMetaTemplatesPage() {
               href={DOCS_COMPONENTS}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 text-[var(--brand-primary)] underline-offset-4 hover:underline"
             >
               Componentes
             </a>
@@ -462,7 +466,7 @@ function WhatsappMetaTemplatesPage() {
               href={DOCS_CALL_PERMISSION}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 text-[var(--brand-primary)] underline-offset-4 hover:underline"
             >
               Permissão de ligação
             </a>
@@ -487,16 +491,16 @@ function WhatsappMetaTemplatesPage() {
       </div>
 
       {isError ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-danger)]/30 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] px-4 py-3 text-sm text-[var(--color-danger)]">
           {error instanceof Error ? error.message : "Erro ao falar com a Meta."}{" "}
           Se aparecer configuração em falta, confira no servidor{" "}
-          <code className="rounded bg-muted px-1 text-xs">META_WHATSAPP_*</code> e o escopo{" "}
+          <code className="rounded bg-[var(--glass-bg-strong)] px-1 text-xs">META_WHATSAPP_*</code> e o escopo{" "}
           <code className="text-xs">whatsapp_business_management</code> no token.
         </div>
       ) : !isLoading ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-[var(--text-muted)]">
           Com a lista a carregar bem, o token no servidor já tem acesso à WABA.{" "}
-          <strong className="font-medium text-foreground">Dica:</strong> não reutilize o mesmo nome de template
+          <strong className="font-medium text-[var(--text-primary)]">Dica:</strong> não reutilize o mesmo nome de template
           enquanto outro com esse nome estiver pendente na Meta.
         </p>
       ) : null}
@@ -508,21 +512,21 @@ function WhatsappMetaTemplatesPage() {
           <Skeleton className="h-10 w-full" />
         </div>
       ) : isError ? (
-        <p className="text-sm text-destructive">{error instanceof Error ? error.message : "Erro"}</p>
+        <p className="text-sm text-[var(--color-danger)]">{error instanceof Error ? error.message : "Erro"}</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum template encontrado nesta WABA.</p>
+        <p className="text-sm text-[var(--text-muted)]">Nenhum template encontrado nesta WABA.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)]">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-border bg-muted/50">
+            <thead className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
               <tr>
-                <th className="px-3 py-2 font-medium">Nome</th>
-                <th className="px-3 py-2 font-medium">Label</th>
-                <th className="px-3 py-2 font-medium">Idioma</th>
-                <th className="px-3 py-2 font-medium">Categoria</th>
-                <th className="px-3 py-2 font-medium">Estado</th>
-                <th className="px-3 py-2 font-medium">Qualidade</th>
-                <th className="px-3 py-2 font-medium text-center">
+                <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Nome</th>
+                <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Label</th>
+                <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Idioma</th>
+                <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Categoria</th>
+                <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Estado</th>
+                <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Qualidade</th>
+                <th className="px-3 py-2 font-medium text-center text-[var(--text-secondary)]">
                   <TooltipHost label="Liberado para o agente usar no chat" side="bottom">
                     <span className="flex items-center justify-center gap-1">
                       <UserCheck className="size-4" />
@@ -576,13 +580,13 @@ function WhatsappMetaTemplatesPage() {
                 const isCallPermission = isCallPermissionTemplate(row);
 
                 return (
-                  <tr key={row.id} className="border-b border-border/80 last:border-0">
-                    <td className="px-3 py-2 font-medium">
+                  <tr key={row.id} className="border-b border-[var(--glass-border-subtle)] last:border-0">
+                    <td className="px-3 py-2 font-medium text-[var(--text-primary)]">
                       <div className="flex items-center gap-2">
                         <span>{row.name}</span>
                         {isCallPermission ? (
                           <TooltipHost label="Template de permissão de ligação (Business Calling API)" side="top">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 ring-1 ring-sky-200">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-info)] ring-1 ring-[color-mix(in_srgb,var(--color-info)_30%,transparent)]">
                               <Phone className="size-2.5" />
                               Voz
                             </span>
@@ -609,29 +613,29 @@ function WhatsappMetaTemplatesPage() {
                               setEditingLabelId(null);
                             }}
                           />
-                          <button type="submit" className="rounded p-0.5 text-emerald-600 hover:bg-emerald-50">
+                          <button type="submit" className="rounded p-0.5 text-[var(--color-success)] hover:bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)]">
                             <Check className="size-3.5" />
                           </button>
                         </form>
                       ) : (
                         <button
                           type="button"
-                          className="group/lbl flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                          className="group/lbl flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                           onClick={() => { setEditingLabelId(row.id); setLabelDraft(cfg?.label ?? ""); }}
                         >
-                          <span className={cn(cfg?.label ? "font-medium text-foreground" : "italic")}>
+                          <span className={cn(cfg?.label ? "font-medium text-[var(--text-primary)]" : "italic")}>
                             {cfg?.label || "Sem label"}
                           </span>
                           <Pencil className="size-3 opacity-0 group-hover/lbl:opacity-100" />
                         </button>
                       )}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-muted-foreground">{row.language ?? "—"}</td>
+                    <td className="px-3 py-2 tabular-nums text-[var(--text-muted)]">{row.language ?? "—"}</td>
                     <td className="px-3 py-2">
-                      <span className="text-xs">
+                      <span className="text-xs text-[var(--text-secondary)]">
                         {row.category ?? "—"}
                         {row.sub_category ? (
-                          <span className="text-muted-foreground"> · {row.sub_category}</span>
+                          <span className="text-[var(--text-muted)]"> · {row.sub_category}</span>
                         ) : null}
                       </span>
                     </td>
@@ -639,23 +643,23 @@ function WhatsappMetaTemplatesPage() {
                       <Badge
                         variant="secondary"
                         className={cn(
-                          row.status === "APPROVED" && "bg-emerald-100 text-emerald-900",
+                          row.status === "APPROVED" && "bg-[color-mix(in_srgb,var(--color-success)_18%,transparent)] text-[var(--color-success)]",
                           (row.status === "PENDING" || row.status === "PENDING_APPROVAL") &&
-                            "bg-amber-100 text-amber-900",
-                          row.status === "REJECTED" && "bg-red-100 text-red-900",
+                            "bg-[color-mix(in_srgb,var(--color-warning)_18%,transparent)] text-[var(--color-warning)]",
+                          row.status === "REJECTED" && "bg-[color-mix(in_srgb,var(--color-danger)_18%,transparent)] text-[var(--color-danger)]",
                         )}
                       >
                         {st}
                       </Badge>
                       {rejectReason ? (
                         <TooltipHost label={rejectReason} side="bottom">
-                          <p className="mt-1 max-w-xs text-xs text-destructive">
+                          <p className="mt-1 max-w-xs text-xs text-[var(--color-danger)]">
                             {rejectReason}
                           </p>
                         </TooltipHost>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2 text-xs">{q}</td>
+                    <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">{q}</td>
                     <td className="px-3 py-2 text-center">
                       <TooltipHost
                         label={cfg?.agentEnabled ? "Liberado para agentes — clique para bloquear" : "Bloqueado para agentes — clique para liberar"}
@@ -667,8 +671,8 @@ function WhatsappMetaTemplatesPage() {
                           className={cn(
                             "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                             cfg?.agentEnabled
-                              ? "border-emerald-400 bg-emerald-500"
-                              : "border-border bg-muted",
+                              ? "border-[var(--color-success)] bg-[var(--color-success)]"
+                              : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
                             row.status !== "APPROVED" && "cursor-not-allowed opacity-40",
                           )}
                           onClick={() => saveConfig({ agentEnabled: !cfg?.agentEnabled })}
@@ -715,7 +719,7 @@ function WhatsappMetaTemplatesPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="size-8 text-destructive hover:text-destructive"
+                            className="size-8 text-[var(--color-danger)] hover:text-[var(--color-danger)]"
                             aria-label="Excluir na Meta"
                             onClick={async () => {
                               const ok = await confirmDialog({

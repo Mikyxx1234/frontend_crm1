@@ -38,6 +38,7 @@ import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
+import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { Chip } from "@/components/crm/chip";
 
 import {
@@ -60,6 +61,8 @@ import {
   useTeamUsers,
   type MoveVars,
 } from "@/features/pipeline-v2/hooks";
+import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
+import { useQueryClient } from "@tanstack/react-query";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
@@ -403,6 +406,7 @@ export default function KanbanV2ClientPage({
   }, [board]);
 
   const { data: dealDetail } = useDealDetail(activeDealId);
+  const queryClient = useQueryClient();
 
   // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
   // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
@@ -452,6 +456,7 @@ export default function KanbanV2ClientPage({
     useDealChatBinding({
       conversationId: dealConversationId,
       contactName: dealContactName,
+      contactId: dealContactId,
       // sessionExpired derivado dentro do hook a partir do session retornado
       // por useMessages (backend = source of truth) com fallback heurístico
       // em lastInboundAt. Não passar override manual aqui.
@@ -688,6 +693,22 @@ export default function KanbanV2ClientPage({
                   {dealDetail?.status === "WON" ? "Reabrir" : "Ganhar"}
                 </span>
               }
+            />
+          ) : undefined
+        }
+        contactEditSlot={
+          activeDealId && dealContactId ? (
+            <ContactEditDialog
+              contactId={dealContactId}
+              initial={{
+                name: dealDetail?.contact?.name ?? "",
+                email: dealDetail?.contact?.email ?? null,
+                phone: dealDetail?.contact?.phone ?? null,
+              }}
+              onSaved={() => {
+                queryClient.invalidateQueries({ queryKey: dealDetailKey(activeDealId) });
+                queryClient.invalidateQueries({ queryKey: ["pipeline-board"], exact: false });
+              }}
             />
           ) : undefined
         }

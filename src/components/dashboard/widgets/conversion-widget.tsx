@@ -38,7 +38,7 @@ export function ConversionWidget() {
 
       {/* Progress bar */}
       <div className="space-y-1.5">
-        <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/50">
+        <div className="flex h-3 w-full overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
           {total > 0 && (
             <>
               <div
@@ -58,7 +58,7 @@ export function ConversionWidget() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/40 bg-muted/20 px-3 py-2 text-center">
+      <div className="rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Ciclo médio
         </p>

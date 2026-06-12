@@ -1034,3 +1034,50 @@ domínio próprio (ex.: `crm.minhaescola.com.br` no front e
 **frontend** em ambos os serviços.
 
 ---
+
+### 2026-06-11 — Padrão único DS v2 para modais/dialogs
+
+**Decisão.** Toda modal/dialog/sheet adota um único padrão visual DS v2,
+ancorado nos tokens (com dark mode automático):
+
+- **Overlay:** `bg-black/30 backdrop-blur-sm` (md no base `<dialog>`).
+- **Painel:** `rounded-[var(--radius-2xl)]` (xl em modais pequenas),
+  `border border-[var(--glass-border)]`, `bg-[var(--glass-bg-modal)]`,
+  `shadow-[var(--glass-shadow-lg)]`, `backdrop-blur-xl`.
+- **Texto:** título `text-[var(--text-primary)]`, descrição
+  `text-[var(--text-muted)]`, secundário `text-[var(--text-secondary)]`.
+- **Superfícies internas:** `--glass-bg-overlay` / `--input-bg`;
+  bordas `--glass-border-subtle`.
+- **Estado semântico:** `--color-success/danger/warning/info` (+`-bg`/`-text`);
+  marca/seleção `--brand-primary` / `--color-enterprise-bg`.
+- **Cores de marca de canais** (WhatsApp `#25D366`, Messenger `#1877F2`,
+  Instagram pink/violet, Telegram cyan) **são preservadas** como
+  identidade — não viram token.
+
+A referência-ouro que já seguia o padrão é
+`features/inbox-v2/extras/task-dialog.tsx` / `schedule-dialog.tsx`.
+
+**Contexto.** Existiam 5 "dialetos" coexistindo: base glass branca
+(`bg-white/75 border-white/55 rounded-[22px]`, shadcn, sem dark), DS v2
+por token, slate/blue nativo (kanban filters), shadcn semântico
+(`bg-card`/`border-border`) e hex/inline de marca. Overlays variavam
+(`black/30..40`, `slate-900/30..40`, `rgba(30,42,59,.35)`). O maior
+alavancador foi refatorar os 3 componentes-base
+(`components/ui/dialog.tsx`, `sheet.tsx`, `alert-dialog.tsx`): só isso
+deu dark mode e tokens a todas as modais que herdam deles.
+
+**Alternativas descartadas.**
+
+- **Manter `bg-white/75` no base e só ajustar caso a caso.** Perpetua a
+  ausência de dark mode e o `rounded-[22px]` cru.
+- **Migrar tudo para Radix Dialog.** Reescrita grande sem ganho — o
+  `<dialog>` nativo já centraliza e o token resolve o tema.
+
+**Impacto.** Tokens legados inexistentes corrigidos no caminho
+(`--color-ink-subtle`, `--glass-bg`, `--color-ink-muted`). `ds-scan`
+acumulou melhora (tailwindNativePalette −157, bgWhiteAlpha −8,
+rawRoundedPx −7) sem regressões. Novas modais devem partir do
+`DialogContent`/`SheetContent` base ou replicar o bloco de tokens acima;
+nunca usar `bg-white`/`bg-card`/slate em superfície de modal.
+
+---

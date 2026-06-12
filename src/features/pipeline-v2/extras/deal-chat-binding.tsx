@@ -9,14 +9,24 @@
  * pra serem plugados nas props correspondentes do DealDetailPanel.
  */
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconMessageCirclePlus } from "@tabler/icons-react";
+import { IconLoader2, IconMessageCirclePlus } from "@tabler/icons-react";
+
+import { apiUrl } from "@/lib/api";
+import { getInitials } from "@/lib/utils";
 
 import { DaySeparator, MessageBubble } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
-import { Composer, TemplatePickerList } from "@/features/inbox-v2/extras";
+import {
+  Composer,
+  TemplatePickerList,
+  whatsappTemplateToPending,
+  type PendingTemplate,
+} from "@/features/inbox-v2/extras";
 import {
   useInboxRealtime,
   useMessages,
@@ -50,11 +60,64 @@ export function useDealChatBinding(params: {
 }): DealChatBindingResult {
   const { conversationId, contactName, contactId, sessionExpired: sessionExpiredOverride } = params;
 
+  const { data: session } = useSession();
+  // Fallback para o avatar das bolhas outgoing quando a mensagem não traz
+  // `senderName` (ex.: histórico antigo). Mesma lógica do ChatArea do inbox.
+  const agentInitials = getInitials(session?.user?.name?.trim() || "") || "·";
+
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
+  // Template escolhido no modal (sessão expirada) → abre o painel no Composer.
+  const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
 
-  const { data: messagesResp } = useMessages(conversationId);
-  const sendMutation = useSendMessage(conversationId);
+  // ── Auto-ensure da conversa ──────────────────────────────────────
+  // Para a aba "Conversa" do deal ficar idêntica ao /inbox (composer com
+  // "+"/templates funcionando mesmo em lead sem histórico), garantimos uma
+  // conversa do contato quando o deal ainda não tem uma vinculada. Reusa o
+  // endpoint `skipSend` (cria OU reutiliza a conversa WhatsApp do contato),
+  // mesmo comportamento do deal detail legado (`ConversationsPanel`).
+  const qc = useQueryClient();
+  const [ensuredId, setEnsuredId] = useState<string | null>(null);
+  const autoEnsuredRef = useRef(false);
+
+  const ensureMutation = useMutation({
+    mutationFn: async (cid: string) => {
+      const res = await fetch(apiUrl("/api/conversations/create"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId: cid, skipSend: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message ?? "Erro ao iniciar conversa");
+      return data.conversation as { id: string };
+    },
+    onSuccess: (conv) => {
+      setEnsuredId(conv.id);
+      if (contactId) qc.invalidateQueries({ queryKey: ["contact", contactId] });
+    },
+    onError: (err: Error) => toast.error(err.message || "Falha ao iniciar conversa"),
+  });
+
+  // Reseta o controle de auto-ensure ao trocar de deal/contato.
+  useEffect(() => {
+    autoEnsuredRef.current = false;
+    setEnsuredId(null);
+  }, [contactId]);
+
+  useEffect(() => {
+    if (!conversationId && contactId && !ensuredId && !autoEnsuredRef.current && !ensureMutation.isPending) {
+      autoEnsuredRef.current = true;
+      ensureMutation.mutate(contactId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, contactId, ensuredId]);
+
+  // Id efetivo: o do deal (quando já vinculado) ou o recém-garantido.
+  const effectiveConversationId = conversationId ?? ensuredId;
+  const ensuring = !effectiveConversationId && !!contactId && (ensureMutation.isPending || !ensureMutation.isError);
+
+  const { data: messagesResp } = useMessages(effectiveConversationId);
+  const sendMutation = useSendMessage(effectiveConversationId);
 
   // Deriva sessionExpired da mesma fonte do /inbox: prioriza `session.active`
   // do backend; se o objeto `session` não vier, cai no heurístico de 24h
@@ -81,14 +144,14 @@ export function useDealChatBinding(params: {
         : sessionActiveFromBackend !== undefined
           ? !sessionActiveFromBackend
           : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundFromMessages);
-  const sessionExpired = !!conversationId && sessionExpiredDerived;
+  const sessionExpired = !!effectiveConversationId && sessionExpiredDerived;
 
   // SSE: assina /api/sse/messages e invalida as mensagens da conversa
   // ativa quando chega new_message. Sem isto o chat do deal só atualizava
   // após F5 (useMessages não tem polling) — o inbox já fazia isso.
   useInboxRealtime({
-    activeConversationId: conversationId,
-    enabled: !!conversationId,
+    activeConversationId: effectiveConversationId,
+    enabled: !!effectiveConversationId,
   });
 
   const bubbles = useMemo(
@@ -101,7 +164,7 @@ export function useDealChatBinding(params: {
 
   function handleSend() {
     const t = draft.trim();
-    if (!t || !conversationId) return;
+    if (!t || !effectiveConversationId) return;
     sendMutation.mutate(
       { content: t },
       {
@@ -113,7 +176,7 @@ export function useDealChatBinding(params: {
 
   function handleSendNote() {
     const t = draft.trim();
-    if (!t || !conversationId) return;
+    if (!t || !effectiveConversationId) return;
     sendMutation.mutate(
       { content: t, asNote: true },
       {
@@ -125,8 +188,13 @@ export function useDealChatBinding(params: {
 
   // ── messages ────────────────────────────────────────────────
   let messagesNode: React.ReactNode;
-  if (!conversationId) {
-    messagesNode = (
+  if (!effectiveConversationId) {
+    messagesNode = ensuring ? (
+      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-[var(--text-muted)]">
+        <IconLoader2 size={22} className="animate-spin" />
+        <p className="font-display text-[13px]">Iniciando conversa…</p>
+      </div>
+    ) : (
       <div className="flex h-full flex-col items-center justify-center px-6 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]">
           <IconMessageCirclePlus size={28} />
@@ -135,8 +203,8 @@ export function useDealChatBinding(params: {
           Sem conversa vinculada
         </h3>
         <p className="mt-1.5 max-w-[340px] font-display text-[13px] leading-relaxed text-[var(--text-muted)]">
-          Este negócio ainda não tem conversa associada. Abra a Caixa de
-          Entrada e vincule um contato para conversar por aqui.
+          Este negócio ainda não tem contato com WhatsApp. Vincule um contato
+          com telefone para conversar por aqui.
         </p>
         <Link
           href="/inbox"
@@ -162,16 +230,16 @@ export function useDealChatBinding(params: {
       return (
         <Fragment key={b.id}>
           {showSeparator && <DaySeparator date={dayLabel} />}
-          <MessageBubble message={b} />
+          <MessageBubble message={b} agentInitials={agentInitials} />
         </Fragment>
       );
     });
   }
 
   // ── composer ────────────────────────────────────────────────
-  const composerNode = conversationId ? (
+  const composerNode = effectiveConversationId ? (
     <Composer
-      conversationId={conversationId}
+      conversationId={effectiveConversationId}
       value={draft}
       onChange={setDraft}
       onSend={handleSend}
@@ -179,6 +247,8 @@ export function useDealChatBinding(params: {
       sending={sendMutation.isPending}
       disabled={!!sessionExpired}
       contactId={contactId}
+      externalTemplate={externalTemplate}
+      onExternalTemplateConsumed={() => setExternalTemplate(null)}
     />
   ) : null;
 
@@ -193,15 +263,19 @@ export function useDealChatBinding(params: {
 
   // ── template picker modal ───────────────────────────────────
   const templateModal =
-    templateOpen && conversationId ? (
+    templateOpen && effectiveConversationId ? (
       <div
         className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
         onClick={() => setTemplateOpen(false)}
       >
         <div onClick={(e) => e.stopPropagation()}>
           <TemplatePickerList
-            conversationId={conversationId}
+            conversationId={effectiveConversationId}
             onClose={() => setTemplateOpen(false)}
+            onPick={(tpl) => {
+              setExternalTemplate(whatsappTemplateToPending(tpl));
+              setTemplateOpen(false);
+            }}
           />
         </div>
       </div>

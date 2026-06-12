@@ -29,6 +29,14 @@ Adicione uma entrada com:
 
 ## Entradas
 
+### 2026-06-11 — Empresas: campos CNPJ e E-mail sem coluna nativa no banco
+
+- Arquivo: `src/app/(app)/companies/client-page.tsx` e `src/app/(app)/companies/[id]/client-page.tsx`
+- Necessidade: colunas `cnpj` e `email` no model `Company` (Prisma). O produto exige os campos nativos Nome, Endereço, CNPJ, Telefone e E-mail
+- Fallback: mapeamento de colunas existentes — **CNPJ → `size`** e **E-mail → `domain`** (rotulados corretamente apenas na UI). `name`, `phone` e `address` são nativos
+- Impacto: dados persistem normalmente e o CRUD completo funciona; porém o significado das colunas `size`/`domain` no banco diverge do rótulo exibido. Integrações externas que leiam `size`/`domain` direto verão CNPJ/e-mail
+- Sugestão: na próxima janela de mudança no backend, criar migração adicionando `cnpj String?` e `email String?` ao model `Company`, atualizar rotas `/api/companies*` e migrar os dados de `size`/`domain` para as novas colunas
+
 ### 2026-06-11 — Sidebar catalog: itens novos para `/reports` e `/ai-agents`
 
 - Arquivo: `src/lib/sidebar-catalog.ts` (frontend) e `backend/src/lib/sidebar-catalog.ts` (read-only nesta migração)

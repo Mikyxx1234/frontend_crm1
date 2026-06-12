@@ -17,7 +17,7 @@ export default function MessageModelsV2ClientPage() {
       description="Internos, WhatsApp WABA e Flows (Kommo)"
       icon={<IconTemplate size={22} />}
     >
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 backdrop-blur-md">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
         <OldMessageModelsPage />
       </div>
     </SettingsV2Shell>

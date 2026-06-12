@@ -6,18 +6,30 @@
  */
 
 import {
+  IconBolt,
   IconCircleCheck,
   IconCircleX,
   IconClock,
   IconEdit,
+  IconMessage,
+  IconMessagePlus,
+  IconNote,
   IconPlus,
   IconRefresh,
+  IconRobot,
+  IconSend,
+  IconTag,
   IconTrendingUp,
   IconUser,
 } from "@tabler/icons-react";
 
 import { useDealTimeline } from "@/features/pipeline-v2/hooks";
 import type { DealTimelineEvent } from "@/features/pipeline-v2/api";
+import {
+  EVENT_CONFIG,
+  eventDescription,
+  type FeedEvent,
+} from "@/components/crm/feed/event-config";
 
 interface DealTimelineTabProps {
   dealId: string;
@@ -27,14 +39,29 @@ const TYPE_META: Record<
   string,
   { label: string; icon: React.ComponentType<{ size?: number }>; color: string }
 > = {
-  CREATED: { label: "Negocio criado", icon: IconPlus, color: "#5b6ff5" },
-  STAGE_CHANGED: { label: "Estagio alterado", icon: IconTrendingUp, color: "#5b6ff5" },
-  STATUS_CHANGED: { label: "Status alterado", icon: IconRefresh, color: "#a78bfa" },
-  WON: { label: "Negocio ganho", icon: IconCircleCheck, color: "#10b981" },
-  LOST: { label: "Negocio perdido", icon: IconCircleX, color: "#ef4444" },
-  ASSIGNED: { label: "Responsavel alterado", icon: IconUser, color: "#5b6ff5" },
-  FIELD_UPDATED: { label: "Campo atualizado", icon: IconEdit, color: "#718096" },
-  CUSTOM_FIELD_UPDATED: { label: "Campo custom alterado", icon: IconEdit, color: "#718096" },
+  CREATED: { label: "Negocio criado", icon: IconPlus, color: "var(--brand-primary)" },
+  STAGE_CHANGED: { label: "Estagio alterado", icon: IconTrendingUp, color: "var(--brand-primary)" },
+  STATUS_CHANGED: { label: "Status alterado", icon: IconRefresh, color: "var(--color-info)" },
+  WON: { label: "Negocio ganho", icon: IconCircleCheck, color: "var(--color-success)" },
+  LOST: { label: "Negocio perdido", icon: IconCircleX, color: "var(--color-danger)" },
+  ASSIGNED: { label: "Responsavel alterado", icon: IconUser, color: "var(--brand-primary)" },
+  FIELD_UPDATED: { label: "Campo atualizado", icon: IconEdit, color: "var(--text-muted)" },
+  CUSTOM_FIELD_UPDATED: { label: "Campo custom alterado", icon: IconEdit, color: "var(--text-muted)" },
+
+  // Eventos de conversa/mensagem — aparecem quando a timeline é exibida no
+  // contexto do inbox (escopada ao negócio do contato).
+  MESSAGE_RECEIVED: { label: "Mensagem recebida", icon: IconMessage, color: "var(--brand-primary)" },
+  MESSAGE_SENT: { label: "Mensagem enviada", icon: IconSend, color: "var(--color-success)" },
+  CONVERSATION_CREATED: { label: "Conversa criada", icon: IconMessagePlus, color: "var(--brand-primary)" },
+  CONVERSATION_CLOSED: { label: "Conversa encerrada", icon: IconCircleCheck, color: "var(--color-success)" },
+  CONVERSATION_REOPENED: { label: "Conversa reaberta", icon: IconRefresh, color: "var(--color-warning)" },
+  CONVERSATION_STATUS_CHANGED: { label: "Status da conversa", icon: IconRefresh, color: "var(--color-info)" },
+  ASSIGNEE_CHANGED: { label: "Responsavel da conversa", icon: IconUser, color: "var(--brand-primary)" },
+  NOTE_ADDED: { label: "Nota adicionada", icon: IconNote, color: "var(--color-warning)" },
+  TAG_ADDED: { label: "Tag adicionada", icon: IconTag, color: "var(--color-info)" },
+  TAG_REMOVED: { label: "Tag removida", icon: IconTag, color: "var(--color-danger)" },
+  AUTOMATION_EXECUTED: { label: "Automacao executada", icon: IconBolt, color: "var(--color-info)" },
+  AI_AGENT_ACTION: { label: "Acao do agente IA", icon: IconRobot, color: "var(--color-info)" },
 };
 
 function fmtDate(iso: string): string {
@@ -52,23 +79,24 @@ function fmtDate(iso: string): string {
   }
 }
 
+/**
+ * Descrição textual do evento. Delega ao `eventDescription` canônico
+ * (`event-config.ts`), que cobre todos os tipos — incluindo eventos de
+ * mensagem/conversa que só aparecem no contexto do inbox.
+ */
 function describe(ev: DealTimelineEvent): string {
-  const meta = ev.meta ?? {};
-  if (ev.type === "STAGE_CHANGED") {
-    const from = (meta.from as { name?: string } | string | undefined);
-    const to = (meta.to as { name?: string } | string | undefined);
-    const fromName =
-      typeof from === "string" ? from : from?.name ?? "?";
-    const toName = typeof to === "string" ? to : to?.name ?? "?";
-    return `${fromName} → ${toName}`;
-  }
-  if (ev.type === "STATUS_CHANGED") {
-    return `${meta.from ?? "?"} → ${meta.to ?? "?"}`;
-  }
-  if (ev.type === "FIELD_UPDATED" || ev.type === "CUSTOM_FIELD_UPDATED") {
-    return String(meta.fieldLabel ?? meta.fieldId ?? "");
-  }
-  return "";
+  return eventDescription({
+    id: ev.id,
+    type: ev.type,
+    occurredAt: ev.createdAt,
+    meta: ev.meta ?? {},
+  } as FeedEvent);
+}
+
+/** Converte um tipo desconhecido (SNAKE_CASE) em texto legível. */
+function prettifyType(type: string): string {
+  const lower = type.replace(/_/g, " ").toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
 export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
@@ -108,9 +136,12 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-[22px]">
       {events.map((ev) => {
         const meta = TYPE_META[ev.type] ?? {
-          label: ev.type,
+          // Fallback: tipos não mapeados localmente ainda recebem o rótulo
+          // PT-BR canônico do EVENT_CONFIG; só caem no prettify se forem
+          // realmente desconhecidos.
+          label: EVENT_CONFIG[ev.type]?.label ?? prettifyType(ev.type),
           icon: IconClock,
-          color: "#718096",
+          color: "var(--text-muted)",
         };
         const Icon = meta.icon;
         const desc = describe(ev);
@@ -125,7 +156,10 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
           >
             <div
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-              style={{ background: `${meta.color}1f`, color: meta.color }}
+              style={{
+                background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
+                color: meta.color,
+              }}
             >
               <Icon size={15} />
             </div>

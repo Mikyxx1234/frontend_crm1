@@ -111,7 +111,7 @@ export function StageRankingWidget(props: StageRankingProps = {}) {
         <p className="text-xs font-medium text-muted-foreground">
           Agentes por etapa do funil
         </p>
-        <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5">
+        <div className="flex items-center gap-1 rounded-lg bg-[var(--glass-bg-strong)] p-0.5">
           <MetricToggleBtn
             active={metric === "count"}
             onClick={() => setMetric("count")}
@@ -163,7 +163,7 @@ function MetricToggleBtn({
       {active && (
         <motion.span
           layoutId="stage-ranking-metric"
-          className="absolute inset-0 rounded-md bg-card shadow-sm"
+          className="absolute inset-0 rounded-md bg-[var(--glass-bg-overlay)] shadow-sm"
           transition={SUBTLE_SPRING}
         />
       )}
@@ -185,7 +185,7 @@ function StageColumn({ stage, metric }: { stage: StageRow; metric: Metric }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={SUBTLE_SPRING}
-      className="flex flex-col gap-2 rounded-xl border border-border/70 bg-card/50 p-3"
+      className="flex flex-col gap-2 rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-3"
     >
       <div className="flex items-center gap-2">
         <span
@@ -229,7 +229,7 @@ function StageColumn({ stage, metric }: { stage: StageRow; metric: Metric }) {
                         ? "bg-slate-100 text-foreground"
                         : idx === 2
                           ? "bg-orange-100 text-orange-700"
-                          : "bg-muted text-muted-foreground",
+                          : "bg-[var(--glass-bg-overlay)] text-muted-foreground",
                   )}
                 >
                   {idx === 0 ? (
@@ -249,7 +249,7 @@ function StageColumn({ stage, metric }: { stage: StageRow; metric: Metric }) {
                         : formatBRL(agent.value, { compact: true })}
                     </span>
                   </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-muted">
+                  <div className="h-1 overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
@@ -277,7 +277,7 @@ function StageColumn({ stage, metric }: { stage: StageRow; metric: Metric }) {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-border/60 text-center text-xs text-muted-foreground">
+    <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-[var(--glass-border-subtle)] text-center text-xs text-muted-foreground">
       {message}
     </div>
   );
@@ -289,12 +289,12 @@ function LoadingSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="flex h-32 flex-col gap-2 rounded-xl border border-border/60 bg-muted/40 p-3"
+          className="flex h-32 flex-col gap-2 rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-3"
         >
-          <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
-          <div className="h-2 w-full animate-pulse rounded bg-muted" />
-          <div className="h-2 w-4/5 animate-pulse rounded bg-muted" />
-          <div className="h-2 w-3/5 animate-pulse rounded bg-muted" />
+          <div className="h-3 w-1/3 animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+          <div className="h-2 w-full animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+          <div className="h-2 w-4/5 animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+          <div className="h-2 w-3/5 animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
         </div>
       ))}
     </div>

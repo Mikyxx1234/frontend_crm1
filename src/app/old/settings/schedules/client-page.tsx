@@ -2,10 +2,9 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft, Check, Clock, Loader2, Pencil,
+  Check, Loader2, Pencil,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -161,22 +159,7 @@ export default function SchedulesPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
-      <Link href="/old/settings" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" /> Voltar
-      </Link>
-
-      <PageHeader
-        title="Horários e Disponibilidade"
-        icon={<Clock />}
-        description={
-          <>
-            Gerencie o expediente e status online/offline de cada agente. A distribuição de leads considera esses dados.
-            A coluna <span className="font-medium text-foreground">Ligações WA</span> indica quem pode receber chamadas de voz WhatsApp (com status Online e dentro do horário).
-          </>
-        }
-      />
-
+    <div className="w-full space-y-4">
       {isError && (
         <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           Erro ao carregar agentes.
@@ -223,7 +206,7 @@ export default function SchedulesPage() {
                           <span className={cn("absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white", STATUS_DOT[status])} />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground">{agent.name}</p>
+                          <p className="truncate font-medium text-[var(--text-primary)]">{agent.name}</p>
                           <p className="truncate text-xs text-muted-foreground">{agent.email}</p>
                         </div>
                       </div>
@@ -235,7 +218,7 @@ export default function SchedulesPage() {
                         disabled={statusMutation.isPending}
                         className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium lumen-transition hover:opacity-80", STATUS_COLORS[status])}
                       >
-                        <span className={cn("size-1.5 rounded-full", status === "ONLINE" ? "bg-white" : status === "AWAY" ? "bg-white" : "bg-[#64748b]")} />
+                        <span className={cn("size-1.5 rounded-full", status === "ONLINE" ? "bg-[var(--glass-bg-overlay)]" : status === "AWAY" ? "bg-[var(--glass-bg-overlay)]" : "bg-[#64748b]")} />
                         {STATUS_LABELS[status]}
                       </button>
                     </td>
@@ -257,13 +240,13 @@ export default function SchedulesPage() {
                         </button>
                       </TooltipHost>
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-foreground">
+                    <td className="px-4 py-3 tabular-nums text-[var(--text-primary)]">
                       {sched?.startTime ?? "08:00"}
                     </td>
                     <td className="hidden px-4 py-3 tabular-nums text-muted-foreground md:table-cell">
                       {sched ? `${sched.lunchStart} – ${sched.lunchEnd}` : "12:00 – 13:00"}
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-foreground">
+                    <td className="px-4 py-3 tabular-nums text-[var(--text-primary)]">
                       {sched?.endTime ?? "18:00"}
                     </td>
                     <td className="hidden px-4 py-3 lg:table-cell">
@@ -343,7 +326,7 @@ export default function SchedulesPage() {
                         "inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium lumen-transition",
                         active
                           ? "bg-[#1e40af] text-white shadow-sm"
-                          : "border border-border bg-card text-muted-foreground hover:border-accent hover:text-foreground"
+                          : "border border-border bg-card text-muted-foreground hover:border-accent hover:text-[var(--text-primary)]"
                       )}>
                       {active && <Check className="size-3" />}
                       {wd.short}

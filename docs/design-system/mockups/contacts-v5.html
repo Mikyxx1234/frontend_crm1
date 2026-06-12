@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!--
+  CONTATOS — VERSÃO 5: "Lista tipo caixa de e-mail (hover rico)"
+  Direção visual: linhas finas e elegantes como uma inbox; no hover surge uma
+  faixa de ações rápidas à direita (editar, e-mail, ligar, excluir) e a data dá
+  lugar às ações. Coluna de status (ponto online) à esquerda do nome. Densidade
+  média-alta, foco em ação rápida sobre cada registro.
+  (Telas gêmeas: para /companies, troque colunas por
+   Nome · Site · Telefone · Segmento · Tags · Criado em.)
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Contatos — v5 (Lista tipo inbox)</title>
+<style>
+  :root{
+    --bg-base:#dde8f5;--bg-mesh:linear-gradient(135deg,#dde8f5 0%,#b8cfec 40%,#e8d5f0 70%,#dde8f5 100%);
+    --brand-primary:#5b6ff5;--brand-primary-dark:#3d52e8;--brand-secondary:#a78bfa;
+    --text-primary:#0f172a;--text-secondary:#374151;--text-muted:#4b5563;
+    --glass-bg-base:rgba(255,255,255,0.82);--glass-bg-overlay:rgba(255,255,255,0.58);
+    --glass-bg-strong:rgba(255,255,255,0.32);--glass-bg-modal:rgba(255,255,255,0.97);
+    --glass-border:rgba(180,200,230,0.55);--glass-border-subtle:rgba(180,200,230,0.30);
+    --glass-shadow-sm:0 1px 6px rgba(100,130,180,0.10);--glass-shadow:0 4px 24px rgba(100,130,180,0.18);
+    --glass-shadow-lg:0 8px 40px rgba(100,130,180,0.22);
+    --color-online:#10b981;--color-danger:#ef4444;--color-enterprise-bg:rgba(91,111,245,0.15);
+    --radius-sm:6px;--radius-md:8px;--radius-lg:12px;--radius-xl:16px;--radius-full:9999px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg-mesh);background-attachment:fixed;color:var(--text-primary);font-size:14px;line-height:1.5;display:flex;min-height:100vh}
+  .rail{width:72px;flex-shrink:0;background:var(--glass-bg-overlay);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border-right:1px solid var(--glass-border);display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 0;position:sticky;top:0;height:100vh}
+  .rail .logo{width:38px;height:38px;border-radius:var(--radius-md);background:var(--brand-primary);box-shadow:var(--glass-shadow-sm);margin-bottom:8px}
+  .rail .nav-ico{width:40px;height:40px;border-radius:var(--radius-md);background:var(--glass-bg-strong);border:1px solid var(--glass-border-subtle);cursor:pointer;transition:.15s}
+  .rail .nav-ico:hover{background:#fff}.rail .nav-ico.active{background:var(--color-enterprise-bg);border-color:var(--brand-primary)}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px 32px;gap:16px;max-width:1400px}
+  .page-header{background:var(--glass-bg-base);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);padding:18px 22px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .page-header .titles h1{font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .page-header .titles p{color:var(--text-muted);font-size:13px;margin-top:2px}
+  .search{flex:1;min-width:200px;display:flex;justify-content:center}
+  .search input{width:100%;max-width:420px;border:1px solid var(--glass-border);background:var(--glass-bg-overlay);border-radius:var(--radius-full);padding:10px 18px;font-size:14px;color:var(--text-primary);outline:none;transition:.15s}
+  .search input::placeholder{color:var(--text-muted)}.search input:focus{border-color:var(--brand-primary);background:#fff;box-shadow:0 0 0 3px var(--color-enterprise-bg)}
+  .btn{font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;border:none;border-radius:var(--radius-full);padding:10px 18px;transition:.15s;white-space:nowrap}
+  .btn-primary{background:var(--brand-primary);color:#fff;box-shadow:var(--glass-shadow-sm)}.btn-primary:hover{background:var(--brand-primary-dark);box-shadow:var(--glass-shadow)}
+  .btn-ghost{background:var(--glass-bg-strong);color:var(--text-secondary);border:1px solid var(--glass-border-subtle)}.btn-ghost:hover{background:#fff}
+  .btn-danger{background:var(--color-danger);color:#fff}.btn-danger:hover{filter:brightness(.93)}
+  .bulk-bar{display:none;align-items:center;gap:14px;background:var(--glass-bg-base);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--brand-primary);border-radius:var(--radius-lg);box-shadow:var(--glass-shadow-sm);padding:10px 16px;font-size:13px;font-weight:600;color:var(--text-secondary)}
+  .bulk-bar.show{display:flex}.bulk-bar .count{color:var(--brand-primary-dark)}.bulk-bar .spacer{flex:1}
+  .list-card{background:#ffffff;border:1px solid var(--glass-border);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);overflow:hidden}
+  .list-top{display:flex;align-items:center;gap:14px;padding:11px 18px;font-size:11px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 var(--glass-border-subtle)}
+  .row{position:relative;display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--glass-border-subtle);
+    cursor:default;transition:background .12s}
+  .row:last-child{border-bottom:none}.row:hover{background:rgba(0,0,0,0.02)}.row.selected{background:rgba(0,0,0,0.02)}
+  .ck{width:16px;height:16px;accent-color:var(--brand-primary);cursor:pointer;flex-shrink:0}
+  .status{width:9px;height:9px;border-radius:var(--radius-full);flex-shrink:0;background:var(--glass-border)}
+  .status.on{background:var(--color-online);box-shadow:0 0 0 3px rgba(16,185,129,0.15)}
+  .av-name{display:flex;align-items:center;gap:10px;width:280px;min-width:160px;flex-shrink:0}
+  .avatar{width:30px;height:30px;border-radius:var(--radius-full);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+  .name-link{font-weight:600;color:var(--text-primary);text-decoration:none;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .name-link:hover{color:var(--brand-primary-dark)}
+  .snippet{flex:1;min-width:0;font-size:13px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
+  .snippet .sep{opacity:.5}.snippet b{font-weight:600;color:var(--text-secondary)}
+  .tags{display:flex;gap:5px;flex-shrink:0}
+  .tag{font-size:11px;font-weight:600;padding:2px 9px;border-radius:var(--radius-full);background:var(--color-enterprise-bg);color:var(--brand-primary-dark)}
+  .tag.alt{background:rgba(167,139,250,0.16);color:#7c5cd6}
+  .date{flex-shrink:0;width:90px;text-align:right;font-size:12px;color:var(--text-muted);transition:opacity .12s}
+  /* slide-in actions strip */
+  .actions{position:absolute;right:14px;top:50%;transform:translateY(-50%) translateX(8px);
+    display:flex;gap:6px;opacity:0;pointer-events:none;transition:.14s}
+  .row:hover .actions{opacity:1;pointer-events:auto;transform:translateY(-50%) translateX(0)}
+  .row:hover .date{opacity:0}
+  .act{width:30px;height:30px;border-radius:var(--radius-md);border:1px solid var(--glass-border-subtle);background:#fff;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-secondary);transition:.12s;box-shadow:var(--glass-shadow-sm)}
+  .act:hover{background:var(--color-enterprise-bg);color:var(--brand-primary-dark);border-color:var(--brand-primary)}
+  .act.danger:hover{background:rgba(239,68,68,0.12);color:var(--color-danger);border-color:var(--color-danger)}
+  .pager{display:flex;align-items:center;justify-content:center;gap:14px;background:var(--glass-bg-overlay);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);border-radius:var(--radius-full);box-shadow:var(--glass-shadow-sm);padding:8px 16px;align-self:center;font-size:13px;color:var(--text-muted)}
+  .pager .btn-ghost{padding:6px 14px;font-size:13px}
+  @media(max-width:900px){.rail{display:none}.main{padding:14px}.snippet,.date{display:none}.av-name{width:auto;flex:1}}
+</style>
+</head>
+<body>
+  <nav class="rail" aria-label="Navegação principal">
+    <div class="logo" aria-hidden="true"></div>
+    <div class="nav-ico active" role="button" tabindex="0" aria-label="Contatos"></div>
+    <div class="nav-ico" role="button" tabindex="0" aria-label="Empresas"></div>
+    <div class="nav-ico" role="button" tabindex="0" aria-label="Negócios"></div>
+    <div class="nav-ico" role="button" tabindex="0" aria-label="Configurações"></div>
+  </nav>
+  <main class="main">
+    <header class="page-header">
+      <div class="titles"><h1>Contatos</h1><p>Gerencie todos os seus contatos em um só lugar</p></div>
+      <div class="search"><input type="search" placeholder="Buscar por nome, e-mail ou empresa…" aria-label="Buscar contatos" /></div>
+      <button class="btn btn-primary">+ Novo contato</button>
+    </header>
+    <div class="bulk-bar" id="bulkBar" role="region" aria-live="polite">
+      <span class="count" id="bulkCount">0 selecionados</span><div class="spacer"></div>
+      <button class="btn btn-ghost" onclick="clearAll()">Limpar</button>
+      <button class="btn btn-danger">Excluir</button>
+    </div>
+    <section class="list-card" aria-label="Lista de contatos">
+      <div class="list-top">
+        <input type="checkbox" class="ck" id="checkAll" aria-label="Selecionar todos" onclick="toggleAll(this)">
+        <span style="width:9px"></span>
+        <span class="av-name" style="width:280px">Nome</span>
+        <span style="flex:1">E-mail · Telefone · Empresa</span>
+        <span style="width:90px;text-align:right">Criado</span>
+      </div>
+      <div id="rows"></div>
+    </section>
+    <nav class="pager" aria-label="Paginação">
+      <button class="btn btn-ghost">‹ Anterior</button>
+      <span>10 contatos — página 1 de 4</span>
+      <button class="btn btn-ghost">Próxima ›</button>
+    </nav>
+  </main>
+<script>
+  const contatos=[
+    {n:"Ana Beatriz Carvalho",e:"ana.carvalho@nexora.com.br",t:"+55 11 98123-4521",emp:"Nexora Tecnologia",tags:["Cliente","VIP"],d:"12/03/2025",c:"#5b6ff5",on:true},
+    {n:"Bruno Almeida Souza",e:"bruno.souza@vortexlab.com",t:"+55 21 99654-3120",emp:"Vortex Lab",tags:["Lead"],d:"04/03/2025",c:"#a78bfa",on:false},
+    {n:"Carla Mendes Ribeiro",e:"carla.ribeiro@lumina.io",t:"+55 31 98477-1188",emp:"Lumina Digital",tags:["Parceiro"],d:"28/02/2025",c:"#10b981",on:true},
+    {n:"Diego Fernandes Lima",e:"diego.lima@tropos.com.br",t:"+55 41 99012-7745",emp:"Tropos Sistemas",tags:["Cliente"],d:"19/02/2025",c:"#5b6ff5",on:false},
+    {n:"Eduarda Pinto Rocha",e:"eduarda.rocha@kairu.app",t:"+55 51 98330-9921",emp:"Kairu",tags:["Lead","Frio"],d:"11/02/2025",c:"#a78bfa",on:false},
+    {n:"Felipe Nogueira Dias",e:"felipe.dias@onda.co",t:"+55 11 97765-2234",emp:"Onda Marketing",tags:["Cliente"],d:"03/02/2025",c:"#5b6ff5",on:true},
+    {n:"Gabriela Santos Melo",e:"gabriela.melo@altave.com.br",t:"+55 19 98221-6650",emp:"Altave Cloud",tags:["VIP"],d:"27/01/2025",c:"#10b981",on:true},
+    {n:"Henrique Costa Barros",e:"henrique.barros@meridian.io",t:"+55 71 99188-3344",emp:"Meridian",tags:["Lead"],d:"20/01/2025",c:"#a78bfa",on:false},
+    {n:"Isabela Martins Freitas",e:"isabela.freitas@polobr.com",t:"+55 85 98455-7782",emp:"Polo Brasil",tags:["Parceiro","VIP"],d:"14/01/2025",c:"#5b6ff5",on:true},
+    {n:"João Pedro Azevedo",e:"joao.azevedo@verza.com.br",t:"+55 48 99677-1029",emp:"Verza Group",tags:["Cliente"],d:"08/01/2025",c:"#a78bfa",on:false},
+  ];
+  function initials(n){const p=n.split(" ");return (p[0][0]+(p[1]?p[1][0]:"")).toUpperCase()}
+  const rows=document.getElementById('rows');
+  contatos.forEach(c=>{
+    const tags=c.tags.map((t,k)=>`<span class="tag${k%2?' alt':''}">${t}</span>`).join('');
+    rows.insertAdjacentHTML('beforeend',`
+      <div class="row" data-row>
+        <input type="checkbox" class="ck row-ck" aria-label="Selecionar ${c.n}" onclick="rowToggle(this)">
+        <span class="status ${c.on?'on':''}" title="${c.on?'Online':'Offline'}"></span>
+        <div class="av-name">
+          <span class="avatar" style="background:${c.c}">${initials(c.n)}</span>
+          <a class="name-link">${c.n}</a>
+        </div>
+        <div class="snippet">
+          <span>${c.e}</span><span class="sep">·</span><span>${c.t}</span><span class="sep">·</span><b>${c.emp}</b>
+          <span class="tags">${tags}</span>
+        </div>
+        <div class="date">${c.d}</div>
+        <div class="actions" role="group" aria-label="Ações para ${c.n}">
+          <button class="act" title="Editar" aria-label="Editar ${c.n}">✎</button>
+          <button class="act" title="Enviar e-mail" aria-label="Enviar e-mail">✉</button>
+          <button class="act" title="Ligar" aria-label="Ligar">☎</button>
+          <button class="act danger" title="Excluir" aria-label="Excluir ${c.n}">🗑</button>
+        </div>
+      </div>`);
+  });
+  function rowToggle(ck){ck.closest('.row').classList.toggle('selected',ck.checked);updateBulk()}
+  function toggleAll(m){document.querySelectorAll('.row-ck').forEach(ck=>{ck.checked=m.checked;ck.closest('.row').classList.toggle('selected',m.checked)});updateBulk()}
+  function clearAll(){document.querySelectorAll('.row-ck').forEach(ck=>{ck.checked=false;ck.closest('.row').classList.remove('selected')});document.getElementById('checkAll').checked=false;updateBulk()}
+  function updateBulk(){const n=document.querySelectorAll('.row-ck:checked').length;document.getElementById('bulkBar').classList.toggle('show',n>0);document.getElementById('bulkCount').textContent=n+' selecionado'+(n>1?'s':'')}
+</script>
+</body>
+</html>

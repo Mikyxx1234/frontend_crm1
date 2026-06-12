@@ -382,6 +382,7 @@ interface StageOptionsMenuProps {
   onMoveBackward: () => void;
   onRename: () => void;
   onChangeColor: (color: string) => void;
+  onDelete: () => void;
 }
 
 function StageOptionsMenu({
@@ -393,6 +394,7 @@ function StageOptionsMenu({
   onMoveBackward,
   onRename,
   onChangeColor,
+  onDelete,
 }: StageOptionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [showColors, setShowColors] = useState(false);
@@ -506,6 +508,18 @@ function StageOptionsMenu({
               </div>
             </div>
           )}
+
+          <div className="my-1 border-t border-black/5" />
+
+          {/* Excluir */}
+          <button
+            type="button"
+            onClick={() => { onDelete(); close(); }}
+            className="flex w-full cursor-pointer items-center gap-2.5 px-3.5 py-2 font-display text-[12.5px] font-semibold text-[var(--color-danger-text)] transition-colors hover:bg-[var(--color-danger-bg)]"
+          >
+            <IconTrash size={14} />
+            Excluir estágio
+          </button>
         </div>
       )}
     </div>
@@ -589,6 +603,69 @@ function RenameStageModal({
           >
             <IconCheck size={13} />
             Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal de excluir estágio ─────────────────────────────────────
+
+function DeleteStageModal({
+  open,
+  stageName,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  stageName: string;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      onClick={busy ? undefined : onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-6 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--color-danger)_25%,transparent)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]">
+            <IconTrash size={18} />
+          </span>
+          <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+            Excluir estágio
+          </h2>
+        </div>
+        <p className="font-body text-[13px] leading-relaxed text-[var(--text-secondary)]">
+          Tem certeza que deseja excluir o estágio{" "}
+          <strong className="font-semibold text-[var(--text-primary)]">{stageName}</strong>? Esta
+          ação não pode ser desfeita. Estágios com negócios não podem ser excluídos.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-danger)] px-4 py-2 font-display text-[12px] font-bold text-white shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-px hover:brightness-95 disabled:translate-y-0 disabled:opacity-50"
+          >
+            <IconTrash size={13} />
+            {busy ? "Excluindo..." : "Excluir"}
           </button>
         </div>
       </div>
@@ -691,6 +768,7 @@ interface StageColumnProps {
   onMoveBackward: (stageId: string) => void;
   onRename: (stageId: string) => void;
   onChangeColor: (stageId: string, color: string) => void;
+  onDelete: (stageId: string) => void;
   onDragStart: (stageId: string) => void;
   onDragOver: (stageId: string) => void;
   onDrop: (targetId: string) => void;
@@ -711,6 +789,7 @@ function StageColumn({
   onMoveBackward,
   onRename,
   onChangeColor,
+  onDelete,
   onDragStart,
   onDragOver,
   onDrop,
@@ -779,6 +858,7 @@ function StageColumn({
             onMoveBackward={() => onMoveBackward(stage.id)}
             onRename={() => onRename(stage.id)}
             onChangeColor={(color) => onChangeColor(stage.id, color)}
+            onDelete={() => onDelete(stage.id)}
           />
         )}
       </div>
@@ -1025,6 +1105,10 @@ export default function PipelineSettingsClientPage() {
   // Modal de renomear
   const [renamingStageId, setRenamingStageId] = useState<string | null>(null);
 
+  // Modal de excluir estágio
+  const [deletingStageId, setDeletingStageId] = useState<string | null>(null);
+  const [deletingBusy, setDeletingBusy] = useState(false);
+
   // Modal de nova etapa
   const [addStageOpen, setAddStageOpen] = useState(false);
 
@@ -1224,6 +1308,11 @@ export default function PipelineSettingsClientPage() {
     return stages.find((s) => s.id === renamingStageId)?.name ?? "";
   }, [renamingStageId, stages]);
 
+  const deletingStageName = useMemo(() => {
+    if (!deletingStageId) return "";
+    return stages.find((s) => s.id === deletingStageId)?.name ?? "";
+  }, [deletingStageId, stages]);
+
   // ─── Handlers de estágio ────────────────────────────────────────
 
   // Terminais fixos (Ganho/Perdido): não arrastam, não recebem drop e
@@ -1317,6 +1406,57 @@ export default function PipelineSettingsClientPage() {
     setStageColorOverrides((prev) => ({ ...prev, [newId]: color }));
     setAddStageOpen(false);
   }, [terminalStageIds]);
+
+  // Exclusão de estágio. Estágios locais (ainda não salvos) são apenas
+  // removidos do estado; persistidos disparam DELETE imediato — o backend
+  // valida proteções (estágio com negócios, entrada e terminais) e devolve
+  // 409 com mensagem, exibida via toast.
+  const handleConfirmDeleteStage = useCallback(async () => {
+    const id = deletingStageId;
+    if (!id) return;
+
+    if (id.startsWith("local-stage-")) {
+      setStageOrder((prev) => prev.filter((s) => s !== id));
+      setStageNameOverrides((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setStageColorOverrides((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setStageAutomationsMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setDeletingStageId(null);
+      toast.success("Estágio removido.");
+      return;
+    }
+
+    if (!pipelineId) return;
+    setDeletingBusy(true);
+    try {
+      const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/stages/${id}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.message ?? "Falha ao excluir estágio.");
+      }
+      toast.success("Estágio excluído.");
+      setDeletingStageId(null);
+      await queryClient.invalidateQueries({ queryKey: boardKey(pipelineId, "OPEN") });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir estágio.");
+    } finally {
+      setDeletingBusy(false);
+    }
+  }, [deletingStageId, pipelineId, queryClient]);
 
   // ─── Handlers de automação ──────────────────────────────────────
 
@@ -1523,6 +1663,7 @@ export default function PipelineSettingsClientPage() {
                   onMoveBackward={handleMoveBackward}
                   onRename={setRenamingStageId}
                   onChangeColor={handleChangeColor}
+                  onDelete={setDeletingStageId}
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
@@ -1565,6 +1706,14 @@ export default function PipelineSettingsClientPage() {
         onConfirm={handleRenameConfirm}
       />
 
+      <DeleteStageModal
+        open={!!deletingStageId}
+        stageName={deletingStageName}
+        busy={deletingBusy}
+        onClose={() => setDeletingStageId(null)}
+        onConfirm={handleConfirmDeleteStage}
+      />
+
       <AddStageModal
         open={addStageOpen}
         onClose={() => setAddStageOpen(false)}
@@ -1602,7 +1751,7 @@ export default function PipelineSettingsClientPage() {
 
 function EmptyStages({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
-    <div className="grid w-full place-items-center rounded-xl border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg)] p-12 text-center backdrop-blur-md">
+    <div className="grid w-full place-items-center rounded-xl border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-12 text-center backdrop-blur-md">
       <div>
         <h2 className="font-display text-base font-bold text-[var(--text-primary)]">
           {isAuthenticated ? "Selecione um pipeline" : "Carregando..."}

@@ -258,7 +258,7 @@ export default function ApiTokensPage() {
                 {copied && (
                   <p className="text-xs text-green-600">Copiado!</p>
                 )}
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                <div className="rounded-md border border-[var(--color-warning)]/30 bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] p-3 text-xs text-[var(--color-warning)]">
                   Guarde esta chave em um local seguro. Ela será usada como
                   token de autenticação nas requisições (Bearer Token).
                 </div>

@@ -92,7 +92,7 @@ export function WidgetCard({
       transition={{ duration: 0.35, ease: "easeOut" }}
       whileHover={{ y: -4 }}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-6 shadow-[var(--glass-shadow-sm)] backdrop-blur-[16px] transition-shadow duration-300 hover:shadow-[var(--glass-shadow)]",
+        "group relative flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-6 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-shadow duration-300 hover:shadow-[var(--glass-shadow)]",
         featured && "sm:col-span-2 sm:flex-row sm:items-stretch sm:gap-6",
       )}
     >
@@ -104,7 +104,7 @@ export function WidgetCard({
 
       <div className={cn("flex flex-col", featured && "sm:w-1/2 sm:shrink-0")}>
         <div className="flex items-start justify-between gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-transform duration-300 group-hover:scale-105">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-transform duration-300 group-hover:scale-105">
             <WidgetIcon widget={widget} className="size-6" />
           </div>
 
@@ -224,7 +224,7 @@ function StatusBadge({
 }) {
   if (disabled) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.08)] px-2.5 py-1 font-display text-[11px] font-semibold text-[#dc2626]">
+      <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] px-2.5 py-1 font-display text-[11px] font-semibold text-[var(--color-danger-text)]">
         Indisponível
       </span>
     );

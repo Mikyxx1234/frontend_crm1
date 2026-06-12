@@ -93,6 +93,7 @@ import {
 } from "@/lib/whatsapp-outbound-template-label";
 import { dt } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
+import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog";
 
 /** Texto da nota em uma linha (banner fixado estilo WhatsApp). */
 function notePreviewOneLine(content: string, maxChars = 140): string {
@@ -2535,7 +2536,37 @@ export function ChatWindow({
                             >
                               <span className="cursor-default">{time}</span>
                               {isFailed ? (
-                                <AlertTriangle className="size-3 text-destructive" />
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex cursor-help items-center">
+                                      <AlertTriangle className="size-3 text-destructive" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="top"
+                                    align="end"
+                                    className="w-max max-w-[300px] whitespace-normal [overflow-wrap:anywhere] border border-[color:var(--color-danger)]/30 bg-white px-3 py-2 text-left text-[11px] font-medium leading-snug text-[var(--color-danger-text)] shadow-[var(--shadow-lg)] v2-dark:bg-[var(--glass-bg-modal)]"
+                                  >
+                                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide">
+                                      Erro no envio (Meta)
+                                    </span>
+                                    <span className="block">
+                                      {summarizeSendError(m.sendError)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="pointer-events-auto mt-1.5 inline-flex items-center gap-1 rounded-md border border-[color:var(--color-danger)]/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--color-danger)]/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void navigator.clipboard
+                                          .writeText(translateSendError(m.sendError))
+                                          .then(() => toast.success("Erro copiado"));
+                                      }}
+                                    >
+                                      Copiar erro
+                                    </button>
+                                  </TooltipContent>
+                                </Tooltip>
                               ) : showCheck ? (
                                 isDelivered ? (
                                   <svg
@@ -2586,7 +2617,7 @@ export function ChatWindow({
                             </span>
                           );
 
-                          const timeEl = m.createdAt ? (
+                          const timeEl = m.createdAt && !isFailed ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 {timeInner}
@@ -2708,8 +2739,22 @@ export function ChatWindow({
                         <div className="flex items-center gap-2 rounded-b-[16px] border-t border-[rgba(239,68,68,0.2)] bg-destructive/5 px-3.5 py-2">
                           <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
                           <span className="flex-1 truncate text-[11px] text-destructive">
-                            {m.sendError ?? "Falha ao enviar"}
+                            {m.sendError ? summarizeSendError(m.sendError) : "Falha ao enviar"}
                           </span>
+                          {m.sendError ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void navigator.clipboard
+                                  .writeText(translateSendError(m.sendError))
+                                  .then(() => toast.success("Erro copiado"));
+                              }}
+                              className="shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-medium text-destructive lumen-transition hover:bg-destructive/10"
+                            >
+                              Copiar
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={(e) => {

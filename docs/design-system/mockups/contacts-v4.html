@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!--
+  CONTATOS — VERSÃO 4: "Avatar + 2 linhas por registro" (DS v2 fiel)
+  Linha alta com avatar grande e duas linhas (nome+tags / e-mail·telefone·empresa),
+  metadado à direita. Fontes reais (Plus Jakarta Sans + DM Sans), tokens DS v2,
+  tags no padrão real, sombra de marca, header com ícone-quadrado glass.
+  (Telas gêmeas: para /companies linha 2 vira site · telefone · segmento.)
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Contatos — v4 (Avatar + 2 linhas) · DS v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base:#dde8f5;--bg-mesh:linear-gradient(135deg,#dde8f5 0%,#b8cfec 40%,#e8d5f0 70%,#dde8f5 100%);
+    --brand-primary:#5b6ff5;--brand-primary-light:#7b8df7;--brand-primary-dark:#3d52e8;--brand-secondary:#a78bfa;
+    --text-primary:#0f172a;--text-secondary:#374151;--text-muted:#4b5563;
+    --glass-bg-base:rgba(255,255,255,0.82);--glass-bg-overlay:rgba(255,255,255,0.58);
+    --glass-bg-panel:rgba(255,255,255,0.32);--glass-bg-strong:rgba(255,255,255,0.32);--glass-bg-modal:rgba(255,255,255,0.97);
+    --glass-border:rgba(180,200,230,0.55);--glass-border-subtle:rgba(180,200,230,0.30);
+    --glass-shadow-sm:0 1px 6px rgba(100,130,180,0.10);--glass-shadow:0 4px 24px rgba(100,130,180,0.18);--glass-shadow-lg:0 8px 40px rgba(100,130,180,0.22);
+    --color-online:#10b981;--color-success:#10b981;--color-success-bg:rgba(16,185,129,0.12);
+    --color-danger:#ef4444;--color-enterprise-bg:rgba(91,111,245,0.15);
+    --shadow-brand:0 4px 14px rgba(91,111,245,0.35);
+    --input-border-focus:rgba(91,111,245,0.50);--input-ring-focus:rgba(91,111,245,0.20);
+    --font-display:"Plus Jakarta Sans","DM Sans",system-ui,sans-serif;
+    --font-body:"DM Sans","Inter",system-ui,sans-serif;
+    --radius-sm:6px;--radius-md:8px;--radius-lg:12px;--radius-xl:16px;--radius-2xl:32px;--radius-full:9999px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--font-body);background:var(--bg-mesh);background-attachment:fixed;color:var(--text-primary);
+    font-size:14px;line-height:1.5;display:flex;gap:16px;padding:16px;min-height:100vh;-webkit-font-smoothing:antialiased}
+  .font-display{font-family:var(--font-display)}
+  .rail{width:56px;flex-shrink:0;background:var(--glass-bg-panel);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);border-radius:var(--radius-2xl);box-shadow:var(--glass-shadow);
+    display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0;position:sticky;top:16px;height:calc(100vh - 32px)}
+  .rail .logo{width:34px;height:34px;border-radius:var(--radius-md);background:var(--brand-primary);box-shadow:var(--shadow-brand);margin-bottom:6px}
+  .rail .nav-ico{width:38px;height:38px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;transition:.15s}
+  .rail .nav-ico:hover{background:var(--glass-bg-overlay);color:var(--text-secondary)}
+  .rail .nav-ico.active{background:var(--color-enterprise-bg);color:var(--brand-primary)}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px}
+  .page-header{background:var(--glass-bg-base);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);padding:14px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .page-icon{width:44px;height:44px;border-radius:var(--radius-lg);background:var(--glass-bg-overlay);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:center;color:var(--brand-primary);flex-shrink:0}
+  .titles h1{font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:-.3px}
+  .titles p{color:var(--text-muted);font-size:12.5px;margin-top:1px}
+  .search{flex:1;min-width:200px;display:flex;justify-content:center}
+  .search-wrap{position:relative;width:100%;max-width:440px;color:var(--text-muted)}
+  .search-wrap .s-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none}
+  .search input{width:100%;border:1px solid var(--glass-border);background:var(--glass-bg-overlay);border-radius:var(--radius-full);padding:10px 16px 10px 40px;font-family:var(--font-body);font-size:13px;color:var(--text-primary);outline:none;transition:.15s}
+  .search input::placeholder{color:var(--text-muted)}
+  .search input:focus{border-color:var(--input-border-focus);background:#fff;box-shadow:0 0 0 3px var(--input-ring-focus)}
+  .btn{font-family:var(--font-display);font-size:13px;font-weight:700;cursor:pointer;border:none;border-radius:var(--radius-full);padding:9px 16px;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .btn-primary{background:var(--brand-primary);color:#fff;box-shadow:var(--shadow-brand)}.btn-primary:hover{background:var(--brand-primary-dark);transform:translateY(-1px)}
+  .btn-ghost{background:transparent;color:var(--text-secondary)}.btn-ghost:hover{background:rgba(0,0,0,0.05)}
+  .btn-danger{background:var(--color-danger);color:#fff}.btn-danger:hover{transform:translateY(-1px)}
+  .bulk-bar{display:none;align-items:center;gap:14px;background:var(--glass-bg-strong);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:10px 16px}
+  .bulk-bar.show{display:flex}.bulk-bar .count{font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary)}.bulk-bar .spacer{flex:1}
+  .list-card{background:#ffffff;border:1px solid var(--glass-border);border-radius:var(--radius-xl);box-shadow:var(--glass-shadow);overflow:hidden}
+  .list-top{display:flex;align-items:center;gap:12px;padding:12px 18px;font-family:var(--font-display);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 var(--glass-border-subtle)}
+  .row{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--glass-border-subtle);transition:background .12s}
+  .row:last-child{border-bottom:none}.row:hover{background:rgba(0,0,0,0.02)}.row.selected{background:rgba(0,0,0,0.02)}
+  .ck{width:16px;height:16px;accent-color:var(--brand-primary);cursor:pointer;flex-shrink:0}
+  .avatar{width:44px;height:44px;border-radius:var(--radius-full);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-display);font-weight:700;font-size:15px;transition:transform .12s}
+  .row:hover .avatar{transform:scale(1.05)}
+  .info{flex:1;min-width:0}
+  .line1{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .name-link{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--text-primary);text-decoration:none;cursor:pointer}
+  .name-link:hover{color:var(--brand-primary)}
+  .edit-pencil{opacity:0;border:none;background:transparent;cursor:pointer;color:var(--text-muted);transition:.12s;line-height:0}
+  .row:hover .edit-pencil{opacity:.6}.edit-pencil:hover{opacity:1;color:var(--brand-primary)}
+  .line2{font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .line2 .sep{opacity:.5}
+  .line2 b{font-family:var(--font-display);font-weight:600;color:var(--text-secondary)}
+  .tags{display:flex;gap:5px;flex-wrap:wrap}
+  .tag{font-family:var(--font-display);font-size:10px;font-weight:700;padding:1px 8px;border-radius:var(--radius-full);border:1px solid var(--glass-border);background:var(--glass-bg-overlay);color:var(--brand-primary-dark)}
+  .tag.alt{color:var(--brand-secondary)}
+  .meta{flex-shrink:0;text-align:right;font-family:var(--font-display);font-size:12px;color:var(--text-muted)}
+  .meta .lbl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.8}
+  .pager{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--glass-bg-base);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:var(--radius-full);box-shadow:var(--glass-shadow-sm);padding:7px 10px;align-self:center}
+  .pager .lbl{font-family:var(--font-display);font-size:12.5px;font-weight:600;color:var(--text-muted);padding:0 8px}
+  .pager .pbtn{font-family:var(--font-display);font-size:12.5px;font-weight:700;color:var(--text-secondary);background:var(--glass-bg-overlay);border:1px solid var(--glass-border);border-radius:var(--radius-full);padding:6px 14px;cursor:pointer;transition:.15s}
+  .pager .pbtn:hover{background:#fff;color:var(--brand-primary)}
+  @media(max-width:760px){.rail{display:none}body{padding:12px}.meta{display:none}}
+</style>
+</head>
+<body>
+  <nav class="rail" aria-label="Navegação principal">
+    <div class="logo" aria-hidden="true"></div>
+    <div class="nav-ico" role="button" tabindex="0" aria-label="Dashboard"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+    <div class="nav-ico" role="button" tabindex="0" aria-label="Funil"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4-2v-4Z"/></svg></div>
+    <div class="nav-ico active" role="button" tabindex="0" aria-label="Contatos"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 21v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><path d="M16 3.1a3 3 0 0 1 0 5.8"/><path d="M21 21v-1a5 5 0 0 0-3.5-4.8"/></svg></div>
+    <div class="nav-ico" role="button" tabindex="0" aria-label="Negócios"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></div>
+  </nav>
+  <main class="main">
+    <header class="page-header">
+      <div class="page-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 21v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><path d="M16 3.1a3 3 0 0 1 0 5.8"/><path d="M21 21v-1a5 5 0 0 0-3.5-4.8"/></svg></div>
+      <div class="titles"><h1>Contatos</h1><p>Diretório de contatos vinculados ao CRM</p></div>
+      <div class="search"><div class="search-wrap"><span class="s-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span><input type="search" placeholder="Buscar por nome, e-mail..." aria-label="Buscar contatos" /></div></div>
+      <button class="btn btn-primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Novo contato</button>
+    </header>
+    <div class="bulk-bar" id="bulkBar" role="region" aria-live="polite">
+      <span class="count" id="bulkCount">0 selecionados</span><div class="spacer"></div>
+      <button class="btn btn-ghost" onclick="clearAll()">Limpar</button>
+      <button class="btn btn-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg> Excluir</button>
+    </div>
+    <section class="list-card" aria-label="Lista de contatos">
+      <div class="list-top">
+        <input type="checkbox" class="ck" id="checkAll" aria-label="Selecionar todos" onclick="toggleAll(this)">
+        <span>Contato</span>
+      </div>
+      <div id="rows"></div>
+    </section>
+    <nav class="pager" aria-label="Paginação">
+      <button class="pbtn">‹ Anterior</button>
+      <span class="lbl">66 contatos — página 1 de 3</span>
+      <button class="pbtn">Próxima ›</button>
+    </nav>
+  </main>
+<script>
+  const contatos=[
+    {n:"Ana Beatriz Carvalho",e:"ana.carvalho@nexora.com.br",t:"+55 11 98123-4521",emp:"Nexora Tecnologia",tags:["Cliente","VIP"],d:"12/03/2025",c:"var(--brand-primary)"},
+    {n:"Bruno Almeida Souza",e:"bruno.souza@vortexlab.com",t:"+55 21 99654-3120",emp:"Vortex Lab",tags:["Lead"],d:"04/03/2025",c:"var(--brand-secondary)"},
+    {n:"Carla Mendes Ribeiro",e:"carla.ribeiro@lumina.io",t:"+55 31 98477-1188",emp:"Lumina Digital",tags:["Parceiro"],d:"28/02/2025",c:"var(--color-success)"},
+    {n:"Diego Fernandes Lima",e:"diego.lima@tropos.com.br",t:"+55 41 99012-7745",emp:"Tropos Sistemas",tags:["Cliente"],d:"19/02/2025",c:"var(--brand-primary)"},
+    {n:"Eduarda Pinto Rocha",e:"eduarda.rocha@kairu.app",t:"+55 51 98330-9921",emp:"Kairu",tags:["Lead","Frio"],d:"11/02/2025",c:"var(--brand-secondary)"},
+    {n:"Felipe Nogueira Dias",e:"felipe.dias@onda.co",t:"+55 11 97765-2234",emp:"Onda Marketing",tags:["Cliente"],d:"03/02/2025",c:"var(--brand-primary)"},
+    {n:"Gabriela Santos Melo",e:"gabriela.melo@altave.com.br",t:"+55 19 98221-6650",emp:"Altave Cloud",tags:["VIP"],d:"27/01/2025",c:"var(--color-success)"},
+    {n:"Henrique Costa Barros",e:"henrique.barros@meridian.io",t:"+55 71 99188-3344",emp:"Meridian",tags:["Lead"],d:"20/01/2025",c:"var(--brand-secondary)"},
+    {n:"Isabela Martins Freitas",e:"isabela.freitas@polobr.com",t:"+55 85 98455-7782",emp:"Polo Brasil",tags:["Parceiro","VIP"],d:"14/01/2025",c:"var(--brand-primary)"},
+    {n:"João Pedro Azevedo",e:"joao.azevedo@verza.com.br",t:"+55 48 99677-1029",emp:"Verza Group",tags:["Cliente"],d:"08/01/2025",c:"var(--brand-secondary)"},
+  ];
+  function initials(n){const p=n.split(" ");return (p[0][0]+(p[1]?p[1][0]:"")).toUpperCase()}
+  const rows=document.getElementById('rows');
+  contatos.forEach(c=>{
+    const tags=c.tags.map((t,k)=>`<span class="tag${k%2?' alt':''}">${t}</span>`).join('');
+    rows.insertAdjacentHTML('beforeend',`
+      <div class="row" data-row>
+        <input type="checkbox" class="ck row-ck" aria-label="Selecionar ${c.n}" onclick="rowToggle(this)">
+        <span class="avatar" style="background:${c.c}">${initials(c.n)}</span>
+        <div class="info">
+          <div class="line1">
+            <a class="name-link">${c.n}</a>
+            <button class="edit-pencil" aria-label="Editar ${c.n}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+            <div class="tags">${tags}</div>
+          </div>
+          <div class="line2">
+            <span>${c.e}</span><span class="sep">·</span>
+            <span>${c.t}</span><span class="sep">·</span>
+            <b>${c.emp}</b>
+          </div>
+        </div>
+        <div class="meta"><span class="lbl">Criado em</span>${c.d}</div>
+      </div>`);
+  });
+  function rowToggle(ck){ck.closest('.row').classList.toggle('selected',ck.checked);updateBulk()}
+  function toggleAll(m){document.querySelectorAll('.row-ck').forEach(ck=>{ck.checked=m.checked;ck.closest('.row').classList.toggle('selected',m.checked)});updateBulk()}
+  function clearAll(){document.querySelectorAll('.row-ck').forEach(ck=>{ck.checked=false;ck.closest('.row').classList.remove('selected')});document.getElementById('checkAll').checked=false;updateBulk()}
+  function updateBulk(){const n=document.querySelectorAll('.row-ck:checked').length;document.getElementById('bulkBar').classList.toggle('show',n>0);document.getElementById('bulkCount').textContent=n+' selecionado'+(n>1?'s':'')}
+</script>
+</body>
+</html>

@@ -25,3 +25,69 @@ export function getApiBaseUrl(): string {
 export function apiUrl(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
+
+/**
+ * Erro tipado de chamada à API. Preserva `status` e `code` para que a UI
+ * decida o tratamento (ex.: 401 → relogar; 502/503/504 → tentar de novo).
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/**
+ * Interpreta a resposta de um `fetch` para a API e devolve o JSON tipado.
+ *
+ * Por que existe: o `/api/*` passa pelo proxy do EasyPanel/Traefik e pelo
+ * rewrite do Next. Quando o backend está indisponível ou o request estoura
+ * o timeout do proxy, a resposta vem como **HTML** (página 502/503/504), não
+ * JSON. Sem este tratamento, `res.json()` falha e a UI mostra um erro
+ * genérico ("Erro ao enviar template") sem dizer a causa real.
+ *
+ * Regras:
+ *  - 401 → "Sua sessão expirou. Faça login novamente." (code AUTH_REQUIRED)
+ *  - 502/503/504 ou corpo não-JSON → "Servidor temporariamente indisponível…"
+ *  - demais erros → usa `message` do payload, senão `fallbackMessage`.
+ */
+export async function parseApiResponse<T>(
+  res: Response,
+  fallbackMessage: string,
+): Promise<T> {
+  const contentType = res.headers.get("content-type") ?? "";
+  const isJson = contentType.includes("application/json");
+  const data: Record<string, unknown> = isJson
+    ? await res.json().catch(() => ({}))
+    : {};
+
+  if (res.ok) return data as T;
+
+  const payloadMessage =
+    typeof data.message === "string" ? data.message : null;
+  const payloadCode = typeof data.code === "string" ? data.code : undefined;
+
+  if (res.status === 401) {
+    throw new ApiError(
+      payloadMessage && payloadCode !== "AUTH_REQUIRED"
+        ? payloadMessage
+        : "Sua sessão expirou. Faça login novamente.",
+      401,
+      payloadCode ?? "AUTH_REQUIRED",
+    );
+  }
+
+  if (res.status === 502 || res.status === 503 || res.status === 504 || !isJson) {
+    throw new ApiError(
+      "Servidor temporariamente indisponível. Tente novamente em instantes.",
+      res.status,
+      payloadCode,
+    );
+  }
+
+  throw new ApiError(payloadMessage ?? fallbackMessage, res.status, payloadCode);
+}

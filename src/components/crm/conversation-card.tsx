@@ -13,7 +13,6 @@ import {
   IconUser,
   IconTemplate,
   IconCheck,
-  IconTag,
   IconMessage,
   IconBrandWhatsapp,
   IconBrandInstagram,
@@ -57,11 +56,6 @@ export interface Conversation {
    * adapters/legados que ainda passam apenas o nome da primeira tag.
    */
   tag?: string | null
-  /**
-   * Lista completa de tags do contato. O card mostra até 2 e
-   * indica "+N" para o restante. Clique no chip abre o popover de
-   * gerenciamento se `tagsSlot` estiver presente.
-   */
   tags?: Array<{ id: string; name: string; color?: string | null }>
   /** Id do responsável atual — usado pelo AssigneePopover. */
   assigneeId?: string | null
@@ -89,13 +83,6 @@ export interface Conversation {
 interface ConversationCardProps {
   conversation: Conversation
   onClick?: () => void
-  /**
-   * Slot opcional para o popover de gerenciamento de tags. Quando
-   * presente, o cluster de tags (linha dedicada do card) fica clicável
-   * e abre o popover. Caso ausente, as tags são apenas display.
-   * Use stopPropagation interno para não disparar o `onClick` do card.
-   */
-  tagsSlot?: React.ReactNode
   /**
    * Slot opcional para o popover de troca de responsável. Quando
    * presente, substitui o chip de assignee na linha inferior do card.
@@ -178,44 +165,10 @@ function channelBadge(channel: string | null | undefined): {
   return null;
 }
 
-/** Helpers de cor para chip de tag — alpha 0.14 no bg, alpha 0.95 no texto. */
-function tagColors(hex: string | null | undefined): {
-  bg: string;
-  fg: string;
-  border: string;
-} {
-  if (!hex) {
-    return {
-      bg: "var(--color-enterprise-bg)",
-      fg: "var(--brand-primary)",
-      border: "rgba(91,111,245,0.25)",
-    };
-  }
-  // Aceita "#rrggbb" — converte para rgba.
-  const clean = hex.replace("#", "");
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) {
-    return {
-      bg: "var(--color-enterprise-bg)",
-      fg: "var(--brand-primary)",
-      border: "rgba(91,111,245,0.25)",
-    };
-  }
-  return {
-    bg: `rgba(${r}, ${g}, ${b}, 0.14)`,
-    fg: `rgb(${Math.max(0, r - 30)}, ${Math.max(0, g - 30)}, ${Math.max(0, b - 30)})`,
-    border: `rgba(${r}, ${g}, ${b}, 0.30)`,
-  };
-}
-
-const MAX_VISIBLE_TAGS = 2;
 
 export function ConversationCard({
   conversation,
   onClick,
-  tagsSlot,
   assigneeSlot,
 }: ConversationCardProps) {
   const TypeIcon =
@@ -333,46 +286,40 @@ export function ConversationCard({
         </div>
       </div>
 
-      {/* Linha de tags — até MAX_VISIBLE_TAGS chips coloridos + indicador
-          "+N" para o restante. Wrapper inteiro é clicável quando o
-          `tagsSlot` está presente (abre o popover de gerenciamento).
-          O slot é renderizado no canto direito da linha. */}
-      {(conversation.tags?.length ?? 0) > 0 && (
-        <div
-          className="mt-2.5 flex min-w-0 items-center gap-1.5"
-          onClick={(e) => {
-            // Quando o slot existe, evita propagar para o onClick do card.
-            if (tagsSlot) e.stopPropagation()
-          }}
-          onMouseDown={(e) => { if (tagsSlot) e.stopPropagation() }}
-        >
-          {(conversation.tags ?? []).slice(0, MAX_VISIBLE_TAGS).map((t) => {
-            const c = tagColors(t.color)
+      {/* Tags de contato — max 2 visíveis, +N para overflow */}
+      {conversation.tags && conversation.tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          {conversation.tags.slice(0, 2).map((t) => {
+            const hex = (t.color ?? "#6366f1").replace("#", "");
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            const valid = ![r, g, b].some(Number.isNaN);
+            const bg = valid ? `rgba(${r},${g},${b},0.14)` : "rgba(91,111,245,0.14)";
+            const fg = valid
+              ? `rgb(${Math.max(0, r - 25)},${Math.max(0, g - 25)},${Math.max(0, b - 25)})`
+              : "var(--brand-primary)";
+            const border = valid ? `rgba(${r},${g},${b},0.28)` : "rgba(91,111,245,0.25)";
             return (
-              <TooltipGlass key={t.id} label={t.name} side="top">
-                <span
-                  className="inline-flex shrink-0 max-w-[110px] items-center gap-1 truncate whitespace-nowrap rounded-full border px-2 py-px font-display text-[10.5px] font-semibold"
-                  style={{ background: c.bg, color: c.fg, borderColor: c.border }}
-                >
-                  <IconTag size={9} stroke={2.5} />
-                  <span className="truncate">{t.name}</span>
-                </span>
-              </TooltipGlass>
-            )
+              <span
+                key={t.id}
+                className="inline-flex max-w-[90px] truncate rounded-full border px-2 py-px font-display text-[10px] font-semibold"
+                style={{ background: bg, color: fg, borderColor: border }}
+                title={t.name}
+              >
+                {t.name}
+              </span>
+            );
           })}
-          {(conversation.tags?.length ?? 0) > MAX_VISIBLE_TAGS && (
+          {conversation.tags.length > 2 && (
             <TooltipGlass
-              label={(conversation.tags ?? []).slice(MAX_VISIBLE_TAGS).map((t) => t.name).join(", ")}
+              label={conversation.tags.slice(2).map((t) => t.name).join(", ")}
               side="top"
             >
-              <span className="inline-flex shrink-0 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10.5px] font-bold text-[var(--text-secondary)]">
-                +{(conversation.tags?.length ?? 0) - MAX_VISIBLE_TAGS}
+              <span className="inline-flex shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px font-display text-[10px] font-bold text-[var(--text-secondary)]">
+                +{conversation.tags.length - 2}
               </span>
             </TooltipGlass>
-          )}
-          {/* botão "gerenciar" — só aparece se houver slot. Compacto. */}
-          {tagsSlot && (
-            <span className="ml-auto shrink-0">{tagsSlot}</span>
           )}
         </div>
       )}
@@ -381,13 +328,14 @@ export function ConversationCard({
           quando o nome do responsavel + chip de sessao somam mais largura
           do que a coluna. O chip do assignee trunca com ellipsis. */}
       <div className="mt-2.5 flex min-w-0 flex-nowrap items-center gap-2">
-        {/* Quando há `assigneeSlot` (popover injetado), ele substitui o
-            chip estático. O slot ocupa o espaço restante da linha
-            (`flex-1`) em vez de um teto fixo de 60% — assim o nome do
-            agente e o placeholder "+Responsável" não são cortados quando
-            a coluna é estreita. O badge de sessão permanece `shrink-0`.
-            O próprio botão do popover já faz stopPropagation. */}
-        <span className="flex min-w-0 flex-1 items-center">
+        {/* Quando há responsável: exibe label "RESPONSÁVEL" + chip/slot.
+            Sem responsável: apenas chip ghost "+Responsável". */}
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          {(conversation.assignee || conversation.assigneeId) && (
+            <span className="shrink-0 font-display text-[9.5px] font-bold text-[var(--text-muted)]">
+              Responsável
+            </span>
+          )}
           {assigneeSlot ??
             (conversation.assignee ? (
               <Chip variant="brand" className="max-w-full truncate whitespace-nowrap">
@@ -399,19 +347,6 @@ export function ConversationCard({
               </Chip>
             ))}
         </span>
-
-        {/* Linha sem tags (acima): também precisamos de uma forma rápida
-            de abrir o popover de tags quando não há nenhuma. Renderiza
-            o slot em estado "vazio" pra esses casos. */}
-        {tagsSlot && (conversation.tags?.length ?? 0) === 0 && (
-          <span
-            className="shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            {tagsSlot}
-          </span>
-        )}
 
         {conversation.sessionExpiresIn && (
           <TooltipGlass

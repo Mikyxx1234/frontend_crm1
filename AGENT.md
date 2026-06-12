@@ -5,6 +5,37 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-12 — Config de campos personalizados inline (estilo Kommo) — Fase 1
+
+**Decisão.** Trazer a configuração de campos personalizados para **dentro** do
+`DealDetailPanel` e do `ContactAside` via uma seção/aba **"Configurações"**,
+inspirada no Kommo (dentro do lead há uma aba que configura e posiciona os
+campos). **Fase 1 é frontend-only, sem migration.**
+
+**Escopo Fase 1 (definido com o usuário):**
+- **Reaproveita** o que já existe: CRUD de definições via `/api/custom-fields`
+  (`entity=deal|contact`) e ordem/visibilidade de **blocos** via
+  `/api/field-layout` + hook `useFieldLayout` (contextos `deal_panel_v2` e
+  `inbox_lead_v2`, escopo **admin** = padrão da org).
+- **Não** entra nesta fase: ordem por campo individual (precisa coluna `order`
+  no `CustomField`), grupos/abas de campos, obrigatório-por-etapa e "Apenas API"
+  (ficam para Fase 2/3, exigem schema/migration no backend).
+- **Permissão:** a aba só aparece/edita para quem tem `settings:custom_fields`
+  (admin/manager); demais usuários só **veem** os campos.
+- A página global `/settings/custom-fields` **permanece** como gerenciador
+  org-wide; o inline é um atalho contextual.
+
+**Por quê.** A infra de definição + layout já existe; o gap é só de
+*superfície* (UX). Fazer inline reduz atrito (configurar sem sair do negócio)
+e evita duplicar backend. Manter Fase 1 sem migration respeita a restrição
+atual de deploy do backend.
+
+**Plano de implementação.** Componente reutilizável `FieldConfigPanel`
+(`entity` + `context`), montado por slot no `DealDetailPanel` (gear na sidebar)
+e no `ContactAside` (gear no header). Detalhe nos to-dos da sessão.
+
+---
+
 ### 2026-06-09 — Editor de escopo por usuário (funis e canais)
 
 **Decisão.** `UserPermissionsView` (sheet "Gerenciar" de cada usuário em

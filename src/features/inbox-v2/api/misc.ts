@@ -148,6 +148,10 @@ export interface InboxLeadPanelField {
   type: string;
   options: string[];
   value: string | null;
+  /** Regras de formatação condicional (JSON cru do backend). */
+  highlightRules?: unknown[] | null;
+  /** Highlight já resolvido pelo backend — use este em vez de re-resolver. */
+  highlight?: { severity: string; label: string } | null;
 }
 
 export interface ContactDetail {

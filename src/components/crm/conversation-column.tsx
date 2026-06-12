@@ -63,14 +63,13 @@ interface ConversationColumnProps {
    */
   hideSearch?: boolean
   /**
-   * Renderiza slots específicos por card (tags / assignee popovers).
-   * O callback recebe a conversation e devolve os nodes que serão
-   * injetados em `tagsSlot` e `assigneeSlot` do `ConversationCard`.
+   * Renderiza slots específicos por card (assignee popover).
+   * O callback recebe a conversation e devolve o node que será
+   * injetado em `assigneeSlot` do `ConversationCard`.
    * Mantido fora dos dados pra evitar incluir JSX no objeto serializável
    * que sai do adapter.
    */
   renderCardSlots?: (conversation: Conversation) => {
-    tagsSlot?: React.ReactNode
     assigneeSlot?: React.ReactNode
   }
   /**
@@ -391,7 +390,6 @@ export function ConversationColumn({
                 active: conversation.id === activeConversationId,
               }}
               onClick={() => onSelectConversation?.(conversation.id)}
-              tagsSlot={slots?.tagsSlot}
               assigneeSlot={slots?.assigneeSlot}
             />
           )

@@ -40,6 +40,7 @@ import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
+import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { Chip } from "@/components/crm/chip";
 
 import {
@@ -430,6 +431,9 @@ export default function KanbanV2ClientPage({
     const ownerName = dealDetail.owner?.name?.trim() || "Sem responsavel";
     return {
       id: dealDetail.id,
+      number: (dealDetail as { number?: number }).number ?? null,
+      contactId: dealDetail.contact?.id ?? null,
+      contactNumber: (dealDetail.contact as { number?: number } | null)?.number ?? null,
       name: contactName,
       initials: avatarInitials(contactName),
       avatarColor: avatarColorSlugFromName(contactName),
@@ -810,34 +814,6 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        forecastSlot={
-          activeDealId ? (
-            <InlineEditText
-              dealId={activeDealId}
-              field="expectedCloseAt"
-              type="date"
-              value={
-                dealDetail?.expectedClose
-                  ? dealDetail.expectedClose.slice(0, 10)
-                  : null
-              }
-              placeholder="Indefinida"
-              pipelineId={pipelineId}
-              statusFilter={status}
-              display={(v) =>
-                v && v.trim() ? (
-                  <span className="cursor-pointer font-display text-[13px] font-semibold text-[var(--text-primary)]">
-                    {formatDate(v)}
-                  </span>
-                ) : (
-                  <span className="cursor-pointer font-display text-[13px] italic text-[var(--text-muted)]">
-                    Indefinida
-                  </span>
-                )
-              }
-            />
-          ) : undefined
-        }
         customFieldsSlot={(() => {
           // Mesma lógica do toContactAside: mescla inboxLeadPanelFields (contato) +
           // dealInboxPanelFields[activeDealId] (campos do negócio ativo),
@@ -847,13 +823,28 @@ export default function KanbanV2ClientPage({
             ? (dealContact?.dealInboxPanelFields?.[activeDealId] ?? [])
             : [];
           const seen = new Set<string>();
-          return [...contactFields, ...dealFields]
+          type Tagged = (typeof contactFields[0]) & { _et: "contact" | "deal"; _eid: string };
+          const tagged: Tagged[] = [
+            ...contactFields.map((f) => ({ ...f, _et: "contact" as const, _eid: dealContactId ?? "" })),
+            ...dealFields.map((f) => ({ ...f, _et: "deal" as const, _eid: activeDealId ?? "" })),
+          ];
+          return tagged
             .filter((f) => {
-              if (!f.value?.trim() || seen.has(f.fieldId)) return false;
+              if (seen.has(f.fieldId)) return false;
               seen.add(f.fieldId);
-              return true;
+              return true; // não filtra vazios — o editor cuida de mostrar "Adicionar"
             })
-            .map((f) => ({ fieldId: f.fieldId, label: f.label || f.name, value: f.value }));
+            .map((f) => ({
+              fieldId: f.fieldId,
+              label: f.label || f.name,
+              value: f.value,
+              type: f.type,
+              options: f.options ?? [],
+              entityType: f._et,
+              entityId: f._eid,
+              highlightRules: f.highlightRules ?? null,
+              highlight: f.highlight ?? null,
+            }));
         })()}
         messagesSlot={messagesNode}
         composerSlot={composerNode}
@@ -875,35 +866,61 @@ export default function KanbanV2ClientPage({
             : undefined
         }
         tagsSlot={
-          activeDealId ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(dealDetail?.tags ?? []).map((t) => (
-                <span
-                  key={t.id}
-                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
-                  style={{
-                    background: `${t.color ?? "#5b6ff5"}22`,
-                    color: t.color ?? "var(--brand-primary)",
-                    border: `1px solid ${t.color ?? "#5b6ff5"}44`,
-                  }}
-                >
-                  {t.name}
-                </span>
-              ))}
-              <TagsPopover
-                dealId={activeDealId}
-                currentTags={dealDetail?.tags ?? []}
-                pipelineId={pipelineId}
-                statusFilter={status}
-                trigger={
-                  <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
-                    <IconPlus size={10} />
-                    Adicionar
+          activeDealId ? (() => {
+            const allTags = dealDetail?.tags ?? [];
+            const MAX_VISIBLE = 2;
+            const visibleTags = allTags.slice(0, MAX_VISIBLE);
+            const hiddenTags = allTags.slice(MAX_VISIBLE);
+            return (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {visibleTags.map((t) => (
+                  <span
+                    key={t.id}
+                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                    style={{
+                      background: `${t.color ?? "#5b6ff5"}22`,
+                      color: t.color ?? "var(--brand-primary)",
+                      border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                    }}
+                  >
+                    {t.name}
                   </span>
-                }
-              />
-            </div>
-          ) : undefined
+                ))}
+                {hiddenTags.length > 0 && (
+                  <TooltipGlass
+                    label={hiddenTags.map((t) => t.name).join(", ")}
+                    side="top"
+                  >
+                    <span className="inline-flex shrink-0 cursor-default items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-secondary)]">
+                      +{hiddenTags.length}
+                    </span>
+                  </TooltipGlass>
+                )}
+                <TagsPopover
+                  dealId={activeDealId}
+                  currentTags={allTags}
+                  pipelineId={pipelineId}
+                  statusFilter={status}
+                  trigger={
+                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                      <IconPlus size={10} />
+                      {allTags.length === 0 ? "Adicionar" : ""}
+                    </span>
+                  }
+                />
+              </div>
+            );
+          })() : undefined
+        }
+        contactFieldConfigSlot={
+          <RequirePermission permission="settings:custom_fields">
+            <FieldConfigPanel entities={["contact"]} context="deal_panel_v2" />
+          </RequirePermission>
+        }
+        dealFieldConfigSlot={
+          <RequirePermission permission="settings:custom_fields">
+            <FieldConfigPanel entities={["deal"]} context="deal_panel_v2" />
+          </RequirePermission>
         }
       />
 
@@ -1328,35 +1345,50 @@ function DroppableColumn({
                       isSelected={selectedIds.has(deal.id)}
                       selectionMode={selectionMode}
                       onToggleSelect={() => onToggleSelect(deal.id)}
-                      tagsSlot={
-                        <>
-                          {(raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>)).map((t) => (
-                            <span
-                              key={t.id}
-                              className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide"
-                              style={{
-                                background: `${t.color || "#5b6ff5"}22`,
-                                color: t.color || "var(--brand-primary)",
-                                border: `1px solid ${t.color || "#5b6ff5"}44`,
-                              }}
-                            >
-                              {t.name}
-                            </span>
-                          ))}
-                          <TagsPopover
-                            dealId={deal.id}
-                            currentTags={raw?.tags ?? []}
-                            pipelineId={pipelineId}
-                            statusFilter={statusFilter}
-                            trigger={
-                              // Botão "+" circular igual ao do inbox (triggerVariant="icon").
-                              <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
-                                +
+                      tagsSlot={(() => {
+                        const allTags = raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>);
+                        const MAX_VISIBLE = 2;
+                        const visibleTags = allTags.slice(0, MAX_VISIBLE);
+                        const hiddenTags = allTags.slice(MAX_VISIBLE);
+                        return (
+                          <>
+                            {visibleTags.map((t) => (
+                              <span
+                                key={t.id}
+                                className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide"
+                                style={{
+                                  background: `${t.color || "#5b6ff5"}22`,
+                                  color: t.color || "var(--brand-primary)",
+                                  border: `1px solid ${t.color || "#5b6ff5"}44`,
+                                }}
+                              >
+                                {t.name}
                               </span>
-                            }
-                          />
-                        </>
-                      }
+                            ))}
+                            {hiddenTags.length > 0 && (
+                              <TooltipGlass
+                                label={hiddenTags.map((t) => t.name).join(", ")}
+                                side="top"
+                              >
+                                <span className="inline-flex cursor-default items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px font-display text-[9.5px] font-bold text-[var(--text-muted)]">
+                                  +{hiddenTags.length}
+                                </span>
+                              </TooltipGlass>
+                            )}
+                            <TagsPopover
+                              dealId={deal.id}
+                              currentTags={raw?.tags ?? []}
+                              pipelineId={pipelineId}
+                              statusFilter={statusFilter}
+                              trigger={
+                                <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
+                                  +
+                                </span>
+                              }
+                            />
+                          </>
+                        );
+                      })()}
                       ownerSlot={
                         <AssigneePopover
                           dealId={deal.id}
@@ -1365,16 +1397,18 @@ function DroppableColumn({
                           pipelineId={pipelineId}
                           statusFilter={statusFilter}
                           trigger={
-                            // Mesmo padrão visual do inbox: Chip brand quando
-                            // há responsável, Chip ghost "+Responsável" quando
-                            // não há (em vez de pintar "Sem responsavel" de azul).
                             raw?.owner?.name ? (
-                              <Chip
-                                variant="brand"
-                                className="max-w-full cursor-pointer truncate whitespace-nowrap transition-colors hover:bg-[rgba(91,111,245,0.22)]"
-                              >
-                                {raw.owner.name}
-                              </Chip>
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="font-display text-[9.5px] font-bold text-[var(--text-muted)]">
+                                  Responsável
+                                </span>
+                                <Chip
+                                  variant="brand"
+                                  className="max-w-full cursor-pointer truncate whitespace-nowrap transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                                >
+                                  {raw.owner.name}
+                                </Chip>
+                              </span>
                             ) : (
                               <Chip
                                 variant="ghost"

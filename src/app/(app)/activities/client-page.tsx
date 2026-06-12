@@ -119,6 +119,17 @@ export default function V2ActivitiesClientPage() {
     deleteMutation.mutate(id)
   }
 
+  const markAllDone = () => {
+    const nowIso = new Date().toISOString()
+    for (const a of dayItems) {
+      if (a.status === "concluida") continue
+      updateMutation.mutate({
+        id: a.id,
+        payload: { completed: true, completedAt: nowIso },
+      })
+    }
+  }
+
   const create = (a: Activity) => {
     createMutation.mutate(
       {
@@ -271,16 +282,21 @@ export default function V2ActivitiesClientPage() {
               <div>
                 <p className="font-display text-[15px] font-bold capitalize text-[var(--text-primary)]">
                   {longDateLabel(selectedDate)}
-                  {isToday && (
-                    <span className="ml-2 rounded-full bg-[var(--brand-primary)] px-2 py-0.5 font-display text-[10px] font-bold text-white">
-                      Hoje
-                    </span>
-                  )}
                 </p>
                 <p className="font-body text-[12px] text-[var(--text-muted)]">
                   {dayItems.length} {dayItems.length === 1 ? "atividade" : "atividades"}
+                  {isToday ? " para hoje" : ""}
                 </p>
               </div>
+              {dayItems.some((a) => a.status !== "concluida") && (
+                <button
+                  type="button"
+                  onClick={markAllDone}
+                  className="shrink-0 font-display text-[12px] font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-dark)]"
+                >
+                  Marcar todas como concluídas
+                </button>
+              )}
             </div>
 
             {/* Lista de atividades */}

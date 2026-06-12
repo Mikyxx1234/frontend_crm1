@@ -23,7 +23,7 @@ import {
 import { getContact } from "@/features/inbox-v2/api/misc";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
-import { AudioRecorderButton } from "./audio-recorder-button";
+import { AudioRecorderButton, type AudioRecordState } from "./audio-recorder-button";
 import { ComposerMenu } from "./composer-menu";
 import {
   TemplateComposePanel,
@@ -82,6 +82,8 @@ export function Composer({
   onExternalTemplateConsumed?: () => void;
 }) {
   const [noteMode, setNoteMode] = useState(false);
+  const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
+  const isAudioActive = audioRecState !== "idle";
 
   // ── Contexto para interpolação de templates internos ─────────────
   // Busca dados do contato quando contactId está disponível, para
@@ -408,68 +410,85 @@ export function Composer({
             : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]"
         }`}
       >
-        <ComposerMenu
-          conversationId={conversationId}
-          className="h-9 w-9 shrink-0"
-          noteMode={noteMode}
-          onToggleNote={onSendNote ? () => setNoteMode((v) => !v) : undefined}
-          isResolved={isResolved}
-          contactId={contactId}
-          templateContext={templateContext}
-          onPickInternal={insertTemplateText}
-          onPickTemplate={(tpl) => setPendingTemplate(whatsappTemplateToPending(tpl))}
-        />
-        <ButtonGlass
-          type="button"
-          variant="icon"
-          size="icon"
-          title="Emoji"
-          className="h-9 w-9 shrink-0"
-          disabled
-        >
-          <IconMoodSmile size={20} />
-        </ButtonGlass>
+        {/* Controles padrão — ocultos durante gravação de áudio */}
+        {!isAudioActive && (
+          <>
+            <ComposerMenu
+              conversationId={conversationId}
+              className="h-9 w-9 shrink-0"
+              noteMode={noteMode}
+              onToggleNote={onSendNote ? () => setNoteMode((v) => !v) : undefined}
+              isResolved={isResolved}
+              contactId={contactId}
+              templateContext={templateContext}
+              onPickInternal={insertTemplateText}
+              onPickTemplate={(tpl) => setPendingTemplate(whatsappTemplateToPending(tpl))}
+            />
+            <ButtonGlass
+              type="button"
+              variant="icon"
+              size="icon"
+              title="Emoji"
+              className="h-9 w-9 shrink-0"
+              disabled
+            >
+              <IconMoodSmile size={20} />
+            </ButtonGlass>
+          </>
+        )}
 
-        <div className="flex flex-1 flex-col justify-center">
-          {noteMode ? (
-            <span className="mb-0.5 inline-flex items-center gap-1 self-start rounded-full bg-warning/15 px-2 py-0.5 font-display text-[11px] font-semibold text-warning ring-1 ring-inset ring-warning/25">
-              <IconLock size={12} /> Nota
-            </span>
-          ) : null}
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={value}
-            onChange={(e) => {
-              onChange(e.target.value);
-              e.target.style.height = "auto";
-              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              noteMode
-                ? "Nota interna (não enviada ao cliente)..."
-                : placeholder ?? "Escreva uma mensagem ou / para modelos..."
-            }
-            disabled={disabled || sending}
-            className="w-full resize-none overflow-hidden border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ minHeight: "24px", maxHeight: "120px", lineHeight: "1.5" }}
+        {/* Área de texto — oculta durante gravação de áudio */}
+        {!isAudioActive && (
+          <div className="flex flex-1 flex-col justify-center">
+            {noteMode ? (
+              <span className="mb-0.5 inline-flex items-center gap-1 self-start rounded-full bg-warning/15 px-2 py-0.5 font-display text-[11px] font-semibold text-warning ring-1 ring-inset ring-warning/25">
+                <IconLock size={12} /> Nota
+              </span>
+            ) : null}
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={value}
+              onChange={(e) => {
+                onChange(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                noteMode
+                  ? "Nota interna (não enviada ao cliente)..."
+                  : placeholder ?? "Escreva uma mensagem ou / para modelos..."
+              }
+              disabled={disabled || sending}
+              className="w-full resize-none overflow-hidden border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ minHeight: "24px", maxHeight: "120px", lineHeight: "1.5" }}
+            />
+          </div>
+        )}
+
+        {/* AudioRecorderButton: microfone (idle) ou barra inline (recording/preview) */}
+        {!noteMode && (
+          <AudioRecorderButton
+            conversationId={conversationId}
+            className="h-9 w-9 shrink-0"
+            onStateChange={setAudioRecState}
           />
-        </div>
+        )}
 
-        {!noteMode ? (
-          <AudioRecorderButton conversationId={conversationId} className="h-9 w-9 shrink-0" />
-        ) : null}
-        <ButtonGlass
-          type="submit"
-          variant="primary"
-          size="icon"
-          title={noteMode ? "Salvar nota" : "Enviar"}
-          className="h-9 w-9 shrink-0"
-          disabled={!value.trim() || sending || disabled}
-        >
-          <IconSend size={18} />
-        </ButtonGlass>
+        {/* Botão enviar — oculto durante gravação (AudioRecorderButton tem o seu próprio) */}
+        {!isAudioActive && (
+          <ButtonGlass
+            type="submit"
+            variant="primary"
+            size="icon"
+            title={noteMode ? "Salvar nota" : "Enviar"}
+            className="h-9 w-9 shrink-0"
+            disabled={!value.trim() || sending || disabled}
+          >
+            <IconSend size={18} />
+          </ButtonGlass>
+        )}
       </form>
     </div>
   );

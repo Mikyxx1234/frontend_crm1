@@ -12,7 +12,7 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
 import { ContactAside } from "@/components/crm/contact-aside";
-import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
+import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
 import {
@@ -103,10 +103,14 @@ export default function InboxV2ClientPage({
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
-  // ── Largura da coluna de conversas (persistida) ────────────────
+  // ── Largura das colunas (persistidas) ─────────────────────────
   const [convWidth, setConvWidth] = usePersistentWidth(
     "inbox-v2:conv-width",
     320,
+  );
+  const [asideWidth, setAsideWidth] = usePersistentWidth(
+    "inbox-v2:aside-width",
+    340,
   );
 
   // ── Estado de UI local ─────────────────────────────────────────
@@ -288,7 +292,7 @@ export default function InboxV2ClientPage({
       filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
-        count: tabCounts?.[t.id] ?? null,
+        count: tabCounts?.[t.id] ?? undefined,
       }))}
       activeTabIndex={TABS.findIndex((t) => t.id === tab)}
       onTabChange={(idx) => {
@@ -302,17 +306,6 @@ export default function InboxV2ClientPage({
       hasMore={hasNextPage}
       isLoadingMore={isFetchingNextPage}
       renderCardSlots={(c) => ({
-        tagsSlot: (
-          <TagsPopover
-            conversationId={c.id}
-            currentTags={(c.tags ?? []).map((t) => ({
-              id: t.id,
-              name: t.name,
-              color: t.color ?? null,
-            }))}
-            triggerVariant="icon"
-          />
-        ),
         assigneeSlot: (
           <RequirePermission
             permission="conversation:reassign_others"
@@ -519,17 +512,15 @@ export default function InboxV2ClientPage({
         tagsNode={tagsNode}
         collapsed={asideCollapsed}
         onToggleCollapse={() => setAsideCollapsed((v) => !v)}
-        contactEditNode={
-          activeContactId ? (
-            <ContactEditDialog
-              contactId={activeContactId}
-              initial={{
-                name: contactDetail?.name ?? activeRow.contact?.name ?? "",
-                email: contactDetail?.email ?? null,
-                phone: contactDetail?.phone ?? activeRow.contact?.phone ?? null,
-              }}
-            />
-          ) : undefined
+        contactFieldConfigSlot={
+          <RequirePermission permission="settings:custom_fields">
+            <FieldConfigPanel entities={["contact"]} context="inbox_lead_v2" />
+          </RequirePermission>
+        }
+        dealFieldConfigSlot={
+          <RequirePermission permission="settings:custom_fields">
+            <FieldConfigPanel entities={["deal"]} context="inbox_lead_v2" />
+          </RequirePermission>
         }
       />
     ) : (
@@ -580,11 +571,20 @@ export default function InboxV2ClientPage({
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
-            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "44px" : "340px"}` }}
+            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}` }}
           >
             {conversationColumnNode}
             {chatNode}
-            {asideNode}
+            <div className="relative min-h-0 overflow-hidden">
+              <ColumnResizer
+                direction="left"
+                value={asideWidth}
+                onChange={setAsideWidth}
+                min={280}
+                max={560}
+              />
+              {asideNode}
+            </div>
           </div>
         </div>
         {templateModalNode}
@@ -597,14 +597,23 @@ export default function InboxV2ClientPage({
     <div
       className="v2-screen grid gap-4 p-4"
       style={{
-        // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 fixa.
-        gridTemplateColumns: `72px ${convWidth}px 1fr ${asideCollapsed ? "44px" : "340px"}`,
+        // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
+        gridTemplateColumns: `72px ${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}`,
       }}
     >
       {navRailNode}
       {conversationColumnNode}
       {chatNode}
-      {asideNode}
+      <div className="relative min-h-0 overflow-hidden">
+        <ColumnResizer
+          direction="left"
+          value={asideWidth}
+          onChange={setAsideWidth}
+          min={280}
+          max={560}
+        />
+        {asideNode}
+      </div>
       {templateModalNode}
     </div>
   );

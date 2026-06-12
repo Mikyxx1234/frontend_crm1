@@ -26,6 +26,11 @@ interface ColumnResizerProps {
   min?: number;
   /** Largura máxima permitida. Default 520. */
   max?: number;
+  /**
+   * "right" (padrão): alça ancora à direita do container — para colunas esquerdas.
+   * "left": alça ancora à esquerda e inverte o delta — para colunas direitas.
+   */
+  direction?: "right" | "left";
   className?: string;
 }
 
@@ -34,6 +39,7 @@ export function ColumnResizer({
   onChange,
   min = 240,
   max = 520,
+  direction = "right",
   className,
 }: ColumnResizerProps) {
   const [dragging, setDragging] = useState(false);
@@ -54,7 +60,9 @@ export function ColumnResizer({
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: PointerEvent) => {
-      const delta = e.clientX - startXRef.current;
+      const raw = e.clientX - startXRef.current;
+      // Para coluna direita: arrastar para a ESQUERDA (delta negativo) aumenta a largura.
+      const delta = direction === "left" ? -raw : raw;
       const next = Math.min(max, Math.max(min, startValueRef.current + delta));
       onChange(next);
     };
@@ -73,7 +81,7 @@ export function ColumnResizer({
       document.body.style.cursor = prevCursor;
       document.body.style.userSelect = prevSelect;
     };
-  }, [dragging, min, max, onChange]);
+  }, [dragging, direction, min, max, onChange]);
 
   return (
     <button
@@ -81,7 +89,8 @@ export function ColumnResizer({
       aria-label="Redimensionar coluna"
       onPointerDown={onPointerDown}
       className={cn(
-        "group absolute -right-[6px] top-0 z-20 flex h-full w-3 cursor-col-resize items-center justify-center",
+        "group absolute top-0 z-20 flex h-full w-3 cursor-col-resize items-center justify-center",
+        direction === "left" ? "-left-[6px]" : "-right-[6px]",
         className,
       )}
     >

@@ -117,7 +117,7 @@ export function ActivitiesWeeklySummary({ items }: ActivitiesWeeklySummaryProps)
         </div>
         <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-2.5">
           <p className="font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-            Taxa de conclusão
+            Taxa de Foco
           </p>
           <p className="mt-0.5 font-display text-[18px] font-bold text-[var(--brand-primary)]">
             {rate}%

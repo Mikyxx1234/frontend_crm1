@@ -695,3 +695,13 @@
 [data-radix-popper-content-wrapper] {
   z-index: 10001 !important;
 }
+
+/* ── Animação das barras do gravador de áudio (AudioRecorderButton) ── */
+@keyframes audioWave {
+  0%   { transform: scaleY(0.35); opacity: 0.55; }
+  100% { transform: scaleY(1);    opacity: 1;    }
+}
+.audio-wave-bar {
+  animation: audioWave 0.6s ease-in-out infinite alternate;
+  transform-origin: center;
+}

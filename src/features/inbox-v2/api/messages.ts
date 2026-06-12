@@ -3,7 +3,7 @@
  * Espelham as linhas 15-22, 28-31, 49-50 do contrato Fase 1.
  */
 
-import { apiUrl } from "@/lib/api";
+import { apiUrl, parseApiResponse } from "@/lib/api";
 
 import type {
   InboxMessageDto,
@@ -48,13 +48,10 @@ export async function sendMessage(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(
-      typeof data?.message === "string" ? data.message : "Erro ao enviar mensagem",
-    );
-  }
-  return data as { message: InboxMessageDto; metaError?: string };
+  return parseApiResponse<{ message: InboxMessageDto; metaError?: string }>(
+    res,
+    "Erro ao enviar mensagem",
+  );
 }
 
 /** POST /api/conversations/:id/attachments — multipart/form-data */
@@ -164,13 +161,7 @@ export async function sendTemplate(
       ...(vars.templateGraphId ? { templateGraphId: vars.templateGraphId } : {}),
     }),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(
-      typeof data?.message === "string" ? data.message : "Erro ao enviar template",
-    );
-  }
-  return data as { message: InboxMessageDto };
+  return parseApiResponse<{ message: InboxMessageDto }>(res, "Erro ao enviar template");
 }
 
 /** POST /api/media/transcribe */

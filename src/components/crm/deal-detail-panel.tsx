@@ -1,12 +1,19 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+} from "@hello-pangea/dnd"
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconArrowLeft,
   IconChevronDown,
   IconDotsVertical,
+  IconGripVertical,
   IconSearch,
   IconPlus,
   IconPencil,
@@ -18,10 +25,21 @@ import {
   IconMoodSmile,
   IconMicrophone,
   IconSend,
+  IconSettings,
+  IconX,
 } from "@tabler/icons-react"
+import { useSectionOrder } from "@/hooks/use-section-order"
 import { BadgeGlass } from "./badge-glass"
+
+// ─── Ordem das seções da sidebar ──────────────────────────────────
+type SidebarSection = "principal" | "contato" | "campos"
+const SIDEBAR_DEFAULT_ORDER: SidebarSection[] = ["principal", "contato", "campos"]
+const SIDEBAR_STORAGE_KEY = "crm:deal-detail:sidebar-order"
 import { ChatArea } from "./chat-area"
 import { type Message } from "./message-bubble"
+import { resolveHighlight, SEVERITY_COLORS } from "@/lib/highlight"
+import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
+import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
 
 interface DealOwner {
   initials: string
@@ -31,6 +49,12 @@ interface DealOwner {
 
 export interface DealDetail {
   id: string
+  /** Número sequencial do deal por organização (1, 2, 3…). */
+  number?: number | null
+  /** ID do contato vinculado ao deal (necessário para editar campos do contato inline). */
+  contactId?: string | null
+  /** Número sequencial do contato por organização. */
+  contactNumber?: number | null
   name: string
   initials: string
   avatarColor: string
@@ -59,7 +83,6 @@ interface DealDetailPanelProps {
   contactEditSlot?: React.ReactNode
   ownerSlot?: React.ReactNode
   sourceSlot?: React.ReactNode
-  forecastSlot?: React.ReactNode
   tagsSlot?: React.ReactNode
   /**
    * Slots para conteudo dinamico do painel de chat. Quando passados,
@@ -80,8 +103,32 @@ interface DealDetailPanelProps {
    * Campos personalizados reais do negócio.
    * Quando fornecido, substitui os rótulos hardcoded (FIELD_GROUPS).
    * Cada item: { fieldId, label, value } — value nulo exibe "—".
+   * `highlightRules` opcional: regras de formatação condicional (JSON cru).
+   * `entityType` + `entityId`: entidade dona do valor (para edição inline).
+   * `options`: opções de um campo SELECT.
    */
-  customFieldsSlot?: { fieldId: string; label: string; value: string | null }[]
+  customFieldsSlot?: {
+    fieldId: string;
+    label: string;
+    value: string | null;
+    type?: string;
+    options?: string[];
+    entityType?: "contact" | "deal";
+    entityId?: string;
+    highlightRules?: unknown[] | null;
+    /** Highlight já resolvido pelo backend — preferir sobre re-resolver. */
+    highlight?: { severity: string; label: string } | null;
+  }[]
+  /**
+   * Painel de configuração de campos (FieldConfigPanel).
+   * Quando fornecido, exibe um botão de engrenagem na sidebar que
+   * alterna para o modo de configuração. Visível apenas para admin/manager.
+   */
+  fieldConfigSlot?: React.ReactNode
+  /** Slot de configuração de campos de contato (split do fieldConfigSlot). */
+  contactFieldConfigSlot?: React.ReactNode
+  /** Slot de configuração de campos de negócio (split do fieldConfigSlot). */
+  dealFieldConfigSlot?: React.ReactNode
   /**
    * Dropdown de troca de fase montado externamente (ex.: StagePicker glass).
    * Quando fornecido, substitui o bloco "Funil de vendas / nome da fase" da sidebar.
@@ -116,17 +163,37 @@ export function DealDetailPanel({
   contactEditSlot,
   ownerSlot,
   sourceSlot,
-  forecastSlot,
   tagsSlot,
   messagesSlot,
   composerSlot,
   sessionAlertSlot,
   tabContentOverride,
   customFieldsSlot,
+  fieldConfigSlot,
+  contactFieldConfigSlot,
+  dealFieldConfigSlot,
   stageDropdownSlot,
   funnelSegments,
 }: DealDetailPanelProps) {
+  // Retrocompatibilidade: split slots sobrepõem o legado fieldConfigSlot
+  const resolvedContactConfig = contactFieldConfigSlot ?? fieldConfigSlot ?? null;
+  const resolvedDealConfig = dealFieldConfigSlot ?? null;
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
+  const [configOpen, setConfigOpen] = useState(false)
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
+  // Optimistic updates para campos nativos do deal
+  const [dealNative, setDealNative] = useState<Record<string, string>>({})
+  // Modo edição para campos personalizados do negócio
+  const [dealCustomEditMode, setDealCustomEditMode] = useState(false)
+  const [sectionOrder, reorderSections] = useSectionOrder<SidebarSection>(
+    SIDEBAR_STORAGE_KEY,
+    SIDEBAR_DEFAULT_ORDER,
+  )
+
+  function handleSidebarDragEnd(result: DropResult) {
+    if (!result.destination) return
+    reorderSections(result.source.index, result.destination.index)
+  }
 
   // ESC fecha o painel quando esta aberto. Ignora se algum input/
   // textarea/contenteditable estiver focado para nao atrapalhar
@@ -217,7 +284,13 @@ export function DealDetailPanel({
                 {contactEditSlot}
               </div>
               <div className="mt-px font-display text-xs text-[var(--text-muted)]">
-                #{deal.id} · {deal.phone || "+55 11 98702-3902"}
+                {deal.contactNumber != null
+                  ? `#${deal.contactNumber}`
+                  : deal.number != null
+                    ? `#${deal.number}`
+                    : `#${deal.id.slice(-6).toUpperCase()}`}
+                {" · "}
+                {deal.phone || "+55 11 98702-3902"}
               </div>
             </div>
           </div>
@@ -248,9 +321,41 @@ export function DealDetailPanel({
           >
             {/* Cabeçalho fixo: identificador + funil de vendas segmentado */}
             <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-[22px] pb-4 pt-[18px]">
-              <h2 className="truncate font-display text-[16px] font-bold tracking-tight text-[var(--text-primary)]">
-                Lead #{deal.id.slice(-6).toUpperCase()}
-              </h2>
+              {/* Linha do título: nome do deal + tags inline + gear */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                  <h2 className="shrink-0 font-display text-[16px] font-bold tracking-tight text-[var(--text-primary)]">
+                    Lead #{deal.number ?? deal.id.slice(-6).toUpperCase()}
+                  </h2>
+                  {/* Tags inline com o título */}
+                  {tagsSlot ?? (
+                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[var(--glass-border)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                      <IconPlus size={10} />
+                      Tags
+                    </span>
+                  )}
+                </div>
+                {(resolvedContactConfig || resolvedDealConfig) && (
+                  <TooltipGlass
+                    label={configOpen ? "Voltar aos campos" : "Configurar campos"}
+                    side="left"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setConfigOpen((v) => !v)}
+                      aria-label={configOpen ? "Voltar aos campos" : "Configurar campos"}
+                      className={cn(
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+                        configOpen
+                          ? "bg-[var(--brand-primary)] text-white"
+                          : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      {configOpen ? <IconX size={14} /> : <IconSettings size={14} />}
+                    </button>
+                  </TooltipGlass>
+                )}
+              </div>
 
               <div className="mt-3.5">
                 <div className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -304,77 +409,205 @@ export function DealDetailPanel({
                   </div>
                 )}
               </div>
+
+              {/* Responsável — clicável para alterar */}
+              <div className="mt-3.5 flex items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-3">
+                <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                  Responsável
+                </span>
+                {ownerSlot ?? (
+                  <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1 font-display text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+                  >
+                    {deal.owner?.name || "Sem responsável"}
+                    <IconChevronDown size={11} />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Conteúdo rolável: lista densa de campos */}
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-[22px] py-4">
-              <div className="flex min-w-0 flex-col gap-5">
-                {/* Principal */}
-                <FieldCard>
-                  <FieldRow
-                    label="Responsável"
-                    valueNode={
-                      ownerSlot ?? (
-                        <span className="inline-flex cursor-pointer items-center gap-1.5 font-display text-[13px] font-bold italic text-[var(--text-muted)]">
-                          {deal.owner?.name || "Sem responsável"}
-                          <IconChevronDown size={12} />
-                        </span>
-                      )
-                    }
-                  />
-                  <FieldRow label="Venda" value={formatMoney(deal.value)} money />
-                  <FieldRow
-                    label="Origem"
-                    valueNode={sourceSlot ?? <PlaceholderValue text="Adicionar" />}
-                  />
-                  <FieldRow
-                    label="Previsão"
-                    valueNode={forecastSlot ?? <PlaceholderValue text="Indefinida" />}
-                  />
-                  <FieldRow
-                    label="Tags"
-                    isLast
-                    valueNode={
-                      tagsSlot ?? (
-                        <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[var(--glass-border)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
-                          <IconPlus size={10} />
-                          Adicionar
-                        </span>
-                      )
-                    }
-                  />
-                </FieldCard>
-
-                {/* Dados de Contato */}
-                <FieldCard title="Dados de Contato">
-                  <FieldRow
-                    label="Telefone"
-                    valueNode={
-                      <a
-                        href={deal.phone ? `tel:${deal.phone}` : undefined}
-                        className="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+              {configOpen && (resolvedContactConfig || resolvedDealConfig) ? (
+                <div className="flex min-w-0 flex-col gap-3">
+                  {resolvedContactConfig}
+                  {resolvedDealConfig}
+                </div>
+              ) : (
+                <DragDropContext onDragEnd={handleSidebarDragEnd}>
+                  <Droppable droppableId="sidebar-sections">
+                    {(droppableProvided) => (
+                      <div
+                        ref={droppableProvided.innerRef}
+                        {...droppableProvided.droppableProps}
+                        className="flex min-w-0 flex-col gap-5"
                       >
-                        {deal.phone || "—"}
-                      </a>
-                    }
-                  />
-                  <FieldRow label="Email" value={deal.email ?? undefined} isLast />
-                </FieldCard>
+                        {sectionOrder.map((sectionId, index) => {
+                          if (sectionId === "campos" && (!customFieldsSlot || customFieldsSlot.length === 0)) return null
+                          return (
+                            <Draggable key={sectionId} draggableId={sectionId} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={cn(
+                                    "group/section",
+                                    snapshot.isDragging && "z-50 opacity-90",
+                                  )}
+                                >
+                                  {sectionId === "principal" && (
+                                    <FieldCard
+                                      dragHandleProps={provided.dragHandleProps ?? undefined}
+                                      dragLabel="Arraste o bloco principal"
+                                    >
+                                      <FieldRow
+                                        label="Origem"
+                                        isLast
+                                        valueNode={sourceSlot ?? <PlaceholderValue text="Adicionar" />}
+                                      />
+                                    </FieldCard>
+                                  )}
 
-                {/* Campos do negócio — dados reais via customFieldsSlot */}
-                {customFieldsSlot && customFieldsSlot.length > 0 && (
-                  <FieldCard title="Campos do negócio">
-                    {customFieldsSlot.map((field, i) => (
-                      <FieldRow
-                        key={field.fieldId}
-                        label={field.label}
-                        value={field.value ?? undefined}
-                        isLast={i === customFieldsSlot.length - 1}
-                      />
-                    ))}
-                  </FieldCard>
-                )}
-              </div>
+                                  {sectionId === "contato" && (
+                                    <FieldCard
+                                      title="Dados de Contato"
+                                      dragHandleProps={provided.dragHandleProps ?? undefined}
+                                    >
+                                      <FieldRow
+                                        label="Telefone"
+                                        valueNode={
+                                          deal.contactId ? (
+                                            <InlineNativeEditor
+                                              value={dealNative["phone"] ?? deal.phone}
+                                              entityType="contact"
+                                              entityId={deal.contactId}
+                                              fieldKey="phone"
+                                              inputType="tel"
+                                              placeholder="Adicionar telefone"
+                                              invalidateKeys={[["contact-sidebar", deal.contactId]]}
+                                              onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))}
+                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                            />
+                                          ) : (
+                                            <a
+                                              href={deal.phone ? `tel:${deal.phone}` : undefined}
+                                              className="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                            >
+                                              {deal.phone || "—"}
+                                            </a>
+                                          )
+                                        }
+                                      />
+                                      <FieldRow
+                                        label="Email"
+                                        isLast
+                                        valueNode={
+                                          deal.contactId ? (
+                                            <InlineNativeEditor
+                                              value={dealNative["email"] ?? (deal.email ?? undefined)}
+                                              entityType="contact"
+                                              entityId={deal.contactId}
+                                              fieldKey="email"
+                                              inputType="email"
+                                              placeholder="Adicionar e-mail"
+                                              invalidateKeys={[["contact-sidebar", deal.contactId]]}
+                                              onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))}
+                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                            />
+                                          ) : (
+                                            <span className="font-display text-[13px] font-bold text-[var(--brand-primary)]">
+                                              {deal.email || "—"}
+                                            </span>
+                                          )
+                                        }
+                                      />
+                                    </FieldCard>
+                                  )}
+
+                                  {sectionId === "campos" && customFieldsSlot && customFieldsSlot.length > 0 && (
+                                    <FieldCard
+                                      title="Campos do negócio"
+                                      dragHandleProps={provided.dragHandleProps ?? undefined}
+                                      titleActions={
+                                        <button
+                                          type="button"
+                                          onClick={() => setDealCustomEditMode((v) => !v)}
+                                          title={dealCustomEditMode ? "Sair do modo edição" : "Editar campos"}
+                                          className={cn(
+                                            "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                                            dealCustomEditMode
+                                              ? "bg-[var(--brand-primary)] text-white"
+                                              : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                          )}
+                                        >
+                                          {dealCustomEditMode ? <IconX size={12} /> : <IconPencil size={12} />}
+                                        </button>
+                                      }
+                                    >
+                                      {customFieldsSlot.map((field, i) => {
+                                        const currentValue = fieldValues[field.fieldId] ?? field.value
+                                        const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                        const canEdit = !!field.entityType && !!field.entityId
+                                        return (
+                                          <FieldRow
+                                            key={field.fieldId}
+                                            label={field.label}
+                                            value={(!hl && !canEdit && !dealCustomEditMode) ? (currentValue ?? undefined) : undefined}
+                                            valueNode={
+                                              /* Modo edição: sempre mostra editor, ignorando badge */
+                                              dealCustomEditMode && canEdit ? (
+                                                <InlineFieldEditor
+                                                  fieldId={field.fieldId}
+                                                  fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                  fieldOptions={field.options ?? []}
+                                                  value={currentValue ?? null}
+                                                  entityType={field.entityType!}
+                                                  entityId={field.entityId!}
+                                                  editMode={dealCustomEditMode}
+                                                  invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                  onSaved={(v) =>
+                                                    setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                  }
+                                                  textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                                  placeholder="— Adicionar"
+                                                />
+                                              ) : hl ? (
+                                                <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                              ) : canEdit ? (
+                                                <InlineFieldEditor
+                                                  fieldId={field.fieldId}
+                                                  fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                  fieldOptions={field.options ?? []}
+                                                  value={currentValue ?? null}
+                                                  entityType={field.entityType!}
+                                                  entityId={field.entityId!}
+                                                  invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                  onSaved={(v) =>
+                                                    setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                  }
+                                                  textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                                  placeholder="— Adicionar"
+                                                />
+                                              ) : undefined
+                                            }
+                                            isLast={i === customFieldsSlot.length - 1}
+                                          />
+                                        )
+                                      })}
+                                    </FieldCard>
+                                  )}
+                                </div>
+                              )}
+                            </Draggable>
+                          )
+                        })}
+                        {droppableProvided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              )}
             </div>
           </aside>
 
@@ -508,17 +741,70 @@ function SubLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** Cartão branco que agrupa uma lista densa de FieldRow (estilo Kommo). */
+/** Badge colorido de destaque para campos com formatação condicional. */
+function HighlightBadge({
+  severity,
+  label,
+}: {
+  severity: "danger" | "success" | "warning" | "info"
+  label: string
+}) {
+  const colors = SEVERITY_COLORS[severity]
+  return (
+    <span
+      style={{
+        backgroundColor: colors.bg,
+        color: colors.text,
+        border: `1px solid ${colors.border}`,
+      }}
+      className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
+    >
+      {label}
+    </span>
+  )
+}
+
+/** Cartão que agrupa uma lista densa de FieldRow (estilo Kommo).
+ *  Quando `dragHandleProps` é fornecido, exibe alça de arraste no header. */
 function FieldCard({
   title,
+  dragLabel,
+  dragHandleProps,
+  titleActions,
   children,
 }: {
   title?: string
+  /** Texto acessível para a alça quando não há título. */
+  dragLabel?: string
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>
+  /** Ações extras no cabeçalho (botões, ícones). */
+  titleActions?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section>
-      {title && <SubLabel>{title}</SubLabel>}
+      {/* Header com título + alça de arraste */}
+      <div className="mb-2 flex items-center gap-1">
+        {dragHandleProps && (
+          <span
+            {...dragHandleProps}
+            className="flex cursor-grab items-center rounded p-0.5 text-[var(--text-muted)] opacity-0 transition-opacity group-hover/section:opacity-50 hover:opacity-100 active:cursor-grabbing"
+            aria-label={dragLabel ?? `Arrastar bloco ${title ?? ""}`}
+          >
+            <IconGripVertical size={12} />
+          </span>
+        )}
+        {title && (
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            {title}
+          </span>
+        )}
+        {titleActions && (
+          <div className="ml-auto flex items-center gap-1">
+            {titleActions}
+          </div>
+        )}
+      </div>
       <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4">
         {children}
       </div>

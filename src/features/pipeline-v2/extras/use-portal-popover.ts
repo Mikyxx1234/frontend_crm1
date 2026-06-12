@@ -50,19 +50,43 @@ export function usePortalPopover(): PortalPopoverState {
 
   // Click-outside: ignora cliques no trigger OU no popover (ambos
   // sao agora "donos" do popover, em DOMs diferentes via portal).
+  // Usa capture:true para interceptar ANTES dos handlers do Radix, evitando
+  // que a camada de bloqueio de pointer-events do DropdownMenu (modal=true)
+  // seja interpretada como "clique fora".
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
       const t = e.target as Node;
-      // Ignora cliques dentro de portais do Radix (DropdownMenu/Select/
-      // Popover) que renderizam FORA do popoverRef. Sem isso, selecionar
-      // uma opção de um dropdown aninhado fecharia o popover inteiro.
-      if (
-        t instanceof Element &&
-        t.closest("[data-radix-popper-content-wrapper]")
-      ) {
-        return;
+
+      // Ignora elementos que foram removidos do DOM antes deste handler
+      // rodar (ex: Radix fecha seu portal antes do mousedown borbulhar).
+      if (!document.contains(t)) return;
+
+      // Resolve o Element mais próximo — e.target pode ser um Text node
+      // quando o usuário clica no texto de um item (ex: opção de dropdown
+      // Radix). Sem isso, instanceof Element falha e o guard abaixo nunca
+      // roda, causando o fechamento indevido do popover.
+      const el: Element | null =
+        t instanceof Element ? t : (t as Node).parentElement;
+
+      // Ignora cliques dentro de QUALQUER portal do Radix (DropdownMenu,
+      // Select, Tooltip, Popover…). O atributo data-radix-portal está
+      // presente em todos os containers de portal do Radix, cobrindo
+      // também casos onde a camada de bloqueio (modal=true) intercepta
+      // o evento antes dos elementos reais.
+      if (el) {
+        if (
+          el.closest("[data-radix-portal]") ||
+          el.closest("[data-radix-popper-content-wrapper]") ||
+          el.closest("[data-radix-select-viewport]") ||
+          el.closest("[data-radix-dropdown-menu-content]") ||
+          el.closest("[role='listbox']") ||
+          el.closest("[role='menu']")
+        ) {
+          return;
+        }
       }
+
       if (
         triggerRef.current &&
         !triggerRef.current.contains(t) &&
@@ -72,8 +96,10 @@ export function usePortalPopover(): PortalPopoverState {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    // capture:true garante que este handler roda ANTES dos listeners do Radix,
+    // permitindo verificar o alvo original antes de qualquer re-montagem do DOM.
+    document.addEventListener("mousedown", onClickOutside, true);
+    return () => document.removeEventListener("mousedown", onClickOutside, true);
   }, [open]);
 
   return { open, rect, triggerRef, popoverRef, toggle, close };

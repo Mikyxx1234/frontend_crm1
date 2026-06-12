@@ -23,6 +23,8 @@ export interface BoardDealDto {
   priority?: "HIGH" | "MEDIUM" | "LOW";
   contact: {
     id: string;
+    /** Número sequencial do contato por org (1, 2, 3…). */
+    number?: number | null;
     name: string;
     email: string | null;
     phone?: string | null;

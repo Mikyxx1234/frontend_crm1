@@ -37,6 +37,8 @@ interface DropdownGlassProps {
   menuLabel?: string
   className?: string
   triggerClassName?: string
+  /** Classes adicionais para cada item da lista */
+  itemClassName?: string
   disabled?: boolean
 }
 
@@ -62,12 +64,13 @@ export function DropdownGlass({
   menuLabel,
   className,
   triggerClassName,
+  itemClassName,
   disabled,
 }: DropdownGlassProps) {
   const selected = options.find((o) => o.value === value)
 
   return (
-    <DropdownPrimitive.Root>
+    <DropdownPrimitive.Root modal={false}>
       {/*
        * suppressHydrationWarning: o Radix usa useId internamente para
        * o atributo id="radix-..." do trigger. Em árvores onde algo acima
@@ -141,6 +144,7 @@ export function DropdownGlass({
                   isSelected && "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
                   option.danger &&
                     "text-[var(--color-danger)] data-[highlighted]:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] data-[highlighted]:text-[var(--color-danger)]",
+                  itemClassName,
                 )}
               >
                 {option.icon && (

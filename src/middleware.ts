@@ -184,7 +184,8 @@ export async function middleware(req: NextRequest) {
         );
       }
       const loginUrl = new URL("/login", req.nextUrl.origin);
-      loginUrl.searchParams.set("callbackUrl", pathname);
+      const fullPath = pathname + (req.nextUrl.search ?? "");
+      loginUrl.searchParams.set("callbackUrl", fullPath);
       return withSecurityHeaders(NextResponse.redirect(loginUrl));
     }
 

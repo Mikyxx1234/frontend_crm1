@@ -331,7 +331,7 @@ export function Composer({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
               noteMode
-                ? "border border-warning/40 bg-warning/10 text-warning shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+                ? "border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
                 : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
             )}
           >
@@ -437,11 +437,7 @@ export function Composer({
 
       <form
         onSubmit={handleSubmit}
-        className={`flex items-center gap-2 rounded-[var(--radius-2xl)] border px-[18px] py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)] ${
-          noteMode
-            ? "border-warning/45 bg-warning-soft"
-            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]"
-        }`}
+        className="flex items-center gap-2 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-[18px] py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)]"
       >
         {/* Controles padrão — ocultos durante gravação de áudio */}
         {!isAudioActive && (
@@ -516,10 +512,7 @@ export function Composer({
             variant="primary"
             size="icon"
             title={noteMode ? "Salvar nota" : "Enviar"}
-            className={cn(
-              "h-9 w-9 shrink-0",
-              noteMode && "bg-warning shadow-[0_4px_14px_rgba(234,179,8,0.35)] hover:brightness-95",
-            )}
+            className="h-9 w-9 shrink-0"
             disabled={!value.trim() || sending || disabled}
           >
             <IconSend size={18} />

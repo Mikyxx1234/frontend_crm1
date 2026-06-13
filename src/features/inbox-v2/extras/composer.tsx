@@ -7,6 +7,7 @@ import {
   IconSend,
   IconMoodSmile,
   IconLock,
+  IconMessage,
   IconSignature,
   IconPencil,
   IconCheck,
@@ -308,6 +309,38 @@ export function Composer({
         </div>
       )}
 
+      {/* ── Tab selector: Mensagem / Nota interna ── */}
+      {onSendNote && (
+        <div className="mb-2 flex items-center gap-1.5 px-0.5">
+          <button
+            type="button"
+            onClick={() => setNoteMode(false)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+              !noteMode
+                ? "border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+            )}
+          >
+            <IconMessage size={13} />
+            Mensagem
+          </button>
+          <button
+            type="button"
+            onClick={() => setNoteMode(true)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+              noteMode
+                ? "border border-warning/40 bg-warning/10 text-warning shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+            )}
+          >
+            <IconLock size={13} />
+            Nota interna
+          </button>
+        </div>
+      )}
+
       {/* Barra de assinatura do agente — só no modo mensagem (não em nota) */}
       {!noteMode ? (
         <div className="mb-1.5 flex items-center gap-2 px-2">
@@ -483,7 +516,10 @@ export function Composer({
             variant="primary"
             size="icon"
             title={noteMode ? "Salvar nota" : "Enviar"}
-            className="h-9 w-9 shrink-0"
+            className={cn(
+              "h-9 w-9 shrink-0",
+              noteMode && "bg-warning shadow-[0_4px_14px_rgba(234,179,8,0.35)] hover:brightness-95",
+            )}
             disabled={!value.trim() || sending || disabled}
           >
             <IconSend size={18} />

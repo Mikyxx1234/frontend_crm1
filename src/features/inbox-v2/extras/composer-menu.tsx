@@ -163,22 +163,7 @@ export function ComposerMenu({
                 <IconBolt size={15} /> Executar automação
               </button>
 
-              {onToggleNote ? (
-                <>
-                  <div className="my-1 h-px bg-border/60" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onToggleNote();
-                      closeMenu();
-                    }}
-                    className={itemClass}
-                  >
-                    <IconLock size={15} />
-                    {noteMode ? "Sair do modo nota" : "Nota interna"}
-                  </button>
-                </>
-              ) : null}
+              {/* Nota interna removida do menu: agora é tab no composer */}
 
               <button
                 type="button"

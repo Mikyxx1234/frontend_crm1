@@ -26,7 +26,6 @@ import {
   IconPencil,
   IconPlus,
   IconSettings,
-  IconTrash,
   IconTrophy,
   IconUpload,
   IconX,
@@ -79,7 +78,6 @@ import {
   AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
-  DealDeleteButton,
   DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
@@ -147,13 +145,16 @@ export default function KanbanV2ClientPage({
   // refetch do server component a cada abrir/fechar. O estado React é a
   // fonte de renderização; a URL apenas espelha (e habilita compartilhar
   // o link + voltar/avançar do navegador via popstate).
-  const setActiveDeal = useCallback((id: string | null) => {
+  // setActiveDeal(id, num?) — id = CUID interno, num = número sequencial para a URL.
+  // A URL exibe o número legível (?deal=102); internamente usamos sempre o CUID.
+  const setActiveDeal = useCallback((id: string | null, num?: number | null) => {
     setActiveDealId(id);
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     if (id) {
-      if (url.searchParams.get("deal") === id) return;
-      url.searchParams.set("deal", id);
+      const urlVal = num != null ? String(num) : id;
+      if (url.searchParams.get("deal") === urlVal) return;
+      url.searchParams.set("deal", urlVal);
       window.history.pushState(window.history.state, "", url.toString());
     } else {
       if (!url.searchParams.has("deal")) return;
@@ -162,7 +163,9 @@ export default function KanbanV2ClientPage({
     }
   }, []);
 
-  // Inicializa a partir da URL no mount (abrir via link direto).
+  // Inicializa a partir da URL no mount.
+  // Aceita tanto número sequencial (?deal=102) quanto CUID (legado).
+  // O backend /api/deals/[id] já faz lookup por ambos.
   useEffect(() => {
     const d = new URL(window.location.href).searchParams.get("deal");
     if (d) setActiveDealId(d);
@@ -412,6 +415,20 @@ export default function KanbanV2ClientPage({
   const { data: dealDetail } = useDealDetail(activeDealId);
   const queryClient = useQueryClient();
 
+  // Quando dealDetail carrega via lookup por número sequencial (?deal=102),
+  // troca activeDealId para o CUID real (mutations usam CUID).
+  useEffect(() => {
+    if (
+      dealDetail?.id &&
+      activeDealId &&
+      /^\d+$/.test(activeDealId) &&
+      dealDetail.id !== activeDealId
+    ) {
+      setActiveDealId(dealDetail.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealDetail?.id]);
+
   // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
   // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
   const dealContactId = dealDetail?.contact?.id ?? null;
@@ -574,7 +591,10 @@ export default function KanbanV2ClientPage({
               <DroppableColumn
                 key={col.stageId}
                 column={col}
-                onDealClick={setActiveDeal}
+                onDealClick={(id) => {
+                  const raw = dealById.get(id);
+                  setActiveDeal(id, raw?.number ?? null);
+                }}
                 dealById={dealById}
                 pipelineId={pipelineId}
                 statusFilter={status}
@@ -729,28 +749,7 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        deleteSlot={
-          activeDealId ? (
-            <DealDeleteButton
-              dealId={activeDealId}
-              pipelineId={pipelineId}
-              statusFilter={status}
-              onDeleted={() => setActiveDeal(null)}
-              trigger={
-                <span
-                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8"
-                  style={{
-                    background: "var(--glass-bg-strong)",
-                    borderColor: "var(--glass-border)",
-                    boxShadow: "var(--glass-shadow-sm)",
-                  }}
-                >
-                  <IconTrash size={16} />
-                </span>
-              }
-            />
-          ) : undefined
-        }
+        deleteSlot={undefined}
         moreActionsSlot={
           activeDealId ? (
             <DealActionsMenu
@@ -760,16 +759,11 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
               onDeleted={() => setActiveDeal(null)}
               trigger={
-                <TooltipGlass label="Mais opções" side="bottom">
+                <TooltipGlass label="Mais opções" side="left">
                   <span
-                    className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
-                    style={{
-                      background: "var(--glass-bg-strong)",
-                      borderColor: "var(--glass-border)",
-                      boxShadow: "var(--glass-shadow-sm)",
-                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
                   >
-                    <IconDotsVertical size={16} />
+                    <IconDotsVertical size={14} />
                   </span>
                 </TooltipGlass>
               }

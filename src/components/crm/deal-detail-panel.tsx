@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   DragDropContext,
   Droppable,
@@ -159,7 +159,7 @@ export function DealDetailPanel({
   onClose,
   deal,
   moreActionsSlot,
-  deleteSlot,
+  deleteSlot: _deleteSlot,
   contactEditSlot,
   ownerSlot,
   sourceSlot,
@@ -180,6 +180,8 @@ export function DealDetailPanel({
   const resolvedDealConfig = dealFieldConfigSlot ?? null;
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
   const [configOpen, setConfigOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   // Optimistic updates para campos nativos do deal
   const [dealNative, setDealNative] = useState<Record<string, string>>({})
@@ -340,19 +342,6 @@ export function DealDetailPanel({
 
           {/* Espaço flex-1 para empurrar actions para a direita */}
           <div className="flex-1" />
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <PanelIconBtn title="Buscar">
-              <IconSearch size={16} />
-            </PanelIconBtn>
-            {deleteSlot}
-            {moreActionsSlot ?? (
-              <PanelIconBtn title="Mais">
-                <IconDotsVertical size={16} />
-              </PanelIconBtn>
-            )}
-          </div>
         </header>
 
         {/* 2 COLS: SIDEBAR + CONTENT */}
@@ -378,6 +367,10 @@ export function DealDetailPanel({
                     </span>
                   )}
                 </div>
+                <div className="flex shrink-0 items-center gap-1">
+                {/* Kebab (ações do deal) */}
+                {moreActionsSlot}
+                {/* Gear (configuração de campos) */}
                 {(resolvedContactConfig || resolvedDealConfig) && (
                   <TooltipGlass
                     label={configOpen ? "Voltar aos campos" : "Configurar campos"}
@@ -398,7 +391,8 @@ export function DealDetailPanel({
                     </button>
                   </TooltipGlass>
                 )}
-              </div>
+                </div>{/* fim flex shrink-0 (kebab + gear) */}
+              </div>{/* fim justify-between */}
 
               <div className="mt-3.5">
                 <div className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -671,7 +665,14 @@ export function DealDetailPanel({
               aria-label="Conversa"
               className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
             >
-              <TabsBar activeTab={activeTab} onChange={setActiveTab} />
+              <TabsBar
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                searchOpen={searchOpen}
+                searchQuery={searchQuery}
+                onSearchOpen={setSearchOpen}
+                onSearchChange={setSearchQuery}
+              />
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
@@ -714,45 +715,109 @@ export function DealDetailPanel({
 function TabsBar({
   activeTab,
   onChange,
+  searchOpen,
+  searchQuery,
+  onSearchOpen,
+  onSearchChange,
 }: {
   activeTab: TabId
   onChange: (id: TabId) => void
+  searchOpen?: boolean
+  searchQuery?: string
+  onSearchOpen?: (open: boolean) => void
+  onSearchChange?: (q: string) => void
 }) {
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
+
   return (
-    <header className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3">
-      <div className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-        {TABS.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.id
-          return (
+    <div className="shrink-0 border-b border-[var(--glass-border-subtle)]">
+      <header className="flex items-center gap-3 px-4 py-3">
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+          {TABS.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onChange(tab.id)}
+                className={cn(
+                  "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+                  isActive
+                    ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
+              >
+                <Icon size={14} />
+                {tab.label}
+                {tab.count !== undefined && (
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 font-display text-[10px] font-bold",
+                      isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Lupa: pesquisa dentro da aba ativa */}
+        {activeTab === "conversa" && onSearchOpen && (
+          <TooltipGlass label={searchOpen ? "Fechar busca" : "Buscar na conversa"} side="bottom">
             <button
-              key={tab.id}
               type="button"
-              onClick={() => onChange(tab.id)}
+              onClick={() => {
+                onSearchOpen(!searchOpen)
+                if (searchOpen) onSearchChange?.("")
+              }}
               className={cn(
-                "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
-                isActive
-                  ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+                searchOpen
+                  ? "bg-[var(--brand-primary)] text-white"
+                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]",
               )}
+              aria-label="Buscar na conversa"
             >
-              <Icon size={14} />
-              {tab.label}
-              {tab.count !== undefined && (
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 font-display text-[10px] font-bold",
-                    isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                  )}
-                >
-                  {tab.count}
-                </span>
-              )}
+              <IconSearch size={14} />
             </button>
-          )
-        })}
-      </div>
-    </header>
+          </TooltipGlass>
+        )}
+      </header>
+
+      {/* Barra de busca deslizante */}
+      {searchOpen && activeTab === "conversa" && (
+        <div className="flex items-center gap-2 border-t border-[var(--glass-border-subtle)] px-4 py-2">
+          <IconSearch size={14} className="shrink-0 text-[var(--text-muted)]" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Buscar na conversa…"
+            value={searchQuery ?? ""}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            className="flex-1 bg-transparent font-display text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange?.("")}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)]"
+            >
+              <IconX size={11} />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

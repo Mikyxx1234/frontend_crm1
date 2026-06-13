@@ -211,7 +211,50 @@ export function DealDetailPanel({
     return () => window.removeEventListener("keydown", onKey)
   }, [isOpen, onClose])
 
-  if (!deal) return null
+  // Enquanto isOpen=true mas o detail ainda está carregando (API assíncrona),
+  // mostra o frame do painel com skeleton para dar feedback imediato ao clique.
+  if (!deal) {
+    if (!isOpen) return null;
+    return (
+      <div
+        className="fixed inset-0 z-50 translate-x-0 transition-transform duration-300 ease-out"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--bg-base, #dde8f5) 0%, var(--bg-mesh-1, #b8cfec) 40%, var(--bg-mesh-2, #e8d5f0) 70%, var(--bg-base, #dde8f5) 100%)",
+          backgroundAttachment: "fixed",
+        }}
+      >
+        <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
+          <header className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-[22px] py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+            <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]">
+              <IconX size={18} />
+            </button>
+            <div className="h-9 w-9 animate-pulse rounded-full bg-[var(--glass-bg-strong)]" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-4 w-40 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
+              <div className="h-3 w-24 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
+            </div>
+          </header>
+          <div className="flex min-h-0 flex-1 gap-3.5">
+            <div className="flex w-[320px] shrink-0 flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-5 backdrop-blur-md">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-1">
+                  <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+                  <div className="h-4 w-full animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md">
+              <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-[var(--brand-primary)]" />
+                <span className="font-display text-[12px]">Carregando…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const currentStageIndex = deal.stage ? STAGES.indexOf(deal.stage) : 2
   const avatarClass = `av-${deal.avatarColor}`

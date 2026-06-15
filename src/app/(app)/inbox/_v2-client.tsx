@@ -28,6 +28,7 @@ import {
   toMessageBubble,
 } from "@/features/inbox-v2/adapters";
 import {
+  useConversationFeatures,
   useConversations,
   useContactSidebar,
   useInboxRealtime,
@@ -218,6 +219,7 @@ export default function InboxV2ClientPage({
   // ── Mutations ───────────────────────────────────────────────────
   const sendMessage = useSendMessage(activeId);
   const markRead = useMarkConversationRead();
+  const { features: convFeatures } = useConversationFeatures();
 
   function handleSelect(id: string) {
     setActiveId(id);
@@ -486,6 +488,8 @@ export default function InboxV2ClientPage({
             contactId={activeContactId}
             externalTemplate={externalTemplate}
             onExternalTemplateConsumed={() => setExternalTemplate(null)}
+            signatureAllowed={convFeatures.agentSignatureEnabled}
+            signatureEditable={convFeatures.agentSignatureEditable}
           />
         }
         notesSlot={notesSlot}

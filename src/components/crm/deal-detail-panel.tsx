@@ -27,7 +27,11 @@ import {
   IconSend,
   IconSettings,
   IconX,
+  IconCircleCheck,
+  IconCircleDashed,
 } from "@tabler/icons-react"
+import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
+import { RequirePermission } from "@/components/auth/require-permission"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { BadgeGlass } from "./badge-glass"
 
@@ -140,6 +144,10 @@ interface DealDetailPanelProps {
    * Se ausente, cai nos STAGES/FUNNEL_PALETTE hardcoded.
    */
   funnelSegments?: { id: string; name: string; color: string; position: number }[]
+  /** ID da conversa ativa vinculada ao deal — permite encerrar/reabrir pelo kebab da TabsBar. */
+  conversationId?: string | null
+  /** Estado de resolução da conversa — para mostrar "Encerrar" ou "Reabrir". */
+  isResolved?: boolean
 }
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
@@ -174,6 +182,8 @@ export function DealDetailPanel({
   dealFieldConfigSlot,
   stageDropdownSlot,
   funnelSegments,
+  conversationId,
+  isResolved,
 }: DealDetailPanelProps) {
   // Retrocompatibilidade: split slots sobrepõem o legado fieldConfigSlot
   const resolvedContactConfig = contactFieldConfigSlot ?? fieldConfigSlot ?? null;
@@ -672,6 +682,8 @@ export function DealDetailPanel({
                 searchQuery={searchQuery}
                 onSearchOpen={setSearchOpen}
                 onSearchChange={setSearchQuery}
+                conversationId={conversationId}
+                isResolved={isResolved}
               />
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
@@ -719,6 +731,8 @@ function TabsBar({
   searchQuery,
   onSearchOpen,
   onSearchChange,
+  conversationId,
+  isResolved,
 }: {
   activeTab: TabId
   onChange: (id: TabId) => void
@@ -726,97 +740,166 @@ function TabsBar({
   searchQuery?: string
   onSearchOpen?: (open: boolean) => void
   onSearchChange?: (q: string) => void
+  conversationId?: string | null
+  isResolved?: boolean
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const toggleResolve = useToggleConversationResolve()
 
+  /* Fecha kebab ao clicar fora */
+  useEffect(() => {
+    if (!menuOpen) return
+    function onOut(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener("mousedown", onOut)
+    return () => document.removeEventListener("mousedown", onOut)
+  }, [menuOpen])
+
+  /* Foca input ao abrir busca */
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus()
   }, [searchOpen])
 
+  const hasConversaActions = (activeTab === "conversa" && !!onSearchOpen) || !!conversationId
+
   return (
     <div className="shrink-0 border-b border-[var(--glass-border-subtle)]">
-      <header className="flex items-center gap-3 px-4 py-3">
-        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-          {TABS.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            return (
+      <header className="flex items-center gap-2 px-4 py-3">
+        {/* Tabs pill group — oculta enquanto busca está aberta */}
+        {!(searchOpen && activeTab === "conversa") && (
+          <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+            {TABS.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onChange(tab.id)}
+                  className={cn(
+                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+                    isActive
+                      ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                  )}
+                >
+                  <Icon size={14} />
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 font-display text-[10px] font-bold",
+                        isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Busca inline — ocupa o flex-1 quando aberta */}
+        {searchOpen && activeTab === "conversa" ? (
+          <div className="flex flex-1 items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-1.5">
+            <IconSearch size={13} className="shrink-0 text-[var(--text-muted)]" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Buscar na conversa…"
+              value={searchQuery ?? ""}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              className="flex-1 bg-transparent font-display text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+            />
+            {searchQuery && (
               <button
-                key={tab.id}
                 type="button"
-                onClick={() => onChange(tab.id)}
-                className={cn(
-                  "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
-                  isActive
-                    ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                )}
+                onClick={() => onSearchChange?.("")}
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)]"
               >
-                <Icon size={14} />
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 font-display text-[10px] font-bold",
-                      isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
-                    )}
-                  >
-                    {tab.count}
-                  </span>
-                )}
+                <IconX size={10} />
               </button>
-            )
-          })}
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Lupa: pesquisa dentro da aba ativa */}
-        {activeTab === "conversa" && onSearchOpen && (
-          <TooltipGlass label={searchOpen ? "Fechar busca" : "Buscar na conversa"} side="bottom">
+            )}
             <button
               type="button"
-              onClick={() => {
-                onSearchOpen(!searchOpen)
-                if (searchOpen) onSearchChange?.("")
-              }}
+              aria-label="Fechar busca"
+              onClick={() => { onSearchOpen?.(false); onSearchChange?.("") }}
+              className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+            >
+              <IconX size={12} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+
+        {/* Kebab de ações do header — lupa + encerrar conversa */}
+        {hasConversaActions && (
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              aria-label="Ações"
+              onClick={() => setMenuOpen((v) => !v)}
               className={cn(
                 "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
-                searchOpen
-                  ? "bg-[var(--brand-primary)] text-white"
-                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]",
+                menuOpen
+                  ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]",
               )}
-              aria-label="Buscar na conversa"
             >
-              <IconSearch size={14} />
+              <IconDotsVertical size={15} />
             </button>
-          </TooltipGlass>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full z-[200] mt-1.5 w-52 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+                {/* Buscar na conversa */}
+                {activeTab === "conversa" && onSearchOpen && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSearchOpen(!searchOpen)
+                      if (searchOpen) onSearchChange?.("")
+                      setMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-white/10"
+                  >
+                    <IconSearch size={14} className="shrink-0 text-[var(--text-muted)]" />
+                    {searchOpen ? "Fechar busca" : "Buscar na conversa"}
+                  </button>
+                )}
+
+                {/* Encerrar / Reabrir conversa */}
+                {conversationId && (
+                  <RequirePermission permission="conversation:close">
+                    <button
+                      type="button"
+                      disabled={toggleResolve.isPending}
+                      onClick={() => {
+                        toggleResolve.mutate(
+                          { conversationId, action: isResolved ? "reopen" : "resolve" },
+                          { onSuccess: () => setMenuOpen(false) },
+                        )
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-white/10 disabled:opacity-50"
+                    >
+                      {isResolved
+                        ? <IconCircleDashed size={14} className="shrink-0 text-[var(--text-muted)]" />
+                        : <IconCircleCheck size={14} className="shrink-0 text-[var(--text-muted)]" />
+                      }
+                      {isResolved ? "Reabrir conversa" : "Encerrar conversa"}
+                    </button>
+                  </RequirePermission>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </header>
-
-      {/* Barra de busca deslizante */}
-      {searchOpen && activeTab === "conversa" && (
-        <div className="flex items-center gap-2 border-t border-[var(--glass-border-subtle)] px-4 py-2">
-          <IconSearch size={14} className="shrink-0 text-[var(--text-muted)]" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Buscar na conversa…"
-            value={searchQuery ?? ""}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            className="flex-1 bg-transparent font-display text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchChange?.("")}
-              className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)]"
-            >
-              <IconX size={11} />
-            </button>
-          )}
-        </div>
-      )}
     </div>
   )
 }

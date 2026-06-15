@@ -9,7 +9,9 @@
     "start": "next start -p 3000",
     "lint": "next lint && node scripts/ds-scan.mjs",
     "ds:check": "node scripts/ds-scan.mjs",
-    "ds:update": "node scripts/ds-scan.mjs --update --verbose"
+    "ds:update": "node scripts/ds-scan.mjs --update --verbose",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
@@ -56,6 +58,7 @@
   },
   "devDependencies": {
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.4"
+    "eslint-config-next": "^16.2.4",
+    "vitest": "^4.1.8"
   }
 }

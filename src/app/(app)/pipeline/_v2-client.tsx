@@ -476,11 +476,12 @@ export default function KanbanV2ClientPage({
       ?.conversations?.[0]?.id ?? null;
   const dealContactName =
     dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
-  const { messagesNode, composerNode, sessionAlertNode, templateModal } =
+  const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote } =
     useDealChatBinding({
       conversationId: dealConversationId,
       contactName: dealContactName,
       contactId: dealContactId,
+      dealId: activeDealId,
       // sessionExpired derivado dentro do hook a partir do session retornado
       // por useMessages (backend = source of truth) com fallback heurístico
       // em lastInboundAt. Não passar override manual aqui.
@@ -843,6 +844,11 @@ export default function KanbanV2ClientPage({
         messagesSlot={messagesNode}
         composerSlot={composerNode}
         sessionAlertSlot={sessionAlertNode ?? null}
+        conversationId={dealConversationId}
+        isResolved={
+          (dealDetail?.contact as { conversations?: { status?: string }[] } | null | undefined)
+            ?.conversations?.[0]?.status === "RESOLVED"
+        }
         tabContentOverride={
           activeDealId
             ? {
@@ -852,6 +858,7 @@ export default function KanbanV2ClientPage({
                     notes={dealDetail?.notes ?? null}
                     pipelineId={pipelineId}
                     statusFilter={status}
+                    pinnedNote={pinnedNote}
                   />
                 ),
                 timeline: <DealTimelineTab dealId={activeDealId} />,

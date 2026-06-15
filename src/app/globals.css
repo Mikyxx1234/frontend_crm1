@@ -210,6 +210,60 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   DS v2 — tokens do hub "Modelos de mensagem" (ESPELHO de styles/globals-v2.css)
+   ──────────────────────────────────────────────────────────────────
+   `globals-v2.css` só é importado pelo grupo de rotas (app). O editor de
+   Flow vive em /old/settings/message-models/flows/[id] (DashboardShell
+   legado, que carrega apenas este globals.css). Sem este bloco os tokens
+   --brand-primary / --text-* / --glass-bg-base / semânticos NÃO resolvem
+   na rota legada — e o DropdownGlass (usado no editor) fica sem cor.
+   Aditivo: nomes novos, não sobrescrevem tokens shadcn deste arquivo.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --brand-primary:        #5b6ff5;
+  --brand-primary-light:  #7b8df7;
+  --brand-primary-dark:   #3d52e8;
+  --brand-secondary:      #a78bfa;
+
+  --text-primary:         #0f172a;
+  --text-secondary:       #374151;
+  --text-muted:           #4b5563;
+
+  --glass-bg-base:        rgba(255, 255, 255, 0.82);
+  --glass-bg-panel:       rgba(255, 255, 255, 0.32);
+  --glass-bg-modal:       rgba(255, 255, 255, 0.97);
+
+  --color-online:         #10b981;
+  --color-enterprise-bg:  rgba(91, 111, 245, 0.15);
+  --color-success-bg:     rgba(16, 185, 129, 0.12);
+  --color-success-text:   #047857;
+  --color-danger-bg:      rgba(239, 68, 68, 0.10);
+  --color-danger-text:    #b91c1c;
+  --color-warn:           #d97706;
+  --color-warn-bg:        rgba(217, 119, 6, 0.08);
+  --color-warn-border:    rgba(217, 119, 6, 0.30);
+  --color-info-bg:        rgba(91, 111, 245, 0.08);
+  --color-info-border:    rgba(91, 111, 245, 0.28);
+
+  --input-border-focus:   rgba(91, 111, 245, 0.50);
+  --input-ring-focus:     rgba(91, 111, 245, 0.20);
+
+  /* WhatsApp — cores de marca do canal, ISOLADAS (mock do editor de Flow
+     e preview do template). Não usar fora do contexto do balão WhatsApp. */
+  --wa-frame:         #111b21;
+  --wa-bg:            #efeae2;
+  --wa-bubble:        #ffffff;
+  --wa-bubble-out:    #d9fdd3;
+  --wa-text:          #111b21;
+  --wa-text-muted:    #667781;
+  --wa-accent:        #25d366;
+  --wa-accent-strong: #128c7e;
+  --wa-field-bg:      #f7f8fa;
+  --wa-field-border:  #e3e6ea;
+  --wa-header:        #075e54;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    CHAT — bolha enviada + fundo da thread (`data-chat-theme` no <html>)
    ══════════════════════════════════════════════════════════════════ */
 :root {
@@ -369,6 +423,51 @@
   --bg-gradient: linear-gradient(135deg, #0b1220 0%, #131b30 40%, #1c1530 70%, #0e1426 100%);
 
   ::selection { background: rgba(91, 111, 245, 0.30); color: #e8edf5; }
+}
+
+/* DS v2 — variante escura dos tokens do hub "Modelos de mensagem".
+   Espelha styles/globals-v2.css (.v2-dark) para a rota legada do editor
+   de Flow, que usa o .dark do next-themes (não o .v2-dark). */
+.dark {
+  --brand-primary:        #7b8df7;
+  --brand-primary-light:  #a0aefa;
+  --brand-primary-dark:   #5b6ff5;
+  --brand-secondary:      #c4b5fd;
+
+  --text-primary:         #e2e8f0;
+  --text-secondary:       #94a3b8;
+  --text-muted:           #64748b;
+
+  --glass-bg-base:        rgba(30, 41, 59, 0.85);
+  --glass-bg-panel:       rgba(15, 23, 42, 0.55);
+  --glass-bg-modal:       rgba(15, 23, 42, 0.98);
+
+  --color-enterprise-bg:  rgba(123, 141, 247, 0.20);
+  --color-success-bg:     rgba(16, 185, 129, 0.18);
+  --color-success-text:   #34d399;
+  --color-danger-bg:      rgba(239, 68, 68, 0.18);
+  --color-danger-text:    #f87171;
+  --color-warn:           #fbbf24;
+  --color-warn-bg:        rgba(251, 191, 36, 0.12);
+  --color-warn-border:    rgba(251, 191, 36, 0.30);
+  --color-info-bg:        rgba(123, 141, 247, 0.12);
+  --color-info-border:    rgba(123, 141, 247, 0.30);
+
+  --input-border-focus:   rgba(123, 141, 247, 0.60);
+  --input-ring-focus:     rgba(123, 141, 247, 0.25);
+
+  /* WhatsApp — variante escura das cores isoladas do canal. */
+  --wa-frame:         #2a3942;
+  --wa-bg:            #0b141a;
+  --wa-bubble:        #1f2c33;
+  --wa-bubble-out:    #144d37;
+  --wa-text:          #e9edef;
+  --wa-text-muted:    #8696a0;
+  --wa-accent:        #25d366;
+  --wa-accent-strong: #25d366;
+  --wa-field-bg:      #111b21;
+  --wa-field-border:  #2a3942;
+  --wa-header:        #202c33;
 }
 
 /* ──────────────────────────────────────────────────────────────────

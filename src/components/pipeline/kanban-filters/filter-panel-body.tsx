@@ -19,6 +19,7 @@ import { Save, Search, Trash2, Star, StarOff, Users as UsersIcon, Lock, Bookmark
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { SelectNative } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -186,22 +187,20 @@ function DateRangeField({
   const preset = detectPreset(value);
   return (
     <div className="space-y-1.5">
-      <SelectNative
+      <DropdownGlass
+        options={(Object.keys(DATE_PRESET_LABELS) as DatePresetKey[]).map((k) => ({
+          value: k,
+          label: DATE_PRESET_LABELS[k],
+        }))}
         value={preset}
-        onChange={(e) => {
-          const key = e.target.value as DatePresetKey;
+        onValueChange={(v) => {
+          const key = v as DatePresetKey;
           if (key === "custom") return;
           if (key === "any") return onChange(undefined);
           onChange(dateRangeFromPreset(key) ?? undefined);
         }}
-        className="h-7 text-[11px]"
-      >
-        {(Object.keys(DATE_PRESET_LABELS) as DatePresetKey[]).map((k) => (
-          <option key={k} value={k}>
-            {DATE_PRESET_LABELS[k]}
-          </option>
-        ))}
-      </SelectNative>
+        triggerClassName="h-7 w-full text-[11px]"
+      />
       {preset === "custom" && (
         <div className="flex items-center gap-1">
           <Input
@@ -446,22 +445,17 @@ function CustomFieldRow({
         </button>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        <SelectNative
+        <DropdownGlass
+          options={allowedOps.map((op) => ({
+            value: op,
+            label: CUSTOM_OPERATORS.find((o) => o.value === op)?.label ?? op,
+          }))}
           value={currentOp}
-          onChange={(e) =>
-            onChange({ ...filter, operator: e.target.value as CustomFieldOperator, value: undefined })
+          onValueChange={(v) =>
+            onChange({ ...filter, operator: v as CustomFieldOperator, value: undefined })
           }
-          className="h-7 text-[11px]"
-        >
-          {allowedOps.map((op) => {
-            const def = CUSTOM_OPERATORS.find((o) => o.value === op);
-            return (
-              <option key={op} value={op}>
-                {def?.label ?? op}
-              </option>
-            );
-          })}
-        </SelectNative>
+          triggerClassName="h-7 w-full text-[11px]"
+        />
         {opDef?.needsValue ? (
           currentOp === "between" ? (
             <div className="col-span-1 grid grid-cols-2 gap-1">
@@ -514,16 +508,13 @@ function CustomFieldRow({
                 ))}
               </SelectNative>
             ) : (
-              <SelectNative
-                value={typeof filter.value === "string" ? filter.value : ""}
-                onChange={(e) => onChange({ ...filter, value: e.target.value })}
-                className="h-7 text-[11px]"
-              >
-                <option value="">— escolha —</option>
-                {field.options.map((o) => (
-                  <option key={o} value={o}>{o}</option>
-                ))}
-              </SelectNative>
+              <DropdownGlass
+                options={field.options.map((o) => ({ value: o, label: o }))}
+                value={typeof filter.value === "string" ? filter.value || undefined : undefined}
+                onValueChange={(v) => onChange({ ...filter, value: v })}
+                placeholder="— escolha —"
+                triggerClassName="h-7 w-full text-[11px]"
+              />
             )
           ) : (
             <Input
@@ -887,16 +878,13 @@ function PropertiesColumn({
               <p className="text-[11px] text-red-500">Erro: {optionsError}</p>
             ) : (
               <div className="flex items-center gap-1.5">
-                <SelectNative
-                  value={pickDealCfId}
-                  onChange={(e) => setPickDealCfId(e.target.value)}
-                  className="h-7 flex-1 text-[11px]"
-                >
-                  <option value="">+ Adicionar critério...</option>
-                  {(options?.dealCustomFields ?? []).map((cf) => (
-                    <option key={cf.id} value={cf.id}>{cf.label}</option>
-                  ))}
-                </SelectNative>
+                <DropdownGlass
+                  options={(options?.dealCustomFields ?? []).map((cf) => ({ value: cf.id, label: cf.label }))}
+                  value={pickDealCfId || undefined}
+                  onValueChange={setPickDealCfId}
+                  placeholder="+ Adicionar critério..."
+                  triggerClassName="h-7 flex-1 text-[11px]"
+                />
                 <Button
                   type="button"
                   size="sm"
@@ -947,16 +935,13 @@ function PropertiesColumn({
               <p className="text-[11px] text-[var(--text-muted)]">Carregando…</p>
             ) : (
               <div className="flex items-center gap-1.5">
-                <SelectNative
-                  value={pickContactCfId}
-                  onChange={(e) => setPickContactCfId(e.target.value)}
-                  className="h-7 flex-1 text-[11px]"
-                >
-                  <option value="">+ Adicionar critério...</option>
-                  {(options?.contactCustomFields ?? []).map((cf) => (
-                    <option key={cf.id} value={cf.id}>{cf.label}</option>
-                  ))}
-                </SelectNative>
+                <DropdownGlass
+                  options={(options?.contactCustomFields ?? []).map((cf) => ({ value: cf.id, label: cf.label }))}
+                  value={pickContactCfId || undefined}
+                  onValueChange={setPickContactCfId}
+                  placeholder="+ Adicionar critério..."
+                  triggerClassName="h-7 flex-1 text-[11px]"
+                />
                 <Button
                   type="button"
                   size="sm"
@@ -1038,17 +1023,12 @@ function TagsColumn({
 
       {/* Modo de combinação */}
       {selectedIds.length > 1 && (
-        <SelectNative
+        <DropdownGlass
+          options={TAG_MODE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           value={draft.tagMode ?? "any"}
-          onChange={(e) => setDraftField("tagMode", e.target.value as TagMode)}
-          className="h-7 text-[11px]"
-        >
-          {TAG_MODE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </SelectNative>
+          onValueChange={(v) => setDraftField("tagMode", v as TagMode)}
+          triggerClassName="h-7 w-full text-[11px]"
+        />
       )}
 
       {/* Search */}

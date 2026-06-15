@@ -17,6 +17,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { cn } from "@/lib/utils";
 
 import {
@@ -345,31 +346,23 @@ function UserRolesEditor({
 
       {/* Adicionar role nova */}
       <div className="mt-1 flex items-center gap-2">
-        <select
-          value={selectedToAdd}
-          onChange={(e) => setSelectedToAdd(e.target.value)}
-          disabled={rolesLoading || availableRoles.length === 0 || adding}
-          className="h-7 flex-1 rounded-[var(--radius-md)] border px-2 text-xs"
-          style={{
-            borderColor: "var(--glass-border)",
-            background: "var(--glass-bg-base)",
-            color: "var(--text-secondary)",
-          }}
-        >
-          <option value="">
-            {rolesLoading
+        <DropdownGlass
+          options={availableRoles.map((r) => ({
+            value: r.id,
+            label: `${r.name}${r.systemPreset ? " · sistema" : ""}`,
+          }))}
+          value={selectedToAdd || undefined}
+          onValueChange={setSelectedToAdd}
+          placeholder={
+            rolesLoading
               ? "Carregando roles..."
               : availableRoles.length === 0
                 ? "Todas as roles já atribuídas"
-                : "Atribuir role..."}
-          </option>
-          {availableRoles.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-              {r.systemPreset ? " · sistema" : ""}
-            </option>
-          ))}
-        </select>
+                : "Atribuir role..."
+          }
+          disabled={rolesLoading || availableRoles.length === 0 || adding}
+          triggerClassName="h-7 flex-1 text-xs"
+        />
         <Button
           size="sm"
           variant="outline"

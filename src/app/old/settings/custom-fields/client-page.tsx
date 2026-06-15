@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -406,22 +406,26 @@ function FieldFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Entidade</Label>
-              <SelectNative
+              <DropdownGlass
+                options={[
+                  { value: "contact", label: "Contato" },
+                  { value: "deal", label: "Negócio" },
+                  { value: "product", label: "Produto/Serviço" },
+                ]}
                 value={entity}
-                onChange={(e) => setEntity(e.target.value)}
+                onValueChange={(v) => setEntity(v)}
                 disabled={mode === "edit"}
-                className="h-9"
-              >
-                <option value="contact">Contato</option>
-                <option value="deal">Negócio</option>
-                <option value="product">Produto/Serviço</option>
-              </SelectNative>
+                triggerClassName="w-full"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Tipo</Label>
-              <SelectNative value={type} onChange={(e) => setType(e.target.value)} className="h-9">
-                {TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </SelectNative>
+              <DropdownGlass
+                options={TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                value={type}
+                onValueChange={(v) => setType(v)}
+                triggerClassName="w-full"
+              />
             </div>
           </div>
 

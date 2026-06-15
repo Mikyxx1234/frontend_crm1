@@ -61,6 +61,8 @@ export function Composer({
   contactId,
   externalTemplate,
   onExternalTemplateConsumed,
+  signatureAllowed = true,
+  signatureEditable = true,
 }: {
   conversationId: string | null;
   value: string;
@@ -81,6 +83,10 @@ export function Composer({
   externalTemplate?: PendingTemplate | null;
   /** Avisado quando o `externalTemplate` foi absorvido (para o pai limpar). */
   onExternalTemplateConsumed?: () => void;
+  /** Permissão org-level: agentes podem usar assinatura. Default true. */
+  signatureAllowed?: boolean;
+  /** Permissão org-level: agentes podem editar o texto da assinatura. Default true. */
+  signatureEditable?: boolean;
 }) {
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
@@ -309,131 +315,141 @@ export function Composer({
         </div>
       )}
 
-      {/* ── Tab selector: Mensagem / Nota interna ── */}
-      {onSendNote && (
+      {/* ── Row: tabs (esq.) + slot direito (assinatura ou badge nota) ── */}
+      {(onSendNote || (signatureAllowed && !noteMode)) && (
         <div className="mb-2 flex items-center gap-1.5 px-0.5">
-          <button
-            type="button"
-            onClick={() => setNoteMode(false)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
-              !noteMode
-                ? "border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-            )}
-          >
-            <IconMessage size={13} />
-            Mensagem
-          </button>
-          <button
-            type="button"
-            onClick={() => setNoteMode(true)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
-              noteMode
-                ? "border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-            )}
-          >
-            <IconLock size={13} />
-            Nota interna
-          </button>
-        </div>
-      )}
-
-      {/* Barra de assinatura do agente — só no modo mensagem (não em nota) */}
-      {!noteMode ? (
-        <div className="mb-1.5 flex items-center gap-2 px-2">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={sigEnabled}
-            aria-label={sigEnabled ? "Desligar assinatura" : "Ligar assinatura"}
-            onClick={() => persistSigEnabled(!sigEnabled)}
-            className={cn(
-              "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors",
-              sigEnabled ? "bg-[var(--brand-primary)]" : "bg-[var(--text-muted)]/40",
-            )}
-          >
-            <span
-              className={cn(
-                "inline-block size-3 rounded-full bg-white shadow transition-transform",
-                sigEnabled ? "translate-x-[14px]" : "translate-x-[2px]",
-              )}
-            />
-          </button>
-          <IconSignature size={13} className="shrink-0 text-[var(--text-muted)]" />
-          {sigEditing ? (
-            <span className="flex items-center gap-1">
-              <input
-                autoFocus
-                value={sigDraft}
-                onChange={(e) => setSigDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    persistSigValue(sigDraft.trim());
-                    setSigEditing(false);
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    setSigEditing(false);
-                  }
-                }}
-                placeholder={agentName || "Seu nome"}
-                className="h-6 w-40 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 font-body text-[11.5px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
-              />
-              <button
-                type="button"
-                aria-label="Salvar assinatura"
-                onClick={() => {
-                  persistSigValue(sigDraft.trim());
-                  setSigEditing(false);
-                }}
-                className="rounded-[var(--radius-sm)] p-0.5 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
-              >
-                <IconCheck size={14} />
-              </button>
-              <button
-                type="button"
-                aria-label="Cancelar"
-                onClick={() => setSigEditing(false)}
-                className="rounded-[var(--radius-sm)] p-0.5 text-[var(--text-muted)] hover:bg-[var(--text-muted)]/10"
-              >
-                <IconX size={14} />
-              </button>
-            </span>
-          ) : (
+          {/* Tabs Mensagem / Nota interna */}
+          {onSendNote && (
             <>
-              <TooltipGlass
-                label={effectiveSignature ? `Assinando como ${effectiveSignature}` : "Defina um nome para assinar"}
-                side="top"
-              >
-                <span
-                  className={cn(
-                    "max-w-[180px] truncate font-body text-[11.5px] font-semibold transition-colors",
-                    sigEnabled
-                      ? "text-[var(--text-primary)]"
-                      : "text-[var(--text-muted)] line-through",
-                  )}
-                >
-                  {effectiveSignature || "Sem assinatura"}
-                </span>
-              </TooltipGlass>
               <button
                 type="button"
-                aria-label="Editar assinatura"
-                onClick={() => {
-                  setSigDraft(sigValue);
-                  setSigEditing(true);
-                }}
-                className="rounded-[var(--radius-sm)] p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+                onClick={() => setNoteMode(false)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+                  !noteMode
+                    ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
               >
-                <IconPencil size={12} />
+                <IconMessage size={13} />
+                Mensagem
+              </button>
+              <button
+                type="button"
+                onClick={() => setNoteMode(true)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+                  noteMode
+                    ? "border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
+              >
+                <IconLock size={13} />
+                Nota interna
               </button>
             </>
           )}
+
+          {/* Espaçador */}
+          <div className="flex-1" />
+
+          {/* Slot direito: badge "Nota" no modo nota, assinatura no modo mensagem */}
+          {noteMode ? (
+            /* Badge de nota — ocupa o mesmo espaço da assinatura */
+            <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-1 font-display text-[11.5px] font-semibold text-warning ring-1 ring-inset ring-warning/25">
+              <IconLock size={12} /> Nota
+            </span>
+          ) : signatureAllowed ? (
+            /* Assinatura do agente */
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={sigEnabled}
+                aria-label={sigEnabled ? "Desligar assinatura" : "Ligar assinatura"}
+                onClick={() => persistSigEnabled(!sigEnabled)}
+                className={cn(
+                  "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors",
+                  sigEnabled ? "bg-[var(--brand-primary)]" : "bg-[var(--text-muted)]/40",
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-block size-3 rounded-full bg-white shadow transition-transform",
+                    sigEnabled ? "translate-x-[14px]" : "translate-x-[2px]",
+                  )}
+                />
+              </button>
+              <IconSignature size={13} className="shrink-0 text-[var(--text-muted)]" />
+              {sigEditing ? (
+                <span className="flex items-center gap-1">
+                  <input
+                    autoFocus
+                    value={sigDraft}
+                    onChange={(e) => setSigDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        persistSigValue(sigDraft.trim());
+                        setSigEditing(false);
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        setSigEditing(false);
+                      }
+                    }}
+                    placeholder={agentName || "Seu nome"}
+                    className="h-6 w-40 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 font-body text-[11.5px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Salvar assinatura"
+                    onClick={() => { persistSigValue(sigDraft.trim()); setSigEditing(false); }}
+                    className="rounded-[var(--radius-sm)] p-0.5 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10"
+                  >
+                    <IconCheck size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Cancelar"
+                    onClick={() => setSigEditing(false)}
+                    className="rounded-[var(--radius-sm)] p-0.5 text-[var(--text-muted)] hover:bg-[var(--text-muted)]/10"
+                  >
+                    <IconX size={14} />
+                  </button>
+                </span>
+              ) : (
+                <>
+                  <TooltipGlass
+                    label={effectiveSignature ? `Assinando como ${effectiveSignature}` : "Defina um nome para assinar"}
+                    side="top"
+                  >
+                    <span
+                      className={cn(
+                        "max-w-[140px] truncate font-body text-[11.5px] font-semibold transition-colors",
+                        sigEnabled
+                          ? "text-[var(--text-primary)]"
+                          : "text-[var(--text-muted)] line-through",
+                      )}
+                    >
+                      {effectiveSignature || "Sem assinatura"}
+                    </span>
+                  </TooltipGlass>
+                  {signatureEditable && (
+                    <button
+                      type="button"
+                      aria-label="Editar assinatura"
+                      onClick={() => { setSigDraft(sigValue); setSigEditing(true); }}
+                      className="rounded-[var(--radius-sm)] p-0.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+                    >
+                      <IconPencil size={12} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -469,11 +485,6 @@ export function Composer({
         {/* Área de texto — oculta durante gravação de áudio */}
         {!isAudioActive && (
           <div className="flex flex-1 flex-col justify-center">
-            {noteMode ? (
-              <span className="mb-0.5 inline-flex items-center gap-1 self-start rounded-full bg-warning/15 px-2 py-0.5 font-display text-[11px] font-semibold text-warning ring-1 ring-inset ring-warning/25">
-                <IconLock size={12} /> Nota
-              </span>
-            ) : null}
             <textarea
               ref={textareaRef}
               rows={1}

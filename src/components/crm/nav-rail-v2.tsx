@@ -206,15 +206,6 @@ export function NavRailV2({ className }: { className?: string }) {
           replica a régua horizontal do miolo (w-full + px-3) para os dois
           grupos ficarem alinhados mesmo quando o scrollbar ocupa espaço. */}
       <div className="flex w-full shrink-0 flex-col items-center gap-2 px-3">
-      <DockButton
-        href="/settings"
-        title="Configurações"
-        active={pathname.startsWith("/settings") && !isProfileActive}
-        disablePop
-      >
-        <IconSettings size={20} />
-      </DockButton>
-
       {/* Status do agente (Online / Ausente / Offline) — define a distribuição */}
       <DockButton
         title={`Status: ${statusMeta.label}`}
@@ -237,6 +228,16 @@ export function NavRailV2({ className }: { className?: string }) {
         disablePop
       >
         {theme === "light" ? <IconMoon size={20} /> : <IconSun size={20} />}
+      </DockButton>
+
+      {/* Configurações — último ícone antes do avatar do usuário. */}
+      <DockButton
+        href="/settings"
+        title="Configurações"
+        active={pathname.startsWith("/settings") && !isProfileActive}
+        disablePop
+      >
+        <IconSettings size={20} />
       </DockButton>
 
       {/* Avatar — abre menu da conta (Meu perfil / Sair).
@@ -331,8 +332,8 @@ export function NavRailV2({ className }: { className?: string }) {
             <IconLogout size={16} />
             <span className="font-medium">Sair</span>
           </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
       </div>
 

@@ -28,8 +28,11 @@ import {
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
 import {
+  useAddNoteToLog,
+  useConversationFeatures,
   useInboxRealtime,
   useMessages,
+  usePinNote,
   useSendMessage,
 } from "@/features/inbox-v2/hooks";
 import {
@@ -44,12 +47,16 @@ interface DealChatBindingResult {
   sessionAlertNode: React.ReactNode | undefined;
   /** Modal que precisa ficar montado em algum ancestral comum. */
   templateModal: React.ReactNode;
+  /** Nota fixada na conversa, caso exista, para exibir na tab Notas. */
+  pinnedNote: { id: string; content: string; senderName?: string | null; time?: string | null } | null;
 }
 
 export function useDealChatBinding(params: {
   conversationId: string | null;
   contactName: string;
   contactId?: string | null;
+  /** ID do deal — usado para "Adicionar ao log". */
+  dealId?: string | null;
   /**
    * Override opcional. Quando ausente, o hook deriva `sessionExpired` do
    * `session` retornado pela própria query `useMessages` (mesma fonte que o
@@ -58,12 +65,14 @@ export function useDealChatBinding(params: {
    */
   sessionExpired?: boolean;
 }): DealChatBindingResult {
-  const { conversationId, contactName, contactId, sessionExpired: sessionExpiredOverride } = params;
+  const { conversationId, contactName, contactId, dealId, sessionExpired: sessionExpiredOverride } = params;
 
   const { data: session } = useSession();
   // Fallback para o avatar das bolhas outgoing quando a mensagem não traz
   // `senderName` (ex.: histórico antigo). Mesma lógica do ChatArea do inbox.
   const agentInitials = getInitials(session?.user?.name?.trim() || "") || "·";
+
+  const { features: convFeatures } = useConversationFeatures();
 
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
@@ -118,6 +127,8 @@ export function useDealChatBinding(params: {
 
   const { data: messagesResp } = useMessages(effectiveConversationId);
   const sendMutation = useSendMessage(effectiveConversationId);
+  const pinMutation = usePinNote(effectiveConversationId);
+  const addToLogMutation = useAddNoteToLog(dealId ?? null);
 
   // Deriva sessionExpired da mesma fonte do /inbox: prioriza `session.active`
   // do backend; se o objeto `session` não vier, cai no heurístico de 24h
@@ -154,6 +165,8 @@ export function useDealChatBinding(params: {
     enabled: !!effectiveConversationId,
   });
 
+  const pinnedNoteId = messagesResp?.pinnedNoteId ?? null;
+
   const bubbles = useMemo(
     () =>
       (messagesResp?.messages ?? []).map((m) =>
@@ -161,6 +174,19 @@ export function useDealChatBinding(params: {
       ),
     [messagesResp, contactName],
   );
+
+  // Nota fixada — usada pela tab Notas do deal.
+  const pinnedNote = useMemo(() => {
+    if (!pinnedNoteId) return null;
+    const raw = (messagesResp?.messages ?? []).find((m) => m.id === pinnedNoteId);
+    if (!raw) return null;
+    return {
+      id: raw.id,
+      content: raw.content,
+      senderName: raw.senderName ?? null,
+      time: raw.createdAt ? new Date(raw.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null,
+    };
+  }, [pinnedNoteId, messagesResp]);
 
   function handleSend() {
     const t = draft.trim();
@@ -227,10 +253,29 @@ export function useDealChatBinding(params: {
       const dayLabel = formatDayLabel(b.createdAt);
       const showSeparator = dayLabel && dayLabel !== lastDayLabel;
       if (showSeparator) lastDayLabel = dayLabel;
+      const isNoteBubble = b.isNote === true;
       return (
         <Fragment key={b.id}>
           {showSeparator && <DaySeparator date={dayLabel} />}
-          <MessageBubble message={b} agentInitials={agentInitials} />
+          <MessageBubble
+            message={b}
+            agentInitials={agentInitials}
+            isPinned={isNoteBubble && b.id === pinnedNoteId}
+            onPinNote={
+              isNoteBubble && effectiveConversationId
+                ? (noteId) => pinMutation.mutate({ noteId })
+                : undefined
+            }
+            onAddToLog={
+              isNoteBubble && dealId
+                ? (content) =>
+                    addToLogMutation.mutate(
+                      { content },
+                      { onSuccess: () => toast.success("Nota adicionada ao log do negócio") },
+                    )
+                : undefined
+            }
+          />
         </Fragment>
       );
     });
@@ -249,6 +294,8 @@ export function useDealChatBinding(params: {
       contactId={contactId}
       externalTemplate={externalTemplate}
       onExternalTemplateConsumed={() => setExternalTemplate(null)}
+      signatureAllowed={convFeatures.agentSignatureEnabled}
+      signatureEditable={convFeatures.agentSignatureEditable}
     />
   ) : null;
 
@@ -281,5 +328,5 @@ export function useDealChatBinding(params: {
       </div>
     ) : null;
 
-  return { messagesNode, composerNode, sessionAlertNode, templateModal };
+  return { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote };
 }

@@ -57,6 +57,12 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
     [catalog?.resources],
   );
 
+  // Editor unificado: exibe TODAS as permissões do catálogo, incluindo
+  // mensageria (conversas, canais, templates, campanhas). A gestão de
+  // mensageria foi consolidada aqui — em /settings/conversations sobrou
+  // apenas um atalho.
+  const editorResources = catalog?.resources ?? [];
+
   useEffect(() => {
     if (role) {
       setName(role.name);
@@ -243,7 +249,7 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
       {/* ── COLUNA DIREITA: matriz de permissões ───────────────────────── */}
       <div className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 shadow-[var(--glass-shadow-sm)]">
         <RolePermissionsEditor
-          resources={catalog?.resources ?? []}
+          resources={editorResources}
           checked={checked}
           onChange={setChecked}
           mode={mode}

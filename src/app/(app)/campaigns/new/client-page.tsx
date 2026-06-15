@@ -20,6 +20,7 @@ import {
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { InputGlass } from "@/components/crm/input-glass";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { MultiSelectPopover } from "@/features/dashboard-v2/components/multi-select-popover";
 
 import {
@@ -279,18 +280,13 @@ export default function NewCampaignClientPage() {
 
                 {audienceMode === "segment" ? (
                   <Field label="Segmento">
-                    <select
-                      value={segmentId}
-                      onChange={(e) => setSegmentId(e.target.value)}
-                      className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 font-body text-[13px] text-[var(--text-primary)]"
-                    >
-                      <option value="">Selecione um segmento</option>
-                      {(segmentsQuery.data ?? []).map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                    <DropdownGlass
+                      options={(segmentsQuery.data ?? []).map((s) => ({ value: s.id, label: s.name }))}
+                      value={segmentId || undefined}
+                      onValueChange={setSegmentId}
+                      placeholder="Selecione um segmento"
+                      triggerClassName="w-full"
+                    />
                   </Field>
                 ) : (
                   <div className="space-y-3">
@@ -356,23 +352,20 @@ export default function NewCampaignClientPage() {
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label="Estágio de vida">
-                        <select
+                        <DropdownGlass
+                          options={[
+                            { value: "", label: "Todos" },
+                            ...LIFECYCLE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+                          ]}
                           value={filters.lifecycleStage ?? ""}
-                          onChange={(e) =>
+                          onValueChange={(v) =>
                             setFilters((f) => ({
                               ...f,
-                              lifecycleStage: e.target.value || undefined,
+                              lifecycleStage: v || undefined,
                             }))
                           }
-                          className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 font-body text-[13px] text-[var(--text-primary)]"
-                        >
-                          <option value="">Todos</option>
-                          {LIFECYCLE_OPTIONS.map((o) => (
-                            <option key={o.value} value={o.value}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
+                          triggerClassName="w-full"
+                        />
                       </Field>
                       <Field label="Criado desde">
                         <InputGlass
@@ -421,26 +414,19 @@ export default function NewCampaignClientPage() {
                       {templatesQuery.isLoading ? (
                         <div className="h-10 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-subtle)]" />
                       ) : (
-                        <select
-                          value={templateName}
-                          onChange={(e) => {
-                            setTemplateName(e.target.value);
-                            const tpl = (templatesQuery.data ?? []).find(
-                              (t) => t.name === e.target.value,
-                            );
+                        <DropdownGlass
+                          options={(templatesQuery.data ?? [])
+                            .filter((t) => t.status === "APPROVED")
+                            .map((t) => ({ value: t.name, label: `${t.name} (${t.language})` }))}
+                          value={templateName || undefined}
+                          onValueChange={(v) => {
+                            setTemplateName(v);
+                            const tpl = (templatesQuery.data ?? []).find((t) => t.name === v);
                             if (tpl?.language) setTemplateLanguage(tpl.language);
                           }}
-                          className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 font-body text-[13px] text-[var(--text-primary)]"
-                        >
-                          <option value="">Selecione um template</option>
-                          {(templatesQuery.data ?? [])
-                            .filter((t) => t.status === "APPROVED")
-                            .map((t) => (
-                              <option key={t.id ?? t.name} value={t.name}>
-                                {t.name} ({t.language})
-                              </option>
-                            ))}
-                        </select>
+                          placeholder="Selecione um template"
+                          triggerClassName="w-full"
+                        />
                       )}
                     </Field>
                     <Field label="Idioma">

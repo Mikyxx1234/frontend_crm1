@@ -4,6 +4,7 @@ import * as React from "react"
 import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu"
 import { IconCheck, IconChevronDown } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
+import { useModalPortalContainer } from "@/components/ui/modal-portal-context"
 
 export interface DropdownOption {
   value: string
@@ -68,6 +69,9 @@ export function DropdownGlass({
   disabled,
 }: DropdownGlassProps) {
   const selected = options.find((o) => o.value === value)
+  // Quando dentro de um <dialog> modal (top-layer), portamos o menu pra dentro
+  // dele — senão o conteúdo cai no body, atrás do backdrop, e fica inclicável.
+  const portalContainer = useModalPortalContainer()
 
   return (
     <DropdownPrimitive.Root modal={false}>
@@ -106,7 +110,7 @@ export function DropdownGlass({
         )}
       </DropdownPrimitive.Trigger>
 
-      <DropdownPrimitive.Portal>
+      <DropdownPrimitive.Portal container={portalContainer ?? undefined}>
         <DropdownPrimitive.Content
           align={align}
           side={side}

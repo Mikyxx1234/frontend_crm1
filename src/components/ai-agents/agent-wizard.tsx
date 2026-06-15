@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import {
   ARCHETYPES,
   type ArchetypeDescriptor,
@@ -404,18 +405,12 @@ function IdentityStep({
       </div>
       <div className="grid gap-2">
         <Label htmlFor="w-lang">Idioma principal</Label>
-        <select
-          id="w-lang"
+        <DropdownGlass
+          options={LANGUAGE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
-        >
-          {LANGUAGE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          onValueChange={setLanguage}
+          triggerClassName="w-full"
+        />
       </div>
     </div>
   );
@@ -541,18 +536,12 @@ function PersonalityStep({
 
         <div className="grid gap-2">
           <Label htmlFor="w-model">Modelo LLM</Label>
-          <select
-            id="w-model"
+          <DropdownGlass
+            options={MODEL_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
-          >
-            {MODEL_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={setModel}
+            triggerClassName="w-full"
+          />
           <div className="grid gap-1 pt-2">
             <Label htmlFor="w-temp" className="text-xs font-normal">
               Temperatura: {temperature.toFixed(1)}

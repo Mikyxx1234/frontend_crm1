@@ -376,7 +376,7 @@ export default function LogsClientPage() {
               <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
                 Não foi possível carregar o feed.
               </div>
-            ) : groups.length === 0 ? (
+            ) : allItems.length === 0 ? (
               <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
                 <EmptyState
                   icon={<IconClipboardList size={28} />}
@@ -390,7 +390,7 @@ export default function LogsClientPage() {
               </div>
             ) : (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
-                <div className={`mb-2.5 grid ${FEED_GRID} items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]`}>
+                <div className={`mb-2.5 grid ${FEED_GRID} items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--text-muted)]`}>
                   <SortHeader label="Evento" column="evento" sort={sort} onSort={toggleSort} />
                   <SortHeader label="Detalhe" column="detalhe" sort={sort} onSort={toggleSort} />
                   <SortHeader label="Entidade" column="entidade" sort={sort} onSort={toggleSort} />
@@ -543,34 +543,37 @@ function EventCard({ event }: { event: FeedEvent }) {
 
   return (
     <div
-      className={`grid ${FEED_GRID} items-center gap-3.5 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]`}
+      className={`grid ${FEED_GRID} items-center gap-3.5 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]`}
     >
+      {/* Coluna: Evento */}
       <div className="flex min-w-0 items-center gap-2.5">
         <span
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
         >
-          <Icon size={15} />
+          <Icon size={16} />
         </span>
-        <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+        <span className="truncate font-display text-[14px] font-semibold text-[var(--text-primary)]">
           {cfg.label}
         </span>
       </div>
 
+      {/* Coluna: Detalhe */}
       <span className="block truncate font-body text-[13px] text-[var(--text-secondary)]">
         {detail || "—"}
       </span>
 
+      {/* Coluna: Entidade */}
       <div className="min-w-0">
         {entityLabelText || event.entityType ? (
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="flex items-center gap-1.5 whitespace-nowrap">
               {event.entityType && (
-                <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
+                <span className="shrink-0 font-display text-[12px] font-bold uppercase tracking-[0.03em] text-[var(--text-muted)]">
                   {ENTITY_LABEL[event.entityType] ?? event.entityType}
                 </span>
               )}
               {entityLabelText && (
-                <span className="truncate font-body text-[12px] text-[var(--text-secondary)]">
+                <span className="truncate font-body text-[13px] text-[var(--text-secondary)]">
                   {entityLabelText}
                 </span>
               )}
@@ -580,10 +583,10 @@ function EventCard({ event }: { event: FeedEvent }) {
                 type="button"
                 onClick={() => void copyId(entityId)}
                 title={`Copiar ID: ${entityId}`}
-                className="inline-flex w-fit items-center gap-1 rounded-[var(--radius-sm)] px-1 py-0.5 font-mono text-[10px] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]"
+                className="inline-flex w-fit items-center gap-1 rounded-[var(--radius-sm)] px-1 py-0.5 font-mono text-[11px] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]"
               >
                 <span>{truncateId(entityId)}</span>
-                <IconCopy size={10} />
+                <IconCopy size={11} />
               </button>
             )}
           </div>
@@ -592,12 +595,13 @@ function EventCard({ event }: { event: FeedEvent }) {
         )}
       </div>
 
+      {/* Coluna: Origem */}
       <div className="min-w-0">
         {origin.pill ? (
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="flex items-center gap-1.5">
               <span
-                className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${
+                className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-display text-[11px] font-bold ${
                   origin.pill === "client"
                     ? "bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] text-[var(--color-info)]"
                     : "bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]"
@@ -606,13 +610,13 @@ function EventCard({ event }: { event: FeedEvent }) {
                 {origin.pill === "client" ? "Cliente" : "Agente"}
               </span>
               {origin.primary && (
-                <span className="truncate font-body text-[12px] text-[var(--text-secondary)]">
+                <span className="truncate font-body text-[13px] text-[var(--text-secondary)]">
                   {origin.primary}
                 </span>
               )}
             </span>
             {origin.secondary && (
-              <span className="truncate font-body text-[10px] text-[var(--text-muted)]">
+              <span className="truncate font-body text-[12px] text-[var(--text-muted)]">
                 {origin.secondary}
               </span>
             )}
@@ -622,16 +626,18 @@ function EventCard({ event }: { event: FeedEvent }) {
         )}
       </div>
 
+      {/* Coluna: Ator */}
       <div>
         <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 font-display text-[11px] font-bold ${badge.className}`}
+          className={`inline-flex items-center rounded-full px-2.5 py-1 font-display text-[12px] font-semibold ${badge.className}`}
         >
           {actor.label}
         </span>
       </div>
 
+      {/* Coluna: Data */}
       <div className="text-right">
-        <span className="font-display tabular-nums text-[12px] text-[var(--text-muted)]">
+        <span className="font-display tabular-nums text-[13px] text-[var(--text-muted)]">
           {format(parseISO(event.occurredAt), "HH:mm", { locale: ptBR })}
         </span>
       </div>

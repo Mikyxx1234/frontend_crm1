@@ -37,11 +37,13 @@ import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { TabsGlass } from "@/components/crm/tabs-glass";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { BulkOperationProgressDialog } from "@/components/pipeline/bulk-operation-progress-dialog";
 import { Button } from "@/components/ui/button";
+import { SelectNative } from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -769,16 +771,15 @@ export function ImportPanel({
           <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Pipeline alvo (opcional)
           </label>
-          <SelectGlass
+          <DropdownGlass
+            options={[
+              { value: "", label: "— Usar pipeline do CSV (coluna Pipeline) —" },
+              ...pipelines.map((p) => ({ value: p.name, label: p.name })),
+            ]}
             value={targetPipelineName}
-            onChange={setTargetPipelineName}
-            className="h-10 text-[13px]"
-          >
-            <option value="">— Usar pipeline do CSV (coluna Pipeline) —</option>
-            {pipelines.map((p) => (
-              <option key={p.id} value={p.name}>{p.name}</option>
-            ))}
-          </SelectGlass>
+            onValueChange={setTargetPipelineName}
+            triggerClassName="h-10 w-full text-[13px]"
+          />
           <p className="font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
             Use quando o arquivo só trouxer a etapa (ex.: <span className="font-medium">Status do lead</span> do Kommo) sem indicar o pipeline. Se a linha já tiver coluna <span className="font-medium">Pipeline</span> preenchida, ela prevalece.
           </p>
@@ -971,38 +972,6 @@ function UploadStep({
 
 // ─── Step 2 — Mapping ─────────────────────────────────────────────────────────
 
-// ─── SelectGlass ─────────────────────────────────────────────────────────────
-// Select nativo estilizado com tokens DS v2
-function SelectGlass({
-  value,
-  onChange,
-  disabled,
-  children,
-  className,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={cn(
-        "h-10 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-body text-[13px] text-[var(--text-primary)] outline-none backdrop-blur-sm transition-all",
-        "focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20",
-        "disabled:cursor-not-allowed disabled:opacity-40",
-        className,
-      )}
-    >
-      {children}
-    </select>
-  );
-}
-
 function MappingStep({
   entity,
   delimiter,
@@ -1070,12 +1039,15 @@ function MappingStep({
             Modelo salvo
           </label>
           <div className="flex gap-2">
-            <SelectGlass value={selectedModel} onChange={onApplyModel} className="flex-1 h-10 text-[13px]">
-              <option value="">— Nenhum (mapeamento atual) —</option>
-              {savedModels.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </SelectGlass>
+            <DropdownGlass
+              options={[
+                { value: "", label: "— Nenhum (mapeamento atual) —" },
+                ...savedModels.map((m) => ({ value: m.id, label: m.name })),
+              ]}
+              value={selectedModel}
+              onValueChange={onApplyModel}
+              triggerClassName="flex-1 h-10 text-[13px]"
+            />
             {selectedModel && (
               <TooltipGlass label="Remover modelo" side="top">
                 <button
@@ -1094,16 +1066,17 @@ function MappingStep({
           <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
             Delimitador
           </label>
-          <SelectGlass
+          <DropdownGlass
+            options={[
+              { value: ";", label: "Ponto e vírgula ( ; )" },
+              { value: ",", label: "Vírgula ( , )" },
+              { value: "\t", label: "Tab" },
+            ]}
             value={delimiter}
-            onChange={(v) => onDelimiterChange(v as CsvDelimiter)}
+            onValueChange={(v) => onDelimiterChange(v as CsvDelimiter)}
             disabled={isSpreadsheet}
-            className="h-10 text-[13px]"
-          >
-            <option value=";">Ponto e vírgula ( ; )</option>
-            <option value=",">Vírgula ( , )</option>
-            <option value="\t">Tab</option>
-          </SelectGlass>
+            triggerClassName="h-10 w-full text-[13px]"
+          />
           {isSpreadsheet && (
             <p className="font-body text-[12px] text-[var(--text-muted)]">Não aplicável a planilhas</p>
           )}
@@ -1167,9 +1140,9 @@ function MappingStep({
                   const isMapped = !!columnMapping[h];
                   return (
                     <td key={h} className="px-2 py-2.5">
-                      <SelectGlass
+                      <SelectNative
                         value={columnMapping[h] ?? ""}
-                        onChange={(v) => onColumnChange(h, v)}
+                        onChange={(e) => onColumnChange(h, e.target.value)}
                         className={cn(
                           "h-9 min-w-[140px] text-[12px]",
                           isMapped
@@ -1190,7 +1163,7 @@ function MappingStep({
                             ))}
                           </optgroup>
                         )}
-                      </SelectGlass>
+                      </SelectNative>
                     </td>
                   );
                 })}
@@ -1482,25 +1455,18 @@ export function ExportPanel() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="export-pipeline" className="text-sm font-medium text-foreground">
+            <label className="text-sm font-medium text-foreground">
               Pipeline
             </label>
-            <select
-              id="export-pipeline"
+            <DropdownGlass
+              options={[
+                { value: "all", label: "Todos os pipelines" },
+                ...pipelines.map((p) => ({ value: p.id, label: p.name })),
+              ]}
               value={pipelineId}
-              onChange={(e) => setPipelineId(e.target.value)}
-              className={cn(
-                "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground",
-                "focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30",
-              )}
-            >
-              <option value="all">Todos os pipelines</option>
-              {pipelines.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={setPipelineId}
+              triggerClassName="h-10 w-full text-sm"
+            />
           </div>
           <Button
             type="button"

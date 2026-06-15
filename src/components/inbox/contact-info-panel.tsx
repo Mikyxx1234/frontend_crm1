@@ -22,7 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { dt } from "@/lib/design-tokens";
@@ -298,9 +298,12 @@ export function ContactInfoPanel({
               <Separator className="my-3 bg-border/60" />
               <p className="mb-1.5 text-[10px] font-semibold uppercase text-muted-foreground">Alterar estágio</p>
               <div className="flex flex-col gap-2">
-                <SelectNative value={lifecycleLocal} onChange={(e) => setLifecycleLocal(e.target.value)} className="h-9 border-indigo-500/20 text-xs">
-                  {LIFECYCLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </SelectNative>
+                <DropdownGlass
+                options={LIFECYCLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                value={lifecycleLocal}
+                onValueChange={(v) => setLifecycleLocal(v)}
+                triggerClassName="h-9 w-full border-indigo-500/20 text-xs"
+              />
                 <Button type="button" size="sm" variant="secondary" className="h-8 text-xs"
                   disabled={lifecycleMutation.isPending || lifecycleLocal === data.lifecycleStage}
                   onClick={() => lifecycleMutation.mutate(lifecycleLocal)}>
@@ -400,16 +403,13 @@ export function ContactInfoPanel({
                           {valueLabel} · {d.status === "OPEN" ? "Aberto" : d.status === "WON" ? "Ganho" : "Perdido"}
                         </p>
                         {d.status === "OPEN" && stages.length > 0 && (
-                          <SelectNative
+                          <DropdownGlass
+                            options={stages.map((s) => ({ value: s.id, label: s.name }))}
                             value={d.stage.id}
-                            onChange={(e) => moveDealMutation.mutate({ dealId: d.id, stageId: e.target.value })}
+                            onValueChange={(v) => moveDealMutation.mutate({ dealId: d.id, stageId: v })}
                             disabled={moveDealMutation.isPending}
-                            className="mt-1.5 h-7 text-[10px]"
-                          >
-                            {stages.map((s) => (
-                              <option key={s.id} value={s.id}>{s.name}</option>
-                            ))}
-                          </SelectNative>
+                            triggerClassName="mt-1.5 h-7 w-full text-[10px]"
+                          />
                         )}
                       </li>
                     );

@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
@@ -293,22 +293,17 @@ export default function TeamSettingsPage() {
                   <span className="text-xs font-medium text-muted-foreground">
                     Função
                   </span>
-                  <SelectNative
+                  <DropdownGlass
+                    options={ROLES.map((r) => ({ value: r, label: ROLE_PT[r] }))}
                     value={u.role}
                     disabled={updateRole.isPending || !isAdmin}
-                    onChange={(e) => {
-                      const next = e.target.value as UserRole;
+                    onValueChange={(v) => {
+                      const next = v as UserRole;
                       if (next === u.role) return;
                       updateRole.mutate({ id: u.id, role: next });
                     }}
-                    className="bg-background"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {ROLE_PT[r]}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    triggerClassName="w-full"
+                  />
                 </div>
                 {isAdmin ? (
                   <div className="grid grid-cols-2 gap-2">
@@ -406,16 +401,12 @@ export default function TeamSettingsPage() {
             </div>
             <div className="grid gap-1.5">
               <span className="text-sm font-medium">Função</span>
-              <SelectNative
+              <DropdownGlass
+                options={ROLES.map((r) => ({ value: r, label: ROLE_PT[r] }))}
                 value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value as UserRole)}
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_PT[r]}
-                  </option>
-                ))}
-              </SelectNative>
+                onValueChange={(v) => setInviteRole(v as UserRole)}
+                triggerClassName="w-full"
+              />
             </div>
             <div className="grid gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
               <div className="flex items-center justify-between">

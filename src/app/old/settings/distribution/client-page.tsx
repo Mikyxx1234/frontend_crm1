@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type DistributionMode = "ROUND_ROBIN" | "RULE_BASED" | "MANUAL";
@@ -302,31 +302,29 @@ export default function DistributionSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dist-mode">Modo</Label>
-                <SelectNative
-                  id="dist-mode"
+                <Label>Modo</Label>
+                <DropdownGlass
+                  options={[
+                    { value: "ROUND_ROBIN", label: "Round-robin" },
+                    { value: "RULE_BASED", label: "Baseado em regras" },
+                    { value: "MANUAL", label: "Manual" },
+                  ]}
                   value={newMode}
-                  onChange={(e) => setNewMode(e.target.value as DistributionMode)}
-                >
-                  <option value="ROUND_ROBIN">Round-robin</option>
-                  <option value="RULE_BASED">Baseado em regras</option>
-                  <option value="MANUAL">Manual</option>
-                </SelectNative>
+                  onValueChange={(v) => setNewMode(v as DistributionMode)}
+                  triggerClassName="w-full"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dist-pipeline">Pipeline (opcional)</Label>
-                <SelectNative
-                  id="dist-pipeline"
+                <Label>Pipeline (opcional)</Label>
+                <DropdownGlass
+                  options={[
+                    { value: "", label: "Todos os pipelines" },
+                    ...pipelines.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
                   value={newPipelineId}
-                  onChange={(e) => setNewPipelineId(e.target.value)}
-                >
-                  <option value="">Todos os pipelines</option>
-                  {pipelines.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </SelectNative>
+                  onValueChange={(v) => setNewPipelineId(v)}
+                  triggerClassName="w-full"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Membros da equipe</Label>

@@ -23,6 +23,9 @@ import {
   IconLock,
   IconLoader2,
   IconTextCaption,
+  IconPin,
+  IconPinFilled,
+  IconListCheck,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -173,6 +176,7 @@ export interface Message {
   sendError?: string
 }
 
+
 /** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing). */
 function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
   if (status === "pending") {
@@ -254,11 +258,17 @@ function CopyErrorButton({ text }: { text: string }) {
   )
 }
 
-interface MessageBubbleProps {
+export interface MessageBubbleProps {
   message: Message
   /** Iniciais do agente logado — exibidas no avatar das mensagens outgoing. */
   agentInitials?: string
   className?: string
+  /** Esta nota está fixada na conversa? Exibe indicador âmbar. */
+  isPinned?: boolean
+  /** Callback para fixar (messageId) ou desafixar (null). */
+  onPinNote?: (messageId: string | null) => void
+  /** Callback para adicionar conteúdo da nota ao log/timeline do deal. */
+  onAddToLog?: (content: string) => void
 }
 
 function FormBubble({ message, className }: { message: Message; className?: string }) {
@@ -372,6 +382,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(0)
   const [transcript, setTranscript] = useState<TranscriptState>({ status: "idle" })
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false)
 
   const toggle = useCallback(() => {
     const el = audioRef.current
@@ -445,10 +456,20 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   const transcriptBg = isOutgoing
     ? "bg-white/10 text-white/90 border-white/20"
     : "bg-[var(--brand-primary)]/5 text-[var(--text-secondary)] border-[var(--glass-border-subtle)]"
-  const btnColor     = isOutgoing ? "text-white/60 hover:text-white" : "text-[var(--text-muted)] hover:text-[var(--brand-primary)]"
+  // Botão "Transcrever": pill com fundo sólido para garantir contraste em qualquer cor de bolha.
+  const btnBase = isOutgoing
+    ? "bg-white/20 text-white hover:bg-white/30"
+    : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20"
 
   return (
-    <div className="flex w-[220px] flex-col gap-1 py-0.5 pb-4">
+    <div
+      className={cn(
+        "flex w-[220px] flex-col gap-1 py-0.5",
+        // Folga inferior só quando há transcrição (evita o horário sobrepor o
+        // texto). No estado padrão, o horário divide a linha com "Transcrever".
+        transcript.status === "done" ? "pb-4" : "pb-1.5",
+      )}
+    >
       {/* Linha do player */}
       <div className="flex items-center gap-2.5">
         {/* Elemento audio oculto */}
@@ -505,15 +526,15 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
         </div>
       </div>
 
-      {/* Botão Transcrever — linha dedicada, evita sobreposição com o timestamp absoluto */}
+      {/* Botão Transcrever — pill compacta com fundo próprio para contraste */}
       {url && transcript.status !== "done" && (
         <button
           type="button"
           disabled={transcript.status === "loading"}
           onClick={handleTranscribe}
           className={cn(
-            "ml-[25px] flex items-center gap-1 self-start rounded transition-colors",
-            btnColor,
+            "ml-[25px] flex items-center gap-1 self-start rounded-full px-2 py-0.5 transition-colors",
+            btnBase,
             transcript.status === "loading" && "cursor-wait",
           )}
         >
@@ -527,16 +548,27 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
         </button>
       )}
 
-      {/* Resultado da transcrição */}
+      {/* Resultado da transcrição — colapsável */}
       {transcript.status === "done" && transcript.text && (
-        <div className={cn(
-          "rounded-md border px-2.5 py-1.5 text-[11px] leading-relaxed",
-          transcriptBg,
-        )}>
-          <span className="mb-0.5 block font-display text-[9px] font-bold uppercase tracking-[0.1em] opacity-60">
-            Transcrição
-          </span>
-          {transcript.text}
+        <div className={cn("rounded-md border px-2.5 py-1.5 text-[11px] leading-relaxed", transcriptBg)}>
+          <p className={cn(
+            "transition-all",
+            transcriptExpanded ? "" : "line-clamp-2",
+          )}>
+            {transcript.text}
+          </p>
+          {transcript.text.length > 80 && (
+            <button
+              type="button"
+              onClick={() => setTranscriptExpanded((v) => !v)}
+              className={cn(
+                "mt-0.5 font-display text-[9px] font-semibold opacity-60 hover:opacity-100",
+                isOutgoing ? "text-white" : "text-[var(--brand-primary)]",
+              )}
+            >
+              {transcriptExpanded ? "Ver menos" : "Ver mais"}
+            </button>
+          )}
         </div>
       )}
       {transcript.status === "done" && !transcript.text && (
@@ -673,7 +705,14 @@ function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boo
   )
 }
 
-export function MessageBubble({ message, agentInitials, className }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  agentInitials,
+  className,
+  isPinned,
+  onPinNote,
+  onAddToLog,
+}: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
   const isNote = message.isNote === true
@@ -684,44 +723,103 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
     return <FormBubble message={message} className={className} />
   }
 
-  // Nota interna: layout dedicado — full-width amarelo claro com borda
-  // lateral âmbar + badge "Nota". Não usa o esquema azul (que indicaria
-  // mensagem enviada ao cliente). Mantém `senderInitials`/avatar do
-  // agente, mas em circle neutro pra não competir com a cor da nota.
+  // Nota interna: barra horizontal full-width com gradiente âmbar.
+  // Layout: [🔒 NOTA] [texto flex-1] [ações hover] [agente] [hora]
   if (isNote) {
+    const hasNoteActions = !!(onPinNote || onAddToLog)
     return (
-      <div className={cn("flex w-full items-start gap-2.5", className)}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full bg-warning-soft font-display text-[10px] font-bold text-warning">
-              {message.senderInitials || agentInitials || "·"}
-            </div>
-          </TooltipTrigger>
-          {senderName && (
-            <TooltipContent side="left" className="font-medium text-[11px]">
-              {senderName}
-            </TooltipContent>
-          )}
-        </Tooltip>
-        <div
-          className="relative min-w-0 flex-1 rounded-[var(--radius-md)] border border-warning/20 border-l-[3px] border-l-warning bg-warning-soft px-3.5 py-2 text-sm leading-[1.45] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
-        >
-          <div className="mb-1 flex items-center gap-1.5">
-            <IconLock size={10} className="text-warning" />
-            <span className="inline-flex items-center rounded-full bg-warning/15 px-1.5 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-warning ring-1 ring-inset ring-warning/25">
-              Nota interna
+      <div
+        className={cn(
+          "group relative flex w-full items-center gap-2.5 rounded-[var(--radius-lg)] border px-3.5 py-2 text-sm leading-[1.45] transition-colors",
+          isPinned
+            ? "border-warning/60 bg-[linear-gradient(135deg,rgba(251,191,36,0.14)_0%,rgba(245,158,11,0.10)_100%)]"
+            : "border-warning/30 bg-[linear-gradient(135deg,rgba(251,191,36,0.08)_0%,rgba(245,158,11,0.06)_100%)]",
+          className,
+        )}
+      >
+        {/* Indicador de nota fixada */}
+        {isPinned && (
+          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-warning/15 px-1.5 py-0.5">
+            <IconPinFilled size={9} className="text-warning" />
+            <span className="font-display text-[8px] font-bold uppercase tracking-wider text-warning">
+              fixada
             </span>
-            {senderName && (
-              <span className="font-display text-[10px] font-semibold text-warning/70">
-                {senderName}
-              </span>
+          </span>
+        )}
+
+        {/* Ícone + badge "NOTA" */}
+        <span className="flex shrink-0 items-center gap-1.5">
+          <IconLock size={13} className="text-warning" />
+          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-warning">
+            Nota
+          </span>
+        </span>
+
+        {/* Separador */}
+        <span className="h-3.5 w-px shrink-0 bg-warning/30" />
+
+        {/* Conteúdo da mensagem */}
+        <span className="min-w-0 flex-1 text-[var(--text-primary)]">
+          <MessageContent message={message} isOutgoing={false} />
+        </span>
+
+        {/* Ações hover (fixar + log) */}
+        {hasNoteActions && (
+          <span className="ml-1 flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            {onPinNote && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isPinned ? onPinNote(null) : onPinNote(message.id)
+                    }
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-warning/60 transition-colors hover:bg-warning/15 hover:text-warning"
+                    aria-label={isPinned ? "Desafixar nota" : "Fixar nota"}
+                  >
+                    {isPinned ? (
+                      <IconPinFilled size={13} />
+                    ) : (
+                      <IconPin size={13} />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[11px]">
+                  {isPinned ? "Desafixar nota" : "Fixar nota"}
+                </TooltipContent>
+              </Tooltip>
             )}
-          </div>
-          <MessageContent message={message} isOutgoing={true} />
-          <span className="pointer-events-none mt-1 block select-none text-right text-[10.5px] leading-none text-warning/60">
+            {onAddToLog && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onAddToLog(message.content)}
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-warning/60 transition-colors hover:bg-warning/15 hover:text-warning"
+                    aria-label="Adicionar ao log do negócio"
+                  >
+                    <IconListCheck size={13} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[11px]">
+                  Adicionar ao log do negócio
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </span>
+        )}
+
+        {/* Agente + hora */}
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {senderName && (
+            <span className="font-display text-[11px] font-semibold text-warning/70">
+              {senderName}
+            </span>
+          )}
+          <span className="font-body text-[10.5px] text-warning/50">
             {message.time}
           </span>
-        </div>
+        </span>
       </div>
     )
   }

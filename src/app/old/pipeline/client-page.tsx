@@ -8,7 +8,6 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Bookmark,
   CheckCircle2,
-  ChevronDown,
   Clock,
   LayoutGrid,
   List,
@@ -22,6 +21,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import {
   createSavedFilter as apiCreateSavedFilter,
   deleteSavedFilter as apiDeleteSavedFilter,
@@ -950,19 +950,12 @@ export default function PipelinePage({ initialView }: PipelinePageProps = {}) {
               {pipelines[0]?.name ?? "Pipeline"}
             </span>
           ) : (
-            <div className="relative">
-              <select
-                value={pipelineId}
-                onChange={(e) => setPipelineId(e.target.value)}
-                className="h-7 cursor-pointer appearance-none rounded-md border-0 bg-[var(--color-bg-muted)] py-0 pl-2.5 pr-7 text-[12px] font-medium text-foreground transition hover:bg-[var(--color-bg-hover)] focus:outline-none focus:ring-2 focus:ring-primary/20"
-                aria-label="Selecionar pipeline"
-              >
-                {pipelines.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
-            </div>
+            <DropdownGlass
+              options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
+              value={pipelineId}
+              onValueChange={(v) => setPipelineId(v)}
+              triggerClassName="h-7 text-[12px] font-medium"
+            />
           )}
 
           {boardFetching && !boardLoading && (
@@ -1212,62 +1205,37 @@ export default function PipelinePage({ initialView }: PipelinePageProps = {}) {
         {/* Filtros avançados */}
         {showFilters && (
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border-soft)] px-4 py-2 md:px-6">
-            <div className="relative">
-              <select
-                value={filterAgent}
-                onChange={(e) => setFilterAgent(e.target.value)}
-                className={cn(
-                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary/20",
-                  filterAgent !== "all"
-                    ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
-                    : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)]",
-                )}
-              >
-                <option value="all">Agente</option>
-                <option value="none">Sem responsável</option>
-                {userOptions.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
-            </div>
+            <DropdownGlass
+              options={[
+                { value: "all", label: "Agente" },
+                { value: "none", label: "Sem responsável" },
+                ...userOptions.map((u) => ({ value: u.id, label: u.name })),
+              ]}
+              value={filterAgent}
+              onValueChange={(v) => setFilterAgent(v)}
+              triggerClassName="h-7 text-[11px] font-semibold"
+            />
 
-            <div className="relative">
-              <select
-                value={filterStage}
-                onChange={(e) => setFilterStage(e.target.value)}
-                className={cn(
-                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary/20",
-                  filterStage !== "all"
-                    ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
-                    : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)]",
-                )}
-              >
-                <option value="all">Etapa</option>
-                {board.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
-            </div>
+            <DropdownGlass
+              options={[
+                { value: "all", label: "Etapa" },
+                ...board.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+              value={filterStage}
+              onValueChange={(v) => setFilterStage(v)}
+              triggerClassName="h-7 text-[11px] font-semibold"
+            />
 
-            <div className="relative">
-              <select
-                value={filterMsg}
-                onChange={(e) => setFilterMsg(e.target.value as "all" | "unread" | "no-reply")}
-                className={cn(
-                  "h-7 appearance-none rounded-lg border py-0 pl-2.5 pr-7 text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary/20",
-                  filterMsg !== "all"
-                    ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300"
-                    : "border-[var(--color-border)] bg-[var(--color-input)] text-[var(--color-ink-soft)]",
-                )}
-              >
-                <option value="all">Mensagens</option>
-                <option value="unread">Não lidas</option>
-                <option value="no-reply">Sem resposta</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-[var(--color-ink-muted)]" />
-            </div>
+            <DropdownGlass
+              options={[
+                { value: "all", label: "Mensagens" },
+                { value: "unread", label: "Não lidas" },
+                { value: "no-reply", label: "Sem resposta" },
+              ]}
+              value={filterMsg}
+              onValueChange={(v) => setFilterMsg(v as "all" | "unread" | "no-reply")}
+              triggerClassName="h-7 text-[11px] font-semibold"
+            />
 
             <button
               type="button"

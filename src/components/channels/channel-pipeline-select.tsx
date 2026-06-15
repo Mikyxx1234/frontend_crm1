@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Label } from "@/components/ui/label";
 import { listPipelines } from "@/features/inbox-v2/api/misc";
 
@@ -28,22 +29,20 @@ export function ChannelPipelineSelect({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>Funil de destino</Label>
-      <select
-        id={id}
+      <Label>Funil de destino</Label>
+      <DropdownGlass
+        options={[
+          { value: "", label: "Padrão da organização" },
+          ...pipelines.map((p) => ({
+            value: p.id,
+            label: `${p.name}${p.isDefault ? " (padrão)" : ""}`,
+          })),
+        ]}
         value={value ?? ""}
+        onValueChange={(v) => onChange(v || null)}
         disabled={disabled || isLoading}
-        onChange={(e) => onChange(e.target.value ? e.target.value : null)}
-        className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 font-body text-[13px] text-[var(--text-primary)] disabled:opacity-60"
-      >
-        <option value="">Padrão da organização</option>
-        {pipelines.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-            {p.isDefault ? " (padrão)" : ""}
-          </option>
-        ))}
-      </select>
+        triggerClassName="w-full"
+      />
       <p className="text-xs text-[var(--text-muted)]">
         Novos leads que chegarem por este canal entram neste funil. Conversas
         que já existem não são movidas.

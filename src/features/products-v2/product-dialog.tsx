@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  IconBoxMultiple,
   IconBriefcase,
   IconBuildingStore,
   IconCash,
@@ -25,10 +26,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
 import { Textarea } from "@/components/ui/textarea";
 import { apiUrl } from "@/lib/api";
 import { useCan } from "@/hooks/use-my-permissions";
+import { useCatalogs } from "@/features/catalogs-v2/hooks";
+import { capabilityMeta } from "@/features/catalogs-v2/constants";
 
 import { InventoryPanel } from "./inventory-panel";
 import { OffersSection } from "./offers-section";
@@ -56,11 +59,24 @@ const KIND_ICON: Record<ProductKind, React.ReactNode> = {
   JOB_OPENING: <IconBriefcase size={16} />,
 };
 
+/**
+ * Tipos oferecidos na CRIAÇÃO: apenas a distinção genérica Produto × Serviço.
+ * Especializações como "vaga" e "curso" não são tipos — vêm das CAPACIDADES
+ * do catálogo (allocation=seats, fulfillment=recruiting/enrollment, …).
+ * `COURSE`/`JOB_OPENING` permanecem apenas para edição de produtos legados.
+ */
+const CREATE_TYPES: { kind: ProductKind; label: string }[] = [
+  { kind: "PHYSICAL", label: "Produto" },
+  { kind: "SERVICE", label: "Serviço" },
+];
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** null = criação; string = edição. */
   productId: string | null;
+  /** Pré-seleciona o catálogo ao criar (ex.: logo após criar o catálogo). */
+  initialCatalogId?: string;
   onCreated?: (id: string) => void;
 };
 
@@ -69,10 +85,11 @@ const sectionClass =
 const sectionTitleClass =
   "mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]";
 
-export function ProductDialog({ open, onOpenChange, productId, onCreated }: Props) {
+export function ProductDialog({ open, onOpenChange, productId, initialCatalogId, onCreated }: Props) {
   const isEdit = !!productId;
   const { data: detail } = useProductDetail(productId);
   const { data: pipelines = [] } = usePipelinesLite();
+  const { data: catalogs = [] } = useCatalogs();
   const saveBlocks = useSaveProductBlocks(productId);
   const canInventoryView = useCan("inventory:view");
 
@@ -84,6 +101,7 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
   const [price, setPrice] = React.useState("");
   const [unit, setUnit] = React.useState("un");
   const [isActive, setIsActive] = React.useState(true);
+  const [catalogId, setCatalogId] = React.useState("");
 
   // Físico
   const [weightGrams, setWeightGrams] = React.useState("");
@@ -107,13 +125,14 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
       setPrice("");
       setUnit("un");
       setIsActive(true);
+      setCatalogId(initialCatalogId ?? "");
       setWeightGrams("");
       setPlans([]);
       setCourseMode("EAD");
       setPostSalePipelineId("");
       setClasses([]);
     }
-  }, [open, isEdit]);
+  }, [open, isEdit, initialCatalogId]);
 
   React.useEffect(() => {
     if (!detail) return;
@@ -124,6 +143,7 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
     setPrice(String(Number(detail.price)));
     setUnit(detail.unit);
     setIsActive(detail.isActive);
+    setCatalogId(detail.catalogId ?? "");
     setWeightGrams(detail.shipping?.weightGrams != null ? String(detail.shipping.weightGrams) : "");
     setPlans(detail.plans ?? []);
     setCourseMode(detail.courseConfig?.mode ?? "EAD");
@@ -140,6 +160,7 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
       unit: kind === "SERVICE" ? "serviço" : unit.trim() || "un",
       type: kind === "SERVICE" ? "SERVICE" : "PRODUCT",
       kind,
+      catalogId: catalogId || null,
       isActive,
     };
     if (kind === "PHYSICAL") {
@@ -191,6 +212,7 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
             unit,
             sku: sku.trim() || null,
             description: description.trim() || null,
+            catalogId: catalogId || null,
           }),
         });
         const created = await res.json().catch(() => ({}));
@@ -211,13 +233,31 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
     }
   };
 
+  const catalogOptions: DropdownOption[] = React.useMemo(
+    () => [
+      { value: "", label: "Sem catálogo" },
+      ...catalogs.map((c) => ({
+        value: c.id,
+        label: c.name,
+        description: c.isDefault ? "Padrão" : undefined,
+      })),
+    ],
+    [catalogs],
+  );
+
+  const inheritedCaps = React.useMemo(() => {
+    const cat = catalogs.find((c) => c.id === catalogId);
+    return (cat?.capabilities ?? []).filter((c) => c.enabled);
+  }, [catalogs, catalogId]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar produto" : "Novo produto"}</DialogTitle>
           <DialogDescription>
-            Selecione o tipo para revelar as configurações específicas.
+            Escolha Produto ou Serviço. As especializações (vaga, curso…) vêm das
+            capacidades do catálogo.
           </DialogDescription>
         </DialogHeader>
 
@@ -225,35 +265,47 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
           {/* Seletor de tipo */}
           <div className={sectionClass}>
             <p className={sectionTitleClass}>Tipo de produto</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {(Object.keys(KIND_LABEL) as ProductKind[]).map((k) => {
-                const selected = kind === k;
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    disabled={isEdit}
-                    onClick={() => setKind(k)}
-                    className={[
-                      "flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2.5 text-sm font-medium transition-colors",
-                      selected
-                        ? "border-[var(--brand-primary)] bg-[var(--glass-bg-strong)] text-[var(--brand-primary)]"
-                        : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                      isEdit && "cursor-not-allowed opacity-60",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  >
-                    {KIND_ICON[k]}
-                    {KIND_LABEL[k]}
-                  </button>
-                );
-              })}
-            </div>
-            {isEdit && (
-              <p className="mt-2 text-[11px] text-[var(--text-secondary)]">
-                O tipo não pode ser alterado após a criação.
-              </p>
+            {isEdit ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">
+                  {KIND_ICON[kind]}
+                  {KIND_LABEL[kind]}
+                </span>
+                <span className="text-[11px] text-[var(--text-secondary)]">
+                  O tipo não pode ser alterado após a criação.
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {CREATE_TYPES.map(({ kind: k, label }) => {
+                    const selected = kind === k;
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setKind(k)}
+                        className={[
+                          "flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2.5 text-sm font-medium transition-colors",
+                          selected
+                            ? "border-[var(--brand-primary)] bg-[var(--glass-bg-strong)] text-[var(--brand-primary)]"
+                            : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                        ].join(" ")}
+                      >
+                        {KIND_ICON[k]}
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[11px] text-[var(--text-secondary)]">
+                  Vaga, curso e outras especializações vêm das{" "}
+                  <span className="font-medium text-[var(--text-primary)]">
+                    capacidades do catálogo
+                  </span>{" "}
+                  selecionado abaixo.
+                </p>
+              </>
             )}
           </div>
 
@@ -309,6 +361,52 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
                 </label>
               </div>
             </div>
+          </div>
+
+          {/* Catálogo (capacidades herdadas) */}
+          <div className={sectionClass}>
+            <p className={sectionTitleClass}>
+              <IconBoxMultiple size={14} /> Catálogo
+            </p>
+            <DropdownGlass
+              options={catalogOptions}
+              value={catalogId}
+              onValueChange={setCatalogId}
+              triggerClassName="h-10 w-full text-[13px]"
+              placeholder="Sem catálogo"
+            />
+            {inheritedCaps.length > 0 ? (
+              <div className="mt-3 flex flex-col gap-1.5">
+                <p className="text-[11px] font-medium text-[var(--text-secondary)]">
+                  Capacidades herdadas deste catálogo
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {inheritedCaps.map((c) => {
+                    const meta = capabilityMeta(c.capabilityKey);
+                    const Icon = meta.icon;
+                    return (
+                      <span
+                        key={c.id}
+                        className="inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg-strong)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-primary)]"
+                        title={c.overridePolicy === "LOCKED" ? "Travada — herdada e não editável no produto" : undefined}
+                      >
+                        <Icon size={11} className="text-[var(--brand-primary)]" />
+                        {meta.short}
+                        {c.overridePolicy === "LOCKED" && (
+                          <span className="text-[var(--text-muted)]">· travada</span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 text-[11px] text-[var(--text-secondary)]">
+                {catalogId
+                  ? "Este catálogo não tem capacidades ativas."
+                  : "Vincule a um catálogo para herdar capacidades (preços, alocação, etc.)."}
+              </p>
+            )}
           </div>
 
           {/* PHYSICAL: envio */}
@@ -378,23 +476,20 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
                       </div>
                       <div className="col-span-3">
                         <Label className="text-[11px]">Intervalo</Label>
-                        <SelectNative
+                        <DropdownGlass
+                          options={(Object.keys(PLAN_INTERVAL_LABEL) as PlanInterval[]).map(
+                            (iv) => ({ value: iv, label: PLAN_INTERVAL_LABEL[iv] }),
+                          )}
                           value={p.interval}
-                          onChange={(e) =>
+                          onValueChange={(v) =>
                             setPlans((arr) =>
                               arr.map((x, j) =>
-                                j === i ? { ...x, interval: e.target.value as PlanInterval } : x,
+                                j === i ? { ...x, interval: v as PlanInterval } : x,
                               ),
                             )
                           }
-                          className="mt-1 h-9"
-                        >
-                          {(Object.keys(PLAN_INTERVAL_LABEL) as PlanInterval[]).map((iv) => (
-                            <option key={iv} value={iv}>
-                              {PLAN_INTERVAL_LABEL[iv]}
-                            </option>
-                          ))}
-                        </SelectNative>
+                          triggerClassName="mt-1 h-9 w-full"
+                        />
                       </div>
                       <div className="col-span-3">
                         <Label className="text-[11px]">Valor (R$)</Label>
@@ -436,32 +531,27 @@ export function ProductDialog({ open, onOpenChange, productId, onCreated }: Prop
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <Label>Modalidade</Label>
-                  <SelectNative
+                  <DropdownGlass
+                    options={(Object.keys(COURSE_MODE_LABEL) as CourseMode[]).map((m) => ({
+                      value: m,
+                      label: COURSE_MODE_LABEL[m],
+                    }))}
                     value={courseMode}
-                    onChange={(e) => setCourseMode(e.target.value as CourseMode)}
-                    className="mt-1 h-9"
-                  >
-                    {(Object.keys(COURSE_MODE_LABEL) as CourseMode[]).map((m) => (
-                      <option key={m} value={m}>
-                        {COURSE_MODE_LABEL[m]}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    onValueChange={(v) => setCourseMode(v as CourseMode)}
+                    triggerClassName="mt-1 h-9 w-full"
+                  />
                 </div>
                 <div>
                   <Label>Funil pós-venda</Label>
-                  <SelectNative
+                  <DropdownGlass
+                    options={[
+                      { value: "", label: "— Nenhum —" } as DropdownOption,
+                      ...pipelines.map((p) => ({ value: p.id, label: p.name })),
+                    ]}
                     value={postSalePipelineId}
-                    onChange={(e) => setPostSalePipelineId(e.target.value)}
-                    className="mt-1 h-9"
-                  >
-                    <option value="">— Nenhum —</option>
-                    {pipelines.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    onValueChange={(v) => setPostSalePipelineId(v)}
+                    triggerClassName="mt-1 h-9 w-full"
+                  />
                 </div>
               </div>
 

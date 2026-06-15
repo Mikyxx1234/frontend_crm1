@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { useCan } from "@/hooks/use-my-permissions";
 
 import { useAdjustInventory, useOrgUnits, useProductInventory } from "./hooks";
@@ -161,17 +161,12 @@ export function InventoryPanel({ productId }: { productId: string }) {
           <div className="grid gap-2 sm:grid-cols-12">
             <div className="sm:col-span-3">
               <Label className="text-[11px]">Operação</Label>
-              <SelectNative
+              <DropdownGlass
+                options={OPERATIONS}
                 value={operation}
-                onChange={(e) => setOperation(e.target.value)}
-                className="mt-1 h-9"
-              >
-                {OPERATIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </SelectNative>
+                onValueChange={(v) => setOperation(v)}
+                triggerClassName="mt-1 h-9 w-full"
+              />
             </div>
             <div className="sm:col-span-2">
               <Label className="text-[11px]">Qtd.</Label>
@@ -185,10 +180,19 @@ export function InventoryPanel({ productId }: { productId: string }) {
             </div>
             <div className="sm:col-span-3">
               <Label className="text-[11px]">Pool / unidade</Label>
-              <SelectNative
+              <DropdownGlass
+                options={[
+                  ...pools.map((p) => ({
+                    value: p.id,
+                    label: p.orgUnit?.name ?? "Pool global",
+                  })),
+                  { value: "new:", label: "+ Novo pool global" },
+                  ...orgUnits
+                    .filter((u) => u.active)
+                    .map((u) => ({ value: `new:${u.id}`, label: `+ Novo pool — ${u.name}` })),
+                ]}
                 value={poolId || `new:${orgUnitId}`}
-                onChange={(e) => {
-                  const v = e.target.value;
+                onValueChange={(v) => {
                   if (v.startsWith("new:")) {
                     setPoolId("");
                     setOrgUnitId(v.slice(4));
@@ -197,22 +201,8 @@ export function InventoryPanel({ productId }: { productId: string }) {
                     setOrgUnitId("");
                   }
                 }}
-                className="mt-1 h-9"
-              >
-                {pools.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.orgUnit?.name ?? "Pool global"}
-                  </option>
-                ))}
-                <option value="new:">+ Novo pool global</option>
-                {orgUnits
-                  .filter((u) => u.active)
-                  .map((u) => (
-                    <option key={u.id} value={`new:${u.id}`}>
-                      + Novo pool — {u.name}
-                    </option>
-                  ))}
-              </SelectNative>
+                triggerClassName="mt-1 h-9 w-full"
+              />
             </div>
             <div className="sm:col-span-4">
               <Label className="text-[11px]">Motivo *</Label>

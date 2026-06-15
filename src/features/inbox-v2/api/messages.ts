@@ -197,3 +197,40 @@ export async function discardAiDraft(messageId: string): Promise<void> {
   });
   if (!res.ok) throw new Error("Falha ao descartar rascunho");
 }
+
+/**
+ * PUT /api/conversations/:id/pin-note
+ * noteId = null para desafixar.
+ */
+export async function pinNote(
+  conversationId: string,
+  noteId: string | null,
+): Promise<{ id: string; pinnedNoteId: string | null }> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/pin-note`),
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ noteId }),
+    },
+  );
+  if (!res.ok) throw new Error("Falha ao fixar nota");
+  return res.json();
+}
+
+/**
+ * POST /api/deals/:id/notes
+ * Cria uma nota vinculada ao deal E dispara evento NOTE_ADDED na timeline.
+ */
+export async function addNoteToLog(
+  dealId: string,
+  content: string,
+): Promise<{ id: string; content: string }> {
+  const res = await fetch(apiUrl(`/api/deals/${dealId}/notes`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error("Falha ao adicionar nota ao log");
+  return res.json();
+}

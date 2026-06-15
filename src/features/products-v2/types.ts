@@ -109,6 +109,7 @@ export type ProductDetail = {
   unit: string;
   type: "PRODUCT" | "SERVICE";
   kind: ProductKind;
+  catalogId: string | null;
   isActive: boolean;
   trackStock: boolean;
   stock: number | string;

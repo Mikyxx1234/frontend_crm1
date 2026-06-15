@@ -5,6 +5,160 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-14 — Produto: tipo binário (Produto/Serviço) + fluxo guiado pós-wizard [DECISÃO — agente OPUS]
+
+**Decisão.** (1) Na **criação** de produto, o seletor de tipo deixa de expor os
+4 `ProductKind` (Físico/Serviço/Curso/Vaga) e passa a oferecer apenas a
+distinção genérica **Produto** (`kind=PHYSICAL`) × **Serviço** (`kind=SERVICE`).
+"Vaga" e "curso" deixam de ser *tipo* — passam a ser expressos pelas
+**capacidades do catálogo** (`allocation=seats`, `fulfillment=recruiting/enrollment`,
+…) ao qual o produto é vinculado. (2) Ao **finalizar o wizard de catálogo**, o
+`CatalogWizard` agora devolve o id do catálogo criado (`onDone(createdId)`) e a
+`CatalogsManager` abre direto o **"Novo produto"** já vinculado a ele
+(`ProductDialog initialCatalogId=...`) — fluxo guiado "criou catálogo → cadastra
+o 1º item".
+
+**Por quê.** O catálogo já migrou pro modelo de capacidades, mas o diálogo de
+produto seguia no `ProductKind` antigo, com blocos hardcoded por tipo (turmas de
+curso, processo seletivo de vaga). Isso duplicava a modelagem e confundia: o
+usuário já declara "vagas" via capacidade do catálogo e o produto pedia o tipo
+"Vaga" de novo. A simplificação alinha as duas pontas e deixa a especialização
+vir de um único lugar (capacidades).
+
+**Compatibilidade (sem perda de dados).** `COURSE`/`JOB_OPENING` continuam em
+`types.ts` e seus blocos só renderizam **na edição** de produtos legados; o tipo
+é imutável após a criação, então editar um produto antigo mostra o tipo como
+*chip read-only* (ex.: "Curso") e preserva os blocos. Backend (`type`+`kind`)
+inalterado. Pendente (follow-up): a **lista** de produtos ainda mostra
+filtros/coluna "Físico/Curso/Vaga" do modelo antigo.
+
+**Validado.** E2E: criar catálogo → abre "Novo produto" vinculado, só com
+Produto/Serviço; editar produto `SERVICE` legado → chip read-only "Serviço".
+
+---
+
+### 2026-06-14 — `DropdownGlass` dentro de modais: portal para a top-layer do `<dialog>` [DECISÃO — agente OPUS]
+
+**Decisão.** O `DropdownGlass` (Radix DropdownMenu) passou a portar seu menu
+para **dentro do elemento `<dialog>`** quando renderizado dentro de um modal,
+em vez do `document.body` padrão. Mecanismo: novo contexto
+`components/ui/modal-portal-context.tsx`; o `DialogContent` publica seu nó
+`<dialog>` (via `useState` no `ref` callback) num `ModalPortalContext.Provider`;
+o `DropdownGlass` lê `useModalPortalContainer()` e passa em
+`DropdownPrimitive.Portal container={...}`. Fora de modal o valor é `null`
+(portal no body, comportamento inalterado).
+
+**Por quê.** O `Dialog` usa `<dialog>` nativo com `showModal()`, que cria uma
+*top-layer* real + `::backdrop`. O Radix porta para o `body` (fora da
+top-layer) → o menu ficava **atrás do backdrop**, invisível e com os cliques
+**interceptados pelo `<dialog>`** (confirmado: "`<dialog>` subtree intercepts
+pointer events"). Isso era uma **regressão da Fase 4**, quando troquei
+`SelectNative` (popup nativo, desenhado pelo SO acima do `<dialog>`) por
+`DropdownGlass` em `schema-fields.tsx`. Resultado prático: no wizard de catálogo
+não dava pra escolher o **Modo** da capacidade (ex.: `allocation` → "Vagas /
+lugares"), a Política de override nem os enums — travando o caso de uso de
+**vagas de estágio**. A correção é geral: vale para todos os modais
+(`product-dialog`, `add-deal-dialog`, `agent-wizard`, `task-dialog`, …).
+
+**Validado.** E2E no navegador: criar catálogo "Vagas de Estágio" → trocar
+`allocation` para `seats` (Total de vagas=10) → `fulfillment` para `recruiting`
+→ `POST /api/catalogs` `201` com `mode:"seats"`/`mode:"recruiting"` persistidos.
+
+---
+
+### 2026-06-14 — DS v2 no editor de Flow (rota legada) + tokens espelhados em `globals.css` [DECISÃO — agente OPUS]
+
+**Decisão.** Refatorar visualmente o **editor de WhatsApp Flow**
+(`app/old/settings/message-models/flows/[id]/client-page.tsx`) e a **modal "Novo
+template na Meta"** (`app/old/settings/whatsapp-templates/client-page.tsx`) para
+o DS v2 — sem tocar em rotas, fetchers, mutations ou schemas. `SelectNative`
+(proibido pelo `.cursorrules`) foi trocado por `DropdownGlass`; paleta nativa
+(`slate/amber/emerald/indigo` + `border-border/bg-card/bg-muted/text-*-foreground`)
+trocada por tokens DS v2.
+
+**Problema estrutural resolvido.** Os tokens DS v2 (`--brand-primary`,
+`--text-*`, `--glass-bg-base`, `--color-warn`, `--color-enterprise-bg` etc.)
+vivem em `styles/globals-v2.css`, que **só é importado pelo grupo `(app)`**. O
+editor de Flow e a aba WhatsApp são alcançados pela rota legada `/old/...`
+(`DashboardShell` + `next-themes` `.dark`), que carrega apenas `globals.css` —
+onde esses nomes **não existiam**. Sem eles, `DropdownGlass` e o chrome glass
+ficariam sem cor, e o dark mode (que usa `.dark`, não `.v2-dark`) quebraria.
+
+**Como.** Bloco **aditivo** desses tokens + variáveis isoladas do canal
+(`--wa-*`, para o mock do WhatsApp) adicionado a `globals.css` em `:root`
+(light) e `.dark` (dark), espelhando os valores de `globals-v2.css`. São nomes
+novos → zero regressão nas páginas legadas (que não os usavam) e o hub passa a
+renderizar igual nos dois shells. `--wa-*` também espelhado em `globals-v2.css`
+(`:root` + `.v2-dark`) para a modal que roda na rota `(app)`.
+
+**Trade-off.** Duplicação de definição de tokens entre os dois arquivos CSS.
+Aceito porque unificar os dois sistemas de dark mode (`.dark` vs `.v2-dark`)
+seria mudança de arquitetura fora do escopo "apenas visual". Valores espelhados
+para que, se ambas as classes coexistirem numa rota v2, o resultado seja
+idêntico.
+
+**Nota.** `npm run ds:check` já falha no HEAD por drift pré-existente
+(`hexInStyle` 369→374) e **exclui `src/app/old/**`** do scan — portanto estas
+mudanças não afetam o ratchet (verificado via `git stash`).
+
+---
+
+### 2026-06-13 — Refatoração visual do hub "Modelos de mensagem" (4 abas) fiel aos mockups DS v2 [DECISÃO — agente OPUS]
+
+**Decisão.** Refatorar somente a **camada de apresentação** das 4 abas de
+`/settings/message-models` (overview, internos, whatsapp, flows) para os mockups
+`settings-message-templates*.html`, **sem tocar em contratos de dados** (mesmas
+queries/mutations React Query, diálogos de criação/edição/preview e gating por
+permissão preservados).
+
+**Ponto estrutural:** criei o módulo compartilhado
+`app/old/settings/message-models/hub-ui.tsx` com os blocos visuais reusáveis
+(`HubStatGrid`/`HubStat`, `HubCallout`, `HubTabBar`, `HubToolbar`, `HubChip`,
+`HubPanel`, `HubSubHeader`). As 3 telas (hub + `templates` + `whatsapp-templates`
+embeds) consomem esse módulo, garantindo consistência 1:1 com os mockups e
+evitando divergência de estilos. O chrome (nav-rail + page header) continua vindo
+do `SettingsV2Shell`; os mockups só contribuem com stats/callouts/tabs/toolbar/
+painéis.
+
+**Contadores das abas/stats** passaram a ser derivados das queries do hub
+(`templates`/`whatsapp-flow-definitions` agora sempre habilitadas por serem
+locais e baratas; lista Meta segue só na overview por ser externa). Aba Flows
+ganhou ação de excluir reusando `DELETE /api/whatsapp-flow-definitions/[id]`.
+
+**Tokens:** adicionei ao `globals-v2.css` (`@theme`) as variантes que faltavam e
+são usadas pelos callouts/badges dos mockups: `--color-warn`, `--color-warn-bg`,
+`--color-warn-border`, `--color-danger-bg`, `--color-info-bg`, `--color-info-border`.
+Warnings de shorthand Tailwind permanecem (padrão do repo).
+
+---
+
+### 2026-06-13 — Wizard de Catálogo por Capacidades (Fase 4) com sub-perguntas dirigidas por JSON Schema [DECISÃO — agente OPUS]
+
+**Decisão.** Nova feature `features/catalogs-v2` + rota `(app)/settings/catalogs`
+(grupo "CRM & Dados" do settings-nav, `catalog:view`). O wizard faz **perguntas
+de negócio** (não tipos de produto) e cada "sim" liga uma capacidade.
+
+**Ponto-chave de agnosticismo:** as sub-perguntas de cada capacidade são
+**renderizadas dinamicamente a partir do JSON Schema** servido por
+`GET /api/capabilities` (`schema-fields.tsx`): enum→select, boolean→switch,
+number/integer→input numérico, string→input texto. Consequência: **capacidade
+nova aparece no wizard sem tocar a tela** — só o backend (registro Fase 0)
+muda. A única parte de apresentação acoplada por capacidade é o texto da
+pergunta de negócio (`BUSINESS_QUESTION`), com fallback no `label` do registro.
+
+**Fluxo:** 3 passos (Início: nome/descrição + escolher template opcional →
+Capacidades: cards com toggle + sub-perguntas → Revisão: chips das capacidades).
+Templates carregados de `GET /api/catalog-templates` pré-marcam respostas (nunca
+bloqueiam). Lista de catálogos com ação "salvar como template" e excluir
+(default protegido). Hooks em `apiUrl()` + React Query. DS v2 (tokens, Tabler,
+glass). Build verde; warnings de shorthand Tailwind são o padrão do repo.
+
+**Desvio do PRD registrado:** o PRD sugere gerar a UI via v0 (MCP). Construí
+direto em DS v2 para entregar o wizard testável sem o roundtrip do v0; refinar
+via v0 depois é opcional.
+
+---
+
 ### 2026-06-12 — Config de campos personalizados inline (estilo Kommo) — Fase 1
 
 **Decisão.** Trazer a configuração de campos personalizados para **dentro** do

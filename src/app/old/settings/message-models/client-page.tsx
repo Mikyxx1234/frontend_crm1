@@ -2,20 +2,26 @@
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Download,
   FileText,
+  Info,
+  LayoutTemplate,
   Loader2,
   MessageCircle,
   Plus,
-  Download,
+  Search,
+  Trash2,
   Workflow,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,10 +31,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TabsGlass } from "@/components/crm/tabs-glass";
+import { cn } from "@/lib/utils";
 
+import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 import InternalTemplatesPage from "../templates/client-page";
 import WhatsAppTemplatesPage from "../whatsapp-templates/client-page";
+import {
+  HubCallout,
+  HubChip,
+  HubPanel,
+  HubStat,
+  HubStatGrid,
+  HubSubHeader,
+  HubTabBar,
+  HubToolbar,
+  type HubTabDef,
+} from "./hub-ui";
 
 type InternalRow = {
   id: string;
@@ -50,6 +68,7 @@ type MetaRow = {
 
 type FlowListRow = {
   id: string;
+  shortId: string | null;
   name: string;
   status: string;
   metaFlowId: string | null;
@@ -74,6 +93,7 @@ const META_STATUS: Record<string, string> = {
 
 export default function MessageModelsHubPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const queryClient = useQueryClient();
@@ -113,9 +133,12 @@ export default function MessageModelsHubPage() {
           else sp.set(k, v);
         }
       }
-      router.replace(`/old/settings/message-models?${sp.toString()}`);
+      // Preserva a rota atual: quando o hub roda dentro do shell v2
+      // (`/settings/message-models`), navega na rota canônica; quando roda
+      // standalone em `/old/...`, mantém o caminho legado.
+      router.replace(`${pathname}?${sp.toString()}`);
     },
-    [router, searchParams],
+    [router, pathname, searchParams],
   );
 
   const { data: internals = [], isLoading: loadingInt } = useQuery({
@@ -125,7 +148,6 @@ export default function MessageModelsHubPage() {
       if (!r.ok) return [] as InternalRow[];
       return r.json() as Promise<InternalRow[]>;
     },
-    enabled: safeTab === "overview",
   });
 
   const { data: metaPage, isLoading: loadingMeta } = useQuery({
@@ -146,7 +168,6 @@ export default function MessageModelsHubPage() {
       if (!r.ok) return [] as FlowListRow[];
       return r.json() as Promise<FlowListRow[]>;
     },
-    enabled: safeTab === "overview" || safeTab === "flows",
   });
 
   const createFlowMutation = useMutation({
@@ -171,7 +192,22 @@ export default function MessageModelsHubPage() {
     },
     onSuccess: (out) => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-definitions"] });
-      router.push(`/old/settings/message-models/flows/${out.id}`);
+      router.push(`/settings/message-models/flows/${out.id}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteFlowMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await fetch(apiUrl(`/api/whatsapp-flow-definitions/${id}`), { method: "DELETE" });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(typeof j?.message === "string" ? j.message : "Erro ao excluir flow.");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-definitions"] });
+      toast.success("Flow excluído.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -209,130 +245,284 @@ export default function MessageModelsHubPage() {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-flow-meta-list"] });
       setImportOpen(false);
       toast.success(out.created ? "Flow importado da Meta." : "Flow já estava no CRM — abrindo editor.");
-      router.push(`/old/settings/message-models/flows/${out.id}`);
+      router.push(`/settings/message-models/flows/${out.id}`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const tabDefs = React.useMemo(() => {
-    const defs: { value: string; label: string }[] = [
-      { value: "overview", label: "Visão geral" },
-    ];
-    if (canViewTemplates) defs.push({ value: "internal", label: "Internos" });
-    if (canSubmitMeta) defs.push({ value: "whatsapp", label: "WhatsApp (Meta)" });
-    if (canSubmitMeta) defs.push({ value: "flows", label: "Flows" });
-    return defs;
-  }, [canViewTemplates, canSubmitMeta]);
+  const [ovQuery, setOvQuery] = React.useState("");
+  const [ovFilter, setOvFilter] = React.useState<"all" | "interno" | "waba" | "flow">("all");
+  const [flowQuery, setFlowQuery] = React.useState("");
+  const [flowFilter, setFlowFilter] = React.useState<"all" | "PUBLISHED" | "DRAFT">("all");
 
-  const activeIndex = Math.max(
-    0,
-    tabDefs.findIndex((t) => t.value === safeTab),
+  const metaRows = metaPage?.data ?? [];
+  const metaLoaded = !!metaPage;
+  const internalCount = internals.length;
+  const metaCount = metaRows.length;
+  const flowCount = flows.length;
+  const totalCount = internalCount + metaCount + flowCount;
+  const metaApproved = metaRows.filter((r) => r.status === "APPROVED").length;
+  const metaPending = metaRows.filter(
+    (r) => r.status === "PENDING" || r.status === "PENDING_APPROVAL",
+  ).length;
+  const flowPublished = flows.filter((f) => f.status === "PUBLISHED").length;
+  const flowDraft = flows.filter((f) => f.status !== "PUBLISHED").length;
+  const flowWithMeta = flows.filter((f) => f.metaFlowId?.trim()).length;
+
+  const tabDefs = React.useMemo<HubTabDef[]>(() => {
+    const defs: HubTabDef[] = [
+      { value: "overview", label: "Visão geral", count: totalCount || undefined },
+    ];
+    if (canViewTemplates) defs.push({ value: "internal", label: "Internos", count: internalCount });
+    if (canSubmitMeta) {
+      defs.push({ value: "whatsapp", label: "WhatsApp (Meta)", count: metaLoaded ? metaCount : undefined });
+      defs.push({ value: "flows", label: "Flows", count: flowCount });
+    }
+    return defs;
+  }, [canViewTemplates, canSubmitMeta, totalCount, internalCount, metaLoaded, metaCount, flowCount]);
+
+  const overviewRows = React.useMemo(() => {
+    const q = ovQuery.trim().toLowerCase();
+    type OvRow = {
+      key: string;
+      type: "interno" | "waba" | "flow";
+      name: string;
+      preview: string;
+      vars: string[];
+      statusKind: "approved" | "pending" | "rejected" | "none";
+      statusLabel: string;
+      channel: string;
+      onOpen: () => void;
+    };
+    const out: OvRow[] = [];
+    if (ovFilter === "all" || ovFilter === "interno") {
+      for (const t of internals) {
+        out.push({
+          key: `int-${t.id}`,
+          type: "interno",
+          name: t.name,
+          preview: t.content ?? "",
+          vars: [...new Set((t.content?.match(/\{\{(.*?)\}\}/g) ?? []))],
+          statusKind: "none",
+          statusLabel: "Modelo interno",
+          channel: [t.category, t.channelType].filter(Boolean).join(" · ") || "Interno · todos os canais",
+          onOpen: () => setTab("internal"),
+        });
+      }
+    }
+    if (ovFilter === "all" || ovFilter === "waba") {
+      for (const t of metaRows) {
+        const kind =
+          t.status === "APPROVED"
+            ? "approved"
+            : t.status === "REJECTED"
+              ? "rejected"
+              : "pending";
+        out.push({
+          key: `meta-${t.id}`,
+          type: "waba",
+          name: t.name,
+          preview: "",
+          vars: [],
+          statusKind: kind,
+          statusLabel: META_STATUS[t.status] ?? t.status,
+          channel: ["WhatsApp", t.category, t.language].filter(Boolean).join(" · "),
+          onOpen: () => setTab("whatsapp"),
+        });
+      }
+    }
+    if (ovFilter === "all" || ovFilter === "flow") {
+      for (const f of flows) {
+        out.push({
+          key: `flow-${f.id}`,
+          type: "flow",
+          name: f.name,
+          preview: f.metaFlowId ? `Meta flow id ${f.metaFlowId}` : "Flow criado no CRM",
+          vars: [],
+          statusKind: "none",
+          statusLabel: f.status === "PUBLISHED" ? "Publicado" : "Rascunho",
+          channel: f.status === "PUBLISHED" ? "Flow · publicado" : "Flow · rascunho",
+          onOpen: () => router.push(`/settings/message-models/flows/${f.shortId ?? f.id}`),
+        });
+      }
+    }
+    if (!q) return out;
+    return out.filter(
+      (r) => r.name.toLowerCase().includes(q) || r.preview.toLowerCase().includes(q),
+    );
+  }, [internals, metaRows, flows, ovFilter, ovQuery, router, setTab]);
+
+  const flowRows = React.useMemo(() => {
+    const q = flowQuery.trim().toLowerCase();
+    return flows.filter((f) => {
+      const okF = flowFilter === "all" || f.status === flowFilter;
+      const okQ = !q || f.name.toLowerCase().includes(q) || (f.metaFlowId ?? "").includes(q);
+      return okF && okQ;
+    });
+  }, [flows, flowFilter, flowQuery]);
+
+  const headerSlots = useSettingsHeaderSlots();
+
+  const tabBarNode = React.useMemo(
+    () => (
+      <HubTabBar
+        tabs={tabDefs}
+        active={safeTab}
+        onChange={(value) => setTab(value, { new: null, create: null })}
+      />
+    ),
+    [tabDefs, safeTab, setTab],
   );
 
-  return (
-    <div className="w-full space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <TabsGlass
-          tabs={tabDefs.map((t) => t.label)}
-          activeTab={activeIndex}
-          onChange={(i) => setTab(tabDefs[i].value, { new: null, create: null })}
-          className="w-auto"
-        />
+  const actionNode = React.useMemo(
+    () =>
+      safeTab === "overview" ? (
         <Button type="button" size="sm" onClick={() => setNewOpen(true)}>
           <Plus className="size-4" />
           <span className="ml-2">Novo modelo</span>
         </Button>
-      </div>
+      ) : null,
+    [safeTab],
+  );
+
+  // Injeta abas + ação na linha do PageHeader (padrão Pipeline) quando
+  // rodando dentro do SettingsV2Shell. Sem o shell (rota /old) cai no
+  // render inline abaixo.
+  React.useEffect(() => {
+    if (!headerSlots) return;
+    headerSlots.setCenter(tabBarNode);
+    headerSlots.setActions(actionNode);
+    return () => {
+      headerSlots.setCenter(null);
+      headerSlots.setActions(null);
+    };
+  }, [headerSlots, tabBarNode, actionNode]);
+
+  return (
+    <div className="w-full space-y-4">
+      {!headerSlots ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {tabBarNode}
+          {actionNode}
+        </div>
+      ) : null}
 
       {safeTab === "overview" && (
         <div className="space-y-4">
-          <p className="text-sm text-[var(--text-muted)]">
-            Lista rápida dos modelos internos (primeira página) e templates Meta na WABA. Use os separadores para
-            gestão completa.
-          </p>
-          {loadingInt || loadingMeta || loadingFlows ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)]">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
-                  <tr>
-                    <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Tipo</th>
-                    <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Nome</th>
-                    <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Detalhes</th>
-                    <th className="px-3 py-2 font-medium text-[var(--text-secondary)] w-[100px]">Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {internals.map((t) => (
-                    <tr key={`int-${t.id}`} className="border-b border-[var(--glass-border-subtle)]">
-                      <td className="px-3 py-2">
-                        <Badge variant="secondary">Interno</Badge>
-                      </td>
-                      <td className="px-3 py-2 font-medium text-[var(--text-primary)]">{t.name}</td>
-                      <td className="px-3 py-2 text-[var(--text-muted)]">
-                        {[t.category, t.channelType].filter(Boolean).join(" · ") || "—"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setTab("internal")}>
-                          Abrir
-                        </Button>
-                      </td>
+          <HubStatGrid>
+            <HubStat tone="brand" icon={<LayoutTemplate className="size-5" />} value={totalCount} label="Modelos no total" />
+            <HubStat tone="violet" icon={<FileText className="size-5" />} value={internalCount} label="Internos" />
+            <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={metaApproved} label="WhatsApp aprovados" />
+            <HubStat tone="warn" icon={<Clock className="size-5" />} value={metaPending} label="Aguardando revisão Meta" />
+          </HubStatGrid>
+
+          <HubCallout icon={<Info className="size-[18px]" />}>
+            As rotas antigas{" "}
+            <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
+              /settings/templates
+            </code>{" "}
+            e{" "}
+            <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
+              /settings/whatsapp-templates
+            </code>{" "}
+            redirecionam para este hub.
+          </HubCallout>
+
+          <HubPanel>
+            <HubToolbar
+              searchValue={ovQuery}
+              onSearchChange={setOvQuery}
+              placeholder="Buscar por nome, conteúdo ou variável..."
+            >
+              <HubChip active={ovFilter === "all"} onClick={() => setOvFilter("all")}>
+                Todos os canais
+              </HubChip>
+              <HubChip active={ovFilter === "interno"} onClick={() => setOvFilter("interno")} dot="var(--text-muted)">
+                Interno
+              </HubChip>
+              <HubChip active={ovFilter === "waba"} onClick={() => setOvFilter("waba")} dot="var(--color-online)">
+                WhatsApp
+              </HubChip>
+              <HubChip active={ovFilter === "flow"} onClick={() => setOvFilter("flow")} dot="var(--brand-primary)">
+                Flow
+              </HubChip>
+            </HubToolbar>
+
+            {loadingInt || loadingMeta || loadingFlows ? (
+              <div className="space-y-2 p-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : overviewRows.length === 0 ? (
+              <div className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
+                <Search className="size-9 text-[var(--glass-border)]" />
+                <p className="text-[13px] text-[var(--text-muted)]">Nenhum modelo encontrado.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[680px] border-collapse text-left">
+                  <thead>
+                    <tr className="[&>th]:px-[18px] [&>th]:py-3.5 [&>th]:text-[11px] [&>th]:font-bold [&>th]:uppercase [&>th]:tracking-[0.06em] [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
+                      <th className="w-[140px]">Tipo</th>
+                      <th>Nome / conteúdo</th>
+                      <th className="w-[260px]">Status / canal</th>
+                      <th className="w-[120px] text-right">Ação</th>
                     </tr>
-                  ))}
-                  {(metaPage?.data ?? []).map((t) => (
-                    <tr key={`meta-${t.id}`} className="border-b border-[var(--glass-border-subtle)]">
-                      <td className="px-3 py-2">
-                        <Badge>WhatsApp</Badge>
-                      </td>
-                      <td className="px-3 py-2 font-medium text-[var(--text-primary)]">{t.name}</td>
-                      <td className="px-3 py-2 text-[var(--text-muted)]">
-                        {META_STATUS[t.status] ?? t.status} · {t.language ?? "—"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setTab("whatsapp")}>
-                          Abrir
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                  {flows.map((f) => (
-                    <tr key={`flow-${f.id}`} className="border-b border-[var(--glass-border-subtle)]">
-                      <td className="px-3 py-2">
-                        <Badge variant="outline">Flow</Badge>
-                      </td>
-                      <td className="px-3 py-2 font-medium text-[var(--text-primary)]">{f.name}</td>
-                      <td className="px-3 py-2 text-[var(--text-muted)]">
-                        {f.status}
-                        {f.metaFlowId ? (
-                          <>
-                            {" "}
-                            · <code className="text-[10px]">{f.metaFlowId}</code>
-                          </>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => router.push(`/old/settings/message-models/flows/${f.id}`)}
-                        >
-                          Editar
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {internals.length === 0 && (metaPage?.data ?? []).length === 0 && flows.length === 0 ? (
-                <p className="p-6 text-center text-sm text-[var(--text-muted)]">Nenhum modelo encontrado.</p>
-              ) : null}
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {overviewRows.map((r) => (
+                      <tr
+                        key={r.key}
+                        className="border-b border-[var(--glass-border-subtle)] transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
+                      >
+                        <td className="px-[18px] py-3.5 align-middle">
+                          <OverviewTypeBadge type={r.type} />
+                        </td>
+                        <td className="px-[18px] py-3.5 align-middle">
+                          <div className="min-w-0">
+                            <div className="font-bold text-[var(--text-primary)]">{r.name}</div>
+                            {r.preview ? (
+                              <div className="mt-0.5 max-w-[520px] truncate text-[12.5px] text-[var(--text-muted)]">
+                                {r.preview}
+                              </div>
+                            ) : null}
+                            {r.vars.length ? (
+                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                {r.vars.map((v) => (
+                                  <span
+                                    key={v}
+                                    className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]"
+                                  >
+                                    {v}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-[18px] py-3.5 align-middle">
+                          <div className="flex flex-col gap-1.5">
+                            <StatusPill kind={r.statusKind} label={r.statusLabel} />
+                            <span className="text-[12px] text-[var(--text-secondary)]">{r.channel}</span>
+                          </div>
+                        </td>
+                        <td className="px-[18px] py-3.5 text-right align-middle">
+                          <button
+                            type="button"
+                            onClick={r.onOpen}
+                            className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
+                          >
+                            Abrir <ChevronRight className="size-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </HubPanel>
         </div>
       )}
 
@@ -351,88 +541,172 @@ export default function MessageModelsHubPage() {
         ))}
 
       {safeTab === "flows" && canSubmitMeta && (
-        <div className="space-y-3">
-          <div className="rounded-[var(--radius-lg)] border border-[var(--color-info)]/30 bg-[color-mix(in_srgb,var(--color-info)_8%,transparent)] px-3 py-2 text-xs text-[var(--text-secondary)]">
-            Flows criados só no <strong>Meta Business Manager</strong> não aparecem aqui automaticamente.
-            Use <strong>Importar da Meta</strong> para trazer o cadastro (ex.: estagiário) e configurar o mapeamento
-            das respostas no lead.
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-[var(--text-muted)]">
-              Desenhe no CRM ou importe um flow já publicado na WABA; depois mapeie cada resposta para o campo do
-              lead.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setImportOpen(true);
-                  void refetchMetaFlows();
-                }}
-              >
-                <Download className="size-4" />
-                <span className="ml-2">Importar da Meta</span>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={createFlowMutation.isPending}
-                onClick={() => createFlowMutation.mutate()}
-              >
-                {createFlowMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Workflow className="size-4" />
-                )}
-                <span className="ml-2">Novo flow</span>
-              </Button>
-            </div>
-          </div>
-          <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)]">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]">
-                <tr>
-                  <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Nome</th>
-                  <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Estado</th>
-                  <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Meta flow id</th>
-                  <th className="px-3 py-2 font-medium text-[var(--text-secondary)]">Atualizado</th>
-                  <th className="px-3 py-2 w-[100px]" />
-                </tr>
-              </thead>
-              <tbody>
-                {flows.map((f) => (
-                  <tr key={f.id} className="border-b border-[var(--glass-border-subtle)]">
-                    <td className="px-3 py-2 font-medium text-[var(--text-primary)]">{f.name}</td>
-                    <td className="px-3 py-2 text-[var(--text-secondary)]">{f.status}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-[var(--text-secondary)]">{f.metaFlowId ?? "—"}</td>
-                    <td className="px-3 py-2 text-[var(--text-muted)]">
-                      {new Date(f.updatedAt).toLocaleString("pt-BR")}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/old/settings/message-models/flows/${f.id}`)}
+        <div className="space-y-4">
+          <HubSubHeader
+            icon={<Workflow className="size-5" />}
+            title="Flows interativos"
+            actions={
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setImportOpen(true);
+                    void refetchMetaFlows();
+                  }}
+                >
+                  <Download className="size-4" />
+                  <span className="ml-2">Importar da Meta</span>
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={createFlowMutation.isPending}
+                  onClick={() => createFlowMutation.mutate()}
+                >
+                  {createFlowMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Workflow className="size-4" />
+                  )}
+                  <span className="ml-2">Novo flow</span>
+                </Button>
+              </>
+            }
+          >
+            Desenhe um flow direto no CRM ou importe um já publicado na WABA; depois{" "}
+            <strong className="font-bold text-[var(--text-secondary)]">mapeie cada resposta para o campo do lead</strong>.
+            Flows publicados podem ser anexados como{" "}
+            <code className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--text-secondary)]">
+              botão Flow
+            </code>{" "}
+            nos templates da Meta.
+          </HubSubHeader>
+
+          <HubStatGrid>
+            <HubStat tone="brand" icon={<Workflow className="size-5" />} value={flowCount} label="Flows no total" />
+            <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={flowPublished} label="Publicados" />
+            <HubStat tone="warn" icon={<FileText className="size-5" />} value={flowDraft} label="Rascunhos" />
+            <HubStat tone="violet" icon={<LayoutTemplate className="size-5" />} value={flowWithMeta} label="Com Meta flow id" />
+          </HubStatGrid>
+
+          <HubCallout tone="info" icon={<Info className="size-[18px]" />}>
+            Flows criados só no <strong className="font-bold text-[var(--brand-primary-dark)]">Meta Business Manager</strong>{" "}
+            não aparecem aqui automaticamente. Use{" "}
+            <strong className="font-bold text-[var(--brand-primary-dark)]">Importar da Meta</strong> para trazer o cadastro
+            (ex.: estagiário) e configurar o mapeamento das respostas no lead.
+          </HubCallout>
+
+          <HubPanel>
+            <HubToolbar
+              searchValue={flowQuery}
+              onSearchChange={setFlowQuery}
+              placeholder="Buscar flow por nome ou Meta flow id..."
+            >
+              <HubChip active={flowFilter === "all"} onClick={() => setFlowFilter("all")} count={flowCount}>
+                Todos
+              </HubChip>
+              <HubChip active={flowFilter === "PUBLISHED"} onClick={() => setFlowFilter("PUBLISHED")} count={flowPublished}>
+                Publicados
+              </HubChip>
+              <HubChip active={flowFilter === "DRAFT"} onClick={() => setFlowFilter("DRAFT")} count={flowDraft}>
+                Rascunhos
+              </HubChip>
+            </HubToolbar>
+
+            {loadingFlows ? (
+              <div className="space-y-2 p-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : flowRows.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 px-5 py-14 text-center">
+                <Workflow className="size-9 text-[var(--glass-border)]" />
+                <h3 className="text-[15px] font-bold text-[var(--text-secondary)]">Nenhum flow encontrado</h3>
+                <p className="text-[13px] text-[var(--text-muted)]">Ajuste a busca ou importe um flow já publicado na Meta.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[820px] border-collapse text-left">
+                  <thead>
+                    <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-[11px] [&>th]:font-bold [&>th]:uppercase [&>th]:tracking-[0.06em] [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
+                      <th>Nome</th>
+                      <th className="w-[140px]">Estado</th>
+                      <th className="w-[200px]">Meta flow id</th>
+                      <th className="w-[180px]">Atualizado</th>
+                      <th className="w-[170px] text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {flowRows.map((f) => (
+                      <tr
+                        key={f.id}
+                        className="border-b border-[var(--glass-border-subtle)] transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
                       >
-                        Editar
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {flows.length === 0 ? (
-              <p className="p-4 text-center text-sm text-[var(--text-muted)]">Nenhum flow criado ainda.</p>
-            ) : null}
-          </div>
+                        <td className="px-4 py-3.5 align-middle">
+                          <div className="flex items-center gap-3">
+                            <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+                              <Workflow className="size-[18px]" />
+                            </span>
+                            <div className="min-w-0">
+                              <div className="truncate font-bold text-[var(--text-primary)]">{f.name}</div>
+                              <div className="mt-0.5 text-[11.5px] text-[var(--text-muted)]">
+                                {f.metaFlowId ? "Importado da Meta" : "Criado no CRM"}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 align-middle">
+                          <FlowStateBadge published={f.status === "PUBLISHED"} />
+                        </td>
+                        <td className="px-4 py-3.5 align-middle">
+                          {f.metaFlowId ? (
+                            <span className="font-mono text-[12px] text-[var(--text-secondary)]">{f.metaFlowId}</span>
+                          ) : (
+                            <span className="text-[var(--text-muted)] opacity-60">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 align-middle text-[12.5px] text-[var(--text-secondary)]">
+                          {new Date(f.updatedAt).toLocaleString("pt-BR")}
+                        </td>
+                        <td className="px-4 py-3.5 align-middle">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              aria-label="Excluir flow"
+                              onClick={() => deleteFlowMutation.mutate(f.id)}
+                              disabled={deleteFlowMutation.isPending}
+                              className="flex size-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)]/40 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/settings/message-models/flows/${f.shortId ?? f.id}`)}
+                              className="rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-1.5 text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
+                            >
+                              Editar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--glass-border-subtle)] px-[18px] py-3">
+              <span className="text-[12.5px] text-[var(--text-muted)]">
+                {flowRows.length} {flowRows.length === 1 ? "flow" : "flows"}
+              </span>
+            </div>
+          </HubPanel>
         </div>
       )}
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>Novo modelo</DialogTitle>
             <DialogDescription>Escolha o tipo de modelo, como no Kommo.</DialogDescription>
@@ -483,7 +757,7 @@ export default function MessageModelsHubPage() {
       </Dialog>
 
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>Importar flow da Meta</DialogTitle>
             <DialogDescription>
@@ -521,7 +795,7 @@ export default function MessageModelsHubPage() {
                       onClick={() => {
                         if (mf.crmFlowDefinitionId) {
                           setImportOpen(false);
-                          router.push(`/old/settings/message-models/flows/${mf.crmFlowDefinitionId}`);
+                          router.push(`/settings/message-models/flows/${mf.crmFlowDefinitionId}`);
                         }
                       }}
                     >
@@ -548,5 +822,70 @@ export default function MessageModelsHubPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function OverviewTypeBadge({ type }: { type: "interno" | "waba" | "flow" }) {
+  const map = {
+    interno: {
+      label: "Interno",
+      icon: <FileText className="size-3.5" />,
+      cls: "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+    },
+    waba: {
+      label: "WhatsApp",
+      icon: <MessageCircle className="size-3.5" />,
+      cls: "border-[color-mix(in_srgb,var(--color-success)_30%,transparent)] bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
+    },
+    flow: {
+      label: "Flow",
+      icon: <Workflow className="size-3.5" />,
+      cls: "border-[var(--input-border-focus)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary-dark)]",
+    },
+  } as const;
+  const m = map[type];
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-2.5 py-1 text-[11.5px] font-bold", m.cls)}>
+      {m.icon}
+      {m.label}
+    </span>
+  );
+}
+
+function StatusPill({
+  kind,
+  label,
+}: {
+  kind: "approved" | "pending" | "rejected" | "none";
+  label: string;
+}) {
+  const map = {
+    approved: { color: "text-[var(--color-success-text)]", dot: "bg-[var(--color-online)]" },
+    pending: { color: "text-[var(--color-warn)]", dot: "bg-[var(--color-warn)]" },
+    rejected: { color: "text-[var(--color-danger-text)]", dot: "bg-[var(--color-danger)]" },
+    none: { color: "text-[var(--text-muted)]", dot: "bg-[var(--glass-border)]" },
+  } as const;
+  const m = map[kind];
+  return (
+    <span className={cn("inline-flex w-fit items-center gap-1.5 text-[11.5px] font-bold", m.color)}>
+      <span className={cn("size-[7px] rounded-full", m.dot)} />
+      {label}
+    </span>
+  );
+}
+
+function FlowStateBadge({ published }: { published: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
+        published
+          ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
+          : "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+      )}
+    >
+      <span className={cn("size-1.5 rounded-full", published ? "bg-[var(--color-online)]" : "bg-[var(--text-muted)] opacity-60")} />
+      {published ? "Published" : "Draft"}
+    </span>
   );
 }

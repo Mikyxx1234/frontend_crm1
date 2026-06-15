@@ -78,7 +78,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -3024,17 +3024,12 @@ export function ChatWindow({
                 </button>
               </div>
               <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(130px,180px)_minmax(0,1fr)]">
-                <SelectNative
+                <DropdownGlass
+                  options={ACTIVITY_TYPES}
                   value={taskType}
-                  onChange={(e) => setTaskType(e.target.value)}
-                  className="h-9 min-w-0 rounded-xl text-[13px]"
-                >
-                  {ACTIVITY_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </SelectNative>
+                  onValueChange={(v) => setTaskType(v)}
+                  triggerClassName="h-9 min-w-0 rounded-xl text-[13px]"
+                />
                 <Input
                   type="datetime-local"
                   value={taskScheduled}

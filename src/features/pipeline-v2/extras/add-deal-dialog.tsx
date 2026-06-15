@@ -15,6 +15,8 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
+
 import { apiUrl } from "@/lib/api";
 import { useCreateDeal, useTeamUsers } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
@@ -243,35 +245,27 @@ export function AddDealDialog({
             </label>
             <label className="block">
               <span className={labelCls}>Estágio *</span>
-              <select
+              <DropdownGlass
+                options={stages.map((s) => ({ value: s.id, label: s.name }))}
                 value={stageId}
-                onChange={(e) => setStageId(e.target.value)}
-                className={inputCls}
-              >
-                {stages.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setStageId}
+                triggerClassName="w-full"
+              />
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className={labelCls}>Responsável</span>
-              <select
+              <DropdownGlass
+                options={[
+                  { value: "", label: "Sem responsável" },
+                  ...users.map((u) => ({ value: u.id, label: u.name })),
+                ]}
                 value={ownerId}
-                onChange={(e) => setOwnerId(e.target.value)}
-                className={inputCls}
-              >
-                <option value="">Sem responsável</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setOwnerId}
+                triggerClassName="w-full"
+              />
             </label>
             <label className="block">
               <span className={labelCls}>Fechamento esperado</span>
@@ -421,18 +415,13 @@ export function AddDealDialog({
                       {f.required ? " *" : ""}
                     </span>
                     {f.options && f.options.length > 0 ? (
-                      <select
-                        value={v}
-                        onChange={(e) => onChange(e.target.value)}
-                        className={inputCls}
-                      >
-                        <option value="">Selecione…</option>
-                        {f.options.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
+                      <DropdownGlass
+                        options={f.options.map((opt) => ({ value: opt, label: opt }))}
+                        value={v || undefined}
+                        onValueChange={onChange}
+                        placeholder="Selecione…"
+                        triggerClassName="w-full"
+                      />
                     ) : type === "date" ? (
                       <input
                         type="date"

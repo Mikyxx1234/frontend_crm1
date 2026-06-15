@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Separator } from "@/components/ui/separator";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -399,26 +399,40 @@ function QuickRuleForm({
 
       <div className="grid gap-1.5">
         <Label className="text-xs">Gatilho</Label>
-        <SelectNative value={trigger} onChange={(e) => setTrigger(e.target.value)} className="h-8 text-sm" disabled={availableTriggers.length === 1}>
-          {availableTriggers.map((t) => <option key={t} value={t}>{TRIGGER_LABELS[t] ?? t}</option>)}
-        </SelectNative>
+        <DropdownGlass
+          options={availableTriggers.map((t) => ({ value: t, label: TRIGGER_LABELS[t] ?? t }))}
+          value={trigger}
+          onValueChange={setTrigger}
+          disabled={availableTriggers.length === 1}
+          triggerClassName="h-8 w-full text-sm"
+        />
       </div>
 
       {trigger === "stage_changed" && (
-        <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
           <div className="grid gap-1">
             <Label className="text-[10px]">De</Label>
-            <SelectNative value={fromStageId} onChange={(e) => setFromStageId(e.target.value)} className="h-7 text-xs">
-              <option value="">Qualquer</option>
-              {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </SelectNative>
+            <DropdownGlass
+              options={[
+                { value: "", label: "Qualquer" },
+                ...stages.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+              value={fromStageId}
+              onValueChange={setFromStageId}
+              triggerClassName="h-7 w-full text-xs"
+            />
           </div>
           <div className="grid gap-1">
             <Label className="text-[10px]">Para</Label>
-            <SelectNative value={toStageId} onChange={(e) => setToStageId(e.target.value)} className="h-7 text-xs">
-              <option value="">Qualquer</option>
-              {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </SelectNative>
+            <DropdownGlass
+              options={[
+                { value: "", label: "Qualquer" },
+                ...stages.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+              value={toStageId}
+              onValueChange={setToStageId}
+              triggerClassName="h-7 w-full text-xs"
+            />
           </div>
         </div>
       )}
@@ -426,13 +440,18 @@ function QuickRuleForm({
       {(trigger === "message_received" || trigger === "message_sent") && (
         <div className="grid gap-1">
           <Label className="text-[10px]">Canal</Label>
-          <SelectNative value={channel} onChange={(e) => setChannel(e.target.value)} className="h-7 text-xs">
-            <option value="">Todos</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="instagram">Instagram</option>
-            <option value="facebook">Facebook</option>
-            <option value="email">E-mail</option>
-          </SelectNative>
+          <DropdownGlass
+            options={[
+              { value: "", label: "Todos" },
+              { value: "whatsapp", label: "WhatsApp" },
+              { value: "instagram", label: "Instagram" },
+              { value: "facebook", label: "Facebook" },
+              { value: "email", label: "E-mail" },
+            ]}
+            value={channel}
+            onValueChange={setChannel}
+            triggerClassName="h-7 w-full text-xs"
+          />
         </div>
       )}
 
@@ -449,29 +468,40 @@ function QuickRuleForm({
           <div key={idx} className="rounded-md border border-border bg-white p-2 space-y-1.5">
             <div className="flex items-center gap-1.5">
               <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-white">{idx + 1}</span>
-              <SelectNative value={action.type} onChange={(e) => updateAction(idx, { type: e.target.value })} className="h-7 flex-1 text-xs">
-                {ACTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </SelectNative>
+              <DropdownGlass
+                options={ACTION_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                value={action.type}
+                onValueChange={(v) => updateAction(idx, { type: v })}
+                triggerClassName="h-7 flex-1 text-xs"
+              />
               <button type="button" onClick={() => removeAction(idx)} className="p-0.5 text-[var(--color-ink-muted)] hover:text-destructive">
                 <Trash2 className="size-3" />
               </button>
             </div>
             {action.type === "move_stage" ? (
-              <SelectNative value={action.value} onChange={(e) => updateAction(idx, { value: e.target.value })} className="h-7 text-xs">
-                <option value="">Selecione…</option>
-                {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </SelectNative>
+              <DropdownGlass
+                options={stages.map((s) => ({ value: s.id, label: s.name }))}
+                value={action.value || undefined}
+                onValueChange={(v) => updateAction(idx, { value: v })}
+                placeholder="Selecione…"
+                triggerClassName="h-7 w-full text-xs"
+              />
             ) : action.type === "change_lifecycle" ? (
-              <SelectNative value={action.value} onChange={(e) => updateAction(idx, { value: e.target.value })} className="h-7 text-xs">
-                <option value="">Selecione…</option>
-                <option value="SUBSCRIBER">Assinante</option>
-                <option value="LEAD">Lead</option>
-                <option value="MQL">MQL</option>
-                <option value="SQL">SQL</option>
-                <option value="OPPORTUNITY">Oportunidade</option>
-                <option value="CUSTOMER">Cliente</option>
-                <option value="EVANGELIST">Evangelista</option>
-              </SelectNative>
+              <DropdownGlass
+                options={[
+                  { value: "SUBSCRIBER", label: "Assinante" },
+                  { value: "LEAD", label: "Lead" },
+                  { value: "MQL", label: "MQL" },
+                  { value: "SQL", label: "SQL" },
+                  { value: "OPPORTUNITY", label: "Oportunidade" },
+                  { value: "CUSTOMER", label: "Cliente" },
+                  { value: "EVANGELIST", label: "Evangelista" },
+                ]}
+                value={action.value || undefined}
+                onValueChange={(v) => updateAction(idx, { value: v })}
+                placeholder="Selecione…"
+                triggerClassName="h-7 w-full text-xs"
+              />
             ) : action.type === "send_message" ? (
               <textarea
                 value={action.value}

@@ -4,8 +4,9 @@ import { apiUrl } from "@/lib/api";
 
 import type {
   EffectivePermissions,
-  GroupMember,
+  GroupDetail,
   GroupSummary,
+  GroupWritePayload,
   PermissionsCatalog,
   RoleSummary,
 } from "./types";
@@ -39,7 +40,12 @@ export function useRole(id: string | null) {
 export function useCreateRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; description?: string; permissions: string[] }) =>
+    mutationFn: (data: {
+      name: string;
+      description?: string;
+      permissions: string[];
+      inheritsFrom?: string | null;
+    }) =>
       apiFetch<RoleSummary>("/api/roles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,6 +68,7 @@ export function useUpdateRole() {
       name?: string;
       description?: string;
       permissions?: string[];
+      inheritsFrom?: string | null;
     }) =>
       apiFetch<RoleSummary>(`/api/roles/${id}`, {
         method: "PUT",
@@ -131,25 +138,18 @@ export function useGroups() {
 }
 
 export function useGroup(id: string | null) {
-  return useQuery<GroupSummary>({
+  return useQuery<GroupDetail>({
     queryKey: ["groups", id],
     queryFn: () => apiFetch(`/api/groups/${id}`),
-    enabled: !!id,
+    enabled: !!id && id !== "new",
   });
 }
 
 export function useCreateGroup() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: {
-      name: string;
-      description?: string;
-      color?: string;
-      roleId?: string | null;
-      channelGrants?: string[];
-      stageGrants?: string[];
-    }) =>
-      apiFetch<GroupSummary>("/api/groups", {
+    mutationFn: (data: GroupWritePayload & { name: string }) =>
+      apiFetch<GroupDetail>("/api/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -163,20 +163,8 @@ export function useCreateGroup() {
 export function useUpdateGroup() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      ...data
-    }: {
-      id: string;
-      name?: string;
-      description?: string;
-      color?: string;
-      roleId?: string | null;
-      channelGrants?: string[];
-      stageGrants?: string[];
-      isActive?: boolean;
-    }) =>
-      apiFetch<GroupSummary>(`/api/groups/${id}`, {
+    mutationFn: ({ id, ...data }: GroupWritePayload & { id: string }) =>
+      apiFetch<GroupDetail>(`/api/groups/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -184,6 +172,7 @@ export function useUpdateGroup() {
     onSuccess: (_, { id }) => {
       void qc.invalidateQueries({ queryKey: ["groups"] });
       void qc.invalidateQueries({ queryKey: ["groups", id] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
   });
 }
@@ -202,46 +191,17 @@ export function useDeleteGroup() {
 export function useAddGroupMember() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      groupId,
-      userId,
-      roleId,
-    }: {
-      groupId: string;
-      userId: string;
-      roleId?: string | null;
-    }) =>
-      apiFetch<GroupMember>(`/api/groups/${groupId}/members`, {
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      apiFetch<GroupDetail>(`/api/groups/${groupId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, roleId }),
+        body: JSON.stringify({ userId }),
       }),
-    onSuccess: (_, { groupId }) => {
+    onSuccess: (_, { groupId, userId }) => {
       void qc.invalidateQueries({ queryKey: ["groups", groupId] });
       void qc.invalidateQueries({ queryKey: ["groups"] });
-    },
-  });
-}
-
-export function useUpdateGroupMember() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      groupId,
-      userId,
-      roleId,
-    }: {
-      groupId: string;
-      userId: string;
-      roleId: string | null;
-    }) =>
-      apiFetch<GroupMember>(`/api/groups/${groupId}/members/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleId }),
-      }),
-    onSuccess: (_, { groupId }) => {
-      void qc.invalidateQueries({ queryKey: ["groups", groupId] });
+      void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
   });
 }
@@ -251,9 +211,11 @@ export function useRemoveGroupMember() {
   return useMutation({
     mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
       apiFetch(`/api/groups/${groupId}/members/${userId}`, { method: "DELETE" }),
-    onSuccess: (_, { groupId }) => {
+    onSuccess: (_, { groupId, userId }) => {
       void qc.invalidateQueries({ queryKey: ["groups", groupId] });
       void qc.invalidateQueries({ queryKey: ["groups"] });
+      void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
   });
 }

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { ModalPortalContext } from "@/components/ui/modal-portal-context";
 
 type DialogContextValue = {
   open: boolean;
@@ -95,10 +96,17 @@ const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
   ({ className, children, size = "md", panelClassName, ...props }, ref) => {
     const { open, onOpenChange } = useDialogContext("DialogContent");
     const internalRef = React.useRef<HTMLDialogElement | null>(null);
+    // Nó publicado no contexto de portal: popovers/menus (DropdownGlass) portam
+    // pra dentro do `<dialog>` (top-layer) em vez do body, senão ficam atrás do
+    // backdrop e os cliques são interceptados pelo modal.
+    const [portalNode, setPortalNode] = React.useState<HTMLDialogElement | null>(
+      null
+    );
 
     const setRefs = React.useCallback(
       (node: HTMLDialogElement | null) => {
         internalRef.current = node;
+        setPortalNode(node);
         if (typeof ref === "function") ref(node);
         else if (ref != null)
           (ref as React.MutableRefObject<HTMLDialogElement | null>).current =
@@ -162,13 +170,15 @@ const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
             // - radius via token --radius-2xl
             // - superfície via --glass-bg-modal (dark automático)
             // - max-h dinâmico acompanha o viewport mobile (100dvh)
-            "relative z-50 mx-auto my-auto grid max-h-[calc(100dvh-2rem)] w-full gap-4 overflow-y-auto rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-6 text-[var(--text-primary)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[opacity,transform] duration-200",
+            "relative z-50 mx-auto my-auto grid max-h-[calc(100dvh-2rem)] w-full gap-4 overflow-y-auto overflow-x-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-6 text-[var(--text-primary)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[opacity,transform] duration-200",
             DIALOG_SIZE_CLASS[size],
             panelClassName
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          {children}
+          <ModalPortalContext.Provider value={portalNode}>
+            {children}
+          </ModalPortalContext.Provider>
         </div>
       </dialog>,
       document.body

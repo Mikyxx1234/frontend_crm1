@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { useCan } from "@/hooks/use-my-permissions";
 import { formatCurrency } from "@/lib/utils";
 
@@ -112,18 +112,13 @@ export function OffersSection({
         <div className="mt-3 grid grid-cols-12 items-end gap-2">
           <div className="col-span-5">
             <Label className="text-[11px]">Unidade</Label>
-            <SelectNative
+            <DropdownGlass
+              options={availableUnits.map((u) => ({ value: u.id, label: u.name }))}
               value={newUnit}
-              onChange={(e) => setNewUnit(e.target.value)}
-              className="mt-1 h-9"
-            >
-              <option value="">— Selecione —</option>
-              {availableUnits.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </SelectNative>
+              onValueChange={(v) => setNewUnit(v)}
+              placeholder="— Selecione —"
+              triggerClassName="mt-1 h-9 w-full"
+            />
           </div>
           <div className="col-span-3">
             <Label className="text-[11px]">Preço</Label>

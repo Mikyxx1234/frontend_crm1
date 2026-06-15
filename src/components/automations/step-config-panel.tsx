@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Textarea } from "@/components/ui/textarea";
 import type { AutomationStep } from "@/lib/automation-workflow";
 import { stepTypeLabel, summarizeStepConfig } from "@/lib/automation-workflow";
@@ -666,11 +666,18 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                     />
                   </>
                 ) : (
-                  <SelectNative
-                    id="sc-stage"
+                  <DropdownGlass
+                    triggerClassName="w-full"
+                    placeholder="Selecione…"
                     value={String(draft.stageId ?? "")}
-                    onChange={(e) => {
-                      const sid = e.target.value;
+                    options={pipelines.flatMap((p) =>
+                      p.stages.map((s) => ({
+                        value: s.id,
+                        label: s.name,
+                        description: p.name,
+                      }))
+                    )}
+                    onValueChange={(sid) => {
                       const stage = allStages.find((s) => s.id === sid);
                       setDraft((d) => ({
                         ...d,
@@ -678,18 +685,7 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                         stageName: stage ? stage.name : "",
                       }));
                     }}
-                  >
-                    <option value="">Selecione…</option>
-                    {pipelines.map((p) => (
-                      <optgroup key={p.id} label={p.name}>
-                        {p.stages.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </SelectNative>
+                  />
                 )}
               </div>
             );
@@ -718,20 +714,21 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-uf-entity">Entidade</Label>
-                <SelectNative
-                  id="sc-uf-entity"
+                <DropdownGlass
+                  triggerClassName="w-full"
                   value={String(draft.entity ?? "contact")}
-                  onChange={(e) =>
+                  options={[
+                    { value: "contact", label: "Contato" },
+                    { value: "deal", label: "Negócio" },
+                  ]}
+                  onValueChange={(v) =>
                     setDraft((d) => ({
                       ...d,
-                      entity: e.target.value,
+                      entity: v,
                       field: "",
                     }))
                   }
-                >
-                  <option value="contact">Contato</option>
-                  <option value="deal">Negócio</option>
-                </SelectNative>
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-field-filter">Localizar campo</Label>
@@ -744,14 +741,12 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-field">Campo</Label>
-                <SelectNative
-                  id="sc-field"
+                <DropdownGlass
+                  triggerClassName="w-full"
+                  placeholder="Selecione um campo…"
                   value={String(draft.field ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, field: e.target.value }))}
-                >
-                  <option value="">Selecione um campo…</option>
-                  <optgroup label="Campos nativos">
-                    {(UPDATE_FIELD_BUILTINS[
+                  options={[
+                    ...(UPDATE_FIELD_BUILTINS[
                       String(draft.entity ?? "contact") === "deal" ? "deal" : "contact"
                     ] ?? [])
                       .filter((o) =>
@@ -759,27 +754,26 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                           .toLowerCase()
                           .includes(updateFieldFilter.trim().toLowerCase()),
                       )
-                      .map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                  </optgroup>
-                  <optgroup label="Campos personalizados">
-                    {(customFieldsQuery.data ?? [])
+                      .map((o) => ({
+                        value: o.value,
+                        label: o.label,
+                        description: "Campos nativos",
+                      })),
+                    ...(customFieldsQuery.data ?? [])
                       .filter((f) => f.entity === String(draft.entity ?? "contact"))
                       .filter((f) =>
                         `${f.label} ${f.name}`
                           .toLowerCase()
                           .includes(updateFieldFilter.trim().toLowerCase()),
                       )
-                      .map((f) => (
-                        <option key={f.id} value={f.name}>
-                          {f.label} ({f.name})
-                        </option>
-                      ))}
-                  </optgroup>
-                </SelectNative>
+                      .map((f) => ({
+                        value: f.name,
+                        label: `${f.label} (${f.name})`,
+                        description: "Campos personalizados",
+                      })),
+                  ]}
+                  onValueChange={(v) => setDraft((d) => ({ ...d, field: v }))}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-val">Valor</Label>
@@ -799,19 +793,20 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             <>
               <div className="space-y-2">
                 <Label htmlFor="sc-act-type">Tipo</Label>
-                <SelectNative
-                  id="sc-act-type"
+                <DropdownGlass
+                  triggerClassName="w-full"
                   value={String(draft.type ?? "TASK")}
-                  onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
-                >
-                  <option value="CALL">Ligação</option>
-                  <option value="EMAIL">E-mail</option>
-                  <option value="MEETING">Reunião</option>
-                  <option value="TASK">Tarefa</option>
-                  <option value="NOTE">Nota</option>
-                  <option value="WHATSAPP">WhatsApp</option>
-                  <option value="OTHER">Outro</option>
-                </SelectNative>
+                  options={[
+                    { value: "CALL", label: "Ligação" },
+                    { value: "EMAIL", label: "E-mail" },
+                    { value: "MEETING", label: "Reunião" },
+                    { value: "TASK", label: "Tarefa" },
+                    { value: "NOTE", label: "Nota" },
+                    { value: "WHATSAPP", label: "WhatsApp" },
+                    { value: "OTHER", label: "Outro" },
+                  ]}
+                  onValueChange={(v) => setDraft((d) => ({ ...d, type: v }))}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="sc-act-title">Título</Label>
@@ -929,21 +924,22 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                             <span className="text-lg text-destructive">×</span>
                           </Button>
                         </div>
-                        <SelectNative
+                        <DropdownGlass
+                          triggerClassName="w-full"
                           value={btn.gotoStepId ?? ""}
-                          onChange={(e) => {
+                          options={[
+                            { value: "", label: "→ Próximo passo (linear)" },
+                            ...otherSteps.map((s) => ({
+                              value: s.id,
+                              label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                            })),
+                          ]}
+                          onValueChange={(v) => {
                             const next = [...buttons];
-                            next[idx] = { ...next[idx], gotoStepId: e.target.value };
+                            next[idx] = { ...next[idx], gotoStepId: v };
                             setDraft((d) => ({ ...d, buttons: next }));
                           }}
-                        >
-                          <option value="">→ Próximo passo (linear)</option>
-                          {otherSteps.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                            </option>
-                          ))}
-                        </SelectNative>
+                        />
                       </div>
                     ))}
                   </div>
@@ -964,17 +960,18 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </div>
                 <div className="space-y-2">
                   <Label>Se a resposta não bater com nenhum botão</Label>
-                  <SelectNative
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={String(draft.elseGotoStepId ?? "")}
-                    onChange={(e) => setDraft((d) => ({ ...d, elseGotoStepId: e.target.value }))}
-                  >
-                    <option value="">→ Próximo passo (linear)</option>
-                    {otherSteps.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    options={[
+                      { value: "", label: "→ Próximo passo (linear)" },
+                      ...otherSteps.map((s) => ({
+                        value: s.id,
+                        label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                      })),
+                    ]}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, elseGotoStepId: v }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sc-int-var">Salvar resposta em variável</Label>
@@ -1022,15 +1019,16 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sc-delay-u">Unidade</Label>
-                  <SelectNative
-                    id="sc-delay-u"
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={unit}
-                    onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))}
-                  >
-                    <option value="minutes">Minutos</option>
-                    <option value="hours">Horas</option>
-                    <option value="days">Dias</option>
-                  </SelectNative>
+                    options={[
+                      { value: "minutes", label: "Minutos" },
+                      { value: "hours", label: "Horas" },
+                      { value: "days", label: "Dias" },
+                    ]}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, unit: v }))}
+                  />
                 </div>
               </>
             );
@@ -1120,32 +1118,34 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
 
                 <div className="space-y-2">
                   <Label>Até a mensagem recebida → ir para</Label>
-                  <SelectNative
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={String(draft.receivedGotoStepId ?? "")}
-                    onChange={(e) => setDraft((d) => ({ ...d, receivedGotoStepId: e.target.value }))}
-                  >
-                    <option value="">Próximo passo (linear)</option>
-                    {otherSteps.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    options={[
+                      { value: "", label: "Próximo passo (linear)" },
+                      ...otherSteps.map((s) => ({
+                        value: s.id,
+                        label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                      })),
+                    ]}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, receivedGotoStepId: v }))}
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Sem resposta (timeout) → ir para</Label>
-                  <SelectNative
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={String(draft.timeoutGotoStepId ?? "")}
-                    onChange={(e) => setDraft((d) => ({ ...d, timeoutGotoStepId: e.target.value }))}
-                  >
-                    <option value="">Próximo passo (linear)</option>
-                    {otherSteps.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    options={[
+                      { value: "", label: "Próximo passo (linear)" },
+                      ...otherSteps.map((s) => ({
+                        value: s.id,
+                        label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                      })),
+                    ]}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, timeoutGotoStepId: v }))}
+                  />
                 </div>
               </>
             );
@@ -1201,21 +1201,22 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                             <span className="text-lg text-destructive">×</span>
                           </Button>
                         </div>
-                        <SelectNative
+                        <DropdownGlass
+                          triggerClassName="w-full"
                           value={btn.gotoStepId ?? ""}
-                          onChange={(e) => {
+                          options={[
+                            { value: "", label: "→ Próximo passo (linear)" },
+                            ...otherSteps.map((s) => ({
+                              value: s.id,
+                              label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                            })),
+                          ]}
+                          onValueChange={(v) => {
                             const next = [...buttons];
-                            next[idx] = { ...next[idx], gotoStepId: e.target.value };
+                            next[idx] = { ...next[idx], gotoStepId: v };
                             setDraft((d) => ({ ...d, buttons: next }));
                           }}
-                        >
-                          <option value="">→ Próximo passo (linear)</option>
-                          {otherSteps.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                            </option>
-                          ))}
-                        </SelectNative>
+                        />
                       </div>
                     ))}
                   </div>
@@ -1244,17 +1245,18 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </div>
                 <div className="space-y-2">
                   <Label>Se a resposta não bater com nenhum botão</Label>
-                  <SelectNative
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={String(draft.elseGotoStepId ?? "")}
-                    onChange={(e) => setDraft((d) => ({ ...d, elseGotoStepId: e.target.value }))}
-                  >
-                    <option value="">→ Próximo passo (linear)</option>
-                    {otherSteps.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    options={[
+                      { value: "", label: "→ Próximo passo (linear)" },
+                      ...otherSteps.map((s) => ({
+                        value: s.id,
+                        label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                      })),
+                    ]}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, elseGotoStepId: v }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sc-q-timeout">Timeout (horas)</Label>
@@ -1268,32 +1270,31 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sc-q-tact">Ação ao expirar</Label>
-                  <SelectNative
-                    id="sc-q-tact"
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={String(draft.timeoutAction ?? "continue")}
-                    onChange={(e) => setDraft((d) => ({ ...d, timeoutAction: e.target.value }))}
-                  >
-                    <option value="continue">Continuar fluxo</option>
-                    <option value="stop">Parar fluxo</option>
-                    <option value="retry">Reenviar pergunta</option>
-                    <option value="goto">Ir para step</option>
-                  </SelectNative>
+                    options={[
+                      { value: "continue", label: "Continuar fluxo" },
+                      { value: "stop", label: "Parar fluxo" },
+                      { value: "retry", label: "Reenviar pergunta" },
+                      { value: "goto", label: "Ir para step" },
+                    ]}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, timeoutAction: v }))}
+                  />
                 </div>
                 {String(draft.timeoutAction) === "goto" && (
                   <div className="space-y-2">
                     <Label htmlFor="sc-q-tgt">Ir para (no timeout)</Label>
-                    <SelectNative
-                      id="sc-q-tgt"
+                    <DropdownGlass
+                      triggerClassName="w-full"
+                      placeholder="Selecione…"
                       value={String(draft.timeoutGotoStepId ?? "")}
-                      onChange={(e) => setDraft((d) => ({ ...d, timeoutGotoStepId: e.target.value }))}
-                    >
-                      <option value="">Selecione…</option>
-                      {otherSteps.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                        </option>
-                      ))}
-                    </SelectNative>
+                      options={otherSteps.map((s) => ({
+                        value: s.id,
+                        label: `${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                      }))}
+                      onValueChange={(v) => setDraft((d) => ({ ...d, timeoutGotoStepId: v }))}
+                    />
                   </div>
                 )}
               </>
@@ -1334,18 +1335,16 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
             return (
               <div className="space-y-2">
                 <Label htmlFor="sc-gt-target">Ir para qual passo?</Label>
-                <SelectNative
-                  id="sc-gt-target"
+                <DropdownGlass
+                  triggerClassName="w-full"
+                  placeholder="Selecione…"
                   value={String(draft.targetStepId ?? "")}
-                  onChange={(e) => setDraft((d) => ({ ...d, targetStepId: e.target.value }))}
-                >
-                  <option value="">Selecione…</option>
-                  {otherSteps.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                    </option>
-                  ))}
-                </SelectNative>
+                  options={otherSteps.map((s) => ({
+                    value: s.id,
+                    label: `${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                  }))}
+                  onValueChange={(v) => setDraft((d) => ({ ...d, targetStepId: v }))}
+                />
                 <p className="text-[11px] text-muted-foreground">
                   Permite criar loops e desvios no fluxo.
                 </p>
@@ -1386,22 +1385,19 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                       placeholder="ID do estágio"
                     />
                   ) : (
-                    <SelectNative
-                      id="sc-cd-stage"
+                    <DropdownGlass
+                      triggerClassName="w-full"
+                      placeholder="Selecione…"
                       value={String(draft.stageId ?? "")}
-                      onChange={(e) => setDraft((d) => ({ ...d, stageId: e.target.value }))}
-                    >
-                      <option value="">Selecione…</option>
-                      {pipelines.map((p) => (
-                        <optgroup key={p.id} label={p.name}>
-                          {p.stages.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </SelectNative>
+                      options={pipelines.flatMap((p) =>
+                        p.stages.map((s) => ({
+                          value: s.id,
+                          label: s.name,
+                          description: p.name,
+                        }))
+                      )}
+                      onValueChange={(v) => setDraft((d) => ({ ...d, stageId: v }))}
+                    />
                   )}
                 </div>
                 <div className="space-y-2">
@@ -1579,17 +1575,18 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </div>
                 <div className="space-y-2">
                   <Label>Fora do horário → ir para</Label>
-                  <SelectNative
+                  <DropdownGlass
+                    triggerClassName="w-full"
                     value={String(draft.elseStepId ?? "")}
-                    onChange={(e) => setDraft((d) => ({ ...d, elseStepId: e.target.value }))}
-                  >
-                    <option value="">Encerrar fluxo</option>
-                    {otherSteps.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    options={[
+                      { value: "", label: "Encerrar fluxo" },
+                      ...otherSteps.map((s) => ({
+                        value: s.id,
+                        label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                      })),
+                    ]}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, elseStepId: v }))}
+                  />
                 </div>
               </>
             );
@@ -1837,11 +1834,26 @@ function ConditionFieldPicker({
   }
 
   return (
-    <SelectNative
-      className="h-9 text-[12px]"
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder="Selecione um campo…"
       value={value}
-      onChange={(e) => {
-        const v = e.target.value;
+      options={[
+        ...CONDITION_FIELD_GROUPS.flatMap((group) =>
+          group.options.map((opt) => ({
+            value: opt.value,
+            label: opt.hint ? `${opt.label} (${opt.hint})` : opt.label,
+            description: group.label,
+          }))
+        ),
+        ...declaredVariables.map((opt) => ({
+          value: opt.value,
+          label: opt.label,
+          description: "Variáveis do fluxo",
+        })),
+        { value: CUSTOM, label: "✏ Personalizado…" },
+      ]}
+      onValueChange={(v) => {
         if (v === CUSTOM) {
           setCustomMode(true);
           onChange("");
@@ -1849,29 +1861,7 @@ function ConditionFieldPicker({
         }
         onChange(v);
       }}
-    >
-      <option value="">Selecione um campo…</option>
-      {CONDITION_FIELD_GROUPS.map((group) => (
-        <optgroup key={group.label} label={group.label}>
-          {group.options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-              {opt.hint ? ` (${opt.hint})` : ""}
-            </option>
-          ))}
-        </optgroup>
-      ))}
-      {declaredVariables.length > 0 && (
-        <optgroup label="Variáveis do fluxo">
-          {declaredVariables.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </optgroup>
-      )}
-      <option value={CUSTOM}>✏ Personalizado…</option>
-    </SelectNative>
+    />
   );
 }
 
@@ -1922,17 +1912,19 @@ function ConditionValueInput({
   }
   if (field === "conversation.status") {
     return (
-      <SelectNative
-        className="h-9 text-[12px]"
+      <DropdownGlass
+        triggerClassName="h-9 text-[12px] w-full"
+        placeholder="Selecione…"
         value={str}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">Selecione…</option>
-        <option value="OPEN">Em aberto (OPEN)</option>
-        <option value="RESOLVED">Fechada / Resolvida (RESOLVED)</option>
-        <option value="PENDING">Pendente (PENDING)</option>
-        <option value="SNOOZED">Adiada (SNOOZED)</option>
-      </SelectNative>
+        options={[
+          { value: "", label: "Selecione…" },
+          { value: "OPEN", label: "Em aberto (OPEN)" },
+          { value: "RESOLVED", label: "Fechada / Resolvida (RESOLVED)" },
+          { value: "PENDING", label: "Pendente (PENDING)" },
+          { value: "SNOOZED", label: "Adiada (SNOOZED)" },
+        ]}
+        onValueChange={onChange}
+      />
     );
   }
   if (
@@ -1941,64 +1933,72 @@ function ConditionValueInput({
     field === "conversation.hasAgentReply"
   ) {
     return (
-      <SelectNative
-        className="h-9 text-[12px]"
+      <DropdownGlass
+        triggerClassName="h-9 text-[12px] w-full"
+        placeholder="Selecione…"
         value={str}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">Selecione…</option>
-        <option value="true">Sim</option>
-        <option value="false">Não</option>
-      </SelectNative>
+        options={[
+          { value: "", label: "Selecione…" },
+          { value: "true", label: "Sim" },
+          { value: "false", label: "Não" },
+        ]}
+        onValueChange={onChange}
+      />
     );
   }
   if (field === "conversation.channel") {
     return (
-      <SelectNative
-        className="h-9 text-[12px]"
+      <DropdownGlass
+        triggerClassName="h-9 text-[12px] w-full"
+        placeholder="Selecione…"
         value={str}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">Selecione…</option>
-        <option value="whatsapp">WhatsApp</option>
-        <option value="email">E-mail</option>
-        <option value="telegram">Telegram</option>
-        <option value="instagram">Instagram</option>
-        <option value="webchat">Web chat</option>
-      </SelectNative>
+        options={[
+          { value: "", label: "Selecione…" },
+          { value: "whatsapp", label: "WhatsApp" },
+          { value: "email", label: "E-mail" },
+          { value: "telegram", label: "Telegram" },
+          { value: "instagram", label: "Instagram" },
+          { value: "webchat", label: "Web chat" },
+        ]}
+        onValueChange={onChange}
+      />
     );
   }
   if (field === "deal.status") {
     return (
-      <SelectNative
-        className="h-9 text-[12px]"
+      <DropdownGlass
+        triggerClassName="h-9 text-[12px] w-full"
+        placeholder="Selecione…"
         value={str}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">Selecione…</option>
-        <option value="OPEN">Aberto (OPEN)</option>
-        <option value="WON">Ganho (WON)</option>
-        <option value="LOST">Perdido (LOST)</option>
-      </SelectNative>
+        options={[
+          { value: "", label: "Selecione…" },
+          { value: "OPEN", label: "Aberto (OPEN)" },
+          { value: "WON", label: "Ganho (WON)" },
+          { value: "LOST", label: "Perdido (LOST)" },
+        ]}
+        onValueChange={onChange}
+      />
     );
   }
   if (field === "contact.lifecycleStage") {
     return (
-      <SelectNative
-        className="h-9 text-[12px]"
+      <DropdownGlass
+        triggerClassName="h-9 text-[12px] w-full"
+        placeholder="Selecione…"
         value={str}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">Selecione…</option>
-        <option value="SUBSCRIBER">Assinante</option>
-        <option value="LEAD">Lead</option>
-        <option value="MQL">MQL</option>
-        <option value="SQL">SQL</option>
-        <option value="OPPORTUNITY">Oportunidade</option>
-        <option value="CUSTOMER">Cliente</option>
-        <option value="EVANGELIST">Evangelista</option>
-        <option value="OTHER">Outro</option>
-      </SelectNative>
+        options={[
+          { value: "", label: "Selecione…" },
+          { value: "SUBSCRIBER", label: "Assinante" },
+          { value: "LEAD", label: "Lead" },
+          { value: "MQL", label: "MQL" },
+          { value: "SQL", label: "SQL" },
+          { value: "OPPORTUNITY", label: "Oportunidade" },
+          { value: "CUSTOMER", label: "Cliente" },
+          { value: "EVANGELIST", label: "Evangelista" },
+          { value: "OTHER", label: "Outro" },
+        ]}
+        onValueChange={onChange}
+      />
     );
   }
 
@@ -2038,22 +2038,19 @@ function StagePickerValue({
   }
 
   return (
-    <SelectNative
-      className="h-9 text-[12px]"
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder="Selecione um estágio…"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">Selecione um estágio…</option>
-      {pipelines.map((p) => (
-        <optgroup key={p.id} label={p.name}>
-          {p.stages.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </optgroup>
-      ))}
-    </SelectNative>
+      options={pipelines.flatMap((p) =>
+        p.stages.map((s) => ({
+          value: s.id,
+          label: s.name,
+          description: p.name,
+        }))
+      )}
+      onValueChange={onChange}
+    />
   );
 }
 
@@ -2083,18 +2080,13 @@ function PipelinePickerValue({
   }
 
   return (
-    <SelectNative
-      className="h-9 text-[12px]"
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder="Selecione um pipeline…"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">Selecione um pipeline…</option>
-      {pipelines.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.name}
-        </option>
-      ))}
-    </SelectNative>
+      options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
+      onValueChange={onChange}
+    />
   );
 }
 
@@ -2151,23 +2143,16 @@ function TagPickerValue({
   }
 
   return (
-    <SelectNative
-      className="h-9 text-[12px]"
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder="Selecione uma tag…"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">Selecione uma tag…</option>
-      {tags.map((t) => (
-        <option key={t.id} value={t.name}>
-          {t.name}
-        </option>
-      ))}
-      {isCustom && (
-        <option value={value}>
-          {value} (valor personalizado)
-        </option>
-      )}
-    </SelectNative>
+      options={[
+        ...tags.map((t) => ({ value: t.name, label: t.name })),
+        ...(isCustom ? [{ value: value, label: `${value} (valor personalizado)` }] : []),
+      ]}
+      onValueChange={onChange}
+    />
   );
 }
 
@@ -2215,27 +2200,22 @@ function StageNamePickerValue({
   }
 
   return (
-    <SelectNative
-      className="h-9 text-[12px]"
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder="Selecione uma etapa…"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">Selecione uma etapa…</option>
-      {pipelines.map((p) => (
-        <optgroup key={p.id} label={p.name}>
-          {p.stages.map((s) => (
-            <option key={s.id} value={s.name}>
-              {s.name}
-            </option>
-          ))}
-        </optgroup>
-      ))}
-      {isCustom && (
-        <option value={value}>
-          {value} (valor personalizado)
-        </option>
-      )}
-    </SelectNative>
+      options={[
+        ...pipelines.flatMap((p) =>
+          p.stages.map((s) => ({
+            value: s.name,
+            label: s.name,
+            description: p.name,
+          }))
+        ),
+        ...(isCustom ? [{ value: value, label: `${value} (valor personalizado)` }] : []),
+      ]}
+      onValueChange={onChange}
+    />
   );
 }
 
@@ -2272,23 +2252,16 @@ function PipelineNamePickerValue({
   }
 
   return (
-    <SelectNative
-      className="h-9 text-[12px]"
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder="Selecione um pipeline…"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">Selecione um pipeline…</option>
-      {pipelines.map((p) => (
-        <option key={p.id} value={p.name}>
-          {p.name}
-        </option>
-      ))}
-      {isCustom && (
-        <option value={value}>
-          {value} (valor personalizado)
-        </option>
-      )}
-    </SelectNative>
+      options={[
+        ...pipelines.map((p) => ({ value: p.name, label: p.name })),
+        ...(isCustom ? [{ value: value, label: `${value} (valor personalizado)` }] : []),
+      ]}
+      onValueChange={onChange}
+    />
   );
 }
 
@@ -2331,18 +2304,13 @@ function CompanyPickerValue({
   }
 
   return (
-    <SelectNative
-      className="h-9 text-[12px]"
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder="Selecione uma empresa…"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">Selecione uma empresa…</option>
-      {companies.map((c) => (
-        <option key={c.id} value={c.id}>
-          {c.name}
-        </option>
-      ))}
-    </SelectNative>
+      options={companies.map((c) => ({ value: c.id, label: c.name }))}
+      onValueChange={onChange}
+    />
   );
 }
 
@@ -2399,31 +2367,16 @@ function OwnerPickerValue({
   const activeAgents = agents.filter((a) => a.active);
 
   return (
-    <SelectNative
-      className="h-9 text-[12px]"
+    <DropdownGlass
+      triggerClassName="h-9 text-[12px] w-full"
+      placeholder="Selecione…"
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">Selecione…</option>
-      {humans.length > 0 && (
-        <optgroup label="Humanos">
-          {humans.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </optgroup>
-      )}
-      {activeAgents.length > 0 && (
-        <optgroup label="Agentes IA">
-          {activeAgents.map((a) => (
-            <option key={a.userId} value={a.userId}>
-              🤖 {a.name}
-            </option>
-          ))}
-        </optgroup>
-      )}
-    </SelectNative>
+      options={[
+        ...humans.map((u) => ({ value: u.id, label: u.name, description: "Humanos" })),
+        ...activeAgents.map((a) => ({ value: a.userId, label: `🤖 ${a.name}`, description: "Agentes IA" })),
+      ]}
+      onValueChange={onChange}
+    />
   );
 }
 
@@ -2573,19 +2526,14 @@ function ConditionStepConfig({
                   }}
                   declaredVariables={declaredVariables}
                 />
-                <SelectNative
-                  className="h-9 text-[12px]"
+                <DropdownGlass
+                  triggerClassName="h-9 text-[12px] w-full"
                   value={effectiveOp}
-                  onChange={(e) =>
-                    updateRule(bIdx, rIdx, { op: e.target.value as ConditionOp })
+                  options={availableOps.map((o) => ({ value: o.value, label: o.label }))}
+                  onValueChange={(v) =>
+                    updateRule(bIdx, rIdx, { op: v as ConditionOp })
                   }
-                >
-                  {availableOps.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </SelectNative>
+                />
                 {effectiveOp === "empty" || effectiveOp === "not_empty" ? (
                   <div className="flex h-9 items-center rounded-md border border-border bg-[var(--color-bg-subtle)] px-3 text-[11px] italic text-[var(--color-ink-muted)]">
                     (sem valor)
@@ -2629,20 +2577,20 @@ function ConditionStepConfig({
 
           <div className="space-y-1.5">
             <Label className="text-[11px]">Quando esta condição baterem → ir para</Label>
-            <SelectNative
-              className="h-9 text-[12px]"
+            <DropdownGlass
+              triggerClassName="h-9 text-[12px] w-full"
               value={branch.nextStepId ?? ""}
-              onChange={(e) =>
-                updateBranch(bIdx, { nextStepId: e.target.value || undefined })
+              options={[
+                { value: "", label: "Encerrar fluxo" },
+                ...otherSteps.map((s) => ({
+                  value: s.id,
+                  label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+                })),
+              ]}
+              onValueChange={(v) =>
+                updateBranch(bIdx, { nextStepId: v || undefined })
               }
-            >
-              <option value="">Encerrar fluxo</option>
-              {otherSteps.map((s) => (
-                <option key={s.id} value={s.id}>
-                  → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-                </option>
-              ))}
-            </SelectNative>
+            />
           </div>
         </div>
       ))}
@@ -2661,18 +2609,18 @@ function ConditionStepConfig({
         <Label className="text-[11px] text-rose-700">
           Nenhuma das condições → ir para
         </Label>
-        <SelectNative
-          className="h-9 text-[12px]"
+        <DropdownGlass
+          triggerClassName="h-9 text-[12px] w-full"
           value={String(draft.elseStepId ?? "")}
-          onChange={(e) => setDraft((d) => ({ ...d, elseStepId: e.target.value }))}
-        >
-          <option value="">Encerrar fluxo</option>
-          {otherSteps.map((s) => (
-            <option key={s.id} value={s.id}>
-              → {stepTypeLabel(s.type)}: {summarizeStepConfig(s.type, s.config).slice(0, 40)}
-            </option>
-          ))}
-        </SelectNative>
+          options={[
+            { value: "", label: "Encerrar fluxo" },
+            ...otherSteps.map((s) => ({
+              value: s.id,
+              label: `→ ${stepTypeLabel(s.type)}: ${summarizeStepConfig(s.type, s.config).slice(0, 40)}`,
+            })),
+          ]}
+          onValueChange={(v) => setDraft((d) => ({ ...d, elseStepId: v }))}
+        />
       </div>
     </>
   );
@@ -2794,44 +2742,38 @@ function AssignOwnerStepConfig({
         {isLoading ? (
           <p className="text-xs text-muted-foreground">Carregando usuários…</p>
         ) : (
-          <SelectNative
-            id="sc-owner"
+          <DropdownGlass
+            triggerClassName="w-full"
+            placeholder="Selecione…"
             value={selectedId}
-            onChange={(e) => handleChange(e.target.value)}
-          >
-            <option value="">Selecione…</option>
-            {humans.length > 0 && (
-              <optgroup label="Humanos">
-                {humans.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.email})
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {activeAgents.length > 0 && (
-              <optgroup label="Agentes IA (handoff automático)">
-                {activeAgents.map((a) => (
-                  <option key={a.userId} value={a.userId}>
-                    🤖 {a.name} · {ARCHETYPE_LABEL[a.archetype] ?? a.archetype} ·{" "}
-                    {a.autonomyMode === "AUTONOMOUS" ? "autônomo" : "rascunho"}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </SelectNative>
+            options={[
+              ...humans.map((u) => ({
+                value: u.id,
+                label: `${u.name} (${u.email})`,
+                description: "Humanos",
+              })),
+              ...activeAgents.map((a) => ({
+                value: a.userId,
+                label: `🤖 ${a.name} · ${ARCHETYPE_LABEL[a.archetype] ?? a.archetype} · ${a.autonomyMode === "AUTONOMOUS" ? "autônomo" : "rascunho"}`,
+                description: "Agentes IA (handoff automático)",
+              })),
+            ]}
+            onValueChange={handleChange}
+          />
         )}
       </div>
 
       <div className="space-y-2">
         <Label>Aplicar em</Label>
-        <SelectNative
+        <DropdownGlass
+          triggerClassName="w-full"
           value={target}
-          onChange={(e) => setDraft((d) => ({ ...d, target: e.target.value }))}
-        >
-          <option value="deal">Negócio (deal) — herda no contato e nas conversas</option>
-          <option value="contact">Contato — propaga pras conversas abertas</option>
-        </SelectNative>
+          options={[
+            { value: "deal", label: "Negócio (deal) — herda no contato e nas conversas" },
+            { value: "contact", label: "Contato — propaga pras conversas abertas" },
+          ]}
+          onValueChange={(v) => setDraft((d) => ({ ...d, target: v }))}
+        />
       </div>
 
       {selectedType === "AI" && selectedId && (
@@ -2928,26 +2870,23 @@ function TransferToAIAgentStepConfig({
             .
           </p>
         ) : (
-          <SelectNative
-            id="sc-ai-transfer"
+          <DropdownGlass
+            triggerClassName="w-full"
+            placeholder="Selecione um agente…"
             value={selectedId}
-            onChange={(e) => {
-              const a = activeAgents.find((x) => x.userId === e.target.value);
+            options={activeAgents.map((a) => ({
+              value: a.userId,
+              label: `🤖 ${a.name} · ${ARCHETYPE_LABEL[a.archetype] ?? a.archetype} · ${a.autonomyMode === "AUTONOMOUS" ? "autônomo" : "rascunho"}`,
+            }))}
+            onValueChange={(v) => {
+              const a = activeAgents.find((x) => x.userId === v);
               setDraft((d) => ({
                 ...d,
-                agentUserId: e.target.value,
+                agentUserId: v,
                 agentLabel: a?.name ?? "",
               }));
             }}
-          >
-            <option value="">Selecione um agente…</option>
-            {activeAgents.map((a) => (
-              <option key={a.userId} value={a.userId}>
-                🤖 {a.name} · {ARCHETYPE_LABEL[a.archetype] ?? a.archetype} ·{" "}
-                {a.autonomyMode === "AUTONOMOUS" ? "autônomo" : "rascunho"}
-              </option>
-            ))}
-          </SelectNative>
+          />
         )}
       </div>
 
@@ -2966,13 +2905,15 @@ function TransferToAIAgentStepConfig({
 
       <div className="space-y-2">
         <Label>Aplicar em</Label>
-        <SelectNative
+        <DropdownGlass
+          triggerClassName="w-full"
           value={target}
-          onChange={(e) => setDraft((d) => ({ ...d, target: e.target.value }))}
-        >
-          <option value="deal">Negócio (deal) — herda no contato e nas conversas</option>
-          <option value="contact">Contato — propaga pras conversas abertas</option>
-        </SelectNative>
+          options={[
+            { value: "deal", label: "Negócio (deal) — herda no contato e nas conversas" },
+            { value: "contact", label: "Contato — propaga pras conversas abertas" },
+          ]}
+          onValueChange={(v) => setDraft((d) => ({ ...d, target: v }))}
+        />
       </div>
     </>
   );
@@ -3028,25 +2969,23 @@ function AskAIAgentStepConfig({
             .
           </p>
         ) : (
-          <SelectNative
-            id="sc-ai-agent"
+          <DropdownGlass
+            triggerClassName="w-full"
+            placeholder="Selecione um agente…"
             value={selectedId}
-            onChange={(e) => {
-              const a = activeAgents.find((x) => x.id === e.target.value);
+            options={activeAgents.map((a) => ({
+              value: a.id,
+              label: `${a.name} · ${a.archetype}`,
+            }))}
+            onValueChange={(v) => {
+              const a = activeAgents.find((x) => x.id === v);
               setDraft((d) => ({
                 ...d,
-                agentId: e.target.value,
+                agentId: v,
                 agentLabel: a?.name ?? "",
               }));
             }}
-          >
-            <option value="">Selecione um agente…</option>
-            {activeAgents.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} · {a.archetype}
-              </option>
-            ))}
-          </SelectNative>
+          />
         )}
       </div>
 
@@ -3137,28 +3076,25 @@ function TemplateStepConfig({
             Nenhum template liberado. Libere em Configurações → Templates WhatsApp.
           </p>
         ) : (
-          <SelectNative
-            id="sc-tpl-select"
+          <DropdownGlass
+            triggerClassName="w-full"
+            placeholder="Selecione um template…"
             value={selectedName}
-            onChange={(e) => {
-              const tpl = templates.find((t) => t.metaTemplateName === e.target.value);
+            options={templates.map((t) => ({
+              value: t.metaTemplateName,
+              label: `${t.label || t.metaTemplateName}${t.category ? ` (${CAT_LABEL[t.category] ?? t.category})` : ""}`,
+            }))}
+            onValueChange={(v) => {
+              const tpl = templates.find((t) => t.metaTemplateName === v);
               setDraft((d) => ({
                 ...d,
-                templateName: e.target.value,
+                templateName: v,
                 templateLabel: tpl?.label ?? "",
                 languageCode: tpl?.language ?? d.languageCode ?? "pt_BR",
                 templateCategory: tpl?.category ?? "",
               }));
             }}
-          >
-            <option value="">Selecione um template…</option>
-            {templates.map((t) => (
-              <option key={t.metaTemplateId} value={t.metaTemplateName}>
-                {t.label || t.metaTemplateName}
-                {t.category ? ` (${CAT_LABEL[t.category] ?? t.category})` : ""}
-              </option>
-            ))}
-          </SelectNative>
+          />
         )}
       </div>
 
@@ -3266,16 +3202,17 @@ function MediaStepConfig({
     <>
       <div className="space-y-2">
         <Label htmlFor="sc-media-type">Tipo de mídia</Label>
-        <SelectNative
-          id="sc-media-type"
+        <DropdownGlass
+          triggerClassName="w-full"
           value={mediaType}
-          onChange={(e) => setDraft((d) => ({ ...d, mediaType: e.target.value }))}
-        >
-          <option value="image">Imagem</option>
-          <option value="video">Vídeo</option>
-          <option value="audio">Áudio</option>
-          <option value="document">Documento</option>
-        </SelectNative>
+          options={[
+            { value: "image", label: "Imagem" },
+            { value: "video", label: "Vídeo" },
+            { value: "audio", label: "Áudio" },
+            { value: "document", label: "Documento" },
+          ]}
+          onValueChange={(v) => setDraft((d) => ({ ...d, mediaType: v }))}
+        />
       </div>
 
       <div className="space-y-2">
@@ -3428,25 +3365,23 @@ function TransferAutomationConfig({
         ) : automations.length === 0 ? (
           <p className="text-xs text-muted-foreground">Nenhuma outra automação encontrada.</p>
         ) : (
-          <SelectNative
-            id="sc-transfer-target"
+          <DropdownGlass
+            triggerClassName="w-full"
+            placeholder="Selecione uma automação…"
             value={selectedId}
-            onChange={(e) => {
-              const a = automations.find((x) => x.id === e.target.value);
+            options={automations.map((a) => ({
+              value: a.id,
+              label: `${a.name}${!a.active ? " (inativa)" : ""}`,
+            }))}
+            onValueChange={(v) => {
+              const a = automations.find((x) => x.id === v);
               setDraft((d) => ({
                 ...d,
-                targetAutomationId: e.target.value,
+                targetAutomationId: v,
                 targetAutomationName: a?.name ?? "",
               }));
             }}
-          >
-            <option value="">Selecione uma automação…</option>
-            {automations.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} {!a.active ? "(inativa)" : ""}
-              </option>
-            ))}
-          </SelectNative>
+          />
         )}
       </div>
       <p className="text-[11px] text-muted-foreground">

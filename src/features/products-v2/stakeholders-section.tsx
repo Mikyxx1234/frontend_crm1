@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
 import { useCan } from "@/hooks/use-my-permissions";
 
 import {
@@ -16,6 +16,11 @@ import {
   useStakeholderMutations,
 } from "./hooks";
 import type { StakeholderChannel } from "./types";
+
+const CHANNEL_OPTIONS: DropdownOption[] = [
+  { value: "WHATSAPP", label: "WhatsApp" },
+  { value: "EMAIL", label: "E-mail" },
+];
 
 export function StakeholdersSection({ productId }: { productId: string }) {
   const { data: stakeholders = [] } = useProductStakeholders(productId);
@@ -168,14 +173,12 @@ export function StakeholdersSection({ productId }: { productId: string }) {
             </div>
             <div className="sm:col-span-2">
               <Label className="text-[11px]">Canal</Label>
-              <SelectNative
+              <DropdownGlass
+                options={CHANNEL_OPTIONS}
                 value={channel}
-                onChange={(e) => setChannel(e.target.value as StakeholderChannel)}
-                className="mt-1 h-9"
-              >
-                <option value="WHATSAPP">WhatsApp</option>
-                <option value="EMAIL">E-mail</option>
-              </SelectNative>
+                onValueChange={(v) => setChannel(v as StakeholderChannel)}
+                triggerClassName="mt-1 h-9 w-full"
+              />
             </div>
             <div className="flex items-end sm:col-span-2">
               <Button

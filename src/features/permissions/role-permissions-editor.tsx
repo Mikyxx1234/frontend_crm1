@@ -18,7 +18,7 @@
  *    `settings` e `nav` editáveis diretamente.
  */
 
-import { createElement, useId, useState } from "react";
+import { createElement, useId, useState, type ReactNode } from "react";
 import {
   IconAlertTriangle,
   IconBolt,
@@ -46,6 +46,7 @@ import {
 
 import { cn } from "@/lib/utils";
 
+import { groupResourcesByCategory } from "./categories";
 import {
   LEVELS,
   actionTier,
@@ -67,6 +68,14 @@ export interface RolePermissionsEditorProps {
   onModeChange: (m: PermissionsEditorMode) => void;
   /** Presets do sistema / loading. */
   disabled?: boolean;
+  /**
+   * "full" (default): editor completo com toggle de modo, agrupamento por
+   * categoria, grade administrativa e navegação derivada.
+   * "embedded": lista granular plana dos `resources` passados, sem header,
+   * sem toggle e sem settings/nav — usada na seção de mensageria em
+   * /settings/conversations.
+   */
+  variant?: "full" | "embedded";
 }
 
 /* ── Resource → ícone (espelha o catálogo do backend) ───────────────────── */
@@ -105,14 +114,41 @@ export function RolePermissionsEditor({
   mode,
   onModeChange,
   disabled = false,
+  variant = "full",
 }: RolePermissionsEditorProps) {
   const settingsResource = resources.find((r) => r.resource === "settings");
+  const navResource = resources.find((r) => r.resource === "nav");
   const mainResources = resources.filter(
     (r) => r.resource !== "settings" && r.resource !== "nav",
   );
+  const groups = groupResourcesByCategory(mainResources);
+
+  // ── Variante embutida: lista granular plana, sem header/toggle ──────────
+  if (variant === "embedded") {
+    if (resources.length === 0) {
+      return (
+        <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
+          <EmptyCatalog />
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-1 items-start gap-2.5 text-[12px] text-[var(--text-primary)] xl:grid-cols-2">
+        {resources.map((resource) => (
+          <GranularSection
+            key={resource.resource}
+            resource={resource}
+            checked={checked}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex w-full flex-col gap-4 text-[12px] text-[var(--text-primary)]">
+    <div className="flex w-full flex-col gap-5 text-[12px] text-[var(--text-primary)]">
       {/* Toggle de modo */}
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-display text-[13px] font-bold text-[var(--text-primary)]">
@@ -123,23 +159,25 @@ export function RolePermissionsEditor({
 
       {mode === "levels" ? (
         <>
-          {/* Recursos com níveis — grid responsivo de cards */}
+          {/* Recursos com níveis — agrupados por categoria */}
           {mainResources.length === 0 ? (
             <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
               <EmptyCatalog />
             </div>
           ) : (
-            <div className="grid grid-cols-1 items-start gap-2.5 xl:grid-cols-2 2xl:grid-cols-3">
-              {mainResources.map((resource) => (
-                <LevelRow
-                  key={resource.resource}
-                  resource={resource}
-                  checked={checked}
-                  onChange={onChange}
-                  disabled={disabled}
-                />
-              ))}
-            </div>
+            groups.map((group) => (
+              <CategoryGroup key={group.id} label={group.label}>
+                {group.resources.map((resource) => (
+                  <LevelRow
+                    key={resource.resource}
+                    resource={resource}
+                    checked={checked}
+                    onChange={onChange}
+                    disabled={disabled}
+                  />
+                ))}
+              </CategoryGroup>
+            ))
           )}
 
           {/* Configurações administrativas */}
@@ -155,24 +193,63 @@ export function RolePermissionsEditor({
           {/* Navegação derivada */}
           <NavDerivedFooter checked={checked} />
         </>
-      ) : resources.length === 0 ? (
+      ) : mainResources.length === 0 && !settingsResource && !navResource ? (
         <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
           <EmptyCatalog />
         </div>
       ) : (
-        <div className="grid grid-cols-1 items-start gap-2.5 xl:grid-cols-2 2xl:grid-cols-3">
-          {resources.map((resource) => (
-            <GranularSection
-              key={resource.resource}
-              resource={resource}
-              checked={checked}
-              onChange={onChange}
-              disabled={disabled}
-            />
+        <>
+          {groups.map((group) => (
+            <CategoryGroup key={group.id} label={group.label}>
+              {group.resources.map((resource) => (
+                <GranularSection
+                  key={resource.resource}
+                  resource={resource}
+                  checked={checked}
+                  onChange={onChange}
+                  disabled={disabled}
+                />
+              ))}
+            </CategoryGroup>
           ))}
-        </div>
+          {(settingsResource || navResource) && (
+            <CategoryGroup label="Administração & Sistema">
+              {settingsResource && (
+                <GranularSection
+                  resource={settingsResource}
+                  checked={checked}
+                  onChange={onChange}
+                  disabled={disabled}
+                />
+              )}
+              {navResource && (
+                <GranularSection
+                  resource={navResource}
+                  checked={checked}
+                  onChange={onChange}
+                  disabled={disabled}
+                />
+              )}
+            </CategoryGroup>
+          )}
+        </>
       )}
     </div>
+  );
+}
+
+/* ── Cabeçalho + grade de uma categoria ──────────────────────────────────── */
+
+function CategoryGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section aria-label={label} className="flex flex-col gap-2">
+      <h4 className="font-display text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+        {label}
+      </h4>
+      <div className="grid grid-cols-1 items-start gap-2.5 xl:grid-cols-2 2xl:grid-cols-3">
+        {children}
+      </div>
+    </section>
   );
 }
 

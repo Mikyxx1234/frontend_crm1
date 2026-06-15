@@ -105,6 +105,68 @@ function resourceIcon(resource: string): Icon {
   return RESOURCE_ICONS[resource] ?? IconShield;
 }
 
+/**
+ * Rampa de cores dos níveis — espelha o editor de grupo (Negado/Resp./
+ * Equipe/Todos) para manter consistência visual entre os dois editores.
+ */
+const LEVEL_COLOR: Record<0 | 1 | 2 | 3, string> = {
+  0: "#94a3b8",
+  1: "var(--color-warn)",
+  2: "var(--brand-primary-light)",
+  3: "var(--brand-primary)",
+};
+
+const LEVEL_DOT: Record<0 | 1 | 2 | 3, string> = {
+  0: "#cbd5e1",
+  1: "var(--color-warn)",
+  2: "var(--brand-primary-light)",
+  3: "var(--brand-primary)",
+};
+
+/* ── Chrome compartilhado (painel + legenda) — DS v2, igual ao grupo ─────── */
+
+function Panel({
+  icon,
+  title,
+  sub,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  sub?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
+      <div className="flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-[18px] py-3.5">
+        <span className="text-[var(--brand-primary)]">{icon}</span>
+        <h2 className="font-display text-[14.5px] font-bold text-[var(--text-primary)]">{title}</h2>
+        {sub && <span className="text-[12px] text-[var(--text-muted)]">{sub}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function LevelLegend() {
+  return (
+    <div className="flex flex-wrap gap-3.5 border-b border-[var(--glass-border-subtle)] bg-black/[0.015] px-[18px] py-3">
+      {LEVELS.map((lvl) => (
+        <div
+          key={lvl.id}
+          className="flex items-center gap-1.5 text-[11.5px] text-[var(--text-muted)]"
+        >
+          <span
+            className="size-2.5 rounded-full"
+            style={{ background: LEVEL_DOT[lvl.id] }}
+          />
+          {lvl.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ── Componente principal ────────────────────────────────────────────────── */
 
 export function RolePermissionsEditor({
@@ -148,10 +210,10 @@ export function RolePermissionsEditor({
   }
 
   return (
-    <div className="flex w-full flex-col gap-5 text-[12px] text-[var(--text-primary)]">
+    <div className="flex w-full flex-col gap-4 text-[12px] text-[var(--text-primary)]">
       {/* Toggle de modo */}
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+      <div className="flex items-center justify-between gap-2 px-0.5">
+        <h3 className="font-display text-[14.5px] font-bold text-[var(--text-primary)]">
           Permissões
         </h3>
         <ModeToggle mode={mode} onModeChange={onModeChange} disabled={disabled} />
@@ -159,25 +221,36 @@ export function RolePermissionsEditor({
 
       {mode === "levels" ? (
         <>
-          {/* Recursos com níveis — agrupados por categoria */}
+          {/* Recursos com níveis — painel único com legenda + linhas por
+              categoria (mesmo chrome do editor de grupo). */}
           {mainResources.length === 0 ? (
-            <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
+            <Panel icon={<IconShield size={18} />} title="Permissões por módulo">
               <EmptyCatalog />
-            </div>
+            </Panel>
           ) : (
-            groups.map((group) => (
-              <CategoryGroup key={group.id} label={group.label}>
-                {group.resources.map((resource) => (
-                  <LevelRow
-                    key={resource.resource}
-                    resource={resource}
-                    checked={checked}
-                    onChange={onChange}
-                    disabled={disabled}
-                  />
-                ))}
-              </CategoryGroup>
-            ))
+            <Panel
+              icon={<IconShield size={18} />}
+              title="Permissões por módulo"
+              sub="nível de acesso por recurso"
+            >
+              <LevelLegend />
+              {groups.map((group) => (
+                <div key={group.id}>
+                  <div className="border-b border-[var(--glass-border-subtle)] bg-black/[0.01] px-[18px] py-2 font-display text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    {group.label}
+                  </div>
+                  {group.resources.map((resource) => (
+                    <LevelRow
+                      key={resource.resource}
+                      resource={resource}
+                      checked={checked}
+                      onChange={onChange}
+                      disabled={disabled}
+                    />
+                  ))}
+                </div>
+              ))}
+            </Panel>
           )}
 
           {/* Configurações administrativas */}
@@ -333,19 +406,20 @@ function LevelRow({
   }
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
-      <div className="flex flex-col gap-2.5 px-3 py-2.5">
-        {/* Cabeçalho do card: ícone + label + contador + expandir */}
-        <div className="flex items-center gap-2">
-          {createElement(resourceIcon(resource.resource), {
-            size: 16,
-            className: "shrink-0 text-[var(--text-secondary)]",
-            "aria-hidden": true,
-          })}
+    <div className="border-b border-[var(--glass-border-subtle)] last:border-b-0">
+      <div className="flex flex-col gap-3 px-[18px] py-4 hover:bg-black/[0.015]">
+        {/* Linha: ícone + label + contador + expandir */}
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
+            {createElement(resourceIcon(resource.resource), {
+              size: 18,
+              "aria-hidden": true,
+            })}
+          </span>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="truncate text-[12px] font-semibold text-[var(--text-primary)]">
+              <span className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">
                 {resource.label}
               </span>
               {level === null && (
@@ -354,7 +428,7 @@ function LevelRow({
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-[11px] text-[var(--text-muted)]">
               {count}/{total} ações
             </span>
           </div>
@@ -370,11 +444,11 @@ function LevelRow({
           </button>
         </div>
 
-        {/* Segmented control de nível — largura total do card */}
+        {/* Segmented control de nível — colorido por nível (igual ao grupo) */}
         <div
           role="group"
           aria-label={`Nível de acesso em ${resource.label}`}
-          className="flex w-full items-center gap-0.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-0.5"
+          className="flex w-full gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-0.5"
         >
           {LEVELS.map((lvl) => {
             const isActive = level === lvl.id;
@@ -388,15 +462,16 @@ function LevelRow({
                 aria-pressed={isActive}
                 title={lvl.label}
                 className={cn(
-                  "flex-1 cursor-pointer rounded-full px-2 py-1 text-[10px] font-semibold transition-all",
+                  "min-w-0 flex-1 cursor-pointer truncate rounded-[var(--radius-sm)] px-1 py-1.5 font-display text-[11px] font-bold transition-colors",
                   "focus-visible:outline-2 focus-visible:outline-[var(--brand-primary)]",
                   "disabled:cursor-not-allowed disabled:opacity-50",
                   isActive
-                    ? "bg-[var(--brand-primary)] text-[var(--color-primary-foreground)] shadow-[var(--glass-shadow-sm)]"
+                    ? "text-white"
                     : isFilled
                       ? "bg-[var(--color-primary-soft)] text-[var(--brand-primary)]"
                       : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                 )}
+                style={isActive ? { background: LEVEL_COLOR[lvl.id] } : undefined}
               >
                 {lvl.label}
               </button>
@@ -405,9 +480,9 @@ function LevelRow({
         </div>
       </div>
 
-      {/* Checkboxes por action (card expandido / personalizado) */}
+      {/* Checkboxes por action (linha expandida / personalizado) */}
       {expanded && (
-        <ul className="border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-3 py-1.5">
+        <ul className="border-t border-[var(--glass-border-subtle)] bg-black/[0.015] px-[18px] py-2">
           {resource.actions.map((action) => (
             <ActionCheckboxRow
               key={action.action}
@@ -499,14 +574,8 @@ function SettingsGrid({
   }
 
   return (
-    <section aria-label="Configurações administrativas" className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        <IconSettings size={14} className="text-[var(--text-secondary)]" aria-hidden />
-        <h4 className="font-display text-[12px] font-bold text-[var(--text-primary)]">
-          Configurações administrativas
-        </h4>
-      </div>
-      <div className="grid grid-cols-1 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] sm:grid-cols-2">
+    <Panel icon={<IconSettings size={18} />} title="Configurações administrativas">
+      <div className="grid grid-cols-1 sm:grid-cols-2">
         {resource.actions.map((action) => {
           const key = `${resource.resource}:${action.action}`;
           const on = checked.has(key);
@@ -541,7 +610,7 @@ function SettingsGrid({
           );
         })}
       </div>
-    </section>
+    </Panel>
   );
 }
 

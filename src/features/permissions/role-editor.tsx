@@ -253,8 +253,8 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
         )}
       </aside>
 
-      {/* ── COLUNA DIREITA: matriz de permissões ───────────────────────── */}
-      <div className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 shadow-[var(--glass-shadow-sm)]">
+      {/* ── COLUNA DIREITA: matriz de permissões (painéis soltos, DS v2) ── */}
+      <div className="flex min-w-0 flex-col gap-4">
         <RolePermissionsEditor
           resources={editorResources}
           checked={checked}
@@ -315,7 +315,7 @@ function RoleChannelScope({ roleId }: { roleId: string }) {
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] p-3">
+    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-4 shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
       <div className="flex items-center gap-1.5">
         <IconAntennaBars5 size={14} className="text-[var(--text-muted)]" />
         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">

@@ -124,8 +124,16 @@ function Sidebar({
   const { data: users = [], isLoading: usersLoading } = useUsers();
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md">
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow)] backdrop-blur-md v2-dark:bg-[var(--glass-bg-modal)]">
+      <div className="flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3.5 py-3">
+        <span className="text-[var(--brand-primary)]">
+          <IconShieldCheck size={16} />
+        </span>
+        <h2 className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+          Acessos
+        </h2>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-2.5">
         <Section
           icon={<IconShield size={13} />}
           title="Papéis"
@@ -199,13 +207,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-1">
-      <header className="flex items-center gap-1.5 px-2 pb-1 pt-1.5">
-        <span className="text-[var(--text-muted)]">{icon}</span>
-        <h3 className="font-display text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+    <section className="flex flex-col gap-1 border-t border-[var(--glass-border-subtle)] pt-2.5 first:border-t-0 first:pt-0">
+      <header className="flex items-center gap-1.5 px-2 pb-1 pt-0.5">
+        <span className="text-[var(--brand-primary)]">{icon}</span>
+        <h3 className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
           {title}
         </h3>
-        <span className="text-[10.5px] font-semibold text-[var(--text-muted)]">
+        <span className="flex min-w-[18px] items-center justify-center rounded-full bg-[var(--glass-bg-overlay)] px-1.5 text-[10px] font-bold text-[var(--text-muted)]">
           {loading ? "…" : count}
         </span>
         {onAdd && (

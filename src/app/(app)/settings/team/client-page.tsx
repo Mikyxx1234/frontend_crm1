@@ -37,11 +37,21 @@ import {
   setCrmActionGrantsForUser,
 } from "@/lib/permissions";
 
+import { useRoles } from "@/features/permissions/hooks";
+
 import { SettingsV2Shell } from "../_v2-shell";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
 
-type UserRow = { id: string; name: string; email: string; role: UserRole };
+type AssignedRole = { id: string; name: string; systemPreset: string | null };
+
+type UserRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  assignedRoles?: AssignedRole[];
+};
 
 type CrmPermissionDraft = Record<CrmActionKey, boolean>;
 
@@ -50,16 +60,6 @@ const DEFAULT_INVITE_PERMISSIONS: CrmPermissionDraft = {
   runAutomations: true,
   assignOwner: true,
 };
-
-const ROLE_PT: Record<UserRole, string> = {
-  ADMIN: "Administrador",
-  MANAGER: "Gerente",
-  MEMBER: "Membro",
-};
-
-const ROLES: UserRole[] = ["ADMIN", "MANAGER", "MEMBER"];
-
-const ROLE_OPTIONS = ROLES.map((r) => ({ value: r, label: ROLE_PT[r] }));
 
 const DEFAULT_PER_PAGE = 25;
 
@@ -84,15 +84,30 @@ function avatarColor(seed: string): string {
 }
 
 /** Classes do badge de função (espelha o HTML de referência DS v2). */
-function roleBadgeClass(role: UserRole): string {
-  switch (role) {
-    case "ADMIN":
-      return "border-transparent bg-[var(--color-enterprise-bg,rgba(91,111,245,0.15))] text-[var(--brand-primary-dark,#3d52e8)]";
-    case "MANAGER":
-      return "border-transparent bg-[rgba(91,111,245,0.10)] text-[var(--brand-primary)]";
-    default:
-      return "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]";
+function roleBadgeClass(isAdminRole: boolean): string {
+  return isAdminRole
+    ? "border-transparent bg-[var(--color-enterprise-bg,rgba(91,111,245,0.15))] text-[var(--brand-primary-dark,#3d52e8)]"
+    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]";
+}
+
+/**
+ * Resolve a "função" exibida do usuário (modelo híbrido):
+ *   - ADMIN legado → preset "Administrador".
+ *   - senão, a primeira role CUSTOMIZADA atribuída (não-preset).
+ *   - fallback: primeira role atribuída (preset legado MANAGER/MEMBER).
+ */
+function userFunctionRole(
+  u: UserRow,
+  adminRoleId: string | undefined,
+): AssignedRole | undefined {
+  if (u.role === "ADMIN") {
+    return adminRoleId
+      ? { id: adminRoleId, name: "Administrador", systemPreset: "ADMIN" }
+      : { id: "__admin__", name: "Administrador", systemPreset: "ADMIN" };
   }
+  const custom = u.assignedRoles?.find((r) => !r.systemPreset);
+  if (custom) return custom;
+  return u.assignedRoles?.[0];
 }
 
 async function parseJsonError(res: Response, fallback: string): Promise<never> {
@@ -111,6 +126,24 @@ export default function TeamV2ClientPage() {
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
 
+  // Funções disponíveis (modelo híbrido): ADMIN preset + roles customizadas.
+  const { data: roles = [] } = useRoles();
+  const adminRole = React.useMemo(
+    () => roles.find((r) => r.systemPreset === "ADMIN"),
+    [roles],
+  );
+  const customRoles = React.useMemo(
+    () => roles.filter((r) => !r.isSystem),
+    [roles],
+  );
+  const baseRoleOptions = React.useMemo(
+    () => [
+      ...(adminRole ? [{ value: adminRole.id, label: "Administrador" }] : []),
+      ...customRoles.map((r) => ({ value: r.id, label: r.name })),
+    ],
+    [adminRole, customRoles],
+  );
+
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(DEFAULT_PER_PAGE);
@@ -120,7 +153,7 @@ export default function TeamV2ClientPage() {
   const [inviteName, setInviteName] = React.useState("");
   const [inviteEmail, setInviteEmail] = React.useState("");
   const [invitePassword, setInvitePassword] = React.useState("");
-  const [inviteRole, setInviteRole] = React.useState<UserRole>("MEMBER");
+  const [inviteRoleId, setInviteRoleId] = React.useState<string>("");
   const [invitePermissions, setInvitePermissions] = React.useState<CrmPermissionDraft>(
     DEFAULT_INVITE_PERMISSIONS,
   );
@@ -195,18 +228,23 @@ export default function TeamV2ClientPage() {
     });
   }
 
-  // ─── Mutations (preservadas da versão anterior) ────────────────────────
-  const updateRole = useMutation({
-    mutationFn: async ({ id, role }: { id: string; role: UserRole }) => {
-      const res = await fetch(apiUrl(`/api/users/${id}`), {
+  // ─── Mutations ─────────────────────────────────────────────────────────
+  // Função primária: aponta para uma Role (preset ADMIN ou customizada).
+  const setPrimaryRole = useMutation({
+    mutationFn: async ({ id, roleId }: { id: string; roleId: string }) => {
+      const res = await fetch(apiUrl(`/api/users/${id}/primary-role`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ roleId }),
       });
       if (!res.ok) await parseJsonError(res, "Erro ao atualizar função.");
-      return res.json() as Promise<UserRow>;
+      return res.json();
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["users-list"] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["users-list"] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
+      toast.success("Função atualizada.");
+    },
     onError: (err) =>
       toast.error(err instanceof Error ? err.message : "Erro ao atualizar função."),
   });
@@ -255,6 +293,10 @@ export default function TeamV2ClientPage() {
     newPassword === confirmPassword &&
     !updatePassword.isPending;
 
+  const inviteIsAdmin = inviteRoleId !== "" && inviteRoleId === adminRole?.id;
+  const inviteIsCustomRole =
+    inviteRoleId !== "" && !inviteIsAdmin && customRoles.some((r) => r.id === inviteRoleId);
+
   const invite = useMutation({
     mutationFn: async () => {
       const res = await fetch(apiUrl("/api/users"), {
@@ -264,14 +306,30 @@ export default function TeamV2ClientPage() {
           name: inviteName.trim(),
           email: inviteEmail.trim(),
           password: invitePassword,
-          role: inviteRole,
+          // Baseline legado: ADMIN preset ou MEMBER. A role customizada,
+          // quando escolhida, é aplicada logo após via primary-role.
+          role: inviteIsAdmin ? "ADMIN" : "MEMBER",
         }),
       });
       if (!res.ok) await parseJsonError(res, "Erro ao convidar membro.");
       const created = (await res.json()) as { id?: string } & UserRow;
 
+      if (created?.id && inviteIsCustomRole) {
+        try {
+          await fetch(apiUrl(`/api/users/${created.id}/primary-role`), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roleId: inviteRoleId }),
+          });
+        } catch {
+          toast.warning(
+            "Usuário criado, mas a função não foi aplicada. Ajuste na lista de Equipe.",
+          );
+        }
+      }
+
       const allTrue = CRM_ACTION_KEYS.every((k) => invitePermissions[k] === true);
-      if (created?.id && !allTrue && inviteRole !== "ADMIN") {
+      if (created?.id && !allTrue && !inviteIsAdmin) {
         try {
           const cur = await fetch(apiUrl("/api/settings/permissions"));
           const curData = (await cur.json().catch(() => ({}))) as {
@@ -304,7 +362,7 @@ export default function TeamV2ClientPage() {
       setInviteName("");
       setInviteEmail("");
       setInvitePassword("");
-      setInviteRole("MEMBER");
+      setInviteRoleId("");
       setInvitePermissions(DEFAULT_INVITE_PERMISSIONS);
     },
   });
@@ -391,7 +449,7 @@ export default function TeamV2ClientPage() {
           tone="green"
           icon={<IconUserPlus size={20} />}
           value={othersCount}
-          label="Gerentes e membros"
+          label="Demais funções"
         />
       </div>
 
@@ -456,6 +514,16 @@ export default function TeamV2ClientPage() {
           <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
             {pageItems.map((u) => {
               const isSelected = selected.has(u.id);
+              const fnRole = userFunctionRole(u, adminRole?.id);
+              const isAdminRole = fnRole?.systemPreset === "ADMIN";
+              const fnLabel = fnRole?.name ?? "Sem função";
+              // Garante que o valor atual apareça no dropdown mesmo se for um
+              // preset legado (MANAGER/MEMBER) fora das opções base.
+              const rowOptions =
+                fnRole && fnRole.id !== "__admin__" &&
+                !baseRoleOptions.some((o) => o.value === fnRole.id)
+                  ? [{ value: fnRole.id, label: fnLabel }, ...baseRoleOptions]
+                  : baseRoleOptions;
               return (
                 <div
                   key={u.id}
@@ -489,11 +557,11 @@ export default function TeamV2ClientPage() {
                         <span
                           className={cn(
                             "inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-display text-[10px] font-bold",
-                            roleBadgeClass(u.role),
+                            roleBadgeClass(isAdminRole),
                           )}
                         >
                           <IconShield size={11} className="opacity-85" />
-                          {ROLE_PT[u.role]}
+                          {fnLabel}
                         </span>
                       </div>
                       <div className="mt-0.5 flex items-center gap-1.5 font-body text-[12px] text-[var(--text-muted)]">
@@ -505,15 +573,16 @@ export default function TeamV2ClientPage() {
 
                   <div>
                     <DropdownGlass
-                      options={ROLE_OPTIONS}
-                      value={u.role}
+                      options={rowOptions}
+                      value={fnRole && fnRole.id !== "__admin__" ? fnRole.id : undefined}
+                      placeholder="Definir função"
                       onValueChange={(next) => {
-                        if (next === u.role) return;
-                        updateRole.mutate({ id: u.id, role: next as UserRole });
+                        if (fnRole && next === fnRole.id) return;
+                        setPrimaryRole.mutate({ id: u.id, roleId: next });
                       }}
-                      disabled={updateRole.isPending || !isAdmin}
+                      disabled={setPrimaryRole.isPending || !isAdmin}
                       matchTriggerWidth={false}
-                      triggerClassName="h-9 min-w-[150px]"
+                      triggerClassName="h-9 min-w-[160px]"
                     />
                   </div>
 
@@ -623,17 +692,22 @@ export default function TeamV2ClientPage() {
             <div className="grid gap-1.5">
               <span className="text-sm font-medium">Função</span>
               <DropdownGlass
-                options={ROLE_OPTIONS}
-                value={inviteRole}
-                onValueChange={(next) => setInviteRole(next as UserRole)}
+                options={baseRoleOptions}
+                value={inviteRoleId || undefined}
+                placeholder="Selecione a função"
+                onValueChange={(next) => setInviteRoleId(next)}
                 matchTriggerWidth
                 triggerClassName="w-full"
               />
+              <p className="text-[11px] text-muted-foreground">
+                Apenas <strong>Administrador</strong> é preset. As demais funções
+                são as roles criadas em Permissões.
+              </p>
             </div>
             <div className="grid gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Permissões iniciais</span>
-                {inviteRole === "ADMIN" ? (
+                {inviteIsAdmin ? (
                   <span className="text-[11px] font-semibold uppercase text-amber-600">
                     Admin · tudo liberado
                   </span>
@@ -646,13 +720,13 @@ export default function TeamV2ClientPage() {
               <div className="grid gap-1.5">
                 {CRM_ACTION_KEYS.map((action) => {
                   const checked =
-                    inviteRole === "ADMIN" ? true : invitePermissions[action];
+                    inviteIsAdmin ? true : invitePermissions[action];
                   return (
                     <label
                       key={action}
                       className={cn(
                         "flex items-center justify-between gap-3 rounded-lg border border-transparent bg-background/60 px-3 py-2 text-sm transition-colors",
-                        inviteRole !== "ADMIN" && "hover:border-border",
+                        !inviteIsAdmin && "hover:border-border",
                       )}
                     >
                       <span className="min-w-0 truncate text-[var(--text-primary)]">
@@ -662,7 +736,7 @@ export default function TeamV2ClientPage() {
                         type="button"
                         role="switch"
                         aria-checked={checked}
-                        disabled={inviteRole === "ADMIN"}
+                        disabled={inviteIsAdmin}
                         onClick={() =>
                           setInvitePermissions((prev) => ({
                             ...prev,
@@ -672,7 +746,7 @@ export default function TeamV2ClientPage() {
                         className={cn(
                           "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
                           checked ? "bg-primary" : "bg-muted-foreground/30",
-                          inviteRole === "ADMIN" && "cursor-not-allowed opacity-70",
+                          inviteIsAdmin && "cursor-not-allowed opacity-70",
                         )}
                       >
                         <span

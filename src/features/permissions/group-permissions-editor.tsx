@@ -45,21 +45,33 @@ import type {
 
 // ─── Config da matriz ────────────────────────────────────────────────────────
 
-const ENTITIES: { resource: string; label: string; desc: string; icon: typeof IconUser }[] = [
-  { resource: "deal", label: "Negócios", desc: "Leads e oportunidades", icon: IconTargetArrow },
-  { resource: "contact", label: "Contatos", desc: "Pessoas", icon: IconUser },
-  { resource: "company", label: "Empresas", desc: "Organizações", icon: IconBuilding },
-  { resource: "task", label: "Tarefas", desc: "Atividades", icon: IconChecklist },
-  { resource: "product", label: "Produtos", desc: "Catálogo", icon: IconBox },
-];
+/**
+ * Recursos "escopáveis" — registros com responsável (owner), onde faz
+ * sentido o nível SELF (só os próprios) vs ALL (todos). Os demais recursos
+ * do catálogo são booleanos (Negado/Liberado) porque são ações org-wide.
+ */
+const SCOPABLE_RESOURCES = new Set<string>([
+  "deal",
+  "contact",
+  "company",
+  "task",
+  "conversation",
+]);
 
-const ACTION_COLUMNS: { action: string; label: string }[] = [
-  { action: "create", label: "Criar" },
-  { action: "view", label: "Ver" },
-  { action: "edit", label: "Editar" },
-  { action: "delete", label: "Excluir" },
-  { action: "export", label: "Exportar" },
-];
+/**
+ * Recursos ocultos no editor de grupo: `nav` é controlado pela
+ * personalização de menu lateral (sidebarRoutes), não pela matriz.
+ */
+const HIDDEN_RESOURCES = new Set<string>(["nav"]);
+
+/** Ícone por recurso do catálogo (fallback: IconColumns). */
+const RESOURCE_ICON: Record<string, typeof IconUser> = {
+  deal: IconTargetArrow,
+  contact: IconUser,
+  company: IconBuilding,
+  task: IconChecklist,
+  product: IconBox,
+};
 
 const LEVELS: {
   k: GroupScopeLevel;
@@ -176,6 +188,10 @@ export function GroupPermissionsEditor({
   // Campos: "entity.fieldKey" -> grant
   const [fieldGrants, setFieldGrants] = useState<Record<string, GroupFieldGrantEntry>>({});
 
+  // Membros escolhidos ANTES de salvar (grupo novo). Enviados via `memberIds`
+  // no create; em grupos existentes usamos as mutations add/remove direto.
+  const [pendingMemberIds, setPendingMemberIds] = useState<string[]>([]);
+
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
@@ -197,14 +213,12 @@ export function GroupPermissionsEditor({
     setFieldGrants(fg);
   }, [group]);
 
-  // Catálogo: set de "resource:action" válidos (pra esconder colunas inexistentes)
-  const validKeys = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of catalog?.resources ?? []) {
-      for (const a of r.actions) set.add(`${r.resource}:${a.action}`);
-    }
-    return set;
-  }, [catalog]);
+  // Recursos do catálogo exibidos na matriz (exclui `nav`, controlado pelo
+  // menu lateral). Mostra TODOS os módulos — paridade com o editor de role.
+  const matrixResources = useMemo(
+    () => (catalog?.resources ?? []).filter((r) => !HIDDEN_RESOURCES.has(r.resource)),
+    [catalog],
+  );
 
   const saving = createGroup.isPending || updateGroup.isPending;
 
@@ -227,6 +241,7 @@ export function GroupPermissionsEditor({
       permissions,
       stageGrants: stage,
       fieldGrants: fields,
+      ...(isNew && pendingMemberIds.length ? { memberIds: pendingMemberIds } : {}),
     };
   }
 
@@ -366,6 +381,8 @@ export function GroupPermissionsEditor({
             isNew={isNew}
             groupId={groupId}
             members={group?.members ?? []}
+            pendingMemberIds={pendingMemberIds}
+            onPendingChange={setPendingMemberIds}
             onAdd={(userId) => groupId && addMember.mutate({ groupId, userId })}
             onRemove={(userId) => groupId && removeMember.mutate({ groupId, userId })}
             busy={addMember.isPending || removeMember.isPending}
@@ -407,49 +424,70 @@ export function GroupPermissionsEditor({
 
         {/* CONTENT */}
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          {/* MATRIZ */}
+          {/* MATRIZ — catálogo completo (paridade com roles) */}
           <Panel
             icon={<IconColumns size={18} />}
             title="Permissões por módulo"
             sub="escopo de cada ação"
           >
             <Legend />
-            {ENTITIES.map((ent) => (
-              <div
-                key={ent.resource}
-                className="flex flex-col gap-3 border-b border-[var(--glass-border-subtle)] px-[18px] py-4 last:border-b-0 hover:bg-black/[0.015]"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="flex size-[34px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
-                    <ent.icon size={18} />
-                  </span>
-                  <div>
-                    <div className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
-                      {ent.label}
+            {matrixResources.map((res) => {
+              const Icon = RESOURCE_ICON[res.resource] ?? IconColumns;
+              const scopable = SCOPABLE_RESOURCES.has(res.resource);
+              return (
+                <div
+                  key={res.resource}
+                  className="flex flex-col gap-3 border-b border-[var(--glass-border-subtle)] px-[18px] py-4 last:border-b-0 hover:bg-black/[0.015]"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
+                      <Icon size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+                        {res.label}
+                      </div>
+                      {res.description && (
+                        <div className="text-[11px] text-[var(--text-muted)]">
+                          {res.description}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-[11px] text-[var(--text-muted)]">{ent.desc}</div>
                   </div>
-                </div>
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-x-3.5 gap-y-3">
-                  {ACTION_COLUMNS.filter((c) => validKeys.has(`${ent.resource}:${c.action}`)).map(
-                    (col) => {
-                      const key = `${ent.resource}:${col.action}`;
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-x-3.5 gap-y-3">
+                    {res.actions.map((act) => {
+                      const key = `${res.resource}:${act.action}`;
+                      const level = scopes[key] ?? "NONE";
                       return (
                         <div key={key} className="flex min-w-0 flex-col gap-1.5">
-                          <span className="font-display text-[11px] font-bold uppercase tracking-[0.4px] text-[var(--text-secondary)]">
-                            {col.label}
+                          <span className="flex items-center gap-1.5 font-display text-[11px] font-bold uppercase tracking-[0.4px] text-[var(--text-secondary)]">
+                            <span className="truncate">{act.label}</span>
+                            {act.destructive && (
+                              <span className="shrink-0 rounded-full bg-[var(--color-danger-bg)] px-1.5 py-px text-[8.5px] font-bold uppercase tracking-wide text-[var(--color-danger)]">
+                                sensível
+                              </span>
+                            )}
                           </span>
-                          <ScopeControl
-                            value={scopes[key] ?? "NONE"}
-                            onChange={(lvl) => setScopes((p) => ({ ...p, [key]: lvl }))}
-                          />
+                          {scopable ? (
+                            <ScopeControl
+                              value={level}
+                              onChange={(lvl) => setScopes((p) => ({ ...p, [key]: lvl }))}
+                            />
+                          ) : (
+                            <BoolControl
+                              value={level !== "NONE"}
+                              onChange={(on) =>
+                                setScopes((p) => ({ ...p, [key]: on ? "ALL" : "NONE" }))
+                              }
+                            />
+                          )}
                         </div>
                       );
-                    },
-                  )}
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </Panel>
 
           {/* ETAPAS */}
@@ -599,9 +637,51 @@ function ScopeControl({
   );
 }
 
+/**
+ * Controle booleano (Negado/Liberado) para recursos não-escopáveis,
+ * mantendo a mesma estética do `ScopeControl`. Internamente mapeia para
+ * os níveis `NONE`/`ALL` do modelo de grupo.
+ */
+function BoolControl({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  return (
+    <div className="flex gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-0.5">
+      <button
+        type="button"
+        onClick={() => onChange(false)}
+        className={cn(
+          "flex min-w-0 flex-1 items-center justify-center rounded-[var(--radius-sm)] px-1 py-1.5 font-display text-[11px] font-bold transition-colors",
+          !value ? "text-white" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+        )}
+        style={!value ? { background: "#94a3b8" } : undefined}
+      >
+        Negado
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange(true)}
+        className={cn(
+          "flex min-w-0 flex-1 items-center justify-center rounded-[var(--radius-sm)] px-1 py-1.5 font-display text-[11px] font-bold transition-colors",
+          value ? "text-white" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+        )}
+        style={value ? { background: "var(--brand-primary)" } : undefined}
+      >
+        Liberado
+      </button>
+    </div>
+  );
+}
+
 function MembersSection({
   isNew,
   members,
+  pendingMemberIds,
+  onPendingChange,
   onAdd,
   onRemove,
   busy,
@@ -609,22 +689,99 @@ function MembersSection({
   isNew: boolean;
   groupId: string | null;
   members: { id: string; user: OrgUser }[];
+  pendingMemberIds: string[];
+  onPendingChange: (ids: string[]) => void;
   onAdd: (userId: string) => void;
   onRemove: (userId: string) => void;
   busy: boolean;
 }) {
   const [picking, setPicking] = useState(false);
   const { data: users = [] } = useOrgUsers();
-  const memberIds = new Set(members.map((m) => m.user.id));
-  const available = users.filter((u) => !memberIds.has(u.id));
 
+  // ── Modo CRIAÇÃO: seleção local, persistida via `memberIds` no save ──
   if (isNew) {
+    const pendingSet = new Set(pendingMemberIds);
+    const pendingUsers = users.filter((u) => pendingSet.has(u.id));
+    const availableNew = users.filter((u) => !pendingSet.has(u.id));
     return (
-      <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-3 text-[12px] text-[var(--text-muted)]">
-        Salve o grupo para atribuir membros.
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="font-display text-[12px] font-bold text-[var(--text-secondary)]">
+            Membros ({pendingUsers.length})
+          </span>
+          <button
+            type="button"
+            onClick={() => setPicking((v) => !v)}
+            className="flex items-center gap-1 font-display text-[12px] font-bold text-[var(--brand-primary)]"
+          >
+            <IconPlus size={13} />
+            Atribuir
+          </button>
+        </div>
+
+        {picking && (
+          <div className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white p-2">
+            {availableNew.length === 0 ? (
+              <p className="px-1 py-2 text-[11.5px] text-[var(--text-muted)]">
+                Todos os usuários já foram selecionados.
+              </p>
+            ) : (
+              <div className="max-h-48 overflow-auto">
+                {availableNew.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => onPendingChange([...pendingMemberIds, u.id])}
+                    className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-1.5 py-1.5 text-left transition-colors hover:bg-black/[0.04]"
+                  >
+                    <Avatar user={u} idx={0} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-semibold text-[var(--text-primary)]">
+                        {u.name}
+                      </span>
+                      <span className="block truncate text-[11px] text-[var(--text-muted)]">{u.email}</span>
+                    </span>
+                    <IconPlus size={14} className="text-[var(--brand-primary)]" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-0.5">
+          {pendingUsers.map((u, i) => (
+            <div key={u.id} className="group flex items-center gap-2.5 rounded-[var(--radius-md)] p-1.5 hover:bg-black/[0.02]">
+              <Avatar user={u} idx={i} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13px] font-semibold leading-tight text-[var(--text-primary)]">
+                  {u.name}
+                </div>
+                <div className="truncate text-[11px] text-[var(--text-muted)]">{u.email}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onPendingChange(pendingMemberIds.filter((id) => id !== u.id))}
+                className="rounded p-1 text-[var(--text-muted)] opacity-0 transition-all hover:text-[var(--color-danger)] group-hover:opacity-100"
+                title="Remover da seleção"
+              >
+                <IconX size={14} />
+              </button>
+            </div>
+          ))}
+          {pendingUsers.length === 0 && (
+            <p className="px-1 py-1 text-[11.5px] text-[var(--text-muted)]">
+              Nenhum membro selecionado. Os escolhidos entram ao salvar.
+            </p>
+          )}
+        </div>
       </div>
     );
   }
+
+  // ── Modo EDIÇÃO: mutations diretas (add/remove) ──
+  const memberIds = new Set(members.map((m) => m.user.id));
+  const available = users.filter((u) => !memberIds.has(u.id));
 
   return (
     <div className="flex flex-col gap-2">

@@ -102,6 +102,8 @@ export interface GroupWritePayload {
   permissions?: GroupPermissionEntry[];
   stageGrants?: GroupStageGrantEntry[];
   fieldGrants?: GroupFieldGrantEntry[];
+  /** IDs de usuários a vincular como membros já na criação do grupo. */
+  memberIds?: string[];
 }
 
 export interface EffectivePermissions {

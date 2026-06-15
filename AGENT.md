@@ -5,6 +5,55 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-15 — Diretório v2: edição na linha + vínculo contato↔empresa
+
+**Decisão.** As listagens v2 `/contacts` e `/companies` (`app/(app)/contacts/client-page.tsx`
+e `.../companies/client-page.tsx`) ganharam uma coluna **"Ações"** com botão
+de editar por linha, abrindo `EditContactDialog` / `EditCompanyDialog` (mesmo
+padrão visual dos diálogos de criação, via `createPortal`). Antes só havia o
+lápis no hover do nome, que apenas navegava para o detalhe — não dava para
+editar a partir da lista.
+
+**Vínculo de empresa.** Novo `CompanyPicker` (combobox com busca via
+`useCompanies`, com opção de "remover vínculo") foi adicionado tanto na
+criação quanto na edição de contato. Envia `companyId` no corpo do
+`POST/PUT /api/contacts[/:id]` — o backend já suportava connect/disconnect
+no Prisma. **Por quê pela ótica do contato:** a relação é 1 contato → 1
+empresa (`Contact.companyId`), então o lado natural do vínculo é o contato.
+O picker só lista empresas da própria org, mantendo o vínculo restrito ao
+tenant.
+
+---
+
+### 2026-06-15 — RBAC: função híbrida, paridade de grupos e canal por papel [DECISÃO — agente OPUS]
+
+**Decisão.** Três frentes de RBAC, todas **não-quebráveis** para orgs que já
+rodam o CRM (ex.: DNA na `main`):
+
+1. **Função híbrida (Equipe).** O seletor de função em `/settings/team` deixa
+   de usar Admin/Gerente/Membro fixos: mantém **ADMIN como único preset** e o
+   restante vira **roles customizadas** (atribuídas via `UserRoleAssignment`).
+   Novo `PUT /api/users/[id]/primary-role`. O legado `User.role` continua no
+   banco como fallback no `loadAuthzContext` — por isso nada quebra. Guard
+   impede rebaixar o **último ADMIN** da org.
+
+2. **Paridade de grupos.** O `group-permissions-editor` passou a usar o
+   **catálogo completo** de permissões (igual às roles); recursos com
+   responsável usam níveis (Negado/Resp./Equipe/Todos), o resto usa
+   Negado/Liberado. Membros podem ser adicionados **já na criação** do grupo
+   (`memberIds`).
+
+3. **Canal por papel.** `channel.{view,send}` ganhou o eixo `roles[roleId]`
+   além de `users[userId]`. Resolução **aditiva**: o acesso passa se QUALQUER
+   regra (do usuário OU de uma role dele) permitir; sem regra alguma →
+   liberado (comportamento anterior preservado). Editor no `RoleEditor`
+   ("Canais deste papel") + `GET/PUT /api/roles/[id]/scope-grants`.
+   Enforcement só roda com a flag `rbac_granular_scope_v1` ligada.
+
+Commits: back `58beaa2`/`87001b3`, front `33586b0`/`9d1ef0c`.
+
+---
+
 ### 2026-06-14 — Produto: tipo binário (Produto/Serviço) + fluxo guiado pós-wizard [DECISÃO — agente OPUS]
 
 **Decisão.** (1) Na **criação** de produto, o seletor de tipo deixa de expor os

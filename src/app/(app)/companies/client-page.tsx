@@ -25,7 +25,9 @@ import {
   useCompanies,
   useCreateCompany,
   useDeleteCompany,
+  useUpdateCompany,
 } from "@/features/directory-v2/hooks";
+import type { CompanyListItemDto } from "@/features/directory-v2/api";
 
 const DEFAULT_PER_PAGE = 25;
 
@@ -65,6 +67,7 @@ export default function V2CompaniesClientPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<CompanyListItemDto | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMut = useDeleteCompany();
@@ -208,7 +211,7 @@ export default function V2CompaniesClientPage() {
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
-            <div className="mb-2.5 grid grid-cols-[42px_2.2fr_1.3fr_1.2fr_1.5fr_1.7fr_0.8fr] items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+            <div className="mb-2.5 grid grid-cols-[42px_2.2fr_1.3fr_1.2fr_1.5fr_1.7fr_0.8fr_44px] items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
               <span>
                 <CheckboxGlass
                   checked={allChecked}
@@ -223,13 +226,14 @@ export default function V2CompaniesClientPage() {
               <span>E-mail</span>
               <span>Endereço</span>
               <span>Contatos</span>
+              <span className="text-right">Ações</span>
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
               {items.map((c) => (
                 <div
                   key={c.id}
-                  className={`grid grid-cols-[42px_2.2fr_1.3fr_1.2fr_1.5fr_1.7fr_0.8fr] items-center gap-3.5 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)] ${
+                  className={`grid grid-cols-[42px_2.2fr_1.3fr_1.2fr_1.5fr_1.7fr_0.8fr_44px] items-center gap-3.5 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)] ${
                     selected.has(c.id)
                       ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
                       : "border-[var(--glass-border-subtle)]"
@@ -280,6 +284,18 @@ export default function V2CompaniesClientPage() {
                       {c._count.contacts}
                     </span>
                   </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(c)}
+                      aria-label={`Editar ${c.name}`}
+                      title="Editar empresa"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+                    >
+                      <IconPencil size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -301,6 +317,7 @@ export default function V2CompaniesClientPage() {
       </main>
 
       <CreateCompanyDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <EditCompanyDialog company={editing} onClose={() => setEditing(null)} />
       <ConfirmDeleteDialog
         open={confirmOpen}
         count={selected.size}
@@ -520,6 +537,154 @@ function CreateCompanyDialog({
             className="rounded-full bg-[var(--brand-primary)] px-4 py-1.5 font-display text-xs font-semibold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:opacity-60"
           >
             {createMut.isPending ? "Criando..." : "Criar"}
+          </button>
+        </div>
+      </form>
+    </div>,
+    document.body,
+  );
+}
+
+function EditCompanyDialog({
+  company,
+  onClose,
+}: {
+  company: CompanyListItemDto | null;
+  onClose: () => void;
+}) {
+  const open = company !== null;
+  const [name, setName] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const updateMut = useUpdateCompany();
+
+  useEffect(() => {
+    if (company) {
+      setName(company.name);
+      setCnpj(company.size ?? "");
+      setPhone(company.phone ?? "");
+      setEmail(company.domain ?? "");
+      setAddress(company.address ?? "");
+      updateMut.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [company?.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    if (open) {
+      window.addEventListener("keydown", onEsc);
+      return () => window.removeEventListener("keydown", onEsc);
+    }
+  }, [open, onClose]);
+
+  if (!open || !company || typeof document === "undefined") return null;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const n = name.trim();
+    if (!n || !company) return;
+    updateMut.mutate(
+      {
+        id: company.id,
+        body: {
+          name: n,
+          size: cnpj.trim() || null,
+          phone: phone.trim() || null,
+          domain: email.trim() || null,
+          address: address.trim() || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success("Empresa atualizada.");
+          onClose();
+        },
+      },
+    );
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        className="w-[460px] max-w-[90vw] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-5 shadow-2xl"
+      >
+        <h3 className="mb-4 font-display text-base font-bold text-[var(--text-primary)]">
+          Editar empresa
+        </h3>
+
+        <FieldInput
+          label="Nome da Empresa *"
+          type="text"
+          required
+          autoFocus
+          value={name}
+          onChange={setName}
+          placeholder="Razão social ou nome fantasia"
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <FieldInput
+            label="CNPJ"
+            type="text"
+            value={cnpj}
+            onChange={setCnpj}
+            placeholder="00.000.000/0000-00"
+          />
+          <FieldInput
+            label="Telefone"
+            type="tel"
+            value={phone}
+            onChange={setPhone}
+            placeholder="(11) 3333-4444"
+          />
+        </div>
+        <FieldInput
+          label="E-mail"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="contato@empresa.com"
+        />
+        <FieldInput
+          label="Endereço da Empresa"
+          type="text"
+          value={address}
+          onChange={setAddress}
+          placeholder="Rua, número, bairro, cidade — UF"
+        />
+
+        {updateMut.isError ? (
+          <p className="mb-3 text-[12px] text-[var(--color-danger,#e11d48)]">
+            {updateMut.error instanceof Error
+              ? updateMut.error.message
+              : "Erro ao atualizar empresa."}
+          </p>
+        ) : null}
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] hover:bg-black/5"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={!name.trim() || updateMut.isPending}
+            className="rounded-full bg-[var(--brand-primary)] px-4 py-1.5 font-display text-xs font-semibold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:opacity-60"
+          >
+            {updateMut.isPending ? "Salvando..." : "Salvar"}
           </button>
         </div>
       </form>

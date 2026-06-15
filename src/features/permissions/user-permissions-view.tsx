@@ -389,7 +389,7 @@ function UserRolesEditor({
 /* ── UserScopeEditor ─────────────────────────────────────────────────────── */
 
 /** `["*"]` salvo no backend equivale a "todos" → tratamos como `null` na UI. */
-function normalizeScope(value: string[] | null | undefined): string[] | null {
+export function normalizeScope(value: string[] | null | undefined): string[] | null {
   if (!value) return null;
   if (value.includes("*")) return null;
   return value;
@@ -523,7 +523,7 @@ function UserScopeEditor({ userId }: { userId: string }) {
  * Seletor "Todos" + lista de checkboxes. `value === null` significa sem
  * restrição (todos); um array (mesmo vazio) restringe aos itens marcados.
  */
-function ScopeMultiSelect({
+export function ScopeMultiSelect({
   label,
   icon,
   options,

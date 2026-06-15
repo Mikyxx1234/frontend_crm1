@@ -3,8 +3,11 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   IconAlertTriangle,
+  IconAntennaBars5,
+  IconEye,
   IconKey,
   IconLoader2,
+  IconSend,
   IconShield,
   IconUsers,
 } from "@tabler/icons-react";
@@ -20,12 +23,16 @@ import {
   useDeleteRole,
   usePermissionsCatalog,
   useRole,
+  useRoleScopeGrants,
+  useScopeChannelOptions,
   useUpdateRole,
+  useUpdateRoleScopeGrants,
 } from "./hooks";
 import {
   RolePermissionsEditor,
   type PermissionsEditorMode,
 } from "./role-permissions-editor";
+import { ScopeMultiSelect, normalizeScope } from "./user-permissions-view";
 
 interface RoleEditorProps {
   roleId: string | null;
@@ -262,6 +269,107 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
             <code className="font-mono">*</code>) — as permissões não são editáveis.
           </p>
         )}
+
+        {/* Canais por papel: só faz sentido para papéis não-admin já criados
+            (precisa de roleId para persistir o grant). */}
+        {!isNew && !isAdminPreset && roleId && <RoleChannelScope roleId={roleId} />}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Escopo de CANAIS por papel. Concede a todos os usuários com este papel acesso
+ * a ver / enviar nos canais selecionados (eixo aditivo ao override por usuário).
+ * Persiste em `permissions.scope.grants.v1` via
+ * `PUT /api/roles/[id]/scope-grants`. Só tem efeito real com a flag
+ * `rbac_granular_scope_v1` ativa.
+ */
+function RoleChannelScope({ roleId }: { roleId: string }) {
+  const { data, isLoading } = useRoleScopeGrants(roleId);
+  const channels = useScopeChannelOptions();
+  const update = useUpdateRoleScopeGrants(roleId);
+
+  const [channelViewIds, setChannelViewIds] = useState<string[] | null>(null);
+  const [channelSendIds, setChannelSendIds] = useState<string[] | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!data) return;
+    setChannelViewIds(normalizeScope(data.channelViewIds));
+    setChannelSendIds(normalizeScope(data.channelSendIds));
+    setDirty(false);
+  }, [data]);
+
+  async function handleSave() {
+    setErr(null);
+    try {
+      await update.mutateAsync({ channelViewIds, channelSendIds });
+      setDirty(false);
+      setSaved(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erro ao salvar canais.");
+    }
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] p-3">
+      <div className="flex items-center gap-1.5">
+        <IconAntennaBars5 size={14} className="text-[var(--text-muted)]" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          Canais deste papel
+        </span>
+      </div>
+      <p className="text-[11px] text-[var(--text-muted)]">
+        Define quais canais os usuários com este papel podem ver/usar. Some-se ao
+        que cada usuário já tenha liberado individualmente.
+      </p>
+
+      <ScopeMultiSelect
+        label="Canais — ver mensagens"
+        icon={<IconEye size={12} className="text-[var(--text-muted)]" />}
+        options={channels.data ?? []}
+        value={channelViewIds}
+        onChange={(v) => {
+          setChannelViewIds(v);
+          setDirty(true);
+          setSaved(false);
+        }}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
+
+      <ScopeMultiSelect
+        label="Canais — enviar mensagens"
+        icon={<IconSend size={12} className="text-[var(--text-muted)]" />}
+        options={channels.data ?? []}
+        value={channelSendIds}
+        onChange={(v) => {
+          setChannelSendIds(v);
+          setDirty(true);
+          setSaved(false);
+        }}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
+
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void handleSave()}
+          disabled={!dirty || update.isPending}
+          className="h-7 shrink-0 gap-1 text-[11px]"
+        >
+          {update.isPending ? <IconLoader2 className="size-3 animate-spin" /> : null}
+          Salvar canais
+        </Button>
+        {saved && !dirty && (
+          <span className="text-[11px] text-[var(--text-muted)]">Salvo</span>
+        )}
+        {err && <span className="text-[11px] text-[var(--color-destructive)]">{err}</span>}
       </div>
     </div>
   );

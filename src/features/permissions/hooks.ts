@@ -279,6 +279,42 @@ export function useUpdateUserScopeGrants(userId: string) {
   });
 }
 
+// ── Escopo de CANAL por Role (RBAC) ──────────────────────────────────────
+// Eixo aditivo: concede canais a todos os usuários que possuem a role.
+// `null` = sem restrição por esta role. `string[]` = restringe/concede aos IDs.
+
+export type RoleScopeGrantsDto = {
+  channelViewIds: string[] | null;
+  channelSendIds: string[] | null;
+};
+
+export function useRoleScopeGrants(roleId: string | null) {
+  return useQuery<RoleScopeGrantsDto>({
+    queryKey: ["role-scope-grants", roleId],
+    queryFn: () => apiFetch(`/api/roles/${roleId}/scope-grants`),
+    enabled: !!roleId,
+  });
+}
+
+export function useUpdateRoleScopeGrants(roleId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<RoleScopeGrantsDto>) =>
+      apiFetch<RoleScopeGrantsDto & { ok: boolean }>(
+        `/api/roles/${roleId}/scope-grants`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["role-scope-grants", roleId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
+    },
+  });
+}
+
 export type ScopeEntityOption = { id: string; name: string };
 
 function pickArray(data: unknown, ...keys: string[]): unknown[] {

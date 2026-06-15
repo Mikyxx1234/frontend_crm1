@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -310,13 +310,12 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Tipo</Label>
-              <SelectNative value={type} onChange={(e) => setType(e.target.value)} className="h-9 text-sm">
-                {ACTIVITY_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </SelectNative>
+              <DropdownGlass
+                options={ACTIVITY_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                value={type}
+                onValueChange={setType}
+                triggerClassName="h-9 w-full text-sm"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Agendar</Label>

@@ -2,7 +2,6 @@
 
 import { Bell, BellOff, Check, Loader2, Smartphone, X } from "lucide-react";
 
-import { PageHeader } from "@/components/ui/page-header";
 import { usePushSubscription } from "@/hooks/use-push-subscription";
 import { cn } from "@/lib/utils";
 
@@ -40,20 +39,14 @@ export default function NotificationsSettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader
-        title="Notificações"
-        description="Configure como o EduIT te avisa quando um cliente responder."
-        icon={<Bell />}
-      />
-
-      <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
+    <div className="space-y-4">
+      <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
         <div className="flex items-start gap-4">
           <div
             className={cn(
               "flex size-12 shrink-0 items-center justify-center rounded-2xl text-white",
               isSubscribed
-                ? "bg-[#22c55e] shadow-green-glow"
+                ? "bg-[var(--color-success)] shadow-green-glow"
                 : "bg-[#06b6d4] shadow-[var(--shadow-lavender-glow)]",
             )}
           >
@@ -64,10 +57,10 @@ export default function NotificationsSettingsPage() {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-lg font-extrabold tracking-tight text-slate-900">
+            <h2 className="font-display text-lg font-extrabold tracking-tight text-[var(--text-primary)]">
               Notificações push neste dispositivo
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               {isSubscribed
                 ? "Você receberá um aviso instantâneo aqui sempre que um cliente responder, mesmo com o app fechado."
                 : "Ative para receber novos contatos em tempo real, sem precisar abrir o EduIT."}
@@ -134,35 +127,35 @@ export default function NotificationsSettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
-        <h2 className="font-display text-lg font-extrabold tracking-tight text-slate-900">
+      <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+        <h2 className="font-display text-lg font-extrabold tracking-tight text-[var(--text-primary)]">
           Sobre o aplicativo
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Para receber notificações no celular como um app nativo,
           instale o EduIT na tela inicial.
         </p>
 
-        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[var(--color-bg-subtle)] p-4">
+        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[var(--glass-bg-subtle)] p-4">
           <Smartphone className="mt-0.5 size-5 shrink-0 text-primary" />
-          <div className="text-sm text-[var(--color-ink-soft)]">
-            <p className="font-bold text-slate-800">Como instalar</p>
+          <div className="text-sm text-[var(--text-muted)]">
+            <p className="font-bold text-[var(--text-secondary)]">Como instalar</p>
             <ul className="mt-2 space-y-1.5 text-[13px]">
               <li>
-                <span className="font-semibold text-foreground">
+                <span className="font-semibold text-[var(--text-primary)]">
                   Android (Chrome / Edge):
                 </span>{" "}
                 toque em ⋮ → &quot;Instalar app&quot; ou aceite o banner de
                 instalação que aparece no rodapé.
               </li>
               <li>
-                <span className="font-semibold text-foreground">
+                <span className="font-semibold text-[var(--text-primary)]">
                   iPhone (Safari):
                 </span>{" "}
                 toque em Compartilhar → &quot;Adicionar à Tela de Início&quot;.
               </li>
               <li>
-                <span className="font-semibold text-foreground">Desktop:</span>{" "}
+                <span className="font-semibold text-[var(--text-primary)]">Desktop:</span>{" "}
                 ícone de instalação (⊕) na barra de endereço, ao lado do cadeado.
               </li>
             </ul>
@@ -184,19 +177,19 @@ function Alert({
 }) {
   const styles = {
     warn: {
-      bg: "bg-amber-50 border-amber-200",
-      text: "text-amber-900",
-      title: "text-amber-900",
+      bg: "bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] border-[var(--color-warning)]/30",
+      text: "text-[var(--color-warning)]",
+      title: "text-[var(--color-warning)]",
     },
     error: {
-      bg: "bg-red-50 border-red-200",
-      text: "text-red-800",
-      title: "text-red-900",
+      bg: "bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] border-[var(--color-danger)]/30",
+      text: "text-[var(--color-danger)]",
+      title: "text-[var(--color-danger)]",
     },
     info: {
-      bg: "bg-blue-50 border-blue-200",
-      text: "text-blue-800",
-      title: "text-blue-900",
+      bg: "bg-[color-mix(in_srgb,var(--color-info)_10%,transparent)] border-[var(--color-info)]/30",
+      text: "text-[var(--color-info)]",
+      title: "text-[var(--color-info)]",
     },
   }[kind];
 
@@ -224,8 +217,8 @@ function StatusChip({ label, ok }: { label: string; ok: boolean }) {
         "inline-flex h-7 items-center gap-1 rounded-full px-2.5",
         "text-[11px] font-semibold uppercase tracking-[0.14em]",
         ok
-          ? "bg-[#22c55e]/10 text-[#15803d]"
-          : "bg-slate-200 text-[var(--color-ink-soft)]",
+          ? "bg-[var(--color-success)]/10 text-[var(--color-success)]"
+          : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
       )}
     >
       {ok ? (

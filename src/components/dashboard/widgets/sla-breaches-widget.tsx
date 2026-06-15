@@ -70,7 +70,7 @@ export function SlaBreachesWidget() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2">
+        <div className="rounded-lg border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Em aberto
           </p>
@@ -78,7 +78,7 @@ export function SlaBreachesWidget() {
             {data?.openConversations ?? 0}
           </p>
         </div>
-        <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2">
+        <div className="rounded-lg border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Resolvidas
           </p>

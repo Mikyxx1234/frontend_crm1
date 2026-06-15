@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle, ArrowLeft, BookOpen, Check, ClipboardCopy, Eye, Loader2, MessageCircle, Pencil, Phone, Plus, RefreshCw, Trash2, UserCheck,
+  AlertTriangle, ArrowLeft, BookOpen, Check, CheckCircle2, ClipboardCopy, Clock, Eye, Info, Layers, Loader2, MessageCircle, MessageSquare, Pencil, Phone, Plus, RefreshCw, Search, Trash2, UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,14 +18,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { pageHeaderDescriptionClass, pageHeaderTitleClass } from "@/components/ui/page-header";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { analyzeTemplateComponents } from "@/lib/meta-whatsapp/analyze-template-components";
 import { mergeOperatorVariables, type OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { cn } from "@/lib/utils";
+import {
+  HubCallout,
+  HubChip,
+  HubPanel,
+  HubStat,
+  HubStatGrid,
+  HubSubHeader,
+  HubToolbar,
+} from "../message-models/hub-ui";
 
 const DOCS_LIST =
   "https://developers.facebook.com/docs/graph-api/reference/whats-app-business-account/message_templates/";
@@ -198,22 +206,22 @@ class TemplateBoundary extends React.Component<
     if (this.state.error) {
       return (
         <div className="w-full space-y-4">
-          <Link href="/old/settings" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <Link href="/old/settings" className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">
             <ArrowLeft className="size-4" /> Configurações
           </Link>
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm">
-            <div className="flex items-center gap-2 text-destructive font-semibold mb-2">
+          <div className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[var(--color-danger-bg)] p-6 text-sm">
+            <div className="mb-2 flex items-center gap-2 font-bold text-[var(--color-danger)]">
               <AlertTriangle className="size-5" />
               Erro ao carregar Templates WhatsApp
             </div>
-            <pre className="mt-2 max-h-48 overflow-auto rounded border border-border bg-muted/40 p-3 text-xs whitespace-pre-wrap font-mono">
+            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] p-3 font-mono text-xs text-[var(--text-secondary)]">
               {this.state.error.message}
               {this.state.error.stack ? `\n\n${this.state.error.stack}` : ""}
             </pre>
             <button
               type="button"
               onClick={() => this.setState({ error: null })}
-              className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              className="mt-4 rounded-[var(--radius-full)] bg-[var(--brand-primary)] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-primary-dark)]"
             >
               Tentar novamente
             </button>
@@ -225,15 +233,15 @@ class TemplateBoundary extends React.Component<
   }
 }
 
-export default function WhatsappMetaTemplatesPageWrapper() {
+export default function WhatsappMetaTemplatesPageWrapper({ embedded = false }: { embedded?: boolean } = {}) {
   return (
     <TemplateBoundary>
-      <WhatsappMetaTemplatesPage />
+      <WhatsappMetaTemplatesPage embedded={embedded} />
     </TemplateBoundary>
   );
 }
 
-function WhatsappMetaTemplatesPage() {
+function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const confirmDialog = useConfirm();
   const router = useRouter();
@@ -258,6 +266,28 @@ function WhatsappMetaTemplatesPage() {
     for (const c of templateConfigs) m.set(c.metaTemplateId, c);
     return m;
   }, [templateConfigs]);
+
+  const countUtility = rows.filter((r) => (r.category ?? "").toUpperCase() === "UTILITY").length;
+  const countMarketing = rows.filter((r) => (r.category ?? "").toUpperCase() === "MARKETING").length;
+  const countAuth = rows.filter((r) => (r.category ?? "").toUpperCase() === "AUTHENTICATION").length;
+  const countApproved = rows.filter((r) => r.status === "APPROVED").length;
+  const countPending = rows.filter(
+    (r) => r.status === "PENDING" || r.status === "PENDING_APPROVAL",
+  ).length;
+  const countAgent = rows.filter((r) => configByMetaId.get(r.id)?.agentEnabled).length;
+
+  const [query, setQuery] = React.useState("");
+  const [catFilter, setCatFilter] = React.useState<"all" | "UTILITY" | "MARKETING" | "AUTHENTICATION">("all");
+
+  const filteredRows = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((r) => {
+      const okC = catFilter === "all" || (r.category ?? "").toUpperCase() === catFilter;
+      const cfgLabel = configByMetaId.get(r.id)?.label ?? "";
+      const okQ = !q || r.name.toLowerCase().includes(q) || cfgLabel.toLowerCase().includes(q);
+      return okC && okQ;
+    });
+  }, [rows, query, catFilter, configByMetaId]);
 
   const configMutation = useMutation({
     mutationFn: upsertTemplateConfig,
@@ -422,119 +452,175 @@ function WhatsappMetaTemplatesPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
-      <Link
-        href="/old/settings"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Configurações
-      </Link>
+    <div className={embedded ? "w-full space-y-4" : "w-full space-y-6"}>
+      {!embedded && (
+        <Link
+          href="/old/settings"
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+        >
+          <ArrowLeft className="size-4" /> Configurações
+        </Link>
+      )}
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className={pageHeaderTitleClass}>
-            Templates WhatsApp (Meta)
-          </h1>
-          <p className={cn(pageHeaderDescriptionClass, "max-w-2xl")}>
-            Lista, criação e exclusão na conta comercial (WABA). Tipos suportados no assistente:{" "}
-            <strong>UTILITY</strong>, <strong>MARKETING</strong> e <strong>AUTHENTICATION</strong>. O assistente também
-            permite <strong>botão Flow</strong> com <code className="text-xs">flow_id</code> publicado no CRM (aba Flows
-            em Modelos de mensagem). Carrossel e permissão de ligação continuam no modo <strong>JSON avançado</strong>.
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            <a
-              href={DOCS_LIST}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
-            >
-              <BookOpen className="size-3" /> API message_templates
-            </a>
-            <a
-              href={DOCS_COMPONENTS}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
-            >
-              Componentes
-            </a>
-            <a
-              href={DOCS_CALL_PERMISSION}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
-            >
-              Permissão de ligação
-            </a>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void refetch()}
-            disabled={isFetching}
+      <HubSubHeader
+        tone="success"
+        icon={<MessageCircle className="size-[22px]" />}
+        title="Templates WhatsApp (Meta)"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+              {isFetching ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              <span className="ml-2">Atualizar</span>
+            </Button>
+            <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" />
+              <span className="ml-2">Novo template</span>
+            </Button>
+          </>
+        }
+      >
+        Lista, criação e exclusão na conta comercial (WABA). Tipos suportados no assistente:{" "}
+        <strong className="font-bold text-[var(--text-secondary)]">UTILITY</strong>,{" "}
+        <strong className="font-bold text-[var(--text-secondary)]">MARKETING</strong> e{" "}
+        <strong className="font-bold text-[var(--text-secondary)]">AUTHENTICATION</strong>. O assistente também permite{" "}
+        <strong className="font-bold text-[var(--text-secondary)]">botão Flow</strong> com{" "}
+        <code className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1 py-0.5 font-mono text-[11px] text-[var(--text-secondary)]">
+          flow_id
+        </code>{" "}
+        publicado no CRM (aba Flows). Carrossel e permissão de ligação continuam no modo{" "}
+        <strong className="font-bold text-[var(--text-secondary)]">JSON avançado</strong>.
+        <div className="mt-2.5 flex flex-wrap items-center gap-4">
+          <a
+            href={DOCS_LIST}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
           >
-            {isFetching ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            <span className="ml-2">Atualizar</span>
-          </Button>
-          <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-4" />
-            <span className="ml-2">Novo template</span>
-          </Button>
+            <BookOpen className="size-3.5" /> API message_templates
+          </a>
+          <a
+            href={DOCS_COMPONENTS}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
+          >
+            <Layers className="size-3.5" /> Componentes
+          </a>
+          <a
+            href={DOCS_CALL_PERMISSION}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
+          >
+            <Phone className="size-3.5" /> Permissão de ligação
+          </a>
         </div>
-      </div>
+      </HubSubHeader>
+
+      <HubStatGrid>
+        <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={countApproved} label="Aprovados pela Meta" />
+        <HubStat tone="warn" icon={<Clock className="size-5" />} value={countPending} label="Em revisão" />
+        <HubStat tone="brand" icon={<MessageSquare className="size-5" />} value={rows.length} label="Templates na WABA" />
+        <HubStat tone="violet" icon={<UserCheck className="size-5" />} value={countAgent} label="Habilitados p/ Agente" />
+      </HubStatGrid>
+
+      <HubCallout icon={<Info className="size-[18px]" />}>
+        As rotas antigas{" "}
+        <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
+          /settings/templates
+        </code>{" "}
+        e{" "}
+        <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
+          /settings/whatsapp-templates
+        </code>{" "}
+        redirecionam para este hub.
+      </HubCallout>
 
       {isError ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <HubCallout tone="danger" icon={<AlertTriangle className="size-[18px]" />}>
           {error instanceof Error ? error.message : "Erro ao falar com a Meta."}{" "}
           Se aparecer configuração em falta, confira no servidor{" "}
-          <code className="rounded bg-muted px-1 text-xs">META_WHATSAPP_*</code> e o escopo{" "}
-          <code className="text-xs">whatsapp_business_management</code> no token.
-        </div>
-      ) : !isLoading ? (
-        <p className="text-xs text-muted-foreground">
-          Com a lista a carregar bem, o token no servidor já tem acesso à WABA.{" "}
-          <strong className="font-medium text-foreground">Dica:</strong> não reutilize o mesmo nome de template
-          enquanto outro com esse nome estiver pendente na Meta.
-        </p>
+          <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-danger)]">
+            META_WHATSAPP_*
+          </code>{" "}
+          e o escopo{" "}
+          <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-danger)]">
+            whatsapp_business_management
+          </code>{" "}
+          no token.
+        </HubCallout>
       ) : null}
 
-      {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : isError ? (
-        <p className="text-sm text-destructive">{error instanceof Error ? error.message : "Erro"}</p>
-      ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum template encontrado nesta WABA.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-border bg-muted/50">
-              <tr>
-                <th className="px-3 py-2 font-medium">Nome</th>
-                <th className="px-3 py-2 font-medium">Label</th>
-                <th className="px-3 py-2 font-medium">Idioma</th>
-                <th className="px-3 py-2 font-medium">Categoria</th>
-                <th className="px-3 py-2 font-medium">Estado</th>
-                <th className="px-3 py-2 font-medium">Qualidade</th>
-                <th className="px-3 py-2 font-medium text-center">
+      <HubPanel>
+        <HubToolbar
+          searchValue={query}
+          onSearchChange={setQuery}
+          placeholder="Buscar por nome do template..."
+        >
+          <HubChip active={catFilter === "all"} onClick={() => setCatFilter("all")} count={rows.length}>
+            Todos
+          </HubChip>
+          <HubChip active={catFilter === "UTILITY"} onClick={() => setCatFilter("UTILITY")} count={countUtility}>
+            Utility
+          </HubChip>
+          <HubChip active={catFilter === "MARKETING"} onClick={() => setCatFilter("MARKETING")} count={countMarketing}>
+            Marketing
+          </HubChip>
+          <HubChip active={catFilter === "AUTHENTICATION"} onClick={() => setCatFilter("AUTHENTICATION")} count={countAuth}>
+            Auth
+          </HubChip>
+        </HubToolbar>
+
+        <p className="px-[18px] pt-3 text-[12px] text-[var(--text-muted)]">
+          Com a lista a carregar, o token no servidor já tem acesso à WABA.{" "}
+          <strong className="font-bold text-[var(--text-secondary)]">Dica:</strong> não reutilize o mesmo nome de template
+          enquanto outro com esse nome estiver pendente na Meta.
+        </p>
+
+        {isLoading ? (
+          <div className="space-y-2 p-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
+            <AlertTriangle className="size-9 text-[var(--color-danger)] opacity-70" />
+            <p className="text-[13px] text-[var(--text-muted)]">
+              Não foi possível carregar os templates da WABA. Veja o aviso acima.
+            </p>
+          </div>
+        ) : filteredRows.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-5 py-14 text-center">
+            <Search className="size-9 text-[var(--glass-border)]" />
+            <p className="text-[13px] text-[var(--text-muted)]">
+              {rows.length === 0 ? "Nenhum template encontrado nesta WABA." : "Nenhum template com esses filtros."}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] border-collapse text-left">
+              <thead>
+                <tr className="[&>th]:px-4 [&>th]:py-3 [&>th]:text-[11px] [&>th]:font-bold [&>th]:uppercase [&>th]:tracking-[0.06em] [&>th]:text-[var(--text-muted)] [&>th]:shadow-[0_1px_0_var(--glass-border-subtle)]">
+                <th>Nome</th>
+                <th>Label</th>
+                <th>Idioma</th>
+                <th>Categoria</th>
+                <th>Estado</th>
+                <th>Qualidade</th>
+                <th className="text-center">
                   <TooltipHost label="Liberado para o agente usar no chat" side="bottom">
-                    <span className="flex items-center justify-center gap-1">
-                      <UserCheck className="size-4" />
-                      <span className="text-xs font-normal text-muted-foreground">Agente</span>
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                      <UserCheck className="size-3.5" />
+                      Agente
                     </span>
                   </TooltipHost>
                 </th>
-                <th className="px-3 py-2 font-medium w-[120px]">Ações</th>
+                <th className="w-[120px] text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {filteredRows.map((row) => {
                 const st = STATUS_PT[row.status] ?? row.status;
                 const scoreRaw =
                   row.quality_score?.score == null ? "" : String(row.quality_score.score).trim();
@@ -576,13 +662,16 @@ function WhatsappMetaTemplatesPage() {
                 const isCallPermission = isCallPermissionTemplate(row);
 
                 return (
-                  <tr key={row.id} className="border-b border-border/80 last:border-0">
-                    <td className="px-3 py-2 font-medium">
+                  <tr
+                    key={row.id}
+                    className="border-b border-[var(--glass-border-subtle)] transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]"
+                  >
+                    <td className="px-4 py-3.5 align-middle font-mono text-[13px] font-semibold text-[var(--text-primary)]">
                       <div className="flex items-center gap-2">
                         <span>{row.name}</span>
                         {isCallPermission ? (
                           <TooltipHost label="Template de permissão de ligação (Business Calling API)" side="top">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 ring-1 ring-sky-200">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-info)] ring-1 ring-[color-mix(in_srgb,var(--color-info)_30%,transparent)]">
                               <Phone className="size-2.5" />
                               Voz
                             </span>
@@ -590,7 +679,7 @@ function WhatsappMetaTemplatesPage() {
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3.5 align-middle">
                       {isEditingLabel ? (
                         <form className="flex items-center gap-1" onSubmit={(e) => {
                           e.preventDefault();
@@ -609,54 +698,54 @@ function WhatsappMetaTemplatesPage() {
                               setEditingLabelId(null);
                             }}
                           />
-                          <button type="submit" className="rounded p-0.5 text-emerald-600 hover:bg-emerald-50">
+                          <button type="submit" className="rounded p-0.5 text-[var(--color-success)] hover:bg-[color-mix(in_srgb,var(--color-success)_12%,transparent)]">
                             <Check className="size-3.5" />
                           </button>
                         </form>
                       ) : (
                         <button
                           type="button"
-                          className="group/lbl flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                          className="group/lbl flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                           onClick={() => { setEditingLabelId(row.id); setLabelDraft(cfg?.label ?? ""); }}
                         >
-                          <span className={cn(cfg?.label ? "font-medium text-foreground" : "italic")}>
+                          <span className={cn(cfg?.label ? "font-medium text-[var(--text-primary)]" : "italic")}>
                             {cfg?.label || "Sem label"}
                           </span>
                           <Pencil className="size-3 opacity-0 group-hover/lbl:opacity-100" />
                         </button>
                       )}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-muted-foreground">{row.language ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      <span className="text-xs">
+                    <td className="px-4 py-3.5 align-middle tabular-nums text-[var(--text-muted)]">{row.language ?? "—"}</td>
+                    <td className="px-4 py-3.5 align-middle">
+                      <span className="text-xs text-[var(--text-secondary)]">
                         {row.category ?? "—"}
                         {row.sub_category ? (
-                          <span className="text-muted-foreground"> · {row.sub_category}</span>
+                          <span className="text-[var(--text-muted)]"> · {row.sub_category}</span>
                         ) : null}
                       </span>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3.5 align-middle">
                       <Badge
                         variant="secondary"
                         className={cn(
-                          row.status === "APPROVED" && "bg-emerald-100 text-emerald-900",
+                          row.status === "APPROVED" && "bg-[color-mix(in_srgb,var(--color-success)_18%,transparent)] text-[var(--color-success)]",
                           (row.status === "PENDING" || row.status === "PENDING_APPROVAL") &&
-                            "bg-amber-100 text-amber-900",
-                          row.status === "REJECTED" && "bg-red-100 text-red-900",
+                            "bg-[color-mix(in_srgb,var(--color-warning)_18%,transparent)] text-[var(--color-warning)]",
+                          row.status === "REJECTED" && "bg-[color-mix(in_srgb,var(--color-danger)_18%,transparent)] text-[var(--color-danger)]",
                         )}
                       >
                         {st}
                       </Badge>
                       {rejectReason ? (
                         <TooltipHost label={rejectReason} side="bottom">
-                          <p className="mt-1 max-w-xs text-xs text-destructive">
+                          <p className="mt-1 max-w-xs text-xs text-[var(--color-danger)]">
                             {rejectReason}
                           </p>
                         </TooltipHost>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2 text-xs">{q}</td>
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-4 py-3.5 align-middle text-xs text-[var(--text-secondary)]">{q}</td>
+                    <td className="px-4 py-3.5 text-center align-middle">
                       <TooltipHost
                         label={cfg?.agentEnabled ? "Liberado para agentes — clique para bloquear" : "Bloqueado para agentes — clique para liberar"}
                         side="left"
@@ -667,8 +756,8 @@ function WhatsappMetaTemplatesPage() {
                           className={cn(
                             "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                             cfg?.agentEnabled
-                              ? "border-emerald-400 bg-emerald-500"
-                              : "border-border bg-muted",
+                              ? "border-[var(--color-success)] bg-[var(--color-success)]"
+                              : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
                             row.status !== "APPROVED" && "cursor-not-allowed opacity-40",
                           )}
                           onClick={() => saveConfig({ agentEnabled: !cfg?.agentEnabled })}
@@ -681,8 +770,8 @@ function WhatsappMetaTemplatesPage() {
                         </button>
                       </TooltipHost>
                     </td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-1">
+                    <td className="px-4 py-3.5 align-middle">
+                      <div className="flex items-center justify-end gap-1">
                         <TooltipHost label="Ver texto do template" side="top">
                           <Button
                             type="button"
@@ -715,7 +804,7 @@ function WhatsappMetaTemplatesPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="size-8 text-destructive hover:text-destructive"
+                            className="size-8 text-[var(--color-danger)] hover:text-[var(--color-danger)]"
                             aria-label="Excluir na Meta"
                             onClick={async () => {
                               const ok = await confirmDialog({
@@ -738,8 +827,9 @@ function WhatsappMetaTemplatesPage() {
               })}
             </tbody>
           </table>
-        </div>
-      )}
+          </div>
+        )}
+      </HubPanel>
 
       {nextCursor ? (
         <Button
@@ -761,16 +851,16 @@ function WhatsappMetaTemplatesPage() {
         <DialogContent size="xl" panelClassName="max-h-[min(90vh,720px)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageCircle className="size-5 text-primary" />
+              <MessageCircle className="size-5 text-[var(--brand-primary)]" />
               Novo template na Meta
             </DialogTitle>
             <DialogDescription>
               O template segue para análise automática da Meta. Campos variáveis:{" "}
-              <code className="text-xs">{"{{1}}"}</code> (POSITIONAL) ou nomes em NAMED, conforme a doc.
+              <code className="font-mono text-xs text-[var(--text-secondary)]">{"{{1}}"}</code> (POSITIONAL) ou nomes em NAMED, conforme a doc.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex gap-2 border-b border-border pb-2">
+          <div className="flex gap-2 border-b border-[var(--glass-border-subtle)] pb-2">
             <Button
               type="button"
               variant={createMode === "assisted" ? "secondary" : "ghost"}
@@ -798,14 +888,16 @@ function WhatsappMetaTemplatesPage() {
                 className="min-h-[220px] font-mono text-xs"
                 spellCheck={false}
               />
-              <p className="text-xs text-muted-foreground">
-                Use para <strong>FLOW</strong>, <strong>carousel</strong>,{" "}
-                <strong>call permission request</strong>, MPM, etc. — copie a estrutura dos exemplos da Meta e
+              <p className="text-xs text-[var(--text-muted)]">
+                Use para <strong className="font-bold text-[var(--text-secondary)]">FLOW</strong>,{" "}
+                <strong className="font-bold text-[var(--text-secondary)]">carousel</strong>,{" "}
+                <strong className="font-bold text-[var(--text-secondary)]">call permission request</strong>, MPM, etc. — copie a estrutura dos exemplos da Meta e
                 ajuste nomes/IDs.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_236px]">
+              <div className="space-y-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <Label>Nome interno (snake_case)</Label>
@@ -823,29 +915,29 @@ function WhatsappMetaTemplatesPage() {
               </div>
               <div>
                 <Label>Categoria</Label>
-                <SelectNative
+                <DropdownGlass
+                  options={[
+                    { value: "UTILITY", label: "UTILITY (transacional)" },
+                    { value: "MARKETING", label: "MARKETING" },
+                    { value: "AUTHENTICATION", label: "AUTHENTICATION (OTP)" },
+                  ]}
                   value={category}
-                  onChange={(e) =>
-                    setCategory(e.target.value as "UTILITY" | "MARKETING" | "AUTHENTICATION")
-                  }
-                  className="w-full"
-                >
-                  <option value="UTILITY">UTILITY (transacional)</option>
-                  <option value="MARKETING">MARKETING</option>
-                  <option value="AUTHENTICATION">AUTHENTICATION (OTP)</option>
-                </SelectNative>
+                  onValueChange={(v) => setCategory(v as "UTILITY" | "MARKETING" | "AUTHENTICATION")}
+                  triggerClassName="w-full"
+                />
               </div>
               {category !== "AUTHENTICATION" ? (
                 <div>
                   <Label>Formato de parâmetros</Label>
-                  <SelectNative
+                  <DropdownGlass
+                    options={[
+                      { value: "POSITIONAL", label: "POSITIONAL ({{1}}, {{2}}…)" },
+                      { value: "NAMED", label: "NAMED (nomes na doc Meta)" },
+                    ]}
                     value={parameterFormat}
-                    onChange={(e) => setParameterFormat(e.target.value as "POSITIONAL" | "NAMED")}
-                    className="w-full"
-                  >
-                    <option value="POSITIONAL">POSITIONAL ({"{{1}}, {{2}}"}…)</option>
-                    <option value="NAMED">NAMED (nomes na doc Meta)</option>
-                  </SelectNative>
+                    onValueChange={(v) => setParameterFormat(v as "POSITIONAL" | "NAMED")}
+                    triggerClassName="w-full"
+                  />
                 </div>
               ) : null}
 
@@ -853,14 +945,15 @@ function WhatsappMetaTemplatesPage() {
                 <>
                   <div>
                     <Label>Cabeçalho</Label>
-                    <SelectNative
+                    <DropdownGlass
+                      options={[
+                        { value: "NONE", label: "Sem cabeçalho" },
+                        { value: "TEXT", label: "TEXT" },
+                      ]}
                       value={headerFormat}
-                      onChange={(e) => setHeaderFormat(e.target.value as "NONE" | "TEXT")}
-                      className="w-full"
-                    >
-                      <option value="NONE">Sem cabeçalho</option>
-                      <option value="TEXT">TEXT</option>
-                    </SelectNative>
+                      onValueChange={(v) => setHeaderFormat(v as "NONE" | "TEXT")}
+                      triggerClassName="w-full"
+                    />
                   </div>
                   {headerFormat === "TEXT" ? (
                     <div>
@@ -877,7 +970,7 @@ function WhatsappMetaTemplatesPage() {
               </div>
 
               {category === "AUTHENTICATION" ? (
-                <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                <div className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] p-3 text-sm">
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -898,10 +991,15 @@ function WhatsappMetaTemplatesPage() {
                   </div>
                   <div>
                     <Label>Tipo OTP</Label>
-                    <SelectNative value={otpType} onChange={(e) => setOtpType(e.target.value)} className="w-full">
-                      <option value="COPY_CODE">COPY_CODE</option>
-                      <option value="ONE_TAP">ONE_TAP</option>
-                    </SelectNative>
+                    <DropdownGlass
+                      options={[
+                        { value: "COPY_CODE", label: "COPY_CODE" },
+                        { value: "ONE_TAP", label: "ONE_TAP" },
+                      ]}
+                      value={otpType}
+                      onValueChange={(v) => setOtpType(v)}
+                      triggerClassName="w-full"
+                    />
                   </div>
                   <div>
                     <Label>Texto do botão OTP</Label>
@@ -915,7 +1013,7 @@ function WhatsappMetaTemplatesPage() {
                     <Input value={footer} onChange={(e) => setFooter(e.target.value)} />
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Botões rápidos (um por linha)</Label>
+                    <Label className="text-xs text-[var(--text-muted)]">Botões rápidos (um por linha)</Label>
                     {quickTexts.map((q, i) => (
                       <Input
                         key={i}
@@ -940,7 +1038,7 @@ function WhatsappMetaTemplatesPage() {
                     </Button>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Botões URL</Label>
+                    <Label className="text-xs text-[var(--text-muted)]">Botões URL</Label>
                     {urlRows.map((r, i) => (
                       <div key={i} className="mb-2 flex gap-2">
                         <Input
@@ -972,10 +1070,11 @@ function WhatsappMetaTemplatesPage() {
                       + URL
                     </Button>
                   </div>
-                  <div className="rounded-lg border border-indigo-200/80 bg-indigo-50/50 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/20">
-                    <label className="flex items-center gap-2 text-sm font-medium">
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-3">
+                    <label className="flex items-center gap-2 text-sm font-bold text-[var(--text-secondary)]">
                       <input
                         type="checkbox"
+                        className="size-4 accent-[var(--brand-primary)]"
                         checked={flowAssistEnabled}
                         onChange={(e) => setFlowAssistEnabled(e.target.checked)}
                       />
@@ -985,24 +1084,22 @@ function WhatsappMetaTemplatesPage() {
                       <div className="mt-3 space-y-2">
                         <div>
                           <Label>Flow publicado (CRM)</Label>
-                          <SelectNative
-                            value={flowPickId}
-                            onChange={(e) => setFlowPickId(e.target.value)}
-                            className="mt-1 w-full"
-                          >
-                            <option value="">— escolha —</option>
-                            {publishedFlows.map((f) => (
-                              <option key={f.id} value={f.metaFlowId!.trim()}>
-                                {f.name} ({f.metaFlowId})
-                              </option>
-                            ))}
-                          </SelectNative>
+                          <DropdownGlass
+                            options={publishedFlows.map((f) => ({
+                              value: f.metaFlowId!.trim(),
+                              label: `${f.name} (${f.metaFlowId})`,
+                            }))}
+                            value={flowPickId || undefined}
+                            onValueChange={(v) => setFlowPickId(v)}
+                            placeholder="— escolha —"
+                            triggerClassName="mt-1 w-full"
+                          />
                           {publishedFlows.length === 0 ? (
-                            <p className="mt-1 text-xs text-muted-foreground">
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
                               Publique um flow em{" "}
                               <Link
                                 href="/old/settings/message-models?tab=flows"
-                                className="font-medium text-primary underline-offset-2 hover:underline"
+                                className="font-bold text-[var(--brand-primary)] underline-offset-2 hover:underline"
                               >
                                 Modelos → Flows
                               </Link>
@@ -1020,22 +1117,32 @@ function WhatsappMetaTemplatesPage() {
                         </div>
                         <div>
                           <Label>flow_action</Label>
-                          <SelectNative
+                          <DropdownGlass
+                            options={[
+                              { value: "NAVIGATE", label: "NAVIGATE" },
+                              { value: "DATA_EXCHANGE", label: "DATA_EXCHANGE" },
+                            ]}
                             value={flowActionMeta}
-                            onChange={(e) =>
-                              setFlowActionMeta(e.target.value as "NAVIGATE" | "DATA_EXCHANGE")
-                            }
-                            className="mt-1 w-full"
-                          >
-                            <option value="NAVIGATE">NAVIGATE</option>
-                            <option value="DATA_EXCHANGE">DATA_EXCHANGE</option>
-                          </SelectNative>
+                            onValueChange={(v) => setFlowActionMeta(v as "NAVIGATE" | "DATA_EXCHANGE")}
+                            triggerClassName="mt-1 w-full"
+                          />
                         </div>
                       </div>
                     ) : null}
                   </div>
                 </>
               )}
+              </div>
+              <WhatsappTemplatePreview
+                category={category}
+                headerFormat={headerFormat}
+                headerText={headerText}
+                body={body}
+                footer={footer}
+                quickTexts={quickTexts}
+                urlRows={urlRows}
+                otpButtonText={otpButtonText}
+              />
             </div>
           )}
 
@@ -1065,14 +1172,14 @@ function WhatsappMetaTemplatesPage() {
           </DialogHeader>
           <div className="space-y-4">
             {previewRow && componentPreviewBlocks(previewRow.components).length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-[var(--text-muted)]">
                 Não há campo de texto nos componentes devolvidos pela API (pode ocorrer em tipos especiais).
                 Consulte o conteúdo no{" "}
                 <a
                   href="https://business.facebook.com/latest/whatsapp_manager/message_templates"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary underline underline-offset-2"
+                  className="font-bold text-[var(--brand-primary)] underline underline-offset-2"
                 >
                   Gestor do WhatsApp
                 </a>
@@ -1082,10 +1189,10 @@ function WhatsappMetaTemplatesPage() {
             {previewRow
               ? componentPreviewBlocks(previewRow.components).map((b, i) => (
                   <div key={`${b.title}-${i}`}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
                       {b.title}
                     </p>
-                    <pre className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-3 text-sm">
+                    <pre className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] p-3 text-sm text-[var(--text-secondary)]">
                       {b.body}
                     </pre>
                   </div>
@@ -1100,5 +1207,105 @@ function WhatsappMetaTemplatesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** Realça variáveis {{...}} dentro do corpo no preview do balão. */
+function highlightTemplateVars(text: string): React.ReactNode {
+  const parts = text.split(/(\{\{.*?\}\})/g);
+  return parts.map((p, i) =>
+    /^\{\{.*\}\}$/.test(p) ? (
+      <span
+        key={i}
+        className="rounded-[var(--radius-sm)] px-1 font-mono text-[11px] font-bold"
+        style={{ background: "color-mix(in srgb, var(--wa-accent) 22%, transparent)", color: "var(--wa-accent-strong)" }}
+      >
+        {p}
+      </span>
+    ) : (
+      <React.Fragment key={i}>{p}</React.Fragment>
+    ),
+  );
+}
+
+/**
+ * Pré-visualização do balão WhatsApp em tempo real (modo assistido do modal
+ * "Novo template na Meta"). Apenas apresentação: consome o estado já existente
+ * do formulário, sem chamadas de API. Cores ISOLADAS em --wa-* (não tokens
+ * globais), por serem cores de marca do canal.
+ */
+function WhatsappTemplatePreview({
+  category,
+  headerFormat,
+  headerText,
+  body,
+  footer,
+  quickTexts,
+  urlRows,
+  otpButtonText,
+}: {
+  category: "UTILITY" | "MARKETING" | "AUTHENTICATION";
+  headerFormat: "NONE" | "TEXT";
+  headerText: string;
+  body: string;
+  footer: string;
+  quickTexts: string[];
+  urlRows: { text: string; url: string }[];
+  otpButtonText: string;
+}) {
+  const isAuth = category === "AUTHENTICATION";
+  const buttons: { text: string; kind: "reply" | "url" }[] = [];
+  if (isAuth) {
+    if (otpButtonText.trim()) buttons.push({ text: otpButtonText.trim(), kind: "url" });
+  } else {
+    for (const q of quickTexts) {
+      if (q.trim()) buttons.push({ text: q.trim(), kind: "reply" });
+    }
+    for (const u of urlRows) {
+      if (u.text.trim()) buttons.push({ text: u.text.trim(), kind: "url" });
+    }
+  }
+
+  return (
+    <aside aria-label="Pré-visualização do WhatsApp" className="space-y-2">
+      <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">Pré-visualização</p>
+      <div
+        className="overflow-hidden rounded-[22px] border-[5px] shadow-[var(--glass-shadow)]"
+        style={{ borderColor: "var(--wa-frame)", background: "var(--wa-bg)" }}
+      >
+        <div className="flex items-center gap-2 px-3 py-1.5" style={{ background: "var(--wa-header)" }}>
+          <span className="text-[10px] font-bold text-white">WhatsApp Business</span>
+        </div>
+        <div className="space-y-1.5 p-3">
+          <div
+            className="rounded-[12px] rounded-tl-[4px] px-2.5 py-2 text-[12px] shadow-sm"
+            style={{ background: "var(--wa-bubble)", color: "var(--wa-text)" }}
+          >
+            {headerFormat === "TEXT" && headerText.trim() ? (
+              <p className="mb-1 font-bold">{headerText}</p>
+            ) : null}
+            <p className="whitespace-pre-line leading-relaxed">
+              {body.trim() ? highlightTemplateVars(body) : "Corpo da mensagem…"}
+            </p>
+            {!isAuth && footer.trim() ? (
+              <p className="mt-1.5 text-[10px]" style={{ color: "var(--wa-text-muted)" }}>{footer}</p>
+            ) : null}
+          </div>
+          {buttons.length ? (
+            <div className="space-y-1">
+              {buttons.map((b, i) => (
+                <div
+                  key={`${b.text}-${i}`}
+                  className="rounded-[10px] py-1.5 text-center text-[11px] font-bold"
+                  style={{ background: "var(--wa-bubble)", color: "var(--wa-accent-strong)", border: "1px solid var(--wa-field-border)" }}
+                >
+                  {b.text}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </aside>
   );
 }

@@ -12,6 +12,19 @@ export default {
   /** Garante o mesmo segredo no middleware (Edge) e nos handlers (Node). */
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   trustHost: true,
+  /**
+   * Silencia o ruído de `JWTSessionError` ("no matching decryption secret"):
+   * acontece quando o navegador ainda tem um cookie cifrado com um segredo
+   * antigo. O wrapper em `auth-public.ts` já trata isso como "sem sessão";
+   * aqui só evitamos poluir o console com o stack trace esperado. Demais
+   * erros continuam sendo logados normalmente.
+   */
+  logger: {
+    error(error: Error) {
+      if (error?.name === "JWTSessionError") return;
+      console.error(error);
+    },
+  },
   /** Em HTTPS, cookies só por canal seguro (mitiga roubo de sessão em redes mistas). */
   useSecureCookies: nextAuthUrl.startsWith("https://"),
   session: { strategy: "jwt" },

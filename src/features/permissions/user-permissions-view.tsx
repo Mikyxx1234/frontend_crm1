@@ -1,19 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
+  Eye,
   Loader2,
   Plus,
   Radio,
+  Send,
   Shield,
   Users,
+  Workflow,
   X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { cn } from "@/lib/utils";
 
 import {
@@ -21,6 +25,11 @@ import {
   useEffectivePermissions,
   useRemoveRoleAssignment,
   useRoles,
+  useScopeChannelOptions,
+  useScopePipelineOptions,
+  useUpdateUserScopeGrants,
+  useUserScopeGrants,
+  type ScopeEntityOption,
 } from "./hooks";
 
 interface UserPermissionsViewProps {
@@ -121,6 +130,9 @@ export function UserPermissionsView({
           </div>
         </div>
       )}
+
+      {/* Acesso a funis e canais (escopo por usuário) */}
+      {editable && <UserScopeEditor userId={userId} />}
 
       {/* Grupos */}
       <div className="flex flex-col gap-1.5">
@@ -334,31 +346,23 @@ function UserRolesEditor({
 
       {/* Adicionar role nova */}
       <div className="mt-1 flex items-center gap-2">
-        <select
-          value={selectedToAdd}
-          onChange={(e) => setSelectedToAdd(e.target.value)}
-          disabled={rolesLoading || availableRoles.length === 0 || adding}
-          className="h-7 flex-1 rounded-[var(--radius-md)] border px-2 text-xs"
-          style={{
-            borderColor: "var(--glass-border)",
-            background: "var(--glass-bg-base)",
-            color: "var(--text-secondary)",
-          }}
-        >
-          <option value="">
-            {rolesLoading
+        <DropdownGlass
+          options={availableRoles.map((r) => ({
+            value: r.id,
+            label: `${r.name}${r.systemPreset ? " · sistema" : ""}`,
+          }))}
+          value={selectedToAdd || undefined}
+          onValueChange={setSelectedToAdd}
+          placeholder={
+            rolesLoading
               ? "Carregando roles..."
               : availableRoles.length === 0
                 ? "Todas as roles já atribuídas"
-                : "Atribuir role..."}
-          </option>
-          {availableRoles.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-              {r.systemPreset ? " · sistema" : ""}
-            </option>
-          ))}
-        </select>
+                : "Atribuir role..."
+          }
+          disabled={rolesLoading || availableRoles.length === 0 || adding}
+          triggerClassName="h-7 flex-1 text-xs"
+        />
         <Button
           size="sm"
           variant="outline"
@@ -377,6 +381,234 @@ function UserRolesEditor({
 
       {error && (
         <p className="text-[11px] text-red-600">{error}</p>
+      )}
+    </div>
+  );
+}
+
+/* ── UserScopeEditor ─────────────────────────────────────────────────────── */
+
+/** `["*"]` salvo no backend equivale a "todos" → tratamos como `null` na UI. */
+export function normalizeScope(value: string[] | null | undefined): string[] | null {
+  if (!value) return null;
+  if (value.includes("*")) return null;
+  return value;
+}
+
+/**
+ * Editor de escopo por usuário: define a quais funis o usuário tem acesso e
+ * em quais canais pode ver / enviar mensagens. Persiste em
+ * `permissions.scope.grants.v1` via `PUT /api/users/[id]/scope-grants`.
+ *
+ * `null` = sem restrição (todos). Só tem efeito real quando a flag
+ * `rbac_granular_scope_v1` está ativa na org (enforcement no backend).
+ */
+function UserScopeEditor({ userId }: { userId: string }) {
+  const { data, isLoading } = useUserScopeGrants(userId);
+  const pipelines = useScopePipelineOptions();
+  const channels = useScopeChannelOptions();
+  const update = useUpdateUserScopeGrants(userId);
+
+  const [pipelineIds, setPipelineIds] = useState<string[] | null>(null);
+  const [channelViewIds, setChannelViewIds] = useState<string[] | null>(null);
+  const [channelSendIds, setChannelSendIds] = useState<string[] | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!data) return;
+    setPipelineIds(normalizeScope(data.pipelineIds));
+    setChannelViewIds(normalizeScope(data.channelViewIds));
+    setChannelSendIds(normalizeScope(data.channelSendIds));
+    setDirty(false);
+  }, [data]);
+
+  function onChangePipelines(v: string[] | null) {
+    setPipelineIds(v);
+    setDirty(true);
+    setSaved(false);
+  }
+  function onChangeChannelView(v: string[] | null) {
+    setChannelViewIds(v);
+    setDirty(true);
+    setSaved(false);
+  }
+  function onChangeChannelSend(v: string[] | null) {
+    setChannelSendIds(v);
+    setDirty(true);
+    setSaved(false);
+  }
+
+  async function handleSave() {
+    setError(null);
+    try {
+      await update.mutateAsync({ pipelineIds, channelViewIds, channelSendIds });
+      setDirty(false);
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao salvar acesso.");
+    }
+  }
+
+  return (
+    <div
+      className="flex flex-col gap-3 rounded-[var(--radius-lg)] border p-3"
+      style={{ borderColor: "var(--glass-border)" }}
+    >
+      <div className="flex items-center gap-1.5">
+        <Workflow className="size-3.5" style={{ color: "var(--text-muted)" }} />
+        <span
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: "var(--text-muted)" }}
+        >
+          Acesso a funis e canais
+        </span>
+      </div>
+
+      <ScopeMultiSelect
+        label="Funis com acesso"
+        icon={<Workflow className="size-3" style={{ color: "var(--text-muted)" }} />}
+        options={pipelines.data ?? []}
+        value={pipelineIds}
+        onChange={onChangePipelines}
+        loading={isLoading || pipelines.isLoading}
+        allLabel="Todos os funis"
+      />
+
+      <ScopeMultiSelect
+        label="Canais — ver mensagens"
+        icon={<Eye className="size-3" style={{ color: "var(--text-muted)" }} />}
+        options={channels.data ?? []}
+        value={channelViewIds}
+        onChange={onChangeChannelView}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
+
+      <ScopeMultiSelect
+        label="Canais — enviar mensagens"
+        icon={<Send className="size-3" style={{ color: "var(--text-muted)" }} />}
+        options={channels.data ?? []}
+        value={channelSendIds}
+        onChange={onChangeChannelSend}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
+
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void handleSave()}
+          disabled={!dirty || update.isPending}
+          className="h-7 shrink-0 gap-1 text-[11px]"
+        >
+          {update.isPending ? <Loader2 className="size-3 animate-spin" /> : null}
+          Salvar acesso
+        </Button>
+        {saved && !dirty && (
+          <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+            Salvo
+          </span>
+        )}
+      </div>
+
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Seletor "Todos" + lista de checkboxes. `value === null` significa sem
+ * restrição (todos); um array (mesmo vazio) restringe aos itens marcados.
+ */
+export function ScopeMultiSelect({
+  label,
+  icon,
+  options,
+  value,
+  onChange,
+  loading,
+  allLabel,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  options: ScopeEntityOption[];
+  value: string[] | null;
+  onChange: (next: string[] | null) => void;
+  loading?: boolean;
+  allLabel: string;
+}) {
+  const all = value === null;
+  const selected = useMemo(() => new Set(value ?? []), [value]);
+
+  function toggle(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange(Array.from(next));
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        {icon}
+        <span
+          className="text-[11px] font-semibold uppercase tracking-wide"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {label}
+        </span>
+      </div>
+
+      <label className="flex items-center gap-2 text-xs" style={{ color: "var(--text-secondary)" }}>
+        <input
+          type="checkbox"
+          checked={all}
+          onChange={(e) => onChange(e.target.checked ? null : [])}
+          className="size-3.5 accent-[var(--brand-600)]"
+        />
+        {allLabel}
+      </label>
+
+      {!all && (
+        <div
+          className="flex max-h-40 flex-col gap-0.5 overflow-auto rounded-[var(--radius-md)] border p-1"
+          style={{ borderColor: "var(--glass-border)" }}
+        >
+          {loading ? (
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <Loader2 className="size-3 animate-spin" style={{ color: "var(--text-muted)" }} />
+              <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                Carregando...
+              </span>
+            </div>
+          ) : options.length === 0 ? (
+            <span className="px-2 py-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
+              Nenhum item disponível
+            </span>
+          ) : (
+            options.map((o) => {
+              const on = selected.has(o.id);
+              return (
+                <label
+                  key={o.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1 text-xs hover:bg-black/[0.04]"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => toggle(o.id)}
+                    className="size-3.5 accent-[var(--brand-600)]"
+                  />
+                  <span className="truncate">{o.name}</span>
+                </label>
+              );
+            })
+          )}
+        </div>
       )}
     </div>
   );

@@ -38,7 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -353,9 +353,13 @@ function ContactLeftPanel({
         <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fase do Ciclo</Label>
         <div className="flex items-center gap-2">
           <span className={cn("size-2.5 rounded-full", currentStageOpt?.color ?? "bg-gray-400")} />
-          <SelectNative value={contact.lifecycleStage} onChange={(e) => onUpdate({ lifecycleStage: e.target.value })} disabled={isUpdating} className="h-8 flex-1 text-sm font-medium">
-            {LIFECYCLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </SelectNative>
+          <DropdownGlass
+            options={LIFECYCLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            value={contact.lifecycleStage}
+            onValueChange={(v) => onUpdate({ lifecycleStage: v })}
+            disabled={isUpdating}
+            triggerClassName="h-8 flex-1 text-sm font-medium"
+          />
         </div>
       </div>
 
@@ -638,9 +642,12 @@ function ActivitiesPanel({
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="space-y-1">
               <Label className="text-xs">Tipo</Label>
-              <SelectNative value={type} onChange={(e) => setType(e.target.value)} className="h-8 text-sm">
-                {ACTIVITY_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </SelectNative>
+              <DropdownGlass
+                options={ACTIVITY_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                value={type}
+                onValueChange={(v) => setType(v)}
+                triggerClassName="h-8 w-full text-sm"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Agendar</Label>

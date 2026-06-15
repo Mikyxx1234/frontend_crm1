@@ -275,7 +275,7 @@ export function AvatarCropDialog({
             mask e funciona em qualquer browser.
           */}
           <div
-            className="relative touch-none overflow-hidden rounded-2xl bg-slate-100 select-none"
+            className="relative touch-none overflow-hidden rounded-2xl bg-[var(--glass-bg-strong)] select-none"
             style={{ width: STAGE_SIZE, height: STAGE_SIZE }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -318,7 +318,7 @@ export function AvatarCropDialog({
                 operador entender exatamente o que vai virar avatar. */}
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-white/80"
+              className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-[var(--glass-border)]"
             />
           </div>
 
@@ -332,7 +332,7 @@ export function AvatarCropDialog({
                 onClick={() =>
                   setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - 0.1) * 10) / 10))
                 }
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900 active:scale-95"
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] active:scale-95"
                 aria-label="Diminuir zoom"
               >
                 <ZoomOut className="size-4" />
@@ -345,7 +345,7 @@ export function AvatarCropDialog({
               step={0.01}
               value={zoom}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
-              className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-[var(--color-primary)]"
+              className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--glass-bg-strong)] accent-[var(--brand-primary)]"
               aria-label="Zoom"
               aria-valuetext={`${Math.round(zoom * 100)}%`}
             />
@@ -355,7 +355,7 @@ export function AvatarCropDialog({
                 onClick={() =>
                   setZoom((z) => Math.min(MAX_ZOOM, Math.round((z + 0.1) * 10) / 10))
                 }
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900 active:scale-95"
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] active:scale-95"
                 aria-label="Aumentar zoom"
               >
                 <ZoomIn className="size-4" />
@@ -368,7 +368,7 @@ export function AvatarCropDialog({
                   setZoom(1);
                   setOffset({ x: 0, y: 0 });
                 }}
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-white text-slate-500 transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900 active:scale-95"
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] active:scale-95"
                 aria-label="Resetar enquadramento"
               >
                 <RotateCcw className="size-4" />

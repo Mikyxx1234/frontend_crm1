@@ -377,7 +377,17 @@ export function toMessageBubble(
     time: formatTime(dto.createdAt),
     createdAt: dto.createdAt ?? undefined,
     type: isInbound ? "incoming" : "outgoing",
-    senderInitials: isInbound ? avatarInitials(contactName) : undefined,
+    // Inbound: iniciais do contato. Outbound humano: iniciais do agente que
+    // enviou (`senderName`) — sem isso o avatar caía em "?" em telas que não
+    // injetam `agentInitials` (ex.: aba Conversa do deal detail).
+    senderInitials: isInbound
+      ? avatarInitials(contactName)
+      : !isBot && dto.senderName
+        ? avatarInitials(dto.senderName)
+        : undefined,
+    // Nome completo do remetente — exibido como tooltip no avatar e rótulo
+    // abaixo da bolha outgoing para identificar agente ou automação.
+    senderName: !isInbound && dto.senderName ? dto.senderName : undefined,
     isBot: isBot || undefined,
     formFields: formParsed?.fields,
     formTitle: formParsed?.title,
@@ -395,6 +405,11 @@ export function toMessageBubble(
     mediaUrl: dto.mediaUrl ?? dto.media?.url ?? undefined,
     // Ticks de entrega (estilo WhatsApp) — apenas para mensagens out.
     status: isInbound ? undefined : toBubbleStatus(dto),
+    // Erro de envio (tooltip no balão). GET serializa `sendError`; POST
+    // imediato usa `metaError` — consumimos os dois.
+    sendError: isInbound
+      ? undefined
+      : (dto.sendError ?? dto.metaError ?? undefined) || undefined,
   };
 }
 
@@ -488,6 +503,15 @@ export interface PanelField {
   label: string;
   value: string;
   type: string;
+  options: string[];
+  /** "contact" para campos de contato, "deal" para campos de negócio. */
+  entityType: "contact" | "deal";
+  /** ID da entidade dona do valor (contactId ou dealId). */
+  entityId: string;
+  /** Regras de formatação condicional (JSON cru do backend). */
+  highlightRules?: unknown[] | null;
+  /** Highlight já resolvido pelo backend (preferir sobre re-resolver). */
+  highlight?: { severity: string; label: string } | null;
 }
 
 export interface ContactAsideView {
@@ -496,6 +520,8 @@ export interface ContactAsideView {
   avatarColor: Conversation["avatarColor"];
   status: Conversation["status"];
   contactId: string;
+  /** Número sequencial do contato por organização (1, 2, 3…). */
+  contactNumber?: number | null;
   assignee?: string;
   financialStatus: "success" | "lead" | "enterprise";
   financialLabel: string;
@@ -520,6 +546,16 @@ export interface ContactAsideView {
    * com valores nulos/vazios filtrados.
    */
   panelFields: PanelField[];
+  deals: {
+    id: string;
+    title: string;
+    value: number | null;
+    stageName: string | null;
+    stageId: string | null;
+    pipelineId: string | null;
+    productName: string | null;
+    customFields: { fieldId: string; label: string; value: string | null }[];
+  }[];
 }
 
 const FALLBACK_FIELD = "—";
@@ -584,6 +620,7 @@ export function toContactAside(
   // ── panelFields: mescla inboxLeadPanelFields (contato) + dealInboxPanelFields
   // do deal ativo, deduplicando por fieldId e filtrando valores nulos/vazios.
   const activeDealId = firstDeal?.id;
+  const contactId = contact?.id ?? row.contact?.id ?? row.id;
   const contactPanelFields = contact?.inboxLeadPanelFields ?? [];
   const dealPanelFields = activeDealId
     ? (contact?.dealInboxPanelFields?.[activeDealId] ?? [])
@@ -603,17 +640,27 @@ export function toContactAside(
   }
 
   const seenFieldIds = new Set<string>();
-  const panelFields: PanelField[] = [...contactPanelFields, ...dealPanelFields]
+  type TaggedField = (typeof contactPanelFields[0]) & { _entityType: "contact" | "deal"; _entityId: string };
+  const tagged: TaggedField[] = [
+    ...contactPanelFields.map((f) => ({ ...f, _entityType: "contact" as const, _entityId: contactId })),
+    ...dealPanelFields.map((f) => ({ ...f, _entityType: "deal" as const, _entityId: activeDealId ?? "" })),
+  ];
+  const panelFields: PanelField[] = tagged
     .filter((f) => {
-      if (!f.value?.trim() || seenFieldIds.has(f.fieldId)) return false;
+      if (seenFieldIds.has(f.fieldId)) return false;
       seenFieldIds.add(f.fieldId);
       return true;
     })
     .map((f) => ({
       fieldId: f.fieldId,
       label: f.label || f.name,
-      value: cleanFlowValue(f.value as string),
+      value: cleanFlowValue((f.value ?? "") as string),
       type: f.type,
+      options: f.options ?? [],
+      entityType: f._entityType,
+      entityId: f._entityId,
+      highlightRules: f.highlightRules ?? null,
+      highlight: f.highlight ?? null,
     }));
 
   return {
@@ -622,6 +669,7 @@ export function toContactAside(
     avatarColor: colorFromName(name),
     status: deriveOnline(row.lastInboundAt),
     contactId: contact?.id ?? row.contact?.id ?? row.id,
+    contactNumber: (contact as { number?: number | null } | undefined)?.number ?? null,
     assignee: row.assignedTo?.name,
     financialStatus: financial.status,
     financialLabel: financial.label,

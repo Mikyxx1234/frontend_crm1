@@ -13,6 +13,7 @@ import {
 
 import {
   IconAbc,
+  IconAntenna,
   IconArrowNarrowDown,
   IconArrowNarrowUp,
   IconArrowsExchange,
@@ -25,7 +26,6 @@ import {
   IconPencil,
   IconPlus,
   IconSettings,
-  IconTrash,
   IconTrophy,
   IconUpload,
   IconX,
@@ -38,6 +38,8 @@ import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
+import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
+import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { Chip } from "@/components/crm/chip";
 
 import {
@@ -60,6 +62,8 @@ import {
   useTeamUsers,
   type MoveVars,
 } from "@/features/pipeline-v2/hooks";
+import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
+import { useQueryClient } from "@tanstack/react-query";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
@@ -74,7 +78,6 @@ import {
   AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
-  DealDeleteButton,
   DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
@@ -85,6 +88,7 @@ import {
   WinButton,
   useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
+import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-channels-modal";
 import { FilterModalThreeCol } from "@/components/pipeline/kanban-filters/v2";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import {
@@ -141,13 +145,16 @@ export default function KanbanV2ClientPage({
   // refetch do server component a cada abrir/fechar. O estado React é a
   // fonte de renderização; a URL apenas espelha (e habilita compartilhar
   // o link + voltar/avançar do navegador via popstate).
-  const setActiveDeal = useCallback((id: string | null) => {
+  // setActiveDeal(id, num?) — id = CUID interno, num = número sequencial para a URL.
+  // A URL exibe o número legível (?deal=102); internamente usamos sempre o CUID.
+  const setActiveDeal = useCallback((id: string | null, num?: number | null) => {
     setActiveDealId(id);
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     if (id) {
-      if (url.searchParams.get("deal") === id) return;
-      url.searchParams.set("deal", id);
+      const urlVal = num != null ? String(num) : id;
+      if (url.searchParams.get("deal") === urlVal) return;
+      url.searchParams.set("deal", urlVal);
       window.history.pushState(window.history.state, "", url.toString());
     } else {
       if (!url.searchParams.has("deal")) return;
@@ -156,7 +163,9 @@ export default function KanbanV2ClientPage({
     }
   }, []);
 
-  // Inicializa a partir da URL no mount (abrir via link direto).
+  // Inicializa a partir da URL no mount.
+  // Aceita tanto número sequencial (?deal=102) quanto CUID (legado).
+  // O backend /api/deals/[id] já faz lookup por ambos.
   useEffect(() => {
     const d = new URL(window.location.href).searchParams.get("deal");
     if (d) setActiveDealId(d);
@@ -187,6 +196,7 @@ export default function KanbanV2ClientPage({
   // Kebab menu e modal de import/export
   const [kebabOpen, setKebabOpen] = useState(false);
   const [importExportOpen, setImportExportOpen] = useState<"import" | "export" | null>(null);
+  const [channelsModalOpen, setChannelsModalOpen] = useState(false);
   const bump = useImportExportBump();
 
   // Ordenação dos cards dentro de cada etapa. Os sorts `created_*` e
@@ -403,6 +413,21 @@ export default function KanbanV2ClientPage({
   }, [board]);
 
   const { data: dealDetail } = useDealDetail(activeDealId);
+  const queryClient = useQueryClient();
+
+  // Quando dealDetail carrega via lookup por número sequencial (?deal=102),
+  // troca activeDealId para o CUID real (mutations usam CUID).
+  useEffect(() => {
+    if (
+      dealDetail?.id &&
+      activeDealId &&
+      /^\d+$/.test(activeDealId) &&
+      dealDetail.id !== activeDealId
+    ) {
+      setActiveDealId(dealDetail.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealDetail?.id]);
 
   // Campos personalizados: mesma fonte do contact-aside (inboxLeadPanelFields + dealInboxPanelFields).
   // O contactId vem do dealDetail para garantir que está sempre associado ao deal aberto.
@@ -423,6 +448,9 @@ export default function KanbanV2ClientPage({
     const ownerName = dealDetail.owner?.name?.trim() || "Sem responsavel";
     return {
       id: dealDetail.id,
+      number: (dealDetail as { number?: number }).number ?? null,
+      contactId: dealDetail.contact?.id ?? null,
+      contactNumber: (dealDetail.contact as { number?: number } | null)?.number ?? null,
       name: contactName,
       initials: avatarInitials(contactName),
       avatarColor: avatarColorSlugFromName(contactName),
@@ -448,10 +476,12 @@ export default function KanbanV2ClientPage({
       ?.conversations?.[0]?.id ?? null;
   const dealContactName =
     dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
-  const { messagesNode, composerNode, sessionAlertNode, templateModal } =
+  const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote } =
     useDealChatBinding({
       conversationId: dealConversationId,
       contactName: dealContactName,
+      contactId: dealContactId,
+      dealId: activeDealId,
       // sessionExpired derivado dentro do hook a partir do session retornado
       // por useMessages (backend = source of truth) com fallback heurístico
       // em lastInboundAt. Não passar override manual aqui.
@@ -479,8 +509,7 @@ export default function KanbanV2ClientPage({
       {navRail ?? <NavRail />}
       <div
         ref={boardWrapperRef}
-        className="flex min-h-0 min-w-0 flex-1 flex-col gap-3"
-        style={{ height: "calc(100dvh / var(--v2-scale, 1) - 2rem)", overflow: "clip" }}
+        className="flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-clip"
       >
         <PipelineHeader
           tabsOverride={<></>}
@@ -513,6 +542,7 @@ export default function KanbanV2ClientPage({
                 onSortChange={(k) => { setSortKey(k); setKebabOpen(false); }}
                 onImport={() => { setImportExportOpen("import"); setKebabOpen(false); }}
                 onExport={() => { setImportExportOpen("export"); setKebabOpen(false); }}
+                onChannels={() => { setChannelsModalOpen(true); setKebabOpen(false); }}
                 onSettings={() => { router.push("/settings/pipeline"); setKebabOpen(false); }}
                 selectionMode={selectionMode}
                 onToggleSelectionMode={() => {
@@ -556,14 +586,16 @@ export default function KanbanV2ClientPage({
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             ref={boardRef}
-            className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden pb-3"
-            style={{ backgroundColor: "rgba(175, 19, 19, 0.00)" }}
+            className="kanban-board-hscroll flex min-h-0 min-w-0 flex-1 gap-3.5 overflow-x-auto overflow-y-hidden"
           >
             {columns.map((col) => (
               <DroppableColumn
                 key={col.stageId}
                 column={col}
-                onDealClick={setActiveDeal}
+                onDealClick={(id) => {
+                  const raw = dealById.get(id);
+                  setActiveDeal(id, raw?.number ?? null);
+                }}
                 dealById={dealById}
                 pipelineId={pipelineId}
                 statusFilter={status}
@@ -594,6 +626,15 @@ export default function KanbanV2ClientPage({
           activeTab={importExportOpen}
           onClose={() => setImportExportOpen(null)}
           bump={bump}
+        />
+      )}
+
+      {channelsModalOpen && pipelineId && (
+        <PipelineChannelsModal
+          pipelineId={pipelineId}
+          pipelineName={pipelines?.find((p) => p.id === pipelineId)?.name}
+          open={channelsModalOpen}
+          onClose={() => setChannelsModalOpen(false)}
         />
       )}
 
@@ -693,28 +734,23 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        deleteSlot={
-          activeDealId ? (
-            <DealDeleteButton
-              dealId={activeDealId}
-              pipelineId={pipelineId}
-              statusFilter={status}
-              onDeleted={() => setActiveDeal(null)}
-              trigger={
-                <span
-                  className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8"
-                  style={{
-                    background: "var(--glass-bg-strong)",
-                    borderColor: "var(--glass-border)",
-                    boxShadow: "var(--glass-shadow-sm)",
-                  }}
-                >
-                  <IconTrash size={16} />
-                </span>
-              }
+        contactEditSlot={
+          activeDealId && dealContactId ? (
+            <ContactEditDialog
+              contactId={dealContactId}
+              initial={{
+                name: dealDetail?.contact?.name ?? "",
+                email: dealDetail?.contact?.email ?? null,
+                phone: dealDetail?.contact?.phone ?? null,
+              }}
+              onSaved={() => {
+                queryClient.invalidateQueries({ queryKey: dealDetailKey(activeDealId) });
+                queryClient.invalidateQueries({ queryKey: ["pipeline-board"], exact: false });
+              }}
             />
           ) : undefined
         }
+        deleteSlot={undefined}
         moreActionsSlot={
           activeDealId ? (
             <DealActionsMenu
@@ -724,16 +760,11 @@ export default function KanbanV2ClientPage({
               statusFilter={status}
               onDeleted={() => setActiveDeal(null)}
               trigger={
-                <TooltipGlass label="Mais opções" side="bottom">
+                <TooltipGlass label="Mais opções" side="left">
                   <span
-                    className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-primary)] transition-colors"
-                    style={{
-                      background: "var(--glass-bg-strong)",
-                      borderColor: "var(--glass-border)",
-                      boxShadow: "var(--glass-shadow-sm)",
-                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
                   >
-                    <IconDotsVertical size={16} />
+                    <IconDotsVertical size={14} />
                   </span>
                 </TooltipGlass>
               }
@@ -778,34 +809,6 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        forecastSlot={
-          activeDealId ? (
-            <InlineEditText
-              dealId={activeDealId}
-              field="expectedCloseAt"
-              type="date"
-              value={
-                dealDetail?.expectedClose
-                  ? dealDetail.expectedClose.slice(0, 10)
-                  : null
-              }
-              placeholder="Indefinida"
-              pipelineId={pipelineId}
-              statusFilter={status}
-              display={(v) =>
-                v && v.trim() ? (
-                  <span className="cursor-pointer font-display text-[13px] font-semibold text-[var(--text-primary)]">
-                    {formatDate(v)}
-                  </span>
-                ) : (
-                  <span className="cursor-pointer font-display text-[13px] italic text-[var(--text-muted)]">
-                    Indefinida
-                  </span>
-                )
-              }
-            />
-          ) : undefined
-        }
         customFieldsSlot={(() => {
           // Mesma lógica do toContactAside: mescla inboxLeadPanelFields (contato) +
           // dealInboxPanelFields[activeDealId] (campos do negócio ativo),
@@ -815,17 +818,37 @@ export default function KanbanV2ClientPage({
             ? (dealContact?.dealInboxPanelFields?.[activeDealId] ?? [])
             : [];
           const seen = new Set<string>();
-          return [...contactFields, ...dealFields]
+          type Tagged = (typeof contactFields[0]) & { _et: "contact" | "deal"; _eid: string };
+          const tagged: Tagged[] = [
+            ...contactFields.map((f) => ({ ...f, _et: "contact" as const, _eid: dealContactId ?? "" })),
+            ...dealFields.map((f) => ({ ...f, _et: "deal" as const, _eid: activeDealId ?? "" })),
+          ];
+          return tagged
             .filter((f) => {
-              if (!f.value?.trim() || seen.has(f.fieldId)) return false;
+              if (seen.has(f.fieldId)) return false;
               seen.add(f.fieldId);
-              return true;
+              return true; // não filtra vazios — o editor cuida de mostrar "Adicionar"
             })
-            .map((f) => ({ fieldId: f.fieldId, label: f.label || f.name, value: f.value }));
+            .map((f) => ({
+              fieldId: f.fieldId,
+              label: f.label || f.name,
+              value: f.value,
+              type: f.type,
+              options: f.options ?? [],
+              entityType: f._et,
+              entityId: f._eid,
+              highlightRules: f.highlightRules ?? null,
+              highlight: f.highlight ?? null,
+            }));
         })()}
         messagesSlot={messagesNode}
         composerSlot={composerNode}
         sessionAlertSlot={sessionAlertNode ?? null}
+        conversationId={dealConversationId}
+        isResolved={
+          (dealDetail?.contact as { conversations?: { status?: string }[] } | null | undefined)
+            ?.conversations?.[0]?.status === "RESOLVED"
+        }
         tabContentOverride={
           activeDealId
             ? {
@@ -835,6 +858,7 @@ export default function KanbanV2ClientPage({
                     notes={dealDetail?.notes ?? null}
                     pipelineId={pipelineId}
                     statusFilter={status}
+                    pinnedNote={pinnedNote}
                   />
                 ),
                 timeline: <DealTimelineTab dealId={activeDealId} />,
@@ -843,35 +867,61 @@ export default function KanbanV2ClientPage({
             : undefined
         }
         tagsSlot={
-          activeDealId ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(dealDetail?.tags ?? []).map((t) => (
-                <span
-                  key={t.id}
-                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
-                  style={{
-                    background: `${t.color ?? "#5b6ff5"}22`,
-                    color: t.color ?? "var(--brand-primary)",
-                    border: `1px solid ${t.color ?? "#5b6ff5"}44`,
-                  }}
-                >
-                  {t.name}
-                </span>
-              ))}
-              <TagsPopover
-                dealId={activeDealId}
-                currentTags={dealDetail?.tags ?? []}
-                pipelineId={pipelineId}
-                statusFilter={status}
-                trigger={
-                  <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
-                    <IconPlus size={10} />
-                    Adicionar
+          activeDealId ? (() => {
+            const allTags = dealDetail?.tags ?? [];
+            const MAX_VISIBLE = 2;
+            const visibleTags = allTags.slice(0, MAX_VISIBLE);
+            const hiddenTags = allTags.slice(MAX_VISIBLE);
+            return (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {visibleTags.map((t) => (
+                  <span
+                    key={t.id}
+                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                    style={{
+                      background: `${t.color ?? "#5b6ff5"}22`,
+                      color: t.color ?? "var(--brand-primary)",
+                      border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                    }}
+                  >
+                    {t.name}
                   </span>
-                }
-              />
-            </div>
-          ) : undefined
+                ))}
+                {hiddenTags.length > 0 && (
+                  <TooltipGlass
+                    label={hiddenTags.map((t) => t.name).join(", ")}
+                    side="top"
+                  >
+                    <span className="inline-flex shrink-0 cursor-default items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-secondary)]">
+                      +{hiddenTags.length}
+                    </span>
+                  </TooltipGlass>
+                )}
+                <TagsPopover
+                  dealId={activeDealId}
+                  currentTags={allTags}
+                  pipelineId={pipelineId}
+                  statusFilter={status}
+                  trigger={
+                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                      <IconPlus size={10} />
+                      {allTags.length === 0 ? "Adicionar" : ""}
+                    </span>
+                  }
+                />
+              </div>
+            );
+          })() : undefined
+        }
+        contactFieldConfigSlot={
+          <RequirePermission permission="settings:custom_fields">
+            <FieldConfigPanel entities={["contact"]} context="deal_panel_v2" />
+          </RequirePermission>
+        }
+        dealFieldConfigSlot={
+          <RequirePermission permission="settings:custom_fields">
+            <FieldConfigPanel entities={["deal"]} context="deal_panel_v2" />
+          </RequirePermission>
         }
       />
 
@@ -1296,35 +1346,50 @@ function DroppableColumn({
                       isSelected={selectedIds.has(deal.id)}
                       selectionMode={selectionMode}
                       onToggleSelect={() => onToggleSelect(deal.id)}
-                      tagsSlot={
-                        <>
-                          {(raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>)).map((t) => (
-                            <span
-                              key={t.id}
-                              className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide"
-                              style={{
-                                background: `${t.color || "#5b6ff5"}22`,
-                                color: t.color || "var(--brand-primary)",
-                                border: `1px solid ${t.color || "#5b6ff5"}44`,
-                              }}
-                            >
-                              {t.name}
-                            </span>
-                          ))}
-                          <TagsPopover
-                            dealId={deal.id}
-                            currentTags={raw?.tags ?? []}
-                            pipelineId={pipelineId}
-                            statusFilter={statusFilter}
-                            trigger={
-                              // Botão "+" circular igual ao do inbox (triggerVariant="icon").
-                              <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
-                                +
+                      tagsSlot={(() => {
+                        const allTags = raw?.tags ?? ([] as NonNullable<BoardDealDto["tags"]>);
+                        const MAX_VISIBLE = 2;
+                        const visibleTags = allTags.slice(0, MAX_VISIBLE);
+                        const hiddenTags = allTags.slice(MAX_VISIBLE);
+                        return (
+                          <>
+                            {visibleTags.map((t) => (
+                              <span
+                                key={t.id}
+                                className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide"
+                                style={{
+                                  background: `${t.color || "#5b6ff5"}22`,
+                                  color: t.color || "var(--brand-primary)",
+                                  border: `1px solid ${t.color || "#5b6ff5"}44`,
+                                }}
+                              >
+                                {t.name}
                               </span>
-                            }
-                          />
-                        </>
-                      }
+                            ))}
+                            {hiddenTags.length > 0 && (
+                              <TooltipGlass
+                                label={hiddenTags.map((t) => t.name).join(", ")}
+                                side="top"
+                              >
+                                <span className="inline-flex cursor-default items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px font-display text-[9.5px] font-bold text-[var(--text-muted)]">
+                                  +{hiddenTags.length}
+                                </span>
+                              </TooltipGlass>
+                            )}
+                            <TagsPopover
+                              dealId={deal.id}
+                              currentTags={raw?.tags ?? []}
+                              pipelineId={pipelineId}
+                              statusFilter={statusFilter}
+                              trigger={
+                                <span className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[12px] font-bold leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]">
+                                  +
+                                </span>
+                              }
+                            />
+                          </>
+                        );
+                      })()}
                       ownerSlot={
                         <AssigneePopover
                           dealId={deal.id}
@@ -1333,16 +1398,18 @@ function DroppableColumn({
                           pipelineId={pipelineId}
                           statusFilter={statusFilter}
                           trigger={
-                            // Mesmo padrão visual do inbox: Chip brand quando
-                            // há responsável, Chip ghost "+Responsável" quando
-                            // não há (em vez de pintar "Sem responsavel" de azul).
                             raw?.owner?.name ? (
-                              <Chip
-                                variant="brand"
-                                className="max-w-full cursor-pointer truncate whitespace-nowrap transition-colors hover:bg-[rgba(91,111,245,0.22)]"
-                              >
-                                {raw.owner.name}
-                              </Chip>
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="font-display text-[9.5px] font-bold text-[var(--text-muted)]">
+                                  Responsável
+                                </span>
+                                <Chip
+                                  variant="brand"
+                                  className="max-w-full cursor-pointer truncate whitespace-nowrap transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                                >
+                                  {raw.owner.name}
+                                </Chip>
+                              </span>
                             ) : (
                               <Chip
                                 variant="ghost"
@@ -1448,6 +1515,7 @@ interface PipelineKebabMenuProps {
   onSortChange: (k: SortKey) => void;
   onImport: () => void;
   onExport: () => void;
+  onChannels: () => void;
   onSettings: () => void;
   selectionMode: boolean;
   onToggleSelectionMode: () => void;
@@ -1461,6 +1529,7 @@ function PipelineKebabMenu({
   onSortChange,
   onImport,
   onExport,
+  onChannels,
   onSettings,
   selectionMode,
   onToggleSelectionMode,
@@ -1568,6 +1637,14 @@ function PipelineKebabMenu({
       <div className="mx-3 my-1.5 h-px bg-[var(--glass-border-subtle)]" />
 
       {/* Seção: pipeline */}
+      <button
+        type="button"
+        onClick={onChannels}
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+      >
+        <IconAntenna size={13} className="shrink-0" />
+        Canais do funil
+      </button>
       <button
         type="button"
         onClick={onSettings}

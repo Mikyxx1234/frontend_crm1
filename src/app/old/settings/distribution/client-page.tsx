@@ -2,7 +2,6 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";import {
-  ArrowLeft,
   GitBranch,
   Hand,
   Loader2,
@@ -12,7 +11,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";im
   Trash2,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +26,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
-import { SelectNative } from "@/components/ui/select";
+import { pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type DistributionMode = "ROUND_ROBIN" | "RULE_BASED" | "MANUAL";
@@ -170,26 +168,13 @@ export default function DistributionSettingsPage() {
   const canSubmitCreate = newName.trim().length > 0 && !createMutation.isPending;
 
   return (
-    <div className="w-full space-y-6">
-      <Link
-        href="/old/settings"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        Voltar
-      </Link>
-
-      <PageHeader
-        title="Distribuição de Leads"
-        description="Defina como novos leads são atribuídos à equipe por pipeline ou de forma global."
-        icon={<Shuffle />}
-        actions={
-          <Button type="button" className={`gap-2 ${pageHeaderPrimaryCtaClass}`} onClick={openCreate}>
-            <Plus className="size-4" />
-            Nova regra
-          </Button>
-        }
-      />
+    <div className="w-full space-y-4">
+      <div className="flex justify-end">
+        <Button type="button" className={`gap-2 ${pageHeaderPrimaryCtaClass}`} onClick={openCreate}>
+          <Plus className="size-4" />
+          Nova regra
+        </Button>
+      </div>
 
       {rulesError ? (
         <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
@@ -317,31 +302,29 @@ export default function DistributionSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dist-mode">Modo</Label>
-                <SelectNative
-                  id="dist-mode"
+                <Label>Modo</Label>
+                <DropdownGlass
+                  options={[
+                    { value: "ROUND_ROBIN", label: "Round-robin" },
+                    { value: "RULE_BASED", label: "Baseado em regras" },
+                    { value: "MANUAL", label: "Manual" },
+                  ]}
                   value={newMode}
-                  onChange={(e) => setNewMode(e.target.value as DistributionMode)}
-                >
-                  <option value="ROUND_ROBIN">Round-robin</option>
-                  <option value="RULE_BASED">Baseado em regras</option>
-                  <option value="MANUAL">Manual</option>
-                </SelectNative>
+                  onValueChange={(v) => setNewMode(v as DistributionMode)}
+                  triggerClassName="w-full"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dist-pipeline">Pipeline (opcional)</Label>
-                <SelectNative
-                  id="dist-pipeline"
+                <Label>Pipeline (opcional)</Label>
+                <DropdownGlass
+                  options={[
+                    { value: "", label: "Todos os pipelines" },
+                    ...pipelines.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
                   value={newPipelineId}
-                  onChange={(e) => setNewPipelineId(e.target.value)}
-                >
-                  <option value="">Todos os pipelines</option>
-                  {pipelines.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </SelectNative>
+                  onValueChange={(v) => setNewPipelineId(v)}
+                  triggerClassName="w-full"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Membros da equipe</Label>

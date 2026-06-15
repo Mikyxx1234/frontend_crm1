@@ -3,11 +3,18 @@
 Formato: [Conventional Commits](https://www.conventionalcommits.org/) agrupado por release.
 Datas em ISO 8601. Mais recente no topo.
 
-## [Unreleased] — branch `marcelinho`
+## [Unreleased] — branch `DEV_BRANCH`
 
-> Aguardando merge via PR para `main`.
+> Em teste no servidor de desenvolvimento (EasyPanel). Aguardando promoção para `main`.
 
 ### feat
+- **directory (contacts/companies)**: edição na linha das listagens v2 — nova coluna "Ações" com botão de editar que abre `EditContactDialog` / `EditCompanyDialog` (antes só dava para editar no detalhe). Salva via `useUpdateContact` / `useUpdateCompany`.
+- **directory (contacts)**: vincular contato a empresa direto da UI v2 — novo `CompanyPicker` (combobox com busca + remover vínculo) na criação e edição de contato, enviando `companyId` ao backend (connect/disconnect no Prisma já existente).
+- **rbac (team)**: função híbrida — `/settings/team` mantém **ADMIN como único preset** e passa a atribuir **roles customizadas** (via `UserRoleAssignment`); novo `PUT /api/users/[id]/primary-role` com guard contra rebaixar o último admin. `User.role` segue como fallback (não quebra orgs existentes). (`33586b0`, back `58beaa2`)
+- **rbac (groups)**: paridade com roles — editor de grupo usa o catálogo completo de permissões (níveis para recursos com responsável; Negado/Liberado para o resto) e permite adicionar membros já na criação (`memberIds`). (`33586b0`, back `58beaa2`)
+- **rbac (channels)**: canal por papel — `channel.{view,send}.roles[roleId]` (eixo aditivo ao override por usuário); editor "Canais deste papel" no `RoleEditor` + `GET/PUT /api/roles/[id]/scope-grants`. Enforcement gated por `rbac_granular_scope_v1`. (`9d1ef0c`, back `87001b3`)
+
+### feat (anteriores)
 - **ad-tracking**: exibir UTMs do anúncio no log de automação e no perfil do contato — bloco "UTMs do anúncio" no `AdOriginCard` e no card "Origem — Anúncio" do log expandido. Renderiza `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term` quando preenchidos. (`772b876`)
 
 ### docs

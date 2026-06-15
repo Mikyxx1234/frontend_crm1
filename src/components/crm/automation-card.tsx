@@ -41,7 +41,7 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
   ]
 
   return (
-    <div className="group relative flex items-center gap-4 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-3.5 pl-5 pr-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:shadow-[var(--glass-shadow)]">
+    <div className="group relative flex items-center gap-4 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-3.5 pl-5 pr-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)] hover:shadow-[var(--glass-shadow)]">
       {/* Link expandido sobre toda a linha (stretched link) */}
       <Link
         href={`/automations/${automation.id}`}

@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FlowDefinitionUpsertInput } from "@/services/whatsapp-flow-definitions";
 import { cn } from "@/lib/utils";
@@ -62,6 +62,17 @@ const FIELD_TYPE_OPTIONS = [
   { value: "DATE", label: "Data" },
 ] as const;
 
+const FLOW_CATEGORY_OPTIONS = [
+  "LEAD_GENERATION",
+  "SIGN_UP",
+  "SIGN_IN",
+  "APPOINTMENT_BOOKING",
+  "CONTACT_US",
+  "CUSTOMER_SUPPORT",
+  "SURVEY",
+  "OTHER",
+] as const;
+
 const FIELD_TYPES_WITH_OPTIONS = new Set(["DROPDOWN", "RADIO", "MULTI_SELECT", "SELECT"]);
 
 type MappingNativeOpt = { key: string; label: string };
@@ -83,6 +94,18 @@ function parseOptionsText(text: string): string[] {
     .filter(Boolean);
 }
 
+/** Link "voltar" em pill glass — reusado nos três estados do editor. */
+function BackToFlows() {
+  return (
+    <Link
+      href="/settings/message-models?tab=flows"
+      className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--text-secondary)] transition-colors hover:border-[var(--input-border-focus)] hover:text-[var(--brand-primary)]"
+    >
+      <ArrowLeft className="size-4" /> Modelos de mensagem
+    </Link>
+  );
+}
+
 function DealMappingSelect({
   value,
   onChange,
@@ -96,27 +119,26 @@ function DealMappingSelect({
   customFields: CustomFieldOpt[];
   customFieldsHint?: React.ReactNode;
 }) {
+  const options = React.useMemo<DropdownOption[]>(() => {
+    const out: DropdownOption[] = [{ value: "", label: "— Não mapear —" }];
+    for (const o of nativeFields) {
+      out.push({ value: `d:${o.key}`, label: o.label, description: "Campo padrão do negócio" });
+    }
+    for (const cf of customFields) {
+      out.push({ value: `cf:${cf.id}`, label: cf.label, description: "Campo personalizado" });
+    }
+    return out;
+  }, [nativeFields, customFields]);
+
   return (
     <>
-      <SelectNative value={value} onChange={(e) => onChange(e.target.value)} className="w-full text-xs">
-        <option value="">— Não mapear —</option>
-        <optgroup label="Negócio (campos padrão)">
-          {nativeFields.map((o) => (
-            <option key={o.key} value={`d:${o.key}`}>
-              {o.label}
-            </option>
-          ))}
-        </optgroup>
-        {customFields.length > 0 ? (
-          <optgroup label="Negócio (campos personalizados)">
-            {customFields.map((cf) => (
-              <option key={cf.id} value={`cf:${cf.id}`}>
-                {cf.label}
-              </option>
-            ))}
-          </optgroup>
-        ) : null}
-      </SelectNative>
+      <DropdownGlass
+        options={options}
+        value={value}
+        onValueChange={onChange}
+        placeholder="— Não mapear —"
+        triggerClassName="w-full"
+      />
       {customFieldsHint}
     </>
   );
@@ -217,12 +239,12 @@ export default function FlowDefinitionEditorPage() {
   const customFields = mappingFields?.customFields ?? [];
   const customFieldsHint =
     mappingFieldsLoading ? (
-      <p className="mt-1 text-[10px] text-muted-foreground">Carregando campos do negócio…</p>
+      <p className="mt-1 text-[10px] text-[var(--text-muted)]">Carregando campos do negócio…</p>
     ) : customFields.length === 0 ? (
-      <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[10px] leading-snug text-amber-900 dark:text-amber-200">
-        Nenhum campo personalizado de <strong>negócio</strong> nesta organização — só aparecem
+      <p className="mt-1 rounded-[var(--radius-md)] border border-[var(--color-warn-border)] bg-[var(--color-warn-bg)] px-2 py-1.5 text-[10px] leading-snug text-[var(--text-secondary)]">
+        Nenhum campo personalizado de <strong className="font-bold">negócio</strong> nesta organização — só aparecem
         Título, Valor e Previsão de fechamento.{" "}
-        <Link href="/old/settings/custom-fields?entity=deal" className="font-medium underline">
+        <Link href="/settings/custom-fields?entity=deal" className="font-bold text-[var(--brand-primary)] underline">
           Criar campos do negócio
         </Link>
         {mappingFieldsError ? " (falha ao carregar a lista)" : null}
@@ -382,14 +404,14 @@ export default function FlowDefinitionEditorPage() {
       : null;
 
   if (!id) {
-    return <p className="text-sm text-muted-foreground">ID inválido.</p>;
+    return <p className="text-sm text-[var(--text-muted)]">ID inválido.</p>;
   }
 
   if (isLoading || !draft) {
     return (
       <div className="w-full space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-8 w-48 rounded-[var(--radius-lg)]" />
+        <Skeleton className="h-64 w-full rounded-[var(--radius-xl)]" />
       </div>
     );
   }
@@ -398,73 +420,74 @@ export default function FlowDefinitionEditorPage() {
 
   if (isImportedFromMeta) {
     return (
-      <div className="w-full space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href="/old/settings/message-models?tab=flows"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" /> Modelos de mensagem
-          </Link>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={syncFromMetaMutation.isPending || saveMutation.isPending}
-            onClick={() => syncFromMetaMutation.mutate()}
-          >
-            {syncFromMetaMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <RefreshCw className="size-4" />
-            )}
-            <span className="ml-2">Atualizar perguntas da Meta</span>
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={saveMutation.isPending || syncFromMetaMutation.isPending}
-            onClick={() => saveMutation.mutate(toUpsertInput(draft))}
-          >
-            {saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            <span className="ml-2">Guardar mapeamento</span>
-          </Button>
-        </div>
+      <div className="w-full space-y-4">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <BackToFlows />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={syncFromMetaMutation.isPending || saveMutation.isPending}
+              onClick={() => syncFromMetaMutation.mutate()}
+            >
+              {syncFromMetaMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
+              <span className="ml-2">Atualizar perguntas da Meta</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={saveMutation.isPending || syncFromMetaMutation.isPending}
+              onClick={() => saveMutation.mutate(toUpsertInput(draft))}
+            >
+              {saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              <span className="ml-2">Guardar mapeamento</span>
+            </Button>
+          </div>
+        </header>
 
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
-          <p className="font-medium text-foreground">{draft.name}</p>
-          <p className="mt-1 text-muted-foreground">
-            Flow vinculado à Meta (<code className="text-xs">{draft.metaFlowId}</code>). Abaixo estão as{" "}
-            <strong>perguntas do formulário</strong> — escolha em qual campo do lead cada resposta será gravada.
-            Se faltar pergunta, use <strong>Atualizar perguntas da Meta</strong>.
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-warn-border)] bg-[var(--color-warn-bg)] px-4 py-3 text-sm" role="note">
+          <p className="font-bold text-[var(--text-primary)]">{draft.name}</p>
+          <p className="mt-1 text-[var(--text-secondary)]">
+            Flow vinculado à Meta (
+            <code className="font-mono text-xs text-[var(--text-primary)]">{draft.metaFlowId}</code>). Abaixo estão as{" "}
+            <strong className="font-bold">perguntas do formulário</strong> — escolha em qual campo do lead cada resposta será gravada.
+            Se faltar pergunta, use <strong className="font-bold">Atualizar perguntas da Meta</strong>.
           </p>
         </div>
 
         <div className="space-y-4">
           {draft.screens.map((screen, si) => (
-            <div key={screen.id} className="rounded-lg border border-border bg-card p-4">
-              <p className="mb-3 text-sm font-semibold">{screen.title || `Tela ${si + 1}`}</p>
+            <div
+              key={screen.id}
+              className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-4 shadow-[var(--glass-shadow)] dark:bg-[var(--glass-bg-base)]"
+            >
+              <p className="mb-3 text-sm font-bold text-[var(--text-primary)]">{screen.title || `Tela ${si + 1}`}</p>
               {screen.fields.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhum campo nesta tela.</p>
+                <p className="text-xs text-[var(--text-muted)]">Nenhum campo nesta tela.</p>
               ) : (
                 <div className="space-y-3">
                   {screen.fields.map((f) => (
                     <div
                       key={f.id}
-                      className="grid gap-2 rounded-md border border-border/60 bg-muted/20 p-3 sm:grid-cols-[1fr_1fr]"
+                      className="grid gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] p-3 sm:grid-cols-[1fr_1fr]"
                     >
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
                           Pergunta no WhatsApp
                         </p>
-                        <p className="mt-0.5 text-sm font-semibold text-foreground">{f.label}</p>
+                        <p className="mt-0.5 text-sm font-bold text-[var(--text-primary)]">{f.label}</p>
                         {f.required ? (
-                          <p className="mt-0.5 text-[10px] text-amber-700">Obrigatória no formulário</p>
+                          <p className="mt-0.5 text-[10px] font-semibold text-[var(--color-warn)]">Obrigatória no formulário</p>
                         ) : null}
                       </div>
                       <div>
-                        <Label className="text-xs">Gravar no campo do negócio</Label>
-                        <div className="mt-0.5">
+                        <Label className="text-xs text-[var(--text-secondary)]">Gravar no campo do negócio</Label>
+                        <div className="mt-1">
                           <DealMappingSelect
                             value={mappingSelectValue(f)}
                             onChange={(v) => setFieldMapping(f.id, si, v)}
@@ -488,28 +511,28 @@ export default function FlowDefinitionEditorPage() {
   if (draft.status !== "DRAFT") {
     return (
       <div className="w-full space-y-4">
-        <Link
-          href="/old/settings/message-models?tab=flows"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Modelos de mensagem
-        </Link>
-        <p className="text-sm text-muted-foreground">
-          Este flow está <strong>{draft.status}</strong> e não pode ser editado.
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <BackToFlows />
+        </header>
+        <p className="text-sm text-[var(--text-muted)]">
+          Este flow está <strong className="font-bold text-[var(--text-secondary)]">{draft.status}</strong> e não pode ser editado.
         </p>
       </div>
     );
   }
 
+  const canPublish = draft.screens.some((s) => s.fields.length > 0);
+
   return (
-    <div className="w-full space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href="/old/settings/message-models?tab=flows"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" /> Modelos de mensagem
-        </Link>
+    <div className="w-full space-y-4">
+      {/* Top bar glass: voltar + Guardar rascunho + Publicar na Meta */}
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <div className="flex min-w-0 items-center gap-3">
+          <BackToFlows />
+          <span className="hidden truncate text-[13px] font-bold text-[var(--text-primary)] sm:block">
+            {draft.name || "Editor de Flow"}
+          </span>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -524,11 +547,7 @@ export default function FlowDefinitionEditorPage() {
           <Button
             type="button"
             size="sm"
-            disabled={
-              publishMutation.isPending ||
-              saveMutation.isPending ||
-              !draft.screens.some((s) => s.fields.length > 0)
-            }
+            disabled={publishMutation.isPending || saveMutation.isPending || !canPublish}
             onClick={async () => {
               try {
                 await saveMutation.mutateAsync(toUpsertInput(draft));
@@ -542,17 +561,20 @@ export default function FlowDefinitionEditorPage() {
             <span className="ml-2">Publicar na Meta</span>
           </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)_280px]">
-        <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
+        {/* Coluna 1 — TELAS */}
+        <nav
+          aria-label="Telas do flow"
+          className="space-y-2 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-3 shadow-[var(--glass-shadow)] dark:bg-[var(--glass-bg-base)]"
+        >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Telas</p>
-            <Button
+            <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">Telas</p>
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7"
+              aria-label="Adicionar tela"
+              className="flex size-7 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
               onClick={() => {
                 setDraft((prev) => {
                   if (!prev) return prev;
@@ -564,7 +586,7 @@ export default function FlowDefinitionEditorPage() {
               }}
             >
               <Plus className="size-4" />
-            </Button>
+            </button>
           </div>
           <ul className="space-y-1">
             {draft.screens.map((s, idx) => (
@@ -572,8 +594,10 @@ export default function FlowDefinitionEditorPage() {
                 <button
                   type="button"
                   className={cn(
-                    "min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
-                    idx === selectedScreenIdx ? "bg-primary/10 font-medium text-primary" : "hover:bg-muted",
+                    "min-w-0 flex-1 rounded-[var(--radius-md)] px-2.5 py-2 text-left text-sm transition-colors",
+                    idx === selectedScreenIdx
+                      ? "bg-[var(--color-enterprise-bg)] font-bold text-[var(--brand-primary)]"
+                      : "text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]",
                   )}
                   onClick={() => setSelectedScreenIdx(idx)}
                 >
@@ -582,7 +606,7 @@ export default function FlowDefinitionEditorPage() {
                 {draft.screens.length > 1 ? (
                   <button
                     type="button"
-                    className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    className="flex shrink-0 items-center justify-center rounded-[var(--radius-md)] px-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                     aria-label="Remover tela"
                     onClick={() => {
                       const prevLen = draft.screens.length;
@@ -606,38 +630,31 @@ export default function FlowDefinitionEditorPage() {
               </li>
             ))}
           </ul>
-        </div>
+        </nav>
 
-        <div className="space-y-4 rounded-lg border border-border bg-card p-4">
-          <div>
-            <Label>Título do flow</Label>
+        {/* Coluna 2 — Formulário + CAMPOS */}
+        <div className="space-y-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-4 shadow-[var(--glass-shadow)] dark:bg-[var(--glass-bg-base)]">
+          <div className="grid gap-2">
+            <Label htmlFor="flow-name" className="text-[var(--text-secondary)]">Título do flow</Label>
             <Input
+              id="flow-name"
               value={draft.name}
               onChange={(e) => updateDraft((d) => ({ ...d, name: e.target.value }))}
-              className="mt-1"
             />
           </div>
-          <div>
-            <Label>Categoria Meta</Label>
-            <SelectNative
+          <div className="grid gap-2">
+            <Label className="text-[var(--text-secondary)]">Categoria Meta</Label>
+            <DropdownGlass
+              options={FLOW_CATEGORY_OPTIONS.map((c) => ({ value: c, label: c }))}
               value={draft.flowCategory || "LEAD_GENERATION"}
-              onChange={(e) => updateDraft((d) => ({ ...d, flowCategory: e.target.value }))}
-              className="mt-1 w-full"
-            >
-              <option value="LEAD_GENERATION">LEAD_GENERATION</option>
-              <option value="SIGN_UP">SIGN_UP</option>
-              <option value="SIGN_IN">SIGN_IN</option>
-              <option value="APPOINTMENT_BOOKING">APPOINTMENT_BOOKING</option>
-              <option value="CONTACT_US">CONTACT_US</option>
-              <option value="CUSTOMER_SUPPORT">CUSTOMER_SUPPORT</option>
-              <option value="SURVEY">SURVEY</option>
-              <option value="OTHER">OTHER</option>
-            </SelectNative>
+              onValueChange={(v) => updateDraft((d) => ({ ...d, flowCategory: v }))}
+              triggerClassName="w-full font-mono"
+            />
           </div>
           {activeScreen ? (
             <>
-              <div>
-                <Label>Título da tela (CRM)</Label>
+              <div className="grid gap-2">
+                <Label className="text-[var(--text-secondary)]">Título da tela (CRM)</Label>
                 <Input
                   value={activeScreen.title}
                   onChange={(e) => {
@@ -649,11 +666,10 @@ export default function FlowDefinitionEditorPage() {
                       return { ...d, screens };
                     });
                   }}
-                  className="mt-1"
                 />
               </div>
-              <div className="flex items-center justify-between border-t border-border pt-3">
-                <p className="text-xs font-semibold uppercase text-muted-foreground">Campos</p>
+              <div className="flex items-center justify-between border-t border-[var(--glass-border-subtle)] pt-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">Campos</p>
                 <Button
                   type="button"
                   variant="outline"
@@ -673,17 +689,19 @@ export default function FlowDefinitionEditorPage() {
               </div>
               <div className="space-y-3">
                 {activeScreen.fields.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Adicione pelo menos um campo antes de publicar.</p>
+                  <p className="text-xs text-[var(--text-muted)]">Adicione pelo menos um campo antes de publicar.</p>
                 ) : (
                   activeScreen.fields.map((f, fi) => (
-                    <div key={f.id} className="rounded-lg border border-border/80 bg-muted/20 p-3">
+                    <div
+                      key={f.id}
+                      className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] p-3"
+                    >
                       <div className="mb-2 flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">Campo {fi + 1}</span>
-                        <Button
+                        <span className="text-xs font-bold text-[var(--text-muted)]">Campo {fi + 1}</span>
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 text-destructive"
+                          aria-label={`Remover campo ${fi + 1}`}
+                          className="flex size-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-bg)]"
                           onClick={() => {
                             updateDraft((d) => {
                               const screens = d.screens.map((s, i) => {
@@ -695,11 +713,11 @@ export default function FlowDefinitionEditorPage() {
                           }}
                         >
                           <Trash2 className="size-3.5" />
-                        </Button>
+                        </button>
                       </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div>
-                          <Label className="text-xs">Chave (slug)</Label>
+                      <div className="grid gap-2.5 sm:grid-cols-2">
+                        <div className="grid gap-1.5">
+                          <Label className="text-xs text-[var(--text-secondary)]">Chave (slug)</Label>
                           <Input
                             value={f.fieldKey}
                             onChange={(e) => {
@@ -713,11 +731,11 @@ export default function FlowDefinitionEditorPage() {
                                 return { ...d, screens };
                               });
                             }}
-                            className="mt-0.5 font-mono text-xs"
+                            className="font-mono text-xs"
                           />
                         </div>
-                        <div>
-                          <Label className="text-xs">Rótulo</Label>
+                        <div className="grid gap-1.5">
+                          <Label className="text-xs text-[var(--text-secondary)]">Rótulo</Label>
                           <Input
                             value={f.label}
                             onChange={(e) => {
@@ -731,15 +749,15 @@ export default function FlowDefinitionEditorPage() {
                                 return { ...d, screens };
                               });
                             }}
-                            className="mt-0.5 text-sm"
+                            className="text-sm"
                           />
                         </div>
-                        <div>
-                          <Label className="text-xs">Tipo</Label>
-                          <SelectNative
+                        <div className="grid gap-1.5">
+                          <Label className="text-xs text-[var(--text-secondary)]">Tipo</Label>
+                          <DropdownGlass
+                            options={FIELD_TYPE_OPTIONS.map((t) => ({ value: t.value, label: t.label }))}
                             value={f.fieldType}
-                            onChange={(e) => {
-                              const v = e.target.value;
+                            onValueChange={(v) => {
                               updateDraft((d) => {
                                 const screens = d.screens.map((s, i) => {
                                   if (i !== selectedScreenIdx) return s;
@@ -754,18 +772,13 @@ export default function FlowDefinitionEditorPage() {
                                 return { ...d, screens };
                               });
                             }}
-                            className="mt-0.5 w-full"
-                          >
-                            {FIELD_TYPE_OPTIONS.map((t) => (
-                              <option key={t.value} value={t.value}>
-                                {t.label}
-                              </option>
-                            ))}
-                          </SelectNative>
+                            triggerClassName="w-full"
+                          />
                         </div>
-                        <label className="flex items-center gap-2 text-xs">
+                        <label className="flex items-center gap-2 self-end pb-2 text-xs font-semibold text-[var(--text-secondary)]">
                           <input
                             type="checkbox"
+                            className="size-4 accent-[var(--brand-primary)]"
                             checked={f.required}
                             onChange={(e) => {
                               const checked = e.target.checked;
@@ -784,8 +797,8 @@ export default function FlowDefinitionEditorPage() {
                           Obrigatório
                         </label>
                         {fieldTypeNeedsOptions(f.fieldType) ? (
-                          <div className="sm:col-span-2">
-                            <Label className="text-xs">Opções (uma por linha)</Label>
+                          <div className="grid gap-1.5 sm:col-span-2">
+                            <Label className="text-xs text-[var(--text-secondary)]">Opções (uma por linha)</Label>
                             <textarea
                               value={(f.options ?? []).join("\n")}
                               onChange={(e) => {
@@ -802,7 +815,7 @@ export default function FlowDefinitionEditorPage() {
                                 });
                               }}
                               rows={3}
-                              className="mt-0.5 w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+                              className="resize-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus-visible:border-[var(--input-border-focus)] focus-visible:ring-2 focus-visible:ring-[var(--input-ring-focus)]"
                               placeholder={"Opção 1\nOpção 2\nOpção 3"}
                             />
                           </div>
@@ -816,43 +829,70 @@ export default function FlowDefinitionEditorPage() {
           ) : null}
         </div>
 
-        <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Pré-visualização</p>
-          <div className="mx-auto max-w-[260px] rounded-[24px] border-4 border-slate-800 bg-white p-3 shadow-lg">
-            <p className="text-center text-[10px] font-medium text-slate-500">WhatsApp</p>
-            <div className="mt-2 max-h-[320px] space-y-2 overflow-y-auto text-xs">
+        {/* Coluna 3 — Pré-visualização do telefone + Mapeamento CRM */}
+        <div className="space-y-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-3 shadow-[var(--glass-shadow)] dark:bg-[var(--glass-bg-base)]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">Pré-visualização</p>
+
+          {/* Mock WhatsApp — cores ISOLADAS em --wa-* (não tokens globais) */}
+          <div
+            className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[26px] border-[6px] shadow-[var(--glass-shadow-lg)]"
+            style={{ borderColor: "var(--wa-frame)", background: "var(--wa-bg)" }}
+          >
+            <div
+              className="flex items-center gap-2 px-3 py-2"
+              style={{ background: "var(--wa-header)" }}
+            >
+              <span className="text-[11px] font-bold text-white">WhatsApp</span>
+            </div>
+            <div className="max-h-[320px] space-y-2 overflow-y-auto p-3 text-xs">
               {draft.screens.map((s, si) => (
-                <div key={s.id} className={cn("space-y-1", si !== selectedScreenIdx && "opacity-40")}>
-                  {s.title ? <p className="font-semibold text-slate-900">{s.title}</p> : null}
+                <div key={s.id} className={cn("space-y-1.5", si !== selectedScreenIdx && "opacity-40")}>
+                  {s.title ? (
+                    <p className="font-bold" style={{ color: "var(--wa-text)" }}>{s.title}</p>
+                  ) : null}
                   {s.fields.map((f) => (
-                    <div key={f.id} className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
-                      <span className="text-[10px] text-slate-500">{f.label}</span>
-                      <div className="mt-0.5 h-6 rounded bg-white ring-1 ring-slate-200" />
+                    <div
+                      key={f.id}
+                      className="rounded-[10px] px-2 py-1.5"
+                      style={{ background: "var(--wa-bubble)", border: "1px solid var(--wa-field-border)" }}
+                    >
+                      <span className="text-[10px]" style={{ color: "var(--wa-text-muted)" }}>{f.label}</span>
+                      <div
+                        className="mt-0.5 h-6 rounded-[6px]"
+                        style={{ background: "var(--wa-field-bg)", border: "1px solid var(--wa-field-border)" }}
+                      />
                     </div>
                   ))}
                 </div>
               ))}
               <div className="pt-2">
-                <div className="rounded-full bg-emerald-600 py-1.5 text-center text-[11px] font-medium text-white">
+                <div
+                  className="rounded-full py-1.5 text-center text-[11px] font-bold text-white"
+                  style={{ background: "var(--wa-accent-strong)" }}
+                >
                   Concluir
                 </div>
               </div>
             </div>
           </div>
+
           {draft.screens.some((s) => s.fields.length > 0) ? (
-            <div className="space-y-2 border-t border-border pt-2">
-              <p className="text-xs font-semibold text-muted-foreground">Mapeamento (CRM)</p>
-              <p className="text-[10px] leading-snug text-muted-foreground">
+            <div className="space-y-2 border-t border-[var(--glass-border-subtle)] pt-3">
+              <p className="text-xs font-bold text-[var(--text-secondary)]">Mapeamento (CRM)</p>
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-warn-border)] bg-[var(--color-warn-bg)] px-2.5 py-2 text-[10px] leading-snug text-[var(--text-secondary)]" role="note">
                 Cada resposta do Flow no WhatsApp é gravada no negócio aberto do contato (campo mapeado abaixo).
-              </p>
+              </div>
               {customFieldsHint}
               {draft.screens.flatMap((screen, si) =>
                 screen.fields.map((f) => ({ f, si, screenTitle: screen.title })),
               ).map(({ f, si, screenTitle }) => (
-                <div key={`map-${f.id}`} className="rounded border border-border/60 bg-card p-2">
-                  <p className="mb-0.5 truncate text-[11px] font-medium">{f.label}</p>
+                <div
+                  key={`map-${f.id}`}
+                  className="rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)] p-2"
+                >
+                  <p className="mb-0.5 truncate text-[11px] font-bold text-[var(--text-primary)]">{f.label}</p>
                   {screenTitle ? (
-                    <p className="mb-1 text-[10px] text-muted-foreground">{screenTitle}</p>
+                    <p className="mb-1 text-[10px] text-[var(--text-muted)]">{screenTitle}</p>
                   ) : null}
                   <DealMappingSelect
                     value={mappingSelectValue(f)}

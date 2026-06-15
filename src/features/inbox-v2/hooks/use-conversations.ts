@@ -66,7 +66,13 @@ export function useConversations(params: {
   const data = useMemo<ConversationListResponse | undefined>(() => {
     if (!query.data) return undefined;
     const pages = query.data.pages;
-    const items: ConversationListRow[] = pages.flatMap((p) => p.items);
+    // `p?.items ?? []` evita injetar `undefined` no array agregado quando uma
+    // página vem sem `items` (resposta malformada ou page patchada pelo
+    // realtime). O `.filter(Boolean)` blinda contra buracos em `items[]`.
+    // Sem isso, `rows.map((r) => r.id)` quebra com "Cannot read 'id'".
+    const items: ConversationListRow[] = pages
+      .flatMap((p) => p?.items ?? [])
+      .filter(Boolean) as ConversationListRow[];
     const last = pages[pages.length - 1];
     return {
       items,

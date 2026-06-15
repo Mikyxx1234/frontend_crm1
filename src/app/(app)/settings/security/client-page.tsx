@@ -37,7 +37,7 @@ const FLAG_LABELS: Record<string, { label: string; warning?: string }> = {
   rbac_granular_scope_v1: {
     label: "Escopo granular de RBAC (v1)",
     warning:
-      "Ativa enforcement granular por funil, etapa, campo e sidebar via scope-grants. Use em conjunto com a configuração de permissões.",
+      "Ativa enforcement granular por funil, etapa, campo, sidebar e canais (acesso por usuário a funis e a ver/enviar mensagens por canal) via scope-grants. Use em conjunto com a configuração de permissões.",
   },
 };
 

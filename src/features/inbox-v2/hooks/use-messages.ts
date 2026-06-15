@@ -3,7 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  addNoteToLog,
   getMessages,
+  pinNote,
   sendAttachment,
   sendMessage,
   type InboxMessageDto,
@@ -37,6 +39,33 @@ export function useSendMessage(conversationId: string | null) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
+    },
+  });
+}
+
+/** Mutation: fixar / desafixar nota interna de uma conversa. */
+export function usePinNote(conversationId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<
+    { id: string; pinnedNoteId: string | null },
+    Error,
+    { noteId: string | null }
+  >({
+    mutationFn: ({ noteId }) => pinNote(conversationId as string, noteId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+    },
+  });
+}
+
+/** Mutation: criar nota de deal (adiciona ao log/timeline do negócio). */
+export function useAddNoteToLog(dealId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<{ id: string; content: string }, Error, { content: string }>({
+    mutationFn: ({ content }) => addNoteToLog(dealId as string, content),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["deal-timeline"] });
+      qc.invalidateQueries({ queryKey: ["deal-notes", dealId] });
     },
   });
 }

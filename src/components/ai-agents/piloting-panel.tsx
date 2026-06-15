@@ -39,6 +39,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import type {
   BusinessHoursConfig,
   BusinessHoursSlot,
@@ -448,19 +449,17 @@ function HumanBehaviorSection({
       {value.simulateTyping && (
         <div className="grid gap-2 sm:max-w-xs">
           <Label htmlFor="pilot-typing-pace">Velocidade de digitação</Label>
-          <select
-            id="pilot-typing-pace"
+          <DropdownGlass
+            options={[
+              { value: "10", label: "Rápida (10ms/char · ~6000 cpm)" },
+              { value: "25", label: "Humana média (25ms/char · ~2400 cpm)" },
+              { value: "50", label: "Deliberada (50ms/char · ~1200 cpm)" },
+              { value: "90", label: "Lenta (90ms/char · ~670 cpm)" },
+            ]}
             value={String(value.typingPerCharMs)}
-            onChange={(e) =>
-              patch({ typingPerCharMs: Number(e.target.value) || 25 })
-            }
-            className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
-          >
-            <option value="10">Rápida (10ms/char · ~6000 cpm)</option>
-            <option value="25">Humana média (25ms/char · ~2400 cpm)</option>
-            <option value="50">Deliberada (50ms/char · ~1200 cpm)</option>
-            <option value="90">Lenta (90ms/char · ~670 cpm)</option>
-          </select>
+            onValueChange={(v) => patch({ typingPerCharMs: Number(v) || 25 })}
+            triggerClassName="w-full"
+          />
           <p className="text-[11px] text-muted-foreground">
             Base fixa de 1,5s + {value.typingPerCharMs}ms por caractere. Máximo
             25s por limitação da Meta.
@@ -613,21 +612,16 @@ function InactivitySection({
           {value.inactivityHandoffMode === "SPECIFIC_USER" && (
             <div className="grid gap-2 sm:max-w-sm">
               <Label htmlFor="pilot-handoff-user">Consultor</Label>
-              <select
-                id="pilot-handoff-user"
-                value={value.inactivityHandoffUserId ?? ""}
-                onChange={(e) =>
-                  patch({ inactivityHandoffUserId: e.target.value || null })
-                }
-                className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
-              >
-                <option value="">— selecione —</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.email})
-                  </option>
-                ))}
-              </select>
+              <DropdownGlass
+                options={users.map((u) => ({
+                  value: u.id,
+                  label: `${u.name} (${u.email})`,
+                }))}
+                value={value.inactivityHandoffUserId ?? undefined}
+                onValueChange={(v) => patch({ inactivityHandoffUserId: v || null })}
+                placeholder="— selecione —"
+                triggerClassName="w-full"
+              />
             </div>
           )}
 
@@ -973,20 +967,20 @@ function BusinessHoursSection({
         <>
           <div className="grid gap-2 sm:max-w-xs">
             <Label htmlFor="pilot-tz">Fuso horário</Label>
-            <select
-              id="pilot-tz"
+            <DropdownGlass
+              options={[
+                { value: "America/Sao_Paulo", label: "America/Sao_Paulo" },
+                { value: "America/Manaus", label: "America/Manaus" },
+                { value: "America/Rio_Branco", label: "America/Rio_Branco" },
+                { value: "America/Noronha", label: "America/Noronha" },
+                { value: "UTC", label: "UTC" },
+              ]}
               value={bh.timezone}
-              onChange={(e) =>
-                patch({ businessHours: { ...bh, timezone: e.target.value } })
+              onValueChange={(v) =>
+                patch({ businessHours: { ...bh, timezone: v } })
               }
-              className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
-            >
-              <option value="America/Sao_Paulo">America/Sao_Paulo</option>
-              <option value="America/Manaus">America/Manaus</option>
-              <option value="America/Rio_Branco">America/Rio_Branco</option>
-              <option value="America/Noronha">America/Noronha</option>
-              <option value="UTC">UTC</option>
-            </select>
+              triggerClassName="w-full"
+            />
           </div>
 
           <div className="space-y-2">

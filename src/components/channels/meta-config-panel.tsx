@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useEmbeddedSignup } from "@/hooks/use-embedded-signup";
 
+import { ChannelPipelineSelect } from "./channel-pipeline-select";
 import type { ApiChannel } from "./types";
 import { parseChannelConfigRecord } from "./types";
 
@@ -77,6 +78,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   const wasEmbeddedSignup = cfg.embeddedSignup === true;
 
   const [channelName, setChannelName] = useState(channel.name);
+  const [defaultPipelineId, setDefaultPipelineId] = useState<string | null>(
+    channel.defaultPipelineId ?? null,
+  );
   const [accessToken, setAccessToken] = useState("");
   const [appSecret, setAppSecret] = useState("");
   const [verifyToken, setVerifyToken] = useState(initialVerifyToken);
@@ -95,6 +99,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
 
   useEffect(() => {
     setChannelName(channel.name);
+    setDefaultPipelineId(channel.defaultPipelineId ?? null);
     setPhoneNumberId(initialPnId);
     setBusinessAccountId(initialWaba);
     setAppName(initialAppName);
@@ -102,7 +107,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
     setAppSecret("");
     setVerifyToken(initialVerifyToken);
     setShowTokenHint(!!initialToken);
-  }, [channel.id, channel.name, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret, initialVerifyToken]);
+  }, [channel.id, channel.name, channel.defaultPipelineId, initialPnId, initialWaba, initialAppName, initialToken, initialAppSecret, initialVerifyToken]);
 
   // A URL do webhook PRECISA apontar para o backend (não para o frontend).
   // A Meta entrega o callback HTTP direto no backend — o frontend não tem
@@ -150,7 +155,11 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
       const res = await fetch(apiUrl(`/api/channels/${channel.id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: channelName.trim(), config: nextConfig }),
+        body: JSON.stringify({
+          name: channelName.trim(),
+          config: nextConfig,
+          defaultPipelineId,
+        }),
       });
       const data = (await res.json()) as { message?: string };
       if (!res.ok) {
@@ -172,40 +181,40 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-semibold text-foreground">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
           Meta Cloud API
         </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
           Credenciais do WhatsApp Business Platform. Os tokens são armazenados de
           forma segura; valores atuais aparecem mascarados.
         </p>
       </div>
 
-      <div className="rounded-lg border bg-muted/20 p-4 text-sm">
-        <p className="font-medium text-foreground">Configuração atual</p>
-        <ul className="mt-3 space-y-2 text-muted-foreground">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4 text-sm">
+        <p className="font-medium text-[var(--text-primary)]">Configuração atual</p>
+        <ul className="mt-3 space-y-2 text-[var(--text-muted)]">
           <li className="flex justify-between gap-2">
             <span>Access Token</span>
-            <span className="font-mono text-xs text-foreground">
+            <span className="font-mono text-xs text-[var(--text-primary)]">
               {initialToken ? maskSecret(initialToken) : "—"}
             </span>
           </li>
           <li className="flex justify-between gap-2">
             <span>Phone Number ID</span>
-            <span className="font-mono text-xs text-foreground">
+            <span className="font-mono text-xs text-[var(--text-primary)]">
               {initialPnId || "—"}
             </span>
           </li>
           <li className="flex justify-between gap-2">
             <span>Business Account ID</span>
-            <span className="font-mono text-xs text-foreground">
+            <span className="font-mono text-xs text-[var(--text-primary)]">
               {initialWaba || "—"}
             </span>
           </li>
           {!wasEmbeddedSignup && (
             <li className="flex justify-between gap-2">
               <span>App Secret</span>
-              <span className="font-mono text-xs text-foreground">
+              <span className="font-mono text-xs text-[var(--text-primary)]">
                 {initialAppSecret ? maskSecret(initialAppSecret) : "—"}
               </span>
             </li>
@@ -213,7 +222,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           {wasEmbeddedSignup && (
             <li className="flex justify-between gap-2">
               <span>Origem</span>
-              <span className="text-xs text-foreground">
+              <span className="text-xs text-[var(--text-primary)]">
                 Embedded Signup (App Secret via Integrações)
               </span>
             </li>
@@ -221,19 +230,19 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
         </ul>
       </div>
 
-      <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-4 text-sm dark:border-blue-900/50 dark:bg-blue-950/20">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-4 text-sm">
         <div className="flex items-start gap-3">
-          <Webhook className="size-5 shrink-0 text-blue-600" />
+          <Webhook className="size-5 shrink-0 text-[var(--brand-primary)]" />
           <div className="flex-1 space-y-3">
             <div>
-              <p className="font-semibold text-foreground">Webhook desta organizacao</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="font-semibold text-[var(--text-primary)]">Webhook desta organizacao</p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                 Configure ESTA URL e ESTE token no painel Meta (developers.facebook.com → seu app → WhatsApp → Configuracao).
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <Label className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
                 Callback URL
               </Label>
               <div className="flex gap-2">
@@ -252,7 +261,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                     onClick={() => copyToClipboard(webhookUrl, "url")}
                   >
                     {copiedField === "url" ? (
-                      <Check className="size-3.5 text-green-600" />
+                      <Check className="size-3.5 text-[var(--color-success)]" />
                     ) : (
                       <Copy className="size-3.5" />
                     )}
@@ -260,14 +269,14 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                 </TooltipGlass>
               </div>
               {!channel.organizationSlug ? (
-                <p className="text-xs text-amber-600">
+                <p className="text-xs text-[var(--color-warning)]">
                   Organization slug ausente — recarregue a pagina.
                 </p>
               ) : null}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <Label className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
                 Verify Token
               </Label>
               <div className="flex gap-2">
@@ -299,20 +308,47 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                     onClick={() => copyToClipboard(verifyToken, "token")}
                   >
                     {copiedField === "token" ? (
-                      <Check className="size-3.5 text-green-600" />
+                      <Check className="size-3.5 text-[var(--color-success)]" />
                     ) : (
                       <Copy className="size-3.5" />
                     )}
                   </Button>
                 </TooltipGlass>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[var(--text-muted)]">
                 Cole o mesmo valor no campo &quot;Verify Token&quot; do painel Meta. Salve o canal aqui ANTES de clicar em &quot;Verify and save&quot; no painel da Meta.
               </p>
             </div>
 
-            <details className="text-xs text-muted-foreground">
-              <summary className="cursor-pointer font-medium hover:text-foreground">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5"
+                disabled={saveMutation.isPending || !channel.organizationSlug}
+                onClick={() => saveMutation.mutate()}
+              >
+                {saveMutation.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Webhook className="size-3.5" />
+                )}
+                Salvar e ativar URL de callback
+              </Button>
+              {saveMutation.isSuccess ? (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-success)]">
+                  <Check className="size-3.5" />
+                  URL de callback ativa — verifique no painel Meta.
+                </span>
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">
+                  Grava o verifyToken/credenciais para a Meta validar esta URL.
+                </span>
+              )}
+            </div>
+
+            <details className="text-xs text-[var(--text-muted)]">
+              <summary className="cursor-pointer font-medium hover:text-[var(--text-primary)]">
                 Como configurar no painel Meta?
               </summary>
               <ol className="mt-2 ml-4 list-decimal space-y-1">
@@ -331,10 +367,10 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           <Separator />
           <div className="space-y-3">
             <div>
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-sm font-medium text-[var(--text-primary)]">
                 {wasEmbeddedSignup ? "Reconectar" : "Conectar"} via Facebook
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
                 {wasEmbeddedSignup
                   ? "Atualize o token e credenciais automaticamente."
                   : "Obtenha credenciais automaticamente via Embedded Signup."}
@@ -387,10 +423,10 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               {wasEmbeddedSignup ? "Reconectar com Facebook" : "Conectar com Facebook"}
             </Button>
             {esError ? (
-              <p className="text-sm text-destructive">{esError}</p>
+              <p className="text-sm text-[var(--color-danger-text)]">{esError}</p>
             ) : null}
             {esSuccess ? (
-              <p className="text-sm text-[#22c55e]">
+              <p className="text-sm text-[var(--color-success)]">
                 Credenciais atualizadas com sucesso.
               </p>
             ) : null}
@@ -409,10 +445,15 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
             onChange={(e) => setChannelName(e.target.value)}
             placeholder="Ex: WhatsApp Marketing, WhatsApp Vendas"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-[var(--text-muted)]">
             Identificação interna do canal. Exibido nas conversas para o agente saber a origem.
           </p>
         </div>
+        <ChannelPipelineSelect
+          id="meta-default-pipeline"
+          value={defaultPipelineId}
+          onChange={setDefaultPipelineId}
+        />
         <div className="space-y-2">
           <Label htmlFor="meta-app-name">Nome do App (fonte do contato)</Label>
           <Input
@@ -421,7 +462,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
             onChange={(e) => setAppName(e.target.value)}
             placeholder="Ex: WhatsApp Eduit, WhatsApp Comercial"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-[var(--text-muted)]">
             Nome exibido como &quot;Fonte&quot; no contato quando criado por esta conexão.
           </p>
         </div>
@@ -464,12 +505,12 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
             </TooltipGlass>
           </div>
           {accessToken && accessToken.length < 50 ? (
-            <p className="text-xs text-amber-600">
+            <p className="text-xs text-[var(--color-warning)]">
               Atenção: token muito curto ({accessToken.length} caracteres). Tokens válidos da Meta começam com <span className="font-mono">EAA</span> e têm 200+ caracteres.
             </p>
           ) : null}
           {showTokenHint && initialToken ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[var(--text-muted)]">
               Valor salvo: <span className="font-mono">{maskSecret(initialToken)}</span>
             </p>
           ) : null}
@@ -491,10 +532,10 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           />
         </div>
         {wasEmbeddedSignup ? (
-          <div className="rounded-md border bg-muted/20 px-3 py-2">
-            <p className="text-xs text-muted-foreground">
+          <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+            <p className="text-xs text-[var(--text-muted)]">
               Este canal foi conectado via Embedded Signup. O App Secret é gerenciado
-              em <span className="font-medium text-foreground">Configurações → Integrações</span>.
+              em <span className="font-medium text-[var(--text-primary)]">Configurações → Integrações</span>.
             </p>
           </div>
         ) : (
@@ -537,11 +578,11 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               </TooltipGlass>
             </div>
             {initialAppSecret ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[var(--text-muted)]">
                 Valor salvo: <span className="font-mono">{maskSecret(initialAppSecret)}</span>
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[var(--text-muted)]">
                 Configurações → Básico no painel do seu app Meta. Necessário para verificar webhooks vindos do seu app.
               </p>
             )}
@@ -568,9 +609,9 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           <span
             className={cn(
               "inline-flex items-center gap-1.5 text-sm font-medium",
-              statusOk && "text-[#22c55e]",
-              statusBad && "text-destructive",
-              !statusOk && !statusBad && "text-muted-foreground"
+              statusOk && "text-[var(--color-success)]",
+              statusBad && "text-[var(--color-danger-text)]",
+              !statusOk && !statusBad && "text-[var(--text-muted)]"
             )}
           >
             {statusOk ? (
@@ -592,21 +633,21 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
 
       <Separator />
 
-      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
-        <p className="font-medium text-foreground">WhatsApp Calling API</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          No Meta App, subscreva o webhook <code className="rounded bg-muted px-1">calls</code> além de{" "}
-          <code className="rounded bg-muted px-1">messages</code>. Ative chamadas nas configurações do número de
+      <div className="rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-4 text-sm">
+        <p className="font-medium text-[var(--text-primary)]">WhatsApp Calling API</p>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
+          No Meta App, subscreva o webhook <code className="rounded bg-[var(--glass-bg-strong)] px-1">calls</code> além de{" "}
+          <code className="rounded bg-[var(--glass-bg-strong)] px-1">messages</code>. Ative chamadas nas configurações do número de
           negócio e use um token com os escopos exigidos pela Meta para Calling. Este CRM grava eventos na conversa
           WhatsApp e oferece{" "}
-          <code className="rounded bg-muted px-1">POST /api/conversations/{"{id}"}/whatsapp-calls</code> para o fluxo
+          <code className="rounded bg-[var(--glass-bg-strong)] px-1">POST /api/conversations/{"{id}"}/whatsapp-calls</code> para o fluxo
           WebRTC (SDP offer / pre_accept / accept / reject / terminate).
         </p>
         <a
           href="https://developers.facebook.com/docs/whatsapp/cloud-api/calling"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[var(--brand-primary)] hover:underline"
         >
           Documentação oficial — Calling
           <ExternalLink className="size-3" />
@@ -617,7 +658,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
         href={META_DOCS_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-primary)] hover:underline"
       >
         Documentação Meta Business / Cloud API
         <ExternalLink className="size-3.5" />
@@ -636,7 +677,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
       </Button>
 
       {saveMutation.isError ? (
-        <p className="text-sm text-destructive">
+        <p className="text-sm text-[var(--color-danger-text)]">
           {saveMutation.error instanceof Error
             ? saveMutation.error.message
             : "Erro ao salvar."}

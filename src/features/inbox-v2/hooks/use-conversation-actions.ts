@@ -44,6 +44,9 @@ export function useToggleConversationResolve() {
       toast.success(vars.action === "resolve" ? "Conversa finalizada" : "Conversa reaberta");
       qc.invalidateQueries({ queryKey: ["inbox-conversations"] });
       qc.invalidateQueries({ queryKey: ["conversations"] });
+      // Atualiza timeline e activity-feed do deal vinculado à conversa.
+      qc.invalidateQueries({ queryKey: ["deal-timeline-v2"] });
+      qc.invalidateQueries({ queryKey: ["activity-feed"] });
     },
     onError: (err) => toast.error(err.message),
   });

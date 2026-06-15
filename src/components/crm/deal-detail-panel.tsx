@@ -1,12 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+} from "@hello-pangea/dnd"
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconArrowLeft,
   IconChevronDown,
   IconDotsVertical,
+  IconGripVertical,
   IconSearch,
   IconPlus,
   IconPencil,
@@ -18,10 +25,25 @@ import {
   IconMoodSmile,
   IconMicrophone,
   IconSend,
+  IconSettings,
+  IconX,
+  IconCircleCheck,
+  IconCircleDashed,
 } from "@tabler/icons-react"
+import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
+import { RequirePermission } from "@/components/auth/require-permission"
+import { useSectionOrder } from "@/hooks/use-section-order"
 import { BadgeGlass } from "./badge-glass"
+
+// ─── Ordem das seções da sidebar ──────────────────────────────────
+type SidebarSection = "principal" | "contato" | "campos"
+const SIDEBAR_DEFAULT_ORDER: SidebarSection[] = ["principal", "contato", "campos"]
+const SIDEBAR_STORAGE_KEY = "crm:deal-detail:sidebar-order"
 import { ChatArea } from "./chat-area"
 import { type Message } from "./message-bubble"
+import { resolveHighlight, SEVERITY_COLORS } from "@/lib/highlight"
+import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
+import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
 
 interface DealOwner {
   initials: string
@@ -31,6 +53,12 @@ interface DealOwner {
 
 export interface DealDetail {
   id: string
+  /** Número sequencial do deal por organização (1, 2, 3…). */
+  number?: number | null
+  /** ID do contato vinculado ao deal (necessário para editar campos do contato inline). */
+  contactId?: string | null
+  /** Número sequencial do contato por organização. */
+  contactNumber?: number | null
   name: string
   initials: string
   avatarColor: string
@@ -55,9 +83,10 @@ interface DealDetailPanelProps {
   moreActionsSlot?: React.ReactNode
   /** Botão dedicado de excluir negócio (atalho visível no header). */
   deleteSlot?: React.ReactNode
+  /** Botão de edição do contato (ex.: ContactEditDialog), ao lado do nome. */
+  contactEditSlot?: React.ReactNode
   ownerSlot?: React.ReactNode
   sourceSlot?: React.ReactNode
-  forecastSlot?: React.ReactNode
   tagsSlot?: React.ReactNode
   /**
    * Slots para conteudo dinamico do painel de chat. Quando passados,
@@ -78,8 +107,32 @@ interface DealDetailPanelProps {
    * Campos personalizados reais do negócio.
    * Quando fornecido, substitui os rótulos hardcoded (FIELD_GROUPS).
    * Cada item: { fieldId, label, value } — value nulo exibe "—".
+   * `highlightRules` opcional: regras de formatação condicional (JSON cru).
+   * `entityType` + `entityId`: entidade dona do valor (para edição inline).
+   * `options`: opções de um campo SELECT.
    */
-  customFieldsSlot?: { fieldId: string; label: string; value: string | null }[]
+  customFieldsSlot?: {
+    fieldId: string;
+    label: string;
+    value: string | null;
+    type?: string;
+    options?: string[];
+    entityType?: "contact" | "deal";
+    entityId?: string;
+    highlightRules?: unknown[] | null;
+    /** Highlight já resolvido pelo backend — preferir sobre re-resolver. */
+    highlight?: { severity: string; label: string } | null;
+  }[]
+  /**
+   * Painel de configuração de campos (FieldConfigPanel).
+   * Quando fornecido, exibe um botão de engrenagem na sidebar que
+   * alterna para o modo de configuração. Visível apenas para admin/manager.
+   */
+  fieldConfigSlot?: React.ReactNode
+  /** Slot de configuração de campos de contato (split do fieldConfigSlot). */
+  contactFieldConfigSlot?: React.ReactNode
+  /** Slot de configuração de campos de negócio (split do fieldConfigSlot). */
+  dealFieldConfigSlot?: React.ReactNode
   /**
    * Dropdown de troca de fase montado externamente (ex.: StagePicker glass).
    * Quando fornecido, substitui o bloco "Funil de vendas / nome da fase" da sidebar.
@@ -91,6 +144,10 @@ interface DealDetailPanelProps {
    * Se ausente, cai nos STAGES/FUNNEL_PALETTE hardcoded.
    */
   funnelSegments?: { id: string; name: string; color: string; position: number }[]
+  /** ID da conversa ativa vinculada ao deal — permite encerrar/reabrir pelo kebab da TabsBar. */
+  conversationId?: string | null
+  /** Estado de resolução da conversa — para mostrar "Encerrar" ou "Reabrir". */
+  isResolved?: boolean
 }
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
@@ -110,20 +167,45 @@ export function DealDetailPanel({
   onClose,
   deal,
   moreActionsSlot,
-  deleteSlot,
+  deleteSlot: _deleteSlot,
+  contactEditSlot,
   ownerSlot,
   sourceSlot,
-  forecastSlot,
   tagsSlot,
   messagesSlot,
   composerSlot,
   sessionAlertSlot,
   tabContentOverride,
   customFieldsSlot,
+  fieldConfigSlot,
+  contactFieldConfigSlot,
+  dealFieldConfigSlot,
   stageDropdownSlot,
   funnelSegments,
+  conversationId,
+  isResolved,
 }: DealDetailPanelProps) {
+  // Retrocompatibilidade: split slots sobrepõem o legado fieldConfigSlot
+  const resolvedContactConfig = contactFieldConfigSlot ?? fieldConfigSlot ?? null;
+  const resolvedDealConfig = dealFieldConfigSlot ?? null;
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
+  const [configOpen, setConfigOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
+  // Optimistic updates para campos nativos do deal
+  const [dealNative, setDealNative] = useState<Record<string, string>>({})
+  // Modo edição para campos personalizados do negócio
+  const [dealCustomEditMode, setDealCustomEditMode] = useState(false)
+  const [sectionOrder, reorderSections] = useSectionOrder<SidebarSection>(
+    SIDEBAR_STORAGE_KEY,
+    SIDEBAR_DEFAULT_ORDER,
+  )
+
+  function handleSidebarDragEnd(result: DropResult) {
+    if (!result.destination) return
+    reorderSections(result.source.index, result.destination.index)
+  }
 
   // ESC fecha o painel quando esta aberto. Ignora se algum input/
   // textarea/contenteditable estiver focado para nao atrapalhar
@@ -141,7 +223,50 @@ export function DealDetailPanel({
     return () => window.removeEventListener("keydown", onKey)
   }, [isOpen, onClose])
 
-  if (!deal) return null
+  // Enquanto isOpen=true mas o detail ainda está carregando (API assíncrona),
+  // mostra o frame do painel com skeleton para dar feedback imediato ao clique.
+  if (!deal) {
+    if (!isOpen) return null;
+    return (
+      <div
+        className="fixed inset-0 z-50 translate-x-0 transition-transform duration-300 ease-out"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--bg-base, #dde8f5) 0%, var(--bg-mesh-1, #b8cfec) 40%, var(--bg-mesh-2, #e8d5f0) 70%, var(--bg-base, #dde8f5) 100%)",
+          backgroundAttachment: "fixed",
+        }}
+      >
+        <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
+          <header className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-[22px] py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+            <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]">
+              <IconX size={18} />
+            </button>
+            <div className="h-9 w-9 animate-pulse rounded-full bg-[var(--glass-bg-strong)]" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-4 w-40 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
+              <div className="h-3 w-24 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
+            </div>
+          </header>
+          <div className="flex min-h-0 flex-1 gap-3.5">
+            <div className="flex w-[320px] shrink-0 flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-5 backdrop-blur-md">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-1">
+                  <div className="h-2.5 w-16 animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+                  <div className="h-4 w-full animate-pulse rounded bg-[var(--glass-bg-overlay)]" />
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md">
+              <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-[var(--brand-primary)]" />
+                <span className="font-display text-[12px]">Carregando…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const currentStageIndex = deal.stage ? STAGES.indexOf(deal.stage) : 2
   const avatarClass = `av-${deal.avatarColor}`
@@ -211,28 +336,22 @@ export function DealDetailPanel({
               <div className="flex items-center gap-2 font-display text-[18px] font-bold text-[var(--text-primary)]">
                 {deal.name}
                 <BadgeGlass variant="enterprise">ENTERPRISE</BadgeGlass>
+                {contactEditSlot}
               </div>
               <div className="mt-px font-display text-xs text-[var(--text-muted)]">
-                #{deal.id} · {deal.phone || "+55 11 98702-3902"}
+                {deal.contactNumber != null
+                  ? `#${deal.contactNumber}`
+                  : deal.number != null
+                    ? `#${deal.number}`
+                    : `#${deal.id.slice(-6).toUpperCase()}`}
+                {" · "}
+                {deal.phone || "+55 11 98702-3902"}
               </div>
             </div>
           </div>
 
           {/* Espaço flex-1 para empurrar actions para a direita */}
           <div className="flex-1" />
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <PanelIconBtn title="Buscar">
-              <IconSearch size={16} />
-            </PanelIconBtn>
-            {deleteSlot}
-            {moreActionsSlot ?? (
-              <PanelIconBtn title="Mais">
-                <IconDotsVertical size={16} />
-              </PanelIconBtn>
-            )}
-          </div>
         </header>
 
         {/* 2 COLS: SIDEBAR + CONTENT */}
@@ -244,9 +363,46 @@ export function DealDetailPanel({
           >
             {/* Cabeçalho fixo: identificador + funil de vendas segmentado */}
             <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-[22px] pb-4 pt-[18px]">
-              <h2 className="truncate font-display text-[16px] font-bold tracking-tight text-[var(--text-primary)]">
-                Lead #{deal.id.slice(-6).toUpperCase()}
-              </h2>
+              {/* Linha do título: nome do deal + tags inline + gear */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                  <h2 className="shrink-0 font-display text-[16px] font-bold tracking-tight text-[var(--text-primary)]">
+                    Lead #{deal.number ?? deal.id.slice(-6).toUpperCase()}
+                  </h2>
+                  {/* Tags inline com o título */}
+                  {tagsSlot ?? (
+                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[var(--glass-border)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                      <IconPlus size={10} />
+                      Tags
+                    </span>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                {/* Kebab (ações do deal) */}
+                {moreActionsSlot}
+                {/* Gear (configuração de campos) */}
+                {(resolvedContactConfig || resolvedDealConfig) && (
+                  <TooltipGlass
+                    label={configOpen ? "Voltar aos campos" : "Configurar campos"}
+                    side="left"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setConfigOpen((v) => !v)}
+                      aria-label={configOpen ? "Voltar aos campos" : "Configurar campos"}
+                      className={cn(
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+                        configOpen
+                          ? "bg-[var(--brand-primary)] text-white"
+                          : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      {configOpen ? <IconX size={14} /> : <IconSettings size={14} />}
+                    </button>
+                  </TooltipGlass>
+                )}
+                </div>{/* fim flex shrink-0 (kebab + gear) */}
+              </div>{/* fim justify-between */}
 
               <div className="mt-3.5">
                 <div className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -300,77 +456,205 @@ export function DealDetailPanel({
                   </div>
                 )}
               </div>
+
+              {/* Responsável — clicável para alterar */}
+              <div className="mt-3.5 flex items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-3">
+                <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                  Responsável
+                </span>
+                {ownerSlot ?? (
+                  <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1 font-display text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+                  >
+                    {deal.owner?.name || "Sem responsável"}
+                    <IconChevronDown size={11} />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Conteúdo rolável: lista densa de campos */}
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-[22px] py-4">
-              <div className="flex min-w-0 flex-col gap-5">
-                {/* Principal */}
-                <FieldCard>
-                  <FieldRow
-                    label="Responsável"
-                    valueNode={
-                      ownerSlot ?? (
-                        <span className="inline-flex cursor-pointer items-center gap-1.5 font-display text-[13px] font-bold italic text-[var(--text-muted)]">
-                          {deal.owner?.name || "Sem responsável"}
-                          <IconChevronDown size={12} />
-                        </span>
-                      )
-                    }
-                  />
-                  <FieldRow label="Venda" value={formatMoney(deal.value)} money />
-                  <FieldRow
-                    label="Origem"
-                    valueNode={sourceSlot ?? <PlaceholderValue text="Adicionar" />}
-                  />
-                  <FieldRow
-                    label="Previsão"
-                    valueNode={forecastSlot ?? <PlaceholderValue text="Indefinida" />}
-                  />
-                  <FieldRow
-                    label="Tags"
-                    isLast
-                    valueNode={
-                      tagsSlot ?? (
-                        <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[var(--glass-border)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
-                          <IconPlus size={10} />
-                          Adicionar
-                        </span>
-                      )
-                    }
-                  />
-                </FieldCard>
-
-                {/* Dados de Contato */}
-                <FieldCard title="Dados de Contato">
-                  <FieldRow
-                    label="Telefone"
-                    valueNode={
-                      <a
-                        href={deal.phone ? `tel:${deal.phone}` : undefined}
-                        className="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+              {configOpen && (resolvedContactConfig || resolvedDealConfig) ? (
+                <div className="flex min-w-0 flex-col gap-3">
+                  {resolvedContactConfig}
+                  {resolvedDealConfig}
+                </div>
+              ) : (
+                <DragDropContext onDragEnd={handleSidebarDragEnd}>
+                  <Droppable droppableId="sidebar-sections">
+                    {(droppableProvided) => (
+                      <div
+                        ref={droppableProvided.innerRef}
+                        {...droppableProvided.droppableProps}
+                        className="flex min-w-0 flex-col gap-5"
                       >
-                        {deal.phone || "—"}
-                      </a>
-                    }
-                  />
-                  <FieldRow label="Email" value={deal.email ?? undefined} isLast />
-                </FieldCard>
+                        {sectionOrder.map((sectionId, index) => {
+                          if (sectionId === "campos" && (!customFieldsSlot || customFieldsSlot.length === 0)) return null
+                          return (
+                            <Draggable key={sectionId} draggableId={sectionId} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className={cn(
+                                    "group/section",
+                                    snapshot.isDragging && "z-50 opacity-90",
+                                  )}
+                                >
+                                  {sectionId === "principal" && (
+                                    <FieldCard
+                                      dragHandleProps={provided.dragHandleProps ?? undefined}
+                                      dragLabel="Arraste o bloco principal"
+                                    >
+                                      <FieldRow
+                                        label="Origem"
+                                        isLast
+                                        valueNode={sourceSlot ?? <PlaceholderValue text="Adicionar" />}
+                                      />
+                                    </FieldCard>
+                                  )}
 
-                {/* Campos do negócio — dados reais via customFieldsSlot */}
-                {customFieldsSlot && customFieldsSlot.length > 0 && (
-                  <FieldCard title="Campos do negócio">
-                    {customFieldsSlot.map((field, i) => (
-                      <FieldRow
-                        key={field.fieldId}
-                        label={field.label}
-                        value={field.value ?? undefined}
-                        isLast={i === customFieldsSlot.length - 1}
-                      />
-                    ))}
-                  </FieldCard>
-                )}
-              </div>
+                                  {sectionId === "contato" && (
+                                    <FieldCard
+                                      title="Dados de Contato"
+                                      dragHandleProps={provided.dragHandleProps ?? undefined}
+                                    >
+                                      <FieldRow
+                                        label="Telefone"
+                                        valueNode={
+                                          deal.contactId ? (
+                                            <InlineNativeEditor
+                                              value={dealNative["phone"] ?? deal.phone}
+                                              entityType="contact"
+                                              entityId={deal.contactId}
+                                              fieldKey="phone"
+                                              inputType="tel"
+                                              placeholder="Adicionar telefone"
+                                              invalidateKeys={[["contact-sidebar", deal.contactId]]}
+                                              onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))}
+                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                            />
+                                          ) : (
+                                            <a
+                                              href={deal.phone ? `tel:${deal.phone}` : undefined}
+                                              className="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                            >
+                                              {deal.phone || "—"}
+                                            </a>
+                                          )
+                                        }
+                                      />
+                                      <FieldRow
+                                        label="Email"
+                                        isLast
+                                        valueNode={
+                                          deal.contactId ? (
+                                            <InlineNativeEditor
+                                              value={dealNative["email"] ?? (deal.email ?? undefined)}
+                                              entityType="contact"
+                                              entityId={deal.contactId}
+                                              fieldKey="email"
+                                              inputType="email"
+                                              placeholder="Adicionar e-mail"
+                                              invalidateKeys={[["contact-sidebar", deal.contactId]]}
+                                              onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))}
+                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                            />
+                                          ) : (
+                                            <span className="font-display text-[13px] font-bold text-[var(--brand-primary)]">
+                                              {deal.email || "—"}
+                                            </span>
+                                          )
+                                        }
+                                      />
+                                    </FieldCard>
+                                  )}
+
+                                  {sectionId === "campos" && customFieldsSlot && customFieldsSlot.length > 0 && (
+                                    <FieldCard
+                                      title="Campos do negócio"
+                                      dragHandleProps={provided.dragHandleProps ?? undefined}
+                                      titleActions={
+                                        <button
+                                          type="button"
+                                          onClick={() => setDealCustomEditMode((v) => !v)}
+                                          title={dealCustomEditMode ? "Sair do modo edição" : "Editar campos"}
+                                          className={cn(
+                                            "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                                            dealCustomEditMode
+                                              ? "bg-[var(--brand-primary)] text-white"
+                                              : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                          )}
+                                        >
+                                          {dealCustomEditMode ? <IconX size={12} /> : <IconPencil size={12} />}
+                                        </button>
+                                      }
+                                    >
+                                      {customFieldsSlot.map((field, i) => {
+                                        const currentValue = fieldValues[field.fieldId] ?? field.value
+                                        const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                        const canEdit = !!field.entityType && !!field.entityId
+                                        return (
+                                          <FieldRow
+                                            key={field.fieldId}
+                                            label={field.label}
+                                            value={(!hl && !canEdit && !dealCustomEditMode) ? (currentValue ?? undefined) : undefined}
+                                            valueNode={
+                                              /* Modo edição: sempre mostra editor, ignorando badge */
+                                              dealCustomEditMode && canEdit ? (
+                                                <InlineFieldEditor
+                                                  fieldId={field.fieldId}
+                                                  fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                  fieldOptions={field.options ?? []}
+                                                  value={currentValue ?? null}
+                                                  entityType={field.entityType!}
+                                                  entityId={field.entityId!}
+                                                  editMode={dealCustomEditMode}
+                                                  invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                  onSaved={(v) =>
+                                                    setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                  }
+                                                  textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                                  placeholder="— Adicionar"
+                                                />
+                                              ) : hl ? (
+                                                <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                              ) : canEdit ? (
+                                                <InlineFieldEditor
+                                                  fieldId={field.fieldId}
+                                                  fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                  fieldOptions={field.options ?? []}
+                                                  value={currentValue ?? null}
+                                                  entityType={field.entityType!}
+                                                  entityId={field.entityId!}
+                                                  invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                  onSaved={(v) =>
+                                                    setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                  }
+                                                  textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                                  placeholder="— Adicionar"
+                                                />
+                                              ) : undefined
+                                            }
+                                            isLast={i === customFieldsSlot.length - 1}
+                                          />
+                                        )
+                                      })}
+                                    </FieldCard>
+                                  )}
+                                </div>
+                              )}
+                            </Draggable>
+                          )
+                        })}
+                        {droppableProvided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              )}
             </div>
           </aside>
 
@@ -391,7 +675,16 @@ export function DealDetailPanel({
               aria-label="Conversa"
               className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
             >
-              <TabsBar activeTab={activeTab} onChange={setActiveTab} />
+              <TabsBar
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                searchOpen={searchOpen}
+                searchQuery={searchQuery}
+                onSearchOpen={setSearchOpen}
+                onSearchChange={setSearchQuery}
+                conversationId={conversationId}
+                isResolved={isResolved}
+              />
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
@@ -434,45 +727,180 @@ export function DealDetailPanel({
 function TabsBar({
   activeTab,
   onChange,
+  searchOpen,
+  searchQuery,
+  onSearchOpen,
+  onSearchChange,
+  conversationId,
+  isResolved,
 }: {
   activeTab: TabId
   onChange: (id: TabId) => void
+  searchOpen?: boolean
+  searchQuery?: string
+  onSearchOpen?: (open: boolean) => void
+  onSearchChange?: (q: string) => void
+  conversationId?: string | null
+  isResolved?: boolean
 }) {
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const toggleResolve = useToggleConversationResolve()
+
+  /* Fecha kebab ao clicar fora */
+  useEffect(() => {
+    if (!menuOpen) return
+    function onOut(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener("mousedown", onOut)
+    return () => document.removeEventListener("mousedown", onOut)
+  }, [menuOpen])
+
+  /* Foca input ao abrir busca */
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
+
+  const hasConversaActions = (activeTab === "conversa" && !!onSearchOpen) || !!conversationId
+
   return (
-    <header className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3">
-      <div className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-        {TABS.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.id
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange(tab.id)}
-              className={cn(
-                "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
-                isActive
-                  ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-              )}
-            >
-              <Icon size={14} />
-              {tab.label}
-              {tab.count !== undefined && (
-                <span
+    <div className="shrink-0 border-b border-[var(--glass-border-subtle)]">
+      <header className="flex items-center gap-2 px-4 py-3">
+        {/* Tabs pill group — oculta enquanto busca está aberta */}
+        {!(searchOpen && activeTab === "conversa") && (
+          <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+            {TABS.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onChange(tab.id)}
                   className={cn(
-                    "rounded-full px-1.5 font-display text-[10px] font-bold",
-                    isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+                    isActive
+                      ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                   )}
                 >
-                  {tab.count}
-                </span>
-              )}
+                  <Icon size={14} />
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 font-display text-[10px] font-bold",
+                        isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Busca inline — ocupa o flex-1 quando aberta */}
+        {searchOpen && activeTab === "conversa" ? (
+          <div className="flex flex-1 items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-1.5">
+            <IconSearch size={13} className="shrink-0 text-[var(--text-muted)]" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Buscar na conversa…"
+              value={searchQuery ?? ""}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              className="flex-1 bg-transparent font-display text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange?.("")}
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)]"
+              >
+                <IconX size={10} />
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Fechar busca"
+              onClick={() => { onSearchOpen?.(false); onSearchChange?.("") }}
+              className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+            >
+              <IconX size={12} />
             </button>
-          )
-        })}
-      </div>
-    </header>
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+
+        {/* Kebab de ações do header — lupa + encerrar conversa */}
+        {hasConversaActions && (
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              aria-label="Ações"
+              onClick={() => setMenuOpen((v) => !v)}
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+                menuOpen
+                  ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]",
+              )}
+            >
+              <IconDotsVertical size={15} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full z-[200] mt-1.5 w-52 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+                {/* Buscar na conversa */}
+                {activeTab === "conversa" && onSearchOpen && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSearchOpen(!searchOpen)
+                      if (searchOpen) onSearchChange?.("")
+                      setMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-white/10"
+                  >
+                    <IconSearch size={14} className="shrink-0 text-[var(--text-muted)]" />
+                    {searchOpen ? "Fechar busca" : "Buscar na conversa"}
+                  </button>
+                )}
+
+                {/* Encerrar / Reabrir conversa */}
+                {conversationId && (
+                  <RequirePermission permission="conversation:close">
+                    <button
+                      type="button"
+                      disabled={toggleResolve.isPending}
+                      onClick={() => {
+                        toggleResolve.mutate(
+                          { conversationId, action: isResolved ? "reopen" : "resolve" },
+                          { onSuccess: () => setMenuOpen(false) },
+                        )
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-white/10 disabled:opacity-50"
+                    >
+                      {isResolved
+                        ? <IconCircleDashed size={14} className="shrink-0 text-[var(--text-muted)]" />
+                        : <IconCircleCheck size={14} className="shrink-0 text-[var(--text-muted)]" />
+                      }
+                      {isResolved ? "Reabrir conversa" : "Encerrar conversa"}
+                    </button>
+                  </RequirePermission>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </header>
+    </div>
   )
 }
 
@@ -504,17 +932,70 @@ function SubLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** Cartão branco que agrupa uma lista densa de FieldRow (estilo Kommo). */
+/** Badge colorido de destaque para campos com formatação condicional. */
+function HighlightBadge({
+  severity,
+  label,
+}: {
+  severity: "danger" | "success" | "warning" | "info"
+  label: string
+}) {
+  const colors = SEVERITY_COLORS[severity]
+  return (
+    <span
+      style={{
+        backgroundColor: colors.bg,
+        color: colors.text,
+        border: `1px solid ${colors.border}`,
+      }}
+      className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold"
+    >
+      {label}
+    </span>
+  )
+}
+
+/** Cartão que agrupa uma lista densa de FieldRow (estilo Kommo).
+ *  Quando `dragHandleProps` é fornecido, exibe alça de arraste no header. */
 function FieldCard({
   title,
+  dragLabel,
+  dragHandleProps,
+  titleActions,
   children,
 }: {
   title?: string
+  /** Texto acessível para a alça quando não há título. */
+  dragLabel?: string
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>
+  /** Ações extras no cabeçalho (botões, ícones). */
+  titleActions?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section>
-      {title && <SubLabel>{title}</SubLabel>}
+      {/* Header com título + alça de arraste */}
+      <div className="mb-2 flex items-center gap-1">
+        {dragHandleProps && (
+          <span
+            {...dragHandleProps}
+            className="flex cursor-grab items-center rounded p-0.5 text-[var(--text-muted)] opacity-0 transition-opacity group-hover/section:opacity-50 hover:opacity-100 active:cursor-grabbing"
+            aria-label={dragLabel ?? `Arrastar bloco ${title ?? ""}`}
+          >
+            <IconGripVertical size={12} />
+          </span>
+        )}
+        {title && (
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            {title}
+          </span>
+        )}
+        {titleActions && (
+          <div className="ml-auto flex items-center gap-1">
+            {titleActions}
+          </div>
+        )}
+      </div>
       <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4">
         {children}
       </div>

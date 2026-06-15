@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 
 import { IconFilter, IconLayoutKanban, IconList } from "@tabler/icons-react";
 
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
@@ -20,7 +21,7 @@ import { toDealListRow } from "@/features/pipeline-v2/adapters";
 
 import { cn } from "@/lib/utils";
 
-const PER_PAGE = 30;
+const DEFAULT_PER_PAGE = 25;
 
 /**
  * Visão "Lista" do pipeline /v2 — cabeada em `GET /api/deals`.
@@ -44,6 +45,7 @@ export default function V2PipelineListClientPage() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
 
   // Debounce 300ms para a busca.
   useEffect(() => {
@@ -69,12 +71,12 @@ export default function V2PipelineListClientPage() {
     pipelineId,
     search: debounced || undefined,
     page,
-    perPage: PER_PAGE,
+    perPage,
     enabled: isAuthenticated && !!pipelineId,
   });
 
   const total = dealsQuery.data?.total ?? 0;
-  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
   const items = dealsQuery.data?.items ?? [];
   const rows = items.map(toDealListRow);
 
@@ -96,27 +98,22 @@ export default function V2PipelineListClientPage() {
           }
           actions={
             <>
-              {/* Filtro de pipeline (nativo, simples). */}
-              <label className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]">
+              {/* Filtro de pipeline (DS v2). */}
+              <div className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]">
                 <IconFilter size={14} className="text-[var(--text-muted)]" />
                 <span className="font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
                   Pipeline
                 </span>
-                <select
-                  className="cursor-pointer border-0 bg-transparent font-display text-[13px] font-semibold text-[var(--text-primary)] outline-none"
+                <DropdownGlass
+                  options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
                   value={pipelineId ?? ""}
-                  onChange={(e) => {
-                    setPipelineId(e.target.value || undefined);
+                  onValueChange={(v) => {
+                    setPipelineId(v || undefined);
                     setPage(1);
                   }}
-                >
-                  {pipelines.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  triggerClassName="border-0 bg-transparent font-display text-[13px] font-semibold text-[var(--text-primary)]"
+                />
+              </div>
               <ViewSwitcher current="list" />
             </>
           }
@@ -155,6 +152,11 @@ export default function V2PipelineListClientPage() {
           canNext={page < lastPage}
           onPrev={() => setPage((p) => Math.max(1, p - 1))}
           onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+          perPage={perPage}
+          onPerPageChange={(value) => {
+            setPerPage(value);
+            setPage(1);
+          }}
         />
       </main>
     </div>

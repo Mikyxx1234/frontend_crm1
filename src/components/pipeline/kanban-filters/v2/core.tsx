@@ -16,6 +16,7 @@ import { Check, ChevronDown, Search, Save, Trash2, Bookmark, Lock, Users as User
 
 import { cn } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { SelectNative } from "@/components/ui/select";
 
 import {
@@ -159,17 +160,17 @@ export function FieldCard({
     <div
       className={cn(
         "rounded-xl border bg-white p-3 transition-colors",
-        active ? "border-blue-200 bg-blue-50/30" : "border-black/6 hover:border-black/10",
+        active ? "border-primary/20 bg-primary-soft/30" : "border-black/6 hover:border-black/10",
         className,
       )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">{label}</span>
         {active && onClear && (
           <button
             type="button"
             onClick={onClear}
-            className="text-[11px] font-medium text-blue-600 transition-colors hover:text-blue-700"
+            className="text-[11px] font-medium text-primary transition-colors hover:text-primary-dark"
           >
             Limpar
           </button>
@@ -196,8 +197,8 @@ export function ChipToggle({
       className={cn(
         "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
         active
-          ? "border-transparent bg-blue-600 text-white"
-          : "border-black/6 bg-white text-slate-600 hover:border-black/10 hover:text-slate-900",
+          ? "border-transparent bg-primary text-white"
+          : "border-black/6 bg-white text-ink-soft hover:border-black/10 hover:text-foreground",
       )}
     >
       {active && <Check className="size-3" />}
@@ -223,7 +224,7 @@ export function TextField({
   return (
     <div className="relative">
       {icon && (
-        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">{icon}</span>
+        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-subtle">{icon}</span>
       )}
       <input
         type={type}
@@ -231,7 +232,7 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "h-9 w-full rounded-lg border border-black/6 bg-slate-50/80 px-3 text-[13px] text-slate-900 placeholder:text-slate-400 outline-none transition-colors focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-500/20",
+          "h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none transition-colors focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20",
           icon && "pl-8",
         )}
       />
@@ -243,36 +244,34 @@ function DateRangeField({ value, onChange }: { value?: DateRangeValue; onChange:
   const preset = detectPreset(value);
   return (
     <div className="space-y-2">
-      <SelectNative
+      <DropdownGlass
+        options={(Object.keys(DATE_PRESET_LABELS) as DatePresetKey[]).map((k) => ({
+          value: k,
+          label: DATE_PRESET_LABELS[k],
+        }))}
         value={preset}
-        onChange={(e) => {
-          const key = e.target.value as DatePresetKey;
+        onValueChange={(v) => {
+          const key = v as DatePresetKey;
           if (key === "custom") return;
           if (key === "any") return onChange(undefined);
           onChange(dateRangeFromPreset(key) ?? undefined);
         }}
-        className="h-9 rounded-lg text-[13px]"
-      >
-        {(Object.keys(DATE_PRESET_LABELS) as DatePresetKey[]).map((k) => (
-          <option key={k} value={k}>
-            {DATE_PRESET_LABELS[k]}
-          </option>
-        ))}
-      </SelectNative>
+        triggerClassName="h-9 w-full rounded-lg text-[13px]"
+      />
       {preset === "custom" && (
         <div className="flex items-center gap-2">
           <input
             type="date"
             value={value?.from ?? ""}
             onChange={(e) => onChange({ ...value, from: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-500/20"
+            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-blue-500/20"
           />
-          <span className="shrink-0 text-[12px] text-slate-400">até</span>
+          <span className="shrink-0 text-[12px] text-ink-subtle">até</span>
           <input
             type="date"
             value={value?.to ?? ""}
             onChange={(e) => onChange({ ...value, to: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-slate-900 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-500/20"
+            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-blue-500/20"
           />
         </div>
       )}
@@ -318,9 +317,9 @@ export function StagesSection({ draft, options, optionsLoading, setDraftField, t
   return (
     <FieldCard label="Etapas" active={!!draft.stageIds?.length} onClear={() => setDraftField("stageIds", undefined)}>
       {optionsLoading ? (
-        <p className="text-[12px] text-slate-400">Carregando…</p>
+        <p className="text-[12px] text-ink-subtle">Carregando…</p>
       ) : stages.length === 0 ? (
-        <p className="text-[12px] text-slate-400">Nenhuma etapa.</p>
+        <p className="text-[12px] text-ink-subtle">Nenhuma etapa.</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {stages.map((stage) => {
@@ -333,8 +332,8 @@ export function StagesSection({ draft, options, optionsLoading, setDraftField, t
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors",
                   active
-                    ? "border-transparent bg-blue-600 text-white"
-                    : "border-black/6 bg-white text-slate-600 hover:border-black/10 hover:text-slate-900",
+                    ? "border-transparent bg-primary text-white"
+                    : "border-black/6 bg-white text-ink-soft hover:border-black/10 hover:text-foreground",
                 )}
               >
                 <span className="size-2 shrink-0 rounded-full" style={{ background: stage.color || "#94a3b8" }} />
@@ -418,7 +417,7 @@ export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
             }}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-              draft.withoutOwner ? "bg-blue-50 font-medium text-blue-700" : "text-slate-600 hover:bg-slate-50",
+              draft.withoutOwner ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
             )}
           >
             <span className={ds.avatar.empty + " size-6"}>
@@ -440,7 +439,7 @@ export function OwnersSection({ draft, options, setDraftField }: SectionProps) {
                 }}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-                  active ? "bg-blue-50 font-medium text-blue-700" : "text-slate-600 hover:bg-slate-50",
+                  active ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
                 )}
               >
                 <span
@@ -520,15 +519,15 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Mínimo"
           value={draft.valueFrom ?? ""}
           onChange={(e) => setDraftField("valueFrom", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-black/6 bg-slate-50/80 px-3 text-[13px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
         />
-        <span className="shrink-0 text-[12px] text-slate-400">–</span>
+        <span className="shrink-0 text-[12px] text-ink-subtle">–</span>
         <input
           type="number"
           placeholder="Máximo"
           value={draft.valueTo ?? ""}
           onChange={(e) => setDraftField("valueTo", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-black/6 bg-slate-50/80 px-3 text-[13px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
         />
       </div>
     </FieldCard>
@@ -573,7 +572,7 @@ export function OtherDatesSection({ draft, setDraftField }: SectionProps) {
           { label: "Última interação", key: "lastInteractionAt" as const },
         ].map(({ label, key }) => (
           <div key={key}>
-            <span className="mb-1 block text-[11px] text-slate-400">{label}</span>
+            <span className="mb-1 block text-[11px] text-ink-subtle">{label}</span>
             <DateRangeField value={draft[key]} onChange={(v) => setDraftField(key, v)} />
           </div>
         ))}
@@ -608,25 +607,23 @@ function CustomFieldRow({
       : {};
 
   return (
-    <div className="space-y-2 rounded-lg border border-black/6 bg-slate-50/60 p-2">
+    <div className="space-y-2 rounded-lg border border-black/6 bg-muted/60 p-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] font-semibold text-slate-700">{field.label}</span>
-        <button type="button" onClick={onRemove} className="text-slate-400 transition-colors hover:text-rose-500" aria-label="Remover">
+        <span className="text-[12px] font-semibold text-ink-soft">{field.label}</span>
+        <button type="button" onClick={onRemove} className="text-ink-subtle transition-colors hover:text-destructive" aria-label="Remover">
           <X className="size-3.5" />
         </button>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <SelectNative
+        <DropdownGlass
+          options={allowedOps.map((op) => ({
+            value: op,
+            label: CUSTOM_OPERATORS.find((o) => o.value === op)?.label ?? op,
+          }))}
           value={currentOp}
-          onChange={(e) => onChange({ ...filter, operator: e.target.value as CustomFieldOperator, value: undefined })}
-          className="h-9 rounded-lg text-[12px]"
-        >
-          {allowedOps.map((op) => (
-            <option key={op} value={op}>
-              {CUSTOM_OPERATORS.find((o) => o.value === op)?.label ?? op}
-            </option>
-          ))}
-        </SelectNative>
+          onValueChange={(v) => onChange({ ...filter, operator: v as CustomFieldOperator, value: undefined })}
+          triggerClassName="h-9 w-full rounded-lg text-[12px]"
+        />
         {opDef?.needsValue ? (
           currentOp === "between" ? (
             <div className="col-span-1 grid grid-cols-2 gap-1">
@@ -658,18 +655,13 @@ function CustomFieldRow({
                 ))}
               </SelectNative>
             ) : (
-              <SelectNative
-                value={typeof filter.value === "string" ? filter.value : ""}
-                onChange={(e) => onChange({ ...filter, value: e.target.value })}
-                className="h-9 rounded-lg text-[12px]"
-              >
-                <option value="">— escolha —</option>
-                {field.options.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </SelectNative>
+              <DropdownGlass
+                options={field.options.map((o) => ({ value: o, label: o }))}
+                value={typeof filter.value === "string" ? filter.value || undefined : undefined}
+                onValueChange={(v) => onChange({ ...filter, value: v })}
+                placeholder="— escolha —"
+                triggerClassName="h-9 w-full rounded-lg text-[12px]"
+              />
             )
           ) : (
             <input
@@ -681,7 +673,7 @@ function CustomFieldRow({
             />
           )
         ) : (
-          <span className="self-center text-[11px] italic text-slate-400">sem valor</span>
+          <span className="self-center text-[11px] italic text-ink-subtle">sem valor</span>
         )}
       </div>
     </div>
@@ -721,22 +713,21 @@ function CustomFieldsSection({
     <FieldCard label={label} active={!!selected.length} onClear={() => setDraftField(fieldsKey, undefined)}>
       <div className="space-y-2">
         {optionsLoading ? (
-          <p className="text-[12px] text-slate-400">Carregando…</p>
+          <p className="text-[12px] text-ink-subtle">Carregando…</p>
         ) : (
           <div className="flex items-center gap-2">
-            <SelectNative value={pick} onChange={(e) => setPick(e.target.value)} className="h-9 flex-1 rounded-lg text-[12px]">
-              <option value="">+ Adicionar critério…</option>
-              {available.map((cf) => (
-                <option key={cf.id} value={cf.id}>
-                  {cf.label}
-                </option>
-              ))}
-            </SelectNative>
+            <DropdownGlass
+              options={available.map((cf) => ({ value: cf.id, label: cf.label }))}
+              value={pick || undefined}
+              onValueChange={setPick}
+              placeholder="+ Adicionar critério…"
+              triggerClassName="h-9 flex-1 rounded-lg text-[12px]"
+            />
             <button
               type="button"
               onClick={addField}
               disabled={!pick}
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 px-3 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-muted px-3 text-[13px] font-medium text-ink-soft transition-colors hover:bg-subtle disabled:opacity-50"
             >
               +
             </button>
@@ -807,17 +798,12 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
     >
       <div className="space-y-2">
         {selectedIds.length > 1 && (
-          <SelectNative
+          <DropdownGlass
+            options={TAG_MODE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             value={draft.tagMode ?? "any"}
-            onChange={(e) => setDraftField("tagMode", e.target.value as TagMode)}
-            className="h-9 rounded-lg text-[12px]"
-          >
-            {TAG_MODE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </SelectNative>
+            onValueChange={(v) => setDraftField("tagMode", v as TagMode)}
+            triggerClassName="h-9 w-full rounded-lg text-[12px]"
+          />
         )}
         <TextField value={search} onChange={setSearch} placeholder="Localizar tags" icon={<Search className="size-3.5" />} />
         <div className="max-h-48 space-y-0.5 overflow-y-auto">
@@ -829,10 +815,10 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
             }}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
-              draft.withoutTags ? "bg-blue-50 font-medium text-blue-700" : "text-slate-600 hover:bg-slate-50",
+              draft.withoutTags ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
             )}
           >
-            <span className="inline-block size-2.5 shrink-0 rounded-full border border-dashed border-slate-300" />
+            <span className="inline-block size-2.5 shrink-0 rounded-full border border-dashed border-black/15" />
             Sem tags
             {draft.withoutTags && <Check className="ml-auto size-3.5" />}
           </button>
@@ -846,7 +832,7 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
                 onClick={() => toggleTag(tag.id)}
                 className={cn(
                   "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors",
-                  isSelected ? "bg-blue-50/60" : "hover:bg-slate-50",
+                  isSelected ? "bg-primary-soft/60" : "hover:bg-muted",
                 )}
               >
                 <span
@@ -861,15 +847,15 @@ export function TagsSection({ draft, options, setDraftField }: SectionProps) {
                 </span>
                 <span className="flex items-center gap-1.5">
                   {tag.dealCount != null && (
-                    <span className="tabular-nums text-[11px] text-slate-400">{tag.dealCount.toLocaleString("pt-BR")}</span>
+                    <span className="tabular-nums text-[11px] text-ink-subtle">{tag.dealCount.toLocaleString("pt-BR")}</span>
                   )}
-                  {isSelected && <Check className="size-3.5 text-blue-600" />}
+                  {isSelected && <Check className="size-3.5 text-primary" />}
                 </span>
               </button>
             );
           })}
           {filtered.length === 0 && search && (
-            <p className="px-2 py-3 text-center text-[12px] text-slate-400">Nenhuma tag encontrada.</p>
+            <p className="px-2 py-3 text-center text-[12px] text-ink-subtle">Nenhuma tag encontrada.</p>
           )}
         </div>
       </div>
@@ -916,8 +902,8 @@ export function QuickFiltersList({
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium transition-colors",
                 active
-                  ? "border-transparent bg-blue-600 text-white"
-                  : "border-black/6 bg-white text-slate-600 hover:border-black/10 hover:text-slate-900",
+                  ? "border-transparent bg-primary text-white"
+                  : "border-black/6 bg-white text-ink-soft hover:border-black/10 hover:text-foreground",
               )}
             >
               {qf.dot && <span className="size-2 rounded-full" style={{ background: qf.dot }} />}
@@ -940,7 +926,7 @@ export function QuickFiltersList({
             onClick={() => onApply(qf.filters)}
             className={cn(
               "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
-              active ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+              active ? "bg-primary-soft font-semibold text-primary-dark" : "text-ink-soft hover:bg-muted hover:text-foreground",
             )}
           >
             {qf.dot && <span className="size-2 shrink-0 rounded-full" style={{ background: qf.dot }} />}
@@ -951,8 +937,8 @@ export function QuickFiltersList({
 
       {savedFilters.length > 0 && (
         <>
-          <div className="my-2 border-t border-slate-100" />
-          <span className="px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Salvos</span>
+          <div className="my-2 border-t border-black/5" />
+          <span className="px-3 text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">Salvos</span>
           {savedFilters.map((sf) => {
             const active = JSON.stringify(draft) === JSON.stringify(sf.filterConfig);
             return (
@@ -962,10 +948,10 @@ export function QuickFiltersList({
                 onClick={() => onApply(sf.filterConfig as AdvancedDealFilters)}
                 className={cn(
                   "group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors",
-                  active ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                  active ? "bg-primary-soft font-semibold text-primary-dark" : "text-ink-soft hover:bg-muted hover:text-foreground",
                 )}
               >
-                <Bookmark className="size-3.5 shrink-0 text-blue-600/60" />
+                <Bookmark className="size-3.5 shrink-0 text-primary/60" />
                 <span className="flex-1 truncate">{sf.name}</span>
                 {sf.isShared ? <UsersIcon className="size-3.5 shrink-0 opacity-40" /> : <Lock className="size-3.5 shrink-0 opacity-40" />}
               </button>
@@ -976,11 +962,11 @@ export function QuickFiltersList({
 
       {onRequestSave && !isEmptyFilters(draft) && (
         <>
-          <div className="my-2 border-t border-slate-100" />
+          <div className="my-2 border-t border-black/5" />
           <button
             type="button"
             onClick={() => onRequestSave(draft)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] text-ink-muted transition-colors hover:bg-muted hover:text-foreground"
           >
             <Save className="size-3.5" />
             Salvar filtro atual
@@ -1010,7 +996,7 @@ export function FilterHeaderActions({
           type="button"
           onClick={() => onRequestSave(draft)}
           disabled={empty}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-ink-soft transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
         >
           <Save className="size-3.5" />
           Salvar
@@ -1020,7 +1006,7 @@ export function FilterHeaderActions({
         type="button"
         onClick={onClear}
         disabled={empty}
-        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40"
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-medium text-ink-soft transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
       >
         <Trash2 className="size-3.5" />
         Limpar
@@ -1033,7 +1019,7 @@ export function ActiveCountBadge({ draft }: { draft: AdvancedDealFilters }) {
   const n = countActiveFilters(draft);
   if (n === 0) return null;
   return (
-    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[11px] font-semibold text-white">
+    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white">
       {n}
     </span>
   );

@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Shield } from "lucide-react";
+import {
+  IconAlertTriangle,
+  IconAntennaBars5,
+  IconEye,
+  IconKey,
+  IconLoader2,
+  IconSend,
+  IconShield,
+  IconUsers,
+} from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import {
@@ -15,9 +23,16 @@ import {
   useDeleteRole,
   usePermissionsCatalog,
   useRole,
+  useRoleScopeGrants,
+  useScopeChannelOptions,
   useUpdateRole,
+  useUpdateRoleScopeGrants,
 } from "./hooks";
-import type { ActionDef, ResourceDef } from "./types";
+import {
+  RolePermissionsEditor,
+  type PermissionsEditorMode,
+} from "./role-permissions-editor";
+import { ScopeMultiSelect, normalizeScope } from "./user-permissions-view";
 
 interface RoleEditorProps {
   roleId: string | null;
@@ -37,6 +52,7 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [mode, setMode] = useState<PermissionsEditorMode>("levels");
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
@@ -47,6 +63,12 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
       ),
     [catalog?.resources],
   );
+
+  // Editor unificado: exibe TODAS as permissões do catálogo, incluindo
+  // mensageria (conversas, canais, templates, campanhas). A gestão de
+  // mensageria foi consolidada aqui — em /settings/conversations sobrou
+  // apenas um atalho.
+  const editorResources = catalog?.resources ?? [];
 
   useEffect(() => {
     if (role) {
@@ -61,22 +83,20 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   }, [role, allCatalogKeys]);
 
   const isSystem = role?.isSystem ?? false;
+  const isAdminPreset = role?.systemPreset === "ADMIN";
   const loading = roleLoading || catalogLoading;
   const saving = createRole.isPending || updateRole.isPending;
   const deleting = deleteRole.isPending;
 
-  function togglePermission(key: string) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
+  // Contadores do resumo (coluna de identidade). `nav:*` são derivadas,
+  // então não entram na contagem de "permissões ativas".
+  const permsCount = Array.from(checked).filter(
+    (k) => !k.startsWith("nav:"),
+  ).length;
+  const usersCount = role?._count?.assignments ?? 0;
 
   async function handleSave() {
     setError(null);
-    const isAdminPreset = role?.systemPreset === "ADMIN";
     const permissions = isAdminPreset
       ? ["*"]
       : Array.from(checked);
@@ -112,212 +132,245 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   if (loading) {
     return (
       <div className="flex h-48 items-center justify-center">
-        <Loader2 className="size-5 animate-spin" style={{ color: "var(--text-muted)" }} />
+        <IconLoader2 className="size-5 animate-spin text-[var(--text-muted)]" />
       </div>
     );
   }
 
+  const fieldsDisabled = isSystem && !isNew;
+
   return (
-    <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Shield className="size-4" style={{ color: "var(--brand-primary)" }} />
-        <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-          {isNew ? "Novo role" : (role?.name ?? "")}
-        </span>
-        {isSystem && (
-          <Badge variant="outline" className="ml-auto text-[10px]">
-            Preset do sistema
-          </Badge>
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+      {/* ── COLUNA ESQUERDA: identidade do role (fixa) ─────────────────── */}
+      <aside className="flex flex-col gap-3 lg:sticky lg:top-2">
+        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow-sm)]">
+          {/* Cabeçalho: ícone + nome + badge de preset */}
+          <div className="flex flex-col items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-6 py-5 text-center">
+            <div className="flex size-12 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
+              <IconShield size={22} />
+            </div>
+            <h2 className="font-display text-[14px] font-bold leading-tight text-[var(--text-primary)]">
+              {isNew ? "Novo role" : (role?.name ?? "")}
+            </h2>
+            {isSystem && (
+              <Badge variant="outline" className="text-[10px]">
+                Preset do sistema
+              </Badge>
+            )}
+          </div>
+
+          {/* Campos editáveis + resumo */}
+          <div className="flex flex-col gap-3.5 px-5 py-4">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">Nome</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={fieldsDisabled}
+                placeholder="Ex.: Supervisor SP"
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">Descrição</Label>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={fieldsDisabled}
+                placeholder="Opcional"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            {/* Resumo */}
+            <div className="flex flex-col gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] p-3">
+              <div className="flex items-center gap-2 text-[12px] text-[var(--text-secondary)]">
+                <IconKey size={13} className="shrink-0 text-[var(--brand-primary)]" />
+                <span>
+                  <strong className="text-[var(--text-primary)]">
+                    {isAdminPreset ? "Todas" : permsCount}
+                  </strong>{" "}
+                  {isAdminPreset ? "as permissões" : "permissões ativas"}
+                </span>
+              </div>
+              {!isNew && (
+                <div className="flex items-center gap-2 text-[12px] text-[var(--text-secondary)]">
+                  <IconUsers size={13} className="shrink-0 text-[var(--text-muted)]" />
+                  <span>
+                    <strong className="text-[var(--text-primary)]">{usersCount}</strong>{" "}
+                    usuário(s) com este role
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ações */}
+          <div className="flex flex-col gap-2 border-t border-[var(--glass-border-subtle)] px-5 py-4">
+            <Button
+              size="sm"
+              onClick={() => void handleSave()}
+              disabled={saving || (!isNew && !name.trim())}
+              className="h-9 w-full justify-center text-xs"
+            >
+              {saving && <IconLoader2 className="mr-1.5 size-3 animate-spin" />}
+              Salvar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onClose}
+              className="h-9 w-full justify-center text-xs"
+            >
+              Cancelar
+            </Button>
+            {!isNew && !isSystem && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className={cn(
+                  "mt-1 h-9 w-full justify-center text-xs",
+                  deleteConfirm
+                    ? "border-[var(--color-destructive)] bg-[var(--color-destructive-soft)] text-[var(--color-destructive)]"
+                    : "text-[var(--color-destructive)]",
+                )}
+              >
+                {deleting ? <IconLoader2 className="mr-1.5 size-3 animate-spin" /> : null}
+                {deleteConfirm ? "Confirmar exclusão" : "Deletar role"}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Erro */}
+        {error && (
+          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-destructive)] bg-[var(--color-destructive-soft)] px-3 py-2 text-xs text-[var(--color-destructive)]">
+            <IconAlertTriangle className="size-3.5 shrink-0" />
+            {error}
+          </div>
         )}
+      </aside>
+
+      {/* ── COLUNA DIREITA: matriz de permissões (painéis soltos, DS v2) ── */}
+      <div className="flex min-w-0 flex-col gap-4">
+        <RolePermissionsEditor
+          resources={editorResources}
+          checked={checked}
+          onChange={setChecked}
+          mode={mode}
+          onModeChange={setMode}
+          disabled={isAdminPreset || saving}
+        />
+        {isAdminPreset && (
+          <p className="text-[11px] text-[var(--text-muted)]">
+            O preset Admin sempre possui acesso total (
+            <code className="font-mono">*</code>) — as permissões não são editáveis.
+          </p>
+        )}
+
+        {/* Canais por papel: só faz sentido para papéis não-admin já criados
+            (precisa de roleId para persistir o grant). */}
+        {!isNew && !isAdminPreset && roleId && <RoleChannelScope roleId={roleId} />}
       </div>
+    </div>
+  );
+}
 
-      {/* Campos de nome / descrição */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Nome</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={isSystem && !isNew}
-            placeholder="Ex.: Supervisor SP"
-            className="h-8 text-xs"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Descrição</Label>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={isSystem && !isNew}
-            placeholder="Opcional"
-            className="h-8 text-xs"
-          />
-        </div>
+/**
+ * Escopo de CANAIS por papel. Concede a todos os usuários com este papel acesso
+ * a ver / enviar nos canais selecionados (eixo aditivo ao override por usuário).
+ * Persiste em `permissions.scope.grants.v1` via
+ * `PUT /api/roles/[id]/scope-grants`. Só tem efeito real com a flag
+ * `rbac_granular_scope_v1` ativa.
+ */
+function RoleChannelScope({ roleId }: { roleId: string }) {
+  const { data, isLoading } = useRoleScopeGrants(roleId);
+  const channels = useScopeChannelOptions();
+  const update = useUpdateRoleScopeGrants(roleId);
+
+  const [channelViewIds, setChannelViewIds] = useState<string[] | null>(null);
+  const [channelSendIds, setChannelSendIds] = useState<string[] | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!data) return;
+    setChannelViewIds(normalizeScope(data.channelViewIds));
+    setChannelSendIds(normalizeScope(data.channelSendIds));
+    setDirty(false);
+  }, [data]);
+
+  async function handleSave() {
+    setErr(null);
+    try {
+      await update.mutateAsync({ channelViewIds, channelSendIds });
+      setDirty(false);
+      setSaved(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erro ao salvar canais.");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-4 shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
+      <div className="flex items-center gap-1.5">
+        <IconAntennaBars5 size={14} className="text-[var(--text-muted)]" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          Canais deste papel
+        </span>
       </div>
+      <p className="text-[11px] text-[var(--text-muted)]">
+        Define quais canais os usuários com este papel podem ver/usar. Some-se ao
+        que cada usuário já tenha liberado individualmente.
+      </p>
 
-      {/* Matriz de permissões */}
-      <div className="flex flex-col gap-2">
-        <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-          Permissões
-        </Label>
-        <div
-          className="overflow-auto rounded-[var(--radius-lg)] border"
-          style={{
-            borderColor: "var(--glass-border)",
-            background: "var(--glass-bg-base)",
-            maxHeight: "420px",
-          }}
-        >
-          {(catalog?.resources ?? []).map((res) => (
-            <PermissionSection
-              key={res.resource}
-              resource={res}
-              checked={checked}
-              onToggle={togglePermission}
-            />
-          ))}
-        </div>
-      </div>
+      <ScopeMultiSelect
+        label="Canais — ver mensagens"
+        icon={<IconEye size={12} className="text-[var(--text-muted)]" />}
+        options={channels.data ?? []}
+        value={channelViewIds}
+        onChange={(v) => {
+          setChannelViewIds(v);
+          setDirty(true);
+          setSaved(false);
+        }}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
 
-      {/* Erro */}
-      {error && (
-        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          <AlertTriangle className="size-3.5 shrink-0" />
-          {error}
-        </div>
-      )}
+      <ScopeMultiSelect
+        label="Canais — enviar mensagens"
+        icon={<IconSend size={12} className="text-[var(--text-muted)]" />}
+        options={channels.data ?? []}
+        value={channelSendIds}
+        onChange={(v) => {
+          setChannelSendIds(v);
+          setDirty(true);
+          setSaved(false);
+        }}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
 
-      {/* Ações */}
       <div className="flex items-center gap-2">
         <Button
           size="sm"
+          variant="outline"
           onClick={() => void handleSave()}
-          disabled={saving || (!isNew && !name.trim())}
-          className="h-8 text-xs"
+          disabled={!dirty || update.isPending}
+          className="h-7 shrink-0 gap-1 text-[11px]"
         >
-          {saving && <Loader2 className="mr-1.5 size-3 animate-spin" />}
-          Salvar
+          {update.isPending ? <IconLoader2 className="size-3 animate-spin" /> : null}
+          Salvar canais
         </Button>
-        <Button size="sm" variant="outline" onClick={onClose} className="h-8 text-xs">
-          Cancelar
-        </Button>
-        {!isNew && !isSystem && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
-            className={cn(
-              "ml-auto h-8 text-xs",
-              deleteConfirm
-                ? "border-red-400 bg-red-50 text-red-700 hover:bg-red-100"
-                : "text-red-600 hover:text-red-700",
-            )}
-          >
-            {deleting ? (
-              <Loader2 className="mr-1.5 size-3 animate-spin" />
-            ) : null}
-            {deleteConfirm ? "Confirmar exclusão" : "Deletar role"}
-          </Button>
+        {saved && !dirty && (
+          <span className="text-[11px] text-[var(--text-muted)]">Salvo</span>
         )}
+        {err && <span className="text-[11px] text-[var(--color-destructive)]">{err}</span>}
       </div>
     </div>
-  );
-}
-
-/* ── PermissionSection ───────────────────────────────────────────────────── */
-
-function PermissionSection({
-  resource,
-  checked,
-  onToggle,
-}: {
-  resource: ResourceDef;
-  checked: Set<string>;
-  onToggle: (key: string) => void;
-}) {
-  const [open, setOpen] = useState(true);
-  const allKeys = resource.actions.map((a) => `${resource.resource}:${a.action}`);
-  const checkedCount = allKeys.filter((k) => checked.has(k)).length;
-
-  return (
-    <div className="border-b last:border-b-0" style={{ borderColor: "var(--glass-border-subtle)" }}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
-      >
-        {open ? (
-          <ChevronDown className="size-3.5 shrink-0" style={{ color: "var(--text-muted)" }} />
-        ) : (
-          <ChevronRight className="size-3.5 shrink-0" style={{ color: "var(--text-muted)" }} />
-        )}
-        <span className="flex-1 text-xs font-semibold" style={{ color: "var(--text-primary)" }}>
-          {resource.label}
-        </span>
-        {checkedCount > 0 && (
-          <span
-            className="text-[10px] font-medium"
-            style={{ color: "var(--brand-primary)" }}
-          >
-            {checkedCount}/{allKeys.length}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <ul className="pb-1">
-          {resource.actions.map((action) => (
-            <PermissionRow
-              key={action.action}
-              resource={resource.resource}
-              action={action}
-              checked={checked}
-              onToggle={onToggle}
-            />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function PermissionRow({
-  resource,
-  action,
-  checked,
-  onToggle,
-}: {
-  resource: string;
-  action: ActionDef;
-  checked: Set<string>;
-  onToggle: (key: string) => void;
-}) {
-  const key = `${resource}:${action.action}`;
-  const isChecked = checked.has(key);
-
-  return (
-    <li>
-      <label
-        className="flex cursor-pointer items-center gap-3 py-1.5 pl-10 pr-4 transition-colors hover:bg-[var(--glass-bg-overlay)]"
-      >
-        <input
-          type="checkbox"
-          checked={isChecked}
-          onChange={() => onToggle(key)}
-          className="size-3.5 rounded accent-[var(--brand-primary)]"
-        />
-        <span
-          className={cn("flex-1 text-xs", action.destructive ? "text-red-600" : "")}
-          style={action.destructive ? {} : { color: "var(--text-secondary)" }}
-        >
-          {action.label}
-        </span>
-        <span className="font-mono text-[10px]" style={{ color: "var(--text-muted)" }}>
-          {key}
-        </span>
-      </label>
-    </li>
   );
 }

@@ -69,7 +69,7 @@ const TYPES: {
     label: "E-mail",
     description: "Caixa compartilhada",
     icon: Mail,
-    cardClass: "border-border hover:border-primary/30",
+      cardClass: "border-[var(--glass-border)] hover:border-[var(--brand-primary)]/30",
   },
   {
     type: "WEBCHAT",
@@ -244,7 +244,7 @@ export function CreateChannelDialog({
         <div className="p-6">
           <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="size-5 text-primary" />
+              <Sparkles className="size-5 text-[var(--brand-primary)]" />
               Novo canal
             </DialogTitle>
             <DialogDescription>
@@ -269,7 +269,7 @@ export function CreateChannelDialog({
                       "flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all",
                       cardClass,
                       channelType === type
-                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                        ? "ring-2 ring-[var(--brand-primary)] ring-offset-2"
                         : "opacity-90 hover:opacity-100"
                     )}
                   >
@@ -279,12 +279,12 @@ export function CreateChannelDialog({
                         type === "WHATSAPP" && "text-[#25D366]"
                       )}
                     />
-                    <span className="font-semibold text-foreground">{label}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-[var(--text-primary)]">{label}</span>
+                    <span className="text-xs text-[var(--text-muted)]">
                       {description}
                     </span>
                     {channelType === type ? (
-                      <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                      <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[var(--brand-primary)]">
                         <Check className="size-3.5" />
                         Selecionado
                       </span>
@@ -303,11 +303,11 @@ export function CreateChannelDialog({
                     "rounded-xl border-2 p-4 text-left transition-all",
                     "border-blue-500/20 bg-blue-500/5 hover:border-blue-500/40",
                     provider === "META_CLOUD_API" &&
-                      "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      "ring-2 ring-[var(--brand-primary)] ring-offset-2"
                   )}
                 >
                   <p className="font-semibold">Meta Cloud API (Oficial)</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
                     API oficial do WhatsApp Business. Requer token e IDs do Meta
                     Business. Templates, selo de verificado, cobrança por conversa.
                   </p>
@@ -319,14 +319,14 @@ export function CreateChannelDialog({
                     "rounded-xl border-2 p-4 text-left transition-all",
                     "border-[#25D366]/20 bg-[#25D366]/5 hover:border-[#25D366]/40",
                     provider === "BAILEYS_MD" &&
-                      "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      "ring-2 ring-[var(--brand-primary)] ring-offset-2"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <QrCode className="size-5 text-[#25D366]" />
                     <p className="font-semibold">WhatsApp QR Code</p>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">
                     Conecte qualquer número via QR code. Sem templates, sem
                     verificação Meta. Rápido e direto.
                   </p>
@@ -351,10 +351,10 @@ export function CreateChannelDialog({
                     {showEmbeddedSignup ? (
                       <div className="space-y-3">
                         <div className="rounded-xl border-2 border-blue-500/20 bg-blue-500/5 p-4">
-                          <p className="text-sm font-medium text-foreground">
+                          <p className="text-sm font-medium text-[var(--text-primary)]">
                             Conectar via Facebook
                           </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
                             Obtenha credenciais automaticamente com login Meta.
                             Token, Phone ID e WABA ID são configurados de forma segura.
                             O App Secret é lido de Configurações â†’ Integrações.
@@ -382,7 +382,7 @@ export function CreateChannelDialog({
 
                         <button
                           type="button"
-                          className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                          className="flex w-full items-center justify-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                           onClick={() => setShowManualConfig(!showManualConfig)}
                         >
                           <ChevronDown
@@ -395,7 +395,7 @@ export function CreateChannelDialog({
                         </button>
 
                         {showManualConfig ? (
-                          <div className="space-y-3 rounded-lg border bg-muted/10 p-3">
+                          <div className="space-y-3 rounded-lg border bg-[var(--glass-bg-overlay)] p-3">
                             <div className="space-y-2">
                               <Label htmlFor="ch-token">Access Token</Label>
                               <Input
@@ -439,7 +439,7 @@ export function CreateChannelDialog({
                                 onChange={(e) => setAppSecret(e.target.value)}
                                 placeholder="Chave secreta do seu app Meta"
                               />
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-[var(--text-muted)]">
                                 Configurações â†’ Básico no painel do seu app Meta. Necessário para verificar webhooks vindos do seu app.
                               </p>
                             </div>
@@ -489,7 +489,7 @@ export function CreateChannelDialog({
                             onChange={(e) => setAppSecret(e.target.value)}
                             placeholder="Chave secreta do seu app Meta"
                           />
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-[var(--text-muted)]">
                             Configurações â†’ Básico no painel do seu app Meta. Necessário para verificar webhooks vindos do seu app.
                           </p>
                         </div>
@@ -500,7 +500,7 @@ export function CreateChannelDialog({
 
                 {effectiveProvider === "BAILEYS_MD" ? (
                   <div className="rounded-lg border border-[#25D366]/20 bg-[#25D366]/5 p-3">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-[var(--text-muted)]">
                       Após criar o canal, clique em <strong>Conectar</strong> e escaneie o QR code
                       com seu WhatsApp. O número será detectado automaticamente.
                     </p>
@@ -522,14 +522,14 @@ export function CreateChannelDialog({
             ) : null}
 
             {error ? (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="text-sm text-[var(--color-danger-text)]" role="alert">
                 {error}
               </p>
             ) : null}
           </div>
         </div>
 
-        <DialogFooter className="flex-row flex-wrap gap-2 border-t bg-muted/20 px-6 py-4">
+        <DialogFooter className="flex-row flex-wrap gap-2 border-t bg-[var(--glass-bg-overlay)] px-6 py-4">
           {step > 1 ? (
             <Button
               type="button"

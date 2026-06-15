@@ -36,7 +36,7 @@ export function TeamWidget() {
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr className="border-b border-border/40 text-left">
+          <tr className="border-b border-[var(--glass-border-subtle)] text-left">
             <th className="pb-2 pr-3 font-semibold text-muted-foreground">#</th>
             <th className="pb-2 pr-3 font-semibold text-muted-foreground">Agente</th>
             <th className="pb-2 pr-3 text-right font-semibold text-muted-foreground">Ganhos</th>
@@ -53,7 +53,7 @@ export function TeamWidget() {
             const convRate = total > 0 ? (u.dealsWon / total) * 100 : 0;
 
             return (
-              <tr key={u.userId} className="border-b border-border/20">
+              <tr key={u.userId} className="border-b border-[var(--glass-border-subtle)]">
                 <td className="py-2.5 pr-3">
                   {idx === 0 ? (
                     <Trophy className="size-4 text-amber-500" />
@@ -80,7 +80,7 @@ export function TeamWidget() {
                   {u.avgCycleTime > 0 ? `${u.avgCycleTime.toFixed(1)}d` : "—"}
                 </td>
                 <td className="py-2.5">
-                  <div className="h-2.5 w-full min-w-16 overflow-hidden rounded-full bg-muted/30">
+                  <div className="h-2.5 w-full min-w-16 overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
                     <div
                       className="h-full rounded-full bg-primary transition-all duration-500"
                       style={{ width: `${Math.max(revPct, 3)}%` }}

@@ -4,8 +4,9 @@ import { apiUrl } from "@/lib/api";
 
 import type {
   EffectivePermissions,
-  GroupMember,
+  GroupDetail,
   GroupSummary,
+  GroupWritePayload,
   PermissionsCatalog,
   RoleSummary,
 } from "./types";
@@ -39,7 +40,12 @@ export function useRole(id: string | null) {
 export function useCreateRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; description?: string; permissions: string[] }) =>
+    mutationFn: (data: {
+      name: string;
+      description?: string;
+      permissions: string[];
+      inheritsFrom?: string | null;
+    }) =>
       apiFetch<RoleSummary>("/api/roles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,6 +68,7 @@ export function useUpdateRole() {
       name?: string;
       description?: string;
       permissions?: string[];
+      inheritsFrom?: string | null;
     }) =>
       apiFetch<RoleSummary>(`/api/roles/${id}`, {
         method: "PUT",
@@ -131,25 +138,18 @@ export function useGroups() {
 }
 
 export function useGroup(id: string | null) {
-  return useQuery<GroupSummary>({
+  return useQuery<GroupDetail>({
     queryKey: ["groups", id],
     queryFn: () => apiFetch(`/api/groups/${id}`),
-    enabled: !!id,
+    enabled: !!id && id !== "new",
   });
 }
 
 export function useCreateGroup() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: {
-      name: string;
-      description?: string;
-      color?: string;
-      roleId?: string | null;
-      channelGrants?: string[];
-      stageGrants?: string[];
-    }) =>
-      apiFetch<GroupSummary>("/api/groups", {
+    mutationFn: (data: GroupWritePayload & { name: string }) =>
+      apiFetch<GroupDetail>("/api/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -163,20 +163,8 @@ export function useCreateGroup() {
 export function useUpdateGroup() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      ...data
-    }: {
-      id: string;
-      name?: string;
-      description?: string;
-      color?: string;
-      roleId?: string | null;
-      channelGrants?: string[];
-      stageGrants?: string[];
-      isActive?: boolean;
-    }) =>
-      apiFetch<GroupSummary>(`/api/groups/${id}`, {
+    mutationFn: ({ id, ...data }: GroupWritePayload & { id: string }) =>
+      apiFetch<GroupDetail>(`/api/groups/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -184,6 +172,7 @@ export function useUpdateGroup() {
     onSuccess: (_, { id }) => {
       void qc.invalidateQueries({ queryKey: ["groups"] });
       void qc.invalidateQueries({ queryKey: ["groups", id] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
   });
 }
@@ -202,46 +191,17 @@ export function useDeleteGroup() {
 export function useAddGroupMember() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      groupId,
-      userId,
-      roleId,
-    }: {
-      groupId: string;
-      userId: string;
-      roleId?: string | null;
-    }) =>
-      apiFetch<GroupMember>(`/api/groups/${groupId}/members`, {
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      apiFetch<GroupDetail>(`/api/groups/${groupId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, roleId }),
+        body: JSON.stringify({ userId }),
       }),
-    onSuccess: (_, { groupId }) => {
+    onSuccess: (_, { groupId, userId }) => {
       void qc.invalidateQueries({ queryKey: ["groups", groupId] });
       void qc.invalidateQueries({ queryKey: ["groups"] });
-    },
-  });
-}
-
-export function useUpdateGroupMember() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      groupId,
-      userId,
-      roleId,
-    }: {
-      groupId: string;
-      userId: string;
-      roleId: string | null;
-    }) =>
-      apiFetch<GroupMember>(`/api/groups/${groupId}/members/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleId }),
-      }),
-    onSuccess: (_, { groupId }) => {
-      void qc.invalidateQueries({ queryKey: ["groups", groupId] });
+      void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
   });
 }
@@ -251,9 +211,11 @@ export function useRemoveGroupMember() {
   return useMutation({
     mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
       apiFetch(`/api/groups/${groupId}/members/${userId}`, { method: "DELETE" }),
-    onSuccess: (_, { groupId }) => {
+    onSuccess: (_, { groupId, userId }) => {
       void qc.invalidateQueries({ queryKey: ["groups", groupId] });
       void qc.invalidateQueries({ queryKey: ["groups"] });
+      void qc.invalidateQueries({ queryKey: ["effective-permissions", userId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
     },
   });
 }
@@ -275,5 +237,123 @@ export function useEffectivePermissions(userId: string | null) {
     queryKey: ["effective-permissions", userId],
     queryFn: () => apiFetch(`/api/users/${userId}/effective-permissions`),
     enabled: !!userId,
+  });
+}
+
+// ── Escopo por usuário (funis e canais) ────────────────────────────────────
+//
+// `null` = sem restrição (acesso a todos). `string[]` = restrito aos IDs.
+// Lê/grava o `permissions.scope.grants.v1` da org via endpoint dedicado que
+// faz read-merge-write (não apaga regras de outros usuários/papéis).
+
+export type UserScopeGrantsDto = {
+  pipelineIds: string[] | null;
+  channelViewIds: string[] | null;
+  channelSendIds: string[] | null;
+};
+
+export function useUserScopeGrants(userId: string | null) {
+  return useQuery<UserScopeGrantsDto>({
+    queryKey: ["user-scope-grants", userId],
+    queryFn: () => apiFetch(`/api/users/${userId}/scope-grants`),
+    enabled: !!userId,
+  });
+}
+
+export function useUpdateUserScopeGrants(userId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<UserScopeGrantsDto>) =>
+      apiFetch<UserScopeGrantsDto & { ok: boolean }>(
+        `/api/users/${userId}/scope-grants`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["user-scope-grants", userId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
+    },
+  });
+}
+
+// ── Escopo de CANAL por Role (RBAC) ──────────────────────────────────────
+// Eixo aditivo: concede canais a todos os usuários que possuem a role.
+// `null` = sem restrição por esta role. `string[]` = restringe/concede aos IDs.
+
+export type RoleScopeGrantsDto = {
+  channelViewIds: string[] | null;
+  channelSendIds: string[] | null;
+};
+
+export function useRoleScopeGrants(roleId: string | null) {
+  return useQuery<RoleScopeGrantsDto>({
+    queryKey: ["role-scope-grants", roleId],
+    queryFn: () => apiFetch(`/api/roles/${roleId}/scope-grants`),
+    enabled: !!roleId,
+  });
+}
+
+export function useUpdateRoleScopeGrants(roleId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<RoleScopeGrantsDto>) =>
+      apiFetch<RoleScopeGrantsDto & { ok: boolean }>(
+        `/api/roles/${roleId}/scope-grants`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["role-scope-grants", roleId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
+    },
+  });
+}
+
+export type ScopeEntityOption = { id: string; name: string };
+
+function pickArray(data: unknown, ...keys: string[]): unknown[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    for (const key of keys) {
+      const value = (data as Record<string, unknown>)[key];
+      if (Array.isArray(value)) return value;
+    }
+  }
+  return [];
+}
+
+/** Funis da org (id + nome) para o seletor de escopo. */
+export function useScopePipelineOptions() {
+  return useQuery<ScopeEntityOption[]>({
+    queryKey: ["scope-pipelines"],
+    queryFn: async () => {
+      const data = await apiFetch<unknown>("/api/pipelines");
+      return pickArray(data, "pipelines", "items").map((p) => {
+        const row = p as { id: string; name?: string };
+        return { id: row.id, name: row.name ?? row.id };
+      });
+    },
+    staleTime: 60_000,
+  });
+}
+
+/** Canais da org (id + nome) para o seletor de escopo. */
+export function useScopeChannelOptions() {
+  return useQuery<ScopeEntityOption[]>({
+    queryKey: ["scope-channels"],
+    queryFn: async () => {
+      const data = await apiFetch<unknown>("/api/channels");
+      return pickArray(data, "channels", "items").map((c) => {
+        const row = c as { id: string; name?: string };
+        return { id: row.id, name: row.name ?? row.id };
+      });
+    },
+    staleTime: 60_000,
   });
 }

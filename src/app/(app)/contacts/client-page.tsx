@@ -2,9 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 
-import { IconUsers, IconPlus, IconTrash, IconAlertTriangle } from "@tabler/icons-react";
+import {
+  IconUsers,
+  IconPlus,
+  IconTrash,
+  IconAlertTriangle,
+  IconPencil,
+  IconBuilding,
+  IconSearch,
+  IconCheck,
+  IconX,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
@@ -14,15 +25,42 @@ import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 
-import { useContacts, useCreateContact, useDeleteContact } from "@/features/directory-v2/hooks";
+import {
+  useContacts,
+  useCreateContact,
+  useDeleteContact,
+  useUpdateContact,
+  useCompanies,
+} from "@/features/directory-v2/hooks";
+import type { ContactListItemDto } from "@/features/directory-v2/api";
 
-const PER_PAGE = 30;
+const DEFAULT_PER_PAGE = 25;
 
 function fmtDateBR(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("pt-BR");
+}
+
+const AVATAR_COLORS = [
+  "var(--brand-primary)",
+  "var(--brand-secondary)",
+  "var(--color-success)",
+  "var(--brand-primary-light)",
+];
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase() || "?";
+}
+
+function avatarColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 export default function V2ContactsClientPage() {
@@ -32,7 +70,9 @@ export default function V2ContactsClientPage() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<ContactListItemDto | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteMut = useDeleteContact();
@@ -52,13 +92,13 @@ export default function V2ContactsClientPage() {
   const query = useContacts({
     search: debounced || undefined,
     page,
-    perPage: PER_PAGE,
+    perPage,
     enabled: isAuthenticated,
   });
 
   const items = query.data?.items ?? [];
   const total = query.data?.total ?? 0;
-  const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
 
   const allChecked = items.length > 0 && items.every((c) => selected.has(c.id));
   const someChecked = items.some((c) => selected.has(c.id));
@@ -175,76 +215,110 @@ export default function V2ContactsClientPage() {
             />
           </div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-            <div className="min-h-0 flex-1 overflow-auto">
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10 bg-[var(--glass-bg-overlay)] backdrop-blur-md">
-                  <tr className="border-b border-[var(--glass-border-subtle)]">
-                    <th className="w-12 px-3 py-3 text-left">
-                      <CheckboxGlass
-                        checked={allChecked}
-                        indeterminate={!allChecked && someChecked}
-                        onChange={toggleAll}
-                        aria-label="Selecionar todos"
-                      />
-                    </th>
-                    <Th>Nome</Th>
-                    <Th>E-mail</Th>
-                    <Th>Telefone</Th>
-                    <Th>Empresa</Th>
-                    <Th>Tags</Th>
-                    <Th>Criado em</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((c) => (
-                    <tr
-                      key={c.id}
-                      className={`border-b border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-overlay)] ${
-                        selected.has(c.id) ? "bg-[var(--glass-bg-overlay)]" : ""
-                      }`}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
+            <div className="mb-2.5 grid grid-cols-[42px_2.4fr_1.4fr_1.1fr_1fr_1fr_44px] items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+              <span>
+                <CheckboxGlass
+                  checked={allChecked}
+                  indeterminate={!allChecked && someChecked}
+                  onChange={toggleAll}
+                  aria-label="Selecionar todos"
+                />
+              </span>
+              <span>Nome / E-mail</span>
+              <span>Telefone</span>
+              <span>Empresa</span>
+              <span>Tags</span>
+              <span>Criado em</span>
+              <span className="text-right">Ações</span>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+              {items.map((c) => (
+                <div
+                  key={c.id}
+                  className={`grid grid-cols-[42px_2.4fr_1.4fr_1.1fr_1fr_1fr_44px] items-center gap-3.5 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)] ${
+                    selected.has(c.id)
+                      ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
+                      : "border-[var(--glass-border-subtle)]"
+                  }`}
+                >
+                  <span>
+                    <CheckboxGlass
+                      checked={selected.has(c.id)}
+                      onChange={() => toggleOne(c.id)}
+                      aria-label={`Selecionar ${c.name}`}
+                    />
+                  </span>
+
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
+                      style={{ background: avatarColor(c.id) }}
                     >
-                      <td className="px-3 py-3">
-                        <CheckboxGlass
-                          checked={selected.has(c.id)}
-                          onChange={() => toggleOne(c.id)}
-                          aria-label={`Selecionar ${c.name}`}
+                      {initials(c.name)}
+                    </span>
+                    <div className="min-w-0">
+                      <Link
+                        href={`/contacts/${c.id}`}
+                        className="group/name inline-flex max-w-full items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                      >
+                        <span className="truncate">{c.name}</span>
+                        <IconPencil
+                          size={13}
+                          className="flex-shrink-0 opacity-0 transition-opacity group-hover/name:opacity-60"
                         />
-                      </td>
-                      <Td>
-                        <span className="font-display text-[13px] font-bold text-[var(--text-primary)]">
-                          {c.name}
-                        </span>
-                      </Td>
-                      <Td muted>{c.email ?? "—"}</Td>
-                      <Td muted>{c.phone ?? "—"}</Td>
-                      <Td muted>{c.company?.name ?? "—"}</Td>
-                      <Td>
-                        <div className="flex flex-wrap gap-1">
-                          {(c.tags ?? []).slice(0, 3).map((t) => (
-                            <span
-                              key={t.id}
-                              className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold"
-                              style={{
-                                color: t.color ?? "var(--text-muted)",
-                                borderColor: `${t.color ?? "var(--glass-border)"}33`,
-                              }}
-                            >
-                              {t.name}
-                            </span>
-                          ))}
-                          {(c.tags?.length ?? 0) > 3 && (
-                            <span className="font-display text-[10px] text-[var(--text-muted)]">
-                              +{(c.tags?.length ?? 0) - 3}
-                            </span>
-                          )}
-                        </div>
-                      </Td>
-                      <Td muted>{fmtDateBR(c.createdAt)}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </Link>
+                      <div className="truncate font-body text-[12px] text-[var(--text-muted)]">
+                        {c.email ?? "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                    {c.phone ?? "—"}
+                  </div>
+                  <div className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                    {c.company?.name ?? "—"}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1">
+                    {(c.tags ?? []).slice(0, 3).map((t) => (
+                      <span
+                        key={t.id}
+                        className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold"
+                        style={{
+                          color: t.color ?? "var(--text-muted)",
+                          borderColor: `${t.color ?? "var(--glass-border)"}33`,
+                        }}
+                      >
+                        {t.name}
+                      </span>
+                    ))}
+                    {(c.tags?.length ?? 0) > 3 && (
+                      <span className="font-display text-[10px] text-[var(--text-muted)]">
+                        +{(c.tags?.length ?? 0) - 3}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="font-display text-[13px] text-[var(--text-muted)]">
+                    {fmtDateBR(c.createdAt)}
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(c)}
+                      aria-label={`Editar ${c.name}`}
+                      title="Editar contato"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+                    >
+                      <IconPencil size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -255,10 +329,19 @@ export default function V2ContactsClientPage() {
           canNext={page < lastPage}
           onPrev={() => setPage((p) => Math.max(1, p - 1))}
           onNext={() => setPage((p) => Math.min(lastPage, p + 1))}
+          perPage={perPage}
+          onPerPageChange={(value) => {
+            setPerPage(value);
+            setPage(1);
+          }}
         />
       </main>
 
       <CreateContactDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <EditContactDialog
+        contact={editing}
+        onClose={() => setEditing(null)}
+      />
       <ConfirmDeleteDialog
         open={confirmOpen}
         count={selected.size}
@@ -359,6 +442,8 @@ function CreateContactDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const createMut = useCreateContact();
 
   useEffect(() => {
@@ -366,6 +451,8 @@ function CreateContactDialog({
       setName("");
       setEmail("");
       setPhone("");
+      setCompanyId(null);
+      setCompanyName(null);
       createMut.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -393,8 +480,14 @@ function CreateContactDialog({
         name: n,
         email: email.trim() || null,
         phone: phone.trim() || null,
+        companyId: companyId,
       },
-      { onSuccess: () => onOpenChange(false) },
+      {
+        onSuccess: () => {
+          toast.success("Contato criado.");
+          onOpenChange(false);
+        },
+      },
     );
   }
 
@@ -444,7 +537,7 @@ function CreateContactDialog({
           />
         </label>
 
-        <label className="mb-4 block">
+        <label className="mb-3 block">
           <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
             Telefone
           </span>
@@ -456,6 +549,20 @@ function CreateContactDialog({
             className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
           />
         </label>
+
+        <div className="mb-4">
+          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
+            Empresa
+          </span>
+          <CompanyPicker
+            valueId={companyId}
+            valueName={companyName}
+            onChange={(id, nm) => {
+              setCompanyId(id);
+              setCompanyName(nm);
+            }}
+          />
+        </div>
 
         {createMut.isError ? (
           <p className="mb-3 text-[12px] text-[var(--color-danger,#e11d48)]">
@@ -491,24 +598,281 @@ function CreateContactDialog({
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-      {children}
-    </th>
+function EditContactDialog({
+  contact,
+  onClose,
+}: {
+  contact: ContactListItemDto | null;
+  onClose: () => void;
+}) {
+  const open = contact !== null;
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const updateMut = useUpdateContact();
+
+  useEffect(() => {
+    if (contact) {
+      setName(contact.name);
+      setEmail(contact.email ?? "");
+      setPhone(contact.phone ?? "");
+      setCompanyId(contact.company?.id ?? null);
+      setCompanyName(contact.company?.name ?? null);
+      updateMut.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    if (open) {
+      window.addEventListener("keydown", onEsc);
+      return () => window.removeEventListener("keydown", onEsc);
+    }
+  }, [open, onClose]);
+
+  if (!open || !contact || typeof document === "undefined") return null;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const n = name.trim();
+    if (!n || !contact) return;
+    updateMut.mutate(
+      {
+        id: contact.id,
+        body: {
+          name: n,
+          email: email.trim() || null,
+          phone: phone.trim() || null,
+          companyId: companyId,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success("Contato atualizado.");
+          onClose();
+        },
+      },
+    );
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        className="w-[420px] max-w-[90vw] rounded-[var(--radius-xl)] border p-5 shadow-2xl"
+        style={{
+          background: "rgba(255, 255, 255, 0.98)",
+          borderColor: "var(--glass-border, rgba(0,0,0,0.08))",
+        }}
+      >
+        <h3 className="mb-4 font-display text-base font-bold text-[var(--text-primary,#1a202c)]">
+          Editar contato
+        </h3>
+
+        <label className="mb-3 block">
+          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
+            Nome *
+          </span>
+          <input
+            type="text"
+            autoFocus
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex.: Maria Silva"
+            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
+          />
+        </label>
+
+        <label className="mb-3 block">
+          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
+            E-mail
+          </span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="maria@empresa.com"
+            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
+          />
+        </label>
+
+        <label className="mb-3 block">
+          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
+            Telefone
+          </span>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="(11) 99999-9999"
+            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
+          />
+        </label>
+
+        <div className="mb-4">
+          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
+            Empresa
+          </span>
+          <CompanyPicker
+            valueId={companyId}
+            valueName={companyName}
+            onChange={(id, nm) => {
+              setCompanyId(id);
+              setCompanyName(nm);
+            }}
+          />
+        </div>
+
+        {updateMut.isError ? (
+          <p className="mb-3 text-[12px] text-[var(--color-danger,#e11d48)]">
+            {updateMut.error instanceof Error
+              ? updateMut.error.message
+              : "Erro ao atualizar contato."}
+          </p>
+        ) : null}
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary,#4a5568)] hover:bg-black/5"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={!name.trim() || updateMut.isPending}
+            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-white disabled:opacity-60"
+            style={{
+              background: "var(--brand-primary, #5b6ff5)",
+              boxShadow: "0 4px 14px rgba(91,111,245,0.35)",
+            }}
+          >
+            {updateMut.isPending ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </form>
+    </div>,
+    document.body,
   );
 }
 
-function Td({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
+/**
+ * Seletor de empresa com busca (combobox). Vincula um contato a uma empresa
+ * via `companyId`. `null` = sem empresa. Lista via `useCompanies`.
+ */
+function CompanyPicker({
+  valueId,
+  valueName,
+  onChange,
+}: {
+  valueId: string | null;
+  valueName: string | null;
+  onChange: (id: string | null, name: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [debounced, setDebounced] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(q.trim()), 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const { data, isLoading } = useCompanies({
+    search: debounced || undefined,
+    page: 1,
+    perPage: 20,
+    enabled: open,
+  });
+  const options = data?.items ?? [];
+
   return (
-    <td className="px-3 py-3">
-      <span
-        className={`font-display text-[13px] ${
-          muted ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]"
-        }`}
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-left text-[13px] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
       >
-        {children}
-      </span>
-    </td>
+        <span className="flex min-w-0 items-center gap-2">
+          <IconBuilding size={15} className="flex-shrink-0 text-[var(--text-muted,#718096)]" />
+          <span
+            className={`truncate ${valueName ? "text-[var(--text-primary,#1a202c)]" : "text-[var(--text-muted,#718096)]"}`}
+          >
+            {valueName ?? "Sem empresa vinculada"}
+          </span>
+        </span>
+        {valueId ? (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Remover vínculo de empresa"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange(null, null);
+            }}
+            className="flex-shrink-0 rounded-full p-0.5 text-[var(--text-muted,#718096)] hover:bg-black/5 hover:text-[var(--color-danger,#e11d48)]"
+          >
+            <IconX size={14} />
+          </span>
+        ) : null}
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-10 max-h-56 overflow-hidden rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white shadow-xl">
+          <div className="flex items-center gap-2 border-b border-[var(--glass-border,rgba(0,0,0,0.06))] px-2.5 py-2">
+            <IconSearch size={14} className="text-[var(--text-muted,#718096)]" />
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar empresa..."
+              className="w-full bg-transparent text-[13px] text-[var(--text-primary,#1a202c)] outline-none"
+            />
+          </div>
+          <div className="max-h-44 overflow-y-auto py-1">
+            {isLoading ? (
+              <div className="px-3 py-2 text-[12px] text-[var(--text-muted,#718096)]">Carregando...</div>
+            ) : options.length === 0 ? (
+              <div className="px-3 py-2 text-[12px] text-[var(--text-muted,#718096)]">
+                {debounced ? "Nenhuma empresa encontrada." : "Digite para buscar."}
+              </div>
+            ) : (
+              options.map((co) => {
+                const active = co.id === valueId;
+                return (
+                  <button
+                    key={co.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(co.id, co.name);
+                      setOpen(false);
+                      setQ("");
+                    }}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[13px] text-[var(--text-primary,#1a202c)] hover:bg-[var(--brand-primary,#5b6ff5)]/8"
+                  >
+                    <span className="truncate">{co.name}</span>
+                    {active ? (
+                      <IconCheck size={14} className="flex-shrink-0 text-[var(--brand-primary,#5b6ff5)]" />
+                    ) : null}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

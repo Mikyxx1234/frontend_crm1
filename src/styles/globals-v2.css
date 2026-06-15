@@ -46,6 +46,14 @@
   --color-warning:          #f59e0b;
   --color-info:             #3b82f6;
   --color-teal:             #10D8D8;
+  /* ── Variantes "warn" (âmbar escuro) + backgrounds semânticos usados
+     pelos hubs de Modelos de mensagem (callouts, badges) ─────────── */
+  --color-warn:             #d97706;
+  --color-warn-bg:          rgba(217, 119, 6, 0.08);
+  --color-warn-border:      rgba(217, 119, 6, 0.30);
+  --color-danger-bg:        rgba(239, 68, 68, 0.10);
+  --color-info-bg:          rgba(91, 111, 245, 0.08);
+  --color-info-border:      rgba(91, 111, 245, 0.28);
 
   /* ── Tooltip (charts/heatmap do Dashboard v2) ─────────────────── */
   --tooltip-bg:             #0f172a;
@@ -69,11 +77,13 @@
   --glass-bg-panel:         rgba(255, 255, 255, 0.32);   /* nav-rail, colunas — translúcido real */
   --glass-bg-strong:        rgba(255, 255, 255, 0.32);   /* kanban columns — mesmo nível do panel */
   --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais/dialogs — opaco */
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);   /* hovers sutis — realce leve */
   --glass-border:           rgba(180, 200, 230, 0.55);   /* borda padrão */
   --glass-border-subtle:    rgba(180, 200, 230, 0.30);   /* borda sutil */
   --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
   --glass-shadow:           0 4px 24px rgba(100, 130, 180, 0.18);
   --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+  --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
 
   /* ── Raios extras usados nos componentes do v0 ────────────────── */
   --radius-sm:   0.375rem;  /*  6px */
@@ -153,11 +163,13 @@
   --glass-bg-panel:         rgba(255, 255, 255, 0.32);
   --glass-bg-strong:        rgba(255, 255, 255, 0.32);
   --glass-bg-modal:         rgba(255, 255, 255, 0.97);
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);
   --glass-border:           rgba(180, 200, 230, 0.55);
   --glass-border-subtle:    rgba(180, 200, 230, 0.30);
   --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
   --glass-shadow:           0 4px 24px rgba(100, 130, 180, 0.18);
   --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+  --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
 
   /* Raios extras */
   --radius-sm:   0.375rem;
@@ -184,6 +196,20 @@
   --chat-bubble-received-time:   #94a3b8;
   --chat-bubble-note-bg:         #f8fafc;
   --chat-bubble-note-border:     #e2e8f0;
+
+  /* WhatsApp — cores de marca do canal, ISOLADAS (mock/preview). Não usar
+     fora do contexto do balão WhatsApp. Mantidas em paridade com globals.css. */
+  --wa-frame:         #111b21;
+  --wa-bg:            #efeae2;
+  --wa-bubble:        #ffffff;
+  --wa-bubble-out:    #d9fdd3;
+  --wa-text:          #111b21;
+  --wa-text-muted:    #667781;
+  --wa-accent:        #25d366;
+  --wa-accent-strong: #128c7e;
+  --wa-field-bg:      #f7f8fa;
+  --wa-field-border:  #e3e6ea;
+  --wa-header:        #075e54;
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -329,11 +355,13 @@
   --glass-bg-panel:    rgba(15, 23, 42, 0.55);
   --glass-bg-strong:   rgba(15, 23, 42, 0.55);
   --glass-bg-modal:    rgba(15, 23, 42, 0.98);
+  --glass-bg-subtle:   rgba(255, 255, 255, 0.06);   /* hovers sutis — realce leve no escuro */
   --glass-border:      rgba(99, 120, 180, 0.30);
   --glass-border-subtle: rgba(99, 120, 180, 0.18);
   --glass-shadow-sm:   0 1px 6px rgba(0, 0, 0, 0.35);
   --glass-shadow:      0 4px 24px rgba(0, 0, 0, 0.50);
   --glass-shadow-lg:   0 8px 40px rgba(0, 0, 0, 0.60);
+  --shadow-brand:      0 4px 14px rgba(91, 111, 245, 0.45);
 
   /* Inputs */
   --input-bg:           rgba(30, 41, 59, 0.65);
@@ -360,6 +388,19 @@
   --chat-bubble-received-time:   #94a3b8;
   --chat-bubble-note-bg:         #1e3a5f;
   --chat-bubble-note-border:     rgba(99, 120, 180, 0.35);
+
+  /* WhatsApp — variante escura das cores isoladas do canal. */
+  --wa-frame:         #2a3942;
+  --wa-bg:            #0b141a;
+  --wa-bubble:        #1f2c33;
+  --wa-bubble-out:    #144d37;
+  --wa-text:          #e9edef;
+  --wa-text-muted:    #8696a0;
+  --wa-accent:        #25d366;
+  --wa-accent-strong: #25d366;
+  --wa-field-bg:      #111b21;
+  --wa-field-border:  #2a3942;
+  --wa-header:        #202c33;
 
   /* Scrollbar no dark */
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;

@@ -64,21 +64,21 @@ export function FilterModalThreeCol({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onMouseDown={() => onOpenChange(false)} aria-hidden />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onMouseDown={() => onOpenChange(false)} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Filtros avançados"
-        className="relative flex h-[min(84vh,760px)] w-[min(1120px,100%)] flex-col overflow-hidden rounded-2xl border border-black/6 bg-white shadow-[0_24px_64px_-12px_rgba(15,23,42,0.35)]"
+        className="relative flex h-[min(84vh,760px)] w-[min(1120px,100%)] flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
       >
         {/* Header */}
-        <header className="flex items-center justify-between border-b border-black/6 px-5 py-4">
+        <header className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
               <SlidersHorizontal className="size-4" />
             </span>
             <div className="flex items-center gap-2">
-              <h2 className="text-[16px] font-semibold tracking-tight text-slate-900">Filtros avançados</h2>
+              <h2 className="text-[16px] font-semibold tracking-tight text-[var(--text-primary)]">Filtros avançados</h2>
               <ActiveCountBadge draft={draft} />
             </div>
           </div>
@@ -91,11 +91,11 @@ export function FilterModalThreeCol({
               }}
               onRequestSave={onRequestSave}
             />
-            <div className="h-6 w-px bg-slate-200" />
+            <div className="h-6 w-px bg-[var(--glass-border-subtle)]" />
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="flex size-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
               aria-label="Fechar"
             >
               <X className="size-4" />
@@ -106,13 +106,13 @@ export function FilterModalThreeCol({
         {/* 3 colunas */}
         <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: "232px minmax(0,1fr) 300px" }}>
           {/* Col 1 — Atalhos */}
-          <aside className="flex flex-col overflow-y-auto border-r border-black/6 bg-slate-50/60 p-3">
-            <span className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Atalhos</span>
+          <aside className="flex flex-col overflow-y-auto border-r border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] p-3">
+            <span className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Atalhos</span>
             <QuickFiltersList draft={draft} onApply={applyWhole} onRequestSave={onRequestSave} orientation="vertical" />
           </aside>
 
           {/* Col 2 — Propriedades */}
-          <main className="overflow-y-auto border-r border-black/6 p-4">
+          <main className="overflow-y-auto border-r border-[var(--glass-border-subtle)] p-4">
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <div className="space-y-3">
                 <SearchSection {...section} />
@@ -140,11 +140,11 @@ export function FilterModalThreeCol({
         </div>
 
         {/* Footer */}
-        <footer className="flex items-center justify-end gap-2 border-t border-black/6 px-5 py-3">
+        <footer className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] px-5 py-3">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-5 text-[13px] font-medium text-white transition-colors hover:bg-blue-700"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-5 text-[13px] font-medium text-white transition-colors hover:bg-[var(--brand-primary-dark)]"
           >
             Aplicar filtros
           </button>

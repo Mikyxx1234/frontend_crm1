@@ -120,7 +120,7 @@ export default function CompanyDetailClientPage({ id }: { id: string }) {
           title={query.data?.name ?? "Empresa"}
           description={
             query.data
-              ? `Empresas · ${query.data.domain ?? "sem domínio"}`
+              ? `Empresas · ${query.data.domain ?? "sem e-mail"}`
               : "Carregando..."
           }
           actions={
@@ -175,46 +175,50 @@ export default function CompanyDetailClientPage({ id }: { id: string }) {
               <GlassCard className="p-5">
                 <SectionTitle>Informações</SectionTitle>
                 <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
-                  <Field label="Nome">
+                  <Field label="Nome da Empresa">
                     <InputGlass
                       value={edit.name}
                       onChange={(e) => set("name", e.target.value)}
-                      placeholder="Razão social"
+                      placeholder="Razão social ou nome fantasia"
                     />
                   </Field>
-                  <Field label="Domínio">
-                    <InputGlass
-                      value={edit.domain}
-                      onChange={(e) => set("domain", e.target.value)}
-                      placeholder="empresa.com"
-                    />
-                  </Field>
-                  <Field label="Indústria">
-                    <InputGlass
-                      value={edit.industry}
-                      onChange={(e) => set("industry", e.target.value)}
-                      placeholder="Ex.: SaaS, Educação"
-                    />
-                  </Field>
-                  <Field label="Tamanho">
+                  {/* CNPJ persiste na coluna `size` (backend read-only,
+                      sem coluna nativa). Ver DECISOES-PENDENTES.md. */}
+                  <Field label="CNPJ">
                     <InputGlass
                       value={edit.size}
                       onChange={(e) => set("size", e.target.value)}
-                      placeholder="1-10, 11-50, 51-200..."
+                      placeholder="00.000.000/0000-00"
                     />
                   </Field>
                   <Field label="Telefone">
                     <InputGlass
                       value={edit.phone}
                       onChange={(e) => set("phone", e.target.value)}
-                      placeholder="+55 11 99999-9999"
+                      placeholder="(11) 3333-4444"
                     />
                   </Field>
-                  <Field label="Endereço">
+                  {/* E-mail persiste na coluna `domain` (backend read-only,
+                      sem coluna nativa). Ver DECISOES-PENDENTES.md. */}
+                  <Field label="E-mail">
+                    <InputGlass
+                      value={edit.domain}
+                      onChange={(e) => set("domain", e.target.value)}
+                      placeholder="contato@empresa.com"
+                    />
+                  </Field>
+                  <Field label="Endereço da Empresa">
                     <InputGlass
                       value={edit.address}
                       onChange={(e) => set("address", e.target.value)}
-                      placeholder="Rua, número, cidade"
+                      placeholder="Rua, número, bairro, cidade — UF"
+                    />
+                  </Field>
+                  <Field label="Setor">
+                    <InputGlass
+                      value={edit.industry}
+                      onChange={(e) => set("industry", e.target.value)}
+                      placeholder="Ex.: SaaS, Educação"
                     />
                   </Field>
                 </div>

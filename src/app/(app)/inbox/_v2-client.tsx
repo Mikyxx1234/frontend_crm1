@@ -12,6 +12,7 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
 import { ContactAside } from "@/components/crm/contact-aside";
+import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
 import {
@@ -27,6 +28,7 @@ import {
   toMessageBubble,
 } from "@/features/inbox-v2/adapters";
 import {
+  useConversationFeatures,
   useConversations,
   useContactSidebar,
   useInboxRealtime,
@@ -42,6 +44,8 @@ import {
   InboxFilterButton,
   TagsPopover,
   TemplatePickerList,
+  whatsappTemplateToPending,
+  type PendingTemplate,
 } from "@/features/inbox-v2/extras";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
 import {
@@ -49,6 +53,11 @@ import {
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import {
+  DealActivitiesTab,
+  DealNotesTab,
+  DealTimelineTab,
+} from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 const DEFAULT_FILTERS: InboxFilters = {};
@@ -95,10 +104,14 @@ export default function InboxV2ClientPage({
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
 
-  // ── Largura da coluna de conversas (persistida) ────────────────
+  // ── Largura das colunas (persistidas) ─────────────────────────
   const [convWidth, setConvWidth] = usePersistentWidth(
     "inbox-v2:conv-width",
     320,
+  );
+  const [asideWidth, setAsideWidth] = usePersistentWidth(
+    "inbox-v2:aside-width",
+    340,
   );
 
   // ── Estado de UI local ─────────────────────────────────────────
@@ -111,6 +124,8 @@ export default function InboxV2ClientPage({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [templateOpen, setTemplateOpen] = useState(false);
+  // Template escolhido no modal (sessão expirada) → abre o painel no Composer.
+  const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
 
   // Debounce do search (300ms). Evita refetch a cada tecla.
@@ -135,7 +150,7 @@ export default function InboxV2ClientPage({
     search: debouncedSearch,
     enabled: isAuthenticated,
   });
-  const rawRows = listData?.items ?? [];
+  const rawRows = (listData?.items ?? []).filter(Boolean);
 
   // Ordena (default: última atividade primeiro) e filtra a janela de 24h.
   // Usa `lastMessageAt` (com fallback p/ `lastInboundAt`) para casar a ordem
@@ -204,6 +219,7 @@ export default function InboxV2ClientPage({
   // ── Mutations ───────────────────────────────────────────────────
   const sendMessage = useSendMessage(activeId);
   const markRead = useMarkConversationRead();
+  const { features: convFeatures } = useConversationFeatures();
 
   function handleSelect(id: string) {
     setActiveId(id);
@@ -278,7 +294,7 @@ export default function InboxV2ClientPage({
       filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
-        count: tabCounts?.[t.id] ?? null,
+        count: tabCounts?.[t.id] ?? undefined,
       }))}
       activeTabIndex={TABS.findIndex((t) => t.id === tab)}
       onTabChange={(idx) => {
@@ -292,17 +308,6 @@ export default function InboxV2ClientPage({
       hasMore={hasNextPage}
       isLoadingMore={isFetchingNextPage}
       renderCardSlots={(c) => ({
-        tagsSlot: (
-          <TagsPopover
-            conversationId={c.id}
-            currentTags={(c.tags ?? []).map((t) => ({
-              id: t.id,
-              name: t.name,
-              color: t.color ?? null,
-            }))}
-            triggerVariant="icon"
-          />
-        ),
         assigneeSlot: (
           <RequirePermission
             permission="conversation:reassign_others"
@@ -325,38 +330,6 @@ export default function InboxV2ClientPage({
       })}
     />
   );
-
-  const chatNode =
-    chatContact && activeRow ? (
-      <ChatArea
-        contact={chatContact}
-        messages={messageBubbles}
-        stages={stagePillsView}
-        showSessionAlert={sessionExpired}
-        onUseTemplate={() => setTemplateOpen(true)}
-        headerActionsSlot={
-          <ConversationActionsMenu
-            conversationId={activeId}
-            isResolved={activeRow.status === "RESOLVED"}
-          />
-        }
-        composerSlot={
-          <Composer
-            conversationId={activeId}
-            value={draft}
-            onChange={setDraft}
-            onSend={handleSend}
-            onSendNote={handleSendNote}
-            sending={sendMessage.isPending}
-            disabled={sessionExpired}
-            isResolved={activeRow.status === "RESOLVED"}
-            contactId={activeContactId}
-          />
-        }
-      />
-    ) : (
-      <EmptyChatArea />
-    );
 
   // Tags da conversa ativa — até 2 chips + "+N" para o restante.
   const activeTags = activeRow?.tags ?? [];
@@ -466,6 +439,67 @@ export default function InboxV2ClientPage({
     ? { ...contactAsideView, deals: dealsWithSlots }
     : null;
 
+  // ── Slots das abas do card da conversa ──────────────────────────
+  // Notas/Timeline sao escopados ao 1o negocio do contato (mesmo
+  // padrao do DealDetailPanel). Sem negocio vinculado, mostra um
+  // placeholder amigavel. Atividades ainda e' placeholder global.
+  const dealNotes =
+    (firstDealDetail as { notes?: string | null } | undefined)?.notes ?? null;
+  const notesSlot = firstDealId ? (
+    <DealNotesTab
+      dealId={firstDealId}
+      notes={dealNotes}
+      pipelineId={firstDealPipelineId}
+    />
+  ) : (
+    <NoDealTab message="Vincule um negocio a este contato para registrar notas." />
+  );
+  const timelineSlot = firstDealId ? (
+    <DealTimelineTab dealId={firstDealId} />
+  ) : (
+    <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
+  );
+  const activitiesSlot = <DealActivitiesTab />;
+
+  const chatNode =
+    chatContact && activeRow ? (
+      <ChatArea
+        contact={chatContact}
+        messages={messageBubbles}
+        stages={stagePillsView}
+        showSessionAlert={sessionExpired}
+        onUseTemplate={() => setTemplateOpen(true)}
+        headerActionsSlot={
+          <ConversationActionsMenu
+            conversationId={activeId}
+            isResolved={activeRow.status === "RESOLVED"}
+          />
+        }
+        composerSlot={
+          <Composer
+            conversationId={activeId}
+            value={draft}
+            onChange={setDraft}
+            onSend={handleSend}
+            onSendNote={handleSendNote}
+            sending={sendMessage.isPending}
+            disabled={sessionExpired}
+            isResolved={activeRow.status === "RESOLVED"}
+            contactId={activeContactId}
+            externalTemplate={externalTemplate}
+            onExternalTemplateConsumed={() => setExternalTemplate(null)}
+            signatureAllowed={convFeatures.agentSignatureEnabled}
+            signatureEditable={convFeatures.agentSignatureEditable}
+          />
+        }
+        notesSlot={notesSlot}
+        activitiesSlot={activitiesSlot}
+        timelineSlot={timelineSlot}
+      />
+    ) : (
+      <EmptyChatArea />
+    );
+
   const asideNode =
     contactAsideViewWithSlots && activeRow ? (
       <ContactAside
@@ -482,6 +516,16 @@ export default function InboxV2ClientPage({
         tagsNode={tagsNode}
         collapsed={asideCollapsed}
         onToggleCollapse={() => setAsideCollapsed((v) => !v)}
+        contactFieldConfigSlot={
+          <RequirePermission permission="settings:custom_fields">
+            <FieldConfigPanel entities={["contact"]} context="inbox_lead_v2" />
+          </RequirePermission>
+        }
+        dealFieldConfigSlot={
+          <RequirePermission permission="settings:custom_fields">
+            <FieldConfigPanel entities={["deal"]} context="inbox_lead_v2" />
+          </RequirePermission>
+        }
       />
     ) : (
       <EmptyAside />
@@ -497,6 +541,10 @@ export default function InboxV2ClientPage({
           <TemplatePickerList
             conversationId={activeId}
             onClose={() => setTemplateOpen(false)}
+            onPick={(tpl) => {
+              setExternalTemplate(whatsappTemplateToPending(tpl));
+              setTemplateOpen(false);
+            }}
           />
         </div>
       </div>
@@ -527,11 +575,20 @@ export default function InboxV2ClientPage({
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
-            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "44px" : "340px"}` }}
+            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}` }}
           >
             {conversationColumnNode}
             {chatNode}
-            {asideNode}
+            <div className="relative min-h-0 overflow-hidden">
+              <ColumnResizer
+                direction="left"
+                value={asideWidth}
+                onChange={setAsideWidth}
+                min={280}
+                max={560}
+              />
+              {asideNode}
+            </div>
           </div>
         </div>
         {templateModalNode}
@@ -544,14 +601,23 @@ export default function InboxV2ClientPage({
     <div
       className="v2-screen grid gap-4 p-4"
       style={{
-        // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 fixa.
-        gridTemplateColumns: `72px ${convWidth}px 1fr ${asideCollapsed ? "44px" : "340px"}`,
+        // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
+        gridTemplateColumns: `72px ${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}`,
       }}
     >
       {navRailNode}
       {conversationColumnNode}
       {chatNode}
-      {asideNode}
+      <div className="relative min-h-0 overflow-hidden">
+        <ColumnResizer
+          direction="left"
+          value={asideWidth}
+          onChange={setAsideWidth}
+          min={280}
+          max={560}
+        />
+        {asideNode}
+      </div>
       {templateModalNode}
     </div>
   );
@@ -572,6 +638,17 @@ function EmptyChatArea() {
         Escolha uma conversa na lista para visualizar mensagens e detalhes do contato.
       </p>
     </main>
+  );
+}
+
+function NoDealTab({ message }: { message: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-[var(--text-muted)]">
+      <div className="font-display text-[13px] font-semibold">
+        Nenhum negocio vinculado
+      </div>
+      <p className="max-w-xs text-[12px]">{message}</p>
+    </div>
   );
 }
 
@@ -636,7 +713,7 @@ function InboxStageDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
           {[...stages]
             .sort((a, b) => a.position - b.position)
             .map((s) => {

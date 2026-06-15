@@ -36,7 +36,7 @@ import { apiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import {
   WEBHOOK_VARIABLE_GROUPS,
   WEBHOOK_VARIABLE_OPTIONS,
@@ -394,17 +394,18 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
       {/* Método */}
       <div className="space-y-2">
         <Label htmlFor="sc-wh-method">Método</Label>
-        <SelectNative
-          id="sc-wh-method"
+        <DropdownGlass
+          triggerClassName="w-full"
           value={method}
-          onChange={(e) => setDraft((d) => ({ ...d, method: e.target.value }))}
-        >
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="PATCH">PATCH</option>
-          <option value="DELETE">DELETE</option>
-        </SelectNative>
+          options={[
+            { value: "GET", label: "GET" },
+            { value: "POST", label: "POST" },
+            { value: "PUT", label: "PUT" },
+            { value: "PATCH", label: "PATCH" },
+            { value: "DELETE", label: "DELETE" },
+          ]}
+          onValueChange={(v) => setDraft((d) => ({ ...d, method: v }))}
+        />
       </div>
 
       {/* Headers */}
@@ -520,35 +521,26 @@ export function WebhookStepConfig({ draft, setDraft }: Props) {
                     className="font-mono text-xs"
                     autoComplete="off"
                   />
-                  <SelectNative
+                  <DropdownGlass
+                    triggerClassName="text-xs w-full"
+                    placeholder="Selecione…"
                     value={group}
-                    onChange={(e) =>
-                      handleCategoryChange(entry.id, e.target.value as WebhookVariableGroup)
+                    options={[
+                      { value: "", label: "Selecione…" },
+                      ...visibleGroups.map((g) => ({ value: g, label: g })),
+                    ]}
+                    onValueChange={(v) =>
+                      handleCategoryChange(entry.id, v as WebhookVariableGroup)
                     }
-                    className="text-xs"
-                  >
-                    <option value="">Selecione…</option>
-                    {visibleGroups.map((g) => (
-                      <option key={g} value={g}>
-                        {g}
-                      </option>
-                    ))}
-                  </SelectNative>
-                  <SelectNative
+                  />
+                  <DropdownGlass
+                    triggerClassName="text-xs w-full"
+                    placeholder={group ? "Selecione um campo…" : "Escolha a categoria primeiro"}
                     value={entry.optionKey}
                     disabled={!group}
-                    onChange={(e) => handleOptionChange(entry.id, e.target.value)}
-                    className="text-xs"
-                  >
-                    <option value="">
-                      {group ? "Selecione um campo…" : "Escolha a categoria primeiro"}
-                    </option>
-                    {groupOptions.map((opt) => (
-                      <option key={opt.key} value={opt.key}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </SelectNative>
+                    options={groupOptions.map((opt) => ({ value: opt.key, label: opt.label }))}
+                    onValueChange={(v) => handleOptionChange(entry.id, v)}
+                  />
                   <TooltipGlass label={tokenForEntry(entry)} side="top">
                     <code
                       className={cn(

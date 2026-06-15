@@ -59,7 +59,7 @@ export function QueueByChannelWidget() {
                 </div>
                 <span className="font-bold tabular-nums text-muted-foreground">{c.count}</span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
                 <div
                   className={cn("h-full rounded-full transition-all", meta.bar)}
                   style={{ width: `${pct}%` }}

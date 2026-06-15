@@ -184,7 +184,7 @@ export function NavRailV2({ className }: { className?: string }) {
           rola. `overflow-x-clip` permite o scroll vertical sem forçar
           overflow-x:auto (que cortaria a magnificação) — os DockButton aqui
           usam `disablePop` para a escala caber dentro do padding. */}
-      <div className="flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto overflow-x-clip px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto overflow-x-clip px-3 [scrollbar-width:none] [scrollbar-gutter:stable_both-edges] [&::-webkit-scrollbar]:hidden">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -201,18 +201,16 @@ export function NavRailV2({ className }: { className?: string }) {
         })}
       </div>
 
-      <DockButton
-        href="/settings"
-        title="Configurações"
-        active={pathname.startsWith("/settings") && !isProfileActive}
-      >
-        <IconSettings size={20} />
-      </DockButton>
-
+      {/* Ícones inferiores usam `disablePop` como os itens de navegação:
+          magnificação no lugar, sem saltar para fora do trilho. O wrapper
+          replica a régua horizontal do miolo (w-full + px-3) para os dois
+          grupos ficarem alinhados mesmo quando o scrollbar ocupa espaço. */}
+      <div className="flex w-full shrink-0 flex-col items-center gap-2 px-3">
       {/* Status do agente (Online / Ausente / Offline) — define a distribuição */}
       <DockButton
         title={`Status: ${statusMeta.label}`}
         onClick={() => setStatusPopupOpen(true)}
+        disablePop
       >
         <span className="relative inline-flex">
           <StatusIcon size={20} style={{ color: statusMeta.color }} />
@@ -227,8 +225,19 @@ export function NavRailV2({ className }: { className?: string }) {
       <DockButton
         title={theme === "light" ? "Modo escuro" : "Modo claro"}
         onClick={toggle}
+        disablePop
       >
         {theme === "light" ? <IconMoon size={20} /> : <IconSun size={20} />}
+      </DockButton>
+
+      {/* Configurações — último ícone antes do avatar do usuário. */}
+      <DockButton
+        href="/settings"
+        title="Configurações"
+        active={pathname.startsWith("/settings") && !isProfileActive}
+        disablePop
+      >
+        <IconSettings size={20} />
       </DockButton>
 
       {/* Avatar — abre menu da conta (Meu perfil / Sair).
@@ -243,7 +252,7 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <div
             className={cn(
-              "relative flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[10px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+              "relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[12px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
@@ -251,7 +260,7 @@ export function NavRailV2({ className }: { className?: string }) {
           >
             {initials}
             <span
-              className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)]"
+              className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)]"
               style={{ backgroundColor: statusMeta.color }}
             />
           </div>
@@ -265,7 +274,7 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <div
             className={cn(
-              "relative flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[10px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+              "relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[12px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
@@ -273,7 +282,7 @@ export function NavRailV2({ className }: { className?: string }) {
           >
             {initials}
             <span
-              className="absolute bottom-0 right-0 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-strong)]"
+              className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)]"
               style={{ backgroundColor: statusMeta.color }}
             />
           </div>
@@ -323,9 +332,10 @@ export function NavRailV2({ className }: { className?: string }) {
             <IconLogout size={16} />
             <span className="font-medium">Sair</span>
           </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
+      </div>
 
       <AgentStatusPopup
         open={statusPopupOpen}

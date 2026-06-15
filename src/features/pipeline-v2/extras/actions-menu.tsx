@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconTrash } from "@tabler/icons-react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
@@ -34,12 +35,21 @@ export function DealActionsMenu({
   const [open, setOpen] = useState(false);
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
 
   const setStatus = useSetDealStatus(pipelineId, statusFilter);
   const deleteDealMut = useDeleteDeal(pipelineId, statusFilter);
 
   useEffect(() => {
     if (!open) return;
+    // Calcula posição fixed a partir do trigger para escapar de overflow:hidden
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 6,
+        right: window.innerWidth - rect.right,
+      });
+    }
     function onClickOutside(e: MouseEvent) {
       if (
         containerRef.current &&
@@ -73,9 +83,10 @@ export function DealActionsMenu({
         {trigger}
       </button>
 
-      {open && (
+      {open && dropdownPos && typeof document !== "undefined" && createPortal(
         <div
-          className="absolute right-0 top-full z-30 mt-1.5 w-52 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_32px_rgba(15,20,40,0.16)] backdrop-blur-xl"
+          className="w-52 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_32px_rgba(15,20,40,0.16)] backdrop-blur-xl"
+          style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right, zIndex: 9999 }}
           role="menu"
         >
           {currentStatus !== "LOST" && (
@@ -135,7 +146,8 @@ export function DealActionsMenu({
           >
             Excluir negocio
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Tabulação do motivo da perda (catálogo + "Outro") */}

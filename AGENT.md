@@ -5,6 +5,361 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-15 — Diretório v2: edição na linha + vínculo contato↔empresa
+
+**Decisão.** As listagens v2 `/contacts` e `/companies` (`app/(app)/contacts/client-page.tsx`
+e `.../companies/client-page.tsx`) ganharam uma coluna **"Ações"** com botão
+de editar por linha, abrindo `EditContactDialog` / `EditCompanyDialog` (mesmo
+padrão visual dos diálogos de criação, via `createPortal`). Antes só havia o
+lápis no hover do nome, que apenas navegava para o detalhe — não dava para
+editar a partir da lista.
+
+**Vínculo de empresa.** Novo `CompanyPicker` (combobox com busca via
+`useCompanies`, com opção de "remover vínculo") foi adicionado tanto na
+criação quanto na edição de contato. Envia `companyId` no corpo do
+`POST/PUT /api/contacts[/:id]` — o backend já suportava connect/disconnect
+no Prisma. **Por quê pela ótica do contato:** a relação é 1 contato → 1
+empresa (`Contact.companyId`), então o lado natural do vínculo é o contato.
+O picker só lista empresas da própria org, mantendo o vínculo restrito ao
+tenant.
+
+---
+
+### 2026-06-15 — RBAC: função híbrida, paridade de grupos e canal por papel [DECISÃO — agente OPUS]
+
+**Decisão.** Três frentes de RBAC, todas **não-quebráveis** para orgs que já
+rodam o CRM (ex.: DNA na `main`):
+
+1. **Função híbrida (Equipe).** O seletor de função em `/settings/team` deixa
+   de usar Admin/Gerente/Membro fixos: mantém **ADMIN como único preset** e o
+   restante vira **roles customizadas** (atribuídas via `UserRoleAssignment`).
+   Novo `PUT /api/users/[id]/primary-role`. O legado `User.role` continua no
+   banco como fallback no `loadAuthzContext` — por isso nada quebra. Guard
+   impede rebaixar o **último ADMIN** da org.
+
+2. **Paridade de grupos.** O `group-permissions-editor` passou a usar o
+   **catálogo completo** de permissões (igual às roles); recursos com
+   responsável usam níveis (Negado/Resp./Equipe/Todos), o resto usa
+   Negado/Liberado. Membros podem ser adicionados **já na criação** do grupo
+   (`memberIds`).
+
+3. **Canal por papel.** `channel.{view,send}` ganhou o eixo `roles[roleId]`
+   além de `users[userId]`. Resolução **aditiva**: o acesso passa se QUALQUER
+   regra (do usuário OU de uma role dele) permitir; sem regra alguma →
+   liberado (comportamento anterior preservado). Editor no `RoleEditor`
+   ("Canais deste papel") + `GET/PUT /api/roles/[id]/scope-grants`.
+   Enforcement só roda com a flag `rbac_granular_scope_v1` ligada.
+
+Commits: back `58beaa2`/`87001b3`, front `33586b0`/`9d1ef0c`.
+
+---
+
+### 2026-06-14 — Produto: tipo binário (Produto/Serviço) + fluxo guiado pós-wizard [DECISÃO — agente OPUS]
+
+**Decisão.** (1) Na **criação** de produto, o seletor de tipo deixa de expor os
+4 `ProductKind` (Físico/Serviço/Curso/Vaga) e passa a oferecer apenas a
+distinção genérica **Produto** (`kind=PHYSICAL`) × **Serviço** (`kind=SERVICE`).
+"Vaga" e "curso" deixam de ser *tipo* — passam a ser expressos pelas
+**capacidades do catálogo** (`allocation=seats`, `fulfillment=recruiting/enrollment`,
+…) ao qual o produto é vinculado. (2) Ao **finalizar o wizard de catálogo**, o
+`CatalogWizard` agora devolve o id do catálogo criado (`onDone(createdId)`) e a
+`CatalogsManager` abre direto o **"Novo produto"** já vinculado a ele
+(`ProductDialog initialCatalogId=...`) — fluxo guiado "criou catálogo → cadastra
+o 1º item".
+
+**Por quê.** O catálogo já migrou pro modelo de capacidades, mas o diálogo de
+produto seguia no `ProductKind` antigo, com blocos hardcoded por tipo (turmas de
+curso, processo seletivo de vaga). Isso duplicava a modelagem e confundia: o
+usuário já declara "vagas" via capacidade do catálogo e o produto pedia o tipo
+"Vaga" de novo. A simplificação alinha as duas pontas e deixa a especialização
+vir de um único lugar (capacidades).
+
+**Compatibilidade (sem perda de dados).** `COURSE`/`JOB_OPENING` continuam em
+`types.ts` e seus blocos só renderizam **na edição** de produtos legados; o tipo
+é imutável após a criação, então editar um produto antigo mostra o tipo como
+*chip read-only* (ex.: "Curso") e preserva os blocos. Backend (`type`+`kind`)
+inalterado. Pendente (follow-up): a **lista** de produtos ainda mostra
+filtros/coluna "Físico/Curso/Vaga" do modelo antigo.
+
+**Validado.** E2E: criar catálogo → abre "Novo produto" vinculado, só com
+Produto/Serviço; editar produto `SERVICE` legado → chip read-only "Serviço".
+
+---
+
+### 2026-06-14 — `DropdownGlass` dentro de modais: portal para a top-layer do `<dialog>` [DECISÃO — agente OPUS]
+
+**Decisão.** O `DropdownGlass` (Radix DropdownMenu) passou a portar seu menu
+para **dentro do elemento `<dialog>`** quando renderizado dentro de um modal,
+em vez do `document.body` padrão. Mecanismo: novo contexto
+`components/ui/modal-portal-context.tsx`; o `DialogContent` publica seu nó
+`<dialog>` (via `useState` no `ref` callback) num `ModalPortalContext.Provider`;
+o `DropdownGlass` lê `useModalPortalContainer()` e passa em
+`DropdownPrimitive.Portal container={...}`. Fora de modal o valor é `null`
+(portal no body, comportamento inalterado).
+
+**Por quê.** O `Dialog` usa `<dialog>` nativo com `showModal()`, que cria uma
+*top-layer* real + `::backdrop`. O Radix porta para o `body` (fora da
+top-layer) → o menu ficava **atrás do backdrop**, invisível e com os cliques
+**interceptados pelo `<dialog>`** (confirmado: "`<dialog>` subtree intercepts
+pointer events"). Isso era uma **regressão da Fase 4**, quando troquei
+`SelectNative` (popup nativo, desenhado pelo SO acima do `<dialog>`) por
+`DropdownGlass` em `schema-fields.tsx`. Resultado prático: no wizard de catálogo
+não dava pra escolher o **Modo** da capacidade (ex.: `allocation` → "Vagas /
+lugares"), a Política de override nem os enums — travando o caso de uso de
+**vagas de estágio**. A correção é geral: vale para todos os modais
+(`product-dialog`, `add-deal-dialog`, `agent-wizard`, `task-dialog`, …).
+
+**Validado.** E2E no navegador: criar catálogo "Vagas de Estágio" → trocar
+`allocation` para `seats` (Total de vagas=10) → `fulfillment` para `recruiting`
+→ `POST /api/catalogs` `201` com `mode:"seats"`/`mode:"recruiting"` persistidos.
+
+---
+
+### 2026-06-14 — DS v2 no editor de Flow (rota legada) + tokens espelhados em `globals.css` [DECISÃO — agente OPUS]
+
+**Decisão.** Refatorar visualmente o **editor de WhatsApp Flow**
+(`app/old/settings/message-models/flows/[id]/client-page.tsx`) e a **modal "Novo
+template na Meta"** (`app/old/settings/whatsapp-templates/client-page.tsx`) para
+o DS v2 — sem tocar em rotas, fetchers, mutations ou schemas. `SelectNative`
+(proibido pelo `.cursorrules`) foi trocado por `DropdownGlass`; paleta nativa
+(`slate/amber/emerald/indigo` + `border-border/bg-card/bg-muted/text-*-foreground`)
+trocada por tokens DS v2.
+
+**Problema estrutural resolvido.** Os tokens DS v2 (`--brand-primary`,
+`--text-*`, `--glass-bg-base`, `--color-warn`, `--color-enterprise-bg` etc.)
+vivem em `styles/globals-v2.css`, que **só é importado pelo grupo `(app)`**. O
+editor de Flow e a aba WhatsApp são alcançados pela rota legada `/old/...`
+(`DashboardShell` + `next-themes` `.dark`), que carrega apenas `globals.css` —
+onde esses nomes **não existiam**. Sem eles, `DropdownGlass` e o chrome glass
+ficariam sem cor, e o dark mode (que usa `.dark`, não `.v2-dark`) quebraria.
+
+**Como.** Bloco **aditivo** desses tokens + variáveis isoladas do canal
+(`--wa-*`, para o mock do WhatsApp) adicionado a `globals.css` em `:root`
+(light) e `.dark` (dark), espelhando os valores de `globals-v2.css`. São nomes
+novos → zero regressão nas páginas legadas (que não os usavam) e o hub passa a
+renderizar igual nos dois shells. `--wa-*` também espelhado em `globals-v2.css`
+(`:root` + `.v2-dark`) para a modal que roda na rota `(app)`.
+
+**Trade-off.** Duplicação de definição de tokens entre os dois arquivos CSS.
+Aceito porque unificar os dois sistemas de dark mode (`.dark` vs `.v2-dark`)
+seria mudança de arquitetura fora do escopo "apenas visual". Valores espelhados
+para que, se ambas as classes coexistirem numa rota v2, o resultado seja
+idêntico.
+
+**Nota.** `npm run ds:check` já falha no HEAD por drift pré-existente
+(`hexInStyle` 369→374) e **exclui `src/app/old/**`** do scan — portanto estas
+mudanças não afetam o ratchet (verificado via `git stash`).
+
+---
+
+### 2026-06-13 — Refatoração visual do hub "Modelos de mensagem" (4 abas) fiel aos mockups DS v2 [DECISÃO — agente OPUS]
+
+**Decisão.** Refatorar somente a **camada de apresentação** das 4 abas de
+`/settings/message-models` (overview, internos, whatsapp, flows) para os mockups
+`settings-message-templates*.html`, **sem tocar em contratos de dados** (mesmas
+queries/mutations React Query, diálogos de criação/edição/preview e gating por
+permissão preservados).
+
+**Ponto estrutural:** criei o módulo compartilhado
+`app/old/settings/message-models/hub-ui.tsx` com os blocos visuais reusáveis
+(`HubStatGrid`/`HubStat`, `HubCallout`, `HubTabBar`, `HubToolbar`, `HubChip`,
+`HubPanel`, `HubSubHeader`). As 3 telas (hub + `templates` + `whatsapp-templates`
+embeds) consomem esse módulo, garantindo consistência 1:1 com os mockups e
+evitando divergência de estilos. O chrome (nav-rail + page header) continua vindo
+do `SettingsV2Shell`; os mockups só contribuem com stats/callouts/tabs/toolbar/
+painéis.
+
+**Contadores das abas/stats** passaram a ser derivados das queries do hub
+(`templates`/`whatsapp-flow-definitions` agora sempre habilitadas por serem
+locais e baratas; lista Meta segue só na overview por ser externa). Aba Flows
+ganhou ação de excluir reusando `DELETE /api/whatsapp-flow-definitions/[id]`.
+
+**Tokens:** adicionei ao `globals-v2.css` (`@theme`) as variантes que faltavam e
+são usadas pelos callouts/badges dos mockups: `--color-warn`, `--color-warn-bg`,
+`--color-warn-border`, `--color-danger-bg`, `--color-info-bg`, `--color-info-border`.
+Warnings de shorthand Tailwind permanecem (padrão do repo).
+
+---
+
+### 2026-06-13 — Wizard de Catálogo por Capacidades (Fase 4) com sub-perguntas dirigidas por JSON Schema [DECISÃO — agente OPUS]
+
+**Decisão.** Nova feature `features/catalogs-v2` + rota `(app)/settings/catalogs`
+(grupo "CRM & Dados" do settings-nav, `catalog:view`). O wizard faz **perguntas
+de negócio** (não tipos de produto) e cada "sim" liga uma capacidade.
+
+**Ponto-chave de agnosticismo:** as sub-perguntas de cada capacidade são
+**renderizadas dinamicamente a partir do JSON Schema** servido por
+`GET /api/capabilities` (`schema-fields.tsx`): enum→select, boolean→switch,
+number/integer→input numérico, string→input texto. Consequência: **capacidade
+nova aparece no wizard sem tocar a tela** — só o backend (registro Fase 0)
+muda. A única parte de apresentação acoplada por capacidade é o texto da
+pergunta de negócio (`BUSINESS_QUESTION`), com fallback no `label` do registro.
+
+**Fluxo:** 3 passos (Início: nome/descrição + escolher template opcional →
+Capacidades: cards com toggle + sub-perguntas → Revisão: chips das capacidades).
+Templates carregados de `GET /api/catalog-templates` pré-marcam respostas (nunca
+bloqueiam). Lista de catálogos com ação "salvar como template" e excluir
+(default protegido). Hooks em `apiUrl()` + React Query. DS v2 (tokens, Tabler,
+glass). Build verde; warnings de shorthand Tailwind são o padrão do repo.
+
+**Desvio do PRD registrado:** o PRD sugere gerar a UI via v0 (MCP). Construí
+direto em DS v2 para entregar o wizard testável sem o roundtrip do v0; refinar
+via v0 depois é opcional.
+
+---
+
+### 2026-06-12 — Config de campos personalizados inline (estilo Kommo) — Fase 1
+
+**Decisão.** Trazer a configuração de campos personalizados para **dentro** do
+`DealDetailPanel` e do `ContactAside` via uma seção/aba **"Configurações"**,
+inspirada no Kommo (dentro do lead há uma aba que configura e posiciona os
+campos). **Fase 1 é frontend-only, sem migration.**
+
+**Escopo Fase 1 (definido com o usuário):**
+- **Reaproveita** o que já existe: CRUD de definições via `/api/custom-fields`
+  (`entity=deal|contact`) e ordem/visibilidade de **blocos** via
+  `/api/field-layout` + hook `useFieldLayout` (contextos `deal_panel_v2` e
+  `inbox_lead_v2`, escopo **admin** = padrão da org).
+- **Não** entra nesta fase: ordem por campo individual (precisa coluna `order`
+  no `CustomField`), grupos/abas de campos, obrigatório-por-etapa e "Apenas API"
+  (ficam para Fase 2/3, exigem schema/migration no backend).
+- **Permissão:** a aba só aparece/edita para quem tem `settings:custom_fields`
+  (admin/manager); demais usuários só **veem** os campos.
+- A página global `/settings/custom-fields` **permanece** como gerenciador
+  org-wide; o inline é um atalho contextual.
+
+**Por quê.** A infra de definição + layout já existe; o gap é só de
+*superfície* (UX). Fazer inline reduz atrito (configurar sem sair do negócio)
+e evita duplicar backend. Manter Fase 1 sem migration respeita a restrição
+atual de deploy do backend.
+
+**Plano de implementação.** Componente reutilizável `FieldConfigPanel`
+(`entity` + `context`), montado por slot no `DealDetailPanel` (gear na sidebar)
+e no `ContactAside` (gear no header). Detalhe nos to-dos da sessão.
+
+---
+
+### 2026-06-09 — Editor de escopo por usuário (funis e canais)
+
+**Decisão.** `UserPermissionsView` (sheet "Gerenciar" de cada usuário em
+`/settings/permissions`) ganhou um editor de escopo: a quais **funis** o
+usuário tem acesso e em quais **canais** pode **ver** / **enviar** mensagens.
+Renderiza só quando `editable`.
+
+**Por quê aqui.** O escopo é por usuário (não por papel/grupo), então o lugar
+natural é a sheet do usuário, ao lado do editor de roles. Reaproveita
+`/api/pipelines` e `/api/channels` para as opções.
+
+**Modelo.** `null` = sem restrição (toggle "Todos"); array de IDs = restrito.
+Lê/grava via `GET/PUT /api/users/[id]/scope-grants` (read-merge-write no
+backend, não apaga regras de outros). Hooks novos em `features/permissions/hooks.ts`
+(`useUserScopeGrants`, `useUpdateUserScopeGrants`, `useScopePipelineOptions`,
+`useScopeChannelOptions`). `["*"]` vindo do backend é tratado como "Todos".
+
+**Enforcement é no backend** (flag `rbac_granular_scope_v1`); a UI só
+configura. Detalhes do modelo em `backend/AGENT.md` (mesma data).
+
+---
+
+### 2026-06-10 — /settings/permissions unificada (sem tabs)
+
+**Decisão.** A tela `/settings/permissions` deixou de usar `Tabs`
+(Roles / Grupos / Usuários) e passou a um **layout único** que mostra tudo
+ao mesmo tempo: grid `xl:grid-cols-[minmax(0,1fr)_360px]` com **Usuários**
+na coluna principal (o `UsersTab` intacto: busca + filtros + lista + sheet)
+e um **trilho lateral** com dois cards empilhados — **Roles** (presets do
+sistema + customizados, navega para a página dedicada do editor) e
+**Grupos** (abre o `GroupEditor` em Sheet). Abaixo de `xl`, empilha.
+Blueprint gerado no v0 MCP (model v0-max), adaptado ao DS v2 em Tailwind +
+tokens (`--glass-*`, `--text-*`, `--brand-*`, `font-display`, ícones
+`@tabler/icons-react`).
+
+**Por quê.** Trocar de tab pra cruzar usuário ↔ role ↔ grupo era atrito no
+fluxo de administração. Com tudo na mesma tela o admin vê o catálogo de
+roles/grupos enquanto gerencia usuários. **Nenhuma rota de backend mudou** —
+só os mesmos hooks (`useRoles`, `useGroups`, `useUsers`) reorganizados.
+`RolesTab`/`GroupsTab` (funções locais antigas do client-page) foram
+substituídas por `RolesCard`/`GroupsCard` com header próprio + botão "Novo".
+
+**Ajustes 2026-06-11.** Ícone da tela passou de engrenagem para escudo
+(`SettingsV2Shell` ganhou prop opcional `icon`, default = engrenagem). Os
+cards de Roles e Grupos saíram do trilho lateral e ficam **sempre abaixo**
+dos usuários (grid `md:grid-cols-2`, nunca migram pra lateral). Cards usam
+`bg-white` (padrão "card branco" do dashboard) com hover/badges em tom
+neutro (`black/[0.04-0.05]`) por causa do fundo branco. **Rótulo:** o card
+"Roles" é exibido como **"Regras"** (e a página do editor como "Nova/Editar
+regra"); o entity/rota/hook continua sendo role — mudou só o label. "Grupos"
+permanece "Grupos".
+
+---
+
+### 2026-06-10 — Matriz de permissões em grid de cards (full-screen real)
+
+**Decisão.** Dentro do `RolePermissionsEditor`, a lista vertical de recursos
+(coluna única) virou **grid responsivo de cards**
+(`grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3`) nos dois modos (Simplificado e
+Granular). Cada recurso é um card próprio (`rounded-lg` + `glass-bg-base`):
+no modo Simplificado o segmented de 4 níveis ocupa a **largura total do card**
+(`flex-1` por botão); no Granular o card traz ícone + contador + "tudo" +
+expandir. O wrapper da página perdeu o `max-w-[1400px]` (agora `w-full`).
+
+**Por quê.** Mesmo com a coluna direita larga, as linhas single-column
+deixavam um vão horizontal grande (label à esquerda, controle à direita). O
+grid de cards preenche a tela de fato e mantém densidade/legibilidade. Em
+telas estreitas degrada para 1 coluna sem quebrar. `items-start` evita que
+um card expandido estique os vizinhos da mesma linha.
+
+---
+
+### 2026-06-10 — Editor de role: Sheet → página dedicada full-screen (2 colunas)
+
+**Decisão.** A edição/criação de role saiu do `Sheet` lateral (560px, que
+cortava a matriz) para a rota dedicada
+`/settings/permissions/roles/[roleId]` (`roleId="new"` = criação). O
+layout segue o blueprint gerado no v0 MCP (chat tqb…), adaptado ao DS v2
+em Tailwind + tokens: grid `lg:grid-cols-[320px_minmax(0,1fr)]` com
+**coluna esquerda fixa** (`sticky`) de identidade (ícone, nome, descrição,
+resumo de contagem, ações Salvar/Cancelar/Excluir) e **coluna direita
+larga** com o `RolePermissionsEditor`.
+
+**Por quê.** A matriz de permissões (segmented de 4 níveis + grid 2-col de
+settings) precisa de largura; num Sheet estreito ficava espremida. Página
+dedicada dá URL própria (deep-link, refresh, botão voltar do browser) e
+espaço real. Grupos seguem no Sheet por ora (escopo do pedido foi role).
+
+**Notas de integração.** `SettingsV2Shell` ganhou props opcionais
+`backHref`/`backLabel` (default `/settings`) para o "Voltar" apontar para
+`/settings/permissions`. O `RoleEditor` virou full-page (não é mais usado
+em Sheet). O `RolePermissionsEditor` permaneceu intacto (header/toggle/
+settings/footer internos) — só foi reposicionado na coluna direita.
+
+---
+
+### 2026-06-10 — Editor de permissões em 2 modos (níveis + granular) com `level-matrix`
+
+**Decisão.** A matriz de permissões do RoleEditor (`/settings/permissions`)
+foi substituída pelo `RolePermissionsEditor` (UI gerada via v0 MCP, adaptada
+ao DS v2), com a lógica de negócio isolada em
+`src/features/permissions/level-matrix.tsx` — único dono de `LEVELS`,
+`actionTier()`, `applyLevel()`, `levelOf()`, `deriveNav()` e
+`withDerivedNav()`.
+
+**Por quê.** O modo "Simplificado" (Nenhum · Ver · Operar · Total) precisa de
+uma classificação estável de actions por tier. Em vez de hardcodar listas na
+UI, o tier é resolvido por: campo explícito `ActionDef.tier` (novo, opcional)
+> heurística (`view`=1; `destructive`/`transfer_owner`/`*_others`=3; resto=2).
+Assim, novas actions do catálogo backend caem num tier razoável sem mudança
+no frontend.
+
+**Derivação de `nav:*`.** No modo simplificado, `nav:*` nunca é editado
+direto — `withDerivedNav()` recalcula a partir do `:view` de cada módulo
+(espelha `requiredPermission` de `sidebar-catalog.ts`). Mapeamentos sem
+módulo 1:1: `nav:dashboard` = acesso básico (sempre que há ≥1 permissão),
+`nav:logs` ← `report:view`, `nav:widgets` ← `distribution:view`. No modo
+granular, `nav` aparece como seção editável normal.
+
+---
+
 ### 2026-06-02 — Migração do novo design (frontend novo → branch `feature/migracao-novo-design`)
 
 **Decisão.** Trazido o estado completo do frontend novo
@@ -911,5 +1266,52 @@ está navegando — e o rewrite do frontend pro backend não muda o
 domínio próprio (ex.: `crm.minhaescola.com.br` no front e
 `api.minhaescola.com.br` no back), `NEXTAUTH_URL` continua sendo o
 **frontend** em ambos os serviços.
+
+---
+
+### 2026-06-11 — Padrão único DS v2 para modais/dialogs
+
+**Decisão.** Toda modal/dialog/sheet adota um único padrão visual DS v2,
+ancorado nos tokens (com dark mode automático):
+
+- **Overlay:** `bg-black/30 backdrop-blur-sm` (md no base `<dialog>`).
+- **Painel:** `rounded-[var(--radius-2xl)]` (xl em modais pequenas),
+  `border border-[var(--glass-border)]`, `bg-[var(--glass-bg-modal)]`,
+  `shadow-[var(--glass-shadow-lg)]`, `backdrop-blur-xl`.
+- **Texto:** título `text-[var(--text-primary)]`, descrição
+  `text-[var(--text-muted)]`, secundário `text-[var(--text-secondary)]`.
+- **Superfícies internas:** `--glass-bg-overlay` / `--input-bg`;
+  bordas `--glass-border-subtle`.
+- **Estado semântico:** `--color-success/danger/warning/info` (+`-bg`/`-text`);
+  marca/seleção `--brand-primary` / `--color-enterprise-bg`.
+- **Cores de marca de canais** (WhatsApp `#25D366`, Messenger `#1877F2`,
+  Instagram pink/violet, Telegram cyan) **são preservadas** como
+  identidade — não viram token.
+
+A referência-ouro que já seguia o padrão é
+`features/inbox-v2/extras/task-dialog.tsx` / `schedule-dialog.tsx`.
+
+**Contexto.** Existiam 5 "dialetos" coexistindo: base glass branca
+(`bg-white/75 border-white/55 rounded-[22px]`, shadcn, sem dark), DS v2
+por token, slate/blue nativo (kanban filters), shadcn semântico
+(`bg-card`/`border-border`) e hex/inline de marca. Overlays variavam
+(`black/30..40`, `slate-900/30..40`, `rgba(30,42,59,.35)`). O maior
+alavancador foi refatorar os 3 componentes-base
+(`components/ui/dialog.tsx`, `sheet.tsx`, `alert-dialog.tsx`): só isso
+deu dark mode e tokens a todas as modais que herdam deles.
+
+**Alternativas descartadas.**
+
+- **Manter `bg-white/75` no base e só ajustar caso a caso.** Perpetua a
+  ausência de dark mode e o `rounded-[22px]` cru.
+- **Migrar tudo para Radix Dialog.** Reescrita grande sem ganho — o
+  `<dialog>` nativo já centraliza e o token resolve o tema.
+
+**Impacto.** Tokens legados inexistentes corrigidos no caminho
+(`--color-ink-subtle`, `--glass-bg`, `--color-ink-muted`). `ds-scan`
+acumulou melhora (tailwindNativePalette −157, bgWhiteAlpha −8,
+rawRoundedPx −7) sem regressões. Novas modais devem partir do
+`DialogContent`/`SheetContent` base ou replicar o bloco de tokens acima;
+nunca usar `bg-white`/`bg-card`/slate em superfície de modal.
 
 ---

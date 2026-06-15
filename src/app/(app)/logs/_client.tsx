@@ -2,15 +2,23 @@
 
 import * as React from "react";
 import { Loader2 } from "lucide-react";
-import { IconClipboardList } from "@tabler/icons-react";
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconArrowsSort,
+  IconClipboardList,
+  IconCopy,
+} from "@tabler/icons-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
 import { SearchInput } from "@/components/crm/search-input";
+import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { Button } from "@/components/ui/button";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { DateRangePicker, type DateRange } from "@/components/crm/date-range-picker";
@@ -85,13 +93,69 @@ const ACTOR_BADGE: Record<
   },
 };
 
-type TableVariant = "grid" | "divided" | "zebra";
+// 6 colunas: Evento | Detalhe | Entidade | Origem | Ator | Data.
+// "Detalhe" encolhe para abrir espaço para "Origem" (pill + nome).
+const FEED_GRID = "grid-cols-[1.4fr_1.7fr_1.6fr_1.6fr_0.9fr_0.6fr]";
 
-const VARIANT_OPTIONS: { value: TableVariant; label: string; hint: string }[] = [
-  { value: "grid", label: "Grade", hint: "Bordas em linhas e colunas" },
-  { value: "divided", label: "Divisores", hint: "Linhas verticais sutis" },
-  { value: "zebra", label: "Zebra", hint: "Faixas alternadas, sem grade" },
-];
+type SortColumn = "evento" | "detalhe" | "entidade" | "origem" | "ator" | "data";
+type SortDir = "asc" | "desc";
+
+function resolveEntityId(ev: FeedEvent): string | null {
+  const t = ev.entityType;
+  if (t === "DEAL") return ev.dealId ?? ev.entityId ?? null;
+  if (t === "CONTACT" || t === "MESSAGE")
+    return ev.contactId ?? ev.entityId ?? null;
+  if (t === "CONVERSATION") return ev.conversationId ?? ev.entityId ?? null;
+  return ev.entityId ?? null;
+}
+
+function truncateId(id: string): string {
+  if (id.length <= 10) return `#${id}`;
+  return `#${id.slice(0, 8)}…`;
+}
+
+async function copyId(id: string) {
+  try {
+    await navigator.clipboard.writeText(id);
+    toast.success("ID copiado", { description: id });
+  } catch {
+    toast.error("Não foi possível copiar o ID");
+  }
+}
+
+interface OriginInfo {
+  pill: "client" | "agent" | null;
+  primary: string | null;
+  secondary: string | null;
+}
+
+function resolveOrigin(ev: FeedEvent): OriginInfo {
+  if (ev.entityType !== "MESSAGE") {
+    return { pill: null, primary: null, secondary: null };
+  }
+  if (ev.type === "MESSAGE_RECEIVED") {
+    const name = ev.contactName ?? ev.entityLabel ?? null;
+    return { pill: "client", primary: name, secondary: null };
+  }
+  if (
+    ev.type === "MESSAGE_SENT" ||
+    ev.type === "SCHEDULED_MESSAGE_SENT" ||
+    ev.type === "MESSAGE_FAILED"
+  ) {
+    const agent = ev.actorUser?.name ?? ev.actorLabel ?? null;
+    const client =
+      ev.contactName ??
+      (typeof ev.meta?.contactName === "string" ? ev.meta.contactName : null) ??
+      ev.entityLabel ??
+      null;
+    return {
+      pill: "agent",
+      primary: agent,
+      secondary: client ? `Cliente: ${client}` : null,
+    };
+  }
+  return { pill: null, primary: null, secondary: null };
+}
 
 export default function LogsClientPage() {
   const { ready, isManagerUp } = useRequireManager();
@@ -103,7 +167,7 @@ export default function LogsClientPage() {
   const [q, setQ] = React.useState<string>("");
   const [qDebounced, setQDebounced] = React.useState<string>("");
   const [demo, setDemo] = React.useState<boolean>(false);
-  const [variant, setVariant] = React.useState<TableVariant>("grid");
+  const [limit, setLimit] = React.useState<number>(50);
   const [range, setRange] = React.useState<DateRange>({ from: null, to: null });
 
   React.useEffect(() => {
@@ -118,9 +182,9 @@ export default function LogsClientPage() {
       q: qDebounced || undefined,
       dateFrom: range.from ? format(range.from, "yyyy-MM-dd") : undefined,
       dateTo: range.to ? format(range.to, "yyyy-MM-dd") : undefined,
-      limit: 80,
+      limit,
     }),
-    [entity, actor, qDebounced, range],
+    [entity, actor, qDebounced, range, limit],
   );
 
   const {
@@ -147,7 +211,60 @@ export default function LogsClientPage() {
 
   const allItems = isDemo ? MOCK_FEED : realItems;
 
-  const groups = React.useMemo(() => groupFeedByDay(allItems), [allItems]);
+  const [sort, setSort] = React.useState<{ column: SortColumn; dir: SortDir }>(
+    { column: "data", dir: "desc" },
+  );
+
+  const isDefaultSort = sort.column === "data" && sort.dir === "desc";
+
+  const sortedFlat = React.useMemo(() => {
+    if (isDefaultSort) return allItems;
+    const arr = [...allItems];
+    const dir = sort.dir === "asc" ? 1 : -1;
+    const getKey = (ev: FeedEvent): string => {
+      if (sort.column === "evento")
+        return (EVENT_CONFIG[ev.type]?.label ?? ev.type).toLowerCase();
+      if (sort.column === "detalhe") return eventDescription(ev).toLowerCase();
+      if (sort.column === "entidade")
+        return [
+          ENTITY_LABEL[ev.entityType ?? ""] ?? ev.entityType ?? "",
+          ev.entityLabel ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+      if (sort.column === "origem") {
+        const o = resolveOrigin(ev);
+        return [o.pill ?? "", o.primary ?? ""].join(" ").toLowerCase();
+      }
+      if (sort.column === "ator")
+        return (actorDisplay(ev).label ?? "").toLowerCase();
+      return ev.occurredAt;
+    };
+    arr.sort((a, b) => {
+      const ka = getKey(a);
+      const kb = getKey(b);
+      if (sort.column === "data") {
+        return (
+          (new Date(ka).getTime() - new Date(kb).getTime()) * dir
+        );
+      }
+      return ka.localeCompare(kb, "pt-BR") * dir;
+    });
+    return arr;
+  }, [allItems, sort, isDefaultSort]);
+
+  const groups = React.useMemo(
+    () => (isDefaultSort ? groupFeedByDay(allItems) : []),
+    [allItems, isDefaultSort],
+  );
+
+  const toggleSort = (column: SortColumn) => {
+    setSort((prev) =>
+      prev.column === column
+        ? { column, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { column, dir: column === "data" ? "desc" : "asc" },
+    );
+  };
 
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
@@ -180,53 +297,39 @@ export default function LogsClientPage() {
           icon={<IconClipboardList size={22} />}
           title="Logs"
           description="Histórico completo da operação — humanos, IA, automações e integrações."
-        />
-
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <TabsGlass
-            tabs={["Feed", "Estatísticas (30d)"]}
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            className="max-w-[320px]"
-          />
-          {isFeed && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-0.5 backdrop-blur-md">
-                {VARIANT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    title={opt.hint}
-                    onClick={() => setVariant(opt.value)}
-                    className={`rounded-[var(--radius-md)] px-2.5 py-1 font-display text-[12px] font-bold transition-colors ${
-                      variant === opt.value
-                        ? "bg-[var(--brand-primary)] text-[var(--brand-on-primary,#fff)]"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              <Button
-                variant={isDemo ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setDemo((v) => !v)}
-              >
-                {isDemo ? "Modo demonstração ativo" : "Ver dados de exemplo"}
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {isFeed ? (
-          <>
-            <div className="flex flex-wrap items-center gap-3">
+          center={
+            isFeed ? (
               <SearchInput
                 value={q}
                 onChange={setQ}
                 placeholder="Buscar evento, lead, ator..."
               />
+            ) : undefined
+          }
+          actions={
+            <>
+              <TabsGlass
+                tabs={["Feed", "Estatísticas (30d)"]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                className="max-w-[320px]"
+              />
+              {isFeed && (
+                <Button
+                  variant={isDemo ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setDemo((v) => !v)}
+                >
+                  {isDemo ? "Demonstração" : "Ver exemplo"}
+                </Button>
+              )}
+            </>
+          }
+        />
+
+        {isFeed ? (
+          <>
+            <div className="flex flex-wrap items-center gap-3">
               <DropdownGlass
                 options={ENTITY_OPTIONS}
                 value={entity}
@@ -273,7 +376,7 @@ export default function LogsClientPage() {
               <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
                 Não foi possível carregar o feed.
               </div>
-            ) : groups.length === 0 ? (
+            ) : allItems.length === 0 ? (
               <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
                 <EmptyState
                   icon={<IconClipboardList size={28} />}
@@ -286,52 +389,42 @@ export default function LogsClientPage() {
                 />
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-                <div className="scrollbar-thin min-h-0 flex-1 overflow-auto">
-                  <table className="w-full table-fixed border-collapse">
-                    <colgroup>
-                      <col className="w-[22%]" />
-                      <col className="w-[30%]" />
-                      <col className="w-[28%]" />
-                      <col className="w-[12%]" />
-                      <col className="w-[8%]" />
-                    </colgroup>
-                    <thead className="sticky top-0 z-10 bg-[var(--bg-base)] shadow-[0_1px_0_var(--glass-border)]">
-                      <tr className="border-b border-[var(--glass-border)]">
-                        <Th variant={variant}>Evento</Th>
-                        <Th variant={variant}>Detalhe</Th>
-                        <Th variant={variant}>Entidade</Th>
-                        <Th variant={variant}>Ator</Th>
-                        <Th variant={variant} last className="text-right">
-                          Data
-                        </Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {groups.map(([dayKey, dayItems]) => (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
+                <div className={`mb-2.5 grid ${FEED_GRID} items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--text-muted)]`}>
+                  <SortHeader label="Evento" column="evento" sort={sort} onSort={toggleSort} />
+                  <SortHeader label="Detalhe" column="detalhe" sort={sort} onSort={toggleSort} />
+                  <SortHeader label="Entidade" column="entidade" sort={sort} onSort={toggleSort} />
+                  <SortHeader label="Origem" column="origem" sort={sort} onSort={toggleSort} />
+                  <SortHeader label="Ator" column="ator" sort={sort} onSort={toggleSort} />
+                  <SortHeader label="Data" column="data" sort={sort} onSort={toggleSort} align="right" />
+                </div>
+
+                {!isDefaultSort && hasNextPage && (
+                  <div className="mb-2 px-1 font-body text-[11px] italic text-[var(--text-muted)]">
+                    Ordenando eventos carregados — role para carregar mais.
+                  </div>
+                )}
+
+                <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+                  {isDefaultSort
+                    ? groups.map(([dayKey, dayItems]) => (
                         <React.Fragment key={dayKey}>
-                          <tr className="sticky top-[41px] z-[5]">
-                            <td
-                              colSpan={5}
-                              className="border-y border-[var(--glass-border-subtle)] bg-[var(--bg-base)] px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]"
-                            >
+                          <div className="flex items-center gap-2.5 px-1 pb-0.5 pt-1 first:pt-0">
+                            <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                               {dayLabel(dayItems[0].occurredAt)}
-                            </td>
-                          </tr>
-                          {dayItems.map((ev, i) => (
-                            <EventRow
-                              key={ev.id}
-                              event={ev}
-                              variant={variant}
-                              index={i}
-                            />
+                            </span>
+                            <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
+                          </div>
+                          {dayItems.map((ev) => (
+                            <EventCard key={ev.id} event={ev} />
                           ))}
                         </React.Fragment>
+                      ))
+                    : sortedFlat.map((ev) => (
+                        <EventCard key={ev.id} event={ev} />
                       ))}
-                    </tbody>
-                  </table>
 
-                  <div ref={sentinelRef} className="h-10" />
+                  <div ref={sentinelRef} className="h-1" />
                   {isFetchingNextPage && (
                     <div className="flex items-center justify-center py-4 text-[13px] text-[var(--text-muted)]">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -339,12 +432,22 @@ export default function LogsClientPage() {
                     </div>
                   )}
                   {!hasNextPage && allItems.length > 0 && (
-                    <p className="pb-6 pt-2 text-center text-[11px] text-[var(--text-muted)]/70">
+                    <p className="pb-2 pt-2 text-center text-[11px] text-[var(--text-muted)]/70">
                       Fim do histórico.
                     </p>
                   )}
                 </div>
               </div>
+            )}
+
+            {!isLoading && !isError && allItems.length > 0 && (
+              <PaginationGlass
+                label={`${allItems.length.toLocaleString("pt-BR")} eventos carregados`}
+                showNav={false}
+                perPage={limit}
+                perPageOptions={[25, 50, 100, 200]}
+                onPerPageChange={setLimit}
+              />
             )}
           </>
         ) : (
@@ -419,91 +522,156 @@ export default function LogsClientPage() {
   );
 }
 
-function EventRow({
-  event,
-  variant,
-  index,
-}: {
-  event: FeedEvent;
-  variant: TableVariant;
-  index: number;
-}) {
+function EventCard({ event }: { event: FeedEvent }) {
   const cfg = EVENT_CONFIG[event.type] ?? FALLBACK_CONFIG;
   const Icon = cfg.Icon;
   const detail = eventDescription(event);
   const actor = actorDisplay(event);
   const badge = ACTOR_BADGE[actor.type] ?? ACTOR_BADGE.SYSTEM;
 
-  // Borda vertical entre colunas para "grid" e "divided".
-  const colDivider =
-    variant === "zebra"
-      ? ""
-      : "border-r border-[var(--glass-border-subtle)]";
-  // Borda horizontal entre linhas apenas em "grid".
-  const rowDivider =
-    variant === "grid"
-      ? "border-b border-[var(--glass-border-subtle)]"
-      : variant === "divided"
-        ? "border-b border-[var(--glass-border-subtle)]/60"
-        : "";
-  // Faixas alternadas em "zebra".
-  const zebra =
-    variant === "zebra" && index % 2 === 1
-      ? "bg-[var(--glass-bg-subtle)]/50"
-      : "";
+  // Evita duplicar o nome do contato: quando o rótulo da entidade é o
+  // mesmo do ator (ex.: "Mensagem recebida" → entidade e ator são o
+  // contato), mostramos só o TIPO da entidade na coluna Entidade.
+  const actorNorm = (actor.label ?? "").trim().toLowerCase();
+  const entityLabelText =
+    event.entityLabel && event.entityLabel.trim().toLowerCase() !== actorNorm
+      ? event.entityLabel
+      : null;
+
+  const entityId = resolveEntityId(event);
+  const origin = resolveOrigin(event);
 
   return (
-    <tr
-      className={`${rowDivider} ${zebra} last:border-b-0 transition-colors hover:bg-[var(--glass-bg-overlay)]`}
+    <div
+      className={`grid ${FEED_GRID} items-center gap-3.5 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]`}
     >
-      <td className={`px-3 py-2.5 ${colDivider}`}>
-        <div className="flex items-center gap-2.5">
-          <span
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
-          >
-            <Icon size={15} />
-          </span>
-          <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-            {cfg.label}
-          </span>
-        </div>
-      </td>
-      <td className={`px-3 py-2.5 ${colDivider}`}>
-        <span className="block truncate font-body text-[13px] text-[var(--text-secondary)]">
-          {detail || "—"}
+      {/* Coluna: Evento */}
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
+        >
+          <Icon size={16} />
         </span>
-      </td>
-      <td className={`px-3 py-2.5 ${colDivider}`}>
-        {event.entityLabel || event.entityType ? (
-          <span className="flex items-center gap-1.5 whitespace-nowrap">
-            {event.entityType && (
-              <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--text-muted)]">
-                {ENTITY_LABEL[event.entityType] ?? event.entityType}
-              </span>
+        <span className="truncate font-display text-[14px] font-semibold text-[var(--text-primary)]">
+          {cfg.label}
+        </span>
+      </div>
+
+      {/* Coluna: Detalhe */}
+      <span className="block truncate font-body text-[13px] text-[var(--text-secondary)]">
+        {detail || "—"}
+      </span>
+
+      {/* Coluna: Entidade */}
+      <div className="min-w-0">
+        {entityLabelText || event.entityType ? (
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="flex items-center gap-1.5 whitespace-nowrap">
+              {event.entityType && (
+                <span className="shrink-0 font-display text-[12px] font-bold uppercase tracking-[0.03em] text-[var(--text-muted)]">
+                  {ENTITY_LABEL[event.entityType] ?? event.entityType}
+                </span>
+              )}
+              {entityLabelText && (
+                <span className="truncate font-body text-[13px] text-[var(--text-secondary)]">
+                  {entityLabelText}
+                </span>
+              )}
+            </span>
+            {entityId && (
+              <button
+                type="button"
+                onClick={() => void copyId(entityId)}
+                title={`Copiar ID: ${entityId}`}
+                className="inline-flex w-fit items-center gap-1 rounded-[var(--radius-sm)] px-1 py-0.5 font-mono text-[11px] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]"
+              >
+                <span>{truncateId(entityId)}</span>
+                <IconCopy size={11} />
+              </button>
             )}
-            {event.entityLabel && (
-              <span className="truncate font-body text-[12px] text-[var(--text-secondary)]">
-                {event.entityLabel}
-              </span>
-            )}
-          </span>
+          </div>
         ) : (
           <span className="text-[13px] text-[var(--text-muted)]">—</span>
         )}
-      </td>
-      <td className={`px-3 py-2.5 ${colDivider}`}>
+      </div>
+
+      {/* Coluna: Origem */}
+      <div className="min-w-0">
+        {origin.pill ? (
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-display text-[11px] font-bold ${
+                  origin.pill === "client"
+                    ? "bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] text-[var(--color-info)]"
+                    : "bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]"
+                }`}
+              >
+                {origin.pill === "client" ? "Cliente" : "Agente"}
+              </span>
+              {origin.primary && (
+                <span className="truncate font-body text-[13px] text-[var(--text-secondary)]">
+                  {origin.primary}
+                </span>
+              )}
+            </span>
+            {origin.secondary && (
+              <span className="truncate font-body text-[12px] text-[var(--text-muted)]">
+                {origin.secondary}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-[13px] text-[var(--text-muted)]">—</span>
+        )}
+      </div>
+
+      {/* Coluna: Ator */}
+      <div>
         <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 font-display text-[11px] font-bold ${badge.className}`}
+          className={`inline-flex items-center rounded-full px-2.5 py-1 font-display text-[12px] font-semibold ${badge.className}`}
         >
           {actor.label}
         </span>
-      </td>
-      <td className="px-3 py-2.5 text-right">
-        <span className="font-display tabular-nums text-[12px] text-[var(--text-muted)]">
+      </div>
+
+      {/* Coluna: Data */}
+      <div className="text-right">
+        <span className="font-display tabular-nums text-[13px] text-[var(--text-muted)]">
           {format(parseISO(event.occurredAt), "HH:mm", { locale: ptBR })}
         </span>
-      </td>
-    </tr>
+      </div>
+    </div>
+  );
+}
+
+function SortHeader({
+  label,
+  column,
+  sort,
+  onSort,
+  align,
+}: {
+  label: string;
+  column: SortColumn;
+  sort: { column: SortColumn; dir: SortDir };
+  onSort: (c: SortColumn) => void;
+  align?: "left" | "right";
+}) {
+  const active = sort.column === column;
+  const Arrow = !active ? IconArrowsSort : sort.dir === "asc" ? IconArrowUp : IconArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      className={`inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1 py-0.5 transition-colors hover:text-[var(--text-secondary)] ${
+        align === "right" ? "justify-end" : "justify-start"
+      } ${active ? "text-[var(--brand-primary)]" : ""}`}
+      aria-label={`Ordenar por ${label}`}
+    >
+      <span>{label}</span>
+      <Arrow size={11} className={active ? "" : "opacity-50"} />
+    </button>
   );
 }
 
@@ -519,30 +687,6 @@ function dayLabel(iso: string): string {
   if (sameDay(d, today)) return "Hoje";
   if (sameDay(d, yesterday)) return "Ontem";
   return format(d, "EEEE, dd 'de' MMMM", { locale: ptBR });
-}
-
-function Th({
-  children,
-  className,
-  variant,
-  last,
-}: {
-  children?: React.ReactNode;
-  className?: string;
-  variant: TableVariant;
-  last?: boolean;
-}) {
-  const colDivider =
-    variant === "zebra" || last
-      ? ""
-      : "border-r border-[var(--glass-border-subtle)]";
-  return (
-    <th
-      className={`px-3 py-3 text-left font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)] ${colDivider} ${className ?? ""}`}
-    >
-      {children}
-    </th>
-  );
 }
 
 function StatCard({ label, value }: { label: string; value: number }) {

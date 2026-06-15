@@ -15,6 +15,8 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
+
 import { apiUrl } from "@/lib/api";
 import { useCreateDeal, useTeamUsers } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
@@ -42,9 +44,9 @@ interface DealFieldDef {
 }
 
 const inputCls =
-  "w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]";
+  "w-full rounded-[var(--radius-md)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]";
 const labelCls =
-  "mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]";
+  "mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]";
 
 export function AddDealDialog({
   open,
@@ -202,19 +204,15 @@ export function AddDealDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
       onClick={() => onOpenChange(false)}
     >
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}
-        className="flex max-h-[88vh] w-[460px] max-w-[92vw] flex-col rounded-[var(--radius-xl)] border shadow-2xl"
-        style={{
-          background: "rgba(255, 255, 255, 0.98)",
-          borderColor: "var(--glass-border, rgba(0,0,0,0.08))",
-        }}
+        className="flex max-h-[88vh] w-[460px] max-w-[92vw] flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
       >
-        <h3 className="border-b border-[var(--glass-border,rgba(0,0,0,0.08))] px-5 py-4 font-display text-base font-bold text-[var(--text-primary,#1a202c)]">
+        <h3 className="border-b border-[var(--glass-border)] px-5 py-4 font-display text-base font-bold text-[var(--text-primary)]">
           Novo negócio
         </h3>
 
@@ -247,35 +245,27 @@ export function AddDealDialog({
             </label>
             <label className="block">
               <span className={labelCls}>Estágio *</span>
-              <select
+              <DropdownGlass
+                options={stages.map((s) => ({ value: s.id, label: s.name }))}
                 value={stageId}
-                onChange={(e) => setStageId(e.target.value)}
-                className={inputCls}
-              >
-                {stages.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setStageId}
+                triggerClassName="w-full"
+              />
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className={labelCls}>Responsável</span>
-              <select
+              <DropdownGlass
+                options={[
+                  { value: "", label: "Sem responsável" },
+                  ...users.map((u) => ({ value: u.id, label: u.name })),
+                ]}
                 value={ownerId}
-                onChange={(e) => setOwnerId(e.target.value)}
-                className={inputCls}
-              >
-                <option value="">Sem responsável</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setOwnerId}
+                triggerClassName="w-full"
+              />
             </label>
             <label className="block">
               <span className={labelCls}>Fechamento esperado</span>
@@ -289,7 +279,7 @@ export function AddDealDialog({
           </div>
 
           {/* Contato */}
-          <div className="rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] p-3">
+          <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] p-3">
             <span className={labelCls}>Contato</span>
             <div className="mb-2 flex gap-1">
               {(
@@ -303,12 +293,11 @@ export function AddDealDialog({
                   key={m.id}
                   type="button"
                   onClick={() => setContactMode(m.id)}
-                  className="rounded-full px-3 py-1 font-display text-[11px] font-semibold transition-colors"
-                  style={
+                  className={`rounded-full px-3 py-1 font-display text-[11px] font-semibold transition-colors ${
                     contactMode === m.id
-                      ? { background: "var(--brand-primary,#5b6ff5)", color: "#fff" }
-                      : { background: "rgba(0,0,0,0.05)", color: "var(--text-secondary,#4a5568)" }
-                  }
+                      ? "bg-[var(--brand-primary)] text-white"
+                      : "bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]"
+                  }`}
                 >
                   {m.label}
                 </button>
@@ -318,13 +307,13 @@ export function AddDealDialog({
             {contactMode === "search" ? (
               <div>
                 {selectedContact ? (
-                  <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[rgba(91,111,245,0.08)] px-3 py-2 text-[13px]">
-                    <span className="font-medium text-[var(--text-primary,#1a202c)]">
+                  <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-[13px]">
+                    <span className="font-medium text-[var(--text-primary)]">
                       {selectedContact.name}
                     </span>
                     <button
                       type="button"
-                      className="text-[12px] text-[var(--brand-primary,#5b6ff5)] underline"
+                      className="text-[12px] text-[var(--brand-primary)] underline"
                       onClick={() => setSelectedContact(null)}
                     >
                       trocar
@@ -339,13 +328,13 @@ export function AddDealDialog({
                       placeholder="Buscar por nome, e-mail…"
                       className={inputCls}
                     />
-                    <div className="mt-1 max-h-40 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))]">
+                    <div className="mt-1 max-h-40 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)]">
                       {contactsLoading ? (
-                        <p className="p-2 text-[12px] text-[var(--text-muted,#718096)]">
+                        <p className="p-2 text-[12px] text-[var(--text-muted)]">
                           Buscando…
                         </p>
                       ) : contacts.length === 0 ? (
-                        <p className="p-2 text-[12px] text-[var(--text-muted,#718096)]">
+                        <p className="p-2 text-[12px] text-[var(--text-muted)]">
                           Nenhum contato encontrado.
                         </p>
                       ) : (
@@ -354,17 +343,17 @@ export function AddDealDialog({
                             <li key={c.id}>
                               <button
                                 type="button"
-                                className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-[13px] hover:bg-black/5"
+                                className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-[13px] hover:bg-[var(--glass-bg-strong)]"
                                 onClick={() => {
                                   setSelectedContact({ id: c.id, name: c.name });
                                   setContactSearch("");
                                 }}
                               >
-                                <span className="font-medium text-[var(--text-primary,#1a202c)]">
+                                <span className="font-medium text-[var(--text-primary)]">
                                   {c.name}
                                 </span>
                                 {c.email ? (
-                                  <span className="text-[11px] text-[var(--text-muted,#718096)]">
+                                  <span className="text-[11px] text-[var(--text-muted)]">
                                     {c.email}
                                   </span>
                                 ) : null}
@@ -404,7 +393,7 @@ export function AddDealDialog({
                     className={inputCls}
                   />
                 </div>
-                <p className="text-[11px] text-[var(--text-muted,#718096)]">
+                <p className="text-[11px] text-[var(--text-muted)]">
                   O contato é criado e atribuído ao negócio automaticamente.
                 </p>
               </div>
@@ -413,7 +402,7 @@ export function AddDealDialog({
 
           {/* Custom fields */}
           {fieldDefs.length > 0 ? (
-            <div className="space-y-3 border-t border-[var(--glass-border,rgba(0,0,0,0.08))] pt-3">
+            <div className="space-y-3 border-t border-[var(--glass-border)] pt-3">
               {fieldDefs.map((f) => {
                 const v = cfValues[f.id] ?? "";
                 const onChange = (val: string) =>
@@ -426,18 +415,13 @@ export function AddDealDialog({
                       {f.required ? " *" : ""}
                     </span>
                     {f.options && f.options.length > 0 ? (
-                      <select
-                        value={v}
-                        onChange={(e) => onChange(e.target.value)}
-                        className={inputCls}
-                      >
-                        <option value="">Selecione…</option>
-                        {f.options.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
+                      <DropdownGlass
+                        options={f.options.map((opt) => ({ value: opt, label: opt }))}
+                        value={v || undefined}
+                        onValueChange={onChange}
+                        placeholder="Selecione…"
+                        triggerClassName="w-full"
+                      />
                     ) : type === "date" ? (
                       <input
                         type="date"
@@ -467,26 +451,22 @@ export function AddDealDialog({
           ) : null}
 
           {error ? (
-            <p className="text-[12px] text-[var(--color-danger,#e11d48)]">{error}</p>
+            <p className="text-[12px] text-[var(--color-danger)]">{error}</p>
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-[var(--glass-border,rgba(0,0,0,0.08))] px-5 py-3">
+        <div className="flex justify-end gap-2 border-t border-[var(--glass-border)] px-5 py-3">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary,#4a5568)] hover:bg-black/5"
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={!canSubmit || pending}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-white disabled:opacity-60"
-            style={{
-              background: "var(--brand-primary, #5b6ff5)",
-              boxShadow: "0 4px 14px rgba(91,111,245,0.35)",
-            }}
+            className="rounded-full bg-[var(--brand-primary)] px-4 py-1.5 font-display text-xs font-semibold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] hover:bg-[var(--brand-primary-dark)] disabled:opacity-60"
           >
             {pending ? "Criando…" : "Criar negócio"}
           </button>

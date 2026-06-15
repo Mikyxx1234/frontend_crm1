@@ -38,15 +38,15 @@ export const RECIPIENT_META: Record<
 export const TONE_CLASSES: Record<StatusTone, string> = {
   neutral:
     "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
-  info: "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-300",
+  info: "border-[color-mix(in_srgb,var(--color-info)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-info)_12%,transparent)] text-[var(--color-info)]",
   brand:
-    "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
+    "border-[color-mix(in_srgb,var(--brand-primary)_40%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)] text-[var(--brand-primary)]",
   success:
-    "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
+    "border-[color-mix(in_srgb,var(--color-success)_30%,transparent)] bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
   warning:
-    "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300",
+    "border-[color-mix(in_srgb,var(--color-warning)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_14%,transparent)] text-[var(--color-warning)]",
   danger:
-    "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300",
+    "border-[color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger-text)]",
 };
 
 export const CAMPAIGN_STATUS_FILTERS: { value: string; label: string }[] = [

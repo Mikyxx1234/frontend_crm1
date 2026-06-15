@@ -1,5 +1,11 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   IconRobot,
   IconClipboardList,
@@ -10,10 +16,16 @@ import {
   IconCheck,
   IconChecks,
   IconClock,
+  IconCopy,
   IconAlertCircle,
   IconPlayerPlay,
   IconPlayerPause,
   IconLock,
+  IconLoader2,
+  IconTextCaption,
+  IconPin,
+  IconPinFilled,
+  IconListCheck,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -133,6 +145,8 @@ export interface Message {
   createdAt?: string
   type: "incoming" | "outgoing"
   senderInitials?: string
+  /** Nome completo do agente ou automação que enviou a mensagem. */
+  senderName?: string
   /** Mensagem enviada por bot/automação — exibe badge "AUTOMAÇÃO" */
   isBot?: boolean
   /** Campos parseados de resposta de formulário Meta Flow */
@@ -155,7 +169,13 @@ export interface Message {
    * lida (✓✓ azul), falha (alerta vermelho).
    */
   status?: "pending" | "sent" | "delivered" | "read" | "failed"
+  /**
+   * Texto do erro de envio (traduzido do Meta quando disponível). Exibido
+   * em tooltip ao passar o mouse sobre o ícone de falha (status `failed`).
+   */
+  sendError?: string
 }
+
 
 /** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing). */
 function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
@@ -178,11 +198,77 @@ function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
   )
 }
 
-interface MessageBubbleProps {
+/**
+ * Indicador de status com tooltip de erro. Para `failed`, envolve o ícone
+ * num tooltip que mostra o texto do erro de envio (traduzido do Meta).
+ * Demais status delegam ao `StatusTicks`.
+ */
+function StatusIndicator({
+  status,
+  sendError,
+}: {
+  status: NonNullable<Message["status"]>
+  sendError?: string
+}) {
+  if (status !== "failed") {
+    return <StatusTicks status={status} />
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="pointer-events-auto inline-flex cursor-help items-center">
+          <IconAlertCircle size={13} className="shrink-0 text-[#fca5a5]" aria-label="Falha no envio" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="end"
+        className="w-max max-w-[300px] whitespace-normal [overflow-wrap:anywhere] border border-[color:var(--color-danger)]/30 bg-white px-3 py-2 text-left text-[11px] font-medium normal-case leading-snug text-[var(--color-danger-text)] v2-dark:bg-[var(--glass-bg-modal)]"
+      >
+        <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide">
+          Erro no envio (Meta)
+        </span>
+        <span className="block">
+          {summarizeSendError(sendError)}
+        </span>
+        <CopyErrorButton text={translateSendError(sendError)} />
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** Botão "Copiar" o texto COMPLETO do erro (com a mensagem original da Meta). */
+function CopyErrorButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      className="pointer-events-auto mt-1.5 inline-flex items-center gap-1 rounded-md border border-[color:var(--color-danger)]/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors hover:bg-[color:var(--color-danger)]/10"
+      onClick={(e) => {
+        e.stopPropagation()
+        void navigator.clipboard.writeText(text).then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        })
+      }}
+    >
+      {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+      {copied ? "Copiado" : "Copiar erro"}
+    </button>
+  )
+}
+
+export interface MessageBubbleProps {
   message: Message
   /** Iniciais do agente logado — exibidas no avatar das mensagens outgoing. */
   agentInitials?: string
   className?: string
+  /** Esta nota está fixada na conversa? Exibe indicador âmbar. */
+  isPinned?: boolean
+  /** Callback para fixar (messageId) ou desafixar (null). */
+  onPinNote?: (messageId: string | null) => void
+  /** Callback para adicionar conteúdo da nota ao log/timeline do deal. */
+  onAddToLog?: (content: string) => void
 }
 
 function FormBubble({ message, className }: { message: Message; className?: string }) {
@@ -283,11 +369,20 @@ function fmtTime(s: number): string {
  * Player de áudio minimalista — sem controles nativos do browser.
  * Botão play/pause + barra de progresso clicável + timer.
  */
+/** Estados possíveis da transcrição. */
+type TranscriptState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "done"; text: string }
+  | { status: "error"; message: string }
+
 function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: boolean }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [transcript, setTranscript] = useState<TranscriptState>({ status: "idle" })
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false)
 
   const toggle = useCallback(() => {
     const el = audioRef.current
@@ -321,70 +416,171 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
     }
   }, [])
 
+  const handleTranscribe = useCallback(async () => {
+    if (!url || transcript.status === "loading") return
+    setTranscript({ status: "loading" })
+    let res: Response
+    try {
+      res = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      })
+    } catch {
+      setTranscript({ status: "error", message: "Servidor indisponível." })
+      return
+    }
+    let data: { transcript?: string; error?: string } = {}
+    try {
+      data = (await res.json()) as { transcript?: string; error?: string }
+    } catch {
+      setTranscript({ status: "error", message: `Erro HTTP ${res.status}.` })
+      return
+    }
+    if (!res.ok || data.error) {
+      setTranscript({ status: "error", message: data.error ?? `Erro ${res.status}.` })
+    } else {
+      setTranscript({ status: "done", text: data.transcript ?? "" })
+    }
+  }, [url, transcript.status])
+
   const pct = duration > 0 ? (current / duration) * 100 : 0
   const timeLabel = playing || current > 0 ? fmtTime(current) : fmtTime(duration)
 
   // Cores derivadas de isOutgoing
-  const trackBg   = isOutgoing ? "rgba(255,255,255,0.25)" : "rgba(91,111,245,0.15)"
-  const fillBg    = isOutgoing ? "rgba(255,255,255,0.85)" : "var(--brand-primary)"
-  const iconColor = isOutgoing ? "text-white"             : "text-[var(--brand-primary)]"
-  const timeColor = isOutgoing ? "text-white/70"          : "text-[var(--text-muted)]"
-  const micColor  = isOutgoing ? "text-white/50"          : "text-[var(--text-muted)]"
+  const trackBg      = isOutgoing ? "rgba(255,255,255,0.25)" : "rgba(91,111,245,0.15)"
+  const fillBg       = isOutgoing ? "rgba(255,255,255,0.85)" : "var(--brand-primary)"
+  const iconColor    = isOutgoing ? "text-white"             : "text-[var(--brand-primary)]"
+  const timeColor    = isOutgoing ? "text-white/70"          : "text-[var(--text-muted)]"
+  const micColor     = isOutgoing ? "text-white/50"          : "text-[var(--text-muted)]"
+  const transcriptBg = isOutgoing
+    ? "bg-white/10 text-white/90 border-white/20"
+    : "bg-[var(--brand-primary)]/5 text-[var(--text-secondary)] border-[var(--glass-border-subtle)]"
+  // Botão "Transcrever": pill com fundo sólido para garantir contraste em qualquer cor de bolha.
+  const btnBase = isOutgoing
+    ? "bg-white/20 text-white hover:bg-white/30"
+    : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20"
 
   return (
-    <div className="flex w-[220px] items-center gap-2.5 py-0.5">
-      {/* Elemento audio oculto */}
-      {url && (
-        <audio ref={audioRef} src={url} preload="metadata" aria-hidden="true" />
+    <div
+      className={cn(
+        "flex w-[220px] flex-col gap-1 py-0.5",
+        // Folga inferior só quando há transcrição (evita o horário sobrepor o
+        // texto). No estado padrão, o horário divide a linha com "Transcrever".
+        transcript.status === "done" ? "pb-4" : "pb-1.5",
+      )}
+    >
+      {/* Linha do player */}
+      <div className="flex items-center gap-2.5">
+        {/* Elemento audio oculto */}
+        {url && (
+          <audio ref={audioRef} src={url} preload="metadata" aria-hidden="true" />
+        )}
+
+        {/* Ícone mic (decorativo) */}
+        <IconMicrophone size={13} className={cn("shrink-0", micColor)} />
+
+        {/* Botão play/pause */}
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={!url}
+          aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-opacity",
+            isOutgoing ? "bg-white/20 hover:bg-white/30" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
+            !url && "opacity-40 cursor-not-allowed",
+          )}
+        >
+          {playing
+            ? <IconPlayerPause size={13} className={iconColor} />
+            : <IconPlayerPlay  size={13} className={iconColor} />
+          }
+        </button>
+
+        {/* Barra de progresso */}
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div
+            role="progressbar"
+            aria-valuenow={Math.round(pct)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            className="relative h-[3px] w-full cursor-pointer overflow-hidden rounded-full"
+            style={{ background: trackBg }}
+            onClick={(e) => {
+              const el = audioRef.current
+              if (!el || !duration) return
+              const rect = e.currentTarget.getBoundingClientRect()
+              const ratio = (e.clientX - rect.left) / rect.width
+              el.currentTime = ratio * duration
+            }}
+          >
+            <div
+              className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-100"
+              style={{ width: `${pct}%`, background: fillBg }}
+            />
+          </div>
+          <span className={cn("font-body text-[10px] leading-none tabular-nums", timeColor)}>
+            {timeLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* Botão Transcrever — pill compacta com fundo próprio para contraste */}
+      {url && transcript.status !== "done" && (
+        <button
+          type="button"
+          disabled={transcript.status === "loading"}
+          onClick={handleTranscribe}
+          className={cn(
+            "ml-[25px] flex items-center gap-1 self-start rounded-full px-2 py-0.5 transition-colors",
+            btnBase,
+            transcript.status === "loading" && "cursor-wait",
+          )}
+        >
+          {transcript.status === "loading"
+            ? <IconLoader2 size={10} className="animate-spin" />
+            : <IconTextCaption size={10} />
+          }
+          <span className="font-display text-[10px] font-semibold">
+            {transcript.status === "loading" ? "Transcrevendo…" : "Transcrever"}
+          </span>
+        </button>
       )}
 
-      {/* Ícone mic (decorativo) */}
-      <IconMicrophone size={13} className={cn("shrink-0", micColor)} />
-
-      {/* Botão play/pause */}
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={!url}
-        aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
-        className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-opacity",
-          isOutgoing ? "bg-white/20 hover:bg-white/30" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
-          !url && "opacity-40 cursor-not-allowed",
-        )}
-      >
-        {playing
-          ? <IconPlayerPause size={13} className={iconColor} />
-          : <IconPlayerPlay  size={13} className={iconColor} />
-        }
-      </button>
-
-      {/* Barra de progresso */}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div
-          role="progressbar"
-          aria-valuenow={Math.round(pct)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          className="relative h-[3px] w-full cursor-pointer overflow-hidden rounded-full"
-          style={{ background: trackBg }}
-          onClick={(e) => {
-            const el = audioRef.current
-            if (!el || !duration) return
-            const rect = e.currentTarget.getBoundingClientRect()
-            const ratio = (e.clientX - rect.left) / rect.width
-            el.currentTime = ratio * duration
-          }}
-        >
-          <div
-            className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-100"
-            style={{ width: `${pct}%`, background: fillBg }}
-          />
+      {/* Resultado da transcrição — colapsável */}
+      {transcript.status === "done" && transcript.text && (
+        <div className={cn("rounded-md border px-2.5 py-1.5 text-[11px] leading-relaxed", transcriptBg)}>
+          <p className={cn(
+            "transition-all",
+            transcriptExpanded ? "" : "line-clamp-2",
+          )}>
+            {transcript.text}
+          </p>
+          {transcript.text.length > 80 && (
+            <button
+              type="button"
+              onClick={() => setTranscriptExpanded((v) => !v)}
+              className={cn(
+                "mt-0.5 font-display text-[9px] font-semibold opacity-60 hover:opacity-100",
+                isOutgoing ? "text-white" : "text-[var(--brand-primary)]",
+              )}
+            >
+              {transcriptExpanded ? "Ver menos" : "Ver mais"}
+            </button>
+          )}
         </div>
-        <span className={cn("font-body text-[10px] leading-none tabular-nums", timeColor)}>
-          {timeLabel}
-        </span>
-      </div>
+      )}
+      {transcript.status === "done" && !transcript.text && (
+        <p className={cn("text-[10px] italic", timeColor)}>
+          Áudio sem fala detectada.
+        </p>
+      )}
+      {transcript.status === "error" && (
+        <p className={cn("text-[10px]", isOutgoing ? "text-white/60" : "text-[var(--color-danger)]")}>
+          {transcript.message}
+        </p>
+      )}
     </div>
   )
 }
@@ -509,40 +705,121 @@ function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boo
   )
 }
 
-export function MessageBubble({ message, agentInitials, className }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  agentInitials,
+  className,
+  isPinned,
+  onPinNote,
+  onAddToLog,
+}: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
   const isNote = message.isNote === true
   const hasForm = !!(message.formFields && message.formFields.length > 0)
+  const senderName = message.senderName
 
   if (hasForm) {
     return <FormBubble message={message} className={className} />
   }
 
-  // Nota interna: layout dedicado — full-width amarelo claro com borda
-  // lateral âmbar + badge "Nota". Não usa o esquema azul (que indicaria
-  // mensagem enviada ao cliente). Mantém `senderInitials`/avatar do
-  // agente, mas em circle neutro pra não competir com a cor da nota.
+  // Nota interna: barra horizontal full-width com gradiente âmbar.
+  // Layout: [🔒 NOTA] [texto flex-1] [ações hover] [agente] [hora]
   if (isNote) {
+    const hasNoteActions = !!(onPinNote || onAddToLog)
     return (
-      <div className={cn("flex w-full items-start gap-2.5", className)}>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 font-display text-[10px] font-bold text-amber-700">
-          {message.senderInitials || agentInitials || "·"}
-        </div>
-        <div
-          className="relative min-w-0 flex-1 rounded-[var(--radius-md)] border-l-[3px] border-amber-400 bg-amber-50/80 px-3.5 py-2 text-sm leading-[1.45] text-[var(--text-primary)] shadow-[0_2px_8px_rgba(180,150,80,0.10)]"
-        >
-          <div className="mb-1 flex items-center gap-1.5">
-            <IconLock size={10} className="text-amber-600" />
-            <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-amber-700">
-              Nota interna
+      <div
+        className={cn(
+          "group relative flex w-full items-center gap-2.5 rounded-[var(--radius-lg)] border px-3.5 py-2 text-sm leading-[1.45] transition-colors",
+          isPinned
+            ? "border-warning/60 bg-[linear-gradient(135deg,rgba(251,191,36,0.14)_0%,rgba(245,158,11,0.10)_100%)]"
+            : "border-warning/30 bg-[linear-gradient(135deg,rgba(251,191,36,0.08)_0%,rgba(245,158,11,0.06)_100%)]",
+          className,
+        )}
+      >
+        {/* Indicador de nota fixada */}
+        {isPinned && (
+          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-warning/15 px-1.5 py-0.5">
+            <IconPinFilled size={9} className="text-warning" />
+            <span className="font-display text-[8px] font-bold uppercase tracking-wider text-warning">
+              fixada
             </span>
-          </div>
-          <MessageContent message={message} isOutgoing={true} />
-          <span className="pointer-events-none mt-1 block select-none text-right text-[10.5px] leading-none text-amber-700/70">
+          </span>
+        )}
+
+        {/* Ícone + badge "NOTA" */}
+        <span className="flex shrink-0 items-center gap-1.5">
+          <IconLock size={13} className="text-warning" />
+          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-warning">
+            Nota
+          </span>
+        </span>
+
+        {/* Separador */}
+        <span className="h-3.5 w-px shrink-0 bg-warning/30" />
+
+        {/* Conteúdo da mensagem */}
+        <span className="min-w-0 flex-1 text-[var(--text-primary)]">
+          <MessageContent message={message} isOutgoing={false} />
+        </span>
+
+        {/* Ações hover (fixar + log) */}
+        {hasNoteActions && (
+          <span className="ml-1 flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            {onPinNote && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isPinned ? onPinNote(null) : onPinNote(message.id)
+                    }
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-warning/60 transition-colors hover:bg-warning/15 hover:text-warning"
+                    aria-label={isPinned ? "Desafixar nota" : "Fixar nota"}
+                  >
+                    {isPinned ? (
+                      <IconPinFilled size={13} />
+                    ) : (
+                      <IconPin size={13} />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[11px]">
+                  {isPinned ? "Desafixar nota" : "Fixar nota"}
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {onAddToLog && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onAddToLog(message.content)}
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-warning/60 transition-colors hover:bg-warning/15 hover:text-warning"
+                    aria-label="Adicionar ao log do negócio"
+                  >
+                    <IconListCheck size={13} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[11px]">
+                  Adicionar ao log do negócio
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </span>
+        )}
+
+        {/* Agente + hora */}
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {senderName && (
+            <span className="font-display text-[11px] font-semibold text-warning/70">
+              {senderName}
+            </span>
+          )}
+          <span className="font-body text-[10.5px] text-warning/50">
             {message.time}
           </span>
-        </div>
+        </span>
       </div>
     )
   }
@@ -550,54 +827,69 @@ export function MessageBubble({ message, agentInitials, className }: MessageBubb
   return (
     <div
       className={cn(
-        "flex max-w-[75%] items-end gap-2.5",
-        isOutgoing && "ml-auto flex-row-reverse",
+        "flex max-w-[75%] flex-col gap-0.5",
+        isOutgoing ? "ml-auto items-end" : "items-start",
         className,
       )}
     >
-      {/* Avatar: robô para bot, iniciais para agente */}
-      {isOutgoing && (
-        <div className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
-          isBot
-            ? "bg-[#475569]"
-            : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
-        )}>
-          {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
-        </div>
-      )}
-      <div
-        className={cn(
-          "relative min-w-0 rounded-[var(--radius-lg)] px-[14px] py-2 text-sm leading-[1.45]",
-          isOutgoing
-            ? isBot
-              ? "rounded-br-[4px] bg-[#1e293b] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
-              : "rounded-br-[4px] bg-[var(--brand-primary)] text-white shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
-            : "rounded-bl-[4px] text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
+      <div className={cn("flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
+        {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome */}
+        {isOutgoing && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
+                isBot
+                  ? "bg-[#475569]"
+                  : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
+              )}>
+                {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
+              </div>
+            </TooltipTrigger>
+            {senderName && (
+              <TooltipContent side="left" className="font-medium text-[11px]">
+                {senderName}
+              </TooltipContent>
+            )}
+          </Tooltip>
         )}
-        style={!isOutgoing ? { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" } : undefined}
-      >
-        {/* Badge AUTOMAÇÃO */}
-        {isBot && (
-          <div className="mb-1.5 flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white/90">
-              <IconRobot size={10} />
-              Automação
-            </span>
-          </div>
-        )}
-        {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
-        <MessageContent message={message} isOutgoing={isOutgoing} />
-        <span
+        <div
           className={cn(
-            "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
-            isOutgoing ? "text-white/80" : "text-[var(--text-muted)]",
+            "relative min-w-0 rounded-[var(--radius-lg)] px-[14px] py-2 text-sm leading-[1.45]",
+            isOutgoing
+              ? isBot
+                ? "rounded-br-[4px] bg-[#1e293b] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
+                : "rounded-br-[4px] bg-[var(--brand-primary)] text-white shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
+              : "rounded-bl-[4px] text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
+          style={!isOutgoing ? { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" } : undefined}
         >
-          {message.time}
-          {isOutgoing && message.status && <StatusTicks status={message.status} />}
-        </span>
+          {/* Badge AUTOMAÇÃO */}
+          {isBot && (
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white/90">
+                <IconRobot size={10} />
+                {senderName || "Automação"}
+              </span>
+            </div>
+          )}
+          {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
+          <MessageContent message={message} isOutgoing={isOutgoing} />
+          <span
+            className={cn(
+              "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
+              isOutgoing ? "text-white/80" : "text-[var(--text-muted)]",
+            )}
+          >
+            {message.time}
+            {isOutgoing && message.status && (
+              <StatusIndicator status={message.status} sendError={message.sendError} />
+            )}
+          </span>
+        </div>
       </div>
+
+      {/* Nome do remetente apenas no tooltip do avatar (acima) */}
     </div>
   )
 }

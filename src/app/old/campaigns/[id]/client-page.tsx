@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatDateTime } from "@/lib/utils";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: string }> = {
   DRAFT: { label: "Rascunho", variant: "outline" },
@@ -321,21 +322,21 @@ export default function CampaignDetailPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between pb-3">
             <CardTitle className="text-base">Destinatários</CardTitle>
-            <select
-              className="h-8 rounded-md border bg-background px-2 text-xs"
+            <DropdownGlass
+              options={[
+                { value: "", label: "Todos" },
+                { value: "PENDING", label: "Pendente" },
+                { value: "SENT", label: "Enviado" },
+                { value: "DELIVERED", label: "Entregue" },
+                { value: "READ", label: "Lido" },
+                { value: "FAILED", label: "Falhou" },
+              ]}
               value={recipientFilter}
-              onChange={(e) => {
-                setRecipientFilter(e.target.value);
+              onValueChange={(v) => {
+                setRecipientFilter(v);
                 setRecipientPage(1);
               }}
-            >
-              <option value="">Todos</option>
-              <option value="PENDING">Pendente</option>
-              <option value="SENT">Enviado</option>
-              <option value="DELIVERED">Entregue</option>
-              <option value="READ">Lido</option>
-              <option value="FAILED">Falhou</option>
-            </select>
+            />
           </CardHeader>
           <CardContent>
             {recipientsQuery.isLoading ? (

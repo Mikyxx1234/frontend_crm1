@@ -4,6 +4,7 @@ import * as React from "react"
 import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu"
 import { IconCheck, IconChevronDown } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
+import { useModalPortalContainer } from "@/components/ui/modal-portal-context"
 
 export interface DropdownOption {
   value: string
@@ -37,6 +38,8 @@ interface DropdownGlassProps {
   menuLabel?: string
   className?: string
   triggerClassName?: string
+  /** Classes adicionais para cada item da lista */
+  itemClassName?: string
   disabled?: boolean
 }
 
@@ -62,16 +65,30 @@ export function DropdownGlass({
   menuLabel,
   className,
   triggerClassName,
+  itemClassName,
   disabled,
 }: DropdownGlassProps) {
   const selected = options.find((o) => o.value === value)
+  // Quando dentro de um <dialog> modal (top-layer), portamos o menu pra dentro
+  // dele — senão o conteúdo cai no body, atrás do backdrop, e fica inclicável.
+  const portalContainer = useModalPortalContainer()
 
   return (
-    <DropdownPrimitive.Root>
-      <DropdownPrimitive.Trigger asChild disabled={disabled}>
+    <DropdownPrimitive.Root modal={false}>
+      {/*
+       * suppressHydrationWarning: o Radix usa useId internamente para
+       * o atributo id="radix-..." do trigger. Em árvores onde algo acima
+       * (ex.: useSession do NextAuth, queries que resolvem entre SSR e
+       * mount) reordena os contadores de useId do React 19, o servidor
+       * e o cliente geram IDs diferentes — atributos não-determinísticos
+       * são exatamente o caso de uso recomendado p/ suppressHydrationWarning.
+       * Nenhum impacto funcional: o ID final é o do cliente.
+       */}
+      <DropdownPrimitive.Trigger asChild disabled={disabled} suppressHydrationWarning>
         {trigger ?? (
           <button
             type="button"
+            suppressHydrationWarning
             className={cn(
               "group inline-flex h-10 items-center gap-2 rounded-[var(--radius-md)] px-3.5",
               "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-sm",
@@ -93,7 +110,7 @@ export function DropdownGlass({
         )}
       </DropdownPrimitive.Trigger>
 
-      <DropdownPrimitive.Portal>
+      <DropdownPrimitive.Portal container={portalContainer ?? undefined}>
         <DropdownPrimitive.Content
           align={align}
           side={side}
@@ -131,6 +148,7 @@ export function DropdownGlass({
                   isSelected && "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
                   option.danger &&
                     "text-[var(--color-danger)] data-[highlighted]:bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] data-[highlighted]:text-[var(--color-danger)]",
+                  itemClassName,
                 )}
               >
                 {option.icon && (

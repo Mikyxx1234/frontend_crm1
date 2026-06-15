@@ -36,6 +36,7 @@ import { Label } from "@/components/ui/label";
 import { pageHeaderDescriptionClass, pageHeaderTitleClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -657,18 +658,13 @@ export default function NewCampaignPage() {
                       </p>
                     </div>
                   ) : (
-                    <select
-                      className="h-11 w-full rounded-md border bg-background px-3 text-sm"
-                      value={segmentId}
-                      onChange={(e) => setSegmentId(e.target.value)}
-                    >
-                      <option value="">Selecione um segmento</option>
-                      {(segmentsQuery.data ?? []).map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                    <DropdownGlass
+                      options={(segmentsQuery.data ?? []).map((s) => ({ value: s.id, label: s.name }))}
+                      value={segmentId || undefined}
+                      onValueChange={(v) => setSegmentId(v)}
+                      placeholder="Selecione um segmento"
+                      triggerClassName="w-full"
+                    />
                   )}
                 </div>
               ) : (
@@ -704,25 +700,21 @@ export default function NewCampaignPage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium">Estágio de vida</Label>
-                      <select
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                        value={filters.lifecycleStage ?? ""}
-                        onChange={(e) =>
-                          setFilters({
-                            ...filters,
-                            lifecycleStage: e.target.value || undefined,
-                          })
-                        }
-                      >
-                        <option value="">Todos</option>
-                        <option value="SUBSCRIBER">Subscriber</option>
-                        <option value="LEAD">Lead</option>
-                        <option value="MQL">MQL</option>
-                        <option value="SQL">SQL</option>
-                        <option value="OPPORTUNITY">Opportunity</option>
-                        <option value="CUSTOMER">Customer</option>
-                        <option value="EVANGELIST">Evangelist</option>
-                      </select>
+                      <DropdownGlass
+                        options={[
+                          { value: "SUBSCRIBER", label: "Subscriber" },
+                          { value: "LEAD", label: "Lead" },
+                          { value: "MQL", label: "MQL" },
+                          { value: "SQL", label: "SQL" },
+                          { value: "OPPORTUNITY", label: "Opportunity" },
+                          { value: "CUSTOMER", label: "Customer" },
+                          { value: "EVANGELIST", label: "Evangelist" },
+                        ]}
+                        value={filters.lifecycleStage || undefined}
+                        onValueChange={(v) => setFilters({ ...filters, lifecycleStage: v || undefined })}
+                        placeholder="Todos"
+                        triggerClassName="w-full"
+                      />
                     </div>
                   </div>
 
@@ -733,64 +725,45 @@ export default function NewCampaignPage() {
                         <Layers className="mr-1 inline size-3" />
                         Pipeline
                       </Label>
-                      <select
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                        value={filters.pipelineId ?? ""}
-                        onChange={(e) =>
-                          setFilters({
-                            ...filters,
-                            pipelineId: e.target.value || undefined,
-                            stageIds: undefined, // limpa ao trocar pipeline
-                          })
+                      <DropdownGlass
+                        options={(pipelinesQuery.data ?? []).map((p) => ({ value: p.id, label: p.name }))}
+                        value={filters.pipelineId || undefined}
+                        onValueChange={(v) =>
+                          setFilters({ ...filters, pipelineId: v, stageIds: undefined })
                         }
-                      >
-                        <option value="">Todos</option>
-                        {(pipelinesQuery.data ?? []).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Todos"
+                        triggerClassName="w-full"
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium">Estágio do funil</Label>
-                      <select
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                        value={(filters.stageIds ?? [])[0] ?? ""}
-                        onChange={(e) =>
-                          setFilters({
-                            ...filters,
-                            stageIds: e.target.value ? [e.target.value] : undefined,
-                          })
+                      <DropdownGlass
+                        options={((pipelinesQuery.data ?? []).find((p) => p.id === filters.pipelineId)
+                          ?.stages ?? []).map((s) => ({ value: s.id, label: s.name }))}
+                        value={(filters.stageIds ?? [])[0] || undefined}
+                        onValueChange={(v) =>
+                          setFilters({ ...filters, stageIds: v ? [v] : undefined })
                         }
+                        placeholder="Todos"
                         disabled={!filters.pipelineId}
-                      >
-                        <option value="">Todos</option>
-                        {((pipelinesQuery.data ?? []).find((p) => p.id === filters.pipelineId)
-                          ?.stages ?? []).map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                        triggerClassName="w-full"
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium">Status do deal</Label>
-                      <select
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                        value={filters.dealStatus ?? ""}
-                        onChange={(e) =>
-                          setFilters({
-                            ...filters,
-                            dealStatus: (e.target.value || undefined) as FilterState["dealStatus"],
-                          })
+                      <DropdownGlass
+                        options={[
+                          { value: "OPEN", label: "Aberto" },
+                          { value: "WON", label: "Ganho" },
+                          { value: "LOST", label: "Perdido" },
+                        ]}
+                        value={filters.dealStatus || undefined}
+                        onValueChange={(v) =>
+                          setFilters({ ...filters, dealStatus: v as FilterState["dealStatus"] })
                         }
-                      >
-                        <option value="">Todos</option>
-                        <option value="OPEN">Aberto</option>
-                        <option value="WON">Ganho</option>
-                        <option value="LOST">Perdido</option>
-                      </select>
+                        placeholder="Todos"
+                        triggerClassName="w-full"
+                      />
                     </div>
                   </div>
 
@@ -801,23 +774,13 @@ export default function NewCampaignPage() {
                         <UserIcon className="mr-1 inline size-3" />
                         Dono do deal
                       </Label>
-                      <select
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                        value={filters.dealOwnerId ?? ""}
-                        onChange={(e) =>
-                          setFilters({
-                            ...filters,
-                            dealOwnerId: e.target.value || undefined,
-                          })
-                        }
-                      >
-                        <option value="">Todos</option>
-                        {(usersQuery.data ?? []).map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name}
-                          </option>
-                        ))}
-                      </select>
+                      <DropdownGlass
+                        options={(usersQuery.data ?? []).map((u) => ({ value: u.id, label: u.name }))}
+                        value={filters.dealOwnerId || undefined}
+                        onValueChange={(v) => setFilters({ ...filters, dealOwnerId: v || undefined })}
+                        placeholder="Todos"
+                        triggerClassName="w-full"
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium">
@@ -991,20 +954,15 @@ export default function NewCampaignPage() {
                   {templatesQuery.isLoading ? (
                     <Skeleton className="h-10 w-full" />
                   ) : (
-                    <select
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                      value={templateName}
-                      onChange={(e) => setTemplateName(e.target.value)}
-                    >
-                      <option value="">Selecione um template</option>
-                      {(templatesQuery.data ?? [])
+                    <DropdownGlass
+                      options={(templatesQuery.data ?? [])
                         .filter((t) => t.status === "APPROVED")
-                        .map((t) => (
-                          <option key={t.id ?? t.name} value={t.name}>
-                            {t.name} ({t.language})
-                          </option>
-                        ))}
-                    </select>
+                        .map((t) => ({ value: t.name, label: `${t.name} (${t.language})` }))}
+                      value={templateName || undefined}
+                      onValueChange={(v) => setTemplateName(v)}
+                      placeholder="Selecione um template"
+                      triggerClassName="w-full"
+                    />
                   )}
                   <div className="space-y-2">
                     <Label>Idioma</Label>
@@ -1042,20 +1000,15 @@ export default function NewCampaignPage() {
                   {automationsQuery.isLoading ? (
                     <Skeleton className="h-10 w-full" />
                   ) : (
-                    <select
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                      value={automationId}
-                      onChange={(e) => setAutomationId(e.target.value)}
-                    >
-                      <option value="">Selecione uma automação</option>
-                      {(automationsQuery.data ?? [])
+                    <DropdownGlass
+                      options={(automationsQuery.data ?? [])
                         .filter((a) => a.active)
-                        .map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.name}
-                          </option>
-                        ))}
-                    </select>
+                        .map((a) => ({ value: a.id, label: a.name }))}
+                      value={automationId || undefined}
+                      onValueChange={(v) => setAutomationId(v)}
+                      placeholder="Selecione uma automação"
+                      triggerClassName="w-full"
+                    />
                   )}
                 </div>
               ) : null}

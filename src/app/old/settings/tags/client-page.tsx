@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Tag as TagIcon, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -104,16 +103,10 @@ export default function TagsSettingsPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 p-6">
-      <PageHeader
-        title="Gerenciamento de Tags"
-        description="Crie, edite e organize as tags disponíveis para negócios e contatos."
-        icon={<TagIcon />}
-      />
-
+    <div className="space-y-4">
       {/* Create new */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-white p-1">
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-[var(--glass-bg-overlay)] p-1">
           {TAG_COLORS.map((c) => (
             <button
               key={c}
@@ -158,7 +151,7 @@ export default function TagsSettingsPage() {
           ))
         ) : tags.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 py-10 text-center">
-            <p className="text-sm text-slate-500">Nenhuma tag cadastrada</p>
+            <p className="text-sm text-[var(--text-muted)]">Nenhuma tag cadastrada</p>
             <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
               Crie tags para categorizar negócios e contatos.
             </p>
@@ -223,7 +216,7 @@ function TagRow({
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-white px-4 py-3 transition hover:bg-[var(--color-bg-subtle)]/50">
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-[var(--glass-bg-overlay)] px-4 py-3 transition hover:bg-[var(--glass-bg-subtle)]/50">
       {/* Color dot + picker */}
       <div className="relative">
         <TooltipHost label="Alterar cor" side="top">
@@ -236,7 +229,7 @@ function TagRow({
           />
         </TooltipHost>
         {colorOpen && (
-          <div className="absolute left-0 top-full z-20 mt-1 flex gap-1 rounded-lg border border-border bg-white p-1.5 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 flex gap-1 rounded-lg border border-border bg-[var(--glass-bg-overlay)] p-1.5 shadow-lg">
             {TAG_COLORS.map((c) => (
               <button
                 key={c}
@@ -270,7 +263,7 @@ function TagRow({
           autoFocus
         />
       ) : (
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-secondary)]">
           {tag.name}
         </span>
       )}
@@ -287,7 +280,7 @@ function TagRow({
             type="button"
             onClick={() => { setName(tag.name); setEditing(true); }}
             disabled={isPending}
-            className="rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
+            className="rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-muted)]"
             aria-label="Renomear"
           >
             <Pencil className="size-3.5" />
@@ -297,7 +290,7 @@ function TagRow({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-red-50 hover:text-red-600"
+            className="rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)]"
             aria-label="Excluir"
           >
             <Trash2 className="size-3.5" />

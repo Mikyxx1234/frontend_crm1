@@ -214,7 +214,12 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         icon: Shuffle,
         href: "/settings/distribution",
         allowedRoles: GESTAO,
-        requiredPermission: "conversation:reassign_others",
+        // distribution:manage e key DEDICADA do modulo (so ADMIN/MANAGER tem
+        // por default). Antes usavamos conversation:reassign_others, mas
+        // operadores senior tambem ganham essa permissao (pra puxar leads
+        // pra si na inbox) — usar essa key vazava o item de Distribuicao
+        // pra qualquer atendente, contrariando "Distribuicao = gestao".
+        requiredPermission: "distribution:manage",
       },
     ],
   },

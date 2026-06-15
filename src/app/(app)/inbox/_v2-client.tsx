@@ -150,7 +150,7 @@ export default function InboxV2ClientPage({
     search: debouncedSearch,
     enabled: isAuthenticated,
   });
-  const rawRows = listData?.items ?? [];
+  const rawRows = (listData?.items ?? []).filter(Boolean);
 
   // Ordena (default: última atividade primeiro) e filtra a janela de 24h.
   // Usa `lastMessageAt` (com fallback p/ `lastInboundAt`) para casar a ordem

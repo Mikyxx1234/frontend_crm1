@@ -1,10 +1,20 @@
 export type AutomationTrigger =
   | "Negócio criado"
-  | "Mensagem recebida"
-  | "Etapa alterada"
-  | "Tag adicionada"
   | "Negócio ganho"
   | "Negócio perdido"
+  | "Estágio alterado"
+  | "Tag adicionada"
+  | "Lead score atingido"
+  | "Contato criado"
+  | "Conversa criada"
+  | "Ciclo de vida alterado"
+  | "Agente alterado"
+  | "Mensagem recebida"
+  | "Mensagem enviada"
+  | "Manual"
+  // permite rótulo formatado a partir de um `triggerType` desconhecido sem
+  // perder o autocomplete dos literais acima.
+  | (string & {})
 
 export interface Automation {
   id: string

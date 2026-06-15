@@ -11,14 +11,39 @@
 import type { Automation, AutomationTrigger } from "@/lib/automations-data";
 import type { AutomationListItemDto } from "./api";
 
+// Espelha o `triggerTypeLabel` do backend (src/lib/automation-workflow.ts).
+// IMPORTANTE: o backend manda `triggerType` em snake_case lowercase
+// (ex.: "deal_created"). Mapear com chaves UPPERCASE como antes fazia o
+// lookup falhar em 100% dos casos e cair no fallback "Negócio criado",
+// que era exibido para qualquer automação independente do gatilho real.
 const TRIGGER_LABEL: Record<string, AutomationTrigger> = {
-  DEAL_CREATED: "Negócio criado",
-  DEAL_WON: "Negócio ganho",
-  DEAL_LOST: "Negócio perdido",
-  STAGE_CHANGED: "Etapa alterada",
-  MESSAGE_RECEIVED: "Mensagem recebida",
-  TAG_ADDED: "Tag adicionada",
+  deal_created: "Negócio criado",
+  deal_won: "Negócio ganho",
+  deal_lost: "Negócio perdido",
+  stage_changed: "Estágio alterado",
+  tag_added: "Tag adicionada",
+  lead_score_reached: "Lead score atingido",
+  contact_created: "Contato criado",
+  conversation_created: "Conversa criada",
+  lifecycle_changed: "Ciclo de vida alterado",
+  agent_changed: "Agente alterado",
+  message_received: "Mensagem recebida",
+  message_sent: "Mensagem enviada",
+  manual: "Manual",
 };
+
+/**
+ * Fallback para `triggerType` que ainda não está no mapa (novos gatilhos
+ * adicionados no backend antes do frontend ser atualizado). Formata o
+ * snake_case para Title Case ("custom_event" -> "Custom event") em vez de
+ * mentir "Negócio criado", que escondia o tipo real de várias automações.
+ */
+function formatUnknownTrigger(t: string | undefined | null): AutomationTrigger {
+  if (!t) return "—" as AutomationTrigger;
+  const cleaned = t.replace(/_/g, " ").trim();
+  if (!cleaned) return "—" as AutomationTrigger;
+  return (cleaned.charAt(0).toUpperCase() + cleaned.slice(1)) as AutomationTrigger;
+}
 
 const ACCENTS: Automation["accent"][] = ["blue", "purple", "mint", "coral", "teal"];
 
@@ -66,7 +91,7 @@ export function dtoToAutomation(dto: AutomationListItemDto): Automation {
     id: dto.id,
     name: dto.name,
     description: dto.description ?? "",
-    trigger: TRIGGER_LABEL[dto.triggerType] ?? ("Negócio criado" as AutomationTrigger),
+    trigger: TRIGGER_LABEL[dto.triggerType] ?? formatUnknownTrigger(dto.triggerType),
     steps: dto.stepCount,
     stepTypes: dto.stepTypes ?? [],
     updatedAt: formatDate(dto.updatedAt),

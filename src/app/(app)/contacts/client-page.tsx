@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
@@ -20,10 +19,21 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
+import { PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { SearchInput } from "@/components/crm/search-input";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { Chip } from "@/components/crm/chip";
+import { InputGlass } from "@/components/crm/input-glass";
+import {
+  GlassModal,
+  GlassModalPanel,
+  GlassModalHeader,
+  GlassModalBody,
+  GlassModalFooter,
+} from "@/components/crm/glass-modal";
 
 import {
   useContacts,
@@ -151,7 +161,7 @@ export default function V2ContactsClientPage() {
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
-          icon={<IconUsers size={22} />}
+          icon={<IconUsers size={22} stroke={2.2} />}
           title="Contatos"
           description="Diretório de contatos vinculados ao CRM"
           center={
@@ -162,13 +172,9 @@ export default function V2ContactsClientPage() {
             />
           }
           actions={
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
-            >
-              <IconPlus size={16} /> Novo contato
-            </button>
+            <PagePrimaryButton type="button" onClick={() => setCreateOpen(true)}>
+              <IconPlus size={15} stroke={2.4} /> Novo contato
+            </PagePrimaryButton>
           }
         />
 
@@ -178,20 +184,18 @@ export default function V2ContactsClientPage() {
               {selected.size} selecionado{selected.size > 1 ? "s" : ""}
             </span>
             <div className="flex items-center gap-2">
-              <button
+              <ButtonGlass
+                variant="glass"
+                size="sm"
                 type="button"
                 onClick={() => setSelected(new Set())}
-                className="rounded-full px-3 py-1.5 font-display text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-black/5"
+                className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
               >
                 Limpar
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmOpen(true)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-danger,#e11d48)] px-3.5 py-1.5 font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px"
-              >
+              </ButtonGlass>
+              <ButtonGlass variant="danger" size="sm" type="button" onClick={() => setConfirmOpen(true)}>
                 <IconTrash size={14} /> Excluir
-              </button>
+              </ButtonGlass>
             </div>
           </div>
         )}
@@ -215,8 +219,8 @@ export default function V2ContactsClientPage() {
             />
           </div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
-            <div className="mb-2.5 grid grid-cols-[42px_2.4fr_1.4fr_1.1fr_1fr_1fr_44px] items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+            <div className="grid grid-cols-[36px_2.4fr_1.3fr_1.1fr_1fr_0.9fr_38px] items-center gap-3 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3 py-2 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
               <span>
                 <CheckboxGlass
                   checked={allChecked}
@@ -233,14 +237,12 @@ export default function V2ContactsClientPage() {
               <span className="text-right">Ações</span>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
               {items.map((c) => (
                 <div
                   key={c.id}
-                  className={`grid grid-cols-[42px_2.4fr_1.4fr_1.1fr_1fr_1fr_44px] items-center gap-3.5 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)] ${
-                    selected.has(c.id)
-                      ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
-                      : "border-[var(--glass-border-subtle)]"
+                  className={`grid grid-cols-[36px_2.4fr_1.3fr_1.1fr_1fr_0.9fr_38px] items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${
+                    selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""
                   }`}
                 >
                   <span>
@@ -251,17 +253,17 @@ export default function V2ContactsClientPage() {
                     />
                   </span>
 
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <span
-                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
                       style={{ background: avatarColor(c.id) }}
                     >
                       {initials(c.name)}
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 leading-tight">
                       <Link
                         href={`/contacts/${c.id}`}
-                        className="group/name inline-flex max-w-full items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                        className="group/name inline-flex max-w-full items-center gap-1.5 font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
                       >
                         <span className="truncate">{c.name}</span>
                         <IconPencil
@@ -284,19 +286,12 @@ export default function V2ContactsClientPage() {
 
                   <div className="flex flex-wrap gap-1">
                     {(c.tags ?? []).slice(0, 3).map((t) => (
-                      <span
-                        key={t.id}
-                        className="inline-flex items-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 font-display text-[10px] font-bold"
-                        style={{
-                          color: t.color ?? "var(--text-muted)",
-                          borderColor: `${t.color ?? "var(--glass-border)"}33`,
-                        }}
-                      >
+                      <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>
                         {t.name}
-                      </span>
+                      </Chip>
                     ))}
                     {(c.tags?.length ?? 0) > 3 && (
-                      <span className="font-display text-[10px] text-[var(--text-muted)]">
+                      <span className="font-display text-[11px] text-[var(--text-muted)]">
                         +{(c.tags?.length ?? 0) - 3}
                       </span>
                     )}
@@ -307,15 +302,17 @@ export default function V2ContactsClientPage() {
                   </div>
 
                   <div className="flex justify-end">
-                    <button
+                    <ButtonGlass
+                      variant="icon"
+                      size="icon"
                       type="button"
                       onClick={() => setEditing(c)}
                       aria-label={`Editar ${c.name}`}
                       title="Editar contato"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+                      className="h-8 w-8"
                     >
                       <IconPencil size={16} />
-                    </button>
+                    </ButtonGlass>
                   </div>
                 </div>
               ))}
@@ -366,69 +363,43 @@ function ConfirmDeleteDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") onCancel();
-    }
-    if (open) {
-      window.addEventListener("keydown", onEsc);
-      return () => window.removeEventListener("keydown", onEsc);
-    }
-  }, [open, onCancel]);
-
-  if (!open || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onCancel}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-[440px] max-w-[90vw] rounded-[var(--radius-xl)] border p-5 shadow-2xl"
-        style={{
-          background: "rgba(255, 255, 255, 0.98)",
-          borderColor: "var(--glass-border, rgba(0,0,0,0.08))",
-        }}
-      >
-        <div className="mb-3 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger,#e11d48)_12%,transparent)] text-[var(--color-danger,#e11d48)]">
-            <IconAlertTriangle size={18} />
-          </span>
-          <h3 className="font-display text-base font-bold text-[var(--text-primary,#1a202c)]">
-            Excluir {count === 1 ? "contato" : `${count} contatos`}?
-          </h3>
-        </div>
-        <p className="mb-4 font-body text-[13px] leading-relaxed text-[var(--text-secondary,#4a5568)]">
-          Esta ação não pode ser desfeita.{" "}
-          {count === 1 ? "O contato será removido" : "Os contatos serão removidos"} junto com as
-          conversas, mensagens, notas e atividades vinculadas. Negócios associados são preservados
-          (ficam sem contato).
-        </p>
-        <div className="flex justify-end gap-2">
-          <button
+  return (
+    <GlassModal open={open} onOpenChange={(next) => !next && onCancel()}>
+      <GlassModalPanel className="w-[440px]">
+        <GlassModalHeader
+          title={`Excluir ${count === 1 ? "contato" : `${count} contatos`}?`}
+          icon={
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] text-[var(--color-destructive)]">
+              <IconAlertTriangle size={18} />
+            </span>
+          }
+          description={
+            <>
+              Esta ação não pode ser desfeita.{" "}
+              {count === 1 ? "O contato será removido" : "Os contatos serão removidos"} junto com as
+              conversas, mensagens, notas e atividades vinculadas. Negócios associados são preservados
+              (ficam sem contato).
+            </>
+          }
+        />
+        <GlassModalFooter>
+          <ButtonGlass
+            variant="glass"
+            size="sm"
             type="button"
             onClick={onCancel}
             disabled={pending}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary,#4a5568)] hover:bg-black/5 disabled:opacity-60"
+            className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
           >
             Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={pending}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 font-display text-xs font-semibold text-white disabled:opacity-60"
-            style={{ background: "var(--color-danger, #e11d48)" }}
-          >
+          </ButtonGlass>
+          <ButtonGlass variant="danger" size="sm" type="button" onClick={onConfirm} disabled={pending}>
             <IconTrash size={14} />
             {pending ? "Excluindo..." : "Excluir"}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+          </ButtonGlass>
+        </GlassModalFooter>
+      </GlassModalPanel>
+    </GlassModal>
   );
 }
 
@@ -458,19 +429,6 @@ function CreateContactDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") onOpenChange(false);
-    }
-    if (open) {
-      window.addEventListener("keydown", onEsc);
-      return () => window.removeEventListener("keydown", onEsc);
-    }
-  }, [open, onOpenChange]);
-
-  if (!open || typeof document === "undefined") return null;
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const n = name.trim();
@@ -491,110 +449,94 @@ function CreateContactDialog({
     );
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={() => onOpenChange(false)}
-    >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-        className="w-[420px] max-w-[90vw] rounded-[var(--radius-xl)] border p-5 shadow-2xl"
-        style={{
-          background: "rgba(255, 255, 255, 0.98)",
-          borderColor: "var(--glass-border, rgba(0,0,0,0.08))",
-        }}
-      >
-        <h3 className="mb-4 font-display text-base font-bold text-[var(--text-primary,#1a202c)]">
-          Novo contato
-        </h3>
+  return (
+    <GlassModal open={open} onOpenChange={onOpenChange}>
+      <GlassModalPanel as="form" onSubmit={handleSubmit}>
+        <GlassModalHeader title="Novo contato" />
 
-        <label className="mb-3 block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
-            Nome *
-          </span>
-          <input
-            type="text"
-            autoFocus
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ex.: Maria Silva"
-            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
-          />
-        </label>
+        <GlassModalBody>
+          <label className="mb-3 block">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Nome *
+            </span>
+            <InputGlass
+              type="text"
+              autoFocus
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex.: Maria Silva"
+            />
+          </label>
 
-        <label className="mb-3 block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
-            E-mail
-          </span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="maria@empresa.com"
-            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
-          />
-        </label>
+          <label className="mb-3 block">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              E-mail
+            </span>
+            <InputGlass
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="maria@empresa.com"
+            />
+          </label>
 
-        <label className="mb-3 block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
-            Telefone
-          </span>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(11) 99999-9999"
-            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
-          />
-        </label>
+          <label className="mb-3 block">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Telefone
+            </span>
+            <InputGlass
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(11) 99999-9999"
+            />
+          </label>
 
-        <div className="mb-4">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
-            Empresa
-          </span>
-          <CompanyPicker
-            valueId={companyId}
-            valueName={companyName}
-            onChange={(id, nm) => {
-              setCompanyId(id);
-              setCompanyName(nm);
-            }}
-          />
-        </div>
+          <div className="mb-4">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Empresa
+            </span>
+            <CompanyPicker
+              valueId={companyId}
+              valueName={companyName}
+              onChange={(id, nm) => {
+                setCompanyId(id);
+                setCompanyName(nm);
+              }}
+            />
+          </div>
 
-        {createMut.isError ? (
-          <p className="mb-3 text-[12px] text-[var(--color-danger,#e11d48)]">
-            {createMut.error instanceof Error
-              ? createMut.error.message
-              : "Erro ao criar contato."}
-          </p>
-        ) : null}
+          {createMut.isError ? (
+            <p className="mb-3 text-[12px] text-[var(--color-danger-text)]">
+              {createMut.error instanceof Error
+                ? createMut.error.message
+                : "Erro ao criar contato."}
+            </p>
+          ) : null}
+        </GlassModalBody>
 
-        <div className="flex justify-end gap-2">
-          <button
+        <GlassModalFooter>
+          <ButtonGlass
+            variant="glass"
+            size="sm"
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary,#4a5568)] hover:bg-black/5"
+            className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
           >
             Cancelar
-          </button>
-          <button
+          </ButtonGlass>
+          <ButtonGlass
+            variant="primary"
+            size="sm"
             type="submit"
             disabled={!name.trim() || createMut.isPending}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-white disabled:opacity-60"
-            style={{
-              background: "var(--brand-primary, #5b6ff5)",
-              boxShadow: "0 4px 14px rgba(91,111,245,0.35)",
-            }}
           >
             {createMut.isPending ? "Criando..." : "Criar"}
-          </button>
-        </div>
-      </form>
-    </div>,
-    document.body,
+          </ButtonGlass>
+        </GlassModalFooter>
+      </GlassModalPanel>
+    </GlassModal>
   );
 }
 
@@ -625,18 +567,7 @@ function EditContactDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contact?.id]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    if (open) {
-      window.addEventListener("keydown", onEsc);
-      return () => window.removeEventListener("keydown", onEsc);
-    }
-  }, [open, onClose]);
-
-  if (!open || !contact || typeof document === "undefined") return null;
+  if (!contact) return null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -661,110 +592,94 @@ function EditContactDialog({
     );
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-        className="w-[420px] max-w-[90vw] rounded-[var(--radius-xl)] border p-5 shadow-2xl"
-        style={{
-          background: "rgba(255, 255, 255, 0.98)",
-          borderColor: "var(--glass-border, rgba(0,0,0,0.08))",
-        }}
-      >
-        <h3 className="mb-4 font-display text-base font-bold text-[var(--text-primary,#1a202c)]">
-          Editar contato
-        </h3>
+  return (
+    <GlassModal open={open} onOpenChange={(next) => !next && onClose()}>
+      <GlassModalPanel as="form" onSubmit={handleSubmit}>
+        <GlassModalHeader title="Editar contato" />
 
-        <label className="mb-3 block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
-            Nome *
-          </span>
-          <input
-            type="text"
-            autoFocus
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ex.: Maria Silva"
-            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
-          />
-        </label>
+        <GlassModalBody>
+          <label className="mb-3 block">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Nome *
+            </span>
+            <InputGlass
+              type="text"
+              autoFocus
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex.: Maria Silva"
+            />
+          </label>
 
-        <label className="mb-3 block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
-            E-mail
-          </span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="maria@empresa.com"
-            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
-          />
-        </label>
+          <label className="mb-3 block">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              E-mail
+            </span>
+            <InputGlass
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="maria@empresa.com"
+            />
+          </label>
 
-        <label className="mb-3 block">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
-            Telefone
-          </span>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(11) 99999-9999"
-            className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-[13px] text-[var(--text-primary,#1a202c)] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
-          />
-        </label>
+          <label className="mb-3 block">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Telefone
+            </span>
+            <InputGlass
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(11) 99999-9999"
+            />
+          </label>
 
-        <div className="mb-4">
-          <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted,#718096)]">
-            Empresa
-          </span>
-          <CompanyPicker
-            valueId={companyId}
-            valueName={companyName}
-            onChange={(id, nm) => {
-              setCompanyId(id);
-              setCompanyName(nm);
-            }}
-          />
-        </div>
+          <div className="mb-4">
+            <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Empresa
+            </span>
+            <CompanyPicker
+              valueId={companyId}
+              valueName={companyName}
+              onChange={(id, nm) => {
+                setCompanyId(id);
+                setCompanyName(nm);
+              }}
+            />
+          </div>
 
-        {updateMut.isError ? (
-          <p className="mb-3 text-[12px] text-[var(--color-danger,#e11d48)]">
-            {updateMut.error instanceof Error
-              ? updateMut.error.message
-              : "Erro ao atualizar contato."}
-          </p>
-        ) : null}
+          {updateMut.isError ? (
+            <p className="mb-3 text-[12px] text-[var(--color-danger-text)]">
+              {updateMut.error instanceof Error
+                ? updateMut.error.message
+                : "Erro ao atualizar contato."}
+            </p>
+          ) : null}
+        </GlassModalBody>
 
-        <div className="flex justify-end gap-2">
-          <button
+        <GlassModalFooter>
+          <ButtonGlass
+            variant="glass"
+            size="sm"
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary,#4a5568)] hover:bg-black/5"
+            className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
           >
             Cancelar
-          </button>
-          <button
+          </ButtonGlass>
+          <ButtonGlass
+            variant="primary"
+            size="sm"
             type="submit"
             disabled={!name.trim() || updateMut.isPending}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-white disabled:opacity-60"
-            style={{
-              background: "var(--brand-primary, #5b6ff5)",
-              boxShadow: "0 4px 14px rgba(91,111,245,0.35)",
-            }}
           >
             {updateMut.isPending ? "Salvando..." : "Salvar"}
-          </button>
-        </div>
-      </form>
-    </div>,
-    document.body,
+          </ButtonGlass>
+        </GlassModalFooter>
+      </GlassModalPanel>
+    </GlassModal>
   );
 }
 
@@ -803,7 +718,7 @@ function CompanyPicker({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white px-3 py-2 text-left text-[13px] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
+        className="flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--input-border,var(--glass-border,rgba(0,0,0,0.08)))] bg-[var(--input-bg,#fff)] px-3 py-2 text-left text-[13px] outline-none focus:border-[var(--brand-primary,#5b6ff5)]"
       >
         <span className="flex min-w-0 items-center gap-2">
           <IconBuilding size={15} className="flex-shrink-0 text-[var(--text-muted,#718096)]" />
@@ -822,7 +737,7 @@ function CompanyPicker({
               e.stopPropagation();
               onChange(null, null);
             }}
-            className="flex-shrink-0 rounded-full p-0.5 text-[var(--text-muted,#718096)] hover:bg-black/5 hover:text-[var(--color-danger,#e11d48)]"
+            className="flex-shrink-0 rounded-full p-0.5 text-[var(--text-muted,#718096)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)] hover:text-[var(--color-danger,#e11d48)]"
           >
             <IconX size={14} />
           </span>
@@ -830,7 +745,7 @@ function CompanyPicker({
       </button>
 
       {open ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-10 max-h-56 overflow-hidden rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-white shadow-xl">
+        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-10 max-h-56 overflow-hidden rounded-[var(--radius-md)] border border-[var(--glass-border,rgba(0,0,0,0.08))] bg-[var(--glass-bg-modal,#fff)] shadow-xl">
           <div className="flex items-center gap-2 border-b border-[var(--glass-border,rgba(0,0,0,0.06))] px-2.5 py-2">
             <IconSearch size={14} className="text-[var(--text-muted,#718096)]" />
             <input

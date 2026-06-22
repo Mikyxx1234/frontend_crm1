@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   IconActivity,
@@ -27,23 +28,34 @@ import { AutomationsGallery } from "@/components/crm/automations-gallery"
 import { EmptyState } from "@/components/crm/empty-state"
 import {
   useAutomations,
+  useCreateAutomation,
+  useDeleteAutomation,
+  useReplaceAutomation,
   useToggleAutomation,
 } from "@/features/automations-v2/hooks"
 import { dtoToAutomation } from "@/features/automations-v2/automation-adapter"
 import { MOCK_AUTOMATIONS_PAGE } from "@/features/automations-v2/mock-automations"
 import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode"
+import { AUTOMATION_TRIGGER_TYPES } from "@/lib/automation-workflow"
+import { useConfirm } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 
 const FILTERS = ["Todas", "Ativas", "Pausadas"] as const
 
 export default function V2AutomationsClientPage() {
+  const router = useRouter()
   const { ready, isManagerUp } = useRequireManager()
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState(0)
+  const [isImporting, setIsImporting] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
 
   const automationsQuery = useAutomations({ perPage: 200 })
   const toggleMutation = useToggleAutomation()
+  const createMutation = useCreateAutomation()
+  const replaceMutation = useReplaceAutomation()
+  const deleteMutation = useDeleteAutomation()
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
   const realDtos = automationsQuery.data?.items ?? []
   const hasFilters = query.trim().length > 0 || filter !== 0
@@ -95,15 +107,184 @@ export default function V2AutomationsClientPage() {
     })
   }
 
+  const handleDelete = async (id: string) => {
+    if (isDemo) {
+      toast.info("Modo demonstração — exclusão indisponível.")
+      return
+    }
+    const target = items.find((a) => a.id === id)
+    const name = target?.name ?? "esta automação"
+
+    const ok = await confirm({
+      title: "Excluir automação?",
+      description: (
+        <>
+          Tem certeza que deseja excluir <strong>{name}</strong>? Esta ação não
+          pode ser desfeita. Todos os passos e o histórico de execuções da
+          automação serão removidos.
+        </>
+      ),
+      confirmLabel: "Excluir",
+      cancelLabel: "Cancelar",
+      destructive: true,
+    })
+    if (!ok) return
+
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.success(`Automação "${name}" excluída.`),
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Erro ao excluir automação"),
+    })
+  }
+
   const handleImportClick = () => {
     importInputRef.current?.click()
   }
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /**
+   * Importa um fluxo `.json` exportado por outra automação (formato do
+   * `handleExportJson` em `features/legacy-v1/automations-editor.tsx`):
+   *   { id?, name, description?, triggerType, triggerConfig?, active?,
+   *     steps: [{ id, type, config }], exportedAt? }
+   *
+   * Estratégia em 2 passos:
+   *   1. `POST /api/automations` — cria a casca (sempre pausada,
+   *      `active: false`, para não disparar antes do operador revisar).
+   *   2. `PUT  /api/automations/:id` — substitui tudo de uma vez (nome,
+   *      triggerType, triggerConfig E steps embutidos). Mesmo endpoint
+   *      usado pelo `OldAutomationEditor` para salvar o canvas — é o
+   *      caminho confirmado em produção (o endpoint
+   *      `PUT /api/automations/:id/steps` que o `saveAutomationSteps`
+   *      sugeria não persiste no backend atual).
+   *
+   * O `id` original da AUTOMAÇÃO é descartado (backend gera UUID novo no
+   * POST). Já o `id` de cada STEP é PRESERVADO — sem isso, as referências
+   * internas do fluxo (`nextStepId`, `gotoStepId`, `elseGotoStepId`,
+   * `targetStepId`, etc.) ficariam quebradas após a importação.
+   */
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ""
     if (!file) return
-    toast.info("Importação de .json em breve — use o editor para montar o fluxo.")
+    if (isImporting) return
+
+    setIsImporting(true)
+    try {
+      const text = await file.text()
+
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        toast.error("Arquivo não é um JSON válido.")
+        return
+      }
+
+      if (!parsed || typeof parsed !== "object") {
+        toast.error("Estrutura inválida: era esperado um objeto JSON.")
+        return
+      }
+      const data = parsed as Record<string, unknown>
+
+      const name = typeof data.name === "string" ? data.name.trim() : ""
+      const triggerType =
+        typeof data.triggerType === "string" ? data.triggerType : ""
+      const stepsRaw = Array.isArray(data.steps) ? data.steps : null
+
+      if (!name) {
+        toast.error("Campo `name` ausente ou vazio no JSON.")
+        return
+      }
+      if (!triggerType) {
+        toast.error("Campo `triggerType` ausente no JSON.")
+        return
+      }
+      if (!stepsRaw) {
+        toast.error("Campo `steps` ausente ou inválido no JSON.")
+        return
+      }
+      if (
+        !AUTOMATION_TRIGGER_TYPES.includes(
+          triggerType as (typeof AUTOMATION_TRIGGER_TYPES)[number],
+        )
+      ) {
+        toast.warning(
+          `Gatilho "${triggerType}" não está no catálogo conhecido — tentando mesmo assim.`,
+        )
+      }
+
+      const description =
+        typeof data.description === "string" ? data.description : null
+      const triggerConfig =
+        data.triggerConfig && typeof data.triggerConfig === "object"
+          ? (data.triggerConfig as Record<string, unknown>)
+          : {}
+
+      const steps = stepsRaw
+        .map((raw) => {
+          if (!raw || typeof raw !== "object") return null
+          const s = raw as Record<string, unknown>
+          if (typeof s.type !== "string" || !s.type) return null
+          const config =
+            s.config && typeof s.config === "object" && !Array.isArray(s.config)
+              ? (s.config as Record<string, unknown>)
+              : {}
+          const id =
+            typeof s.id === "string" && s.id.trim() ? s.id : undefined
+          return { id, type: s.type, config }
+        })
+        .filter(
+          (s): s is { id: string | undefined; type: string; config: Record<string, unknown> } =>
+            s !== null,
+        )
+
+      if (steps.length === 0 && stepsRaw.length > 0) {
+        toast.error("Nenhum step válido encontrado no JSON.")
+        return
+      }
+
+      const created = await createMutation.mutateAsync({
+        name,
+        description,
+        triggerType,
+        triggerConfig,
+        active: false,
+      })
+
+      try {
+        await replaceMutation.mutateAsync({
+          id: created.id,
+          body: {
+            name,
+            description,
+            triggerType,
+            triggerConfig,
+            steps,
+          },
+        })
+      } catch (stepErr) {
+        toast.warning(
+          `Automação criada mas falhou ao salvar os ${steps.length} passos: ${
+            stepErr instanceof Error ? stepErr.message : "erro desconhecido"
+          }. Abra no editor para revisar.`,
+        )
+        router.push(`/automations/${created.id}`)
+        return
+      }
+
+      toast.success(
+        `Automação "${name}" importada (pausada, ${steps.length} ${
+          steps.length === 1 ? "passo" : "passos"
+        }).`,
+      )
+      router.push(`/automations/${created.id}`)
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Erro ao importar automação.",
+      )
+    } finally {
+      setIsImporting(false)
+    }
   }
 
   const isLoading = automationsQuery.isLoading
@@ -149,8 +330,13 @@ export default function V2AutomationsClientPage() {
                 className="hidden"
                 onChange={handleImportFile}
               />
-              <PageGhostButton type="button" onClick={handleImportClick}>
-                <IconUpload size={15} /> Importar .json
+              <PageGhostButton
+                type="button"
+                onClick={handleImportClick}
+                disabled={isImporting}
+              >
+                <IconUpload size={15} />
+                {isImporting ? "Importando..." : "Importar .json"}
               </PageGhostButton>
               <PagePrimaryButton href="/automations/new">
                 <IconPlus size={15} stroke={2.4} /> Nova automação
@@ -234,7 +420,11 @@ export default function V2AutomationsClientPage() {
         )}
 
         {!isLoading && !isError && filtered.length > 0 && (
-          <AutomationsGallery automations={filtered} onToggle={handleToggle} />
+          <AutomationsGallery
+            automations={filtered}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+          />
         )}
 
         {!isLoading && !isError && filtered.length === 0 && items.length > 0 && (
@@ -245,6 +435,8 @@ export default function V2AutomationsClientPage() {
           />
         )}
       </main>
+
+      {confirmDialog}
     </div>
   )
 }

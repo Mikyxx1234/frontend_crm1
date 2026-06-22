@@ -7,6 +7,7 @@ import {
   IconActivity,
   IconCircleCheck,
   IconClock,
+  IconTrash,
 } from "@tabler/icons-react"
 import { SwitchGlass } from "./switch-glass"
 import { MiniFlow, type MiniFlowStep } from "./mini-flow"
@@ -24,9 +25,16 @@ const accentBar: Record<Automation["accent"], string> = {
 interface AutomationCardProps {
   automation: Automation
   onToggle: (id: string) => void
+  /**
+   * Quando definido, renderiza um botão lixeira que aparece no hover/focus
+   * do card e dispara o handler com o id. O componente NÃO confirma sozinho
+   * — quem chama deve usar `useConfirm()` antes de efetivar a remoção.
+   * Opcional para preservar usos legados (ex.: galeria preview).
+   */
+  onDelete?: (id: string) => void
 }
 
-export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
+export function AutomationCard({ automation, onToggle, onDelete }: AutomationCardProps) {
   const stepTypes =
     automation.stepTypes && automation.stepTypes.length > 0
       ? automation.stepTypes
@@ -39,7 +47,7 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
   return (
     <article
       className={cn(
-        "group relative flex items-center gap-[18px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-[22px] py-[18px] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
+        "group relative flex cursor-pointer items-center gap-[18px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-[22px] py-[18px] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
       )}
     >
       <Link
@@ -110,6 +118,30 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
         className="relative z-10 shrink-0"
         aria-label={`${automation.active ? "Desativar" : "Ativar"} ${automation.name}`}
       />
+
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => {
+            // O card inteiro é coberto por um <Link> em inset-0 — sem
+            // stopPropagation+preventDefault, o clique navegaria pro editor.
+            e.preventDefault()
+            e.stopPropagation()
+            onDelete(automation.id)
+          }}
+          aria-label={`Excluir ${automation.name}`}
+          title="Excluir automação"
+          className={cn(
+            "relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full",
+            "border border-transparent text-[var(--text-muted)] transition-all duration-150",
+            "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+            "hover:border-[var(--color-danger)]/30 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]/40",
+          )}
+        >
+          <IconTrash size={15} stroke={2.2} />
+        </button>
+      )}
     </article>
   )
 }

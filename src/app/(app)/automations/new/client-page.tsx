@@ -11,16 +11,10 @@ import { PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
 import { useCreateAutomation } from "@/features/automations-v2/hooks";
-
-const TRIGGER_OPTIONS = [
-  { value: "CONTACT_CREATED", label: "Contato criado" },
-  { value: "CONTACT_UPDATED", label: "Contato atualizado" },
-  { value: "DEAL_STAGE_CHANGED", label: "Negócio mudou de estágio" },
-  { value: "TAG_ADDED", label: "Tag adicionada" },
-  { value: "FORM_SUBMITTED", label: "Formulário enviado" },
-  { value: "MESSAGE_RECEIVED", label: "Mensagem recebida" },
-  { value: "SCHEDULED", label: "Agendado (cron)" },
-];
+import {
+  AUTOMATION_TRIGGER_TYPES,
+  triggerTypeLabel,
+} from "@/lib/automation-workflow";
 
 /**
  * Wizard simplificado de criação de automação (versão v2 glass).
@@ -30,6 +24,12 @@ const TRIGGER_OPTIONS = [
  * O wizard antigo (com galeria de templates e canvas integrado)
  * continua disponível em /old/automations/new. Quando o v0 portar
  * a galeria, este arquivo pode ser estendido.
+ *
+ * Os gatilhos são derivados de `AUTOMATION_TRIGGER_TYPES` /
+ * `triggerTypeLabel` (catálogo canônico em `lib/automation-workflow.ts`,
+ * mesmo consumido pelo editor em `TriggerTypeSelect`). Isso garante
+ * que o `triggerType` enviado em `POST /api/automations` é o mesmo
+ * que o `TriggerConfigFields` espera ao reabrir a automação.
  */
 export default function NewAutomationClientPage() {
   const router = useRouter();
@@ -37,7 +37,9 @@ export default function NewAutomationClientPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [triggerType, setTriggerType] = useState(TRIGGER_OPTIONS[0].value);
+  const [triggerType, setTriggerType] = useState<string>(
+    AUTOMATION_TRIGGER_TYPES[0],
+  );
 
   async function handleCreate() {
     if (!name.trim()) {
@@ -117,14 +119,14 @@ export default function NewAutomationClientPage() {
               Gatilho
             </h2>
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-              {TRIGGER_OPTIONS.map((opt) => (
+              {AUTOMATION_TRIGGER_TYPES.map((t) => (
                 <button
-                  key={opt.value}
+                  key={t}
                   type="button"
-                  onClick={() => setTriggerType(opt.value)}
+                  onClick={() => setTriggerType(t)}
                   className={
                     "flex items-center gap-3 rounded-[var(--radius-md)] border px-3.5 py-3 text-left font-body text-[13px] transition-all " +
-                    (triggerType === opt.value
+                    (triggerType === t
                       ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10 text-[var(--text-primary)]"
                       : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/40")
                   }
@@ -132,16 +134,16 @@ export default function NewAutomationClientPage() {
                   <span
                     className={
                       "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 " +
-                      (triggerType === opt.value
+                      (triggerType === t
                         ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
                         : "border-[var(--glass-border)]")
                     }
                   >
-                    {triggerType === opt.value && (
+                    {triggerType === t && (
                       <span className="h-1.5 w-1.5 rounded-full bg-white" />
                     )}
                   </span>
-                  {opt.label}
+                  {triggerTypeLabel(t)}
                 </button>
               ))}
             </div>

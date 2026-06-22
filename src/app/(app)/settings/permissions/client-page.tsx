@@ -22,7 +22,7 @@ import type { GroupSummary, RoleSummary, RoleUser } from "@/features/permissions
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { SettingsV2Shell } from "../_v2-shell";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 // ─── Selection state via query ──────────────────────────────────────────────
 
@@ -94,6 +94,7 @@ export function PermissionsClientPage() {
 
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="Permissões"
       description="Papéis, grupos e usuários"
       icon={<IconShieldCheck size={22} />}

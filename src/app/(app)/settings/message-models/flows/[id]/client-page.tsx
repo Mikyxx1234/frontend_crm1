@@ -1,12 +1,11 @@
 "use client";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import OldFlowEditorClientPage from "@/app/old/settings/message-models/flows/[id]/client-page";
+import OldFlowEditorClientPage from "@/features/legacy-v1/settings/message-models/flows-id";
 
 /**
  * Fase 1d (migração v1→v2): rota canônica `/settings/message-models/flows/[id]`
- * no shell v2. Fornece NavRailV2 + fundo mesh do layout (app). O editor já
- * tem seu próprio header glass com botão de voltar — não duplicamos PageHeader.
+ * no shell v2. O editor mantém header glass próprio com voltar integrado.
  */
 export default function FlowEditorV2ClientPage() {
   return (

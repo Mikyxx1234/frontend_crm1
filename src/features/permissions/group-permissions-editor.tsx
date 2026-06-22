@@ -313,7 +313,7 @@ export function GroupPermissionsEditor({
             type="button"
             onClick={() => onClose?.()}
             disabled={saving}
-            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-white disabled:opacity-60"
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
           >
             Cancelar
           </button>
@@ -401,7 +401,7 @@ export function GroupPermissionsEditor({
             <button
               type="button"
               onClick={() => onClose?.()}
-              className="w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2.5 font-display text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-white"
+              className="w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2.5 font-display text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
             >
               Cancelar
             </button>
@@ -528,7 +528,7 @@ export function GroupPermissionsEditor({
                 type="button"
                 disabled
                 title="Em breve — depende de catálogo de rotas"
-                className="self-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--brand-primary)] opacity-60 transition-colors hover:bg-white disabled:cursor-not-allowed"
+                className="self-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--brand-primary)] opacity-60 transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed"
               >
                 Configurar menu
               </button>

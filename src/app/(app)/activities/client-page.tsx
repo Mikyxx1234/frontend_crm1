@@ -26,7 +26,6 @@ import { PageDemoBanner } from "@/components/crm/page-demo-banner"
 import {
   PagePrimaryButton,
   PageSegmentedControl,
-  PageToolbarRow,
 } from "@/components/crm/page-toolbar"
 import { cn } from "@/lib/utils"
 import { IconCalendarEvent, IconPlus } from "@tabler/icons-react"
@@ -208,18 +207,6 @@ export default function V2ActivitiesClientPage() {
           }
         />
 
-        <PageToolbarRow>
-          <PageSegmentedControl
-            aria-label="Filtrar atividades"
-            items={STATUS_FILTERS.map((f) => ({
-              value: f.key,
-              label: f.label,
-            }))}
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as StatusFilter)}
-          />
-        </PageToolbarRow>
-
         {isDemo && (
           <PageDemoBanner>
             Dados de exemplo — atividades ilustrativas para visualizar o calendário e a agenda.
@@ -350,7 +337,18 @@ export default function V2ActivitiesClientPage() {
                     )}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2.5 font-body text-[11px] text-[var(--text-muted)]">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <PageSegmentedControl
+                    size="compact"
+                    aria-label="Filtrar atividades"
+                    items={STATUS_FILTERS.map((f) => ({
+                      value: f.key,
+                      label: f.label,
+                    }))}
+                    value={statusFilter}
+                    onChange={(v) => setStatusFilter(v as StatusFilter)}
+                  />
+                  <div className="flex flex-wrap items-center gap-2.5 font-body text-[11px] text-[var(--text-muted)]">
                   {AGENDA_LEGEND.map((kind) => {
                     const meta = ACTIVITY_KINDS[kind]
                     return (
@@ -363,6 +361,7 @@ export default function V2ActivitiesClientPage() {
                       </span>
                     )
                   })}
+                  </div>
                 </div>
               </div>
 

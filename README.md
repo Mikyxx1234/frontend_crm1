@@ -74,3 +74,107 @@ npm start
 - `src/lib/auth-public.ts` — NextAuth só leitura de JWT (sem Prisma).
 
 O projeto monólito original **não** é alterado por este diretório; a cópia foi feita para `../crm-frontend` ao lado do repo `crm`.
+
+---
+
+## Editor de Automações (Canvas Interativo)
+
+Rota: **`/automations/[id]`** — editor de fluxo construído com **React Flow** (`@xyflow/react`).
+
+### Arquivos principais
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `src/app/(app)/automations/[id]/page.tsx` | Rota do editor (Server Component). |
+| `src/app/(app)/automations/[id]/client-page.tsx` | Canvas React Flow: estado dos nós/arestas, drag, conexão, exclusão, top bar, painel "Blocos". |
+| `src/features/legacy-v1/automations-editor.tsx` | Editor legado v1 (transição). Substituído pelo canvas acima na Fase 6. |
+
+### Design de referência
+
+O arquivo `public/automations-canvas.html` (ou `Downloads/automations-canvas.html`) é um **mockup estático** com posições fixas em CSS.
+Ele representa o visual DS v2 alvo (glassmorphism, nós com badge numerado, wires SVG, painel "Blocos" à esquerda, minimap).
+**Não copie lógica de lá** — é só referência visual.
+
+### Dependência obrigatória
+
+```bash
+npm install @xyflow/react
+```
+
+Sem ela não há drag de nós, conexões nem exclusão de linhas.
+
+### Ordem de import do CSS (crítica)
+
+```tsx
+import "@xyflow/react/dist/style.css"; // base React Flow — SEMPRE primeiro
+import "./flow-editor.css";            // DS v2 — sobrescreve apenas o visual
+```
+
+Se invertida, os nós aparecem mas o arraste/posicionamento quebra.
+
+### Mapa visual dos nós (DS v2)
+
+Cada nó no canvas tem:
+- **Barra de acento lateral** (4 px) colorida por `--accent` (roxo = gatilho, laranja = condição, azul = ação, verde = WhatsApp, etc.)
+- **Badge numerado** no topo-esquerdo (ordem de execução)
+- **Tipo em pill** (`n-kind`) + título (`n-title`) no cabeçalho
+- **Corpo** opcional com detalhes (preview de mensagem, timer, etc.)
+- **Rodapé** com chips de estatística: `ok`, `warn`, `err`
+- **Portas de conexão** (`port-io`) — saída à direita, entrada representada por círculo SVG
+
+### Tipos de nó disponíveis
+
+| Tipo | `node.type` no React Flow | Acento |
+|---|---|---|
+| Gatilho | `trigger` | `--brand-secondary` (roxo) |
+| Condição | `condition` | `--color-warn` (âmbar) |
+| Ação genérica | `action` | `--brand-primary` (azul) |
+| Mensagem WhatsApp | `whatsapp` | `--color-success` (verde) |
+| Aguardar resposta | `wait` | `--color-warn` |
+| Mover estágio | `stage` | `--brand-primary` |
+| Adicionar tag | `tag` | `--color-success` |
+
+### Blocos arrastáveis (painel esquerdo)
+
+Dois grupos: **Ações** e **Salesbot**. Cada bloco é um `<div draggable>` que, ao ser solto no canvas, cria um nó via `onDrop` do React Flow.
+
+Exemplos de blocos disponíveis:
+- Enviar e-mail, Mover estágio, Atribuir responsável, Adicionar/Remover tag, Atualizar campo, Criar atividade, Atualizar lead score *(Grupo Ações)*
+- Pergunta ao lead, Aguardar resposta, Definir variável, Ir para (Goto), Transferir automação *(Grupo Salesbot)*
+
+### Top bar do editor
+
+| Elemento | Descrição |
+|---|---|
+| "← Automações" | Breadcrumb de volta à lista |
+| Nome editável | `<span contenteditable>` ou modal inline |
+| Toggle ATIVA/PAUSADA | Muda `isActive` via PATCH na API |
+| Copilot | Abre painel de sugestões por IA (futuro) |
+| Auto alinhar | Reorganiza nós em DAG (dagre layout) |
+| Exportar JSON | Download do fluxo como JSON |
+| Logs | Abre painel de execuções históricas |
+| Excluir | Deleta a automação (com confirmação) |
+| Salvar | PATCH `/api/automations/:id` com `{ nodes, edges }` |
+
+### Wires (conexões)
+
+- Curvas Bézier cúbicas (padrão do React Flow)
+- Cor padrão: `--brand-primary-light`
+- Cor de sucesso (caminho "sim"): `--color-success`
+- Cor de erro (caminho "não"/"timeout"): `--color-danger` + `stroke-dasharray: 5 5`
+- Seta (`marker-end`) alinhada ao tema
+
+### Controles de tela
+
+| Controle | Posição |
+|---|---|
+| Zoom (+/−/ajustar) | Canto inf. esquerdo do canvas |
+| Minimap | Canto inf. direito (`display:none` em mobile) |
+
+### Próximos passos de refatoração (Fase 6+)
+
+1. **Migrar `automations-editor.tsx`** (legado) para o novo canvas React Flow.
+2. **Persistência bidirecional**: carregar fluxo existente de `GET /api/automations/:id` e salvar via `PUT`.
+3. **Execução em tempo real**: WebSocket/SSE para atualizar chips `ok/err` nos nós com dados ao vivo.
+4. **Copilot**: integrar chamada à IA para sugerir próximo nó a partir do contexto do fluxo atual.
+5. **Dagre layout** (`npm install dagre`): botão "Auto alinhar" usa `dagre.layout()` para reorganizar os nós automaticamente sem sobreposição.

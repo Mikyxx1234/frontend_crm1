@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { IconSearch } from "@tabler/icons-react";
+import { IconArrowLeft, IconSearch } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
@@ -10,17 +10,47 @@ import { cn } from "@/lib/utils";
  * Design System v2 — elementos de toolbar de página.
  *
  * Hierarquia canônica (respeitar em todas as telas /v2):
- *   1. PageHeader        → identidade (ícone + título + descrição) + ações primárias
- *   2. PageToolbarRow    → busca flex-1 + segmented control à direita (opcional)
+ *   1. PageHeader        → identidade + `back` + busca compacta no `center` + `actions`
+ *   2. PageToolbarRow    → controles extras raros — preferir `actions` ou painel
  *   3. PageFilterBar     → dropdowns / date pickers estruturais (opcional)
  *   4. conteúdo
  *
- * Exceção: telas densas (Pipeline) podem colocar PageSearchBar variant="compact"
- * no slot `center` do PageHeader — nunca duplicar busca em duas linhas.
+ * Busca sempre em `PageHeader.center` via `PageSearchBar variant="compact"`.
+ * Tabs/segmented → `PageHeader.actions` (`PageSegmentedControl size="compact"`) ou
+ * topo do painel de conteúdo quando não couber (ex.: campanhas com muitos status).
+ *
+ * Cabeçalho de colunas em listas → referência `/logs` (Feed):
+ *   `listTableHeadRowClass` + `SortableHeader` / `ListColumnLabel` em `sortable-header.tsx`
+ *   (sentence case, 13px semibold, sort opcional — sem caixa alta).
  */
 
 /** Classes padrão do gatilho DropdownGlass em barras de filtro. */
 export const PAGE_FILTER_DROPDOWN_CLASS = "min-w-[180px]";
+
+// ── Voltar (legado — preferir PageHeader `back`) ─────────────────────────────
+
+export interface PageBackLinkProps {
+  href: string;
+  label: string;
+  className?: string;
+}
+
+/** @deprecated Use `PageHeader` com prop `back`. Mantido para wrappers legacy. */
+export function PageBackLink({ href, label, className }: PageBackLinkProps) {
+  return (
+    <Link
+      href={href}
+      aria-label={`Voltar para ${label}`}
+      className={cn(
+        "inline-flex w-fit items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]",
+        className,
+      )}
+    >
+      <IconArrowLeft size={14} stroke={2.4} className="shrink-0" />
+      {label}
+    </Link>
+  );
+}
 
 // ── Busca ────────────────────────────────────────────────────────────────────
 
@@ -46,7 +76,7 @@ export function PageSearchBar({
 }: PageSearchBarProps) {
   if (variant === "compact") {
     return (
-      <div className={cn("relative w-80", className)}>
+      <div className={cn("relative w-full max-w-md", className)}>
         <IconSearch
           size={15}
           className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
@@ -125,6 +155,8 @@ export interface PageSegmentedControlProps {
   value: string;
   onChange: (value: string) => void;
   "aria-label": string;
+  /** `compact` — cabe no slot `actions` do PageHeader. */
+  size?: "default" | "compact";
   className?: string;
 }
 
@@ -133,8 +165,10 @@ export function PageSegmentedControl({
   value,
   onChange,
   "aria-label": ariaLabel,
+  size = "default",
   className,
 }: PageSegmentedControlProps) {
+  const compact = size === "compact";
   return (
     <div
       className={cn(
@@ -154,7 +188,10 @@ export function PageSegmentedControl({
             aria-selected={active}
             onClick={() => onChange(item.value)}
             className={cn(
-              "cursor-pointer rounded-full px-4 py-[7px] font-display text-[13px] font-bold transition-colors",
+              "cursor-pointer rounded-full font-display font-bold transition-colors",
+              compact
+                ? "px-3 py-1 text-[12px]"
+                : "px-4 py-[7px] text-[13px]",
               active
                 ? "bg-[var(--glass-bg-modal)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]"
                 : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",

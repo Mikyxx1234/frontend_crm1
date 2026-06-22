@@ -17,19 +17,17 @@ export function AutomationsGallery({ automations, onToggle }: AutomationsGallery
         <EmptyState
           icon={<IconBolt size={28} />}
           title="Nenhuma automação encontrada."
-          description="Crie um fluxo para automatizar ações disparadas por eventos do CRM."
+          description="Ajuste a busca ou o filtro para ver outros fluxos."
         />
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
-        {automations.map((a) => (
-          <AutomationCard key={a.id} automation={a} onToggle={onToggle} />
-        ))}
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-0.5 pb-2">
+      {automations.map((a) => (
+        <AutomationCard key={a.id} automation={a} onToggle={onToggle} />
+      ))}
     </div>
   )
 }

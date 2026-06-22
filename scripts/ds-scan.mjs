@@ -2,7 +2,7 @@
 /**
  * Design System v2 — leak scanner (ratchet)
  *
- * Conta vazamentos de token em `src/**\/*.tsx,*.ts` (excluindo `src/app/old/**`)
+ * Conta vazamentos de token em `src/**\/*.tsx,*.ts` (excluindo `src/features/legacy-v1/**`)
  * e compara com a baseline em `scripts/ds-baseline.json`. Falha se a contagem
  * subir em qualquer categoria. Use `--update` para regravar a baseline depois
  * de uma refatoração que reduziu contagens (ratchet só desce).
@@ -38,7 +38,7 @@ const SKIP_DIRS = new Set([
 ]);
 // Caminhos relativos a `src/` que são ignorados (legado v1 + mocks de preview).
 const SKIP_REL = [
-  join("app", "old"),
+  join("features", "legacy-v1"),
   join("lib", "preview-mocks.ts"),
 ];
 

@@ -11,8 +11,10 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import { isPageMockMode } from "@/lib/page-mock-mode";
 
 import type { WidgetDto, WidgetsResponse } from "./types";
+import { MOCK_WIDGETS_RESPONSE } from "./mock";
 
 async function getJson<T>(path: string, errLabel: string): Promise<T> {
   const res = await fetch(apiUrl(path));
@@ -68,6 +70,9 @@ async function sendJson<T>(
 }
 
 export function fetchWidgets(): Promise<WidgetsResponse> {
+  if (isPageMockMode()) {
+    return Promise.resolve(MOCK_WIDGETS_RESPONSE);
+  }
   return getJson<WidgetsResponse>("/api/widgets", "Erro ao carregar widgets.");
 }
 

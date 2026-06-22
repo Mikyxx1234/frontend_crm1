@@ -18,9 +18,10 @@ import {
 } from "./api";
 
 import { isPreviewMode } from "@/lib/preview-mode";
+import { isPageMockMode } from "@/lib/page-mock-mode";
 
 function resolveEnabled(enabled: boolean | undefined): boolean {
-  return isPreviewMode() ? true : (enabled ?? true);
+  return isPreviewMode() || isPageMockMode() ? true : (enabled ?? true);
 }
 
 export function useAutomations(params: {

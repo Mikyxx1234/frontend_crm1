@@ -4,7 +4,13 @@ import * as React from "react";
 import { IconSettings } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import { PageHeader } from "@/components/crm/page-header";
+import { PageHeader, type PageHeaderBack } from "@/components/crm/page-header";
+
+/** Atalho voltar ao hub de configurações — use em sub-páginas de `/settings/*`. */
+export const SETTINGS_HUB_BACK: PageHeaderBack = {
+  href: "/settings",
+  label: "Configurações",
+};
 
 /**
  * Slots de header preenchidos por uma sub-página filha.
@@ -35,14 +41,15 @@ export function useSettingsHeaderSlots(): SettingsHeaderSlotSetters | null {
  * NavRailV2 + PageHeader v2. O v0 pode reimplementar visualmente
  * cada sub-página depois.
  *
- * Não inclui mais o botão "Voltar": a navegação fica na NavRail,
- * e as páginas internas devem omitir um segundo PageHeader.
+ * Sub-páginas de `/settings/*` podem passar `back={SETTINGS_HUB_BACK}` para
+ * atalho ao hub. Listas top-level continuam usando só a NavRail.
  */
 export function SettingsV2Shell({
   title,
   description,
   children,
   icon = <IconSettings size={22} />,
+  back,
   center,
   actions,
 }: {
@@ -51,6 +58,8 @@ export function SettingsV2Shell({
   children: React.ReactNode;
   /** Ícone do cabeçalho. Default: engrenagem (configurações). */
   icon?: React.ReactNode;
+  /** Voltar ao hub ou seção pai (opcional). */
+  back?: PageHeaderBack;
   /** Busca opcional, renderizada no centro do PageHeader. */
   center?: React.ReactNode;
   /** Controles/ações opcionais, renderizados à direita do PageHeader. */
@@ -71,6 +80,7 @@ export function SettingsV2Shell({
 
         <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
           <PageHeader
+            back={back}
             icon={icon}
             title={title}
             description={description ?? "Configurações"}

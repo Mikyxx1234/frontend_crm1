@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  IconArrowLeft,
   IconRocket,
   IconPlayerPause,
   IconPlayerPlay,
@@ -104,9 +103,9 @@ export default function CampaignDetailClientPage() {
           action={
             <Link
               href="/campaigns"
-              className="rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white"
+              className="font-display text-[12px] font-semibold text-[var(--brand-primary)] hover:underline"
             >
-              Voltar
+              Ir para campanhas
             </Link>
           }
         />
@@ -410,11 +409,8 @@ function Shell({
       <NavRailV2 />
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
-          icon={
-            <Link href="/campaigns" className="text-[var(--brand-primary)]">
-              <IconArrowLeft size={22} />
-            </Link>
-          }
+          back={{ href: "/campaigns", label: "Campanhas" }}
+          icon={<IconRocket size={22} />}
           title={title ?? "Campanha"}
           description={subtitle}
           center={badge ? <div>{badge}</div> : undefined}

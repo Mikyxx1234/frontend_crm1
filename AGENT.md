@@ -5,6 +5,32 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-15 — Faxina total: remoção de `app/old/` e finalização da migração v1 → v2 [DECISÃO — agente OPUS/SONNET]
+
+**Decisão.** A pasta `app/old/` foi inteiramente removida. As 7 rotas que não tinham
+equivalente v2 ("órfãs") receberam rotas canônicas em `app/(app)/`. Os 14 componentes
+legados cross-importados foram movidos para `src/features/legacy-v1/`. O `DashboardShell`
+e o `SIDEBAR_ROLE_MATRIX` de `nav-visibility.ts` foram removidos (órfãos).
+
+**Redirects.** `next.config.ts` recebeu redirects permanentes `/old/:path*` → `/:path*`
+(com mapeamentos especiais para `/old/tasks` → `/activities` e `/old/leads/:id` → `/pipeline/:id`).
+O middleware foi atualizado para liberar `/old/*` antes da checagem de auth (para que o
+redirect do Next.js ocorra sem loop).
+
+**Gaps documentados.**
+- `/analytics`, `/analytics/inbox`, `/developers` **não** foram adicionados ao `SIDEBAR_CATALOG`
+  (requer sincronização com o catálogo backend read-only). Acessíveis por URL direta.
+- O erro TypeScript em `features/legacy-v1/settings/message-models/flows-id.tsx` (linha 151,
+  `FlowDefinitionInputField` shape) é **pré-existente** e não bloqueia o build (`ignoreBuildErrors: true`).
+- `ChatWindow` integrado em `/pipeline/[id]` carrega a primeira conversa do contato; a binding
+  completa (draft de IA, notas, timeline) fica disponível via `/inbox` por enquanto.
+
+**Por quê.** Elimina o dual-routing (v1 + v2 rodando em paralelo), simplifica o bundle,
+unifica a navegação no NavRailV2 e remove a penalidade de performance do `DashboardShell`
+legado (1350 LOC de JSX, framer-motion, múltiplos useQuery no mesmo componente).
+
+---
+
 ### 2026-06-15 — Diretório v2: edição na linha + vínculo contato↔empresa
 
 **Decisão.** As listagens v2 `/contacts` e `/companies` (`app/(app)/contacts/client-page.tsx`

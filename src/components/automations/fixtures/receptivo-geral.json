@@ -1,0 +1,350 @@
+{
+  "id": "cmpdf0go200jtp801wgp4d8tk",
+  "name": "receptivo_geral(junho2026)",
+  "description": null,
+  "triggerType": "deal_created",
+  "triggerConfig": {
+    "__rfPos": {
+      "x": -698.9768242895539,
+      "y": -494.4179540766919
+    },
+    "stageId": "",
+    "pipelineId": "cmodk1kqc0002qp013eranfa2"
+  },
+  "active": true,
+  "steps": [
+    {
+      "id": "48c79e05-38c4-490e-8ee3-669870057122",
+      "type": "send_whatsapp_interactive",
+      "config": {
+        "body": "Olá! Seja bem-vindo(a) à DNA Work 👋\nSomos uma empresa especializada em conectar pessoas às melhores oportunidades do mercado.\nPara começar, me conta: qual tipo de vaga você está buscando?",
+        "footer": "",
+        "header": "",
+        "__rfPos": {
+          "x": -377.2853237351384,
+          "y": -495.3081103418734
+        },
+        "buttons": [
+          {
+            "id": "btn_0",
+            "title": "💼Emprego CLT",
+            "gotoStepId": "3d5e34ca-2edf-4a34-a446-659f58b010d8"
+          },
+          {
+            "id": "btn_1",
+            "title": "🎓Estágio - Superior",
+            "gotoStepId": "c614b518-f763-4e92-9223-409ec9bf26a7"
+          },
+          {
+            "id": "btn_2",
+            "title": "📚Estágio - Médio",
+            "gotoStepId": "3ece208e-bf77-4b12-83c0-4674fb4bb162"
+          }
+        ],
+        "nextStepId": "__none__",
+        "elseGotoStepId": "",
+        "saveToVariable": "",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "3d5e34ca-2edf-4a34-a446-659f58b010d8",
+      "type": "add_tag",
+      "config": {
+        "__rfPos": {
+          "x": 507.3700866324791,
+          "y": -767.4221558054893
+        },
+        "tagName": "CLT",
+        "nextStepId": "6f49a874-25d4-4536-9ffa-8ac35ac3cbd8",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "6f49a874-25d4-4536-9ffa-8ac35ac3cbd8",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 765.3700866324791,
+          "y": -912
+        },
+        "content": "Ótimo! Para selecionarmos as melhores vagas, precisamos te conhecer melhor",
+        "nextStepId": "5af11f62-33d4-4ea5-bbb9-5da6ef399550",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "5af11f62-33d4-4ea5-bbb9-5da6ef399550",
+      "type": "send_whatsapp_template",
+      "config": {
+        "__rfPos": {
+          "x": 1169.370086632479,
+          "y": -902.6249999999984
+        },
+        "nextStepId": "a75957dc-f821-4dc4-98e0-89c57281b2b9",
+        "languageCode": "pt_BR",
+        "templateName": "form_clt",
+        "templateLabel": "",
+        "templateCategory": "MARKETING",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "c614b518-f763-4e92-9223-409ec9bf26a7",
+      "type": "add_tag",
+      "config": {
+        "__rfPos": {
+          "x": 481.2332233852316,
+          "y": -513.4374592206698
+        },
+        "tagName": "Estágio Superior",
+        "nextStepId": "f82ff6c8-fc1e-4a43-861e-a381dd2acb5d",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "f82ff6c8-fc1e-4a43-861e-a381dd2acb5d",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 781.983505836974,
+          "y": -449.2384464716508
+        },
+        "content": "Ótimo! Para selecionarmos as melhores vagas, precisamos te conhecer melhor",
+        "nextStepId": "ba72c574-6e36-4972-bf52-f3f82e684f53",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "ba72c574-6e36-4972-bf52-f3f82e684f53",
+      "type": "send_whatsapp_template",
+      "config": {
+        "__rfPos": {
+          "x": 1123.604595603626,
+          "y": -483.3200308697935
+        },
+        "nextStepId": "a75957dc-f821-4dc4-98e0-89c57281b2b9",
+        "languageCode": "pt_BR",
+        "templateName": "form_inicial_estag_junho2026",
+        "templateLabel": "",
+        "templateCategory": "MARKETING",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "a75957dc-f821-4dc4-98e0-89c57281b2b9",
+      "type": "wait_for_reply",
+      "config": {
+        "__rfPos": {
+          "x": 1547.725379005258,
+          "y": -686.8826537317673
+        },
+        "timeoutMs": 480000,
+        "nextStepId": "__none__",
+        "saveToVariable": "",
+        "timeoutGotoStepId": "fe17be9e-7357-4c5c-97c6-45011cf7dc19",
+        "__hasExplicitEdges": true,
+        "receivedGotoStepId": "5f2cbf3f-0675-4d1c-b03e-a572e52a148a"
+      }
+    },
+    {
+      "id": "b6bb7686-7192-4659-ba49-b4c711116253",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 338.2063625945917,
+          "y": -99.2547715353706
+        },
+        "content": "Escolha que tipo de vaga faz mais sentido para você que iremos encaminhar as melhores oportunidades! ",
+        "nextStepId": "a1192220-a928-4ede-a0e9-2e977c37e86d",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "a1192220-a928-4ede-a0e9-2e977c37e86d",
+      "type": "wait_for_reply",
+      "config": {
+        "__rfPos": {
+          "x": 742.0672776511942,
+          "y": -114.8718149427353
+        },
+        "timeoutMs": 300000,
+        "nextStepId": "__none__",
+        "saveToVariable": "",
+        "timeoutGotoStepId": "48413af3-b362-4855-bb3b-1d59ce409c7e",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "3ece208e-bf77-4b12-83c0-4674fb4bb162",
+      "type": "add_tag",
+      "config": {
+        "__rfPos": {
+          "x": 432.3417303634006,
+          "y": -309.4714626154479
+        },
+        "tagName": "Estágio Médio",
+        "nextStepId": "f82ff6c8-fc1e-4a43-861e-a381dd2acb5d",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "48413af3-b362-4855-bb3b-1d59ce409c7e",
+      "type": "move_stage",
+      "config": {
+        "__rfPos": {
+          "x": 1188.208238288018,
+          "y": -71.55010913159963
+        },
+        "stageId": "cmpoeybrf002lpg01gsnj631k",
+        "stageName": "Robô / Sem resposta",
+        "nextStepId": "aa47bdda-c393-4485-a795-94d29ee41357",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "a78ae9ed-03dd-4ffa-a369-0f4966962295",
+      "type": "finish",
+      "config": {
+        "action": "stop",
+        "__rfPos": {
+          "x": 3215.532981852162,
+          "y": -108.5076915713314
+        },
+        "nextStepId": "__none__",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "fe17be9e-7357-4c5c-97c6-45011cf7dc19",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 1925.505513837088,
+          "y": -530.2893298443532
+        },
+        "content": "Notamos que ainda não completou o formulário. \nÉ bem rápido o preenchimento, é só clicar no botão.",
+        "nextStepId": "321f0ce8-8252-42b5-afb7-88a1d432f04b",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "321f0ce8-8252-42b5-afb7-88a1d432f04b",
+      "type": "move_stage",
+      "config": {
+        "__rfPos": {
+          "x": 2269.586551720386,
+          "y": -367.6730153386239
+        },
+        "stageId": "cmpoeybrf002lpg01gsnj631k",
+        "stageName": "Robô / Sem resposta",
+        "nextStepId": "a78ae9ed-03dd-4ffa-a369-0f4966962295",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "5f2cbf3f-0675-4d1c-b03e-a572e52a148a",
+      "type": "move_stage",
+      "config": {
+        "__rfPos": {
+          "x": 1939.978919461412,
+          "y": -787.0531309431423
+        },
+        "stageId": "cmodk1kqd0004qp01gmmbhpqh",
+        "stageName": "1 Form preenchido",
+        "nextStepId": "42f5d0ef-48ed-403a-beaa-feae86b278fc",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "df830201-7cb0-4917-8ea5-4a6ad46c8051",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 2401.547941842625,
+          "y": -574.1136562421061
+        },
+        "content": "Seu cadastro na DNA Work foi recebido com sucesso. Que bom ter você por aqui!\nA partir de agora, nossa equipe vai analisar o seu perfil e, assim que surgir uma oportunidade com seu perfil, suas experiências e objetivos, você será o(a) primeiro(a) a saber. 🎯\n\nFique de olho nas próximas mensagens, as melhores vagas chegam por aqui. ",
+        "nextStepId": "a78ae9ed-03dd-4ffa-a369-0f4966962295",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "8306b69a-b103-4e46-9f57-370b1562815d",
+      "type": "condition",
+      "config": {
+        "branches": [
+          {
+            "id": "branch_b89fea44",
+            "rules": [
+              {
+                "op": "has_tag",
+                "field": "deal.tags",
+                "value": "CLT"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "10bf872b-485d-4d12-a1c5-d8ad7c5b371b",
+      "type": "move_stage",
+      "config": {
+        "__rfPos": {
+          "x": 3080.49063941718,
+          "y": -762.7342120925235
+        },
+        "stageId": "cmpmvrns000bbqg018216856p",
+        "stageName": "Vagas enviada para Candidato",
+        "nextStepId": "__none__",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "909b7e04-ca16-46f8-ae7f-975ae0051842",
+      "type": "create_activity",
+      "config": {
+        "type": "TASK",
+        "title": "Buscar Vagas com feat",
+        "__rfPos": {
+          "x": 2567.81942650491,
+          "y": -765.8503446566144
+        },
+        "nextStepId": "10bf872b-485d-4d12-a1c5-d8ad7c5b371b",
+        "description": "",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "aa47bdda-c393-4485-a795-94d29ee41357",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 1561.595078115893,
+          "y": -77.45975125192973
+        },
+        "content": "Quando estiver pronto(a), é só escolher o tipo de vaga que faz mais sentido, o canal fica aberto para você.\nAté breve! 🌟",
+        "nextStepId": "a78ae9ed-03dd-4ffa-a369-0f4966962295",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "42f5d0ef-48ed-403a-beaa-feae86b278fc",
+      "type": "webhook",
+      "config": {
+        "url": "https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/sourceIds",
+        "body": "{\n  \"event\": \"{{event}}\",\n  \"contactId\": \"{{contact.id}}\",\n  \"nome\": \"{{contact.name}}\",\n  \"telefone\": \"{{contact.phone}}\",\n  \"ctwa_clid\": \"{{contact.adCtwaClid}}\",\n  \"cep\": \"{{dealCustomFields.cep}}\",\n  \"idade\": \"{{dealCustomFields.idade}}\"\n}",
+        "method": "POST",
+        "__rfPos": {
+          "x": 2222.929923453341,
+          "y": -1087.556999614791
+        },
+        "headers": [],
+        "nextStepId": "__none__",
+        "__hasExplicitEdges": true
+      }
+    }
+  ],
+  "exportedAt": "2026-06-16T20:28:46.638Z"
+}

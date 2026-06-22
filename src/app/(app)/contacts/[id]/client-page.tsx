@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  IconArrowLeft,
   IconBuilding,
   IconDeviceFloppy,
   IconHandStop,
@@ -146,6 +145,7 @@ export default function ContactDetailClientPage({ id }: { id: string }) {
 
       <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         <PageHeader
+          back={{ href: "/contacts", label: "Contatos" }}
           icon={<IconUserCircle size={22} />}
           title={query.data?.name ?? "Contato"}
           description={
@@ -190,13 +190,6 @@ export default function ContactDetailClientPage({ id }: { id: string }) {
                 title="Contato não encontrado"
                 description={query.error?.message ?? "Verifique o id ou volte para a lista."}
               />
-              <div className="mt-4 flex justify-center">
-                <Link href="/contacts">
-                  <ButtonGlass>
-                    <IconArrowLeft size={16} /> Voltar para contatos
-                  </ButtonGlass>
-                </Link>
-              </div>
             </GlassCard>
           )}
 
@@ -270,9 +263,9 @@ export default function ContactDetailClientPage({ id }: { id: string }) {
                 <SectionTitle>Tags</SectionTitle>
                 {query.data.tags.length === 0 ? (
                   <p className="text-[12px] text-[var(--text-muted)]">
-                    Nenhuma tag. Adicione tags pela página antiga em{" "}
-                    <Link href={`/old/contacts/${id}`} className="underline">
-                      /old/contacts/{id}
+                    Nenhuma tag. Adicione tags pela página de contatos em{" "}
+                    <Link href={`/contacts/${id}`} className="underline">
+                      /contacts/{id}
                     </Link>
                     .
                   </p>

@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { IconArrowLeft, IconBolt, IconSparkles } from "@tabler/icons-react";
+import { IconBolt, IconSparkles } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
+import { PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { GlassCard } from "@/components/crm/glass-card";
-import { ButtonGlass } from "@/components/crm/button-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { useCreateAutomation } from "@/features/automations-v2/hooks";
 
@@ -66,25 +65,19 @@ export default function NewAutomationClientPage() {
 
       <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         <PageHeader
+          back={{ href: "/automations", label: "Automações" }}
           icon={<IconBolt size={22} />}
           title="Nova automação"
           description="Configure o gatilho e monte as etapas no canvas"
           actions={
-            <>
-              <Link href="/automations">
-                <ButtonGlass variant="glass">
-                  <IconArrowLeft size={16} /> Cancelar
-                </ButtonGlass>
-              </Link>
-              <ButtonGlass
-                variant="primary"
-                onClick={handleCreate}
-                disabled={createMutation.isPending}
-              >
-                <IconSparkles size={16} />
-                {createMutation.isPending ? "Criando..." : "Criar e abrir builder"}
-              </ButtonGlass>
-            </>
+            <PagePrimaryButton
+              type="button"
+              onClick={handleCreate}
+              disabled={createMutation.isPending}
+            >
+              <IconSparkles size={16} />
+              {createMutation.isPending ? "Criando..." : "Criar e abrir builder"}
+            </PagePrimaryButton>
           }
         />
 

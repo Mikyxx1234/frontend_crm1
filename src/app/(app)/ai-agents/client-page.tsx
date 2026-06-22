@@ -2,7 +2,7 @@
 
 import { IconRobot } from "@tabler/icons-react";
 
-import OldAIAgentsPage from "@/app/old/ai-agents/client-page";
+import OldAIAgentsPage from "@/features/legacy-v1/ai-agents";
 import { AppV2PageShell } from "../_v2-page-shell";
 
 /**
@@ -26,3 +26,4 @@ export default function AIAgentsV2ClientPage() {
     </AppV2PageShell>
   );
 }
+

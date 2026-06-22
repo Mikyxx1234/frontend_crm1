@@ -1,0 +1,1353 @@
+{
+  "generatedAt": "2026-06-17T11:19:48.729Z",
+  "baseUrl": "http://localhost:3000",
+  "outputDir": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4",
+  "summary": {
+    "conforme": 23,
+    "parcial": 1,
+    "legacy": 0,
+    "errors": 2
+  },
+  "results": [
+    {
+      "id": "00-hub",
+      "url": "/settings",
+      "label": "Hub configurações",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\00-hub.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": false,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "00-hub",
+      "url": "/settings",
+      "label": "Hub configurações",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\00-hub.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": false,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "01-perfil",
+      "url": "/settings/profile?mock=1",
+      "label": "Perfil",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\01-perfil.png",
+      "dom": {
+        "bgWhite": 19,
+        "bgCard": 5,
+        "borderBorder": 21,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 19,
+            "severity": "P1"
+          },
+          {
+            "code": "BG_CARD",
+            "count": 5,
+            "severity": "P1"
+          },
+          {
+            "code": "BORDER_BORDER",
+            "count": 21,
+            "severity": "P2"
+          }
+        ],
+        "score": 75,
+        "status": "parcial"
+      },
+      "ok": true
+    },
+    {
+      "id": "01-perfil",
+      "url": "/settings/profile?mock=1",
+      "label": "Perfil",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\01-perfil.png",
+      "dom": {
+        "bgWhite": 19,
+        "bgCard": 5,
+        "borderBorder": 21,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 19,
+            "severity": "P1"
+          },
+          {
+            "code": "BG_CARD",
+            "count": 5,
+            "severity": "P1"
+          },
+          {
+            "code": "BORDER_BORDER",
+            "count": 21,
+            "severity": "P2"
+          }
+        ],
+        "score": 75,
+        "status": "parcial"
+      },
+      "ok": true
+    },
+    {
+      "id": "02-canais",
+      "url": "/settings/channels?mock=1",
+      "label": "Canais",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\02-canais.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "02-canais",
+      "url": "/settings/channels?mock=1",
+      "label": "Canais",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\02-canais.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "03-modelos-overview",
+      "url": "/settings/message-models?mock=1&tab=overview",
+      "label": "Modelos — visão geral",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\03-modelos-overview.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "03-modelos-overview",
+      "url": "/settings/message-models?mock=1&tab=overview",
+      "label": "Modelos — visão geral",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\03-modelos-overview.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "03b-modelos-internos",
+      "url": "/settings/message-models?mock=1&tab=internal",
+      "label": "Modelos — internos",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\03b-modelos-internos.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "03b-modelos-internos",
+      "url": "/settings/message-models?mock=1&tab=internal",
+      "label": "Modelos — internos",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\03b-modelos-internos.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "03c-modelos-whatsapp",
+      "url": "/settings/message-models?mock=1&tab=whatsapp",
+      "label": "Modelos — WhatsApp",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\03c-modelos-whatsapp.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "03c-modelos-whatsapp",
+      "url": "/settings/message-models?mock=1&tab=whatsapp",
+      "label": "Modelos — WhatsApp",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\03c-modelos-whatsapp.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "03d-modelos-flows",
+      "url": "/settings/message-models?mock=1&tab=flows",
+      "label": "Modelos — Flows",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\03d-modelos-flows.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "03d-modelos-flows",
+      "url": "/settings/message-models?mock=1&tab=flows",
+      "label": "Modelos — Flows",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\03d-modelos-flows.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "04-conversas",
+      "url": "/settings/conversations?mock=1",
+      "label": "Conversas",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\04-conversas.png",
+      "dom": {
+        "bgWhite": 2,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 2,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 2,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "04-conversas",
+      "url": "/settings/conversations?mock=1",
+      "label": "Conversas",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\04-conversas.png",
+      "dom": {
+        "bgWhite": 2,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 2,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 2,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "05-notificacoes",
+      "url": "/settings/notifications?mock=1",
+      "label": "Notificações",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\05-notificacoes.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "05-notificacoes",
+      "url": "/settings/notifications?mock=1",
+      "label": "Notificações",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\05-notificacoes.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "06-softphone",
+      "url": "/settings/softphone?mock=1",
+      "label": "Softphone",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\06-softphone.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "06-softphone",
+      "url": "/settings/softphone?mock=1",
+      "label": "Softphone",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\06-softphone.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "07-contas-email",
+      "url": "/settings/email-accounts?mock=1",
+      "label": "Contas de e-mail",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\07-contas-email.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 2,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "07-contas-email",
+      "url": "/settings/email-accounts?mock=1",
+      "label": "Contas de e-mail",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\07-contas-email.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 2,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "08-campos",
+      "url": "/settings/custom-fields?mock=1",
+      "label": "Campos personalizados",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\08-campos.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 1,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "08-campos",
+      "url": "/settings/custom-fields?mock=1",
+      "label": "Campos personalizados",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\08-campos.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 1,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "09-tags",
+      "url": "/settings/tags?mock=1",
+      "label": "Tags",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\09-tags.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 2,
+        "glassStrong": 21,
+        "glassNested": 4,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          },
+          {
+            "code": "GLASS_IN_GLASS",
+            "count": 4,
+            "severity": "P2"
+          }
+        ],
+        "score": 85,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "09-tags",
+      "url": "/settings/tags?mock=1",
+      "label": "Tags",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\09-tags.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 2,
+        "glassStrong": 21,
+        "glassNested": 4,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          },
+          {
+            "code": "GLASS_IN_GLASS",
+            "count": 4,
+            "severity": "P2"
+          }
+        ],
+        "score": 85,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "10-produtos",
+      "url": "/settings/products?mock=1",
+      "label": "Produtos",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\10-produtos.png",
+      "dom": {
+        "bgWhite": 9,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 9,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "10-produtos",
+      "url": "/settings/products?mock=1",
+      "label": "Produtos",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\10-produtos.png",
+      "dom": {
+        "bgWhite": 9,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 9,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "11-catalogos",
+      "url": "/settings/catalogs?mock=1",
+      "label": "Catálogos",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\11-catalogos.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 5,
+        "glassStrong": 7,
+        "glassNested": 4,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "GLASS_IN_GLASS",
+            "count": 4,
+            "severity": "P2"
+          }
+        ],
+        "score": 95,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "11-catalogos",
+      "url": "/settings/catalogs?mock=1",
+      "label": "Catálogos",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\11-catalogos.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 5,
+        "glassStrong": 7,
+        "glassNested": 4,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "GLASS_IN_GLASS",
+            "count": 4,
+            "severity": "P2"
+          }
+        ],
+        "score": 95,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "12-pipeline",
+      "url": "/settings/pipeline?mock=1",
+      "label": "Pipeline (settings)",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\12-pipeline.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 2,
+        "glassStrong": 11,
+        "glassNested": 3,
+        "hasBack": false,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          },
+          {
+            "code": "GLASS_IN_GLASS",
+            "count": 3,
+            "severity": "P2"
+          }
+        ],
+        "score": 85,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "12-pipeline",
+      "url": "/settings/pipeline?mock=1",
+      "label": "Pipeline (settings)",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\12-pipeline.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 2,
+        "glassStrong": 11,
+        "glassNested": 3,
+        "hasBack": false,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          },
+          {
+            "code": "GLASS_IN_GLASS",
+            "count": 3,
+            "severity": "P2"
+          }
+        ],
+        "score": 85,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "13-motivos",
+      "url": "/settings/loss-reasons?mock=1",
+      "label": "Motivos de perda",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\13-motivos.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "13-motivos",
+      "url": "/settings/loss-reasons?mock=1",
+      "label": "Motivos de perda",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\13-motivos.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "14-distribuicao",
+      "url": "/settings/distribution?mock=1",
+      "label": "Distribuição",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\14-distribuicao.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 1,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "14-distribuicao",
+      "url": "/settings/distribution?mock=1",
+      "label": "Distribuição",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\14-distribuicao.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 1,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "15-equipe",
+      "url": "/settings/team?mock=1",
+      "label": "Equipe",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\15-equipe.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 10,
+        "glassNested": 1,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "GLASS_IN_GLASS",
+            "count": 1,
+            "severity": "P2"
+          }
+        ],
+        "score": 95,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "15-equipe",
+      "url": "/settings/team?mock=1",
+      "label": "Equipe",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\15-equipe.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 10,
+        "glassNested": 1,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "GLASS_IN_GLASS",
+            "count": 1,
+            "severity": "P2"
+          }
+        ],
+        "score": 95,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "16-horarios",
+      "url": "/settings/schedules?mock=1",
+      "label": "Horários",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\16-horarios.png",
+      "dom": {
+        "bgWhite": 4,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 4,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "16-horarios",
+      "url": "/settings/schedules?mock=1",
+      "label": "Horários",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\16-horarios.png",
+      "dom": {
+        "bgWhite": 4,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 4,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "18-ia",
+      "url": "/settings/ai?mock=1",
+      "label": "Config IA",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\18-ia.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "18-ia",
+      "url": "/settings/ai?mock=1",
+      "label": "Config IA",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\18-ia.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          }
+        ],
+        "score": 90,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "19-api",
+      "url": "/settings/api-tokens?mock=1",
+      "label": "API e Webhooks",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\19-api.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "19-api",
+      "url": "/settings/api-tokens?mock=1",
+      "label": "API e Webhooks",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\19-api.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 1,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "20-permissoes",
+      "url": "/settings/permissions?mock=1",
+      "label": "Permissões",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\20-permissoes.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "20-permissoes",
+      "url": "/settings/permissions?mock=1",
+      "label": "Permissões",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\20-permissoes.png",
+      "dom": {
+        "bgWhite": 0,
+        "bgCard": 0,
+        "borderBorder": 0,
+        "shadcnCard": 0,
+        "glassPanel": 1,
+        "glassStrong": 0,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [],
+        "score": 100,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "21-seguranca",
+      "url": "/settings/security?mock=1",
+      "label": "Segurança",
+      "theme": "light",
+      "ok": false,
+      "error": "page.goto: Timeout 90000ms exceeded.\nCall log:\n  - navigating to \"http://localhost:3000/settings/security?mock=1\", waiting until \"networkidle\"\n",
+      "dom": null
+    },
+    {
+      "id": "21-seguranca",
+      "url": "/settings/security?mock=1",
+      "label": "Segurança",
+      "theme": "dark",
+      "ok": false,
+      "error": "page.goto: Timeout 90000ms exceeded.\nCall log:\n  - navigating to \"http://localhost:3000/settings/security?mock=1\", waiting until \"networkidle\"\n",
+      "dom": null
+    },
+    {
+      "id": "22-mobile",
+      "url": "/settings/mobile-layout?mock=1",
+      "label": "App Mobile",
+      "theme": "light",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\light\\22-mobile.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 7,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 16,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          },
+          {
+            "code": "BORDER_BORDER",
+            "count": 7,
+            "severity": "P2"
+          }
+        ],
+        "score": 85,
+        "status": "conforme"
+      },
+      "ok": true
+    },
+    {
+      "id": "22-mobile",
+      "url": "/settings/mobile-layout?mock=1",
+      "label": "App Mobile",
+      "theme": "dark",
+      "screenshot": "C:\\CRM_Integrado_V0\\frontend\\screenshots\\settings-audit-v4\\dark\\22-mobile.png",
+      "dom": {
+        "bgWhite": 1,
+        "bgCard": 0,
+        "borderBorder": 7,
+        "shadcnCard": 0,
+        "glassPanel": 0,
+        "glassStrong": 16,
+        "glassNested": 0,
+        "hasBack": true,
+        "hasNavRail": true,
+        "errorLike": false,
+        "issues": [
+          {
+            "code": "BG_WHITE",
+            "count": 1,
+            "severity": "P1"
+          },
+          {
+            "code": "BORDER_BORDER",
+            "count": 7,
+            "severity": "P2"
+          }
+        ],
+        "score": 85,
+        "status": "conforme"
+      },
+      "ok": true
+    }
+  ]
+}

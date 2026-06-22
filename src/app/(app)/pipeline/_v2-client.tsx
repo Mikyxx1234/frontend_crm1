@@ -32,12 +32,14 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
-import { NavRail } from "@/components/crm/nav-rail";
+import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
+import { CallHistoryList } from "@/features/softphone/components/call-history-list";
+import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { Chip } from "@/components/crm/chip";
@@ -506,7 +508,7 @@ export default function KanbanV2ClientPage({
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4" style={{ gridTemplateRows: "1fr" }}>
-      {navRail ?? <NavRail />}
+      {navRail ?? <NavRailV2 />}
       <div
         ref={boardWrapperRef}
         className="flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-clip"
@@ -751,6 +753,15 @@ export default function KanbanV2ClientPage({
           ) : undefined
         }
         deleteSlot={undefined}
+        callButtonSlot={
+          activeDealId && dealDetailVm ? (
+            <DealCallButton
+              dealId={activeDealId}
+              phone={dealDetailVm.phone ?? null}
+              contactId={dealDetailVm.contactId ?? undefined}
+            />
+          ) : null
+        }
         moreActionsSlot={
           activeDealId ? (
             <DealActionsMenu
@@ -863,6 +874,14 @@ export default function KanbanV2ClientPage({
                 ),
                 timeline: <DealTimelineTab dealId={activeDealId} />,
                 atividades: <DealActivitiesTab />,
+                chamadas: (
+                  <div className="flex-1 overflow-auto p-4">
+                    <CallHistoryList
+                      embedded
+                      contactId={dealContactId}
+                    />
+                  </div>
+                ),
               }
             : undefined
         }
@@ -1558,7 +1577,7 @@ function PipelineKebabMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
+      className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
     >
       {/* Seção: ordenar */}
       <div className="px-3 pb-1 pt-2.5">

@@ -2864,7 +2864,7 @@ function TransferToAIAgentStepConfig({
         ) : activeAgents.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Nenhum agente IA ativo. Crie um em{" "}
-            <a href="/old/ai-agents" className="underline">
+            <a href="/ai-agents" className="underline">
               Agentes IA
             </a>
             .
@@ -2963,7 +2963,7 @@ function AskAIAgentStepConfig({
         ) : activeAgents.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Nenhum agente ativo. Crie um em{" "}
-            <a href="/old/ai-agents" className="underline">
+            <a href="/ai-agents" className="underline">
               Agentes IA
             </a>
             .

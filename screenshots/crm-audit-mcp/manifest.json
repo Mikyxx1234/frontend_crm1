@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-06-17T00:05:00.000Z",
+  "tool": "MCP Playwright (@playwright/mcp)",
+  "baseUrl": "http://127.0.0.1:3000",
+  "login": "adm@eduit.com.br",
+  "mockMode": "?mock=1 + localStorage page-mock/dir-mock",
+  "phases": {
+    "fase-1-navrail": "NavRail completa + modais contato/empresa + detalhes + filtro campanhas",
+    "fase-2-settings": "Todas as rotas de Settings (22 telas)"
+  }
+}

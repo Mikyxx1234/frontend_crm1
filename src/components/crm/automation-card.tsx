@@ -14,11 +14,11 @@ import { blockKeyForStepType } from "./flow-block-icon"
 import type { Automation } from "@/lib/automations-data"
 
 const accentBar: Record<Automation["accent"], string> = {
-  blue: "av-blue",
-  purple: "av-purple",
-  mint: "av-mint",
-  coral: "av-coral",
-  teal: "av-teal",
+  blue: "bg-[var(--brand-primary)]",
+  purple: "bg-[var(--brand-secondary)]",
+  mint: "bg-[var(--color-success)]",
+  coral: "bg-[var(--color-warn)]",
+  teal: "bg-[var(--color-danger)]",
 }
 
 interface AutomationCardProps {
@@ -27,10 +27,6 @@ interface AutomationCardProps {
 }
 
 export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
-  // Mini-fluxo a partir do workflow REAL: nó de gatilho + passos reais
-  // (tipos vindos da API, normalizados para as chaves de ícone). Sem
-  // `stepTypes` (mock/legado) usamos `steps` (contagem) como nós genéricos
-  // — nunca mais um fluxo fixo de outra automação.
   const stepTypes =
     automation.stepTypes && automation.stepTypes.length > 0
       ? automation.stepTypes
@@ -41,8 +37,11 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
   ]
 
   return (
-    <div className="group relative flex items-center gap-4 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-3.5 pl-5 pr-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)] hover:shadow-[var(--glass-shadow)]">
-      {/* Link expandido sobre toda a linha (stretched link) */}
+    <article
+      className={cn(
+        "group relative flex items-center gap-[18px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-[22px] py-[18px] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
+      )}
+    >
       <Link
         href={`/automations/${automation.id}`}
         className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
@@ -51,70 +50,67 @@ export function AutomationCard({ automation, onToggle }: AutomationCardProps) {
         <span className="sr-only">Abrir editor</span>
       </Link>
 
-      {/* Faixa de acento vertical */}
       <span
-        className={cn("absolute left-0 top-0 h-full w-1", accentBar[automation.accent])}
+        className={cn(
+          "absolute bottom-0 left-0 top-0 w-[5px] rounded-full",
+          accentBar[automation.accent],
+        )}
         aria-hidden
       />
 
-      {/* Status + nome + gatilho */}
-      <div className="min-w-0 flex-1">
+      <div className="relative z-10 min-w-[240px] shrink-0 pl-2.5">
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "relative flex h-2 w-2 shrink-0 items-center justify-center rounded-full",
-              automation.active ? "bg-[var(--color-online)]" : "bg-[var(--color-offline)]",
+              "h-2 w-2 shrink-0 rounded-full",
+              automation.active
+                ? "bg-[var(--color-success)]"
+                : "bg-[var(--text-muted)] opacity-45",
             )}
             aria-hidden
-          >
-            {automation.active && (
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-online)] opacity-60" />
-            )}
-          </span>
-          <h3 className="truncate font-display text-[15px] font-bold text-[var(--text-primary)]">
+          />
+          <h3 className="truncate font-display text-[16px] font-bold text-[var(--text-primary)]">
             {automation.name}
           </h3>
         </div>
         <div className="mt-1 flex items-center gap-1.5 pl-4">
-          <IconBolt size={13} className="shrink-0 text-[var(--brand-primary)]" />
-          <span className="truncate font-display text-[12px] font-semibold text-[var(--text-secondary)]">
+          <IconBolt size={13} stroke={2.2} className="shrink-0 text-[var(--brand-primary)]" />
+          <span className="truncate font-body text-[12.5px] text-[var(--text-muted)]">
             {automation.trigger}
           </span>
         </div>
       </div>
 
-      {/* Mini-fluxo (oculto em telas estreitas) */}
-      <div className="relative z-10 hidden shrink-0 lg:block">
-        <MiniFlow steps={steps} max={5} size="sm" />
+      <div className="relative z-10 hidden min-w-0 flex-1 lg:block">
+        <MiniFlow steps={steps} max={5} size="sm" connected={false} />
       </div>
 
-      {/* Métricas reais */}
-      <div className="hidden shrink-0 items-center gap-5 sm:flex">
+      <div className="relative z-10 hidden shrink-0 items-center gap-[26px] md:flex">
         <RowMetric
-          icon={<IconCircleCheck size={15} />}
+          icon={<IconCircleCheck size={13} />}
           value={`${automation.successRate}%`}
           label="Sucesso"
         />
         <RowMetric
-          icon={<IconActivity size={15} />}
+          icon={<IconActivity size={13} />}
           value={automation.runs.toLocaleString("pt-BR")}
           label="Execuções"
         />
         <RowMetric
-          icon={<IconClock size={15} />}
+          icon={<IconClock size={13} />}
           value={automation.lastRun}
           label="Última"
         />
       </div>
 
-      {/* Toggle ativar/pausar */}
       <SwitchGlass
         checked={automation.active}
         onChange={() => onToggle(automation.id)}
+        size="list"
         className="relative z-10 shrink-0"
         aria-label={`${automation.active ? "Desativar" : "Ativar"} ${automation.name}`}
       />
-    </div>
+    </article>
   )
 }
 
@@ -128,14 +124,16 @@ function RowMetric({
   label: string
 }) {
   return (
-    <div className="flex w-[68px] flex-col items-center gap-0.5 text-center">
-      <span className="text-[var(--text-muted)]">{icon}</span>
-      <span className="max-w-full truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+    <div className="min-w-[58px] text-center">
+      <div className="mb-0.5 flex items-center justify-center gap-1 text-[var(--text-muted)]">
+        {icon}
+      </div>
+      <p className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
         {value}
-      </span>
-      <span className="font-body text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+      </p>
+      <p className="font-body text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--text-muted)]">
         {label}
-      </span>
+      </p>
     </div>
   )
 }

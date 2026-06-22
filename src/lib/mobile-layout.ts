@@ -60,8 +60,8 @@ export const MOBILE_MODULES: MobileModuleDescriptor[] = [
   },
   {
     id: "tasks",
-    label: "Tarefas",
-    href: "/tasks",
+    label: "Atividades",
+    href: "/activities",
     iconName: "CheckSquare",
     description: "Atividades atribuidas ao agente",
     category: "core",

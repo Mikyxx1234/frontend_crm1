@@ -72,6 +72,7 @@ export type WidgetId =
   | "messageVolume"
   | "conversationsByStatus"
   | "channelHealth"
+  | "email"
   // Equipe
   | "agentsOnline"
   | "team"
@@ -248,6 +249,13 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetDescriptor> = {
     category: "service",
     defaults: { x: 6, y: 10, w: 6, h: 4, minW: 4, minH: 3 },
   },
+  email: {
+    id: "email",
+    label: "E-mail",
+    description: "Contas conectadas e mensagens não lidas. CTA para conectar quando vazio.",
+    category: "service",
+    defaults: { x: 0, y: 14, w: 6, h: 5, minW: 3, minH: 4 },
+  },
 
   // ── Equipe ──
   agentsOnline: {
@@ -326,6 +334,7 @@ export const DASHBOARD_PRESETS: Record<Exclude<DashboardPresetId, "custom">, Pre
       "queueByChannel", "slaBreaches",
       "avgResponseTime", "messageVolume",
       "conversationsByStatus", "channelHealth",
+      "email",
     ],
   },
   equipe: {

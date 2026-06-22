@@ -6,7 +6,7 @@ interface SwitchGlassProps {
   checked: boolean
   onChange?: (checked: boolean) => void
   disabled?: boolean
-  size?: "sm" | "md"
+  size?: "sm" | "md" | "list"
   "aria-label"?: string
   className?: string
 }
@@ -22,7 +22,9 @@ export function SwitchGlass({
   const dims =
     size === "sm"
       ? { track: "h-5 w-9", knob: "h-3.5 w-3.5", travel: "translate-x-4" }
-      : { track: "h-6 w-11", knob: "h-4.5 w-4.5", travel: "translate-x-5" }
+      : size === "list"
+        ? { track: "h-6 w-[42px]", knob: "h-5 w-5", travel: "translate-x-[18px]" }
+        : { track: "h-6 w-11", knob: "h-4.5 w-4.5", travel: "translate-x-5" }
 
   return (
     <button
@@ -37,7 +39,7 @@ export function SwitchGlass({
         dims.track,
         checked
           ? "border-transparent bg-[var(--brand-primary)] shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-          : "border-[var(--glass-border)] bg-black/[0.08]",
+          : "border-transparent bg-[rgba(120,140,180,0.40)]",
         className,
       )}
       {...rest}

@@ -12,6 +12,9 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import { isDirectoryMock, mockCompaniesPage, mockContactsPage } from "./mock";
+import { isPageMockMode } from "@/lib/page-mock-mode";
+import { mockActivitiesPage } from "./mock-activities";
 
 async function getJson<T>(path: string, errLabel: string): Promise<T> {
   const res = await fetch(apiUrl(path));
@@ -99,6 +102,7 @@ export interface FetchContactsParams {
 }
 
 export function fetchContacts(params: FetchContactsParams = {}): Promise<ContactListPage> {
+  if (isDirectoryMock()) return Promise.resolve(mockContactsPage(params));
   const sp = new URLSearchParams();
   if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
@@ -258,6 +262,7 @@ export interface FetchCompaniesParams {
 }
 
 export function fetchCompanies(params: FetchCompaniesParams = {}): Promise<CompanyListPage> {
+  if (isDirectoryMock()) return Promise.resolve(mockCompaniesPage(params));
   const sp = new URLSearchParams();
   if (params.search) sp.set("search", params.search);
   if (params.page) sp.set("page", String(params.page));
@@ -377,6 +382,9 @@ export interface FetchActivitiesParams {
 export function fetchActivities(
   params: FetchActivitiesParams = {},
 ): Promise<ActivityListPage> {
+  if (isPageMockMode()) {
+    return Promise.resolve(mockActivitiesPage(params));
+  }
   const sp = new URLSearchParams();
   if (params.type) sp.set("type", params.type);
   if (params.completed !== undefined) sp.set("completed", String(params.completed));

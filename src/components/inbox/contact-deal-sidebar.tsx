@@ -200,7 +200,7 @@ export function ContactDealSidebar(props: Props) {
               <>
                 <div className="border-b border-black/5 dark:border-slate-800 bg-muted dark:bg-ink-soft/40 px-4 py-3">
                   <p className="mb-1.5 text-[10px] font-bold text-foreground dark:text-white">Negócio ativo</p>
-                  <Link href={`/leads/${activeDeal.id}`} className="mb-1.5 block w-full truncate text-left text-[12px] font-medium text-primary hover:underline">{activeDeal.title}</Link>
+                  <Link href={`/pipeline/${activeDeal.id}`} className="mb-1.5 block w-full truncate text-left text-[12px] font-medium text-primary hover:underline">{activeDeal.title}</Link>
                   <div className="flex items-center gap-2">
                     <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-subtle">
                       <div className="absolute inset-y-0 left-0 rounded-full transition-all" style={{ width: `${dealBarPct}%`, backgroundColor: dealBarColor }} />
@@ -303,7 +303,7 @@ export function ContactDealSidebar(props: Props) {
                   <p className="text-[10px] font-bold text-foreground dark:text-white">Todos os negócios</p>
                 </div>
                 {allDeals.map((d) => (
-                  <Link key={d.id} href={`/leads/${d.id}`} className={cn(dt.card.row, "block w-full cursor-pointer text-left")}>
+                  <Link key={d.id} href={`/pipeline/${d.id}`} className={cn(dt.card.row, "block w-full cursor-pointer text-left")}>
                     <span className={cn(dt.text.value, "truncate")}>{d.title}</span>
                     <span className="ml-2 shrink-0 text-[11px] text-ink-subtle dark:text-ink-muted">{d.stage.name}</span>
                   </Link>

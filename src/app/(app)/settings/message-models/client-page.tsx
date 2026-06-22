@@ -2,8 +2,8 @@
 
 import { IconTemplate } from "@tabler/icons-react";
 
-import OldMessageModelsPage from "@/app/old/settings/message-models/client-page";
-import { SettingsV2Shell } from "../_v2-shell";
+import OldMessageModelsPage from "@/features/legacy-v1/settings/message-models";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 /**
  * Fase 1d (migração v1→v2): rota canônica `/settings/message-models` no shell
@@ -13,6 +13,7 @@ import { SettingsV2Shell } from "../_v2-shell";
 export default function MessageModelsV2ClientPage() {
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="Modelos de mensagem"
       description="Internos, WhatsApp WABA e Flows (Kommo)"
       icon={<IconTemplate size={22} />}
@@ -21,3 +22,4 @@ export default function MessageModelsV2ClientPage() {
     </SettingsV2Shell>
   );
 }
+

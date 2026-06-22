@@ -110,7 +110,7 @@ function CatalogCard({
   const productCount = cat._count?.products ?? 0;
 
   return (
-    <article className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-4 shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
+    <article className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
       <div className="flex items-start gap-3">
         <div
           aria-hidden
@@ -150,7 +150,7 @@ function CatalogCard({
             title="Editar catálogo"
             aria-label="Editar catálogo"
             onClick={onEdit}
-            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-white hover:text-[var(--brand-primary)] v2-dark:hover:bg-[var(--glass-bg-modal)]"
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
           >
             <IconPencil size={15} />
           </button>
@@ -160,7 +160,7 @@ function CatalogCard({
             aria-label="Salvar como template"
             onClick={onSaveTemplate}
             disabled={templatePending}
-            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-white hover:text-[var(--brand-primary)] disabled:opacity-50 v2-dark:hover:bg-[var(--glass-bg-modal)]"
+            className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
           >
             <IconBookmark size={15} />
           </button>
@@ -333,9 +333,9 @@ export function CatalogsManager() {
       {/* PAINEL — lista de catálogos */}
       <section
         aria-label="Catálogos da organização"
-        className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]"
+        className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]"
       >
-        <header className="sticky top-0 z-[1] flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-white px-4 py-3.5 v2-dark:bg-[var(--glass-bg-modal)]">
+        <header className="sticky top-0 z-[1] flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3.5 v2-dark:bg-[var(--glass-bg-modal)]">
           <span
             aria-hidden
             className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
@@ -394,7 +394,7 @@ export function CatalogsManager() {
             <button
               type="button"
               onClick={() => setWizardOpen(true)}
-              className="flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-6 text-[var(--text-muted)] transition-all hover:border-[var(--input-border-focus)] hover:bg-white hover:text-[var(--brand-primary)] v2-dark:hover:bg-[var(--glass-bg-modal)]"
+              className="flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-6 text-[var(--text-muted)] transition-all hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
             >
               <span
                 aria-hidden

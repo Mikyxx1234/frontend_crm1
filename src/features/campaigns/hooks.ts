@@ -6,6 +6,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { isPageMockMode } from "@/lib/page-mock-mode";
+import { isPreviewMode } from "@/lib/preview-mode";
+
 import {
   createCampaign,
   fetchAudienceOptions,
@@ -30,6 +33,10 @@ import type {
 
 export const CAMPAIGNS_KEY = ["campaigns"] as const;
 
+function resolveEnabled(enabled: boolean | undefined): boolean {
+  return isPreviewMode() || isPageMockMode() ? true : (enabled ?? true);
+}
+
 /** Status que ainda mudam sozinhos no backend (precisam de polling). */
 const ACTIVE_STATUSES: CampaignStatus[] = [
   "SCHEDULED",
@@ -45,7 +52,7 @@ export function useCampaigns(params: FetchCampaignsParams = {}, enabled = true) 
   return useQuery({
     queryKey: [...CAMPAIGNS_KEY, "list", params],
     queryFn: () => fetchCampaigns(params),
-    enabled,
+    enabled: resolveEnabled(enabled),
     staleTime: 5_000,
     refetchInterval: (query) =>
       query.state.data &&
@@ -59,7 +66,7 @@ export function useCampaign(id: string, enabled = true) {
   return useQuery({
     queryKey: [...CAMPAIGNS_KEY, "detail", id],
     queryFn: () => fetchCampaign(id),
-    enabled: enabled && !!id,
+    enabled: resolveEnabled(enabled) && !!id,
     refetchInterval: (query) =>
       query.state.data && ACTIVE_STATUSES.includes(query.state.data.status)
         ? 5_000
@@ -75,7 +82,7 @@ export function useCampaignStats(
   return useQuery({
     queryKey: [...CAMPAIGNS_KEY, "stats", id],
     queryFn: () => fetchCampaignStats(id),
-    enabled: enabled && !!id,
+    enabled: resolveEnabled(enabled) && !!id,
     refetchInterval: isActive ? 10_000 : false,
   });
 }
@@ -88,7 +95,7 @@ export function useCampaignRecipients(
   return useQuery({
     queryKey: [...CAMPAIGNS_KEY, "recipients", id, params],
     queryFn: () => fetchRecipients(id, params),
-    enabled: enabled && !!id,
+    enabled: resolveEnabled(enabled) && !!id,
   });
 }
 
@@ -126,7 +133,7 @@ export function useChannels(enabled = true) {
   return useQuery({
     queryKey: ["campaigns", "channels"],
     queryFn: fetchChannels,
-    enabled,
+    enabled: resolveEnabled(enabled),
     staleTime: 60_000,
   });
 }
@@ -135,7 +142,7 @@ export function useSegments(enabled = true) {
   return useQuery({
     queryKey: ["campaigns", "segments"],
     queryFn: fetchSegments,
-    enabled,
+    enabled: resolveEnabled(enabled),
     staleTime: 60_000,
   });
 }
@@ -144,7 +151,7 @@ export function useTemplates(enabled = true) {
   return useQuery({
     queryKey: ["campaigns", "templates"],
     queryFn: fetchTemplates,
-    enabled,
+    enabled: resolveEnabled(enabled),
     staleTime: 60_000,
   });
 }
@@ -153,7 +160,7 @@ export function useAudienceOptions(enabled = true) {
   return useQuery({
     queryKey: ["campaigns", "audience-options"],
     queryFn: fetchAudienceOptions,
-    enabled,
+    enabled: resolveEnabled(enabled),
     staleTime: 60_000,
   });
 }

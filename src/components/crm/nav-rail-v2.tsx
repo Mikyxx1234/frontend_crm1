@@ -144,10 +144,21 @@ export function NavRailV2({ className }: { className?: string }) {
   // eliminando o flash de "itens diferentes" ao recarregar.
   const effectiveItems =
     prefs?.sidebar?.items ?? (mounted ? cachedItems : undefined);
-  const navItems = filterNavItemsByPermissions(
-    filterNavItemsByRole(toNavItems(effectiveItems), { role, isSuperAdmin }),
-    { isSuperAdmin, permissions: myPerms?.permissions },
-  );
+  // IMPORTANTE: os filtros por role/permission dependem da sessão. Mesmo com
+  // session prop hidratada via SessionProvider, a leitura do cookie pelo
+  // auth.js no servidor pode resolver `role` em um tick diferente do client
+  // (ex.: refresh do JWT no /api/auth/session em background) — qualquer
+  // divergência muda a CONTAGEM de DockButtons e dispara hydration mismatch
+  // ("div extra/faltando" no FloatingDock). Por isso só aplicamos os
+  // filtros após mount, igual já fazemos com `cachedItems`. Trade-off: por
+  // 1 frame um non-admin vê itens restritos; aceito (mesmo trade do prefs).
+  const baseNavItems = toNavItems(effectiveItems);
+  const navItems = mounted
+    ? filterNavItemsByPermissions(
+        filterNavItemsByRole(baseNavItems, { role, isSuperAdmin }),
+        { isSuperAdmin, permissions: myPerms?.permissions },
+      )
+    : baseNavItems;
   useEffect(() => {
     const preview = isPreviewMode();
     const sessUser = session?.user;

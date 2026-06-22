@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-06-17T00:30:00.000Z",
+  "tool": "MCP Playwright",
+  "waitStrategy": "networkidle (45s max) + 5–7s extra + h1 visible",
+  "baseUrl": "http://127.0.0.1:3000",
+  "login": "adm@eduit.com.br",
+  "mockMode": "?mock=1 + localStorage",
+  "counts": { "fase1": 25, "fase2": 22, "total": 47 },
+  "folder": "frontend/screenshots/crm-audit-v2"
+}

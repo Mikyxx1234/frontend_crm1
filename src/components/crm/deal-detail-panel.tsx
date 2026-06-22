@@ -21,6 +21,7 @@ import {
   IconChecklist,
   IconNote,
   IconClock,
+  IconPhone,
   IconPaperclip,
   IconMoodSmile,
   IconMicrophone,
@@ -71,7 +72,7 @@ export interface DealDetail {
   owner?: DealOwner
 }
 
-type TabId = "conversa" | "atividades" | "notas" | "timeline"
+type TabId = "conversa" | "atividades" | "notas" | "timeline" | "chamadas"
 
 interface DealDetailPanelProps {
   isOpen: boolean
@@ -80,6 +81,8 @@ interface DealDetailPanelProps {
   // Slots opcionais — quando ausentes, mantém o visual default do v0.
   stageRibbonSlot?: React.ReactNode
   winButtonSlot?: React.ReactNode
+  /** Botão "Ligar" do softphone — posicionado no header, antes do moreActions. */
+  callButtonSlot?: React.ReactNode
   moreActionsSlot?: React.ReactNode
   /** Botão dedicado de excluir negócio (atalho visível no header). */
   deleteSlot?: React.ReactNode
@@ -160,12 +163,14 @@ const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: numbe
   { id: "atividades", label: "Atividades", icon: IconChecklist, count: 3 },
   { id: "notas", label: "Notas", icon: IconNote },
   { id: "timeline", label: "Timeline", icon: IconClock },
+  { id: "chamadas", label: "Chamadas", icon: IconPhone },
 ]
 
 export function DealDetailPanel({
   isOpen,
   onClose,
   deal,
+  callButtonSlot,
   moreActionsSlot,
   deleteSlot: _deleteSlot,
   contactEditSlot,
@@ -378,6 +383,8 @@ export function DealDetailPanel({
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
+                {/* Botão "Ligar" — softphone Api4Com */}
+                {callButtonSlot}
                 {/* Kebab (ações do deal) */}
                 {moreActionsSlot}
                 {/* Gear (configuração de campos) */}

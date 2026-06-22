@@ -19,8 +19,8 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PagePrimaryButton } from "@/components/crm/page-toolbar";
-import { SearchInput } from "@/components/crm/search-input";
+import { PagePrimaryButton, PageSearchBar } from "@/components/crm/page-toolbar";
+import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
@@ -165,10 +165,12 @@ export default function V2ContactsClientPage() {
           title="Contatos"
           description="Diretório de contatos vinculados ao CRM"
           center={
-            <SearchInput
+            <PageSearchBar
+              variant="compact"
               value={search}
               onChange={setSearch}
               placeholder="Buscar por nome, e-mail..."
+              aria-label="Buscar contatos"
             />
           }
           actions={
@@ -220,7 +222,7 @@ export default function V2ContactsClientPage() {
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
-            <div className="grid grid-cols-[36px_2.4fr_1.3fr_1.1fr_1fr_0.9fr_38px] items-center gap-3 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3 py-2 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+            <div className={listTableHeadRowClass("grid-cols-[36px_2.4fr_1.3fr_1.1fr_1fr_0.9fr_38px] gap-3 px-3 py-2")}>
               <span>
                 <CheckboxGlass
                   checked={allChecked}
@@ -229,12 +231,12 @@ export default function V2ContactsClientPage() {
                   aria-label="Selecionar todos"
                 />
               </span>
-              <span>Nome / E-mail</span>
-              <span>Telefone</span>
-              <span>Empresa</span>
-              <span>Tags</span>
-              <span>Criado em</span>
-              <span className="text-right">Ações</span>
+              <ListColumnLabel>Nome / E-mail</ListColumnLabel>
+              <ListColumnLabel>Telefone</ListColumnLabel>
+              <ListColumnLabel>Empresa</ListColumnLabel>
+              <ListColumnLabel>Tags</ListColumnLabel>
+              <ListColumnLabel>Criado em</ListColumnLabel>
+              <ListColumnLabel align="right">Ações</ListColumnLabel>
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">

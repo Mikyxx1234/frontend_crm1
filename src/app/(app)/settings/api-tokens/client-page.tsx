@@ -2,19 +2,18 @@
 
 import { IconKey } from "@tabler/icons-react";
 
-import OldApiTokensPage from "@/app/old/settings/api-tokens/client-page";
-import { SettingsV2Shell } from "../_v2-shell";
+import OldApiTokensPage from "@/features/legacy-v1/settings/api-tokens";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 export default function ApiTokensV2ClientPage() {
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="API e Webhooks"
       description="Tokens de integração e eventos"
       icon={<IconKey size={22} />}
     >
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
-        <OldApiTokensPage />
-      </div>
+      <OldApiTokensPage />
     </SettingsV2Shell>
   );
 }

@@ -99,19 +99,19 @@ export function SidebarCustomizationCard() {
   };
 
   return (
-    <section className="rounded-[28px] border border-slate-100 bg-white p-8 shadow-[var(--shadow-lg)]">
+    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-display text-lg font-bold text-slate-900">
+          <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
             Personalização da Sidebar
           </h2>
-          <p className="mt-1 max-w-xl text-sm leading-snug text-slate-500">
+          <p className="mt-1 max-w-xl text-sm leading-snug text-[var(--text-muted)]">
             Escolha quais atalhos aparecem no seu menu lateral e organize a ordem
             conforme sua rotina. Essa configuração vale só para você.
           </p>
         </div>
         {dirty && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
             Alterações não salvas
           </span>
         )}
@@ -153,7 +153,7 @@ export function SidebarCustomizationCard() {
                     dragIndex.current = null;
                   }}
                   className={cn(
-                    "flex items-center gap-3 rounded-2xl border border-slate-100 bg-[var(--color-bg-subtle)]/40 px-3 py-2.5 transition-opacity",
+                    "flex items-center gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-3 py-2.5 transition-opacity",
                     !it.enabled && "opacity-60",
                   )}
                 >
@@ -226,7 +226,7 @@ export function SidebarCustomizationCard() {
           type="button"
           onClick={handleReset}
           disabled={isLoading || isError || saveMutation.isPending}
-          className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-white px-4 text-sm font-semibold text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] disabled:opacity-50"
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 text-sm font-semibold text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
         >
           <RotateCcw className="size-4" />
           Restaurar padrão

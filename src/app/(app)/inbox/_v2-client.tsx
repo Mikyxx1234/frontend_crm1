@@ -14,7 +14,7 @@ import { ChatArea } from "@/components/crm/chat-area";
 import { ContactAside } from "@/components/crm/contact-aside";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
-import { SearchInput } from "@/components/crm/search-input";
+import { PageSearchBar } from "@/components/crm/page-toolbar";
 import {
   ColumnResizer,
   usePersistentWidth,
@@ -249,7 +249,13 @@ export default function InboxV2ClientPage({
   }
 
   // ── Adapters → tipos do v0 ─────────────────────────────────────
-  const conversationCards = useMemo(() => rows.map((r) => toConversationCard(r, { active: r.id === activeId })), [rows, activeId]);
+  const conversationCards = useMemo(
+    () =>
+      rows
+        .filter(Boolean)
+        .map((r) => toConversationCard(r, { active: r.id === activeId })),
+    [rows, activeId],
+  );
   const contactName = activeRow?.contact?.name ?? "";
   const messageBubbles = useMemo(
     () => messages.map((m) => toMessageBubble(m, contactName)),
@@ -279,8 +285,7 @@ export default function InboxV2ClientPage({
 
   const navRailNode = navRail ?? <NavRail />;
 
-  // Quando há header de página, busca + filtro vivem nele (direita/centro),
-  // então a coluna de conversas esconde sua linha de busca/filtro.
+  // Com header de página, busca no centro do header e filtro nas actions.
   const searchInHeader = !!pageHeader;
 
   const conversationColumnNode = (
@@ -291,7 +296,11 @@ export default function InboxV2ClientPage({
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       hideSearch={searchInHeader}
-      filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
+      filterSlot={
+        searchInHeader ? null : (
+          <InboxFilterButton value={filters} onChange={setFilters} />
+        )
+      }
       tabsOverride={TABS.map((t) => ({
         label: t.label,
         count: tabCounts?.[t.id] ?? undefined,
@@ -566,12 +575,15 @@ export default function InboxV2ClientPage({
             title={pageHeader.title}
             description={pageHeader.description}
             center={
-              <SearchInput
+              <PageSearchBar
+                variant="compact"
                 value={searchInput}
                 onChange={setSearchInput}
                 placeholder="Buscar conversa, contato, telefone..."
+                aria-label="Buscar conversas"
               />
             }
+            actions={<InboxFilterButton value={filters} onChange={setFilters} />}
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
@@ -713,7 +725,7 @@ function InboxStageDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
           {[...stages]
             .sort((a, b) => a.position - b.position)
             .map((s) => {

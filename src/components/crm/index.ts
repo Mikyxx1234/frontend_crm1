@@ -3,6 +3,13 @@ export { AvatarGlass } from './avatar-glass'
 export { BadgeGlass } from './badge-glass'
 export { ButtonGlass } from './button-glass'
 export { Chip } from './chip'
+export {
+  GlassModal,
+  GlassModalPanel,
+  GlassModalHeader,
+  GlassModalBody,
+  GlassModalFooter,
+} from './glass-modal'
 export { GlassCard } from './glass-card'
 export { InputGlass } from './input-glass'
 export { StatusPill } from './status-pill'

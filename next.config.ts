@@ -42,6 +42,11 @@ function backendBase(): string {
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: __dirname,
+  env: {
+    // Versão exibida pelo banner "Novidades em vX.Y.Z". Setar APP_VERSION
+    // no ambiente de build (Easypanel) para alinhar com o CHANGELOG.md.
+    NEXT_PUBLIC_APP_VERSION: process.env.APP_VERSION ?? "1.4.0",
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -83,17 +88,41 @@ const nextConfig: NextConfig = {
     };
   },
   /**
-   * REDIRECTS — Migração v2 → raiz.
+   * REDIRECTS — Migração v1 (/old/*) e v2 (/v2/*) → raiz.
    *
-   * Após a migração de rotas, as URLs do segmento `/v2/*` deixaram de
-   * existir (a v2 virou a raiz). Mantemos redirects permanentes pra
-   * preservar links externos, atalhos do PWA, bookmarks e qualquer
-   * referência hardcoded que ainda exista em automações Kommo ou IA.
+   * Ordem: rotas ESPECÍFICAS antes do catch-all genérico. Dois casos
+   * especiais exigem mapeamento explícito (nome mudou):
+   *   - /old/tasks → /activities
+   *   - /old/leads → /pipeline
+   * O resto segue o padrão /:path* → /:path*.
    */
   async redirects() {
     return [
+      // ── v2 legacy (segmento /v2/* virou raiz) ──────────────────────
       { source: "/v2", destination: "/dashboard", permanent: true },
       { source: "/v2/:path*", destination: "/:path*", permanent: true },
+
+      // ── v1 legacy (/old/*) — específicos com nome diferente ────────
+      { source: "/old/tasks", destination: "/activities", permanent: true },
+      {
+        source: "/old/leads",
+        destination: "/pipeline",
+        permanent: true,
+      },
+      {
+        source: "/old/leads/:id",
+        destination: "/pipeline/:id",
+        permanent: true,
+      },
+      {
+        source: "/old/analytics/inbox",
+        destination: "/analytics/inbox",
+        permanent: true,
+      },
+
+      // ── v1 legacy — mapeamento direto (/:path*) ────────────────────
+      { source: "/old", destination: "/dashboard", permanent: true },
+      { source: "/old/:path*", destination: "/:path*", permanent: true },
     ];
   },
   async headers() {

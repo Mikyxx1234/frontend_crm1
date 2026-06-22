@@ -1,0 +1,207 @@
+{
+  "id": "cmq0e6nxv094xp601qpm6iyje",
+  "name": "Follow-up de envio de vaga",
+  "description": "FUP após 2 dias da vaga enviada",
+  "triggerType": "stage_changed",
+  "triggerConfig": {
+    "__rfPos": {
+      "x": 32,
+      "y": 300
+    },
+    "toStageId": "",
+    "fromStageId": "cmpmvrns000bbqg018216856p"
+  },
+  "active": true,
+  "steps": [
+    {
+      "id": "tpl_prop_1",
+      "type": "delay",
+      "config": {
+        "ms": 172800000,
+        "__rfPos": {
+          "x": 353.225352112676,
+          "y": 308.9084507042254
+        },
+        "nextStepId": "tpl_prop_2",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "tpl_prop_2",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 665.6971830985915,
+          "y": 294.6549295774648
+        },
+        "content": "Oi! 👋\nEnviamos algumas vagas para você há alguns dias mas ainda não tivemos retorno.\nAinda tem interesse em oportunidades por aqui?",
+        "nextStepId": "241cbefe-fa36-4d91-95e5-06dd6976daf7",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "04d85d59-c246-4bb1-a01a-72d9200dbf18",
+      "type": "question",
+      "config": {
+        "__rfPos": {
+          "x": 1701.927223945552,
+          "y": 150.0097924126389
+        },
+        "buttons": [
+          {
+            "text": "Localização muito longe",
+            "gotoStepId": ""
+          },
+          {
+            "text": "Salário abaixo do esperado",
+            "gotoStepId": "f5a4049b-0a79-48de-ad9d-85c88d551f7a"
+          },
+          {
+            "text": "Horário não me atende",
+            "gotoStepId": "f5a4049b-0a79-48de-ad9d-85c88d551f7a"
+          },
+          {
+            "text": "Quero uma área diferente ",
+            "gotoStepId": "f5a4049b-0a79-48de-ad9d-85c88d551f7a"
+          },
+          {
+            "text": "Outro",
+            "gotoStepId": "f5a4049b-0a79-48de-ad9d-85c88d551f7a"
+          }
+        ],
+        "message": "Entendido! Para buscarmos opções mais alinhadas, o que não encaixou nas vagas anteriores?",
+        "timeoutMs": 86400000,
+        "nextStepId": "f5a4049b-0a79-48de-ad9d-85c88d551f7a",
+        "timeoutAction": "continue",
+        "elseGotoStepId": "",
+        "saveToVariable": "motivo_nao_match_com_vagas_disponiveis",
+        "timeoutGotoStepId": "",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "f5a4049b-0a79-48de-ad9d-85c88d551f7a",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 2198.951743064023,
+          "y": 273.2764372538885
+        },
+        "content": "Sem problema! 😊\nVamos continuar buscando oportunidades mais alinhadas ao seu perfil e assim que tivermos uma nova opção, você será o(a) primeiro(a) a saber. 🎯\nFique de olho aqui no WhatsApp!",
+        "nextStepId": "debe34a2-0bb7-4b54-acd7-ffe1731b3093",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "debe34a2-0bb7-4b54-acd7-ffe1731b3093",
+      "type": "finish",
+      "config": {
+        "action": "stop",
+        "__rfPos": {
+          "x": 2652.103122821533,
+          "y": 265.1362712747131
+        },
+        "nextStepId": "__none__",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "a4f1181d-b2a4-457b-804e-b8bb15f75177",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 1687.675180183811,
+          "y": -70.90476751384836
+        },
+        "content": "Ótimo! Iremos encaminhar as oportunidades que ainda estão abertas, dá uma olhada",
+        "nextStepId": "debe34a2-0bb7-4b54-acd7-ffe1731b3093",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "241cbefe-fa36-4d91-95e5-06dd6976daf7",
+      "type": "question",
+      "config": {
+        "__rfPos": {
+          "x": 1103.577079620239,
+          "y": 236.9393777397592
+        },
+        "buttons": [
+          {
+            "text": "✅ Sim, ainda tenho interesse!",
+            "gotoStepId": "a4f1181d-b2a4-457b-804e-b8bb15f75177"
+          },
+          {
+            "text": "🔍 Quero ver outras vagas",
+            "gotoStepId": "04d85d59-c246-4bb1-a01a-72d9200dbf18"
+          },
+          {
+            "text": "❌ Não busco mais no momento",
+            "gotoStepId": "9ec3d3e4-968e-4111-92d7-a9858600060b"
+          }
+        ],
+        "message": "Oi! 👋\nEnviamos algumas vagas para você há alguns dias mas ainda não tivemos retorno.\nAinda tem interesse em oportunidades por aqui?",
+        "timeoutMs": 86400000,
+        "timeoutAction": "continue",
+        "elseGotoStepId": "",
+        "saveToVariable": "status_vagas_enviadas",
+        "timeoutGotoStepId": "",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "9ec3d3e4-968e-4111-92d7-a9858600060b",
+      "type": "question",
+      "config": {
+        "__rfPos": {
+          "x": 1688.141825504024,
+          "y": 565.274518248753
+        },
+        "buttons": [
+          {
+            "text": "✅ Consegui um emprego",
+            "gotoStepId": ""
+          },
+          {
+            "text": "⏸️ Vou pausar a busca por ora",
+            "gotoStepId": "ee610fcb-779d-423d-9df0-5f6b793fb368"
+          },
+          {
+            "text": "😞 Não gostei das vagas oferecidas",
+            "gotoStepId": "ee610fcb-779d-423d-9df0-5f6b793fb368"
+          },
+          {
+            "text": "🐢 O processo demorou muito",
+            "gotoStepId": "ee610fcb-779d-423d-9df0-5f6b793fb368"
+          },
+          {
+            "text": "🙋 Motivo pessoal",
+            "gotoStepId": "ee610fcb-779d-423d-9df0-5f6b793fb368"
+          }
+        ],
+        "message": "Tudo bem, obrigado por nos avisar. 🙏\nPara nos ajudar a melhorar, consegue nos dizer o motivo?",
+        "timeoutMs": 86400000,
+        "nextStepId": "ee610fcb-779d-423d-9df0-5f6b793fb368",
+        "timeoutAction": "continue",
+        "elseGotoStepId": "",
+        "saveToVariable": "motivo_perda_candidato",
+        "timeoutGotoStepId": "",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "ee610fcb-779d-423d-9df0-5f6b793fb368",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 2183.624960634818,
+          "y": 682.7723663938305
+        },
+        "content": "Obrigado pelo retorno! 🙏\nSeu feedback é muito importante para continuarmos melhorando.\nDesejamos sucesso na sua carreira e conta com a gente para selecionarmos as melhores vagas.\nQuando quiser retomar a busca, é só chamar, estamos por aqui. Até breve! 😊",
+        "nextStepId": "debe34a2-0bb7-4b54-acd7-ffe1731b3093",
+        "__hasExplicitEdges": true
+      }
+    }
+  ],
+  "exportedAt": "2026-06-16T20:28:51.482Z"
+}

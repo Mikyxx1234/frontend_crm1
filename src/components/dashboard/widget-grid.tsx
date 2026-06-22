@@ -36,6 +36,7 @@ import { MessageVolumeWidget } from "./widgets/message-volume-widget";
 import { ConversationsByStatusWidget } from "./widgets/conversations-by-status-widget";
 import { ChannelHealthWidget } from "./widgets/channel-health-widget";
 import { AgentsOnlineWidget } from "./widgets/agents-online-widget";
+import { EmailWidget } from "./widgets/email-widget";
 
 // A partir do RGL 2.x, `WidthProvider` e o wrapper legado `Responsive`
 // vivem em `react-grid-layout/legacy`. O entrypoint raiz agora expõe um
@@ -60,6 +61,7 @@ const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType> = {
   conversationsByStatus: ConversationsByStatusWidget,
   channelHealth: ChannelHealthWidget,
   agentsOnline: AgentsOnlineWidget,
+  email: EmailWidget,
 };
 
 function layoutToGridItems(items: Layout): GridItem[] {

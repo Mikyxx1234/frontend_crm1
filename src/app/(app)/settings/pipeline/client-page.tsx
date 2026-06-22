@@ -124,11 +124,11 @@ function CopyToStageModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.15)]"
+        className="w-full max-w-sm overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_20px_60px_rgba(15,23,42,0.15)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="relative flex items-start justify-between bg-gradient-to-br from-[#5B6FF5]/10 via-white to-white px-5 pb-4 pt-5">
+        <div className="relative flex items-start justify-between bg-gradient-to-br from-[#5B6FF5]/10 via-[var(--glass-bg-base)] to-[var(--glass-bg-base)] px-5 pb-4 pt-5">
           <span className="absolute left-0 top-0 h-full w-[3px] rounded-r-full bg-[var(--brand-primary)]" />
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
@@ -177,7 +177,7 @@ function CopyToStageModal({
                     "flex items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all",
                     isSelected
                       ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/6"
-                      : "border-black/5 bg-muted hover:border-black/10 hover:bg-white",
+                      : "border-[var(--glass-border-subtle)] bg-muted hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
                   )}
                 >
                   <span
@@ -202,11 +202,11 @@ function CopyToStageModal({
         </div>
 
         {/* Rodapé */}
-        <div className="flex items-center justify-end gap-2 border-t border-black/5 bg-muted/80 px-5 py-3.5">
+        <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] bg-muted/80 px-5 py-3.5">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-black/10 bg-white px-4 py-1.5 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-muted"
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] px-4 py-1.5 font-display text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-muted"
           >
             Cancelar
           </button>
@@ -284,7 +284,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
           </TooltipGlass>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full z-50 mt-1.5 w-44 overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
+            <div className="absolute right-0 top-full z-50 mt-1.5 w-44 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(automation); }}
@@ -430,7 +430,7 @@ function StageOptionsMenu({
       </TooltipGlass>
 
       {open && (
-        <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-[var(--radius-lg)] border border-black/10 bg-white py-1 shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
+        <div className="absolute right-0 top-full z-40 mt-1 w-52 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_8px_28px_rgba(15,23,42,0.14)]">
           {/* Mover posição */}
           <div className="px-2 py-1">
             <p className="px-2 pb-1 font-display text-[10px] font-bold uppercase tracking-wider text-ink-subtle">
@@ -458,7 +458,7 @@ function StageOptionsMenu({
             </div>
           </div>
 
-          <div className="my-1 border-t border-black/5" />
+          <div className="my-1 border-t border-[var(--glass-border-subtle)]" />
 
           {/* Renomear */}
           <button
@@ -488,7 +488,7 @@ function StageOptionsMenu({
 
           {/* Swatches de cor */}
           {showColors && (
-            <div className="border-t border-black/5 px-3.5 py-2.5">
+            <div className="border-t border-[var(--glass-border-subtle)] px-3.5 py-2.5">
               <div className="grid grid-cols-5 gap-1.5">
                 {COLOR_PALETTE.map((c) => (
                   <button
@@ -509,7 +509,7 @@ function StageOptionsMenu({
             </div>
           )}
 
-          <div className="my-1 border-t border-black/5" />
+          <div className="my-1 border-t border-[var(--glass-border-subtle)]" />
 
           {/* Excluir */}
           <button
@@ -1632,7 +1632,7 @@ export default function PipelineSettingsClientPage() {
               <PipelineSettingsTabs
                 onNewPipeline={() => setNewPipelineOpen(true)}
                 onSetDefault={handleSetDefault}
-                onBack={() => router.push("/pipeline")}
+                onBack={() => router.push("/settings")}
                 onSave={handleSaveAll}
                 hasChanges={hasChanges}
                 saving={saving}

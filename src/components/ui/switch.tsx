@@ -56,7 +56,7 @@ export function Switch({
       <span
         aria-hidden
         className={cn(
-          "inline-block size-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200",
+          "inline-block size-5 transform rounded-full bg-[var(--glass-bg-modal)] shadow-md ring-0 transition-transform duration-200",
           checked ? "translate-x-[22px]" : "translate-x-0.5",
         )}
       />

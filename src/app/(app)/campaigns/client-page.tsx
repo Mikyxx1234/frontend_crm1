@@ -18,7 +18,6 @@ import {
   PagePrimaryButton,
   PageSearchBar,
   PageSegmentedControl,
-  PageToolbarRow,
 } from "@/components/crm/page-toolbar";
 
 import { useCampaigns } from "@/features/campaigns/hooks";
@@ -104,6 +103,15 @@ export default function CampaignsClientPage() {
           icon={<IconSpeakerphone size={22} stroke={2.2} />}
           title="Campanhas"
           description="Disparos em massa via WhatsApp (Meta Cloud API) com rastreamento completo"
+          center={
+            <PageSearchBar
+              variant="compact"
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar campanhas..."
+              aria-label="Buscar campanhas"
+            />
+          }
           actions={
             <PagePrimaryButton href="/campaigns/new">
               <IconPlus size={15} stroke={2.4} /> Nova campanha
@@ -117,17 +125,12 @@ export default function CampaignsClientPage() {
           </PageDemoBanner>
         )}
 
-        <PageToolbarRow className="flex-wrap">
-          <PageSearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder="Buscar campanhas..."
-            aria-label="Buscar campanhas"
-          />
-          <PageSegmentedControl
-            aria-label="Filtrar campanhas por status"
-            className="max-w-full flex-wrap"
-            items={CAMPAIGN_STATUS_FILTERS.map((f) => {
+        <div className="min-h-0 flex-1 overflow-auto">
+          <div className="mb-3 flex flex-wrap justify-end">
+            <PageSegmentedControl
+              aria-label="Filtrar campanhas por status"
+              className="max-w-full"
+              items={CAMPAIGN_STATUS_FILTERS.map((f) => {
               const count =
                 f.value === ""
                   ? isDemoBase
@@ -151,9 +154,8 @@ export default function CampaignsClientPage() {
             value={statusFilter}
             onChange={setStatusFilter}
           />
-        </PageToolbarRow>
+          </div>
 
-        <div className="min-h-0 flex-1 overflow-auto">
           {isLoading && allItems.length === 0 ? (
             <div className="flex flex-col gap-2.5">
               {Array.from({ length: 4 }).map((_, i) => (

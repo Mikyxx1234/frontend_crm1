@@ -1,41 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
-import { IconFilter, IconLayoutKanban, IconList } from "@tabler/icons-react";
+import {
+  IconCircleCheck,
+  IconCircleX,
+  IconClock,
+  IconGridDots,
+  IconLayoutKanban,
+  IconList,
+} from "@tabler/icons-react";
 
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { SearchInput } from "@/components/crm/search-input";
+import {
+  PAGE_FILTER_DROPDOWN_CLASS,
+  PageFilterBar,
+  PageSearchBar,
+  PageSegmentedControl,
+} from "@/components/crm/page-toolbar";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
-import { DealListTable } from "@/components/crm/deal-list-table";
+import {
+  DealListTable,
+  type DealListTab,
+} from "@/components/crm/deal-list-table";
 
-import { useDealsList } from "@/features/pipeline-v2/hooks";
-import { usePipelines } from "@/features/pipeline-v2/hooks";
+import { useDealsList, usePipelines } from "@/features/pipeline-v2/hooks";
 import { toDealListRow } from "@/features/pipeline-v2/adapters";
 
 import { cn } from "@/lib/utils";
 
 const DEFAULT_PER_PAGE = 25;
 
-/**
- * Visão "Lista" do pipeline /v2 — cabeada em `GET /api/deals`.
- *
- * - Switcher Kanban/Lista no topo (alterna entre `/v2/pipeline` e
- *   `/v2/pipeline/list`).
- * - Filtro por pipeline (dropdown nativo, escolha o pipeline default).
- * - Busca por título/contato (debounce 300ms).
- * - Paginação server-side (campo `total` do endpoint).
- *
- * O componente da tabela já controla as tabs Abertos/Ganhos/Perdidos/Todos
- * client-side. Quando o volume crescer, podemos elevar o filtro de status
- * para a query (`?status=OPEN`) e a ordenação para `?sortBy/sortOrder`.
- */
+const STATUS_TABS: { id: DealListTab; label: string; icon: React.ReactNode }[] = [
+  { id: "abertos", label: "Abertos", icon: <IconClock size={13} /> },
+  { id: "ganhos", label: "Ganhos", icon: <IconCircleCheck size={13} /> },
+  { id: "perdidos", label: "Perdidos", icon: <IconCircleX size={13} /> },
+  { id: "todos", label: "Todos", icon: <IconGridDots size={13} /> },
+];
+
 export default function V2PipelineListClientPage() {
   const router = useRouter();
   const { status: sessionStatus } = useSession();
@@ -46,8 +54,8 @@ export default function V2PipelineListClientPage() {
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
+  const [statusTab, setStatusTab] = useState<DealListTab>("abertos");
 
-  // Debounce 300ms para a busca.
   useEffect(() => {
     const t = setTimeout(() => {
       setDebounced(search.trim());
@@ -59,7 +67,6 @@ export default function V2PipelineListClientPage() {
   const pipelinesQuery = usePipelines(isAuthenticated);
   const pipelines = pipelinesQuery.data ?? [];
 
-  // Pipeline default: o `isDefault` se existir, senão o primeiro.
   useEffect(() => {
     if (!pipelineId && pipelines.length) {
       const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
@@ -80,44 +87,67 @@ export default function V2PipelineListClientPage() {
   const items = dealsQuery.data?.items ?? [];
   const rows = items.map(toDealListRow);
 
+  const tabCounts = useMemo(
+    () => ({
+      abertos: rows.filter((d) => d.status === "OPEN").length,
+      ganhos: rows.filter((d) => d.status === "WON").length,
+      perdidos: rows.filter((d) => d.status === "LOST").length,
+      todos: rows.length,
+    }),
+    [rows],
+  );
+
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
-          icon={<IconList size={22} />}
+          icon={<IconLayoutKanban size={22} stroke={2.2} />}
           title="Pipeline"
           description="Lista completa de negócios — alterne entre Kanban e Lista"
           center={
-            <SearchInput
+            <PageSearchBar
+              variant="compact"
               value={search}
               onChange={setSearch}
-              placeholder="Buscar por título, e-mail..."
+              placeholder="Buscar por título, contato..."
+              aria-label="Buscar negócios"
             />
           }
-          actions={
-            <>
-              {/* Filtro de pipeline (DS v2). */}
-              <div className="inline-flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 shadow-[var(--glass-shadow-sm)]">
-                <IconFilter size={14} className="text-[var(--text-muted)]" />
-                <span className="font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-                  Pipeline
-                </span>
-                <DropdownGlass
-                  options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
-                  value={pipelineId ?? ""}
-                  onValueChange={(v) => {
-                    setPipelineId(v || undefined);
-                    setPage(1);
-                  }}
-                  triggerClassName="border-0 bg-transparent font-display text-[13px] font-semibold text-[var(--text-primary)]"
-                />
-              </div>
-              <ViewSwitcher current="list" />
-            </>
-          }
+          actions={<ViewSwitcher current="list" />}
         />
+
+        <PageFilterBar className="w-full flex-wrap items-center justify-between gap-3">
+          <DropdownGlass
+            options={pipelines.map((p) => ({ value: p.id, label: p.name }))}
+            value={pipelineId ?? ""}
+            onValueChange={(v) => {
+              setPipelineId(v || undefined);
+              setPage(1);
+            }}
+            menuLabel="Pipeline"
+            triggerClassName={PAGE_FILTER_DROPDOWN_CLASS}
+          />
+          <PageSegmentedControl
+            size="compact"
+            aria-label="Filtrar negócios por status"
+            items={STATUS_TABS.map((t) => ({
+              value: t.id,
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  {t.icon}
+                  {t.label}
+                  <span className="min-w-[18px] rounded-full bg-[var(--glass-bg-strong)] px-1.5 text-center text-[10px] font-bold tabular-nums text-[var(--text-muted)]">
+                    {tabCounts[t.id]}
+                  </span>
+                </span>
+              ),
+            }))}
+            value={statusTab}
+            onChange={(v) => setStatusTab(v as DealListTab)}
+          />
+        </PageFilterBar>
 
         {dealsQuery.isLoading && rows.length === 0 ? (
           <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
@@ -142,6 +172,7 @@ export default function V2PipelineListClientPage() {
         ) : (
           <DealListTable
             deals={rows}
+            statusTab={statusTab}
             onRowClick={(id) => router.push(`/pipeline/${id}`)}
           />
         )}

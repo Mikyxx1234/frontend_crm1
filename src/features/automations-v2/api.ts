@@ -12,6 +12,8 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import { isPageMockMode } from "@/lib/page-mock-mode";
+import { mockAutomationsPage } from "./mock-automations";
 
 async function getJson<T>(path: string, errLabel: string): Promise<T> {
   const res = await fetch(apiUrl(path));
@@ -88,6 +90,9 @@ export interface FetchAutomationsParams {
 export function fetchAutomations(
   params: FetchAutomationsParams = {},
 ): Promise<AutomationListPage> {
+  if (isPageMockMode()) {
+    return Promise.resolve(mockAutomationsPage(params));
+  }
   const sp = new URLSearchParams();
   if (params.active !== undefined) sp.set("active", String(params.active));
   if (params.search) sp.set("search", params.search);

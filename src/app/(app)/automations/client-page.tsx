@@ -22,7 +22,6 @@ import {
   PagePrimaryButton,
   PageSearchBar,
   PageSegmentedControl,
-  PageToolbarRow,
 } from "@/components/crm/page-toolbar"
 import { AutomationsGallery } from "@/components/crm/automations-gallery"
 import { EmptyState } from "@/components/crm/empty-state"
@@ -122,8 +121,27 @@ export default function V2AutomationsClientPage() {
           icon={<IconBolt size={22} stroke={2.2} />}
           title="Automações"
           description="Fluxos disparados por eventos do CRM."
+          center={
+            <PageSearchBar
+              variant="compact"
+              value={query}
+              onChange={setQuery}
+              placeholder="Buscar automações..."
+              aria-label="Buscar automações"
+            />
+          }
           actions={
-            <>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <PageSegmentedControl
+                size="compact"
+                aria-label="Filtrar automações"
+                items={FILTERS.map((label, index) => ({
+                  value: String(index),
+                  label,
+                }))}
+                value={String(filter)}
+                onChange={(v) => setFilter(Number(v))}
+              />
               <input
                 ref={importInputRef}
                 type="file"
@@ -137,7 +155,7 @@ export default function V2AutomationsClientPage() {
               <PagePrimaryButton href="/automations/new">
                 <IconPlus size={15} stroke={2.4} /> Nova automação
               </PagePrimaryButton>
-            </>
+            </div>
           }
         />
 
@@ -171,24 +189,6 @@ export default function V2AutomationsClientPage() {
             tone="neutral"
           />
         </section>
-
-        <PageToolbarRow>
-          <PageSearchBar
-            value={query}
-            onChange={setQuery}
-            placeholder="Buscar automações..."
-            aria-label="Buscar automações"
-          />
-          <PageSegmentedControl
-            aria-label="Filtrar automações"
-            items={FILTERS.map((label, index) => ({
-              value: String(index),
-              label,
-            }))}
-            value={String(filter)}
-            onChange={(v) => setFilter(Number(v))}
-          />
-        </PageToolbarRow>
 
         {isDemo && (
           <PageDemoBanner>

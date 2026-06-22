@@ -315,7 +315,7 @@ function RoleChannelScope({ roleId }: { roleId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-4 shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
+    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)]">
       <div className="flex items-center gap-1.5">
         <IconAntennaBars5 size={14} className="text-[var(--text-muted)]" />
         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">

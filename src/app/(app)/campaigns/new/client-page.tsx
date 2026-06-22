@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  IconArrowLeft,
   IconChevronLeft,
   IconChevronRight,
   IconRocket,
@@ -169,11 +167,8 @@ export default function NewCampaignClientPage() {
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
-          icon={
-            <Link href="/campaigns" className="text-[var(--brand-primary)]">
-              <IconArrowLeft size={22} />
-            </Link>
-          }
+          back={{ href: "/campaigns", label: "Campanhas" }}
+          icon={<IconRocket size={22} />}
           title="Nova campanha"
           description={`Passo ${step} de 4 — ${STEPS[step - 1]}`}
         />
@@ -517,7 +512,7 @@ export default function NewCampaignClientPage() {
             disabled={step === 1}
             className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--brand-primary)]/35 disabled:opacity-40"
           >
-            <IconChevronLeft size={16} /> Voltar
+            <IconChevronLeft size={16} /> Anterior
           </button>
 
           {step < 4 ? (

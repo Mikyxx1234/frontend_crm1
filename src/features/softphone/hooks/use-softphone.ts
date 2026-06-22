@@ -1,0 +1,305 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { SipCredentials } from "../api/types";
+import { getMyCredentials } from "../api/extensions";
+
+type SoftphoneStatus =
+  | "disconnected"
+  | "connecting"
+  | "registered"
+  | "call_ringing"
+  | "call_active"
+  | "call_held"
+  | "error";
+
+interface SoftphoneState {
+  status: SoftphoneStatus;
+  muted: boolean;
+  held: boolean;
+  error: string | null;
+  remoteNumber: string | null;
+  callDirection: "inbound" | "outbound" | null;
+  durationMs: number;
+}
+
+// ─── Module-scoped singleton state (survives React remounts) ───────────
+let moduleUA: unknown = null;
+let moduleSession: unknown = null;
+let moduleInSession: unknown = null;
+let moduleAudio: HTMLAudioElement | null = null;
+let moduleCredentials: SipCredentials | null = null;
+let modulePendingApi4ComDial = false;
+
+if (typeof window !== "undefined" && !moduleAudio) {
+  moduleAudio = new Audio();
+  moduleAudio.autoplay = true;
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    if (moduleUA && typeof (moduleUA as { stop: () => void }).stop === "function") {
+      (moduleUA as { stop: () => void }).stop();
+    }
+  });
+}
+
+export function useSoftphone() {
+  const [state, setState] = useState<SoftphoneState>({
+    status: moduleUA ? "registered" : "disconnected",
+    muted: false,
+    held: false,
+    error: null,
+    remoteNumber: null,
+    callDirection: null,
+    durationMs: 0,
+  });
+
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+
+  const startTimer = useCallback(() => {
+    startTimeRef.current = Date.now();
+    timerRef.current = setInterval(() => {
+      if (startTimeRef.current) {
+        setState((s) => ({ ...s, durationMs: Date.now() - startTimeRef.current! }));
+      }
+    }, 1000);
+  }, []);
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+    startTimeRef.current = null;
+  }, []);
+
+  const connect = useCallback(async () => {
+    if (moduleUA) {
+      setState((s) => ({ ...s, status: "registered", error: null }));
+      return;
+    }
+
+    setState((s) => ({ ...s, status: "connecting", error: null }));
+
+    try {
+      const creds = await getMyCredentials();
+      moduleCredentials = creds;
+
+      const JsSIP = await import("jssip");
+      const socket = new JsSIP.WebSocketInterface(creds.wsServer);
+
+      const config = {
+        sockets: [socket],
+        uri: creds.sipUri,
+        authorization_user: creds.authUser,
+        password: creds.authPassword,
+        register: true,
+        session_timers: false,
+      };
+
+      const ua = new JsSIP.UA(config);
+
+      ua.on("registered", () => {
+        setState((s) => ({ ...s, status: "registered", error: null }));
+      });
+
+      ua.on("registrationFailed", (e: { cause?: string }) => {
+        setState((s) => ({
+          ...s,
+          status: "error",
+          error: `Registro SIP falhou: ${e.cause ?? "unknown"}`,
+        }));
+      });
+
+      ua.on("newRTCSession", (data: { session: unknown; originator: string }) => {
+        const session = data.session as {
+          direction: string;
+          remote_identity?: { uri?: { user?: string } };
+          connection?: RTCPeerConnection;
+          answer: (opts?: object) => void;
+          terminate: () => void;
+          on: (event: string, cb: (...args: unknown[]) => void) => void;
+          request?: { getHeader?: (name: string) => string | undefined };
+        };
+
+        if (data.originator === "remote") {
+          moduleInSession = session;
+
+          const shouldAutoAnswer =
+            modulePendingApi4ComDial ||
+            session.request?.getHeader?.("X-Api4comintegratedcall") === "true";
+
+          if (shouldAutoAnswer) {
+            modulePendingApi4ComDial = false;
+            session.answer({ mediaConstraints: { audio: true, video: false } });
+          }
+
+          const remoteNumber = session.remote_identity?.uri?.user ?? "Desconhecido";
+          setState((s) => ({
+            ...s,
+            status: "call_ringing",
+            remoteNumber,
+            callDirection: "inbound",
+          }));
+
+          session.on("accepted", () => {
+            moduleSession = session;
+            moduleInSession = null;
+            setState((s) => ({ ...s, status: "call_active" }));
+            startTimer();
+            attachAudio(session.connection);
+          });
+        } else {
+          moduleSession = session;
+          const remoteNumber = session.remote_identity?.uri?.user ?? "";
+          setState((s) => ({
+            ...s,
+            status: "call_active",
+            remoteNumber,
+            callDirection: "outbound",
+          }));
+          startTimer();
+
+          session.on("confirmed", () => {
+            attachAudio(session.connection);
+          });
+        }
+
+        session.on("ended", () => {
+          cleanup();
+        });
+
+        session.on("failed", () => {
+          cleanup();
+        });
+      });
+
+      ua.start();
+      moduleUA = ua;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        status: "error",
+        error: e instanceof Error ? e.message : "Erro ao conectar",
+      }));
+    }
+  }, [startTimer]);
+
+  const cleanup = useCallback(() => {
+    moduleSession = null;
+    moduleInSession = null;
+    stopTimer();
+    setState((s) => ({
+      ...s,
+      status: moduleUA ? "registered" : "disconnected",
+      muted: false,
+      held: false,
+      remoteNumber: null,
+      callDirection: null,
+      durationMs: 0,
+    }));
+  }, [stopTimer]);
+
+  const disconnect = useCallback(() => {
+    if (moduleUA && typeof (moduleUA as { stop: () => void }).stop === "function") {
+      (moduleUA as { stop: () => void }).stop();
+    }
+    moduleUA = null;
+    moduleCredentials = null;
+    cleanup();
+    setState((s) => ({ ...s, status: "disconnected" }));
+  }, [cleanup]);
+
+  const dial = useCallback(
+    (number: string, ctx?: { dealId?: string; contactId?: string }) => {
+      if (!moduleUA || !moduleCredentials) return;
+
+      modulePendingApi4ComDial = true;
+
+      import("../api/extensions").then(({ dialApi4Com }) => {
+        dialApi4Com(number, ctx).catch(() => {
+          modulePendingApi4ComDial = false;
+        });
+      });
+    },
+    [],
+  );
+
+  const answer = useCallback(() => {
+    if (moduleInSession) {
+      (moduleInSession as { answer: (opts: object) => void }).answer({
+        mediaConstraints: { audio: true, video: false },
+      });
+    }
+  }, []);
+
+  const hangup = useCallback(() => {
+    const s = (moduleSession ?? moduleInSession) as { terminate: () => void } | null;
+    if (s) s.terminate();
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    if (!moduleSession) return;
+    const session = moduleSession as {
+      isMuted: () => { audio: boolean };
+      mute: () => void;
+      unmute: () => void;
+    };
+    if (session.isMuted().audio) {
+      session.unmute();
+      setState((s) => ({ ...s, muted: false }));
+    } else {
+      session.mute();
+      setState((s) => ({ ...s, muted: true }));
+    }
+  }, []);
+
+  const toggleHold = useCallback(() => {
+    if (!moduleSession) return;
+    const session = moduleSession as {
+      isOnHold: () => { local: boolean };
+      hold: () => void;
+      unhold: () => void;
+    };
+    if (session.isOnHold().local) {
+      session.unhold();
+      setState((s) => ({ ...s, held: false, status: "call_active" }));
+    } else {
+      session.hold();
+      setState((s) => ({ ...s, held: true, status: "call_held" }));
+    }
+  }, []);
+
+  const sendDtmf = useCallback((tone: string) => {
+    if (!moduleSession) return;
+    (moduleSession as { sendDTMF: (t: string) => void }).sendDTMF(tone);
+  }, []);
+
+  function attachAudio(connection: RTCPeerConnection | undefined) {
+    if (!connection || !moduleAudio) return;
+    connection.ontrack = (e) => {
+      if (e.streams?.[0] && moduleAudio) {
+        moduleAudio.srcObject = e.streams[0];
+      }
+    };
+  }
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  return {
+    ...state,
+    connect,
+    disconnect,
+    dial,
+    answer,
+    hangup,
+    toggleMute,
+    toggleHold,
+    sendDtmf,
+    isConnected: state.status !== "disconnected" && state.status !== "error",
+  };
+}

@@ -223,36 +223,62 @@ export function UpdateAvailableBanner() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
+      {/*
+        O chip é um container `<div>` com DOIS botões reais lado a lado:
+        toggle (expandir/recolher) e dismiss (X). Não dá pra aninhar
+        `<button>` dentro de `<button>` (HTML inválido) — por isso a
+        divisão. O X chama `handleDismiss` direto, que persiste a versão
+        em localStorage e remove o banner permanentemente até a próxima
+        release.
+      */}
+      <div
         className={cn(
-          "group inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium shadow-lg backdrop-blur-md transition",
+          "group inline-flex items-stretch overflow-hidden rounded-full border shadow-lg backdrop-blur-md transition",
           "border-white/50 bg-white/80 text-slate-800 hover:bg-white",
           "dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-100 dark:hover:bg-slate-900",
         )}
-        aria-expanded={expanded}
-        aria-controls="update-banner-panel"
       >
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
-        </span>
-        <IconSparkles size={16} className="text-indigo-500" />
-        <span>
-          Novidades em <strong>v{APP_VERSION}</strong>
-        </span>
-        <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
-          {totalItems}
-        </span>
-        <IconChevronUp
-          size={14}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium"
+          aria-expanded={expanded}
+          aria-controls="update-banner-panel"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+          </span>
+          <IconSparkles size={16} className="text-indigo-500" />
+          <span>
+            Novidades em <strong>v{APP_VERSION}</strong>
+          </span>
+          <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
+            {totalItems}
+          </span>
+          <IconChevronUp
+            size={14}
+            className={cn(
+              "text-slate-400 transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Dispensar e não mostrar mais"
+          title="Não mostrar mais esta versão"
           className={cn(
-            "text-slate-400 transition-transform",
-            expanded && "rotate-180",
+            "inline-flex items-center justify-center border-l px-2.5 text-slate-400 transition-colors",
+            "border-white/40 hover:bg-black/5 hover:text-slate-700",
+            "dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-slate-100",
           )}
-        />
-      </button>
+        >
+          <IconX size={14} strokeWidth={2.2} />
+        </button>
+      </div>
     </div>
   );
 }

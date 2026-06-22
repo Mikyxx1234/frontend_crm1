@@ -262,10 +262,18 @@ export function Composer({
     };
   }, [slash.state.open, slash.close]);
 
+  // `disabled` vindo do caller representa restrição do canal de saída
+  // (ex.: sessão WhatsApp de 24h expirada — só pode enviar template).
+  // Nota interna NÃO é enviada ao cliente, é anotação interna do CRM,
+  // então essa restrição não se aplica e o composer deve continuar
+  // funcional no modo nota. Caller pode bloquear nota interna passando
+  // `onSendNote=undefined`.
+  const inputDisabled = noteMode ? false : !!disabled;
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const trimmed = value.trim();
-    if (!trimmed || sending || disabled) return;
+    if (!trimmed || sending || inputDisabled) return;
     if (noteMode && onSendNote) {
       onSendNote(trimmed);
     } else {
@@ -282,7 +290,7 @@ export function Composer({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const trimmed = value.trim();
-      if (!trimmed || sending || disabled) return;
+      if (!trimmed || sending || inputDisabled) return;
       if (noteMode && onSendNote) {
         onSendNote(trimmed);
       } else {
@@ -500,7 +508,7 @@ export function Composer({
                   ? "Nota interna (não enviada ao cliente)..."
                   : placeholder ?? "Escreva uma mensagem ou / para modelos..."
               }
-              disabled={disabled || sending}
+              disabled={inputDisabled || sending}
               className="w-full resize-none overflow-hidden border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
               style={{ minHeight: "24px", maxHeight: "120px", lineHeight: "1.5" }}
             />
@@ -524,7 +532,7 @@ export function Composer({
             size="icon"
             title={noteMode ? "Salvar nota" : "Enviar"}
             className="h-9 w-9 shrink-0"
-            disabled={!value.trim() || sending || disabled}
+            disabled={!value.trim() || sending || inputDisabled}
           >
             <IconSend size={18} />
           </ButtonGlass>

@@ -317,8 +317,14 @@ export default function KanbanV2ClientPage({
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {
-    const q = (filters.search ?? search).trim().toLowerCase();
-    const hasSearch = q.length > 0;
+    // Combina a busca da barra do header (`search`) com a busca do filtro
+    // modal (`filters.search`) via AND — antes só a primeira definida valia
+    // e a outra ficava silenciosamente ignorada, dando impressão de "barra
+    // do header não funciona".
+    const queries = [filters.search, search]
+      .map((v) => (v ?? "").trim().toLowerCase())
+      .filter((v) => v.length > 0);
+    const hasSearch = queries.length > 0;
     const hasOwner = (filters.ownerIds?.length ?? 0) > 0;
     const hasTag = (filters.tagIds?.length ?? 0) > 0;
     const hasStage = (filters.stageIds?.length ?? 0) > 0;
@@ -327,14 +333,18 @@ export default function KanbanV2ClientPage({
     const hasValue = vMin !== null || vMax !== null;
 
     const noFilters = !hasSearch && !hasOwner && !hasTag && !hasStage && !hasValue && isEmptyFilters(filters);
+    // Quando há QUALQUER filtro client-side ativo o `totalCount` que veio
+    // do backend (não filtrado) precisa ser sobrescrito pelo número real
+    // de deals visíveis — caso contrário o badge da coluna fica preso no
+    // total original e parece que o filtro/busca não funcionou.
+    const overrideCount = !noFilters;
 
     const filtered = noFilters
       ? board
       : board
           .filter((stage) => !hasStage || (filters.stageIds ?? []).includes(stage.id))
-          .map((stage) => ({
-            ...stage,
-            deals: stage.deals.filter((d) => {
+          .map((stage) => {
+            const deals = stage.deals.filter((d) => {
               if (hasOwner && (!d.owner?.id || !(filters.ownerIds ?? []).includes(d.owner.id))) return false;
               if (hasTag) {
                 const ids = (d.tags ?? []).map((t) => t.id);
@@ -343,7 +353,7 @@ export default function KanbanV2ClientPage({
               if (hasSearch) {
                 const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
                   .filter(Boolean).join(" ").toLowerCase();
-                if (!hay.includes(q)) return false;
+                if (!queries.every((q) => hay.includes(q))) return false;
               }
               if (hasValue) {
                 const val = Number(d.value) || 0;
@@ -351,8 +361,13 @@ export default function KanbanV2ClientPage({
                 if (vMax !== null && val > vMax) return false;
               }
               return true;
-            }),
-          }));
+            });
+            return {
+              ...stage,
+              deals,
+              totalCount: overrideCount ? deals.length : stage.totalCount,
+            };
+          });
 
     // Ordenação dos cards dentro de cada coluna.
     //

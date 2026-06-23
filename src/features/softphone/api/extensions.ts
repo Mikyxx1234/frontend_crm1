@@ -29,15 +29,28 @@ export async function getMyCredentials(): Promise<SipCredentials> {
   return data.credentials;
 }
 
-export async function connectApi4Com(email: string, password: string) {
-  return fetchJson<{ extension: SipExtension; api4com: { domain: string; ramal: string; wsServer: string } }>(
-    `${BASE}/sip-extensions/connect-api4com`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    },
-  );
+export type ConnectApi4ComResponse = {
+  extension: SipExtension;
+  api4com: { domain: string; ramal: string; wsServer: string };
+  webhook:
+    | { configured: true }
+    | {
+        configured: false;
+        webhookUrl: string;
+        manualSetupRequired: true;
+        reason: string;
+      };
+};
+
+export async function connectApi4Com(
+  email: string,
+  password: string,
+): Promise<ConnectApi4ComResponse> {
+  return fetchJson<ConnectApi4ComResponse>(`${BASE}/sip-extensions/connect-api4com`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
 }
 
 export async function createExtension(data: {

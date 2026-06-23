@@ -130,25 +130,43 @@ export function useSoftphone() {
             session.request?.getHeader?.("X-Api4comintegratedcall") === "true";
 
           if (shouldAutoAnswer) {
+            // Fluxo Api4com: a chamada chega como "inbound" do ponto de
+            // vista SIP (Api4com liga PRIMEIRO pro nosso ramal pra
+            // estabelecer mídia, depois conecta com o destino real).
+            // Mas o usuário clicou em "Ligar" — pra UX, preservamos o
+            // estado "outbound dialing" que o `dial()` já setou. Sem
+            // sobrescrever direction/remoteNumber, o widget continua
+            // mostrando "Chamando…" em vez de piscar "Atender/Recusar".
             modulePendingApi4ComDial = false;
             session.answer({ mediaConstraints: { audio: true, video: false } });
+
+            session.on("accepted", () => {
+              moduleSession = session;
+              moduleInSession = null;
+              setState((s) => ({ ...s, status: "call_active" }));
+              startTimer();
+              attachAudio(session.connection);
+            });
+          } else {
+            // Inbound real: cliente ligou pro nosso ramal sem que
+            // tivéssemos disparado um dial() antes. Mostra UI de
+            // atender/recusar com o número do chamador.
+            const remoteNumber = session.remote_identity?.uri?.user ?? "Desconhecido";
+            setState((s) => ({
+              ...s,
+              status: "call_ringing",
+              remoteNumber,
+              callDirection: "inbound",
+            }));
+
+            session.on("accepted", () => {
+              moduleSession = session;
+              moduleInSession = null;
+              setState((s) => ({ ...s, status: "call_active" }));
+              startTimer();
+              attachAudio(session.connection);
+            });
           }
-
-          const remoteNumber = session.remote_identity?.uri?.user ?? "Desconhecido";
-          setState((s) => ({
-            ...s,
-            status: "call_ringing",
-            remoteNumber,
-            callDirection: "inbound",
-          }));
-
-          session.on("accepted", () => {
-            moduleSession = session;
-            moduleInSession = null;
-            setState((s) => ({ ...s, status: "call_active" }));
-            startTimer();
-            attachAudio(session.connection);
-          });
         } else {
           moduleSession = session;
           const remoteNumber = session.remote_identity?.uri?.user ?? "";
@@ -216,9 +234,30 @@ export function useSoftphone() {
 
       modulePendingApi4ComDial = true;
 
+      // UX: anuncia o estado outbound IMEDIATAMENTE. Sem isso, a UI fica
+      // em "registered" até o Api4com originar a chamada de volta pro
+      // nosso ramal (1-3s), e depois pisca "Atender/Recusar" no meio
+      // tempo entre `newRTCSession` e `session.on("accepted")`.
+      setState((s) => ({
+        ...s,
+        status: "call_ringing",
+        callDirection: "outbound",
+        remoteNumber: number,
+        durationMs: 0,
+        error: null,
+      }));
+
       import("../api/extensions").then(({ dialApi4Com }) => {
-        dialApi4Com(number, ctx).catch(() => {
+        dialApi4Com(number, ctx).catch((e) => {
           modulePendingApi4ComDial = false;
+          // Reverte o estado "discando" e mostra erro pro usuário.
+          setState((s) => ({
+            ...s,
+            status: moduleUA ? "registered" : "disconnected",
+            callDirection: null,
+            remoteNumber: null,
+            error: e instanceof Error ? e.message : "Falha ao discar",
+          }));
         });
       });
     },

@@ -5,6 +5,68 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-23 — Softphone: widget global como ponto único de auto-connect
+
+**Contexto.** Após restaurar o módulo softphone (feat 572f06e do mfpi)
+e provisionar o ramal Api4com via `POST /api/sip-extensions/connect-api4com`,
+o operador via "Conectado! Ramal 1079" verde mas nenhuma chamada
+funcionava: `DealCallButton` mostrava tooltip "Conecte o softphone" e
+F5 voltava à tela de login Api4com. Causa raiz: o `SoftphoneWidget`
+montado em `(app)/layout.tsx` era um placeholder no-op que eu commitei
+pra desbloquear o build (mfpi entregou hook + componentes auxiliares
+mas não o widget global). Sem ele, `useSoftphone()` nunca era chamado
+no nível raiz, então o singleton `moduleUA` (que sobrevive remounts
+mas não reloads) nunca era instanciado.
+
+**Decisão.** O `SoftphoneWidget` é o único lugar da app que dispara
+`useSoftphone.connect()` automaticamente — `useDealDial`, `DealCallButton`
+e qualquer outro consumidor apenas leem o singleton via re-import do
+módulo do hook. Critério de auto-connect: `useSession()` autenticado
++ `GET /api/sip-extensions/me/credentials` retornou 200. Operadores
+sem ramal provisionado (404) não veem chip nenhum e nenhuma tentativa
+de registro SIP é feita — UI permanece limpa pra quem não usa softphone.
+
+**Forma do componente.** Chip flutuante `fixed bottom-4 right-4 z-[60]`
+seguindo o padrão estabelecido por `UpdateAvailableBanner` (mesmo z,
+lado oposto pra não colidir). Três estados visíveis quando idle (verde
+"Softphone ativo", amarelo "Conectando", vermelho com erro + reconectar).
+Painel expandido `w-[280px]` quando há chamada — necessário pra atender
+inbound e expor mute/hold/encerrar (sem isso seria impossível receber
+chamada). Inclui suporte a inbound mesmo o operador planejando só
+outbound — incremento marginal de código e o backend já suporta `newRTCSession`
+remote sem auto-answer.
+
+**Alternativas descartadas.**
+- *Auto-connect direto no layout via hook*: `(app)/layout.tsx` é Server
+  Component; misturar lógica client pesada nele dilui responsabilidade
+  e bloqueia o pre-render. Widget client isolado é a contraparte natural.
+- *Auto-connect dentro do `useSoftphone`*: tornaria o hook não-idempotente
+  (chamadores acidentais disparariam registros) e quebraria o padrão
+  React (hooks sem side-effects implícitos no render).
+- *Chamar `connect()` apenas no form Api4Com após sucesso*: resolveria
+  o caso de uso de conexão inicial, mas F5 continuaria quebrado. O
+  widget global resolve os dois — o `onSuccess` do form continua
+  invalidando o query de credenciais (pra disparar o auto-connect
+  declarativamente) e chama `connect()` defensivamente.
+- *UI invisível (só auto-connect)*: descartada pelo usuário após
+  análise — sem indicador, falha de registro SIP só seria descoberta
+  ao tentar ligar, péssima UX em produção.
+
+**Impacto.**
+- `DealCallButton.canDial` agora vira `true` automaticamente após login,
+  sem ação do operador — telefonia "just works" se o ramal foi provisionado.
+- `connectApi4Com` no form invalida a query `["softphone","credentials"]`
+  e chama `softphone.connect()` no `onSuccess` pra registrar SIP sem F5.
+- Carga adicional: 1 query (`/me/credentials`) por sessão autenticada
+  + 1 conexão WebSocket persistente pra SIP. Cache 5min, sem refetch
+  on focus. Sem ramal provisionado, zero overhead (early-return no widget).
+- Componentes auxiliares (`Api4ComConnectForm`, `ExtensionSettingsForm`,
+  `ProviderConfigForm`, `DealCallButton`, `CallHistoryList`, `CallHistoryFilters`)
+  continuam importados por subpath direto (`@/features/softphone/components/<arquivo>`).
+  Só `SoftphoneWidget` é barrel-exported via `@/features/softphone/components`.
+
+---
+
 ### 2026-06-15 — Faxina total: remoção de `app/old/` e finalização da migração v1 → v2 [DECISÃO — agente OPUS/SONNET]
 
 **Decisão.** A pasta `app/old/` foi inteiramente removida. As 7 rotas que não tinham

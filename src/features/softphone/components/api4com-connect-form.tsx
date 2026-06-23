@@ -37,13 +37,25 @@ function SuccessFeedback({
         está se registrando — acompanhe o chip no canto inferior direito.
       </p>
 
-      {webhook.configured ? (
+      {/*
+        Guarda defensiva: backend antigo (pré-269af93) não retorna o
+        campo `webhook`. Mostra hint pra rebuildar e segue sem crashar.
+      */}
+      {!webhook && (
+        <p className="inline-flex items-center gap-1.5 text-xs text-amber-400">
+          <IconAlertTriangle size={12} />
+          Webhook de chamadas não está configurado. Atualize o backend
+          (commit 269af93+) e reconecte pra que ligações aparecem em /calls.
+        </p>
+      )}
+
+      {webhook?.configured ? (
         <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
           <IconCheck size={12} stroke={2.5} />
           Webhook de chamadas configurado automaticamente — o histórico em
           /calls vai registrar cada ligação.
         </p>
-      ) : (
+      ) : webhook && (
         <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-amber-400/40 bg-amber-500/10 p-3 text-amber-100">
           <div className="inline-flex items-start gap-1.5 text-xs">
             <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0" />

@@ -122,6 +122,20 @@ export function useSoftphone() {
           request?: { getHeader?: (name: string) => string | undefined };
         };
 
+        // CRÍTICO: registrar o ontrack ANTES do answer/SDP processing.
+        // O evento `peerconnection` do JsSIP dispara quando a
+        // RTCPeerConnection é construída, antes de processar a oferta
+        // SDP. Os tracks remotos (incl. early media / ringback) chegam
+        // síncronamente durante o processInboundSDP — se registrarmos
+        // ontrack só em `accepted`, perdemos os primeiros tracks e o
+        // áudio remoto fica mudo enquanto o áudio local sobe normalmente
+        // (sintoma clássico de "ele me ouve mas eu não escuto nada").
+        session.on("peerconnection", (...args: unknown[]) => {
+          const pc = (args[0] as { peerconnection?: RTCPeerConnection })
+            ?.peerconnection;
+          attachAudio(pc);
+        });
+
         if (data.originator === "remote") {
           moduleInSession = session;
 
@@ -317,9 +331,24 @@ export function useSoftphone() {
   function attachAudio(connection: RTCPeerConnection | undefined) {
     if (!connection || !moduleAudio) return;
     connection.ontrack = (e) => {
-      if (e.streams?.[0] && moduleAudio) {
+      if (!moduleAudio) return;
+      // Caminho normal: usa o MediaStream entregue pelo navegador junto
+      // com o track. Cobre 99% dos casos (Chrome/Firefox/Safari).
+      if (e.streams?.[0]) {
         moduleAudio.srcObject = e.streams[0];
+      } else if (e.track) {
+        // Fallback: alguns PBX/encoders entregam track avulso sem stream
+        // associado. Montamos um MediaStream local com o track.
+        const stream = new MediaStream([e.track]);
+        moduleAudio.srcObject = stream;
       }
+      // Garante que o elemento <audio> esteja tocando — autoplay policy
+      // pode suspender mesmo com autoplay=true se a aba não teve
+      // interação recente; o user clicou em "Ligar" há ms, então deve
+      // ter "user gesture" válido.
+      moduleAudio.play().catch((err) => {
+        console.warn("[softphone] audio.play() bloqueado:", err);
+      });
     };
   }
 

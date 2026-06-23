@@ -1,16 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { IconBrandTelegram, IconLoader2 } from "@tabler/icons-react";
+
 import { connectApi4Com } from "../api/extensions";
+import { useSoftphone } from "../hooks/use-softphone";
 
 export function Api4ComConnectForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const queryClient = useQueryClient();
+  const softphone = useSoftphone();
+
   const mutation = useMutation({
     mutationFn: () => connectApi4Com(email, password),
+    onSuccess: async () => {
+      // 1. Atualiza o cache de credenciais — o SoftphoneWidget
+      //    escuta esse query e dispara o connect() automaticamente
+      //    quando o `data` chega.
+      await queryClient.invalidateQueries({ queryKey: ["softphone", "credentials"] });
+
+      // 2. Se por algum motivo o widget não estiver montado nesta
+      //    rota (defensivo — hoje vive no layout global), garante
+      //    que o registro SIP suba imediatamente sem precisar de F5.
+      void softphone.connect();
+    },
   });
 
   return (
@@ -49,7 +65,8 @@ export function Api4ComConnectForm() {
 
       {mutation.isSuccess && (
         <p className="text-xs text-emerald-400">
-          Conectado! Ramal: {mutation.data.api4com.ramal} ({mutation.data.api4com.domain})
+          Conectado! Ramal: {mutation.data.api4com.ramal} ({mutation.data.api4com.domain}).
+          O softphone está se registrando — acompanhe o chip no canto inferior direito.
         </p>
       )}
 

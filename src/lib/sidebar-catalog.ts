@@ -178,7 +178,7 @@ export const SIDEBAR_CATALOG: readonly SidebarCatalogItem[] = [
   {
     key: "calls",
     title: "Chamadas",
-    href: "/calls",
+    href: "/widgets/calls",
     icon: IconPhone,
     description: "Histórico de chamadas recebidas e realizadas.",
     locked: false,

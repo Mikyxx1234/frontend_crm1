@@ -9,6 +9,7 @@ import {
   IconCircleCheckFilled,
   IconLayoutGrid,
   IconLoader2,
+  IconPhone,
   IconPlus,
   IconPuzzle,
   IconRobot,
@@ -27,6 +28,7 @@ import type { WidgetDto } from "@/features/widgets/types";
 const ICON_BY_KEY: Record<string, React.ComponentType<IconProps>> = {
   route: IconRoute,
   bot: IconRobot,
+  phone: IconPhone,
 };
 
 function WidgetIcon({ widget, className }: { widget: WidgetDto; className?: string }) {
@@ -61,6 +63,7 @@ function WidgetIcon({ widget, className }: { widget: WidgetDto; className?: stri
  *  cai na rota generica `/widgets/[slug]` (que sabe redirecionar). */
 const INTERNAL_ROUTE_BY_SLUG: Record<string, string> = {
   smart_distribution: "/widgets/distribution",
+  calls_history: "/widgets/calls",
 };
 
 interface WidgetCardProps {

@@ -41,10 +41,12 @@ import {
   IconAlertTriangle,
   IconRefresh,
   IconX,
+  IconChevronRight,
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { useSoftphone } from "../hooks/use-softphone";
+import { useCallsWidget } from "../hooks/use-calls-widget";
 import { getMyCredentials } from "../api/extensions";
 
 function formatDuration(ms: number): string {
@@ -56,14 +58,22 @@ function formatDuration(ms: number): string {
 
 export function SoftphoneWidget() {
   const { status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === "authenticated";
 
-  // Só busca credenciais quando o usuário está autenticado. 404 (sem
-  // ramal) é tratado pelo `getMyCredentials` lançando erro, e o widget
-  // simplesmente não renderiza (handler abaixo).
+  // Gate por widget `calls_history`: o softphone só monta quando a org
+  // tem a Telefonia ATIVA na Central de Widgets. Quem desinstala, deixa
+  // de ver o chip flutuante (e o DealCallButton também desliga via mesmo
+  // hook). Enquanto a query carrega, devolvemos `enabled=null` → render
+  // nada (evita flash do chip aparecendo e sumindo).
+  const callsWidget = useCallsWidget(isAuthenticated);
+
+  // Só busca credenciais quando o usuário está autenticado E o widget
+  // está habilitado. 404 (sem ramal) é tratado pelo `getMyCredentials`
+  // lançando erro, e o widget simplesmente não renderiza (handler abaixo).
   const credentialsQuery = useQuery({
     queryKey: ["softphone", "credentials"],
     queryFn: getMyCredentials,
-    enabled: sessionStatus === "authenticated",
+    enabled: isAuthenticated && callsWidget.enabled === true,
     retry: false,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -85,6 +95,7 @@ export function SoftphoneWidget() {
   }, [credentialsQuery.data, softphone.status, softphone]);
 
   if (sessionStatus !== "authenticated") return null;
+  if (callsWidget.enabled !== true) return null;
   if (credentialsQuery.isLoading) return null;
   if (credentialsQuery.isError || !credentialsQuery.data) return null;
   if (hidden) return null;
@@ -141,6 +152,11 @@ interface StatusChipProps {
   onHide: () => void;
 }
 
+// localStorage pra lembrar a preferência do operador entre sessões — quem
+// gosta de ver "Softphone ativo • 1079" full não precisa colapsar de novo
+// toda vez que dá F5; quem prefere só o ícone idem.
+const COLLAPSED_STORAGE_KEY = "crm:softphone-chip.collapsed";
+
 function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipProps) {
   // Disconnected aparece só durante a janela curta antes do auto-connect
   // disparar; tratamos como "Conectando" pra não confundir o usuário com
@@ -148,6 +164,45 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
   const isConnecting = status === "connecting" || status === "disconnected";
   const isRegistered = status === "registered";
   const isError = status === "error";
+
+  // Modo colapsado: só o estado Registered colapsa pra ícone redondo. Erros
+  // continuam expandidos (precisa ler a mensagem) e Connecting é transiente.
+  const [collapsed, setCollapsed] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1";
+  });
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(COLLAPSED_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* fail-silent */
+      }
+      return next;
+    });
+  };
+  const showCollapsed = collapsed && isRegistered;
+
+  // Forma colapsada: só ícone do telefone num círculo verde, expansível ao
+  // clicar. Mantém o "ping" pulsante pra dar feedback de que está ativo.
+  if (showCollapsed) {
+    return (
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        aria-label={`Expandir status do softphone (ramal ${ramal})`}
+        title={`Softphone ativo • Ramal ${ramal} — clique para expandir`}
+        className="group relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200/60 bg-emerald-50/90 text-emerald-900 shadow-lg backdrop-blur-md transition hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-950/70 dark:text-emerald-100 dark:hover:bg-emerald-900/70"
+      >
+        <span className="absolute right-1 top-1 flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        </span>
+        <IconPhone size={16} stroke={2.2} />
+      </button>
+    );
+  }
 
   return (
     <div
@@ -201,6 +256,20 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
           </>
         )}
       </div>
+
+      {/* Setinha de colapsar — só faz sentido em Registered (Conectando é
+          transiente, Erro precisa ficar visível pra leitura da mensagem). */}
+      {isRegistered && (
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label="Colapsar chip do softphone"
+          title="Colapsar (deixar só o ícone)"
+          className="inline-flex items-center justify-center border-l border-current/20 px-2 opacity-60 transition-opacity hover:opacity-100"
+        >
+          <IconChevronRight size={14} strokeWidth={2.2} />
+        </button>
+      )}
 
       {/*
         Botão de dispensar só faz sentido no estado de erro — em

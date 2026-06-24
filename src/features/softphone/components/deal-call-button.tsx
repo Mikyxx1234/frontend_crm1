@@ -3,6 +3,7 @@
 import { IconPhone } from "@tabler/icons-react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useDealDial } from "../hooks/use-deal-dial";
+import { useCallsWidget } from "../hooks/use-calls-widget";
 
 interface DealCallButtonProps {
   dealId: string;
@@ -11,9 +12,13 @@ interface DealCallButtonProps {
 }
 
 export function DealCallButton({ dealId, phone, contactId }: DealCallButtonProps) {
+  // Gate por widget: se a org desinstalou a Telefonia em /widgets, o
+  // botão some do card (espelha o comportamento do SoftphoneWidget).
+  const callsWidget = useCallsWidget();
   const { dial, canDial, loading } = useDealDial({ dealId, phone, contactId });
 
   if (!phone) return null;
+  if (callsWidget.enabled !== true) return null;
 
   return (
     <TooltipGlass label={canDial ? `Ligar ${phone}` : "Conecte o softphone"} side="left">

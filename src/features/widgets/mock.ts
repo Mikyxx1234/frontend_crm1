@@ -30,5 +30,20 @@ export const MOCK_WIDGETS_RESPONSE: WidgetsResponse = {
       installedAt: null,
       marketplaceStatus: "ONLINE",
     },
+    {
+      slug: "calls_history",
+      name: "Ligações",
+      description:
+        "Softphone integrado, histórico de chamadas e botão de ligar nos cards. Inclui integração com Api4Com.",
+      features: ["Softphone SIP", "Histórico de chamadas", "Discagem 1-clique"],
+      icon: "phone",
+      category: "Comunicação",
+      availability: "available",
+      ownerType: "INTERNAL",
+      installed: true,
+      status: "ACTIVE",
+      installedAt: new Date().toISOString(),
+      marketplaceStatus: "ONLINE",
+    },
   ],
 };

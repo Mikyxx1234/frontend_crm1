@@ -5,6 +5,71 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-24 — Telefonia como widget (`calls_history`)
+
+**Contexto.** A telefonia (página `/calls`, softphone flutuante global,
+botão "Ligar" nos cards do pipeline) era uma seção nativa do CRM, sempre
+ativa em todas as orgs. Operadores sem provisionamento Api4Com viam ícones
+e cards inúteis (chip "Conectando…" eterno, botão de ligar desabilitado),
+e admins não tinham como desligar a feature centralmente. O padrão da
+**Distribuição Inteligente** (`smart_distribution`) já tinha resolvido
+exatamente esse problema: módulo opt-in plugável via Central de Widgets.
+A consistência arquitetural pedia o mesmo tratamento pra telefonia.
+
+**Decisão.** Criado widget `calls_history` (INTERNAL, categoria
+"Comunicação", ícone `phone`) que gateia TRÊS pontos de entrada:
+
+1. **Página `/widgets/calls`** (era `/calls`) — histórico de chamadas
+   com fallback `NotEnabledState` + CTA pra `/widgets`.
+2. **`SoftphoneWidget`** (chip flutuante bottom-right) — não monta o
+   `JsSIP.UA` nem busca credenciais quando o widget está desinstalado.
+3. **`DealCallButton`** (botão "Ligar" no card) — some completamente
+   sem o widget.
+
+Gate centralizado no hook `useCallsWidget()` (`features/softphone/hooks`)
+— consome a query `useWidgets()` (cache compartilhado) e devolve
+`{ enabled: boolean | null, isLoading }`. O estado `null` durante load
+evita flash visual (chip aparecendo e sumindo).
+
+**Rota antiga `/calls`.** Mantida como **redirect 308** pra
+`/widgets/calls` (preserva favoritos, atalhos de navegador, links em
+e-mails antigos). O `_client.tsx` original foi deletado — não tinha
+mais consumidor.
+
+**Default `installed=true`.** Migration backend
+(`20260624140000_add_calls_history_widget`) faz seed do widget E instala
+`ACTIVE` em todas as orgs existentes. Sem esse backfill, qualquer cliente
+que já usa telefonia veria a feature sumir após deploy — quebra silenciosa
+inaceitável. Quem não quiser, desinstala em `/widgets`.
+
+**Permissão `nav:calls`.** Antes existia em `sidebar-catalog.ts` do
+frontend mas o backend não a tinha no catálogo de permissões — efeito
+prático: o item "Chamadas" só aparecia pra ADMIN (que tem `*`). Adicionada
+no catálogo backend (`permissions.ts`) e nos presets MANAGER e MEMBER,
+com `UPDATE roles` na mesma migration pra propagar às roles existentes.
+Não-breaking: ADMINs continuam vendo; MANAGER/MEMBER ganham acesso (era
+um bug latente, não regressão intencional).
+
+**Alternativa descartada.** Gateamento por `requiredPermission` puro (sem
+widget) — funcionaria pra esconder a página, mas não solucionaria o caso
+"admin quer desligar a feature pra toda a org sem mexer em RBAC de cada
+role". Widget é o ponto certo de toggle org-wide.
+
+**Impacto.**
+- `src/features/softphone/hooks/use-calls-widget.ts` (novo) — hook gate.
+- `src/features/softphone/components/softphone-widget.tsx` — gate +
+  setinha colapsa pro ícone (`localStorage` persiste preferência).
+- `src/features/softphone/components/deal-call-button.tsx` — gate.
+- `src/app/(app)/widgets/calls/{page,client-page}.tsx` (novo) — rota
+  + `NotEnabledState`/`SkeletonState`.
+- `src/app/(app)/calls/page.tsx` — virou redirect 308.
+- `src/lib/sidebar-catalog.ts` — `/calls` → `/widgets/calls`.
+- `src/features/widgets/mock.ts` + `_components/widget-card.tsx`
+  (`ICON_BY_KEY` ganhou `phone`, `INTERNAL_ROUTE_BY_SLUG` ganhou
+  `calls_history`).
+
+---
+
 ### 2026-06-24 — Motivos de perda: toggle "Permitir outro" + gate na UI
 
 **Contexto.** Reporte do cliente em produção: a opção "Outro…" no dialog

@@ -47,6 +47,16 @@ export default function LossReasonsPage() {
   });
   const isRequired = requiredRaw === "true";
 
+  // Setting "Permitir outro motivo". Default = true (mantém comportamento
+  // histórico — quem já usava o botão "Outro…" no dialog não é quebrado).
+  // Quando desligado, o botão "Outro…" some no dialog e o backend rejeita
+  // motivos livres não cadastrados (services/deals.assertLostReasonAllowed).
+  const { data: allowOtherRaw } = useQuery({
+    queryKey: ["org-setting", "deals.loss_reason_allow_other"],
+    queryFn: () => fetchSetting("deals.loss_reason_allow_other"),
+  });
+  const allowOther = allowOtherRaw !== "false";
+
   const createMutation = useMutation({
     mutationFn: async (label: string) => {
       const res = await fetch(apiUrl("/api/settings/loss-reasons"), {
@@ -108,6 +118,26 @@ export default function LossReasonsPage() {
     },
   });
 
+  const toggleAllowOther = useMutation({
+    mutationFn: async (val: boolean) => {
+      const res = await fetch(apiUrl("/api/settings/org"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: "deals.loss_reason_allow_other",
+          value: val ? "true" : "false",
+        }),
+      });
+      if (!res.ok) throw new Error("Erro ao salvar");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["org-setting", "deals.loss_reason_allow_other"],
+      });
+      toast.success("Configuração salva");
+    },
+  });
+
   return (
     <div className="space-y-4">
       {/* Toggle obrigatório */}
@@ -123,6 +153,34 @@ export default function LossReasonsPage() {
           className="text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
         >
           {isRequired ? (
+            <ToggleRight className="size-8 text-cyan-600" />
+          ) : (
+            <ToggleLeft className="size-8 text-[var(--color-ink-muted)]" />
+          )}
+        </button>
+      </div>
+
+      {/* Toggle "Permitir outro motivo".
+          Quando OFF, o dialog de "Marcar como perdido" some o botão "Outro…"
+          e o backend rejeita motivos livres não cadastrados (defesa em
+          profundidade — UI + service `assertLostReasonAllowed`). Recomendado
+          desligar quando o histórico mostra crescimento desorganizado de
+          motivos digitados livremente. */}
+      <div className="flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-5 py-4 shadow-[var(--glass-shadow-sm)]">
+        <div>
+          <p className="text-sm font-semibold text-[var(--text-secondary)]">Permitir motivo personalizado</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            Mostra a opção “Outro…” no momento de marcar como perdido. Desligue para forçar uso apenas dos motivos cadastrados abaixo.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => toggleAllowOther.mutate(!allowOther)}
+          disabled={toggleAllowOther.isPending}
+          className="text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
+          aria-label={allowOther ? "Desligar motivo personalizado" : "Ligar motivo personalizado"}
+        >
+          {allowOther ? (
             <ToggleRight className="size-8 text-cyan-600" />
           ) : (
             <ToggleLeft className="size-8 text-[var(--color-ink-muted)]" />

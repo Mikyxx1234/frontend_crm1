@@ -20,6 +20,27 @@ async function fetchLossReasons(): Promise<LossReason[]> {
   return res.json();
 }
 
+/**
+ * Lê a setting `deals.loss_reason_allow_other` da org. Default = true (mantém
+ * comportamento histórico). Quando false, o botão "Outro…" e o textarea livre
+ * somem do dialog, forçando o usuário a escolher um motivo cadastrado.
+ *
+ * Defesa em profundidade: o backend também rejeita motivos fora da lista
+ * (`services/deals.assertLostReasonAllowed`) — esta consulta serve só pra UX.
+ */
+async function fetchAllowOther(): Promise<boolean> {
+  try {
+    const res = await fetch(
+      apiUrl("/api/settings/org?key=deals.loss_reason_allow_other"),
+    );
+    if (!res.ok) return true;
+    const data = (await res.json()) as { value?: string | null };
+    return data.value !== "false";
+  } catch {
+    return true;
+  }
+}
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,6 +68,13 @@ export function LossReasonDialog({
     enabled: open,
   });
 
+  const { data: allowOther = true } = useQuery({
+    queryKey: ["org-setting", "deals.loss_reason_allow_other"],
+    queryFn: fetchAllowOther,
+    staleTime: 5 * 60_000,
+    enabled: open,
+  });
+
   React.useEffect(() => {
     if (open) {
       setSelected(null);
@@ -54,10 +82,27 @@ export function LossReasonDialog({
     }
   }, [open]);
 
+  // Quando o admin desliga "Outro" enquanto o dialog está aberto e o usuário
+  // já tinha clicado em "Outro…", desfaz a seleção pra evitar enviar string
+  // livre que o backend recusaria com 400.
+  React.useEffect(() => {
+    if (!allowOther && selected === "__other__") {
+      setSelected(null);
+      setCustomReason("");
+    }
+  }, [allowOther, selected]);
+
   const hasReasons = reasons.length > 0;
-  const isOther = selected === "__other__";
-  const resolvedReason = isOther ? customReason.trim() : (selected ?? customReason.trim());
-  const canSubmit = resolvedReason.length > 0;
+  const isOther = allowOther && selected === "__other__";
+  // Quando "Outro" está bloqueado e não há motivos cadastrados, o admin precisa
+  // configurar a lista primeiro — exibimos aviso e desabilitamos o submit.
+  const blockedNoReasons = !allowOther && !hasReasons;
+  const resolvedReason = isOther
+    ? customReason.trim()
+    : allowOther
+      ? (selected ?? customReason.trim())
+      : (selected ?? "");
+  const canSubmit = !blockedNoReasons && resolvedReason.length > 0;
 
   const submit = () => {
     if (canSubmit) onConfirm(resolvedReason);
@@ -91,18 +136,20 @@ export function LossReasonDialog({
                     {r.label}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setSelected(selected === "__other__" ? null : "__other__")}
-                  className={cn(
-                    "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
-                    isOther
-                      ? "border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]"
-                      : "border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
-                  )}
-                >
-                  Outro…
-                </button>
+                {allowOther && (
+                  <button
+                    type="button"
+                    onClick={() => setSelected(selected === "__other__" ? null : "__other__")}
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
+                      isOther
+                        ? "border-[var(--color-danger)] bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]"
+                        : "border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)]",
+                    )}
+                  >
+                    Outro…
+                  </button>
+                )}
               </div>
               {isOther && (
                 <Textarea
@@ -115,7 +162,7 @@ export function LossReasonDialog({
                 />
               )}
             </>
-          ) : (
+          ) : allowOther ? (
             <>
               <Label htmlFor="lost-reason-free">Motivo</Label>
               <Textarea
@@ -126,6 +173,12 @@ export function LossReasonDialog({
                 rows={3}
               />
             </>
+          ) : (
+            <div className="rounded-lg border border-[var(--color-warning)] bg-[var(--color-warning-bg)] px-3 py-2.5 text-xs text-[var(--color-warning-text)]">
+              Nenhum motivo cadastrado. Peça ao admin para adicionar motivos em
+              <span className="font-semibold"> Configurações → Motivos de perda</span>
+              {" "}ou habilitar “Permitir motivo personalizado”.
+            </div>
           )}
         </div>
 

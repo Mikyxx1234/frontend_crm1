@@ -5,6 +5,59 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-24 — Motivos de perda: toggle "Permitir outro" + gate na UI
+
+**Contexto.** Reporte do cliente em produção: a opção "Outro…" no dialog
+de marcar negócio como perdido vinha sendo usada como saída fácil pelos
+vendedores, gerando dezenas de motivos digitados livremente (variações
+de capitalização, typos, frases longas). O dataset ficou inutilizável
+pra análise de motivos de churn — qualquer dashboard que agrupa por
+`Deal.lostReason` virou ruído. A solução de simplesmente apagar o botão
+"Outro…" pra todo mundo quebraria orgs que dependem dele.
+
+**Decisão.** Nova setting per-tenant `deals.loss_reason_allow_other`
+(boolean, default `true`). Quando o admin desliga em
+Configurações → Motivos de perda, o `LossReasonDialog` esconde o botão
+"Outro…" e o textarea livre — só os motivos cadastrados ficam clicáveis.
+Default `true` é não-breaking: orgs que já usam continuam usando até o
+admin marcar explicitamente.
+
+Renderização do motivo no card já existia (`DealCard.lostReason` →
+chip vermelho com ícone), o problema sempre foi a entrada poluída.
+Por isso o ataque é só no dialog + validação backend, sem mexer no card.
+
+**Defesa em profundidade.** Esconder o botão na UI cobre o caminho feliz
+mas não impede chamada direta à API (`PUT /api/deals/[id]/status` com
+`lostReason: "qualquer coisa"`). O service `markDealLost` agora chama
+`assertLostReasonAllowed(reason)` antes do update; mesma helper roda em
+`moveDeal` e no path `move_stage` do `POST /api/deals/bulk`. Erro
+`INVALID_LOST_REASON` é traduzido pra 400 com mensagem explicativa.
+
+**Alternativas descartadas.**
+- *Hardcoded `enum LossReason`*: simples, mas inviável — cada org tem
+  motivos próprios (B2B vendas longas vs B2C educação vs prestação de
+  serviço). Setting + lista cadastrável já existia pra essa flexibilidade.
+- *Validar só na UI*: deixaria a API aberta. Vendedor curioso testando
+  no DevTools, integração externa (Zapier/Make chamando a API), worker
+  de import — tudo conseguiria furar. Centralizar em
+  `assertLostReasonAllowed` no service garante que qualquer caller fica
+  coberto sem repetir validação.
+- *Validar no Prisma extension*: poderia interceptar todo update com
+  `lostReason`, mas mistura camada de dados com regra de negócio org-scoped
+  e complica testes. Helper explícita chamada no service é mais clara.
+
+**Impacto.**
+- Frontend: `LossReasonDialog` lê `deals.loss_reason_allow_other` via
+  `/api/settings/org?key=...` (5min staleTime, mesma chave já cacheada
+  pelo settings page). Toggle no `settings/loss-reasons` espelha o
+  mesmo padrão visual do "Motivo obrigatório" existente.
+- Backend: helper `assertLostReasonAllowed` em `services/deals.ts`
+  exportada pra reuso. Chamadas inseridas em `markDealLost`, `moveDeal`,
+  bulk `mark_lost` e `move_stage`. Worker async `bulk-move-stage.job.ts`
+  já está coberto via validação no enqueue.
+
+---
+
 ### 2026-06-23 — Softphone: widget global como ponto único de auto-connect
 
 **Contexto.** Após restaurar o módulo softphone (feat 572f06e do mfpi)

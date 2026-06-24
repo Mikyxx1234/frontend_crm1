@@ -114,7 +114,7 @@ export default function LossReasonsPage() {
       queryClient.invalidateQueries({
         queryKey: ["org-setting", "deals.loss_reason_required"],
       });
-      toast.success("Configuração salva");
+      toast.success("Configuração salva", { position: "top-center" });
     },
   });
 
@@ -134,7 +134,7 @@ export default function LossReasonsPage() {
       queryClient.invalidateQueries({
         queryKey: ["org-setting", "deals.loss_reason_allow_other"],
       });
-      toast.success("Configuração salva");
+      toast.success("Configuração salva", { position: "top-center" });
     },
   });
 

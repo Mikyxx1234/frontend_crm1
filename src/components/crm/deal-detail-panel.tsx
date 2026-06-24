@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   DragDropContext,
   Droppable,
@@ -12,6 +12,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconArrowLeft,
   IconChevronDown,
+  IconCircleX,
   IconDotsVertical,
   IconGripVertical,
   IconSearch,
@@ -70,6 +71,11 @@ export interface DealDetail {
   online?: boolean
   stage?: string
   owner?: DealOwner
+  /** Status do deal — quando "LOST", o painel exibe o motivo da perda. */
+  status?: "OPEN" | "WON" | "LOST" | null
+  /** Motivo registrado ao marcar o deal como perdido (texto livre OU label
+   *  cadastrado). Exibido em destaque no cabeçalho da sidebar. */
+  lostReason?: string | null
 }
 
 type TabId = "conversa" | "atividades" | "notas" | "timeline" | "chamadas"
@@ -207,6 +213,71 @@ export function DealDetailPanel({
     SIDEBAR_DEFAULT_ORDER,
   )
 
+  // ── Resize da sidebar do detalhe (drag horizontal) ───────────────
+  // Largura persistida em localStorage por operador. Min 280 evita
+  // truncar o nome do estágio/dropdown; max 560 garante que o chat
+  // (coluna direita) mantenha legibilidade mesmo em telas pequenas.
+  // Default 340 mantém o tamanho histórico do v0 pra quem nunca
+  // arrastou ficar igual ao que já conhecia.
+  const SIDEBAR_WIDTH_STORAGE_KEY = "crm:deal-detail.sidebarWidth"
+  const SIDEBAR_WIDTH_MIN = 280
+  const SIDEBAR_WIDTH_MAX = 560
+  const SIDEBAR_WIDTH_DEFAULT = 340
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return SIDEBAR_WIDTH_DEFAULT
+    const raw = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY)
+    const parsed = raw ? Number(raw) : NaN
+    if (!Number.isFinite(parsed)) return SIDEBAR_WIDTH_DEFAULT
+    return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, parsed))
+  })
+  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
+
+  const onResizeMove = useCallback((e: MouseEvent) => {
+    const start = resizeRef.current
+    if (!start) return
+    const delta = e.clientX - start.startX
+    const next = Math.min(
+      SIDEBAR_WIDTH_MAX,
+      Math.max(SIDEBAR_WIDTH_MIN, start.startWidth + delta),
+    )
+    setSidebarWidth(next)
+  }, [])
+
+  const onResizeEnd = useCallback(() => {
+    resizeRef.current = null
+    window.removeEventListener("mousemove", onResizeMove)
+    window.removeEventListener("mouseup", onResizeEnd)
+    document.body.style.cursor = ""
+    document.body.style.userSelect = ""
+    // Persiste a última largura conhecida (lê do DOM via state via closure
+    // do React — atualizamos imediatamente em onResizeMove acima).
+    setSidebarWidth((current) => {
+      try {
+        window.localStorage.setItem(
+          SIDEBAR_WIDTH_STORAGE_KEY,
+          String(current),
+        )
+      } catch {
+        // localStorage pode estar bloqueado (private mode / quota); fail-silent
+      }
+      return current
+    })
+  }, [onResizeMove])
+
+  const onResizeStart = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      resizeRef.current = { startX: e.clientX, startWidth: sidebarWidth }
+      // Visual hint enquanto arrasta — cursor global e bloqueio de seleção
+      // de texto evitam "fantasmas" de highlight ao puxar rápido.
+      document.body.style.cursor = "col-resize"
+      document.body.style.userSelect = "none"
+      window.addEventListener("mousemove", onResizeMove)
+      window.addEventListener("mouseup", onResizeEnd)
+    },
+    [sidebarWidth, onResizeMove, onResizeEnd],
+  )
+
   function handleSidebarDragEnd(result: DropResult) {
     if (!result.destination) return
     reorderSections(result.source.index, result.destination.index)
@@ -227,6 +298,18 @@ export function DealDetailPanel({
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [isOpen, onClose])
+
+  // Cleanup defensivo: se o componente desmontar (painel fechado) durante
+  // um drag em andamento, removemos listeners pra evitar memory leak e
+  // restauramos o cursor/seleção globais.
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("mousemove", onResizeMove)
+      window.removeEventListener("mouseup", onResizeEnd)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+  }, [onResizeMove, onResizeEnd])
 
   // Enquanto isOpen=true mas o detail ainda está carregando (API assíncrona),
   // mostra o frame do painel com skeleton para dar feedback imediato ao clique.
@@ -359,8 +442,14 @@ export function DealDetailPanel({
           <div className="flex-1" />
         </header>
 
-        {/* 2 COLS: SIDEBAR + CONTENT */}
-        <div className="grid min-h-0 flex-1 grid-cols-[340px_1fr] gap-4 overflow-hidden">
+        {/* 2 COLS: SIDEBAR + CONTENT — largura da sidebar é dinâmica
+            (drag horizontal na handle entre as colunas). Min/max bounds
+            evitam quebrar layouts em telas pequenas / coluna direita ficar
+            espremida. */}
+        <div
+          className="grid min-h-0 flex-1 gap-4 overflow-hidden"
+          style={{ gridTemplateColumns: `${sidebarWidth}px 8px 1fr` }}
+        >
           {/* SIDEBAR — painel funcional estilo Kommo (DS glass) */}
           <aside
             aria-label="Detalhes do negócio"
@@ -463,6 +552,26 @@ export function DealDetailPanel({
                   </div>
                 )}
               </div>
+
+              {/* Motivo da perda — destaque vermelho quando deal está LOST.
+                  Mostrado entre a barra de progresso do funil e o bloco do
+                  responsável pra ficar imediatamente visível ao abrir o card,
+                  resposta direta ao "por que esse lead foi perdido?". */}
+              {deal.status === "LOST" && deal.lostReason?.trim() ? (
+                <div className="mt-3 flex items-start gap-2 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.22)] bg-[rgba(239,68,68,0.08)] px-2.5 py-2">
+                  <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[#dc2626]">
+                    <IconCircleX size={14} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-display text-[9.5px] font-bold uppercase tracking-[0.12em] text-[#dc2626]">
+                      Motivo da perda
+                    </div>
+                    <div className="mt-px text-[12px] leading-snug text-[#991b1b]">
+                      {deal.lostReason.trim()}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               {/* Responsável — clicável para alterar */}
               <div className="mt-3.5 flex items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-3">
@@ -664,6 +773,63 @@ export function DealDetailPanel({
               )}
             </div>
           </aside>
+
+          {/* Handle de resize — divisor entre sidebar e content. Coluna
+              fina (8px) no grid pra ficar fácil de pegar com o mouse.
+              role="separator" + aria-* descrevem o controle pra leitores
+              de tela; setas left/right ajustam de 16 em 16px via teclado. */}
+          <div
+            role="separator"
+            aria-label="Redimensionar painel de detalhes"
+            aria-orientation="vertical"
+            aria-valuenow={sidebarWidth}
+            aria-valuemin={SIDEBAR_WIDTH_MIN}
+            aria-valuemax={SIDEBAR_WIDTH_MAX}
+            tabIndex={0}
+            onMouseDown={onResizeStart}
+            onDoubleClick={() => {
+              // Duplo-clique restaura o tamanho default — atalho útil
+              // pra desfazer um arrasto acidental.
+              setSidebarWidth(SIDEBAR_WIDTH_DEFAULT)
+              try {
+                window.localStorage.setItem(
+                  SIDEBAR_WIDTH_STORAGE_KEY,
+                  String(SIDEBAR_WIDTH_DEFAULT),
+                )
+              } catch {
+                /* fail-silent */
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return
+              e.preventDefault()
+              const step = e.shiftKey ? 32 : 16
+              setSidebarWidth((w) => {
+                const next = Math.min(
+                  SIDEBAR_WIDTH_MAX,
+                  Math.max(
+                    SIDEBAR_WIDTH_MIN,
+                    w + (e.key === "ArrowRight" ? step : -step),
+                  ),
+                )
+                try {
+                  window.localStorage.setItem(
+                    SIDEBAR_WIDTH_STORAGE_KEY,
+                    String(next),
+                  )
+                } catch {
+                  /* fail-silent */
+                }
+                return next
+              })
+            }}
+            className="group/handle relative flex cursor-col-resize items-center justify-center self-stretch rounded-full transition-colors hover:bg-[var(--brand-primary)]/15 focus-visible:bg-[var(--brand-primary)]/25 focus-visible:outline-none"
+          >
+            <span
+              aria-hidden
+              className="h-10 w-[3px] rounded-full bg-[var(--glass-border)] transition-colors group-hover/handle:bg-[var(--brand-primary)] group-focus-visible/handle:bg-[var(--brand-primary)]"
+            />
+          </div>
 
           {/* CONTENT */}
           {tabContentOverride?.[activeTab] ? (

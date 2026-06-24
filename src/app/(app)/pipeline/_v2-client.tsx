@@ -481,6 +481,9 @@ export default function KanbanV2ClientPage({
         name: ownerName,
         avatarColor: avatarColorSlugFromName(ownerName),
       },
+      status: (dealDetail as { status?: "OPEN" | "WON" | "LOST" }).status ?? null,
+      lostReason:
+        (dealDetail as { lostReason?: string | null }).lostReason ?? null,
     };
   }, [dealDetail, activeDealStageName]);
 

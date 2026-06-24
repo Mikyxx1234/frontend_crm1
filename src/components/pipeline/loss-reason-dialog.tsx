@@ -68,10 +68,16 @@ export function LossReasonDialog({
     enabled: open,
   });
 
+  // Sem `staleTime` + `refetchOnMount: "always"` pra garantir que toda vez
+  // que o dialog reabre, refazemos o GET. Sem isso, mudar a setting em
+  // Configurações e voltar pro kanban deixava o botão "Outro…" aparecendo
+  // (cache antigo do React Query). Custo da chamada é baixíssimo (1 GET de
+  // org_settings, cacheado por 60s no Redis do backend).
   const { data: allowOther = true } = useQuery({
     queryKey: ["org-setting", "deals.loss_reason_allow_other"],
     queryFn: fetchAllowOther,
-    staleTime: 5 * 60_000,
+    staleTime: 0,
+    refetchOnMount: "always",
     enabled: open,
   });
 

@@ -53,6 +53,21 @@ export async function connectApi4Com(
   });
 }
 
+export type Api4ComStatus = {
+  connected: boolean;
+  email: string | null;
+  ramal: string | null;
+  domain: string | null;
+  webhook: {
+    configured: boolean;
+    webhookUrl: string | null;
+  };
+};
+
+export async function getApi4ComStatus(): Promise<Api4ComStatus> {
+  return fetchJson<Api4ComStatus>(`${BASE}/sip-extensions/me/api4com-status`);
+}
+
 export async function createExtension(data: {
   label: string;
   sipUri: string;

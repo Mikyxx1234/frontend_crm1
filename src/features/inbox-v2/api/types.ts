@@ -178,5 +178,13 @@ export interface MessagesResponse {
   messages: InboxMessageDto[];
   pinnedNoteId: string | null;
   channelProvider: string | null;
+  /**
+   * Pode responder nesta conversa? Derivado de `channel.send` do
+   * scope-grants (backend é fonte de verdade — POST messages aplica o mesmo
+   * enforcement). Default `true` quando o backend não envia o campo (compat
+   * com clients/backends antigos). Quando `false`, o composer deve entrar
+   * em modo leitura com aviso de "sem permissão pra enviar".
+   */
+  canReply?: boolean;
   session?: SessionInfo;
 }

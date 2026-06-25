@@ -26,6 +26,7 @@ export async function getMessages(
     messages: Array.isArray(data.messages) ? data.messages : [],
     pinnedNoteId: data.pinnedNoteId ?? null,
     channelProvider: data.channelProvider ?? null,
+    canReply: typeof data.canReply === "boolean" ? data.canReply : true,
     session: data.session ?? undefined,
   };
 }

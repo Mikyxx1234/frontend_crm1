@@ -275,6 +275,14 @@ export default function InboxV2ClientPage({
       ? !sessionActiveFromBackend
       : isSessionExpired(sessionInfo?.lastInboundAt ?? activeRow.lastInboundAt)
     : false;
+  // Bloco C (25/jun/26): backend pode setar `canReply:false` quando o
+  // usuário não tem `channel.send`. Default true preserva compat com
+  // backend antigo (que não envia o campo).
+  const canReply = messagesData?.canReply ?? true;
+  const composerDisabled = !canReply || sessionExpired;
+  const composerPlaceholder = !canReply
+    ? "Você não tem permissão para enviar mensagens neste canal."
+    : undefined;
   const contactAsideView = activeRow ? toContactAside(contactDetail, activeRow) : null;
 
   // ── Stage pills no header do chat — placeholder até integrar com pipeline real
@@ -492,7 +500,8 @@ export default function InboxV2ClientPage({
             onSend={handleSend}
             onSendNote={handleSendNote}
             sending={sendMessage.isPending}
-            disabled={sessionExpired}
+            disabled={composerDisabled}
+            placeholder={composerPlaceholder}
             isResolved={activeRow.status === "RESOLVED"}
             contactId={activeContactId}
             externalTemplate={externalTemplate}

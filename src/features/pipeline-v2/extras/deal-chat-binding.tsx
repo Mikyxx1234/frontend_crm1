@@ -156,6 +156,9 @@ export function useDealChatBinding(params: {
           ? !sessionActiveFromBackend
           : isSessionExpired(sessionInfo?.lastInboundAt ?? lastInboundFromMessages);
   const sessionExpired = !!effectiveConversationId && sessionExpiredDerived;
+  // Bloco C (25/jun/26): respeita `canReply` exposto pelo backend
+  // (mesma fonte que o /inbox). Compat: default true quando ausente.
+  const canReply = messagesResp?.canReply ?? true;
 
   // SSE: assina /api/sse/messages e invalida as mensagens da conversa
   // ativa quando chega new_message. Sem isto o chat do deal só atualizava
@@ -290,7 +293,12 @@ export function useDealChatBinding(params: {
       onSend={handleSend}
       onSendNote={handleSendNote}
       sending={sendMutation.isPending}
-      disabled={!!sessionExpired}
+      disabled={!canReply || !!sessionExpired}
+      placeholder={
+        !canReply
+          ? "Você não tem permissão para enviar mensagens neste canal."
+          : undefined
+      }
       contactId={contactId}
       externalTemplate={externalTemplate}
       onExternalTemplateConsumed={() => setExternalTemplate(null)}

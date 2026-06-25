@@ -4,10 +4,13 @@ import { useState, useEffect, useMemo } from "react";
 import {
   IconAlertTriangle,
   IconAntennaBars5,
+  IconBan,
   IconEye,
   IconKey,
   IconLoader2,
+  IconMessagePlus,
   IconSend,
+  IconSettings,
   IconShield,
   IconUsers,
 } from "@tabler/icons-react";
@@ -292,6 +295,9 @@ function RoleChannelScope({ roleId }: { roleId: string }) {
 
   const [channelViewIds, setChannelViewIds] = useState<string[] | null>(null);
   const [channelSendIds, setChannelSendIds] = useState<string[] | null>(null);
+  const [channelInitiateIds, setChannelInitiateIds] = useState<string[] | null>(null);
+  const [channelManageIds, setChannelManageIds] = useState<string[] | null>(null);
+  const [channelDenyIds, setChannelDenyIds] = useState<string[] | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -300,13 +306,28 @@ function RoleChannelScope({ roleId }: { roleId: string }) {
     if (!data) return;
     setChannelViewIds(normalizeScope(data.channelViewIds));
     setChannelSendIds(normalizeScope(data.channelSendIds));
+    setChannelInitiateIds(normalizeScope(data.channelInitiateIds));
+    setChannelManageIds(normalizeScope(data.channelManageIds));
+    setChannelDenyIds(normalizeScope(data.channelDenyIds));
     setDirty(false);
   }, [data]);
+
+  const markDirty = (setter: (v: string[] | null) => void) => (v: string[] | null) => {
+    setter(v);
+    setDirty(true);
+    setSaved(false);
+  };
 
   async function handleSave() {
     setErr(null);
     try {
-      await update.mutateAsync({ channelViewIds, channelSendIds });
+      await update.mutateAsync({
+        channelViewIds,
+        channelSendIds,
+        channelInitiateIds,
+        channelManageIds,
+        channelDenyIds,
+      });
       setDirty(false);
       setSaved(true);
     } catch (e) {
@@ -332,27 +353,49 @@ function RoleChannelScope({ roleId }: { roleId: string }) {
         icon={<IconEye size={12} className="text-[var(--text-muted)]" />}
         options={channels.data ?? []}
         value={channelViewIds}
-        onChange={(v) => {
-          setChannelViewIds(v);
-          setDirty(true);
-          setSaved(false);
-        }}
+        onChange={markDirty(setChannelViewIds)}
         loading={isLoading || channels.isLoading}
         allLabel="Todos os canais"
       />
 
       <ScopeMultiSelect
-        label="Canais — enviar mensagens"
+        label="Canais — responder mensagens"
         icon={<IconSend size={12} className="text-[var(--text-muted)]" />}
         options={channels.data ?? []}
         value={channelSendIds}
-        onChange={(v) => {
-          setChannelSendIds(v);
-          setDirty(true);
-          setSaved(false);
-        }}
+        onChange={markDirty(setChannelSendIds)}
         loading={isLoading || channels.isLoading}
         allLabel="Todos os canais"
+      />
+
+      <ScopeMultiSelect
+        label="Canais — iniciar nova conversa"
+        icon={<IconMessagePlus size={12} className="text-[var(--text-muted)]" />}
+        options={channels.data ?? []}
+        value={channelInitiateIds}
+        onChange={markDirty(setChannelInitiateIds)}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
+
+      <ScopeMultiSelect
+        label="Canais — administrar (configurar/conectar)"
+        icon={<IconSettings size={12} className="text-[var(--text-muted)]" />}
+        options={channels.data ?? []}
+        value={channelManageIds}
+        onChange={markDirty(setChannelManageIds)}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
+
+      <ScopeMultiSelect
+        label="Canais bloqueados (nega tudo, exceto se também administra o canal)"
+        icon={<IconBan size={12} className="text-[var(--text-muted)]" />}
+        options={channels.data ?? []}
+        value={channelDenyIds}
+        onChange={markDirty(setChannelDenyIds)}
+        loading={isLoading || channels.isLoading}
+        allLabel="Nenhum canal bloqueado"
       />
 
       <div className="flex items-center gap-2">

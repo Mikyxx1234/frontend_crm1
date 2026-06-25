@@ -250,6 +250,9 @@ export type UserScopeGrantsDto = {
   pipelineIds: string[] | null;
   channelViewIds: string[] | null;
   channelSendIds: string[] | null;
+  channelInitiateIds: string[] | null;
+  channelManageIds: string[] | null;
+  channelDenyIds: string[] | null;
 };
 
 export function useUserScopeGrants(userId: string | null) {
@@ -286,6 +289,9 @@ export function useUpdateUserScopeGrants(userId: string) {
 export type RoleScopeGrantsDto = {
   channelViewIds: string[] | null;
   channelSendIds: string[] | null;
+  channelInitiateIds: string[] | null;
+  channelManageIds: string[] | null;
+  channelDenyIds: string[] | null;
 };
 
 export function useRoleScopeGrants(roleId: string | null) {

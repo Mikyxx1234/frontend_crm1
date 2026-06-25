@@ -47,10 +47,42 @@ export type ScopeGrants = {
     /** Override por usuário: IDs de funis visíveis (ou `["*"]`). */
     users?: UserScopeGrants;
   };
-  /** Escopo de canais por usuário (sem regra legada por papel). */
+  /**
+   * Escopo de canais (instâncias dinâmicas de `Channel`). 4 eixos de ação +
+   * override `deny`. Cada eixo aceita 3 principais (user/role/group),
+   * resolução aditiva (OR).
+   *
+   * Mantido em sincronia com o backend; atualizado 25/jun/26 pra incluir
+   * `initiate`, `manage`, `deny` e eixo `groups`. Ver
+   * `backend_crm1/src/lib/authz/scope-grants-shared.ts` (fonte de verdade
+   * da lógica completa, incluindo precedência deny + anti-lockout).
+   */
   channel?: {
-    view?: { users?: UserScopeGrants };
-    send?: { users?: UserScopeGrants };
+    view?: {
+      users?: UserScopeGrants;
+      roles?: UserScopeGrants;
+      groups?: UserScopeGrants;
+    };
+    send?: {
+      users?: UserScopeGrants;
+      roles?: UserScopeGrants;
+      groups?: UserScopeGrants;
+    };
+    initiate?: {
+      users?: UserScopeGrants;
+      roles?: UserScopeGrants;
+      groups?: UserScopeGrants;
+    };
+    manage?: {
+      users?: UserScopeGrants;
+      roles?: UserScopeGrants;
+      groups?: UserScopeGrants;
+    };
+    deny?: {
+      users?: UserScopeGrants;
+      roles?: UserScopeGrants;
+      groups?: UserScopeGrants;
+    };
   };
   stage?: {
     view?: RoleScope;
@@ -117,6 +149,9 @@ export function parseScopeGrants(input: unknown): ScopeGrants {
   const channel = src.channel && typeof src.channel === "object" ? (src.channel as Record<string, unknown>) : {};
   const channelView = channel.view && typeof channel.view === "object" ? (channel.view as Record<string, unknown>) : {};
   const channelSend = channel.send && typeof channel.send === "object" ? (channel.send as Record<string, unknown>) : {};
+  const channelInitiate = channel.initiate && typeof channel.initiate === "object" ? (channel.initiate as Record<string, unknown>) : {};
+  const channelManage = channel.manage && typeof channel.manage === "object" ? (channel.manage as Record<string, unknown>) : {};
+  const channelDeny = channel.deny && typeof channel.deny === "object" ? (channel.deny as Record<string, unknown>) : {};
   const dealField = field.deal && typeof field.deal === "object" ? (field.deal as Record<string, unknown>) : {};
   const contactField = field.contact && typeof field.contact === "object" ? (field.contact as Record<string, unknown>) : {};
   const productField = field.product && typeof field.product === "object" ? (field.product as Record<string, unknown>) : {};
@@ -130,8 +165,31 @@ export function parseScopeGrants(input: unknown): ScopeGrants {
       users: normalizeUserScope(pipeline.users),
     },
     channel: {
-      view: { users: normalizeUserScope(channelView.users) },
-      send: { users: normalizeUserScope(channelSend.users) },
+      view: {
+        users: normalizeUserScope(channelView.users),
+        roles: normalizeUserScope(channelView.roles),
+        groups: normalizeUserScope(channelView.groups),
+      },
+      send: {
+        users: normalizeUserScope(channelSend.users),
+        roles: normalizeUserScope(channelSend.roles),
+        groups: normalizeUserScope(channelSend.groups),
+      },
+      initiate: {
+        users: normalizeUserScope(channelInitiate.users),
+        roles: normalizeUserScope(channelInitiate.roles),
+        groups: normalizeUserScope(channelInitiate.groups),
+      },
+      manage: {
+        users: normalizeUserScope(channelManage.users),
+        roles: normalizeUserScope(channelManage.roles),
+        groups: normalizeUserScope(channelManage.groups),
+      },
+      deny: {
+        users: normalizeUserScope(channelDeny.users),
+        roles: normalizeUserScope(channelDeny.roles),
+        groups: normalizeUserScope(channelDeny.groups),
+      },
     },
     stage: {
       view: normalizeRoleScope(stage.view),
@@ -217,14 +275,27 @@ export function canAccessPipelineForUser(args: {
   });
 }
 
+/**
+ * Versão simplificada pra checagens UI (apenas override por usuário em
+ * `view`/`send`). NÃO replica toda a lógica do backend (deny + groups +
+ * roles + manage anti-lockout) — o backend é a fonte de verdade. Use só
+ * pra gating cosmético no client; toda decisão de permissão real DEVE
+ * passar pelo backend (`requireChannelScope` em `resource-policy.ts`).
+ *
+ * Ações `initiate`/`manage` ficam aceitas na assinatura mas, como a
+ * cópia client não tem acesso a roleIds/groupIds, retornam permissivo
+ * por padrão (preservando compat). O endpoint correspondente do backend
+ * é que recusará a operação.
+ */
 export function canAccessChannelForUser(args: {
   grants: ScopeGrants;
   role: string | null | undefined;
   userId: string;
-  action: "view" | "send";
+  action: "view" | "send" | "initiate" | "manage";
   channelId: string;
 }): boolean {
   if (asRoleKey(args.role) === "ADMIN") return true;
+  if (args.action === "initiate" || args.action === "manage") return true;
   const viewRule = args.grants.channel?.view?.users?.[args.userId];
   if (Array.isArray(viewRule) && !userScopeAllows(viewRule, args.channelId)) {
     return false;

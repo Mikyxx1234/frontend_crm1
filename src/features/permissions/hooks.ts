@@ -294,6 +294,39 @@ export type RoleScopeGrantsDto = {
   channelDenyIds: string[] | null;
 };
 
+// ── Escopo de CANAL por Group (group-based scoping) ──────────────────────
+// Mesma semântica de roles: eixo aditivo (qualquer grant positivo libera).
+// Grupos são principal de 1ª classe no scope-grants desde 25/jun/26 (Bloco A).
+
+export type GroupScopeGrantsDto = RoleScopeGrantsDto;
+
+export function useGroupScopeGrants(groupId: string | null) {
+  return useQuery<GroupScopeGrantsDto>({
+    queryKey: ["group-scope-grants", groupId],
+    queryFn: () => apiFetch(`/api/groups/${groupId}/scope-grants`),
+    enabled: !!groupId && groupId !== "new",
+  });
+}
+
+export function useUpdateGroupScopeGrants(groupId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<GroupScopeGrantsDto>) =>
+      apiFetch<GroupScopeGrantsDto & { ok: boolean }>(
+        `/api/groups/${groupId}/scope-grants`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["group-scope-grants", groupId] });
+      void qc.invalidateQueries({ queryKey: ["my-permissions"] });
+    },
+  });
+}
+
 export function useRoleScopeGrants(roleId: string | null) {
   return useQuery<RoleScopeGrantsDto>({
     queryKey: ["role-scope-grants", roleId],

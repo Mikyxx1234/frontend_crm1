@@ -58,6 +58,7 @@ import { avatarInitials } from "@/features/inbox-v2/adapters";
 import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
   useBoard,
+  useBoardSearch,
   useDealDetail,
   useMoveDeal,
   usePipelines,
@@ -229,12 +230,40 @@ export default function KanbanV2ClientPage({
     return undefined;
   }, [sortKey]);
 
-  const { data: board = [] } = useBoard({
+  // ── Busca server-side (varre todo o pipeline, não só os 100 carregados) ──
+  // O GET /board pagina 100 deals/coluna; a busca client-side em cima desses
+  // 100 nunca encontra deals em posições posteriores (ex.: #4129 numa coluna
+  // de 671 cards). Quando há termo digitado (≥2 chars debounced), trocamos
+  // o board pelo resultado do POST /board com `filters.search` — server-side
+  // com telefone normalizado e match por número do deal.
+  //
+  // Sem termo: continua o GET paginado normal (mesmo cache, sem refetch
+  // extra). useBoard fica desabilitado durante a busca pra evitar duas
+  // queries simultâneas competindo pelo mesmo state.
+  const rawSearch = (filters.search ?? search).trim();
+  const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(rawSearch), 300);
+    return () => clearTimeout(t);
+  }, [rawSearch]);
+  const hasServerSearch = debouncedSearch.length >= 2;
+
+  const boardNormal = useBoard({
     pipelineId,
     status,
     sort: boardSort,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !hasServerSearch,
   });
+  const boardSearch = useBoardSearch({
+    pipelineId,
+    status,
+    search: debouncedSearch,
+    sort: boardSort,
+    enabled: isAuthenticated && hasServerSearch,
+  });
+  const board = hasServerSearch
+    ? boardSearch.data ?? []
+    : boardNormal.data ?? [];
 
   const moveDeal = useMoveDeal(pipelineId, status);
 
@@ -317,13 +346,15 @@ export default function KanbanV2ClientPage({
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {
-    // Combina a busca da barra do header (`search`) com a busca do filtro
-    // modal (`filters.search`) via AND — antes só a primeira definida valia
-    // e a outra ficava silenciosamente ignorada, dando impressão de "barra
-    // do header não funciona".
-    const queries = [filters.search, search]
-      .map((v) => (v ?? "").trim().toLowerCase())
-      .filter((v) => v.length > 0);
+    // Quando o board veio do POST /board com `filters.search`, o servidor
+    // JÁ filtrou (telefone normalizado, número do deal etc.) — re-filtrar
+    // aqui em cima descartaria matches que só o backend consegue achar
+    // (ex.: telefone `+55 (11) 99697-8282` vs busca `11996978282`).
+    const queries = hasServerSearch
+      ? []
+      : [filters.search, search]
+          .map((v) => (v ?? "").trim().toLowerCase())
+          .filter((v) => v.length > 0);
     const hasSearch = queries.length > 0;
     const hasOwner = (filters.ownerIds?.length ?? 0) > 0;
     const hasTag = (filters.tagIds?.length ?? 0) > 0;
@@ -400,7 +431,7 @@ export default function KanbanV2ClientPage({
       }
       return { ...stage, deals };
     });
-  }, [board, filters, search, sortKey]);
+  }, [board, filters, search, sortKey, hasServerSearch]);
 
   // Filtrar stages por stageGrants do usuário (Permissions v2).
   // stageGrants vazio = todas as fases visíveis (sem restrição).

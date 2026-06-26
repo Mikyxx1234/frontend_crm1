@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import {
   getBoard,
+  getBoardFiltered,
   listPipelines,
   type BoardSortParam,
   type BoardStageDto,
@@ -58,5 +59,52 @@ export function useBoard(params: {
     enabled: preview ? true : ((params.enabled ?? true) && !!params.pipelineId),
     staleTime: 10_000,
     refetchInterval: 30_000,
+  });
+}
+
+/**
+ * Board com busca server-side via POST /api/pipelines/:id/board.
+ *
+ * Roda em paralelo com `useBoard` — ativado SOMENTE quando há termo de
+ * busca (≥2 chars, já debounced pelo caller). Tem queryKey própria pra
+ * NÃO invalidar o cache do board normal: ao limpar a busca, o paginado
+ * volta sem flicker.
+ *
+ * `perStage` default 200 cobre o "matches por coluna" tipico de buscas
+ * por nome/telefone/número. Se atingir o limite numa coluna, dá pra
+ * sinalizar "refine a busca" (não implementado por enquanto).
+ */
+export function useBoardSearch(params: {
+  pipelineId: string | null;
+  status: StatusFilter;
+  search: string;
+  sort?: BoardSortParam;
+  enabled?: boolean;
+  perStage?: number;
+}) {
+  const term = params.search.trim();
+  const sortKey = params.sort
+    ? `${params.sort.field}:${params.sort.direction}`
+    : "default";
+  const perStage = params.perStage ?? 200;
+  return useQuery<BoardStageDto[]>({
+    queryKey: [
+      "pipeline-board-search",
+      params.pipelineId ?? "__none__",
+      params.status,
+      term,
+      sortKey,
+      perStage,
+    ],
+    queryFn: () =>
+      getBoardFiltered(params.pipelineId ?? "pl-1", {
+        status: params.status,
+        filters: { search: term },
+        sort: params.sort,
+        perStage,
+      }),
+    enabled:
+      (params.enabled ?? true) && !!params.pipelineId && term.length >= 2,
+    staleTime: 10_000,
   });
 }

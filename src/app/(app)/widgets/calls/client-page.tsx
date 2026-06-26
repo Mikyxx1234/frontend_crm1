@@ -16,8 +16,9 @@
  */
 
 import { useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { IconPhone } from "@tabler/icons-react";
+import { IconPhone, IconSettings } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
@@ -49,6 +50,16 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
           icon={<IconPhone size={22} stroke={2.2} />}
           title="Chamadas"
           description="Histórico de chamadas recebidas, realizadas e perdidas."
+          actions={
+            <Link
+              href="/settings/softphone"
+              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-2 font-display text-[13px] font-medium text-[var(--text-primary)] transition-all hover:-translate-y-px hover:bg-[var(--glass-bg-strong)]"
+              title="Abrir configurações do softphone (provedor, ramal, webhook)"
+            >
+              <IconSettings size={16} />
+              Configurações
+            </Link>
+          }
         />
 
         {callsWidget.isLoading ? (

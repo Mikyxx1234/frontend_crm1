@@ -73,8 +73,34 @@ function readCachedSidebarItems(): SidebarItemPreference[] | undefined {
  * evitando hydration mismatch).
  */
 
-function isActiveFor(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
+/**
+ * Decide quais hrefs do conjunto devem ficar HIGHLIGHTED dado um
+ * pathname. Match básico é `pathname === href || pathname.startsWith(href + "/")`,
+ * mas quando dois itens casam (ex.: `/widgets` E `/widgets/calls` ambos
+ * casam pra `/widgets/calls`), só o MAIS ESPECÍFICO (href mais longo)
+ * fica ativo — evita "dois ícones acesos" visualmente confusos.
+ *
+ * Implementação: pra cada href candidato, ele só vence se NENHUM outro
+ * candidato tiver href estritamente mais longo que também seja prefixo
+ * válido (`pathname` casa com os dois, mas o mais específico ganha).
+ */
+function computeActiveHrefs(pathname: string, hrefs: readonly string[]): Set<string> {
+  const candidates = hrefs.filter(
+    (h) => pathname === h || pathname.startsWith(`${h}/`),
+  );
+  const winners = candidates.filter(
+    (h) =>
+      !candidates.some(
+        (other) =>
+          other !== h &&
+          other.length > h.length &&
+          // O candidato mais longo precisa estender o mais curto (ex.:
+          // `/widgets/calls` estende `/widgets`). Sem essa checagem, dois
+          // hrefs irmãos não-aninhados poderiam se "cancelar".
+          other.startsWith(h.endsWith("/") ? h : `${h}/`),
+      ),
+  );
+  return new Set(winners);
 }
 
 function computeInitials(name: string): string {
@@ -196,20 +222,26 @@ export function NavRailV2({ className }: { className?: string }) {
           overflow-x:auto (que cortaria a magnificação) — os DockButton aqui
           usam `disablePop` para a escala caber dentro do padding. */}
       <div className="flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto overflow-x-clip px-3 [scrollbar-width:none] [scrollbar-gutter:stable_both-edges] [&::-webkit-scrollbar]:hidden">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <DockButton
-              key={item.key}
-              href={item.href}
-              title={item.title}
-              active={isActiveFor(pathname, item.href)}
-              disablePop
-            >
-              <Icon size={20} />
-            </DockButton>
+        {(() => {
+          const activeHrefs = computeActiveHrefs(
+            pathname,
+            navItems.map((i) => i.href),
           );
-        })}
+          return navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <DockButton
+                key={item.key}
+                href={item.href}
+                title={item.title}
+                active={activeHrefs.has(item.href)}
+                disablePop
+              >
+                <Icon size={20} />
+              </DockButton>
+            );
+          });
+        })()}
       </div>
 
       {/* Ícones inferiores usam `disablePop` como os itens de navegação:

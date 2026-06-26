@@ -7,8 +7,15 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
 import { BadgeGlass } from "./badge-glass"
-import { MessageBubble, DaySeparator, type Message } from "./message-bubble"
+import { MessageBubble, DaySeparator, ConnectionDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
+import {
+  formatConnectionLabel,
+  formatConnectionShort,
+  channelTypeLabel,
+  type ConnectionRef,
+} from "@/lib/connection-label"
+import { IconAffiliate } from "@tabler/icons-react"
 import {
   IconPhone,
   IconVideo,
@@ -57,6 +64,18 @@ interface ChatAreaProps {
   showSessionAlert?: boolean
   className?: string
 
+  /**
+   * Conexão ATUAL da conversa (qual WhatsApp/conta). Exibida como chip no
+   * header — indica por qual canal a pessoa está conversando agora.
+   */
+  connection?: ConnectionRef | null
+  /**
+   * Mapa id→conexão de todos os canais referenciados nas mensagens. Usado
+   * para inserir o marcador de troca de conexão na timeline quando a mesma
+   * conversa alterna entre contas distintas do canal.
+   */
+  connections?: Record<string, ConnectionRef>
+
   // ── Composer controlado (opcional) ──────────────────────────────
   inputValue?: string
   onInputChange?: (value: string) => void
@@ -98,6 +117,8 @@ export function ChatArea({
   daySeparator,
   showSessionAlert = false,
   className,
+  connection,
+  connections,
   inputValue,
   onInputChange,
   onSendMessage,
@@ -156,19 +177,32 @@ export function ChatArea({
     >
       {/* HEADER — minimalista (nome + abas inline + acoes) */}
       <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
-            {contact.name}
-          </h2>
-          {contact.badge && (
-            <BadgeGlass variant={contact.badge}>
-              {contact.badgeLabel ??
-                (contact.badge === "enterprise"
-                  ? "ENTERPRISE"
-                  : contact.badge === "lead"
-                    ? "LEAD"
-                    : "CLIENTE")}
-            </BadgeGlass>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2.5">
+            <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
+              {contact.name}
+            </h2>
+            {contact.badge && (
+              <BadgeGlass variant={contact.badge}>
+                {contact.badgeLabel ??
+                  (contact.badge === "enterprise"
+                    ? "ENTERPRISE"
+                    : contact.badge === "lead"
+                      ? "LEAD"
+                      : "CLIENTE")}
+              </BadgeGlass>
+            )}
+          </div>
+          {connection && (
+            <TooltipGlass
+              label={`Conversando por ${formatConnectionLabel(connection)}`}
+              side="bottom"
+            >
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-secondary)]">
+                <IconAffiliate size={12} className="text-[var(--brand-primary)]" />
+                {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
+              </span>
+            </TooltipGlass>
           )}
         </div>
 
@@ -212,6 +246,13 @@ export function ChatArea({
           // `daySeparator` legado exibido uma única vez no topo.
           let lastDayKey: string | null = null
           let usedFallback = false
+          // Só marca troca de conexão quando a conversa tem 2+ contas distintas
+          // (ex.: dois WhatsApps). Com uma só, o chip do header já basta.
+          const distinctChannels = new Set(
+            messages.map((m) => m.channelId).filter(Boolean) as string[],
+          )
+          const showConnSwitches = distinctChannels.size >= 2
+          let lastChannelId: string | null = null
           return messages.map((message, index) => {
             if (message.type !== "incoming" && message.type !== "outgoing") {
               return null
@@ -227,9 +268,20 @@ export function ChatArea({
               separator = daySeparator
               usedFallback = true
             }
+            // Marcador de troca de conexão: aparece quando o channelId muda
+            // em relação à última mensagem com canal conhecido.
+            let connLabel: string | null = null
+            if (showConnSwitches && message.channelId) {
+              if (message.channelId !== lastChannelId) {
+                const ref = connections?.[message.channelId]
+                if (ref) connLabel = formatConnectionLabel(ref)
+                lastChannelId = message.channelId
+              }
+            }
             return (
               <Fragment key={message.id || index}>
                 {separator && <DaySeparator date={separator} />}
+                {connLabel && <ConnectionDivider label={connLabel} />}
                 <MessageBubble message={message} agentInitials={agentInitials} />
               </Fragment>
             )

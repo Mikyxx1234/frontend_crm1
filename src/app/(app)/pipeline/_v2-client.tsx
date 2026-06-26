@@ -569,7 +569,7 @@ export default function KanbanV2ClientPage({
       ?.conversations?.[0]?.id ?? null;
   const dealContactName =
     dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
-  const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote } =
+  const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote, connection: dealConnection } =
     useDealChatBinding({
       conversationId: dealConversationId,
       contactName: dealContactName,
@@ -946,6 +946,7 @@ export default function KanbanV2ClientPage({
         messagesSlot={messagesNode}
         composerSlot={composerNode}
         sessionAlertSlot={sessionAlertNode ?? null}
+        connection={dealConnection}
         conversationId={dealConversationId}
         isResolved={
           (dealDetail?.contact as { conversations?: { status?: string }[] } | null | undefined)

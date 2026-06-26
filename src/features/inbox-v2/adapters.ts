@@ -11,12 +11,16 @@
 
 import type { Conversation, LastMessageType } from "@/components/crm/conversation-card";
 import type { Message, FormField } from "@/components/crm/message-bubble";
+import type { ConnectionRef } from "@/lib/connection-label";
 
 import type {
   ContactDetail,
   ConversationListRow,
   InboxMessageDto,
 } from "./api";
+
+/** Conexão exibida no painel do contato (qual WhatsApp/conta). */
+export type ContactConnection = ConnectionRef;
 
 // ─────────────────────────────────────────────────────────────────
 // Helpers compartilhados
@@ -410,6 +414,9 @@ export function toMessageBubble(
     sendError: isInbound
       ? undefined
       : (dto.sendError ?? dto.metaError ?? undefined) || undefined,
+    // Conexão por onde a mensagem trafegou — alimenta o marcador de troca
+    // de conexão na timeline (ChatArea / deal-chat-binding).
+    channelId: dto.channelId ?? null,
   };
 }
 
@@ -520,6 +527,8 @@ export interface ContactAsideView {
   avatarColor: Conversation["avatarColor"];
   status: Conversation["status"];
   contactId: string;
+  /** Conexão (Channel) por onde o contato está conversando (qual WhatsApp). */
+  connection?: ContactConnection | null;
   /** Número sequencial do contato por organização (1, 2, 3…). */
   contactNumber?: number | null;
   assignee?: string;
@@ -591,6 +600,7 @@ function formatDateBr(iso: string | null | undefined): string {
 export function toContactAside(
   contact: ContactDetail | undefined | null,
   row: ConversationListRow,
+  connection?: ContactConnection | null,
 ): ContactAsideView {
   const name = contact?.name ?? row.contact?.name ?? "Sem nome";
   const financial = toFinancialStatus(row);
@@ -674,6 +684,7 @@ export function toContactAside(
     initials: avatarInitials(name),
     avatarColor: colorFromName(name),
     status: deriveOnline(row.lastInboundAt),
+    connection: connection ?? null,
     contactId: contact?.id ?? row.contact?.id ?? row.id,
     contactNumber: (contact as { number?: number | null } | undefined)?.number ?? null,
     assignee: row.assignedTo?.name,

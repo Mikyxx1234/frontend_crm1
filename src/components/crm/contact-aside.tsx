@@ -18,7 +18,13 @@ import {
   IconLayoutSidebarRightExpand,
   IconSettings,
   IconX,
+  IconAffiliate,
 } from "@tabler/icons-react"
+import {
+  channelTypeLabel,
+  formatConnectionShort,
+  formatConnectionLabel,
+} from "@/lib/connection-label"
 import { resolveHighlight, SEVERITY_COLORS, type HighlightSeverity } from "@/lib/highlight"
 import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
@@ -33,6 +39,17 @@ export interface ContactDetails {
   contactId: string
   /** Número sequencial do contato por organização (1, 2, 3…). */
   contactNumber?: number | null
+  /**
+   * Conexão (Channel) por onde o contato está conversando — qual conta do
+   * canal (ex.: qual WhatsApp da empresa). Exibida na seção de contato para
+   * distinguir quando a pessoa fala por fontes diferentes.
+   */
+  connection?: {
+    id: string
+    name: string
+    type?: string | null
+    phoneNumber?: string | null
+  } | null
   assignee?: string
   statusBadge?: { variant: "lead" | "enterprise" | "success"; label: string }
   stageSegments?: number
@@ -634,6 +651,19 @@ export function ContactAside({
                                     textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)]"
                                   />
                                 </Row>
+                                {contact.connection && (
+                                  <Row label="Canal">
+                                    <TooltipGlass
+                                      label={`Conversando por ${formatConnectionLabel(contact.connection)}`}
+                                      side="left"
+                                    >
+                                      <span className="inline-flex items-center gap-1.5 font-display text-[12px] font-bold text-[var(--text-primary)]">
+                                        <IconAffiliate size={13} className="text-[var(--brand-primary)]" />
+                                        {channelTypeLabel(contact.connection.type)} · {formatConnectionShort(contact.connection)}
+                                      </span>
+                                    </TooltipGlass>
+                                  </Row>
+                                )}
                                 {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} />}
                                 {isFilled(contact.rg) && <Row label="RG" value={contact.rg} />}
                                 {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} />}

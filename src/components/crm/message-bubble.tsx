@@ -26,6 +26,7 @@ import {
   IconPin,
   IconPinFilled,
   IconListCheck,
+  IconArrowsExchange,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -174,6 +175,12 @@ export interface Message {
    * em tooltip ao passar o mouse sobre o ícone de falha (status `failed`).
    */
   sendError?: string
+  /**
+   * Conexão (Channel) por onde esta mensagem trafegou. Usado para inserir um
+   * marcador na timeline quando a conversa alterna de conexão (ex.: dois
+   * WhatsApps). `null`/undefined = herda a conexão anterior (sem marcador).
+   */
+  channelId?: string | null
 }
 
 
@@ -902,6 +909,30 @@ export function DaySeparator({ date }: DaySeparatorProps) {
   return (
     <div className="self-center px-0 py-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
       {date}
+    </div>
+  )
+}
+
+interface ConnectionDividerProps {
+  /** Rótulo completo da conexão (ex.: "WhatsApp · Vendas SP · +55 (11) 9..."). */
+  label: string
+}
+
+/**
+ * Marcador na timeline indicando que, a partir daqui, a conversa passou a
+ * trafegar por OUTRA conexão (ex.: o contato escreveu para outro número de
+ * WhatsApp da empresa). Inserido pelo chat quando o `channelId` da mensagem
+ * muda em relação à anterior.
+ */
+export function ConnectionDivider({ label }: ConnectionDividerProps) {
+  return (
+    <div className="my-1 flex items-center justify-center gap-2 self-center">
+      <span className="h-px w-6 bg-[var(--glass-border)]" />
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+        <IconArrowsExchange size={12} className="text-[var(--brand-primary)]" />
+        via {label}
+      </span>
+      <span className="h-px w-6 bg-[var(--glass-border)]" />
     </div>
   )
 }

@@ -1598,3 +1598,49 @@ tem auto-reload (`npx tsx` sem `--watch`): após mexer no job é preciso
 reiniciá-lo manualmente.
 
 ---
+
+### 2026-06-26 - Canal/conexão por mensagem (qual WhatsApp na mesma conversa)
+
+**Decisão.** Rastrear a **conexão (`Channel`) por mensagem** para distinguir,
+dentro de UMA conversa, contas distintas do mesmo canal (ex.: dois números de
+WhatsApp da empresa). Adicionada coluna nullable `Message.channelId`
+(FK→`channels`, `ON DELETE SET NULL`) e o `channelId` é carimbado na ingestão
+inbound (Baileys `message-handler`, Meta `handler`) e nas saídas principais
+(rota `messages`, `attachments`, `template`, `forward`, `conversations/create`,
+resposta autônoma da IA em `piloting-actions`). Demais saídas de bot/sistema
+ficam com `channelId = null` → o frontend trata `null` como "herda a conexão
+anterior" (sem marcador falso).
+
+A rota `GET /conversations/:id/messages` passou a expor, por mensagem,
+`channelId`, mais `channel` (conexão ATUAL) e `channels` (mapa id→{name, type,
+phoneNumber}). O `GET /contacts/:id` inclui `channelRef` em cada conversa.
+
+UI: rótulo "Tipo · Apelido · Número" via `lib/connection-label.ts`. Chip de
+conexão no header do chat (`ChatArea`) e no header do contato do pipeline
+(`DealDetailPanel`); linha "Canal" no `contact-aside`; e um `ConnectionDivider`
+na timeline (inbox `ChatArea` + pipeline `deal-chat-binding`) que só aparece
+quando a conversa tem 2+ conexões distintas (com uma só, o chip do header basta).
+
+**Contexto.** A `Conversation` é única por `(contato, channel="whatsapp")` —
+quando o mesmo cliente fala por dois WhatsApps da org, o backend reaproveita a
+MESMA conversa e só atualiza `Conversation.channelId` para o último canal usado.
+Não havia nada na UI indicando por qual conexão a pessoa falava, e mensagens não
+guardavam a conexão de origem.
+
+**Alternativas descartadas.**
+
+- **Mostrar só a conexão atual da conversa (sem coluna em Message).** Simples,
+  mas não distingue mensagem-a-mensagem ("uma veio no WhatsApp A, outra no B").
+- **Separar em conversas distintas por conexão (cada WhatsApp = thread).**
+  Mudança grande de UX/dados e da regra de dedupe — alto risco; descartada.
+
+**Impacto / operação.** O projeto **não usa migrations versionadas** (sync via
+`prisma db push`), mas o **DB de dev tem drift** (colunas em `products` ausentes
+no schema) que impede um `db push` completo seguro. Por isso a coluna foi
+aplicada com SQL aditivo idempotente em
+`backend_crm1/prisma/manual/2026-06-26_message_channel.sql`
+(`prisma db execute`). Para produção, rodar o mesmo arquivo antes do deploy
+(o build gera o Prisma Client a partir do schema; a coluna precisa existir no DB).
+`Message.channelId` é nullable → mensagens históricas ficam sem rótulo.
+
+---

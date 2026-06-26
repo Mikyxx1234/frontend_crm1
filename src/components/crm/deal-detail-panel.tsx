@@ -31,7 +31,14 @@ import {
   IconX,
   IconCircleCheck,
   IconCircleDashed,
+  IconAffiliate,
 } from "@tabler/icons-react"
+import {
+  channelTypeLabel,
+  formatConnectionLabel,
+  formatConnectionShort,
+  type ConnectionRef,
+} from "@/lib/connection-label"
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
 import { useSectionOrder } from "@/hooks/use-section-order"
@@ -157,6 +164,12 @@ interface DealDetailPanelProps {
   conversationId?: string | null
   /** Estado de resolução da conversa — para mostrar "Encerrar" ou "Reabrir". */
   isResolved?: boolean
+  /**
+   * Conexão (Channel) por onde o contato está conversando (qual WhatsApp).
+   * Exibida como chip no header do contato — distingue quando a pessoa fala
+   * por contas/fontes diferentes.
+   */
+  connection?: ConnectionRef | null
 }
 
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
@@ -195,6 +208,7 @@ export function DealDetailPanel({
   funnelSegments,
   conversationId,
   isResolved,
+  connection,
 }: DealDetailPanelProps) {
   // Retrocompatibilidade: split slots sobrepõem o legado fieldConfigSlot
   const resolvedContactConfig = contactFieldConfigSlot ?? fieldConfigSlot ?? null;
@@ -426,14 +440,27 @@ export function DealDetailPanel({
                 <BadgeGlass variant="enterprise">ENTERPRISE</BadgeGlass>
                 {contactEditSlot}
               </div>
-              <div className="mt-px font-display text-xs text-[var(--text-muted)]">
-                {deal.contactNumber != null
-                  ? `#${deal.contactNumber}`
-                  : deal.number != null
-                    ? `#${deal.number}`
-                    : `#${deal.id.slice(-6).toUpperCase()}`}
-                {" · "}
-                {deal.phone || "+55 11 98702-3902"}
+              <div className="mt-px flex items-center gap-2 font-display text-xs text-[var(--text-muted)]">
+                <span>
+                  {deal.contactNumber != null
+                    ? `#${deal.contactNumber}`
+                    : deal.number != null
+                      ? `#${deal.number}`
+                      : `#${deal.id.slice(-6).toUpperCase()}`}
+                  {" · "}
+                  {deal.phone || "+55 11 98702-3902"}
+                </span>
+                {connection && (
+                  <TooltipGlass
+                    label={`Conversando por ${formatConnectionLabel(connection)}`}
+                    side="bottom"
+                  >
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 text-[10.5px] font-semibold text-[var(--text-secondary)]">
+                      <IconAffiliate size={11} className="text-[var(--brand-primary)]" />
+                      {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
+                    </span>
+                  </TooltipGlass>
+                )}
               </div>
             </div>
           </div>

@@ -19,8 +19,9 @@ import { IconLoader2, IconMessageCirclePlus } from "@tabler/icons-react";
 import { apiUrl } from "@/lib/api";
 import { getInitials } from "@/lib/utils";
 
-import { DaySeparator, MessageBubble } from "@/components/crm/message-bubble";
+import { DaySeparator, ConnectionDivider, MessageBubble } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
+import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
 import {
   Composer,
   TemplatePickerList,
@@ -49,6 +50,8 @@ interface DealChatBindingResult {
   templateModal: React.ReactNode;
   /** Nota fixada na conversa, caso exista, para exibir na tab Notas. */
   pinnedNote: { id: string; content: string; senderName?: string | null; time?: string | null } | null;
+  /** Conexão atual da conversa (qual WhatsApp/conta) — para exibir no header. */
+  connection: ConnectionRef | null;
 }
 
 export function useDealChatBinding(params: {
@@ -252,14 +255,28 @@ export function useDealChatBinding(params: {
     );
   } else {
     let lastDayLabel: string | null = null;
+    // Marca troca de conexão só quando há 2+ contas distintas na conversa.
+    const channelsMap = messagesResp?.channels ?? {};
+    const distinctChannels = new Set(
+      bubbles.map((b) => b.channelId).filter(Boolean) as string[],
+    );
+    const showConnSwitches = distinctChannels.size >= 2;
+    let lastChannelId: string | null = null;
     messagesNode = bubbles.map((b) => {
       const dayLabel = formatDayLabel(b.createdAt);
       const showSeparator = dayLabel && dayLabel !== lastDayLabel;
       if (showSeparator) lastDayLabel = dayLabel;
+      let connLabel: string | null = null;
+      if (showConnSwitches && b.channelId && b.channelId !== lastChannelId) {
+        const ref = channelsMap[b.channelId];
+        if (ref) connLabel = formatConnectionLabel(ref);
+        lastChannelId = b.channelId;
+      }
       const isNoteBubble = b.isNote === true;
       return (
         <Fragment key={b.id}>
           {showSeparator && <DaySeparator date={dayLabel} />}
+          {connLabel && <ConnectionDivider label={connLabel} />}
           <MessageBubble
             message={b}
             agentInitials={agentInitials}
@@ -336,5 +353,12 @@ export function useDealChatBinding(params: {
       </div>
     ) : null;
 
-  return { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote };
+  return {
+    messagesNode,
+    composerNode,
+    sessionAlertNode,
+    templateModal,
+    pinnedNote,
+    connection: messagesResp?.channel ?? null,
+  };
 }

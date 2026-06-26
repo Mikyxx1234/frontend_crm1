@@ -283,7 +283,9 @@ export default function InboxV2ClientPage({
   const composerPlaceholder = !canReply
     ? "Você não tem permissão para enviar mensagens neste canal."
     : undefined;
-  const contactAsideView = activeRow ? toContactAside(contactDetail, activeRow) : null;
+  const contactAsideView = activeRow
+    ? toContactAside(contactDetail, activeRow, messagesData?.channel ?? null)
+    : null;
 
   // ── Stage pills no header do chat — placeholder até integrar com pipeline real
   // (Fase 9 conecta no /api/pipelines/:id/board e usa deriveStagePills).
@@ -485,6 +487,8 @@ export default function InboxV2ClientPage({
         messages={messageBubbles}
         stages={stagePillsView}
         showSessionAlert={sessionExpired}
+        connection={messagesData?.channel ?? null}
+        connections={messagesData?.channels}
         onUseTemplate={() => setTemplateOpen(true)}
         headerActionsSlot={
           <ConversationActionsMenu

@@ -554,6 +554,10 @@ export interface ContactAsideView {
     stageId: string | null;
     pipelineId: string | null;
     productName: string | null;
+    /** Status do negocio: OPEN | WON | LOST. */
+    status: string | null;
+    /** Motivo da perda — preenchido quando status = LOST. */
+    lostReason: string | null;
     customFields: { fieldId: string; label: string; value: string | null }[];
   }[];
 }
@@ -614,6 +618,8 @@ export function toContactAside(
     stageId: d.stageId ?? null,
     pipelineId: (d as { pipelineId?: string }).pipelineId ?? null,
     productName: d.productName ?? null,
+    status: (d as { status?: string | null }).status ?? null,
+    lostReason: (d as { lostReason?: string | null }).lostReason ?? null,
     customFields: (d as { customFields?: { fieldId: string; label: string; value: string | null }[] }).customFields ?? [],
   }));
 

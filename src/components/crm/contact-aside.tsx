@@ -56,6 +56,8 @@ export interface ContactDetails {
     stageId?: string | null
     pipelineId?: string | null
     productName?: string | null
+    status?: string | null
+    lostReason?: string | null
     funnelSegments?: { id: string; name: string; color: string; position: number }[]
     stageDropdownSlot?: React.ReactNode
     customFields?: { fieldId: string; label: string; value: string | null }[]
@@ -252,6 +254,10 @@ function DealInline({
     sortedSegments?.find((s) => s.id === deal.stageId)?.name ??
     "Sem estágio"
   const productName = deal.productName ?? course ?? null
+  const status = deal.status ?? null
+  const isLost = status === "LOST"
+  const isWon = status === "WON"
+  const lostReason = isLost ? (deal.lostReason ?? "").trim() : ""
 
   return (
     <div>
@@ -260,9 +266,29 @@ function DealInline({
           <IconBriefcase size={16} className="text-[var(--brand-primary)]" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[14px] font-bold leading-snug text-[var(--text-primary)]">
-            {deal.title}
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-display text-[14px] font-bold leading-snug text-[var(--text-primary)]">
+              {deal.title}
+            </p>
+            {(isLost || isWon) && (
+              <span
+                className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide"
+                style={
+                  isLost
+                    ? {
+                        background: "color-mix(in srgb, var(--color-danger, #dc2626) 12%, transparent)",
+                        color: "var(--color-danger, #dc2626)",
+                      }
+                    : {
+                        background: "color-mix(in srgb, var(--color-success, #059669) 12%, transparent)",
+                        color: "var(--color-success, #059669)",
+                      }
+                }
+              >
+                {isLost ? "Perdido" : "Ganho"}
+              </span>
+            )}
+          </div>
           <div className="relative mt-1">
             {deal.stageDropdownSlot ?? (
               <span className="font-display text-[11px] text-[var(--text-muted)]">
@@ -272,6 +298,17 @@ function DealInline({
           </div>
         </div>
       </div>
+
+      {isLost && lostReason && (
+        <div className="mx-5 mb-3 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-danger,#dc2626)_24%,transparent)] bg-[color-mix(in_srgb,var(--color-danger,#dc2626)_6%,transparent)] px-4 py-2.5">
+          <p className="mb-0.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-danger,#dc2626)]">
+            Motivo da perda
+          </p>
+          <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+            {lostReason}
+          </p>
+        </div>
+      )}
 
       {sortedSegments && sortedSegments.length > 0 && (
         <div className="flex gap-1 px-5 pb-3">

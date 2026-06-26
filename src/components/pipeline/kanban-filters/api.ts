@@ -117,6 +117,30 @@ async function fetchTagsFallback(): Promise<FilterOptionsResponse["tags"]> {
   }
 }
 
+/**
+ * Fallback: lista os motivos de perda do catálogo via
+ * `/api/settings/loss-reasons`. Usado quando o endpoint principal
+ * devolve `lossReasons: []` (versão de backend antiga, escopo, ou cache
+ * antigo) — sem isso a seção "Motivo da perda" do painel some por
+ * completo mesmo com a org tendo motivos cadastrados.
+ */
+async function fetchLossReasonsFallback(): Promise<string[]> {
+  try {
+    const res = await fetch(apiUrl("/api/settings/loss-reasons"), {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => null);
+    const arr = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+    return arr
+      .map((r: Record<string, unknown>) => String(r.label ?? "").trim())
+      .filter((s: string) => s.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
   const res = await fetch(apiUrl("/api/kanban/filter-options"), {
     cache: "no-store",
@@ -143,7 +167,7 @@ export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
   let users = Array.isArray(data?.users) ? data.users : [];
   let tags = Array.isArray(data?.tags) ? data.tags : [];
   const sources = Array.isArray(data?.sources) ? data.sources : [];
-  const lossReasons = Array.isArray(data?.lossReasons) ? data.lossReasons : [];
+  let lossReasons = Array.isArray(data?.lossReasons) ? data.lossReasons : [];
 
   // 2) Fallback: chama endpoints individuais (que existem há mais tempo) p/
   //    preencher campos faltantes. Ocorre quando o primário falhou (404/etc)
@@ -153,6 +177,7 @@ export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
   const needsPipelines = pipelines.length === 0;
   const needsUsers = users.length === 0;
   const needsTags = tags.length === 0;
+  const needsLossReasons = lossReasons.length === 0;
 
   if (
     primaryFailed ||
@@ -160,7 +185,8 @@ export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
     needsContactCfs ||
     needsPipelines ||
     needsUsers ||
-    needsTags
+    needsTags ||
+    needsLossReasons
   ) {
     const [
       dealFb,
@@ -168,12 +194,14 @@ export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
       pipelinesFb,
       usersFb,
       tagsFb,
+      lossReasonsFb,
     ] = await Promise.all([
       needsDealCfs ? fetchCustomFieldsByEntity("deal") : Promise.resolve(null),
       needsContactCfs ? fetchCustomFieldsByEntity("contact") : Promise.resolve(null),
       needsPipelines ? fetchPipelinesFallback() : Promise.resolve(null),
       needsUsers ? fetchUsersFallback() : Promise.resolve(null),
       needsTags ? fetchTagsFallback() : Promise.resolve(null),
+      needsLossReasons ? fetchLossReasonsFallback() : Promise.resolve(null),
     ]);
 
     if (dealFb && dealFb.length > 0) {
@@ -195,6 +223,7 @@ export async function fetchFilterOptions(): Promise<FilterOptionsResponse> {
     if (pipelinesFb && pipelinesFb.length > 0) pipelines = pipelinesFb;
     if (usersFb && usersFb.length > 0) users = usersFb;
     if (tagsFb && tagsFb.length > 0) tags = tagsFb;
+    if (lossReasonsFb && lossReasonsFb.length > 0) lossReasons = lossReasonsFb;
   }
 
   // 3) Só lança se NADA foi recuperado e a primária falhou — assim a UI

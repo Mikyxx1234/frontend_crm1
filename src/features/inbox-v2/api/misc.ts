@@ -174,6 +174,10 @@ export interface ContactDetail {
     value: number;
     stageId: string;
     stageName?: string | null;
+    /** Status do negocio: OPEN | WON | LOST. */
+    status?: string | null;
+    /** Motivo da perda (tabulacao) — preenchido quando status = LOST. */
+    lostReason?: string | null;
     productName?: string | null;
     /** Campos personalizados do negocio: array de pares label → valor */
     customFields?: { fieldId: string; label: string; value: string | null }[];

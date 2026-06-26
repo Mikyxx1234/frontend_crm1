@@ -7,6 +7,8 @@ import {
   ArrowRightLeft,
   CheckCircle2,
   ChevronDown,
+  Loader2,
+  Pencil,
   Trash2,
   Trophy,
   UserCog,
@@ -15,6 +17,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  BulkEditFieldsDialog,
+  type BulkScopeContext,
+} from "@/components/pipeline/bulk-edit-fields-dialog";
 import { BulkOperationProgressDialog } from "@/components/pipeline/bulk-operation-progress-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import { Button } from "@/components/ui/button";
@@ -35,6 +41,11 @@ type BulkActionsBarProps = {
   pipelineId: string;
   stages: StageOption[];
   users: UserOption[];
+  /**
+   * Contexto para "selecionar todos que batem no filtro" na edição em massa.
+   * Quando ausente, a edição opera só sobre os IDs selecionados.
+   */
+  scopeContext?: BulkScopeContext;
 };
 
 /**
@@ -100,6 +111,51 @@ async function bulkAction(body: Record<string, unknown>): Promise<BulkResult> {
   };
 }
 
+/**
+ * Persistência leve da operação em massa atualmente acompanhada. Sobrevive
+ * a fechar o painel (minimizar) e a recarregar a página, para que o usuário
+ * sempre consiga reabrir e ver o resultado final do worker.
+ */
+const ACTIVE_OP_KEY = "crm:bulk-op:active";
+// Janela de restauração: operações persistidas mais antigas que isso são
+// descartadas no mount, evitando "pill fantasma" de jobs já purgados no
+// backend (que dariam 404 e ficariam repollando para sempre).
+const RESTORE_MAX_AGE_MS = 60 * 60 * 1000; // 1h
+type PersistedOp = { id: string; total: number };
+type StoredOp = PersistedOp & { at: number };
+
+function readPersistedOp(): PersistedOp | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_OP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredOp>;
+    if (typeof parsed?.id !== "string" || !parsed.id) return null;
+    if (typeof parsed.at === "number" && Date.now() - parsed.at > RESTORE_MAX_AGE_MS) {
+      window.localStorage.removeItem(ACTIVE_OP_KEY);
+      return null;
+    }
+    return { id: parsed.id, total: typeof parsed.total === "number" ? parsed.total : 0 };
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function writePersistedOp(op: PersistedOp | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (op) {
+      const stored: StoredOp = { ...op, at: Date.now() };
+      window.localStorage.setItem(ACTIVE_OP_KEY, JSON.stringify(stored));
+    } else {
+      window.localStorage.removeItem(ACTIVE_OP_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function BulkActionsBar({
   selectedCount,
   selectedIds,
@@ -107,6 +163,7 @@ export function BulkActionsBar({
   pipelineId,
   stages,
   users,
+  scopeContext,
 }: BulkActionsBarProps) {
   const queryClient = useQueryClient();
   // O CRM aplica `.v2-dark` no <html> (useThemeV2), mas os utilitários
@@ -119,6 +176,7 @@ export function BulkActionsBar({
   const [ownerOpen, setOwnerOpen] = React.useState(false);
   const [lostOpen, setLostOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [editFieldsOpen, setEditFieldsOpen] = React.useState(false);
   // Mover em massa para o estágio Perdido exige tabulação do motivo —
   // guarda o stage alvo até o usuário confirmar no dialog.
   const [pendingLostMoveStage, setPendingLostMoveStage] =
@@ -128,6 +186,40 @@ export function BulkActionsBar({
   // o `BulkOperationProgressDialog` abre e faz polling no backend.
   const [progressOperationId, setProgressOperationId] = React.useState<string | null>(null);
   const [progressTotal, setProgressTotal] = React.useState<number>(0);
+  // Minimizado: o acompanhamento segue ativo (polling), mas o modal fica
+  // oculto e exibimos um pill flutuante para reabrir.
+  const [progressMinimized, setProgressMinimized] = React.useState(false);
+  // Status terminal capturado para colorir/rotular o pill quando minimizado.
+  const [progressDoneStatus, setProgressDoneStatus] = React.useState<string | null>(null);
+
+  // Começa a acompanhar uma operação (centraliza persistência + reset).
+  const startTracking = React.useCallback((operationId: string, total: number) => {
+    setProgressDoneStatus(null);
+    setProgressMinimized(false);
+    setProgressTotal(total);
+    setProgressOperationId(operationId);
+    writePersistedOp({ id: operationId, total });
+  }, []);
+
+  // Encerra o acompanhamento de vez (usuário fechou após terminar).
+  const stopTracking = React.useCallback(() => {
+    setProgressOperationId(null);
+    setProgressMinimized(false);
+    setProgressDoneStatus(null);
+    writePersistedOp(null);
+  }, []);
+
+  // Restaura uma operação pendente ao montar (sobrevive a reload). Abre
+  // minimizada — o pill aparece e o usuário decide reabrir.
+  React.useEffect(() => {
+    const persisted = readPersistedOp();
+    if (persisted) {
+      setProgressTotal(persisted.total);
+      setProgressOperationId(persisted.id);
+      setProgressMinimized(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const invalidate = React.useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["pipeline-board", pipelineId] });
@@ -145,8 +237,7 @@ export function BulkActionsBar({
         } else {
           toast.success(`Operação enfileirada — ${data.total} negócio(s) em segundo plano.`);
         }
-        setProgressTotal(data.total);
-        setProgressOperationId(data.operationId);
+        startTracking(data.operationId, data.total);
         onClear();
         return;
       }
@@ -172,7 +263,7 @@ export function BulkActionsBar({
   // progresso visual. A barra fica oculta quando `selectedCount === 0`
   // mas os Dialogs (em particular o de progresso) seguem no DOM.
   const showBar = selectedCount > 0;
-  if (!showBar && !progressOperationId && !lostOpen && !deleteOpen && !pendingLostMoveStage) return null;
+  if (!showBar && !progressOperationId && !lostOpen && !deleteOpen && !pendingLostMoveStage && !editFieldsOpen) return null;
 
   return (
     <>
@@ -282,6 +373,19 @@ export function BulkActionsBar({
             )}
           </div>
 
+          {/* Edit fields/tags */}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setEditFieldsOpen(true)}
+            className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:hover:!bg-slate-700 dark:hover:!text-white"
+            disabled={mutation.isPending}
+          >
+            <Pencil className="size-3.5" />
+            Editar campos
+          </Button>
+
           {/* Mark won */}
           <Button
             type="button"
@@ -379,16 +483,63 @@ export function BulkActionsBar({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Progresso de operação async (move_stage > 50 ou async: true) */}
+      {/* Edição em massa de campos/tags (sempre async via worker-leads) */}
+      <BulkEditFieldsDialog
+        open={editFieldsOpen}
+        onOpenChange={setEditFieldsOpen}
+        dealIds={dealIds}
+        scopeContext={scopeContext}
+        onEnqueued={(operationId, total) => {
+          toast.success(`Operação enfileirada — ${total} negócio(s) em segundo plano.`);
+          startTracking(operationId, total);
+          onClear();
+        }}
+      />
+
+      {/* Pill flutuante para reabrir uma operação minimizada / restaurada.
+          Fica fora da barra (que some quando a seleção é limpa), garantindo
+          que o usuário sempre consiga voltar a ver o progresso/resultado. */}
+      {progressOperationId && progressMinimized && (
+        <button
+          type="button"
+          onClick={() => setProgressMinimized(false)}
+          className={cn(
+            "fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 text-[13px] font-semibold shadow-2xl shadow-black/20 backdrop-blur-lg transition-all animate-in slide-in-from-bottom-4 fade-in",
+            isDark && "dark",
+            progressDoneStatus === "COMPLETED"
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
+              : progressDoneStatus === "FAILED"
+                ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300"
+                : progressDoneStatus === "PARTIAL"
+                  ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300"
+                  : "border-border bg-card/95 text-card-foreground dark:!border-slate-700 dark:!bg-slate-900 dark:!text-slate-100",
+          )}
+        >
+          {progressDoneStatus ? (
+            <CheckCircle2 className="size-4" />
+          ) : (
+            <Loader2 className="size-4 animate-spin" />
+          )}
+          {progressDoneStatus ? "Ver resultado da operação" : "Operação em andamento — ver"}
+        </button>
+      )}
+
+      {/* Progresso de operação async (move_stage > 50, async: true ou edição
+          em massa de campos). Permanece montado enquanto houver operação
+          acompanhada, mesmo sem seleção. */}
       <BulkOperationProgressDialog
         operationId={progressOperationId}
         optimisticTotal={progressTotal}
+        minimized={progressMinimized}
+        onMinimize={() => setProgressMinimized(true)}
         onOpenChange={(open) => {
-          if (!open) setProgressOperationId(null);
+          // Só chega aqui com `open=false` quando a operação já terminou
+          // (durante o processamento o dialog chama `onMinimize`).
+          if (!open) stopTracking();
         }}
-        onFinished={() => {
-          // Worker terminou — atualiza o board. O toast de status final
-          // já é exibido pelo próprio dialog.
+        onFinished={(opData) => {
+          // Worker terminou — atualiza o board e marca o status para o pill.
+          setProgressDoneStatus(opData.status);
           invalidate();
         }}
       />

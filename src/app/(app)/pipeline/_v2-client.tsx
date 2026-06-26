@@ -70,6 +70,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
+import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import type {
   BoardDealDto,
@@ -275,14 +276,16 @@ export default function KanbanV2ClientPage({
   const requestMove = useCallback(
     (vars: MoveVars) => {
       const target = board.find((s) => s.id === vars.toStageId);
-      if (target?.isLost) {
-        const deal = board
-          .flatMap((s) => s.deals)
-          .find((d) => d.id === vars.dealId);
-        if (deal?.status !== "LOST") {
-          setPendingLostMove(vars);
-          return;
-        }
+      // Entrar no estágio Perdido (vindo de OUTRA etapa) sempre pede o
+      // motivo. Baseamos em `fromStageId !== toStageId` em vez do
+      // `status` do card — esse último fica defasado logo após uma
+      // reabertura otimista (o onMutate move o card mas não atualiza o
+      // status), o que fazia a tabulação ser pulada ou bugar ao mover um
+      // lead reaberto de volta pra Perdido. Reordenar dentro da própria
+      // coluna Perdido (from === to) não dispara o diálogo.
+      if (target?.isLost && vars.fromStageId !== vars.toStageId) {
+        setPendingLostMove(vars);
+        return;
       }
       moveDeal.mutate(vars);
     },
@@ -334,15 +337,21 @@ export default function KanbanV2ClientPage({
     setSelectedIds(new Set());
   }, [pipelineId]);
 
-  // Carrega options de filtro quando o painel é aberto pela primeira vez
+  // Recarrega as options de filtro toda vez que o painel é aberto.
+  // Antes buscava só uma vez (guard `filterOptions !== null`), o que
+  // cacheava listas vazias da org — ex.: motivos de perda criados depois
+  // da primeira abertura nunca apareciam sem dar reload na página.
+  // Mantém as opções anteriores em caso de erro (não pisca pra vazio).
   useEffect(() => {
-    if (!filtersOpen || filterOptions !== null || filterOptionsLoading) return;
+    if (!filtersOpen) return;
+    let cancelled = false;
     setFilterOptionsLoading(true);
     fetchFilterOptions()
-      .then(setFilterOptions)
-      .catch(() => setFilterOptions(null))
-      .finally(() => setFilterOptionsLoading(false));
-  }, [filtersOpen, filterOptions, filterOptionsLoading]);
+      .then((opts) => { if (!cancelled) setFilterOptions(opts); })
+      .catch(() => { /* mantém opções já carregadas */ })
+      .finally(() => { if (!cancelled) setFilterOptionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [filtersOpen]);
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {
@@ -359,11 +368,16 @@ export default function KanbanV2ClientPage({
     const hasOwner = (filters.ownerIds?.length ?? 0) > 0;
     const hasTag = (filters.tagIds?.length ?? 0) > 0;
     const hasStage = (filters.stageIds?.length ?? 0) > 0;
+    const lostReasonSet = (filters.lostReasons?.length ?? 0) > 0
+      ? new Set(filters.lostReasons)
+      : null;
+    const hasLostReason = lostReasonSet !== null;
     const vMin = filters.valueFrom != null ? Number(filters.valueFrom) : null;
     const vMax = filters.valueTo != null ? Number(filters.valueTo) : null;
     const hasValue = vMin !== null || vMax !== null;
 
-    const noFilters = !hasSearch && !hasOwner && !hasTag && !hasStage && !hasValue && isEmptyFilters(filters);
+    const noFilters =
+      !hasSearch && !hasOwner && !hasTag && !hasStage && !hasValue && !hasLostReason && isEmptyFilters(filters);
     // Quando há QUALQUER filtro client-side ativo o `totalCount` que veio
     // do backend (não filtrado) precisa ser sobrescrito pelo número real
     // de deals visíveis — caso contrário o badge da coluna fica preso no
@@ -390,6 +404,9 @@ export default function KanbanV2ClientPage({
                 const val = Number(d.value) || 0;
                 if (vMin !== null && val < vMin) return false;
                 if (vMax !== null && val > vMax) return false;
+              }
+              if (lostReasonSet && !(d.lostReason && lostReasonSet.has(d.lostReason))) {
+                return false;
               }
               return true;
             });
@@ -446,6 +463,31 @@ export default function KanbanV2ClientPage({
     () => toKanbanColumns(stageGrantsFiltered),
     [stageGrantsFiltered],
   );
+
+  // Contexto para "selecionar todos que batem no filtro" na edição em massa.
+  // Permite editar além dos ~100 cards carregados por coluna: o servidor
+  // resolve os IDs a partir do mesmo filtro/visibilidade do board.
+  const scopeContext = useMemo<BulkScopeContext | undefined>(() => {
+    if (!pipelineId) return undefined;
+    const boardForScope = stageGrantsFiltered;
+    const pipelineTotal = boardForScope.reduce(
+      (acc, s) => acc + (s.totalCount ?? s.deals.length),
+      0,
+    );
+    // Habilita o escopo "etapa" só quando TODA a seleção está numa única etapa.
+    let stage: { id: string; name: string; total: number } | null = null;
+    if (selectedIds.size > 0) {
+      const stagesWithSel = boardForScope.filter((s) =>
+        s.deals.some((d) => selectedIds.has(d.id)),
+      );
+      if (stagesWithSel.length === 1) {
+        const s = stagesWithSel[0];
+        stage = { id: s.id, name: s.name, total: s.totalCount ?? s.deals.length };
+      }
+    }
+    const scopeFilters = { ...filters, ...(rawSearch ? { search: rawSearch } : {}) };
+    return { pipelineId, status, filters: scopeFilters, pipelineTotal, stage };
+  }, [pipelineId, stageGrantsFiltered, selectedIds, filters, rawSearch, status]);
 
   // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
   // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
@@ -1011,7 +1053,10 @@ export default function KanbanV2ClientPage({
         onOpenChange={(o) => {
           if (!o) setPendingLostMove(null);
         }}
-        isPending={moveDeal.isPending}
+        // NÃO usar `moveDeal.isPending` aqui: é a mesma mutation usada na
+        // reabertura do lead, então um move anterior ainda em voo deixava o
+        // "Confirmar perda" desabilitado mesmo com o motivo já selecionado.
+        // O diálogo fecha no onConfirm, então não há risco de duplo submit.
         title="Mover para Perdido"
         description="Informe o motivo da perda para concluir a movimentação."
         onConfirm={(reason) => {
@@ -1034,6 +1079,7 @@ export default function KanbanV2ClientPage({
             isLost: s.isLost,
           }))}
           users={teamUsers.map((u) => ({ id: u.id, name: u.name }))}
+          scopeContext={scopeContext}
         />
       ) : null}
 

@@ -286,6 +286,18 @@ export type BulkOperationProgressDialogProps = {
   /** Total de itens esperado (vindo do POST 202). Mostrado enquanto o
    *  backend ainda não preencheu `total` ao iniciar. */
   optimisticTotal?: number;
+  /**
+   * Quando true, o acompanhamento continua ativo (polling segue rodando e
+   * `onFinished` ainda dispara), mas o modal fica oculto — o pai exibe um
+   * pill flutuante para reabrir. Diferente de `operationId=null`, que encerra
+   * o acompanhamento por completo.
+   */
+  minimized?: boolean;
+  /**
+   * Disparado quando o usuário fecha o painel ANTES de terminar. O pai deve
+   * apenas minimizar (manter `operationId`), não zerar o acompanhamento.
+   */
+  onMinimize?: () => void;
 };
 
 /**
@@ -311,8 +323,10 @@ export function BulkOperationProgressDialog({
   title,
   description,
   optimisticTotal,
+  minimized,
+  onMinimize,
 }: BulkOperationProgressDialogProps) {
-  const open = !!operationId;
+  const open = !!operationId && !minimized;
   const { data, error, isLoading } = useBulkOperation(operationId);
 
   const status = data?.status;
@@ -365,8 +379,16 @@ export function BulkOperationProgressDialog({
   }, [operationId]);
 
   const handleOpenChange = (next: boolean) => {
-    if (!next && !isFinished && operationId && data) {
-      // Fechou no meio do processamento — UX-soft: o worker segue.
+    if (!next && !isFinished && operationId) {
+      // Fechou no meio do processamento — minimiza em vez de encerrar: o
+      // worker segue e o pai mostra um pill flutuante para reabrir.
+      if (onMinimize) {
+        toast.message("A operação continua em segundo plano.", {
+          description: `${processed} de ${total} processados até agora.`,
+        });
+        onMinimize();
+        return;
+      }
       toast.message("A operação continua em segundo plano.", {
         description: `${processed} de ${total} processados até agora.`,
       });

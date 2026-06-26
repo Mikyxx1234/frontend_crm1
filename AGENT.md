@@ -5,6 +5,44 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-26 — Edição em massa de campos/tags no pipeline (worker-leads)
+
+**Decisão.** Adicionada a ação "Editar campos…" na `BulkActionsBar` do
+pipeline, que abre o `BulkEditFieldsDialog` e permite atualizar em massa:
+campos (nativos + personalizados) do **Negócio**, campos (nativos +
+personalizados) do **Contato vinculado** e **adicionar tags ao Negócio**.
+Tudo é processado de forma **assíncrona pelo worker-leads** (fila
+`leads-bulk`, job `bulk-update-fields`), com o `BulkOperationProgressDialog`
+já existente fazendo polling.
+
+**Contexto.** Já existia o trio rota `/api/deals/bulk/custom-fields` +
+payload `BulkUpdateFieldsPayload` + job `bulk-update-fields`, mas cobria
+**apenas custom fields de Deal**. Em vez de criar uma fila/rota nova, a
+infra existente foi **estendida de forma aditiva** (campos novos no payload
+são opcionais; o caminho antigo de `updates` segue idêntico). Isso reduz
+superfície de risco e reaproveita progresso/erros-por-item/idempotência já
+testados.
+
+**Alternativas descartadas.**
+- *Plugar na rota `/api/deals/bulk`* (move/won/lost/delete): rejeitado —
+  essa rota é sensível (status terminal, automações, triggers) e o escopo
+  de "editar campos" é ortogonal. Mantida intacta.
+- *Edição síncrona inline*: rejeitado — o usuário pediu explicitamente o
+  worker-leads e operações de N deals × M campos são pesadas (cada deal
+  abre transação própria no upsert).
+- *Bulk-editar campos nativos de Contato com unicidade* (ex.: email):
+  seguro no schema atual (Contact.email/phone **não** são `@unique`), mas
+  erros por-item são capturados em `BulkOperation.errors` sem travar o lote.
+
+**Impacto.** Semântica **skip-empty**: só os campos preenchidos no dialog
+são aplicados (vazio = não altera). Tags são resolvidas/criadas na rota
+(onde há `role` do usuário) e passam ao worker como `tagIds` já resolvidos.
+Gate de permissão: `deal:edit` (base) + `contact:edit` quando há alteração
+de campos de contato. Resolução do contato é por-deal no handler (contatos
+compartilhados recebem o mesmo upsert idempotente).
+
+---
+
 ### 2026-06-24 — Telefonia como widget (`calls_history`)
 
 **Contexto.** A telefonia (página `/calls`, softphone flutuante global,
@@ -1519,5 +1557,44 @@ acumulou melhora (tailwindNativePalette −157, bgWhiteAlpha −8,
 rawRoundedPx −7) sem regressões. Novas modais devem partir do
 `DialogContent`/`SheetContent` base ou replicar o bloco de tokens acima;
 nunca usar `bg-white`/`bg-card`/slate em superfície de modal.
+
+---
+
+### 2026-06-26 - Edição em massa "selecionar todos que batem no filtro" (>100)
+
+**Decisão.** A edição em massa de campos/tags passa a aceitar, além dos IDs
+explícitos selecionados, um `scope` que o **servidor** expande para os IDs
+reais: `POST /api/deals/bulk/custom-fields` aceita
+`scope: { pipelineId, status, filters, stageId? }`. O scope é resolvido por
+`resolveBoardDealIds()` (em `services/deals.ts`), que reaproveita exatamente
+`buildDealWhereFromFilters()` — a mesma engine do `POST /pipelines/:id/board`
+— somando status + visibilidade (MEMBER só vê os próprios) + escopo por
+pipeline (relação `stage.pipelineId`) ou por etapa. Teto rígido de **5000**
+deals por operação (`capped: true` na resposta avisa o frontend). No dialog
+(`BulkEditFieldsDialog`), um seletor de escopo oferece: "apenas selecionados",
+"todos da etapa X" (habilitado só quando toda a seleção está numa única etapa)
+e "todos do funil no filtro atual". `_v2-client` monta o `BulkScopeContext`
+(totais por coluna + etapa da seleção + filtros/busca ativos).
+
+**Contexto.** O board carrega no máximo 100 cards/coluna
+(`DEFAULT_BOARD_COLUMN_LIMIT`), então a seleção via checkbox cobria só os
+carregados — impossível editar mais que ~100. Resolver no servidor evita
+trafegar milhares de IDs e garante que "todos que batem no filtro" = o que o
+usuário vê (mesmo where do board).
+
+**Alternativas descartadas.**
+
+- **Só aumentar o limite da coluna (até 500) e selecionar os carregados.**
+  Paliativo: continua limitado, exige rolar/carregar e não escala.
+- **Resolver os IDs no worker (passar `scope` no payload da fila).** Mais
+  escalável, mas o `BulkOperation.total` não seria conhecido no enqueue e a
+  permissão/visibilidade teria que ser recomputada fora do request — preferiu-se
+  resolver na rota (onde já há sessão + role) e manter o worker recebendo IDs.
+
+**Impacto.** Apenas a edição de campos/tags ganhou scope; as demais ações em
+massa (mover/ganho/perdido/excluir) seguem por IDs explícitos. Reuso total da
+engine de filtro do board (sem duplicar regras). Worker `leads-worker` **não**
+tem auto-reload (`npx tsx` sem `--watch`): após mexer no job é preciso
+reiniciá-lo manualmente.
 
 ---

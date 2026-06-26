@@ -68,6 +68,12 @@ export async function getApi4ComStatus(): Promise<Api4ComStatus> {
   return fetchJson<Api4ComStatus>(`${BASE}/sip-extensions/me/api4com-status`);
 }
 
+export async function disconnectApi4Com(): Promise<{ disconnected: true }> {
+  return fetchJson<{ disconnected: true }>(`${BASE}/sip-extensions/me`, {
+    method: "DELETE",
+  });
+}
+
 export async function createExtension(data: {
   label: string;
   sipUri: string;

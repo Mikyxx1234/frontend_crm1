@@ -8,12 +8,14 @@ import {
   IconCheck,
   IconCopy,
   IconLoader2,
+  IconLogout,
   IconPencil,
   IconPhoneCheck,
 } from "@tabler/icons-react";
 
 import {
   connectApi4Com,
+  disconnectApi4Com,
   getApi4ComStatus,
   type Api4ComStatus,
   type ConnectApi4ComResponse,
@@ -128,11 +130,15 @@ function ConnectedSummary({
   copied,
   onCopy,
   onReconnect,
+  onDisconnect,
+  disconnecting,
 }: {
   status: Api4ComStatus;
   copied: boolean;
   onCopy: (url: string) => void;
   onReconnect: () => void;
+  onDisconnect: () => void;
+  disconnecting: boolean;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -150,15 +156,32 @@ function ConnectedSummary({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onReconnect}
-            className="inline-flex h-7 items-center gap-1 rounded bg-white/10 px-2 text-[11px] font-medium text-white transition hover:bg-white/20"
-            title="Trocar de conta ou re-autenticar"
-          >
-            <IconPencil size={12} />
-            Reconectar
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onReconnect}
+              disabled={disconnecting}
+              className="inline-flex h-7 items-center gap-1 rounded bg-white/10 px-2 text-[11px] font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
+              title="Trocar de conta ou re-autenticar"
+            >
+              <IconPencil size={12} />
+              Reconectar
+            </button>
+            <button
+              type="button"
+              onClick={onDisconnect}
+              disabled={disconnecting}
+              className="inline-flex h-7 items-center gap-1 rounded border border-red-300/30 bg-red-500/10 px-2 text-[11px] font-medium text-red-100 transition hover:bg-red-500/20 disabled:opacity-50"
+              title="Apaga o ramal salvo. Você poderá reconectar depois com outra conta."
+            >
+              {disconnecting ? (
+                <IconLoader2 size={12} className="animate-spin" />
+              ) : (
+                <IconLogout size={12} />
+              )}
+              Desconectar
+            </button>
+          </div>
         </div>
       </div>
 
@@ -203,6 +226,38 @@ export function Api4ComConnectForm() {
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
+  });
+
+  // Desconectar = DELETE /api/sip-extensions/me + reset de caches +
+  // hangup do JsSIP em runtime (sem isso o chip do softphone fica preso
+  // como "Registered" no ramal antigo até o operador dar F5).
+  const disconnectMutation = useMutation({
+    mutationFn: disconnectApi4Com,
+    onSuccess: async () => {
+      // 1. Desliga o UA do JsSIP — sem isso o ramal antigo continua
+      //    registrado e atende ligações.
+      try {
+        softphone.disconnect?.();
+      } catch {
+        /* fail-silent — hook pode não ter o método ainda */
+      }
+      // 2. Limpa cache de credenciais (404 vai começar a aparecer em
+      //    GET /me/credentials, e o SoftphoneWidget para de tentar
+      //    conectar automaticamente).
+      queryClient.removeQueries({ queryKey: ["softphone", "credentials"] });
+      // 3. Atualiza status pra mostrar o form vazio imediatamente.
+      queryClient.setQueryData<Api4ComStatus>(["softphone", "api4com-status"], {
+        connected: false,
+        email: null,
+        ramal: null,
+        domain: null,
+        webhook: { configured: false, webhookUrl: null },
+      });
+      // 4. Limpa o form local pra próximo reconnect começar do zero.
+      setEmail("");
+      setPassword("");
+      setShowForm(false);
+    },
   });
 
   const mutation = useMutation({
@@ -269,12 +324,29 @@ export function Api4ComConnectForm() {
 
   if (showConnectedView) {
     return (
-      <ConnectedSummary
-        status={status}
-        copied={copied}
-        onCopy={copyUrl}
-        onReconnect={() => setShowForm(true)}
-      />
+      <div className="flex flex-col gap-2">
+        <ConnectedSummary
+          status={status}
+          copied={copied}
+          onCopy={copyUrl}
+          onReconnect={() => setShowForm(true)}
+          onDisconnect={() => {
+            if (
+              window.confirm(
+                "Desconectar sua conta Api4Com?\n\nO ramal salvo será apagado e você precisará informar e-mail + senha de novo pra usar telefonia. Chamadas em andamento serão encerradas.",
+              )
+            ) {
+              disconnectMutation.mutate();
+            }
+          }}
+          disconnecting={disconnectMutation.isPending}
+        />
+        {disconnectMutation.isError && (
+          <p className="text-xs text-red-400">
+            {(disconnectMutation.error as Error)?.message ?? "Falha ao desconectar"}
+          </p>
+        )}
+      </div>
     );
   }
 
@@ -297,7 +369,7 @@ export function Api4ComConnectForm() {
         placeholder="E-mail Api4Com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
+        className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
       />
 
       <input
@@ -305,7 +377,7 @@ export function Api4ComConnectForm() {
         placeholder="Senha Api4Com"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
+        className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
       />
 
       {mutation.isError && (
@@ -322,7 +394,7 @@ export function Api4ComConnectForm() {
         <button
           type="submit"
           disabled={!email || !password || mutation.isPending}
-          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-4 text-sm font-medium text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
         >
           {mutation.isPending ? (
             <IconLoader2 size={14} className="animate-spin" />

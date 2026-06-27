@@ -4,7 +4,8 @@ import { useCallback, useState } from "react";
 import { useSoftphone } from "./use-softphone";
 
 interface UseDealDialOptions {
-  dealId: string;
+  /** Opcional: ligações do inbox podem ter só contato, sem negócio. */
+  dealId?: string | null;
   phone: string | null;
   contactId?: string;
 }
@@ -29,7 +30,7 @@ export function useDealDial({ dealId, phone, contactId }: UseDealDialOptions) {
       if (softphone.status !== "registered") {
         await softphone.connect();
       }
-      softphone.dial(phone, { dealId, contactId });
+      softphone.dial(phone, { dealId: dealId ?? undefined, contactId });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao discar");
     } finally {

@@ -6,7 +6,8 @@ import { useDealDial } from "../hooks/use-deal-dial";
 import { useCallsWidget } from "../hooks/use-calls-widget";
 
 interface DealCallButtonProps {
-  dealId: string;
+  /** Opcional: no inbox a ligação pode ter só contato, sem negócio. */
+  dealId?: string | null;
   phone: string | null;
   contactId?: string;
 }

@@ -5,6 +5,30 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-26 — Aviso de ligação no chat + botão de ligar no inbox
+
+**Decisão.**
+1. **Render `messageType: "sip_call"`** no `MessageBubble` como linha
+   centralizada (ícone recebida/realizada/não-atendida + texto + hora). Como
+   inbox (`ChatArea`) e pipeline (`deal-chat-binding`) usam o mesmo
+   `MessageBubble`, uma única branch cobre os dois. `toMessageBubble` já
+   repassa `messageType`.
+2. **Botão de ligar no inbox**: `DealCallButton`/`useDealDial` passaram a
+   aceitar `dealId` opcional; o botão entra no `headerActionsSlot` do
+   `ChatArea` (ao lado do `ConversationActionsMenu`) usando telefone/contato
+   da conversa. Continua atrás do gate `useCallsWidget`.
+
+**Contexto.** Ligações não apareciam na conversa e o inbox não tinha como
+discar (só o pipeline tinha `DealCallButton`).
+
+**Alternativas descartadas.**
+- *Botão na phone-row do `ContactAside`*: o `headerActionsNode` do aside nem
+  era renderizado; o header do chat é o lugar natural e já visível.
+
+**Impacto.** Aditivo. O backend cria a `Message` `sip_call` via webhook.
+
+---
+
 ### 2026-06-26 — Enviar produto em automação, produto no negócio e registro/gatilho de ligações
 
 **Decisão.** Quatro frentes entregues num ciclo só:

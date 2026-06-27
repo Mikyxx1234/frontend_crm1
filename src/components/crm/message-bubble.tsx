@@ -27,6 +27,9 @@ import {
   IconPinFilled,
   IconListCheck,
   IconArrowsExchange,
+  IconPhoneIncoming,
+  IconPhoneOutgoing,
+  IconPhoneOff,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -728,6 +731,36 @@ export function MessageBubble({
 
   if (hasForm) {
     return <FormBubble message={message} className={className} />
+  }
+
+  // Aviso de ligação (SIP/Api4com): linha centralizada com ícone — distingue
+  // recebida/realizada/não-atendida. Renderizado igual no inbox e no pipeline
+  // (ambos usam MessageBubble).
+  if (message.messageType === "sip_call") {
+    const inbound = message.type === "incoming"
+    const missed = /n[ãa]o atendida/i.test(message.content)
+    return (
+      <div className={cn("flex w-full items-center justify-center py-1", className)}>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[11px] font-semibold",
+            missed
+              ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/8 text-[var(--color-danger)]"
+              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+          )}
+        >
+          {missed ? (
+            <IconPhoneOff size={12} />
+          ) : inbound ? (
+            <IconPhoneIncoming size={12} />
+          ) : (
+            <IconPhoneOutgoing size={12} />
+          )}
+          <span>{message.content}</span>
+          <span className="text-[var(--text-muted)]">· {message.time}</span>
+        </span>
+      </div>
+    )
   }
 
   // Nota interna: barra horizontal full-width com gradiente âmbar.

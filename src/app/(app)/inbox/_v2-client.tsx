@@ -53,6 +53,7 @@ import {
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import {
   DealActivitiesTab,
   DealNotesTab,
@@ -491,10 +492,17 @@ export default function InboxV2ClientPage({
         connections={messagesData?.channels}
         onUseTemplate={() => setTemplateOpen(true)}
         headerActionsSlot={
-          <ConversationActionsMenu
-            conversationId={activeId}
-            isResolved={activeRow.status === "RESOLVED"}
-          />
+          <>
+            <DealCallButton
+              dealId={firstDealId}
+              phone={chatContact.phone || null}
+              contactId={activeContactId ?? undefined}
+            />
+            <ConversationActionsMenu
+              conversationId={activeId}
+              isResolved={activeRow.status === "RESOLVED"}
+            />
+          </>
         }
         composerSlot={
           <Composer

@@ -68,6 +68,9 @@ import {
 } from "@/features/pipeline-v2/hooks";
 import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { updateDeal } from "@/features/pipeline-v2/api";
+import { createContact } from "@/features/directory-v2/api";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
@@ -561,6 +564,34 @@ export default function KanbanV2ClientPage({
     };
   }, [dealDetail, activeDealStageName]);
 
+  // Negócio SEM contato vinculado: cria um contato com o telefone/email
+  // digitado e vincula ao deal (o painel chama isso via customSave do
+  // editor inline). Lança o erro de volta pro editor não fechar em falha.
+  const handleCreateContactForField = useCallback(
+    async (field: "phone" | "email", value: string) => {
+      if (!activeDealId) return;
+      const v = value.trim();
+      if (!v) return;
+      try {
+        const name =
+          dealDetail?.title?.trim() || (field === "email" ? "Novo contato" : v);
+        const contact = await createContact({
+          name,
+          ...(field === "phone" ? { phone: v } : { email: v }),
+        });
+        await updateDeal(activeDealId, { contactId: contact.id });
+        queryClient.invalidateQueries({ queryKey: dealDetailKey(activeDealId) });
+        queryClient.invalidateQueries({ queryKey: ["pipeline-board"], exact: false });
+        queryClient.invalidateQueries({ queryKey: ["contact-sidebar", contact.id] });
+        toast.success("Contato criado e vinculado ao negócio.");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Erro ao criar contato.");
+        throw e;
+      }
+    },
+    [activeDealId, dealDetail?.title, queryClient],
+  );
+
   // ── Conversa real ligada ao deal ────────────────────────────────
   // Pega a conversa mais recente do contato (o backend ja ordena por
   // updatedAt desc em getDealById). Quando o deal nao tem contato
@@ -981,6 +1012,7 @@ export default function KanbanV2ClientPage({
         productsSlot={
           activeDealId ? <DealProductsSection dealId={activeDealId} compact /> : null
         }
+        onCreateContactForField={handleCreateContactForField}
         tagsSlot={
           activeDealId ? (() => {
             const allTags = dealDetail?.tags ?? [];

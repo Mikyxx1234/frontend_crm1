@@ -32,6 +32,12 @@ export interface InlineNativeEditorProps {
   formatDisplay?: (raw: string) => string;
   /** Quando true, o ícone ✏ fica sempre visível (seção em modo edição ativo) */
   editMode?: boolean;
+  /**
+   * Override da persistência. Quando fornecido, é chamado no lugar do
+   * PUT nativo (ex.: negócio sem contato vinculado → criar contato + linkar
+   * ao deal). Recebe o valor já com trim aplicado.
+   */
+  customSave?: (trimmedValue: string) => Promise<void>;
 }
 
 async function putNativeField(
@@ -76,6 +82,7 @@ export function InlineNativeEditor({
   placeholder = "Adicionar",
   formatDisplay,
   editMode = false,
+  customSave,
 }: InlineNativeEditorProps) {
   const qc = useQueryClient();
   const [editing, setEditing] = React.useState(false);
@@ -112,7 +119,11 @@ export function InlineNativeEditor({
     }
     setSaving(true);
     try {
-      await putNativeField(entityType, entityId, fieldKey, trimmed);
+      if (customSave) {
+        await customSave(trimmed);
+      } else {
+        await putNativeField(entityType, entityId, fieldKey, trimmed);
+      }
       onSaved?.(trimmed);
       if (invalidateKeys) {
         for (const key of invalidateKeys) {

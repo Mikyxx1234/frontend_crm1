@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { SipCredentials } from "../api/types";
 import { getMyCredentials } from "../api/extensions";
 
@@ -31,6 +32,19 @@ let moduleAudio: HTMLAudioElement | null = null;
 let moduleCredentials: SipCredentials | null = null;
 let modulePendingApi4ComDial = false;
 let moduleSyncTimer: ReturnType<typeof setTimeout> | null = null;
+// Watchdog do fluxo Api4com: após o dial(), a Api4com tem que originar a
+// chamada SIP de volta pro ramal. Se isso não acontece em DIAL_WATCHDOG_MS
+// (gateway/ramal/conta mal configurados), o estado fica preso em "chamando"
+// pra sempre. O watchdog reverte pra "registered" com erro visível.
+let moduleDialWatchdog: ReturnType<typeof setTimeout> | null = null;
+const DIAL_WATCHDOG_MS = 40_000;
+
+function clearDialWatchdog() {
+  if (moduleDialWatchdog) {
+    clearTimeout(moduleDialWatchdog);
+    moduleDialWatchdog = null;
+  }
+}
 
 if (typeof window !== "undefined" && !moduleAudio) {
   moduleAudio = new Audio();
@@ -127,6 +141,8 @@ export function useSoftphone() {
       });
 
       ua.on("newRTCSession", (data: { session: unknown; originator: string }) => {
+        // Chegou uma sessão SIP — o /dialer funcionou, cancela o watchdog.
+        clearDialWatchdog();
         const session = data.session as {
           direction: string;
           remote_identity?: { uri?: { user?: string } };
@@ -237,6 +253,7 @@ export function useSoftphone() {
   const cleanup = useCallback(() => {
     moduleSession = null;
     moduleInSession = null;
+    clearDialWatchdog();
     stopTimer();
     setState((s) => ({
       ...s,
@@ -259,10 +276,8 @@ export function useSoftphone() {
     setState((s) => ({ ...s, status: "disconnected" }));
   }, [cleanup]);
 
-  const dial = useCallback(
+  const startOutboundDial = useCallback(
     (number: string, ctx?: { dealId?: string; contactId?: string }) => {
-      if (!moduleUA || !moduleCredentials) return;
-
       modulePendingApi4ComDial = true;
 
       // UX: anuncia o estado outbound IMEDIATAMENTE. Sem isso, a UI fica
@@ -278,9 +293,31 @@ export function useSoftphone() {
         error: null,
       }));
 
+      // Watchdog: se a Api4com não originar a sessão SIP de volta a tempo,
+      // destrava a UI em vez de ficar preso em "chamando".
+      clearDialWatchdog();
+      moduleDialWatchdog = setTimeout(() => {
+        moduleDialWatchdog = null;
+        if (moduleSession || moduleInSession) return;
+        modulePendingApi4ComDial = false;
+        setState((s) =>
+          s.status === "call_ringing" && s.callDirection === "outbound"
+            ? {
+                ...s,
+                status: moduleUA ? "registered" : "disconnected",
+                callDirection: null,
+                remoteNumber: null,
+                error:
+                  "A chamada não foi completada — o provedor não retornou a ligação. Verifique a configuração da Api4com (ramal/gateway).",
+              }
+            : s,
+        );
+      }, DIAL_WATCHDOG_MS);
+
       import("../api/extensions").then(({ dialApi4Com }) => {
         dialApi4Com(number, ctx).catch((e) => {
           modulePendingApi4ComDial = false;
+          clearDialWatchdog();
           // Reverte o estado "discando" e mostra erro pro usuário.
           setState((s) => ({
             ...s,
@@ -293,6 +330,46 @@ export function useSoftphone() {
       });
     },
     [],
+  );
+
+  const dial = useCallback(
+    (number: string, ctx?: { dealId?: string; contactId?: string }) => {
+      if (!moduleUA || !moduleCredentials) return;
+
+      // Pré-checa o microfone ANTES de discar. Sem mic, a Api4com origina a
+      // sessão SIP mas o getUserMedia do answer falha — a chamada nunca
+      // completa e (antes) o botão ficava preso sem explicação. Aqui
+      // detectamos a ausência/bloqueio e avisamos o usuário na tela.
+      void (async () => {
+        try {
+          const md = navigator.mediaDevices;
+          if (!md?.getUserMedia) {
+            throw Object.assign(new Error("no-media-api"), { name: "NotSupportedError" });
+          }
+          const stream = await md.getUserMedia({ audio: true });
+          stream.getTracks().forEach((t) => t.stop());
+        } catch (err) {
+          const name = (err as { name?: string })?.name ?? "";
+          const msg =
+            name === "NotFoundError" || name === "DevicesNotFoundError"
+              ? "Nenhum microfone encontrado. Conecte um microfone para ligar."
+              : name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError"
+                ? "Acesso ao microfone bloqueado. Permita o microfone no navegador para ligar."
+                : "Não foi possível acessar o microfone. Verifique se há um microfone conectado.";
+          setState((s) => ({
+            ...s,
+            status: moduleUA ? "registered" : "disconnected",
+            callDirection: null,
+            remoteNumber: null,
+            error: msg,
+          }));
+          toast.error(msg);
+          return;
+        }
+        startOutboundDial(number, ctx);
+      })();
+    },
+    [startOutboundDial],
   );
 
   const answer = useCallback(() => {

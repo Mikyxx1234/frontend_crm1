@@ -146,6 +146,12 @@ interface DealDetailPanelProps {
    */
   productsSlot?: React.ReactNode
   /**
+   * Callback para negócio SEM contato vinculado: ao inserir telefone/email
+   * nos "Dados de contato", cria um contato novo e vincula ao deal.
+   * Quando ausente, os campos ficam só-leitura (comportamento legado).
+   */
+  onCreateContactForField?: (field: "phone" | "email", value: string) => Promise<void>
+  /**
    * Painel de configuração de campos (FieldConfigPanel).
    * Quando fornecido, exibe um botão de engrenagem na sidebar que
    * alterna para o modo de configuração. Visível apenas para admin/manager.
@@ -203,6 +209,7 @@ export function DealDetailPanel({
   sourceSlot,
   tagsSlot,
   productsSlot,
+  onCreateContactForField,
   messagesSlot,
   composerSlot,
   sessionAlertSlot,
@@ -454,8 +461,7 @@ export function DealDetailPanel({
                     : deal.number != null
                       ? `#${deal.number}`
                       : `#${deal.id.slice(-6).toUpperCase()}`}
-                  {" · "}
-                  {deal.phone || "+55 11 98702-3902"}
+                  {deal.phone ? ` · ${deal.phone}` : ""}
                 </span>
                 {connection && (
                   <TooltipGlass
@@ -686,6 +692,18 @@ export function DealDetailPanel({
                                               onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))}
                                               textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
                                             />
+                                          ) : onCreateContactForField ? (
+                                            <InlineNativeEditor
+                                              value={dealNative["phone"] ?? deal.phone}
+                                              entityType="deal"
+                                              entityId={deal.id}
+                                              fieldKey="phone"
+                                              inputType="tel"
+                                              placeholder="Adicionar telefone"
+                                              customSave={(v) => onCreateContactForField("phone", v)}
+                                              onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))}
+                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                            />
                                           ) : (
                                             <a
                                               href={deal.phone ? `tel:${deal.phone}` : undefined}
@@ -709,6 +727,18 @@ export function DealDetailPanel({
                                               inputType="email"
                                               placeholder="Adicionar e-mail"
                                               invalidateKeys={[["contact-sidebar", deal.contactId]]}
+                                              onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))}
+                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                            />
+                                          ) : onCreateContactForField ? (
+                                            <InlineNativeEditor
+                                              value={dealNative["email"] ?? (deal.email ?? undefined)}
+                                              entityType="deal"
+                                              entityId={deal.id}
+                                              fieldKey="email"
+                                              inputType="email"
+                                              placeholder="Adicionar e-mail"
+                                              customSave={(v) => onCreateContactForField("email", v)}
                                               onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))}
                                               textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
                                             />

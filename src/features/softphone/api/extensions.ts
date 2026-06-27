@@ -100,6 +100,15 @@ export async function dialApi4Com(phone: string, ctx?: DialApi4ComContext) {
   );
 }
 
+export async function syncCalls(): Promise<{
+  ok: boolean;
+  created: number;
+  updated: number;
+  reason?: string;
+}> {
+  return fetchJson(`${BASE}/calls/sync`, { method: "POST" });
+}
+
 export async function listCalls(filters: ListCallsFilters = {}): Promise<ListCallsResponse> {
   const params = new URLSearchParams();
   if (filters.extensionId) params.set("extensionId", filters.extensionId);

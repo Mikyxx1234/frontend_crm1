@@ -116,6 +116,100 @@ function VariableShortcutHint() {
   );
 }
 
+type ProductOption = { id: string; name: string; sku?: string | null; price?: number };
+
+/**
+ * Seletor de produto do catálogo (busca server-side em /api/products).
+ * Usado pelo passo "Enviar produto". Mantém o nome selecionado no draft
+ * pra exibir o rótulo mesmo antes de a busca retornar.
+ */
+function ProductPicker({
+  value,
+  valueName,
+  onChange,
+}: {
+  value: string;
+  valueName: string;
+  onChange: (id: string, name: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+
+  const productsQuery = useQuery({
+    queryKey: ["products-for-automation", search],
+    staleTime: 30_000,
+    queryFn: async () => {
+      const qs = new URLSearchParams({ perPage: "20", active: "true" });
+      if (search.trim()) qs.set("search", search.trim());
+      const res = await fetch(apiUrl(`/api/products?${qs.toString()}`));
+      if (!res.ok) return [] as ProductOption[];
+      const data = await res.json();
+      const list = Array.isArray(data?.products) ? data.products : [];
+      return list.map((p: Record<string, unknown>) => ({
+        id: String(p.id),
+        name: String(p.name ?? ""),
+        sku: (p.sku as string | null) ?? null,
+        price: typeof p.price === "number" ? p.price : Number(p.price ?? 0),
+      })) as ProductOption[];
+    },
+  });
+
+  const options = productsQuery.data ?? [];
+
+  return (
+    <div className="space-y-2">
+      {value ? (
+        <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
+          <span className="text-[13px] font-medium">
+            {valueName || "Produto selecionado"}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-[12px]"
+            onClick={() => onChange("", "")}
+          >
+            Trocar
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar produto pelo nome ou SKU…"
+          />
+          <div className="max-h-48 overflow-auto rounded-md border border-border">
+            {productsQuery.isLoading ? (
+              <p className="px-3 py-2 text-[12px] text-muted-foreground">Carregando…</p>
+            ) : options.length === 0 ? (
+              <p className="px-3 py-2 text-[12px] text-muted-foreground">
+                Nenhum produto encontrado.
+              </p>
+            ) : (
+              options.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onChange(p.id, p.name)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] hover:bg-muted"
+                >
+                  <span className="truncate">{p.name}</span>
+                  {p.sku ? (
+                    <span className="ml-2 shrink-0 text-[11px] text-muted-foreground">
+                      {p.sku}
+                    </span>
+                  ) : null}
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 type VariableShortcutTextareaProps = {
   id: string;
   value: string;
@@ -232,6 +326,7 @@ function VariableShortcutTextarea({
 const MESSAGING_STEP_TYPES = new Set([
   "send_whatsapp_message",
   "send_whatsapp_interactive",
+  "send_product",
   "question",
 ]);
 
@@ -260,7 +355,20 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
   });
 
   const variableShortcutOptions = useMemo<VariableShortcutOption[]>(() => {
-    const out: VariableShortcutOption[] = [
+    const out: VariableShortcutOption[] = [];
+
+    // Variáveis do produto — só fazem sentido no passo "Enviar produto".
+    if (step?.type === "send_product") {
+      out.push(
+        { label: "Nome do produto", token: "{{produto.nome}}" },
+        { label: "Preço do produto", token: "{{produto.preco}}", hint: "Formatado em R$" },
+        { label: "SKU do produto", token: "{{produto.sku}}" },
+        { label: "Descrição do produto", token: "{{produto.descricao}}" },
+        { label: "Unidade do produto", token: "{{produto.unidade}}" },
+      );
+    }
+
+    out.push(
       // Dados do contato
       { label: "Nome do contato", token: "{{contact.name}}" },
       { label: "Primeiro nome do contato", token: "{{contact.name|first_name}}", hint: "Filtra só o primeiro nome" },
@@ -280,7 +388,7 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
         token: "{{lastResponse|first_name}}",
         hint: "Aplica filtro de primeiro nome",
       },
-    ];
+    );
 
     // Custom fields do contato
     for (const cf of customFieldsShortcutQuery.data?.contacts ?? []) {
@@ -317,7 +425,7 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
       });
     }
     return out;
-  }, [declaredVariables, customFieldsShortcutQuery.data]);
+  }, [declaredVariables, customFieldsShortcutQuery.data, step?.type]);
 
   const pipelinesQuery = useQuery({
     queryKey: ["pipelines-for-steps"],
@@ -866,6 +974,38 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
 
           {step.type === "send_whatsapp_media" && (
             <MediaStepConfig draft={draft} setDraft={setDraft} />
+          )}
+
+          {step.type === "send_product" && (
+            <>
+              <div className="space-y-2">
+                <Label>Produto</Label>
+                <ProductPicker
+                  value={String(draft.productId ?? "")}
+                  valueName={String(draft.productName ?? "")}
+                  onChange={(id, name) =>
+                    setDraft((d) => ({ ...d, productId: id, productName: name }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sc-prod-msg">Mensagem (opcional)</Label>
+                <VariableShortcutTextarea
+                  id="sc-prod-msg"
+                  rows={4}
+                  value={String(draft.content ?? "")}
+                  onChange={(next) => setDraft((d) => ({ ...d, content: next }))}
+                  placeholder="Ex.: Olá! Separei este produto pra você: {{produto.nome}} por {{produto.preco}}."
+                  options={variableShortcutOptions}
+                />
+                <VariableShortcutHint />
+                <p className="text-[11px] text-muted-foreground">
+                  Use as variáveis do produto (<code>{"{{produto.nome}}"}</code>,{" "}
+                  <code>{"{{produto.preco}}"}</code>, …). Se deixar vazio, enviamos um
+                  resumo padrão com nome, descrição e valor.
+                </p>
+              </div>
+            </>
           )}
 
           {step.type === "send_whatsapp_interactive" && (() => {

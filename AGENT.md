@@ -5,6 +5,37 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-26 — Enviar produto em automação, produto no negócio e registro/gatilho de ligações
+
+**Decisão.** Quatro frentes entregues num ciclo só:
+1. **Ação `send_product`** no builder de automações (catálogo em
+   `lib/automation-workflow.ts`, ícone/grupo em `add-step-node.tsx`,
+   painel em `step-config-panel.tsx` com `ProductPicker` + textarea de
+   variáveis `{{produto.*}}`, item na `node-palette.tsx`).
+2. **Adicionar produto ao negócio** reusando o `DealProductsSection`
+   existente: no pipeline via novo slot `productsSlot` do `DealDetailPanel`
+   e no inbox dentro do `DealInline` do `ContactAside`.
+3. **Registro de ligações** via botão/auto **Sincronizar** na página
+   `/calls` (`POST /api/calls/sync`) + sync best-effort ~8s após o término
+   de uma ligação no `useSoftphone`.
+4. **Gatilhos `call_received`/`call_made`** expostos no
+   `trigger-config-fields.tsx` (filtro atendida/não atendida).
+
+**Contexto.** `send_product` espelha `send_whatsapp_message` (texto
+interpolado, sem card de catálogo Meta). O `DealProductsSection` já batia
+nas APIs de line items prontas — evitou duplicar UI. O registro de chamadas
+estava 100% dependente do webhook Api4com (frágil); o sync puxa o CDR
+oficial (`GET /calls`) e reconcilia.
+
+**Alternativas descartadas.**
+- *Nova UI de produtos no v2*: rejeitado — reusar `DealProductsSection`.
+- *Card de catálogo WhatsApp no send_product*: adiado — exige catálogo Meta.
+
+**Impacto.** Aditivo. Builder ganha 1 ação + 2 gatilhos; pipeline/inbox
+ganham seção de produtos; `/calls` passa a popular mesmo sem webhook.
+
+---
+
 ### 2026-06-26 — Edição em massa de campos/tags no pipeline (worker-leads)
 
 **Decisão.** Adicionada a ação "Editar campos…" na `BulkActionsBar` do

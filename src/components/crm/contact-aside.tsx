@@ -28,6 +28,7 @@ import {
 import { resolveHighlight, SEVERITY_COLORS, type HighlightSeverity } from "@/lib/highlight"
 import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
+import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar"
 import { useSectionOrder } from "@/hooks/use-section-order"
 
 // ─────────────────────────────────────────────────────────────────
@@ -392,6 +393,11 @@ function DealInline({
           </div>
         </div>
       )}
+
+      {/* Produtos do negócio (line items) — adicionar/editar/remover. */}
+      <div className="px-5 pb-4">
+        <DealProductsSection dealId={deal.id} compact />
+      </div>
     </div>
   )
 }

@@ -38,6 +38,7 @@ import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
+import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
@@ -976,6 +977,9 @@ export default function KanbanV2ClientPage({
                 ),
               }
             : undefined
+        }
+        productsSlot={
+          activeDealId ? <DealProductsSection dealId={activeDealId} compact /> : null
         }
         tagsSlot={
           activeDealId ? (() => {

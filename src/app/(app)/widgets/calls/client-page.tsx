@@ -15,10 +15,12 @@
  * telefonia, sem precisar mexer em mais nada.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { IconPhone, IconSettings } from "@tabler/icons-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { IconPhone, IconRefresh, IconSettings } from "@tabler/icons-react";
+import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
@@ -26,6 +28,7 @@ import { PageFilterBar } from "@/components/crm/page-toolbar";
 import { CallHistoryFilters } from "@/features/softphone/components/call-history-filters";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
+import { syncCalls } from "@/features/softphone/api/extensions";
 import type { ListCallsFilters } from "@/features/softphone/api/types";
 
 const DEFAULT_FILTERS: ListCallsFilters = { page: 1, perPage: 25 };
@@ -40,6 +43,36 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
   const callsWidget = useCallsWidget(isAuthenticated);
 
   const [filters, setFilters] = useState<ListCallsFilters>(DEFAULT_FILTERS);
+  const queryClient = useQueryClient();
+  const autoSyncedRef = useRef(false);
+
+  const syncMutation = useMutation({
+    mutationFn: syncCalls,
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["calls"] });
+      if (res?.reason === "no_api4com_token") {
+        // Sem conta Api4com conectada — silencioso (a UI de settings cobre isso).
+        return;
+      }
+      const total = (res?.created ?? 0) + (res?.updated ?? 0);
+      if (total > 0) {
+        toast.success(
+          `Chamadas sincronizadas (${res.created} nova(s), ${res.updated} atualizada(s)).`,
+        );
+      }
+    },
+    onError: () => {
+      toast.error("Não foi possível sincronizar as chamadas agora.");
+    },
+  });
+
+  // Sync automático ao abrir a página (uma vez, quando o widget está ativo).
+  useEffect(() => {
+    if (callsWidget.enabled === true && !autoSyncedRef.current) {
+      autoSyncedRef.current = true;
+      syncMutation.mutate();
+    }
+  }, [callsWidget.enabled, syncMutation]);
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
@@ -51,14 +84,29 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
           title="Chamadas"
           description="Histórico de chamadas recebidas, realizadas e perdidas."
           actions={
-            <Link
-              href="/settings/softphone"
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-2 font-display text-[13px] font-medium text-[var(--text-primary)] transition-all hover:-translate-y-px hover:bg-[var(--glass-bg-strong)]"
-              title="Abrir configurações do softphone (provedor, ramal, webhook)"
-            >
-              <IconSettings size={16} />
-              Configurações
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-2 font-display text-[13px] font-medium text-[var(--text-primary)] transition-all hover:-translate-y-px hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
+                title="Sincronizar chamadas com a Api4com"
+              >
+                <IconRefresh
+                  size={16}
+                  className={syncMutation.isPending ? "animate-spin" : undefined}
+                />
+                {syncMutation.isPending ? "Sincronizando…" : "Sincronizar"}
+              </button>
+              <Link
+                href="/settings/softphone"
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-2 font-display text-[13px] font-medium text-[var(--text-primary)] transition-all hover:-translate-y-px hover:bg-[var(--glass-bg-strong)]"
+                title="Abrir configurações do softphone (provedor, ramal, webhook)"
+              >
+                <IconSettings size={16} />
+                Configurações
+              </Link>
+            </div>
           }
         />
 

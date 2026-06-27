@@ -140,6 +140,12 @@ interface DealDetailPanelProps {
     highlight?: { severity: string; label: string } | null;
   }[]
   /**
+   * Seção de produtos do negócio (line items). Renderizada no fim da
+   * sidebar, abaixo das seções reordenáveis. Permite adicionar/editar/
+   * remover produtos vinculados ao deal.
+   */
+  productsSlot?: React.ReactNode
+  /**
    * Painel de configuração de campos (FieldConfigPanel).
    * Quando fornecido, exibe um botão de engrenagem na sidebar que
    * alterna para o modo de configuração. Visível apenas para admin/manager.
@@ -196,6 +202,7 @@ export function DealDetailPanel({
   ownerSlot,
   sourceSlot,
   tagsSlot,
+  productsSlot,
   messagesSlot,
   composerSlot,
   sessionAlertSlot,
@@ -798,6 +805,8 @@ export function DealDetailPanel({
                   </Droppable>
                 </DragDropContext>
               )}
+
+              {productsSlot && <div className="mt-5">{productsSlot}</div>}
             </div>
           </aside>
 

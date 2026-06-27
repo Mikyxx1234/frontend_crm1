@@ -30,10 +30,25 @@ let moduleInSession: unknown = null;
 let moduleAudio: HTMLAudioElement | null = null;
 let moduleCredentials: SipCredentials | null = null;
 let modulePendingApi4ComDial = false;
+let moduleSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 if (typeof window !== "undefined" && !moduleAudio) {
   moduleAudio = new Audio();
   moduleAudio.autoplay = true;
+}
+
+/**
+ * Após o término de uma ligação, o CDR da Api4com leva alguns segundos pra
+ * consolidar. Disparamos um sync best-effort (sem bloquear a UI) pra que a
+ * chamada apareça em /calls mesmo quando o webhook não está configurado.
+ */
+function scheduleApi4ComCallSync() {
+  if (moduleSyncTimer) clearTimeout(moduleSyncTimer);
+  moduleSyncTimer = setTimeout(() => {
+    import("../api/extensions").then(({ syncCalls }) => {
+      syncCalls().catch(() => {});
+    });
+  }, 8000);
 }
 
 if (typeof window !== "undefined") {
@@ -199,10 +214,12 @@ export function useSoftphone() {
 
         session.on("ended", () => {
           cleanup();
+          scheduleApi4ComCallSync();
         });
 
         session.on("failed", () => {
           cleanup();
+          scheduleApi4ComCallSync();
         });
       });
 

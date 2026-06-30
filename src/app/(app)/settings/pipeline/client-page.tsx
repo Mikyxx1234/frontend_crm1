@@ -48,6 +48,54 @@ const STAGE_TRIGGER_LABELS: Record<string, string> = {
   DEAL_LOST: "Quando negócio for perdido",
 };
 
+// Vocabulário do backend (AutomationTriggerType) → label exibido no card do
+// estágio. O backend modela a relação automação ↔ estágio dentro de
+// `triggerConfig` JSON (sem FK no Prisma), então a filtragem por estágio
+// também acontece aqui no client.
+const BACKEND_TRIGGER_LABELS: Record<string, string> = {
+  deal_created: "Quando criado nesta etapa",
+  stage_changed: "Quando entra nesta etapa",
+  deal_won: "Quando negócio for ganho",
+  deal_lost: "Quando negócio for perdido",
+  message_received: "Quando mensagem for recebida",
+  manual: "Execução manual",
+};
+
+/**
+ * Lê `triggerConfig` (JSON) e diz se a automação está vinculada ao estágio
+ * do pipeline em questão. Espelha a convenção usada no editor antigo
+ * (`components/pipeline/funnel-automations.tsx`) — ver investigação em
+ * 39521bd5-3e91-4916-8a54-7b76693baa7e.
+ */
+function isAutomationForStage(
+  cfg: Record<string, unknown> | null | undefined,
+  triggerType: string,
+  pipelineId: string,
+  stageId: string,
+): boolean {
+  if (!cfg) return false;
+  const cfgPipeline = typeof cfg.pipelineId === "string" ? cfg.pipelineId : undefined;
+  if (cfgPipeline && cfgPipeline !== pipelineId) return false;
+  if (cfg.stageId === stageId) return true;
+  if (triggerType === "stage_changed" && cfg.toStageId === stageId) return true;
+  return false;
+}
+
+function labelForBackendTrigger(
+  triggerType: string,
+  cfg: Record<string, unknown> | null | undefined,
+  stageId: string,
+): string {
+  if (
+    triggerType === "stage_changed" &&
+    cfg?.fromStageId === stageId &&
+    cfg?.toStageId !== stageId
+  ) {
+    return "Quando sair desta etapa";
+  }
+  return BACKEND_TRIGGER_LABELS[triggerType] ?? triggerType;
+}
+
 const COLOR_PALETTE = [
   { label: "Azul", value: "#5B6FF5" },
   { label: "Roxo", value: "#8B5CF6" },
@@ -1112,8 +1160,10 @@ export default function PipelineSettingsClientPage() {
   // Modal de nova etapa
   const [addStageOpen, setAddStageOpen] = useState(false);
 
-  // Automações do backend para look-up
-  const { data: automationsData } = useAutomations({ perPage: 200, enabled: isAuthenticated });
+  // Automações do backend para look-up e hidratação da lista por estágio.
+  // perPage usa o máximo aceito pelo backend (100). Orgs com >100 automações
+  // precisariam de paginação adicional; fora do escopo do bugfix atual.
+  const { data: automationsData } = useAutomations({ perPage: 100, enabled: isAuthenticated });
 
   useEffect(() => {
     if (!pipelineId && pipelines?.length) {
@@ -1156,6 +1206,35 @@ export default function PipelineSettingsClientPage() {
       setStageColorOverrides({});
     }
   }, [board]);
+
+  // Hidrata as automações por estágio a partir do GET /api/automations.
+  // O backend não tem FK Automação→Stage; o vínculo vive em
+  // `triggerConfig.{pipelineId,stageId,toStageId,fromStageId}` (ver
+  // `services/automation-executor.ts` no backend e a investigação em
+  // 39521bd5-3e91-4916-8a54-7b76693baa7e).
+  useEffect(() => {
+    if (!pipelineId || !automationsData?.items || board.length === 0) {
+      return;
+    }
+    const map: Record<string, Automation[]> = {};
+    for (const stage of board) {
+      const matches: Automation[] = [];
+      for (const dto of automationsData.items) {
+        const cfg = (dto.triggerConfig ?? null) as Record<string, unknown> | null;
+        if (!isAutomationForStage(cfg, dto.triggerType, pipelineId, stage.id)) {
+          continue;
+        }
+        matches.push({
+          id: dto.id,
+          name: dto.name,
+          description: dto.description ?? undefined,
+          stageTrigger: labelForBackendTrigger(dto.triggerType, cfg, stage.id),
+        });
+      }
+      map[stage.id] = matches;
+    }
+    setStageAutomationsMap(map);
+  }, [pipelineId, automationsData?.items, board]);
 
   // Detecta se há mudanças não salvas comparando estado atual vs baseline.
   const hasChanges = useMemo(() => {

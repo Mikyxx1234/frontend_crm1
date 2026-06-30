@@ -41,12 +41,22 @@ export async function sendMessage(
     content: string;
     asNote?: boolean;
     replyToId?: string | null;
+    /**
+     * Override de canal: quando a org tem >1 WhatsApp conectado, o
+     * composer permite escolher por qual número enviar. O backend valida
+     * (org, tipo, status, scope) e usa o canal escolhido apenas nesta
+     * mensagem (snapshot em `message.channelId`); o canal "atual" da
+     * conversa não é alterado pelo override.
+     */
+    channelId?: string | null;
   },
 ): Promise<{ message: InboxMessageDto; metaError?: string }> {
   const body: Record<string, unknown> = payload.asNote
     ? { content: payload.content, messageType: "note", private: true }
     : { content: payload.content };
   if (payload.replyToId) body.replyToId = payload.replyToId;
+  // Override só faz sentido fora do modo nota (notas internas não saem por canal).
+  if (!payload.asNote && payload.channelId) body.channelId = payload.channelId;
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/messages`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -62,7 +72,12 @@ export async function sendMessage(
 export async function sendAttachment(
   conversationId: string,
   file: File | Blob,
-  options?: { caption?: string; fileName?: string },
+  options?: {
+    caption?: string;
+    fileName?: string;
+    /** Mesma semântica do `channelId` em `sendMessage` (override por mensagem). */
+    channelId?: string | null;
+  },
 ): Promise<{ message: InboxMessageDto }> {
   const form = new FormData();
   form.append(
@@ -71,6 +86,7 @@ export async function sendAttachment(
     options?.fileName ?? (file instanceof File ? file.name : "anexo.bin"),
   );
   if (options?.caption) form.append("caption", options.caption);
+  if (options?.channelId) form.append("channelId", options.channelId);
   const res = await fetch(apiUrl(`/api/conversations/${conversationId}/attachments`), {
     method: "POST",
     body: form,

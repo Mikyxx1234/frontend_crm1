@@ -3,6 +3,7 @@ export { AudioRecorderButton } from "./audio-recorder-button";
 export { TemplatePickerList } from "./template-picker-popover";
 export { ComposerMenu } from "./composer-menu";
 export { Composer } from "./composer";
+export { ChannelSelector } from "./channel-selector";
 export {
   TemplateComposePanel,
   whatsappTemplateToPending,

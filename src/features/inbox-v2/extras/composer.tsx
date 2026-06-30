@@ -25,12 +25,14 @@ import { getContact } from "@/features/inbox-v2/api/misc";
 import type { InternalTemplateContext } from "@/lib/internal-template-variables";
 
 import { AudioRecorderButton, type AudioRecordState } from "./audio-recorder-button";
+import { ChannelSelector } from "./channel-selector";
 import { ComposerMenu } from "./composer-menu";
 import {
   TemplateComposePanel,
   whatsappTemplateToPending,
   type PendingTemplate,
 } from "./template-compose-panel";
+import type { OutboundChannelOption } from "@/features/inbox-v2/hooks/use-channels";
 
 /**
  * Composer completo para o ChatArea. Substitui o footer estático
@@ -63,6 +65,10 @@ export function Composer({
   onExternalTemplateConsumed,
   signatureAllowed = true,
   signatureEditable = true,
+  availableChannels,
+  selectedChannelId,
+  conversationChannelId,
+  onSelectChannel,
 }: {
   conversationId: string | null;
   value: string;
@@ -87,6 +93,18 @@ export function Composer({
   signatureAllowed?: boolean;
   /** Permissão org-level: agentes podem editar o texto da assinatura. Default true. */
   signatureEditable?: boolean;
+  /**
+   * Canais WhatsApp CONNECTED da org (para seletor de canal de envio).
+   * O seletor só é renderizado quando `availableChannels.length > 1` —
+   * orgs com 1 canal não precisam do widget.
+   */
+  availableChannels?: OutboundChannelOption[];
+  /** Canal selecionado para o envio. Controlado pelo pai. */
+  selectedChannelId?: string | null;
+  /** Canal "atual" da conversa (último inbound) — destacado como referência. */
+  conversationChannelId?: string | null;
+  /** Callback quando o agente troca o canal de envio. */
+  onSelectChannel?: (channelId: string) => void;
 }) {
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
@@ -323,8 +341,10 @@ export function Composer({
         </div>
       )}
 
-      {/* ── Row: tabs (esq.) + slot direito (assinatura ou badge nota) ── */}
-      {(onSendNote || (signatureAllowed && !noteMode)) && (
+      {/* ── Row: tabs (esq.) + seletor de canal + slot direito (assinatura ou badge nota) ── */}
+      {(onSendNote ||
+        (signatureAllowed && !noteMode) ||
+        (!noteMode && (availableChannels?.length ?? 0) > 1)) && (
         <div className="mb-2 flex items-center gap-1.5 px-0.5">
           {/* Tabs Mensagem / Nota interna */}
           {onSendNote && (
@@ -360,6 +380,22 @@ export function Composer({
 
           {/* Espaçador */}
           <div className="flex-1" />
+
+          {/* Seletor de canal — só quando há >1 WhatsApp CONNECTED e fora do modo nota.
+              Notas internas não trafegam por canal. */}
+          {!noteMode &&
+            availableChannels &&
+            availableChannels.length > 1 &&
+            onSelectChannel ? (
+            <ChannelSelector
+              channels={availableChannels}
+              selectedChannelId={selectedChannelId ?? null}
+              conversationChannelId={conversationChannelId ?? null}
+              onSelect={onSelectChannel}
+              disabled={sending}
+              className="mr-1"
+            />
+          ) : null}
 
           {/* Slot direito: badge "Nota" no modo nota, assinatura no modo mensagem */}
           {noteMode ? (

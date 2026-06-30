@@ -34,8 +34,10 @@ import {
   useInboxRealtime,
   useMarkConversationRead,
   useMessages,
+  useSelectedOutboundChannel,
   useSendMessage,
   useTabCounts,
+  useWhatsappChannels,
 } from "@/features/inbox-v2/hooks";
 import {
   AssigneePopover,
@@ -222,6 +224,19 @@ export default function InboxV2ClientPage({
   const markRead = useMarkConversationRead();
   const { features: convFeatures } = useConversationFeatures();
 
+  // Seletor de canal: lista de WhatsApps CONNECTED da org + estado
+  // persistido por conversa. Quando a org tem 1 só canal, o widget não
+  // aparece e o backend usa o canal "atual" da conversa (legacy).
+  const { data: whatsappChannels } = useWhatsappChannels(isAuthenticated);
+  const conversationChannelId = messagesData?.channel?.id ?? null;
+  const { selectedChannelId, setSelectedChannelId } = useSelectedOutboundChannel(
+    {
+      conversationId: activeId,
+      conversationChannelId,
+      availableChannels: whatsappChannels,
+    },
+  );
+
   function handleSelect(id: string) {
     setActiveId(id);
     markRead.mutate(id);
@@ -230,7 +245,16 @@ export default function InboxV2ClientPage({
   function handleSend(value: string) {
     if (!activeId) return;
     sendMessage.mutate(
-      { content: value },
+      {
+        content: value,
+        // Só envia override quando o canal escolhido difere do canal
+        // atual da conversa — caminho rápido no backend (sem round-trip
+        // extra de validação) e nenhum efeito visível pro agente que
+        // não trocou de canal.
+        ...(selectedChannelId && selectedChannelId !== conversationChannelId
+          ? { channelId: selectedChannelId }
+          : {}),
+      },
       {
         onSuccess: () => setDraft(""),
         onError: (err) => toast.error(err.message || "Falha ao enviar"),
@@ -520,6 +544,10 @@ export default function InboxV2ClientPage({
             onExternalTemplateConsumed={() => setExternalTemplate(null)}
             signatureAllowed={convFeatures.agentSignatureEnabled}
             signatureEditable={convFeatures.agentSignatureEditable}
+            availableChannels={whatsappChannels}
+            selectedChannelId={selectedChannelId}
+            conversationChannelId={conversationChannelId}
+            onSelectChannel={setSelectedChannelId}
           />
         }
         notesSlot={notesSlot}

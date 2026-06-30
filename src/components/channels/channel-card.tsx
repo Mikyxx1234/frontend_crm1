@@ -17,14 +17,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { GlassCard } from "@/components/crm/glass-card";
 import { Separator } from "@/components/ui/separator";
 import { cn, formatDateTime } from "@/lib/utils";
 
@@ -159,21 +152,21 @@ export function ChannelCard({
     : "—";
 
   return (
-    <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-md">
-      <CardHeader className="space-y-3 pb-4">
+    <GlassCard className="flex flex-col overflow-hidden p-0 transition-shadow hover:shadow-[var(--glass-shadow-lg)]">
+      <div className="space-y-3 px-6 pb-4 pt-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div
               className={cn(
-                "flex size-11 shrink-0 items-center justify-center rounded-xl border bg-muted/40",
+                "flex size-11 shrink-0 items-center justify-center rounded-xl border bg-[var(--glass-bg-overlay)]",
                 channel.type === "WHATSAPP" && "border-[#25D366]/25 bg-[#25D366]/5"
               )}
             >
               <TypeIcon type={channel.type} />
             </div>
             <div className="min-w-0">
-              <CardTitle className="truncate text-base">{channel.name}</CardTitle>
-              <CardDescription className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="truncate font-display text-base font-bold text-[var(--text-primary)]">{channel.name}</h3>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[var(--text-muted)]">
                 <span className="inline-flex items-center gap-1.5 text-xs">
                   <StatusDot
                     status={status}
@@ -190,7 +183,7 @@ export function ChannelCard({
                 )}>
                   {PROVIDER_LABELS[channel.provider]}
                 </span>
-              </CardDescription>
+              </div>
             </div>
           </div>
 
@@ -209,24 +202,24 @@ export function ChannelCard({
             <Badge variant={statusBadgeVariant(status)}>{statusLabel(status)}</Badge>
           )}
         </div>
-      </CardHeader>
+      </div>
 
       <Separator />
 
-      <CardContent className="flex flex-1 flex-col gap-2 py-4 text-sm text-muted-foreground">
+      <div className="flex flex-1 flex-col gap-2 px-6 py-4 text-sm text-[var(--text-muted)]">
         <div className="flex justify-between gap-2">
           <span>Telefone</span>
-          <span className="truncate font-medium text-foreground">
+          <span className="truncate font-medium text-[var(--text-primary)]">
             {channel.phoneNumber ?? "—"}
           </span>
         </div>
         <div className="flex justify-between gap-2">
-          <span>Ãšltima conexão</span>
-          <span className="shrink-0 font-medium text-foreground">{lastAt}</span>
+          <span>Última conexão</span>
+          <span className="shrink-0 font-medium text-[var(--text-primary)]">{lastAt}</span>
         </div>
-      </CardContent>
+      </div>
 
-      <CardFooter className="mt-auto flex flex-wrap items-center gap-2 border-t bg-muted/20 pt-4">
+      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 py-4">
         {status === "DISCONNECTED" ? (
           <>
             <Button
@@ -349,7 +342,7 @@ export function ChannelCard({
           {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
           Excluir
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </GlassCard>
   );
 }

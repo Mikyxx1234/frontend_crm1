@@ -27,8 +27,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import {
+  listTableHeadRowClass,
+  ListColumnLabel,
+} from "@/components/crm/sortable-header";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
-import { SearchInput } from "@/components/crm/search-input";
+import {
+  PagePrimaryButton,
+  PageSearchBar,
+} from "@/components/crm/page-toolbar";
 import { cn } from "@/lib/utils";
 import {
   CRM_ACTION_KEYS,
@@ -39,7 +46,8 @@ import {
 
 import { useRoles } from "@/features/permissions/hooks";
 
-import { SettingsV2Shell } from "../_v2-shell";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
+import { TelephonyToggle } from "@/features/telephony/telephony-toggle";
 
 type UserRole = "ADMIN" | "MANAGER" | "MEMBER";
 
@@ -412,23 +420,22 @@ export default function TeamV2ClientPage() {
 
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="Equipe"
       description="Usuários, convites e permissões CRM"
       center={
-        <SearchInput
+        <PageSearchBar
+          variant="compact"
           value={search}
           onChange={setSearch}
           placeholder="Buscar por nome, e-mail..."
+          aria-label="Buscar usuários"
         />
       }
       actions={
-        <button
-          type="button"
-          onClick={() => setInviteOpen(true)}
-          className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
-        >
+        <PagePrimaryButton type="button" onClick={() => setInviteOpen(true)}>
           <IconPlus size={16} /> Novo usuário
-        </button>
+        </PagePrimaryButton>
       }
     >
       {/* STATS */}
@@ -497,7 +504,7 @@ export default function TeamV2ClientPage() {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
-          <div className="mb-2.5 grid grid-cols-[42px_2.6fr_1.1fr_1.3fr] items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+          <div className={listTableHeadRowClass("mb-2.5 grid-cols-[42px_2.6fr_1.1fr_1.3fr]")}>
             <span>
               <CheckboxGlass
                 checked={allChecked}
@@ -506,9 +513,9 @@ export default function TeamV2ClientPage() {
                 aria-label="Selecionar todos"
               />
             </span>
-            <span>Usuário</span>
-            <span>Função</span>
-            <span className="text-right">Ações</span>
+            <ListColumnLabel>Usuário</ListColumnLabel>
+            <ListColumnLabel>Função</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
@@ -589,10 +596,11 @@ export default function TeamV2ClientPage() {
                   <div className="flex items-center justify-end gap-2">
                     {isAdmin ? (
                       <>
+                        <TelephonyToggle userId={u.id} />
                         <button
                           type="button"
                           onClick={() => openPasswordDialog(u)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-[7px] font-display text-[12px] font-bold text-[var(--brand-primary-dark,#3d52e8)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-white"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-[7px] font-display text-[12px] font-bold text-[var(--brand-primary-dark,#3d52e8)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)]"
                         >
                           <IconKey size={13} /> Senha
                         </button>

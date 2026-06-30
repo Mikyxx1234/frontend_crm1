@@ -389,6 +389,29 @@ export function TriggerConfigFields({ triggerType, value, onChange }: Props) {
           </div>
         </div>
       );
+    case "call_received":
+    case "call_made":
+      return (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            {triggerType === "call_received"
+              ? "Disparado quando uma ligação é recebida (encerrada). O contato é resolvido pelo número."
+              : "Disparado quando uma ligação realizada é encerrada."}
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="tc-call-status">Resultado da ligação (opcional)</Label>
+            <SelectNative
+              id="tc-call-status"
+              value={String(value.status ?? "")}
+              onChange={(e) => set("status", e.target.value)}
+            >
+              <option value="">Qualquer ligação</option>
+              <option value="answered">Apenas atendidas</option>
+              <option value="missed">Apenas não atendidas</option>
+            </SelectNative>
+          </div>
+        </div>
+      );
     case "manual":
       return (
         <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 text-sm text-foreground">

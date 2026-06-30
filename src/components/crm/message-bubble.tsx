@@ -26,6 +26,10 @@ import {
   IconPin,
   IconPinFilled,
   IconListCheck,
+  IconArrowsExchange,
+  IconPhoneIncoming,
+  IconPhoneOutgoing,
+  IconPhoneOff,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -174,6 +178,12 @@ export interface Message {
    * em tooltip ao passar o mouse sobre o ícone de falha (status `failed`).
    */
   sendError?: string
+  /**
+   * Conexão (Channel) por onde esta mensagem trafegou. Usado para inserir um
+   * marcador na timeline quando a conversa alterna de conexão (ex.: dois
+   * WhatsApps). `null`/undefined = herda a conexão anterior (sem marcador).
+   */
+  channelId?: string | null
 }
 
 
@@ -723,6 +733,36 @@ export function MessageBubble({
     return <FormBubble message={message} className={className} />
   }
 
+  // Aviso de ligação (SIP/Api4com): linha centralizada com ícone — distingue
+  // recebida/realizada/não-atendida. Renderizado igual no inbox e no pipeline
+  // (ambos usam MessageBubble).
+  if (message.messageType === "sip_call") {
+    const inbound = message.type === "incoming"
+    const missed = /n[ãa]o atendida/i.test(message.content)
+    return (
+      <div className={cn("flex w-full items-center justify-center py-1", className)}>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-display text-[11px] font-semibold",
+            missed
+              ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/8 text-[var(--color-danger)]"
+              : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+          )}
+        >
+          {missed ? (
+            <IconPhoneOff size={12} />
+          ) : inbound ? (
+            <IconPhoneIncoming size={12} />
+          ) : (
+            <IconPhoneOutgoing size={12} />
+          )}
+          <span>{message.content}</span>
+          <span className="text-[var(--text-muted)]">· {message.time}</span>
+        </span>
+      </div>
+    )
+  }
+
   // Nota interna: barra horizontal full-width com gradiente âmbar.
   // Layout: [🔒 NOTA] [texto flex-1] [ações hover] [agente] [hora]
   if (isNote) {
@@ -902,6 +942,30 @@ export function DaySeparator({ date }: DaySeparatorProps) {
   return (
     <div className="self-center px-0 py-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
       {date}
+    </div>
+  )
+}
+
+interface ConnectionDividerProps {
+  /** Rótulo completo da conexão (ex.: "WhatsApp · Vendas SP · +55 (11) 9..."). */
+  label: string
+}
+
+/**
+ * Marcador na timeline indicando que, a partir daqui, a conversa passou a
+ * trafegar por OUTRA conexão (ex.: o contato escreveu para outro número de
+ * WhatsApp da empresa). Inserido pelo chat quando o `channelId` da mensagem
+ * muda em relação à anterior.
+ */
+export function ConnectionDivider({ label }: ConnectionDividerProps) {
+  return (
+    <div className="my-1 flex items-center justify-center gap-2 self-center">
+      <span className="h-px w-6 bg-[var(--glass-border)]" />
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+        <IconArrowsExchange size={12} className="text-[var(--brand-primary)]" />
+        via {label}
+      </span>
+      <span className="h-px w-6 bg-[var(--glass-border)]" />
     </div>
   )
 }

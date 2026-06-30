@@ -35,6 +35,7 @@ export function DealActionsMenu({
   const [open, setOpen] = useState(false);
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
 
   const setStatus = useSetDealStatus(pipelineId, statusFilter);
@@ -51,9 +52,15 @@ export function DealActionsMenu({
       });
     }
     function onClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      // O dropdown é renderizado via portal em document.body (fora do
+      // containerRef), então precisa ser checado à parte — senão um clique
+      // num item do menu conta como "fora", fecha o menu no mousedown e o
+      // onClick do botão nunca dispara (ex.: "Excluir negócio" sem efeito).
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(target) &&
+        !(dropdownRef.current && dropdownRef.current.contains(target))
       ) {
         setOpen(false);
       }
@@ -85,6 +92,7 @@ export function DealActionsMenu({
 
       {open && dropdownPos && typeof document !== "undefined" && createPortal(
         <div
+          ref={dropdownRef}
           className="w-52 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_32px_rgba(15,20,40,0.16)] backdrop-blur-xl"
           style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right, zIndex: 9999 }}
           role="menu"

@@ -10,6 +10,7 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import { isPageMockMode } from "@/lib/page-mock-mode";
 
 import type {
   AgentOnlineStatus,
@@ -19,6 +20,10 @@ import type {
   RetryResult,
   UpdateResponsibleInput,
 } from "./types";
+import {
+  MOCK_DISTRIBUTION_PENDING,
+  MOCK_DISTRIBUTION_RESPONSIBLES,
+} from "./mock";
 
 async function getJson<T>(path: string, errLabel: string): Promise<T> {
   const res = await fetch(apiUrl(path));
@@ -74,6 +79,9 @@ async function sendJson<T>(
 }
 
 export function fetchResponsibles(): Promise<ResponsiblesResponse> {
+  if (isPageMockMode()) {
+    return Promise.resolve(MOCK_DISTRIBUTION_RESPONSIBLES);
+  }
   return getJson<ResponsiblesResponse>(
     "/api/distribution/responsibles",
     "Erro ao carregar responsáveis.",
@@ -114,6 +122,9 @@ export function setAgentStatus(
 }
 
 export function fetchPending(): Promise<PendingResponse> {
+  if (isPageMockMode()) {
+    return Promise.resolve(MOCK_DISTRIBUTION_PENDING);
+  }
   return getJson<PendingResponse>(
     "/api/distribution/pending",
     "Erro ao carregar a fila de espera.",

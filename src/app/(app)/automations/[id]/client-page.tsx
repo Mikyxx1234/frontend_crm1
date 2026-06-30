@@ -1,7 +1,7 @@
 "use client";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
-import OldAutomationEditor from "@/app/old/automations/[id]/client-page";
+import OldAutomationEditor from "@/features/legacy-v1/automations-editor";
 
 /**
  * Builder de automação v2.

@@ -3,9 +3,6 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
 import {
-  IconArrowDown,
-  IconArrowUp,
-  IconArrowsSort,
   IconClipboardList,
   IconCopy,
 } from "@tabler/icons-react";
@@ -17,13 +14,24 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
-import { SearchInput } from "@/components/crm/search-input";
+import {
+  PAGE_FILTER_DROPDOWN_CLASS,
+  PageFilterBar,
+  PageGhostButton,
+  PageSearchBar,
+  PageSegmentedControl,
+} from "@/components/crm/page-toolbar";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
+import {
+  listTableHeadRowClass,
+  SortableHeader,
+  type SortDir,
+} from "@/components/crm/sortable-header";
 import { Button } from "@/components/ui/button";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { DateRangePicker, type DateRange } from "@/components/crm/date-range-picker";
-import { TabsGlass } from "@/components/crm/tabs-glass";
 import { EmptyState } from "@/components/crm/empty-state";
+import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import {
   EVENT_CONFIG,
   FALLBACK_CONFIG,
@@ -36,6 +44,9 @@ import { useActivityFeed } from "@/features/activity-feed/use-activity-feed";
 import type { ActivityFeedFilters } from "@/features/activity-feed/api";
 import { useActivityStats } from "@/features/activity-feed/use-activity-stats";
 import { MOCK_FEED } from "@/features/activity-feed/mock-feed";
+import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
+
+const LOG_TABS = ["Feed", "Estatísticas (30d)"] as const;
 
 const ENTITY_OPTIONS = [
   { value: "ALL", label: "Todas as entidades" },
@@ -98,7 +109,6 @@ const ACTOR_BADGE: Record<
 const FEED_GRID = "grid-cols-[1.4fr_1.7fr_1.6fr_1.6fr_0.9fr_0.6fr]";
 
 type SortColumn = "evento" | "detalhe" | "entidade" | "origem" | "ator" | "data";
-type SortDir = "asc" | "desc";
 
 function resolveEntityId(ev: FeedEvent): string | null {
   const t = ev.entityType;
@@ -207,11 +217,17 @@ export default function LogsClientPage() {
   // Modo demonstração: ativo manualmente OU automaticamente quando não há
   // eventos reais e nenhum filtro aplicado (para visualizar todos os tipos).
   const isDemo =
-    demo || (!isLoading && !isError && realItems.length === 0 && !hasFilters);
+    demo ||
+    shouldAutoDemoEmpty({
+      realCount: realItems.length,
+      hasFilters,
+      isLoading,
+      isError,
+    });
 
   const allItems = isDemo ? MOCK_FEED : realItems;
 
-  const [sort, setSort] = React.useState<{ column: SortColumn; dir: SortDir }>(
+  const [sort, setSort] = React.useState<{ column: SortColumn; dir: Exclude<SortDir, null> }>(
     { column: "data", dir: "desc" },
   );
 
@@ -294,55 +310,57 @@ export default function LogsClientPage() {
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
-          icon={<IconClipboardList size={22} />}
+          icon={<IconClipboardList size={22} stroke={2.2} />}
           title="Logs"
           description="Histórico completo da operação — humanos, IA, automações e integrações."
           center={
             isFeed ? (
-              <SearchInput
+              <PageSearchBar
+                variant="compact"
                 value={q}
                 onChange={setQ}
                 placeholder="Buscar evento, lead, ator..."
+                aria-label="Buscar eventos"
               />
             ) : undefined
           }
           actions={
-            <>
-              <TabsGlass
-                tabs={["Feed", "Estatísticas (30d)"]}
-                activeTab={activeTab}
-                onChange={setActiveTab}
-                className="max-w-[320px]"
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <PageSegmentedControl
+                size="compact"
+                aria-label="Visão dos logs"
+                items={LOG_TABS.map((label, index) => ({
+                  value: String(index),
+                  label,
+                }))}
+                value={String(activeTab)}
+                onChange={(v) => setActiveTab(Number(v))}
               />
-              {isFeed && (
-                <Button
-                  variant={isDemo ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setDemo((v) => !v)}
-                >
+              {isFeed ? (
+                <PageGhostButton active={isDemo} onClick={() => setDemo((v) => !v)}>
                   {isDemo ? "Demonstração" : "Ver exemplo"}
-                </Button>
-              )}
-            </>
+                </PageGhostButton>
+              ) : null}
+            </div>
           }
         />
 
         {isFeed ? (
           <>
-            <div className="flex flex-wrap items-center gap-3">
+            <PageFilterBar>
               <DropdownGlass
                 options={ENTITY_OPTIONS}
                 value={entity}
-                onValueChange={setEntity}
+                onValueChange={(v) => setEntity(v)}
                 menuLabel="Entidade"
-                triggerClassName="min-w-[180px]"
+                triggerClassName={PAGE_FILTER_DROPDOWN_CLASS}
               />
               <DropdownGlass
                 options={ACTOR_OPTIONS}
                 value={actor}
-                onValueChange={setActor}
+                onValueChange={(v) => setActor(v)}
                 menuLabel="Ator"
-                triggerClassName="min-w-[180px]"
+                triggerClassName={PAGE_FILTER_DROPDOWN_CLASS}
               />
               <DateRangePicker value={range} onChange={setRange} />
               {hasFilters && (
@@ -359,20 +377,19 @@ export default function LogsClientPage() {
                   Limpar
                 </Button>
               )}
-            </div>
+            </PageFilterBar>
 
             {isDemo && (
-              <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--color-enterprise-bg)] px-3 py-2 font-body text-[12px] text-[var(--brand-primary)]">
-                <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[var(--brand-primary)]" />
+              <PageDemoBanner>
                 Dados de exemplo — um evento de cada tipo para visualizar as
                 variações visuais. Os eventos reais aparecerão aqui assim que
                 ocorrerem.
-              </div>
+              </PageDemoBanner>
             )}
 
             {isLoading && allItems.length === 0 ? (
               <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]" />
-            ) : isError ? (
+            ) : isError && !isDemo ? (
               <div className="rounded-[var(--radius-xl)] border border-[var(--color-danger)]/20 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] p-6 text-center font-body text-[13px] text-[var(--color-danger-text)]">
                 Não foi possível carregar o feed.
               </div>
@@ -389,14 +406,39 @@ export default function LogsClientPage() {
                 />
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
-                <div className={`mb-2.5 grid ${FEED_GRID} items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--text-muted)]`}>
-                  <SortHeader label="Evento" column="evento" sort={sort} onSort={toggleSort} />
-                  <SortHeader label="Detalhe" column="detalhe" sort={sort} onSort={toggleSort} />
-                  <SortHeader label="Entidade" column="entidade" sort={sort} onSort={toggleSort} />
-                  <SortHeader label="Origem" column="origem" sort={sort} onSort={toggleSort} />
-                  <SortHeader label="Ator" column="ator" sort={sort} onSort={toggleSort} />
-                  <SortHeader label="Data" column="data" sort={sort} onSort={toggleSort} align="right" />
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+                <div className={listTableHeadRowClass(FEED_GRID)}>
+                  <SortableHeader
+                    label="Evento"
+                    sort={sort.column === "evento" ? sort.dir : null}
+                    onSort={() => toggleSort("evento")}
+                  />
+                  <SortableHeader
+                    label="Detalhe"
+                    sort={sort.column === "detalhe" ? sort.dir : null}
+                    onSort={() => toggleSort("detalhe")}
+                  />
+                  <SortableHeader
+                    label="Entidade"
+                    sort={sort.column === "entidade" ? sort.dir : null}
+                    onSort={() => toggleSort("entidade")}
+                  />
+                  <SortableHeader
+                    label="Origem"
+                    sort={sort.column === "origem" ? sort.dir : null}
+                    onSort={() => toggleSort("origem")}
+                  />
+                  <SortableHeader
+                    label="Ator"
+                    sort={sort.column === "ator" ? sort.dir : null}
+                    onSort={() => toggleSort("ator")}
+                  />
+                  <SortableHeader
+                    label="Data"
+                    sort={sort.column === "data" ? sort.dir : null}
+                    onSort={() => toggleSort("data")}
+                    align="right"
+                  />
                 </div>
 
                 {!isDefaultSort && hasNextPage && (
@@ -405,11 +447,11 @@ export default function LogsClientPage() {
                   </div>
                 )}
 
-                <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+                <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
                   {isDefaultSort
                     ? groups.map(([dayKey, dayItems]) => (
                         <React.Fragment key={dayKey}>
-                          <div className="flex items-center gap-2.5 px-1 pb-0.5 pt-1 first:pt-0">
+                          <div className="flex items-center gap-2.5 px-1 pb-1 pt-3 first:pt-1">
                             <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                               {dayLabel(dayItems[0].occurredAt)}
                             </span>
@@ -543,7 +585,7 @@ function EventCard({ event }: { event: FeedEvent }) {
 
   return (
     <div
-      className={`grid ${FEED_GRID} items-center gap-3.5 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)]`}
+      className={`grid ${FEED_GRID} items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]`}
     >
       {/* Coluna: Evento */}
       <div className="flex min-w-0 items-center gap-2.5">
@@ -642,36 +684,6 @@ function EventCard({ event }: { event: FeedEvent }) {
         </span>
       </div>
     </div>
-  );
-}
-
-function SortHeader({
-  label,
-  column,
-  sort,
-  onSort,
-  align,
-}: {
-  label: string;
-  column: SortColumn;
-  sort: { column: SortColumn; dir: SortDir };
-  onSort: (c: SortColumn) => void;
-  align?: "left" | "right";
-}) {
-  const active = sort.column === column;
-  const Arrow = !active ? IconArrowsSort : sort.dir === "asc" ? IconArrowUp : IconArrowDown;
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(column)}
-      className={`inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1 py-0.5 transition-colors hover:text-[var(--text-secondary)] ${
-        align === "right" ? "justify-end" : "justify-start"
-      } ${active ? "text-[var(--brand-primary)]" : ""}`}
-      aria-label={`Ordenar por ${label}`}
-    >
-      <span>{label}</span>
-      <Arrow size={11} className={active ? "" : "opacity-50"} />
-    </button>
   );
 }
 

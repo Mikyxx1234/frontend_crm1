@@ -11,6 +11,8 @@ interface MiniFlowProps {
   /** Limita a quantidade visível; o excedente vira um "+N" */
   max?: number
   size?: "sm" | "md"
+  /** Traços entre nós (padrão). `false` = só chips, como no mock DS v2. */
+  connected?: boolean
   className?: string
 }
 
@@ -18,10 +20,16 @@ interface MiniFlowProps {
  * Visualização compacta de um fluxo: ícones por etapa conectados por traços.
  * Usada nos cards da galeria de automações.
  */
-export function MiniFlow({ steps, max = 5, size = "md", className }: MiniFlowProps) {
+export function MiniFlow({
+  steps,
+  max = 5,
+  size = "md",
+  connected = true,
+  className,
+}: MiniFlowProps) {
   const dims =
     size === "sm"
-      ? { node: "h-7 w-7", icon: 14, gap: "gap-0", line: "w-3" }
+      ? { node: "h-[30px] w-[30px]", icon: 15, gap: "gap-1.5", line: "w-3" }
       : { node: "h-8 w-8", icon: 16, gap: "gap-0", line: "w-4" }
 
   const visible = steps.slice(0, max)
@@ -46,7 +54,7 @@ export function MiniFlow({ steps, max = 5, size = "md", className }: MiniFlowPro
                 <Icon size={dims.icon} />
               </span>
             </TooltipGlass>
-            {i < visible.length - 1 && (
+            {connected && i < visible.length - 1 && (
               <span
                 className={cn(
                   "h-px shrink-0 bg-gradient-to-r from-[var(--brand-primary)]/40 to-[var(--brand-secondary)]/40",
@@ -61,11 +69,13 @@ export function MiniFlow({ steps, max = 5, size = "md", className }: MiniFlowPro
 
       {overflow > 0 && (
         <>
-          <span className={cn("h-px shrink-0 bg-[var(--glass-border)]", dims.line)} aria-hidden />
+          {connected && (
+            <span className={cn("h-px shrink-0 bg-[var(--glass-border)]", dims.line)} aria-hidden />
+          )}
           <span
             className={cn(
-              "flex shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] font-display text-[11px] font-bold text-[var(--text-muted)]",
-              dims.node,
+              "flex shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] font-mono text-[11.5px] font-semibold text-[var(--text-muted)] px-2",
+              connected ? dims.node : "h-[30px]",
             )}
           >
             +{overflow}

@@ -2,11 +2,11 @@
 
 import { IconArrowsShuffle } from "@tabler/icons-react";
 
-import OldDistributionPage from "@/app/old/settings/distribution/client-page";
+import OldDistributionPage from "@/features/legacy-v1/settings/distribution";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { useUserRole } from "@/hooks/use-user-role";
-import { SettingsV2Shell } from "../_v2-shell";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 /**
  * Fase 1c (migração v1→v2): rota canônica `/settings/distribution` dentro do
@@ -41,13 +41,13 @@ export default function DistributionV2ClientPage() {
 
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="Distribuição"
       description="Round-robin, priorização e regras de atribuição"
       icon={<IconArrowsShuffle size={22} />}
     >
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
-        <OldDistributionPage />
-      </div>
+      <OldDistributionPage />
     </SettingsV2Shell>
   );
 }
+

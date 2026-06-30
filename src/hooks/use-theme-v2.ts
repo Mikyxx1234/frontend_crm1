@@ -16,7 +16,10 @@ function readStored(): ThemeV2 {
 
 function applyTheme(t: ThemeV2) {
   if (typeof document === "undefined") return;
-  document.documentElement.classList.toggle(DARK_CLASS, t === "dark");
+  const isDark = t === "dark";
+  document.documentElement.classList.toggle(DARK_CLASS, isDark);
+  // Tokens shadcn (text-foreground, bg-muted, text-ink-*) vivem em globals.css sob `.dark`.
+  document.documentElement.classList.toggle("dark", isDark);
 }
 
 /**

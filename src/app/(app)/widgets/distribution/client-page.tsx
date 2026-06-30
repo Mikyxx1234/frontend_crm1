@@ -16,10 +16,12 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { NavRail } from "@/components/crm/nav-rail";
+import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
+import { PageDemoBanner } from "@/components/crm/page-demo-banner";
+import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { cn } from "@/lib/utils";
 import { useWidgets } from "@/features/widgets/hooks";
 import {
@@ -36,6 +38,11 @@ import {
   type DistributionResult,
   type PendingDistributionDto,
 } from "@/features/distribution/types";
+import {
+  MOCK_DISTRIBUTION_PENDING,
+  MOCK_DISTRIBUTION_RESPONSIBLES,
+} from "@/features/distribution/mock";
+import { isPageMockMode, shouldAutoDemoEmpty } from "@/lib/page-mock-mode";
 
 const SMART_DISTRIBUTION_SLUG = "smart_distribution";
 
@@ -54,20 +61,43 @@ export default function DistributionClientPage({
   const canManage = role === "ADMIN" || role === "MANAGER";
 
   const widgetsQuery = useWidgets(isAuthenticated);
-  const smartInstalled =
-    widgetsQuery.data?.items.find((w) => w.slug === SMART_DISTRIBUTION_SLUG)
-      ?.installed ?? false;
 
-  const respQuery = useDistributionResponsibles(isAuthenticated && smartInstalled);
-  const pendingQuery = usePendingDistributions(isAuthenticated && smartInstalled);
+  const widgetInstalled =
+    widgetsQuery.data?.items.find((w) => w.slug === SMART_DISTRIBUTION_SLUG)?.installed ??
+    false;
+
+  const respQuery = useDistributionResponsibles(
+    isAuthenticated && (isPageMockMode() || widgetInstalled),
+  );
+  const pendingQuery = usePendingDistributions(
+    isAuthenticated && (isPageMockMode() || widgetInstalled),
+  );
   const simulateMut = useSimulateDistribution();
   const retryMut = useRetryPending();
 
   const [editing, setEditing] = useState<DistributionResponsibleDto | null>(null);
   const [simResult, setSimResult] = useState<DistributionResult | null>(null);
 
-  const responsibles = respQuery.data?.responsibles ?? [];
-  const pending = pendingQuery.data?.pending ?? [];
+  const realResponsibles = respQuery.data?.responsibles ?? [];
+  const realPending = pendingQuery.data?.pending ?? [];
+  const useDemo =
+    isPageMockMode() ||
+    shouldAutoDemoEmpty({
+      realCount: realResponsibles.length,
+      hasFilters: false,
+      isLoading:
+        widgetsQuery.isLoading ||
+        ((isPageMockMode() || widgetInstalled) && respQuery.isLoading),
+      isError: !!respQuery.error,
+    }) ||
+    (!widgetsQuery.isLoading && !widgetInstalled);
+
+  const smartInstalled = useDemo || widgetInstalled;
+
+  const responsibles = useDemo
+    ? MOCK_DISTRIBUTION_RESPONSIBLES.responsibles
+    : realResponsibles;
+  const pending = useDemo ? MOCK_DISTRIBUTION_PENDING.pending : realPending;
 
   const handleRetry = () => {
     retryMut.mutate(undefined, {
@@ -106,7 +136,7 @@ export default function DistributionClientPage({
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
-      {navRail ?? <NavRail />}
+      {navRail ?? <NavRailV2 />}
 
       <main className="flex min-w-0 flex-col gap-4 overflow-y-auto pr-1">
         <PageHeader
@@ -136,12 +166,17 @@ export default function DistributionClientPage({
           <SkeletonState />
         ) : !smartInstalled ? (
           <NotEnabledState />
-        ) : respQuery.isLoading ? (
+        ) : !useDemo && respQuery.isLoading ? (
           <SkeletonState />
-        ) : respQuery.error ? (
+        ) : !useDemo && respQuery.error ? (
           <ErrorState message={respQuery.error.message} />
         ) : (
           <>
+            {useDemo && (
+              <PageDemoBanner>
+                Dados de exemplo — equipe, fila e elegibilidade ilustrativas para o módulo de distribuição.
+              </PageDemoBanner>
+            )}
             {simResult && (
               <SimulationPanel
                 result={simResult}
@@ -176,6 +211,16 @@ export default function DistributionClientPage({
 
 // ── Tabela de responsáveis ──────────────────────────────────────────────
 
+const RESP_GRID = "grid-cols-[2.4fr_1.4fr_0.7fr_0.8fr_1.2fr_0.9fr]";
+
+/* Paleta de avatares: rotaciona pelo índice do responsável */
+const AVATAR_PALETTES = [
+  "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+  "bg-[var(--color-success-bg)] text-[var(--color-success-dark,#0f7a5a)]",
+  "bg-[var(--color-warn-bg,rgba(217,119,6,0.10))] text-[var(--color-warn,#d97706)]",
+  "bg-[color-mix(in_srgb,var(--brand-secondary)_16%,transparent)] text-[var(--brand-secondary)]",
+] as const;
+
 function ResponsiblesTable({
   responsibles,
   currentUserId,
@@ -202,41 +247,38 @@ function ResponsiblesTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr className="border-b border-[var(--glass-border)] font-body text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
-            <th className="px-4 py-3 font-semibold">Responsável</th>
-            <th className="px-4 py-3 font-semibold">Presença</th>
-            <th className="px-4 py-3 text-center font-semibold">Fila</th>
-            <th className="px-4 py-3 text-center font-semibold">Volume</th>
-            <th className="px-4 py-3 font-semibold">Elegibilidade</th>
-            {canManage && <th className="px-4 py-3 text-right font-semibold">Ações</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {responsibles.map((r) => (
-            <ResponsibleRow
-              key={r.userId}
-              r={r}
-              isCurrentUser={r.userId === currentUserId}
-              canManage={canManage}
-              onEdit={onEdit}
-            />
-          ))}
-        </tbody>
-      </table>
+    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+      <div className={listTableHeadRowClass(cn(RESP_GRID, "gap-3 px-3 py-2"))}>
+        <ListColumnLabel>Responsável</ListColumnLabel>
+        <ListColumnLabel>Presença</ListColumnLabel>
+        <ListColumnLabel className="text-center">Fila</ListColumnLabel>
+        <ListColumnLabel className="text-center">Volume</ListColumnLabel>
+        <ListColumnLabel>Elegibilidade</ListColumnLabel>
+        <ListColumnLabel align="right">Ações</ListColumnLabel>
+      </div>
+      {responsibles.map((r, idx) => (
+        <ResponsibleRow
+          key={r.userId}
+          r={r}
+          idx={idx}
+          isCurrentUser={r.userId === currentUserId}
+          canManage={canManage}
+          onEdit={onEdit}
+        />
+      ))}
     </div>
   );
 }
 
 function ResponsibleRow({
   r,
+  idx,
   isCurrentUser,
   canManage,
   onEdit,
 }: {
   r: DistributionResponsibleDto;
+  idx: number;
   isCurrentUser: boolean;
   canManage: boolean;
   onEdit: (r: DistributionResponsibleDto) => void;
@@ -250,6 +292,7 @@ function ResponsibleRow({
     .toUpperCase();
 
   const isOnline = (r.status ?? "OFFLINE") === "ONLINE";
+  const avatarClass = AVATAR_PALETTES[idx % AVATAR_PALETTES.length];
 
   const toggleOwnStatus = () => {
     statusMut.mutate(
@@ -261,82 +304,93 @@ function ResponsibleRow({
   };
 
   return (
-    <tr className="border-b border-[var(--glass-border)] last:border-0 font-body text-[13px] text-[var(--text-primary)]">
+    <div className={cn("grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]", RESP_GRID)}>
       {/* Responsável */}
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12 font-display text-[12px] font-bold text-[var(--brand-primary)]">
-            {initials}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate font-semibold">{r.name ?? "Sem nome"}</p>
-            <p className="truncate text-[12px] text-[var(--text-muted)]">
-              {r.email ?? "—"} · {r.role}
-            </p>
-          </div>
+      <div className="flex min-w-0 items-center gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[13px] font-extrabold ${avatarClass}`}
+        >
+          {initials}
         </div>
-      </td>
+        <div className="min-w-0">
+          <p className="truncate font-display text-[13.5px] font-bold text-[var(--text-primary)]">
+            {r.name ?? "Sem nome"}
+          </p>
+          <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">
+            {r.email ?? "—"}{" "}
+            <span className="font-mono text-[10px] text-[var(--text-secondary)]">· {r.role}</span>
+          </p>
+        </div>
+      </div>
 
       {/* Presença */}
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
-          {isCurrentUser && (
-            <button
-              type="button"
-              onClick={toggleOwnStatus}
-              disabled={statusMut.isPending}
-              className="cursor-pointer rounded-full border border-[var(--glass-border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
-            >
-              {statusMut.isPending
-                ? "..."
-                : isOnline
-                  ? "Ficar offline"
-                  : "Ficar online"}
-            </button>
-          )}
-        </div>
-      </td>
+      <div className="flex items-center gap-2">
+        <PresenceBadge status={r.status} paused={r.paused} participates={r.participates} />
+        {isCurrentUser && (
+          <button
+            type="button"
+            onClick={toggleOwnStatus}
+            disabled={statusMut.isPending}
+            className="cursor-pointer rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[11px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] disabled:opacity-50"
+          >
+            {statusMut.isPending
+              ? "…"
+              : isOnline
+                ? "Ficar offline"
+                : "Ficar online"}
+          </button>
+        )}
+      </div>
 
-      {/* Fila — leads atuais com o responsável */}
-      <td className="px-4 py-3 text-center font-display font-bold">{r.queueCount}</td>
+      {/* Fila */}
+      <div className="text-center font-display text-[15px] font-extrabold text-[var(--text-primary)]">
+        {r.queueCount}
+      </div>
 
-      {/* Volume — limite de leads (∞ = sem limite) */}
-      <td className="px-4 py-3 text-center text-[var(--text-muted)]">
-        {r.queueLimit > 0 ? r.queueLimit : "∞"}
-      </td>
-
-      {/* Elegibilidade */}
-      <td className="px-4 py-3">
-        {r.eligible ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-online)]/12 px-2.5 py-1 text-[12px] font-semibold text-[var(--color-online)]">
-            <IconCircleCheck size={14} /> Elegível
+      {/* Volume */}
+      <div className="text-center font-body text-[18px] leading-none text-[var(--text-muted)]">
+        {r.queueLimit > 0 ? (
+          <span className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
+            {r.queueLimit}
           </span>
         ) : (
-          <span className="flex flex-col items-start gap-1">
-            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[var(--color-danger)]/10 px-2.5 py-1 text-[12px] font-semibold text-[var(--color-danger-text)]">
-              <IconAlertTriangle size={14} /> Indisponível
-            </span>
-            <span className="text-[11px] text-[var(--text-muted)]">
-              {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
-            </span>
-          </span>
+          "∞"
         )}
-      </td>
+      </div>
+
+      {/* Elegibilidade */}
+      <div className="flex flex-col gap-1">
+        {r.eligible ? (
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-success-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-success-dark,#0f7a5a)]">
+            <IconCircleCheck size={13} /> Elegível
+          </span>
+        ) : (
+          <>
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--color-danger-bg)] px-2.5 py-1 font-display text-[11.5px] font-bold text-[var(--color-danger-text)]">
+              <IconAlertTriangle size={13} /> Indisponível
+            </span>
+            {r.blockedReasons.length > 0 && (
+              <span className="pl-0.5 font-body text-[11px] text-[var(--text-muted)]">
+                {r.blockedReasons.map((b) => BLOCK_REASON_LABELS[b]).join(" · ")}
+              </span>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Ações */}
-      {canManage && (
-        <td className="px-4 py-3 text-right">
+      <div className="flex justify-end">
+        {canManage && (
           <button
             type="button"
             onClick={() => onEdit(r)}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-[var(--glass-border)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
           >
-            <IconPencil size={14} /> Editar
+            <IconPencil size={13} /> Editar
           </button>
-        </td>
-      )}
-    </tr>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -450,34 +504,44 @@ function PendingQueueBlock({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-xl)] border p-4 backdrop-blur-md",
+        "overflow-hidden rounded-[var(--radius-xl)] border backdrop-blur-md",
         isEmpty
-          ? "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)]"
-          : "border-amber-400/30 bg-amber-400/[0.06] shadow-[var(--glass-shadow-sm)]"
+          ? "border-[var(--glass-border)] bg-[var(--glass-bg-base,rgba(255,255,255,0.82))] shadow-[var(--glass-shadow)]"
+          : "border-amber-300/40 bg-amber-50/80 shadow-[var(--glass-shadow)]",
       )}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <IconClockExclamation
-            size={18}
-            className={isEmpty ? "text-[var(--text-muted)]" : "text-amber-500"}
-          />
-          <div>
-            <p className="font-display text-[14px] font-bold text-[var(--text-primary)]">
-              Aguardando distribuição ({pending.length})
-            </p>
-            <p className="font-body text-[12px] text-[var(--text-muted)]">
-              Leads sem responsável elegível. São redistribuídos quando alguém
-              fica online.
-            </p>
-          </div>
+      <div className="flex items-start gap-3 p-4">
+        {/* Ícone */}
+        <div
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
+            isEmpty
+              ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
+              : "bg-amber-100 text-amber-600",
+          )}
+        >
+          {isEmpty ? (
+            <IconCircleCheck size={18} />
+          ) : (
+            <IconClockExclamation size={18} />
+          )}
         </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="font-display text-[14.5px] font-extrabold text-[var(--text-primary)]">
+            Aguardando distribuição ({pending.length})
+          </p>
+          <p className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">
+            Leads sem responsável elegível. São redistribuídos quando alguém fica online.
+          </p>
+        </div>
+
         {!isEmpty && (
           <button
             type="button"
             onClick={onRetry}
             disabled={retrying}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-amber-400/40 px-3 py-1.5 font-display text-[12px] font-bold text-amber-600 transition-colors hover:bg-amber-400/10 disabled:opacity-50"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-amber-300/50 bg-amber-50 px-3 py-1.5 font-display text-[12px] font-bold text-amber-600 transition-colors hover:bg-amber-100 disabled:opacity-50"
           >
             {retrying ? (
               <IconLoader2 size={14} className="animate-spin" />
@@ -488,34 +552,36 @@ function PendingQueueBlock({
           </button>
         )}
       </div>
+
       {isEmpty ? (
-        <p className="font-body text-[13px] text-[var(--text-muted)]">
+        <div className="mx-4 mb-4 flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3 font-body text-[13px] text-[var(--text-muted)]">
+          <IconCircleCheck size={15} className="shrink-0 text-[var(--color-success)]" />
           {loading
             ? "Carregando fila…"
             : "Nenhum lead aguardando. Todos os leads recebidos foram distribuídos."}
-        </p>
+        </div>
       ) : (
-      <ul className="flex flex-col gap-1.5">
-        {pending.map((p) => (
-          <li
-            key={p.id}
-            className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px]"
-          >
-            <span className="min-w-0 truncate font-semibold text-[var(--text-primary)]">
-              {p.label}
-              {p.distributionType && (
-                <span className="ml-2 font-normal text-[var(--text-muted)]">
-                  · {p.distributionType}
-                </span>
-              )}
-            </span>
-            <span className="shrink-0 text-[12px] text-[var(--text-muted)]">
-              {p.attempts > 1 ? `${p.attempts} tentativas · ` : ""}
-              {relativeTime(p.createdAt)}
-            </span>
-          </li>
-        ))}
-      </ul>
+        <ul className="mx-4 mb-4 flex flex-col gap-1.5">
+          {pending.map((p) => (
+            <li
+              key={p.id}
+              className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-body text-[13px]"
+            >
+              <span className="min-w-0 truncate font-semibold text-[var(--text-primary)]">
+                {p.label}
+                {p.distributionType && (
+                  <span className="ml-2 font-normal text-[var(--text-muted)]">
+                    · {p.distributionType}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 text-[12px] text-[var(--text-muted)]">
+                {p.attempts > 1 ? `${p.attempts} tentativas · ` : ""}
+                {relativeTime(p.createdAt)}
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

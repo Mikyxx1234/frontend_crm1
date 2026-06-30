@@ -15,6 +15,8 @@
 
 import "@/styles/globals-v2.css";
 import { TooltipProvider } from "@/components/crm/tooltip-glass";
+import { UpdateAvailableBanner } from "@/components/layout/update-banner";
+import { SoftphoneWidget } from "@/features/softphone/components";
 
 export default function AppLayout({
   children,
@@ -31,6 +33,8 @@ export default function AppLayout({
         }}
       >
         {children}
+        <UpdateAvailableBanner />
+        <SoftphoneWidget />
       </div>
     </TooltipProvider>
   );

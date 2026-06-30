@@ -2,19 +2,19 @@
 
 import { IconDeviceMobile } from "@tabler/icons-react";
 
-import { MobileLayoutClientPage as OldMobileLayoutPage } from "@/app/old/settings/mobile-layout/client-page";
-import { SettingsV2Shell } from "../_v2-shell";
+import { MobileLayoutClientPage as OldMobileLayoutPage } from "@/features/legacy-v1/settings/mobile-layout";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 export default function MobileLayoutV2ClientPage() {
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="App Mobile"
       description="Barra inferior do PWA"
       icon={<IconDeviceMobile size={22} />}
     >
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
-        <OldMobileLayoutPage />
-      </div>
+      <OldMobileLayoutPage />
     </SettingsV2Shell>
   );
 }
+

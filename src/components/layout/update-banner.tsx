@@ -1,0 +1,284 @@
+"use client";
+
+/**
+ * Banner flutuante de "atualizações disponíveis" — estilo n8n.
+ *
+ * Lê /changelog.json (gerado em prebuild a partir do CHANGELOG.md) e
+ * compara com `localStorage.crm_last_seen_version`. Se o usuário ainda
+ * não viu a versão atual do app (`NEXT_PUBLIC_APP_VERSION`), exibe um
+ * chip flutuante no canto inferior esquerdo. Clicando, abre painel com
+ * resumo das releases novas. Botão "Entendi" persiste a versão e some.
+ *
+ * Não exibe nada para:
+ *  - usuário não autenticado
+ *  - changelog.json inexistente / vazio
+ *  - versão atual já marcada como vista
+ */
+
+import { useQuery } from "@tanstack/react-query";
+import { IconSparkles, IconX, IconChevronUp } from "@tabler/icons-react";
+import { useSession } from "next-auth/react";
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
+
+const STORAGE_KEY = "crm_last_seen_version";
+const APP_VERSION = (process.env.NEXT_PUBLIC_APP_VERSION ?? "").trim();
+
+type Section = Record<string, string[]>;
+type Release = {
+  version: string;
+  date: string | null;
+  label?: string | null;
+  sections: Section;
+};
+type ChangelogPayload = {
+  releases: Release[];
+  generatedAt?: string;
+};
+
+/**
+ * Compara duas versões semver simples (a > b → 1, a < b → -1, igual → 0).
+ * "unreleased" é sempre tratada como menor que qualquer release nomeada
+ * (não queremos disparar o banner por mudanças não publicadas).
+ */
+function cmpVersion(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a === "unreleased") return -1;
+  if (b === "unreleased") return 1;
+  const pa = a.split(".").map((n) => Number.parseInt(n, 10) || 0);
+  const pb = b.split(".").map((n) => Number.parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const da = pa[i] ?? 0;
+    const db = pb[i] ?? 0;
+    if (da !== db) return da > db ? 1 : -1;
+  }
+  return 0;
+}
+
+async function fetchChangelog(): Promise<ChangelogPayload | null> {
+  try {
+    const res = await fetch("/changelog.json", { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as ChangelogPayload;
+  } catch {
+    return null;
+  }
+}
+
+const SECTION_LABEL: Record<string, string> = {
+  feat: "Novidades",
+  fix: "Correções",
+  refactor: "Refatorações",
+  docs: "Documentação",
+  chore: "Manutenção",
+  perf: "Performance",
+};
+
+const SECTION_ORDER = ["feat", "fix", "perf", "refactor", "docs", "chore"];
+
+function ReleaseCard({ release }: { release: Release }) {
+  const ordered = SECTION_ORDER.filter((k) => release.sections[k]?.length);
+  return (
+    <div className="rounded-xl border border-white/40 bg-white/60 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          {release.version === "unreleased"
+            ? "Em desenvolvimento"
+            : `v${release.version}`}
+        </h4>
+        {release.date && (
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            {release.date}
+          </span>
+        )}
+      </div>
+      {ordered.map((key) => (
+        <div key={key} className="mt-2 first:mt-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {SECTION_LABEL[key] ?? key}
+          </p>
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-[12.5px] leading-snug text-slate-700 dark:text-slate-200">
+            {release.sections[key]!.slice(0, 5).map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+            {release.sections[key]!.length > 5 && (
+              <li className="list-none text-[11px] italic opacity-70">
+                + {release.sections[key]!.length - 5} itens…
+              </li>
+            )}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function UpdateAvailableBanner() {
+  const { status: sessionStatus } = useSession();
+
+  const { data } = useQuery({
+    queryKey: ["changelog"],
+    queryFn: fetchChangelog,
+    enabled: sessionStatus === "authenticated" && APP_VERSION !== "",
+    staleTime: 60 * 60 * 1_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const [lastSeen, setLastSeen] = React.useState<string | null>(null);
+  const [expanded, setExpanded] = React.useState(false);
+  const [hidden, setHidden] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    setLastSeen(window.localStorage.getItem(STORAGE_KEY));
+  }, []);
+
+  if (sessionStatus !== "authenticated") return null;
+  if (!APP_VERSION) return null;
+  if (!data || data.releases.length === 0) return null;
+  if (hidden) return null;
+
+  // Só exibe se a versão atual do app é maior que a última vista.
+  if (lastSeen && cmpVersion(APP_VERSION, lastSeen) <= 0) return null;
+
+  // Releases novas: todas com version > lastSeen e <= APP_VERSION.
+  // "unreleased" entra apenas quando não há registro de last-seen ainda
+  // (primeira sessão), pra dar contexto do que está cozinhando.
+  const newReleases = data.releases.filter((r) => {
+    if (r.version === "unreleased") return !lastSeen;
+    if (cmpVersion(r.version, APP_VERSION) > 0) return false;
+    if (!lastSeen) return true;
+    return cmpVersion(r.version, lastSeen) > 0;
+  });
+
+  if (newReleases.length === 0) return null;
+
+  const totalItems = newReleases.reduce(
+    (acc, r) =>
+      acc + Object.values(r.sections).reduce((a, list) => a + list.length, 0),
+    0,
+  );
+
+  const handleDismiss = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(STORAGE_KEY, APP_VERSION);
+    }
+    setLastSeen(APP_VERSION);
+    setHidden(true);
+  };
+
+  return (
+    <div
+      className="fixed bottom-4 left-[5.5rem] z-[60] flex flex-col items-start gap-2"
+      role="region"
+      aria-label="Atualizações disponíveis"
+    >
+      {expanded && (
+        <div
+          className={cn(
+            "max-h-[70vh] w-[min(420px,calc(100vw-2rem))] overflow-auto rounded-2xl border p-3 shadow-2xl",
+            "border-white/50 bg-white/80 backdrop-blur-xl",
+            "dark:border-white/10 dark:bg-slate-900/80",
+          )}
+          style={{
+            background: "var(--glass-bg-overlay, rgba(255,255,255,0.85))",
+            boxShadow: "var(--glass-shadow, 0 20px 60px rgba(0,0,0,0.18))",
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <IconSparkles size={18} className="text-indigo-500" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                Novidades em v{APP_VERSION}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              aria-label="Fechar"
+              className="rounded-md p-1 text-slate-500 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
+            >
+              <IconX size={16} />
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {newReleases.map((r) => (
+              <ReleaseCard key={r.version} release={r} />
+            ))}
+          </div>
+
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98]"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/*
+        O chip é um container `<div>` com DOIS botões reais lado a lado:
+        toggle (expandir/recolher) e dismiss (X). Não dá pra aninhar
+        `<button>` dentro de `<button>` (HTML inválido) — por isso a
+        divisão. O X chama `handleDismiss` direto, que persiste a versão
+        em localStorage e remove o banner permanentemente até a próxima
+        release.
+      */}
+      <div
+        className={cn(
+          "group inline-flex items-stretch overflow-hidden rounded-full border shadow-lg backdrop-blur-md transition",
+          "border-white/50 bg-white/80 text-slate-800 hover:bg-white",
+          "dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-100 dark:hover:bg-slate-900",
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium"
+          aria-expanded={expanded}
+          aria-controls="update-banner-panel"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+          </span>
+          <IconSparkles size={16} className="text-indigo-500" />
+          <span>
+            Novidades em <strong>v{APP_VERSION}</strong>
+          </span>
+          <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
+            {totalItems}
+          </span>
+          <IconChevronUp
+            size={14}
+            className={cn(
+              "text-slate-400 transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Dispensar e não mostrar mais"
+          title="Não mostrar mais esta versão"
+          className={cn(
+            "inline-flex items-center justify-center border-l px-2.5 text-slate-400 transition-colors",
+            "border-white/40 hover:bg-black/5 hover:text-slate-700",
+            "dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-slate-100",
+          )}
+        >
+          <IconX size={14} strokeWidth={2.2} />
+        </button>
+      </div>
+    </div>
+  );
+}

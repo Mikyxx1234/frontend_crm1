@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  IconArrowLeft,
   IconBuilding,
   IconDeviceFloppy,
   IconHandStop,
@@ -116,6 +115,7 @@ export default function CompanyDetailClientPage({ id }: { id: string }) {
 
       <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
         <PageHeader
+          back={{ href: "/companies", label: "Empresas" }}
           icon={<IconBuilding size={22} />}
           title={query.data?.name ?? "Empresa"}
           description={
@@ -160,13 +160,6 @@ export default function CompanyDetailClientPage({ id }: { id: string }) {
                 title="Empresa não encontrada"
                 description={query.error?.message ?? "Verifique o id ou volte para a lista."}
               />
-              <div className="mt-4 flex justify-center">
-                <Link href="/companies">
-                  <ButtonGlass>
-                    <IconArrowLeft size={16} /> Voltar para empresas
-                  </ButtonGlass>
-                </Link>
-              </div>
             </GlassCard>
           )}
 

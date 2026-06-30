@@ -32,12 +32,15 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
-import { NavRail } from "@/components/crm/nav-rail";
+import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PipelineHeader } from "@/components/crm/pipeline-header";
 import { KanbanColumn } from "@/components/crm/kanban-column";
 import { DealCard } from "@/components/crm/deal-card";
 import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
+import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";
+import { CallHistoryList } from "@/features/softphone/components/call-history-list";
+import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { Chip } from "@/components/crm/chip";
@@ -56,6 +59,7 @@ import { avatarInitials } from "@/features/inbox-v2/adapters";
 import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
   useBoard,
+  useBoardSearch,
   useDealDetail,
   useMoveDeal,
   usePipelines,
@@ -64,9 +68,13 @@ import {
 } from "@/features/pipeline-v2/hooks";
 import { dealDetailKey } from "@/features/pipeline-v2/hooks/use-deal-detail";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { updateDeal } from "@/features/pipeline-v2/api";
+import { createContact } from "@/features/directory-v2/api";
 import { useMyPermissions } from "@/hooks/use-my-permissions";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { BulkActionsBar } from "@/components/pipeline/bulk-actions-bar";
+import type { BulkScopeContext } from "@/components/pipeline/bulk-edit-fields-dialog";
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import type {
   BoardDealDto,
@@ -227,12 +235,40 @@ export default function KanbanV2ClientPage({
     return undefined;
   }, [sortKey]);
 
-  const { data: board = [] } = useBoard({
+  // ── Busca server-side (varre todo o pipeline, não só os 100 carregados) ──
+  // O GET /board pagina 100 deals/coluna; a busca client-side em cima desses
+  // 100 nunca encontra deals em posições posteriores (ex.: #4129 numa coluna
+  // de 671 cards). Quando há termo digitado (≥2 chars debounced), trocamos
+  // o board pelo resultado do POST /board com `filters.search` — server-side
+  // com telefone normalizado e match por número do deal.
+  //
+  // Sem termo: continua o GET paginado normal (mesmo cache, sem refetch
+  // extra). useBoard fica desabilitado durante a busca pra evitar duas
+  // queries simultâneas competindo pelo mesmo state.
+  const rawSearch = (filters.search ?? search).trim();
+  const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(rawSearch), 300);
+    return () => clearTimeout(t);
+  }, [rawSearch]);
+  const hasServerSearch = debouncedSearch.length >= 2;
+
+  const boardNormal = useBoard({
     pipelineId,
     status,
     sort: boardSort,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !hasServerSearch,
   });
+  const boardSearch = useBoardSearch({
+    pipelineId,
+    status,
+    search: debouncedSearch,
+    sort: boardSort,
+    enabled: isAuthenticated && hasServerSearch,
+  });
+  const board = hasServerSearch
+    ? boardSearch.data ?? []
+    : boardNormal.data ?? [];
 
   const moveDeal = useMoveDeal(pipelineId, status);
 
@@ -244,14 +280,16 @@ export default function KanbanV2ClientPage({
   const requestMove = useCallback(
     (vars: MoveVars) => {
       const target = board.find((s) => s.id === vars.toStageId);
-      if (target?.isLost) {
-        const deal = board
-          .flatMap((s) => s.deals)
-          .find((d) => d.id === vars.dealId);
-        if (deal?.status !== "LOST") {
-          setPendingLostMove(vars);
-          return;
-        }
+      // Entrar no estágio Perdido (vindo de OUTRA etapa) sempre pede o
+      // motivo. Baseamos em `fromStageId !== toStageId` em vez do
+      // `status` do card — esse último fica defasado logo após uma
+      // reabertura otimista (o onMutate move o card mas não atualiza o
+      // status), o que fazia a tabulação ser pulada ou bugar ao mover um
+      // lead reaberto de volta pra Perdido. Reordenar dentro da própria
+      // coluna Perdido (from === to) não dispara o diálogo.
+      if (target?.isLost && vars.fromStageId !== vars.toStageId) {
+        setPendingLostMove(vars);
+        return;
       }
       moveDeal.mutate(vars);
     },
@@ -303,36 +341,59 @@ export default function KanbanV2ClientPage({
     setSelectedIds(new Set());
   }, [pipelineId]);
 
-  // Carrega options de filtro quando o painel é aberto pela primeira vez
+  // Recarrega as options de filtro toda vez que o painel é aberto.
+  // Antes buscava só uma vez (guard `filterOptions !== null`), o que
+  // cacheava listas vazias da org — ex.: motivos de perda criados depois
+  // da primeira abertura nunca apareciam sem dar reload na página.
+  // Mantém as opções anteriores em caso de erro (não pisca pra vazio).
   useEffect(() => {
-    if (!filtersOpen || filterOptions !== null || filterOptionsLoading) return;
+    if (!filtersOpen) return;
+    let cancelled = false;
     setFilterOptionsLoading(true);
     fetchFilterOptions()
-      .then(setFilterOptions)
-      .catch(() => setFilterOptions(null))
-      .finally(() => setFilterOptionsLoading(false));
-  }, [filtersOpen, filterOptions, filterOptionsLoading]);
+      .then((opts) => { if (!cancelled) setFilterOptions(opts); })
+      .catch(() => { /* mantém opções já carregadas */ })
+      .finally(() => { if (!cancelled) setFilterOptionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [filtersOpen]);
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {
-    const q = (filters.search ?? search).trim().toLowerCase();
-    const hasSearch = q.length > 0;
+    // Quando o board veio do POST /board com `filters.search`, o servidor
+    // JÁ filtrou (telefone normalizado, número do deal etc.) — re-filtrar
+    // aqui em cima descartaria matches que só o backend consegue achar
+    // (ex.: telefone `+55 (11) 99697-8282` vs busca `11996978282`).
+    const queries = hasServerSearch
+      ? []
+      : [filters.search, search]
+          .map((v) => (v ?? "").trim().toLowerCase())
+          .filter((v) => v.length > 0);
+    const hasSearch = queries.length > 0;
     const hasOwner = (filters.ownerIds?.length ?? 0) > 0;
     const hasTag = (filters.tagIds?.length ?? 0) > 0;
     const hasStage = (filters.stageIds?.length ?? 0) > 0;
+    const lostReasonSet = (filters.lostReasons?.length ?? 0) > 0
+      ? new Set(filters.lostReasons)
+      : null;
+    const hasLostReason = lostReasonSet !== null;
     const vMin = filters.valueFrom != null ? Number(filters.valueFrom) : null;
     const vMax = filters.valueTo != null ? Number(filters.valueTo) : null;
     const hasValue = vMin !== null || vMax !== null;
 
-    const noFilters = !hasSearch && !hasOwner && !hasTag && !hasStage && !hasValue && isEmptyFilters(filters);
+    const noFilters =
+      !hasSearch && !hasOwner && !hasTag && !hasStage && !hasValue && !hasLostReason && isEmptyFilters(filters);
+    // Quando há QUALQUER filtro client-side ativo o `totalCount` que veio
+    // do backend (não filtrado) precisa ser sobrescrito pelo número real
+    // de deals visíveis — caso contrário o badge da coluna fica preso no
+    // total original e parece que o filtro/busca não funcionou.
+    const overrideCount = !noFilters;
 
     const filtered = noFilters
       ? board
       : board
           .filter((stage) => !hasStage || (filters.stageIds ?? []).includes(stage.id))
-          .map((stage) => ({
-            ...stage,
-            deals: stage.deals.filter((d) => {
+          .map((stage) => {
+            const deals = stage.deals.filter((d) => {
               if (hasOwner && (!d.owner?.id || !(filters.ownerIds ?? []).includes(d.owner.id))) return false;
               if (hasTag) {
                 const ids = (d.tags ?? []).map((t) => t.id);
@@ -341,16 +402,24 @@ export default function KanbanV2ClientPage({
               if (hasSearch) {
                 const hay = [d.title, d.contact?.name, d.contact?.email, d.contact?.phone]
                   .filter(Boolean).join(" ").toLowerCase();
-                if (!hay.includes(q)) return false;
+                if (!queries.every((q) => hay.includes(q))) return false;
               }
               if (hasValue) {
                 const val = Number(d.value) || 0;
                 if (vMin !== null && val < vMin) return false;
                 if (vMax !== null && val > vMax) return false;
               }
+              if (lostReasonSet && !(d.lostReason && lostReasonSet.has(d.lostReason))) {
+                return false;
+              }
               return true;
-            }),
-          }));
+            });
+            return {
+              ...stage,
+              deals,
+              totalCount: overrideCount ? deals.length : stage.totalCount,
+            };
+          });
 
     // Ordenação dos cards dentro de cada coluna.
     //
@@ -383,7 +452,7 @@ export default function KanbanV2ClientPage({
       }
       return { ...stage, deals };
     });
-  }, [board, filters, search, sortKey]);
+  }, [board, filters, search, sortKey, hasServerSearch]);
 
   // Filtrar stages por stageGrants do usuário (Permissions v2).
   // stageGrants vazio = todas as fases visíveis (sem restrição).
@@ -398,6 +467,31 @@ export default function KanbanV2ClientPage({
     () => toKanbanColumns(stageGrantsFiltered),
     [stageGrantsFiltered],
   );
+
+  // Contexto para "selecionar todos que batem no filtro" na edição em massa.
+  // Permite editar além dos ~100 cards carregados por coluna: o servidor
+  // resolve os IDs a partir do mesmo filtro/visibilidade do board.
+  const scopeContext = useMemo<BulkScopeContext | undefined>(() => {
+    if (!pipelineId) return undefined;
+    const boardForScope = stageGrantsFiltered;
+    const pipelineTotal = boardForScope.reduce(
+      (acc, s) => acc + (s.totalCount ?? s.deals.length),
+      0,
+    );
+    // Habilita o escopo "etapa" só quando TODA a seleção está numa única etapa.
+    let stage: { id: string; name: string; total: number } | null = null;
+    if (selectedIds.size > 0) {
+      const stagesWithSel = boardForScope.filter((s) =>
+        s.deals.some((d) => selectedIds.has(d.id)),
+      );
+      if (stagesWithSel.length === 1) {
+        const s = stagesWithSel[0];
+        stage = { id: s.id, name: s.name, total: s.totalCount ?? s.deals.length };
+      }
+    }
+    const scopeFilters = { ...filters, ...(rawSearch ? { search: rawSearch } : {}) };
+    return { pipelineId, status, filters: scopeFilters, pipelineTotal, stage };
+  }, [pipelineId, stageGrantsFiltered, selectedIds, filters, rawSearch, status]);
 
   // Lookup ownerId / tags reais por dealId. O `Deal` (v0) que chega no
   // renderDeal só tem `owner.name`, não o `ownerId` nem `tagIds`. Esse
@@ -464,8 +558,39 @@ export default function KanbanV2ClientPage({
         name: ownerName,
         avatarColor: avatarColorSlugFromName(ownerName),
       },
+      status: (dealDetail as { status?: "OPEN" | "WON" | "LOST" }).status ?? null,
+      lostReason:
+        (dealDetail as { lostReason?: string | null }).lostReason ?? null,
     };
   }, [dealDetail, activeDealStageName]);
+
+  // Negócio SEM contato vinculado: cria um contato com o telefone/email
+  // digitado e vincula ao deal (o painel chama isso via customSave do
+  // editor inline). Lança o erro de volta pro editor não fechar em falha.
+  const handleCreateContactForField = useCallback(
+    async (field: "phone" | "email", value: string) => {
+      if (!activeDealId) return;
+      const v = value.trim();
+      if (!v) return;
+      try {
+        const name =
+          dealDetail?.title?.trim() || (field === "email" ? "Novo contato" : v);
+        const contact = await createContact({
+          name,
+          ...(field === "phone" ? { phone: v } : { email: v }),
+        });
+        await updateDeal(activeDealId, { contactId: contact.id });
+        queryClient.invalidateQueries({ queryKey: dealDetailKey(activeDealId) });
+        queryClient.invalidateQueries({ queryKey: ["pipeline-board"], exact: false });
+        queryClient.invalidateQueries({ queryKey: ["contact-sidebar", contact.id] });
+        toast.success("Contato criado e vinculado ao negócio.");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Erro ao criar contato.");
+        throw e;
+      }
+    },
+    [activeDealId, dealDetail?.title, queryClient],
+  );
 
   // ── Conversa real ligada ao deal ────────────────────────────────
   // Pega a conversa mais recente do contato (o backend ja ordena por
@@ -476,7 +601,7 @@ export default function KanbanV2ClientPage({
       ?.conversations?.[0]?.id ?? null;
   const dealContactName =
     dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
-  const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote } =
+  const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote, connection: dealConnection } =
     useDealChatBinding({
       conversationId: dealConversationId,
       contactName: dealContactName,
@@ -506,7 +631,7 @@ export default function KanbanV2ClientPage({
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4" style={{ gridTemplateRows: "1fr" }}>
-      {navRail ?? <NavRail />}
+      {navRail ?? <NavRailV2 />}
       <div
         ref={boardWrapperRef}
         className="flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-clip"
@@ -751,6 +876,15 @@ export default function KanbanV2ClientPage({
           ) : undefined
         }
         deleteSlot={undefined}
+        callButtonSlot={
+          activeDealId && dealDetailVm ? (
+            <DealCallButton
+              dealId={activeDealId}
+              phone={dealDetailVm.phone ?? null}
+              contactId={dealDetailVm.contactId ?? undefined}
+            />
+          ) : null
+        }
         moreActionsSlot={
           activeDealId ? (
             <DealActionsMenu
@@ -844,6 +978,7 @@ export default function KanbanV2ClientPage({
         messagesSlot={messagesNode}
         composerSlot={composerNode}
         sessionAlertSlot={sessionAlertNode ?? null}
+        connection={dealConnection}
         conversationId={dealConversationId}
         isResolved={
           (dealDetail?.contact as { conversations?: { status?: string }[] } | null | undefined)
@@ -863,9 +998,21 @@ export default function KanbanV2ClientPage({
                 ),
                 timeline: <DealTimelineTab dealId={activeDealId} />,
                 atividades: <DealActivitiesTab />,
+                chamadas: (
+                  <div className="flex-1 overflow-auto p-4">
+                    <CallHistoryList
+                      embedded
+                      contactId={dealContactId}
+                    />
+                  </div>
+                ),
               }
             : undefined
         }
+        productsSlot={
+          activeDealId ? <DealProductsSection dealId={activeDealId} compact /> : null
+        }
+        onCreateContactForField={handleCreateContactForField}
         tagsSlot={
           activeDealId ? (() => {
             const allTags = dealDetail?.tags ?? [];
@@ -943,7 +1090,10 @@ export default function KanbanV2ClientPage({
         onOpenChange={(o) => {
           if (!o) setPendingLostMove(null);
         }}
-        isPending={moveDeal.isPending}
+        // NÃO usar `moveDeal.isPending` aqui: é a mesma mutation usada na
+        // reabertura do lead, então um move anterior ainda em voo deixava o
+        // "Confirmar perda" desabilitado mesmo com o motivo já selecionado.
+        // O diálogo fecha no onConfirm, então não há risco de duplo submit.
         title="Mover para Perdido"
         description="Informe o motivo da perda para concluir a movimentação."
         onConfirm={(reason) => {
@@ -966,6 +1116,7 @@ export default function KanbanV2ClientPage({
             isLost: s.isLost,
           }))}
           users={teamUsers.map((u) => ({ id: u.id, name: u.name }))}
+          scopeContext={scopeContext}
         />
       ) : null}
 
@@ -1558,7 +1709,7 @@ function PipelineKebabMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
+      className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
     >
       {/* Seção: ordenar */}
       <div className="px-3 pb-1 pt-2.5">

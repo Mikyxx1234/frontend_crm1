@@ -17,7 +17,7 @@ import {
   useSaveConversationFeature,
   type ConversationFeatures,
 } from "@/features/inbox-v2/hooks";
-import { SettingsV2Shell } from "../_v2-shell";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 // ─── Toggle row (DS v2 — card glass + ícone-quadrado) ───────────────────────
 
@@ -97,6 +97,7 @@ export function ConversationsSettingsClientPage() {
 
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="Conversas"
       description="Funcionalidades das janelas de conversa"
       icon={<IconMessageCircle size={22} />}

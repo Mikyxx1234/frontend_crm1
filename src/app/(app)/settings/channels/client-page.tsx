@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { IconAntenna, IconPlus } from "@tabler/icons-react";
 
-import OldChannelsPage from "@/app/old/settings/channels/client-page";
-import { SearchInput } from "@/components/crm/search-input";
-import { SettingsV2Shell } from "../_v2-shell";
+import OldChannelsPage from "@/features/legacy-v1/settings/channels";
+import { PagePrimaryButton, PageSearchBar } from "@/components/crm/page-toolbar";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 
 export default function ChannelsV2ClientPage() {
   const [search, setSearch] = useState("");
@@ -13,34 +13,31 @@ export default function ChannelsV2ClientPage() {
 
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="Canais"
       description="WhatsApp, Instagram, Facebook e demais canais conectados"
       icon={<IconAntenna size={22} />}
       center={
-        <SearchInput
+        <PageSearchBar
+          variant="compact"
           value={search}
           onChange={setSearch}
           placeholder="Buscar canais por nome, telefone..."
+          aria-label="Buscar canais"
         />
       }
       actions={
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-3.5 py-1.5 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
-        >
+        <PagePrimaryButton type="button" onClick={() => setCreateOpen(true)}>
           <IconPlus size={16} /> Novo Canal
-        </button>
+        </PagePrimaryButton>
       }
     >
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
-        <OldChannelsPage
-          search={search}
-          createOpen={createOpen}
-          onCreateOpenChange={setCreateOpen}
-          hideToolbar
-        />
-      </div>
+      <OldChannelsPage
+        search={search}
+        createOpen={createOpen}
+        onCreateOpenChange={setCreateOpen}
+        hideToolbar
+      />
     </SettingsV2Shell>
   );
 }

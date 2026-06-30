@@ -69,60 +69,6 @@ export function filterSettingsNav(
     .filter((group) => group.items.length > 0);
 }
 
-/**
- * Filtro generico pra itens da sidebar principal (dashboard-shell) —
- * mesma semantica, sem noção de grupo.
- */
-export function filterItemsByRole<T extends { allowedRoles?: UserRole[] }>(
-  items: T[],
-  viewer: Viewer,
-): T[] {
-  const hiddenRoutes = viewer.hiddenRoutes ?? [];
-  return items.filter((item) => {
-    const asRecord = item as unknown as { href?: string; id?: string; requiredPermission?: string };
-    if (asRecord.href && hiddenRoutes.includes(asRecord.href)) return false;
-    return canSeeItem(
-      item as unknown as { allowedRoles?: UserRole[]; requiredPermission?: string; href?: string | null; id?: string },
-      viewer,
-    );
-  });
-}
-
-/**
- * Defaults recomendados pra sidebar principal. Hoje usamos so na
- * sidebar vertical do dashboard-shell — expostos aqui pra que outros
- * consumidores (mobile bottom nav, cmdk palette) possam reaproveitar.
- *
- * Regra geral: MEMBER nao vê configuracoes nem ferramentas
- * administrativas. Ve so o que opera no dia a dia.
- */
-export const SIDEBAR_ROLE_MATRIX: Record<string, UserRole[] | undefined> = {
-  // Operacional — todos
-  "/old/dashboard": undefined,
-  "/old/pipeline": undefined,
-  "/old/inbox": undefined,
-  "/old/tasks": undefined,
-  "/old/contacts": undefined,
-  "/old/companies": undefined,
-  // Gestao
-  "/old/automations": [UserRole.ADMIN, UserRole.MANAGER],
-  "/old/ai-agents": [UserRole.ADMIN, UserRole.MANAGER],
-  "/old/campaigns": [UserRole.ADMIN, UserRole.MANAGER],
-  "/old/analytics": [UserRole.ADMIN, UserRole.MANAGER],
-  "/old/analytics/inbox": [UserRole.ADMIN, UserRole.MANAGER],
-  "/old/reports": [UserRole.ADMIN, UserRole.MANAGER],
-  // Developer area — so ADMIN
-  "/old/developers": [UserRole.ADMIN],
-  // Settings — todos enxergam, conteudo interno eh filtrado por grupo
-  "/old/settings": undefined,
-};
-
-/**
- * Rotas fora do rail da sidebar mas ainda sujeitas ao allow list granular
- * (`scopeGrants.sidebar.routes`). Usado junto com hrefs de nav/bottom.
- */
-export const SIDEBAR_GRANULAR_EXTRA_HREFS = ["/old/analytics/inbox"] as const;
-
 export function computeHiddenSidebarRoutesFromAllowList(
   trackedHrefs: readonly string[],
   sidebarAllowList: string[] | undefined,

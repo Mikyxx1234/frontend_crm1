@@ -1,0 +1,448 @@
+{
+  "id": "cmpy9so3200ubo7010g8es0is",
+  "name": "Pós Vaga Aceita",
+  "description": null,
+  "triggerType": "stage_changed",
+  "triggerConfig": {
+    "__rfPos": {
+      "x": -1345.511552276698,
+      "y": 372.1564405100286
+    },
+    "toStageId": "cmodk1kqd0005qp01oeq3h2ti",
+    "fromStageId": ""
+  },
+  "active": true,
+  "steps": [
+    {
+      "id": "2751f0aa-1d12-4069-973d-75b240a45bc5",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": -1039.50521107707,
+          "y": 326.7832402859819
+        },
+        "content": "Que ótimo, confirmamos seu interesse na vaga! 🙌\nPara garantir que essa vaga é a combinação certa para você, precisamos conhecer melhor o seu perfil.\nQuanto antes preencher, mais rápido avançamos! 🚀",
+        "nextStepId": "a24c6156-77f0-4740-befc-80d26fc312dc",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "a24c6156-77f0-4740-befc-80d26fc312dc",
+      "type": "condition",
+      "config": {
+        "__rfPos": {
+          "x": -310,
+          "y": -50
+        },
+        "branches": [
+          {
+            "id": "branch_e129e40d",
+            "rules": [
+              {
+                "op": "has_tag",
+                "field": "deal.tags",
+                "value": "Perfil Completo"
+              }
+            ],
+            "nextStepId": "980d9b30-a058-4e35-a5ad-e6bf082752c8"
+          }
+        ],
+        "elseStepId": "d3a2493e-ea59-430a-b395-483ffc1bb89d"
+      }
+    },
+    {
+      "id": "d3a2493e-ea59-430a-b395-483ffc1bb89d",
+      "type": "condition",
+      "config": {
+        "__rfPos": {
+          "x": -617.5678229451,
+          "y": 398.138516747251
+        },
+        "branches": [
+          {
+            "id": "branch_cf872d59",
+            "rules": [
+              {
+                "op": "has_tag",
+                "field": "contact.tags",
+                "value": "CLT Operacional"
+              }
+            ],
+            "nextStepId": "8444e3c2-8dd0-44d5-a2df-da89809319a1"
+          },
+          {
+            "id": "branch_73717020",
+            "rules": [
+              {
+                "op": "has_tag",
+                "field": "contact.tags",
+                "value": "CLT"
+              }
+            ],
+            "nextStepId": "0967210f-14c0-40cc-a4b7-9012067a0c89"
+          }
+        ],
+        "elseStepId": "508318d8-97fa-4d47-ba27-5fbe8e07e92d"
+      }
+    },
+    {
+      "id": "7b24fffa-b63c-4fc7-8c54-c14c54c8f0de",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 694.6756311876401,
+          "y": 402.067804778503
+        },
+        "content": "Por último, além do formulário, por favor nos encaminhe por aqui:\n- Seu currículo atualizado ou cópia da carteira de trabalho \n- Um vídeo curto (até 3 min) contando um pouco sobre você e por que quer trabalhar\nDepois desta etapa já iremos agendar a entrevista com a empresa.\nCaso tenha qualquer dúvida, só nos avisar. \nBora! 💪",
+        "nextStepId": "64d950b4-46e8-4768-9485-c44cc66aeee5",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "64d950b4-46e8-4768-9485-c44cc66aeee5",
+      "type": "wait_for_reply",
+      "config": {
+        "__rfPos": {
+          "x": 1083.990185788711,
+          "y": 386.3801438991868
+        },
+        "timeoutMs": 480000,
+        "nextStepId": "__none__",
+        "saveToVariable": "",
+        "timeoutGotoStepId": "c26d7e8b-f14a-4419-8ff8-6472a3c92969",
+        "__hasExplicitEdges": true,
+        "receivedGotoStepId": "980d9b30-a058-4e35-a5ad-e6bf082752c8"
+      }
+    },
+    {
+      "id": "980d9b30-a058-4e35-a5ad-e6bf082752c8",
+      "type": "move_stage",
+      "config": {
+        "__rfPos": {
+          "x": 1424.39870637156,
+          "y": -1.598855154977315
+        },
+        "stageId": "cmodk1kqc0003qp01olqsqctx",
+        "stageName": "2o Form preenchido",
+        "nextStepId": "f4163428-b3a2-46b6-bc8c-33f9d66498e1",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "f4163428-b3a2-46b6-bc8c-33f9d66498e1",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 1862.237032858064,
+          "y": 14.6200651144852
+        },
+        "content": "Ótimo! 🙌\nRecebemos a sua confirmação de interesse na vaga e já vamos dar início ao processo.\nNossa equipe irá analisar o seu perfil e retornará o quanto antes com os próximos passos. Assim que tivermos uma atualização, você será avisado(a) por aqui. 📲\nEnquanto isso, se tiver qualquer dúvida sobre a oportunidade, fique à vontade para perguntar.\n\nBora! 💪",
+        "nextStepId": "8a9b7e0c-8b89-4f36-800c-0ae6a7ad811d",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "32967001-111b-4833-86a1-266904a192b8",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 3299.11887856665,
+          "y": 104.1044519030433
+        },
+        "content": "Obrigado pelo retorno! 🙏\nSua opinião é muito importante para continuarmos melhorando o nosso processo e oferecer cada vez uma experiência melhor para nossos candidatos.\nQualquer coisa, estamos sempre por aqui. Até breve! 😊",
+        "nextStepId": "__none__",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "35db313b-0975-4180-8c4c-77a92441eadb",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 1284.158705727901,
+          "y": 760.0495601069683
+        },
+        "content": "Obrigado, ficamos no aguardo.\nQualquer dúvida, só nos avisar ",
+        "nextStepId": "8a19ffa7-c778-4186-a3b3-04c1d96db524",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "8a19ffa7-c778-4186-a3b3-04c1d96db524",
+      "type": "wait_for_reply",
+      "config": {
+        "__rfPos": {
+          "x": 1637.392853883406,
+          "y": 550.9315130477835
+        },
+        "timeoutMs": 900000,
+        "nextStepId": "__none__",
+        "saveToVariable": "",
+        "timeoutGotoStepId": "5e47ec08-cc55-46c0-be15-d07600845869",
+        "__hasExplicitEdges": true,
+        "receivedGotoStepId": "980d9b30-a058-4e35-a5ad-e6bf082752c8"
+      }
+    },
+    {
+      "id": "8a9b7e0c-8b89-4f36-800c-0ae6a7ad811d",
+      "type": "finish",
+      "config": {
+        "action": "stop",
+        "__rfPos": {
+          "x": 3736.970896057016,
+          "y": 510.3374100392452
+        },
+        "nextStepId": "__none__",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "5e47ec08-cc55-46c0-be15-d07600845869",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 2149.457655303616,
+          "y": 826.6198557891415
+        },
+        "content": "Se precisar de ajuda, nos conte como podemos ajudar!",
+        "nextStepId": "980d9b30-a058-4e35-a5ad-e6bf082752c8",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "040eae10-a979-4cc9-bef5-c88e26d230ad",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 1701.98694411762,
+          "y": 1052.589387906432
+        },
+        "content": "Tudo bem, sem problemas! 😊\nQuando estiver pronto(a), é só mandar o currículo e/ou o vídeo por aqui, o canal fica aberto para você.\nBoas oportunidades aparecem sempre. Até breve! 🌟",
+        "nextStepId": "8a9b7e0c-8b89-4f36-800c-0ae6a7ad811d",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "8444e3c2-8dd0-44d5-a2df-da89809319a1",
+      "type": "send_whatsapp_template",
+      "config": {
+        "__rfPos": {
+          "x": 32.29395461931473,
+          "y": 189.2600556425425
+        },
+        "nextStepId": "930b6803-59de-49ef-8799-a70288bc0064",
+        "languageCode": "pt_BR",
+        "templateName": "form2_clt_junho_2026",
+        "templateLabel": "",
+        "templateCategory": "MARKETING",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "508318d8-97fa-4d47-ba27-5fbe8e07e92d",
+      "type": "send_whatsapp_template",
+      "config": {
+        "__rfPos": {
+          "x": 65.78662291895483,
+          "y": 562.7523001962699
+        },
+        "nextStepId": "930b6803-59de-49ef-8799-a70288bc0064",
+        "languageCode": "pt_BR",
+        "templateName": "form__quali_estag_em",
+        "templateLabel": "",
+        "templateCategory": "MARKETING",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "5d2529ea-07d3-480d-b3d6-1501987e1d80",
+      "type": "condition",
+      "config": {
+        "__rfPos": {
+          "x": 1594.047671244764,
+          "y": -188.2338667206272
+        },
+        "branches": [
+          {
+            "id": "branch_8ab75097",
+            "rules": [
+              {
+                "op": "eq",
+                "field": "",
+                "value": ""
+              }
+            ]
+          }
+        ],
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "b3f7d0aa-3ce1-4753-ad90-ba2609fb6cbd",
+      "type": "send_whatsapp_interactive",
+      "config": {
+        "body": "O que achou do processo seletivo da DNA?\nPara nos ajudar a melhorar cada vez mais, gostaríamos de saber: como você avalia a sua experiência no processo seletivo da DNA até aqui?",
+        "footer": "",
+        "header": "",
+        "__rfPos": {
+          "x": 2741.008941925685,
+          "y": -197.8930013083111
+        },
+        "buttons": [
+          {
+            "id": "btn_0",
+            "title": "😄 Ótima",
+            "gotoStepId": "32967001-111b-4833-86a1-266904a192b8"
+          },
+          {
+            "id": "btn_1",
+            "title": "😐 Regular",
+            "gotoStepId": "32967001-111b-4833-86a1-266904a192b8"
+          },
+          {
+            "id": "btn_2",
+            "title": "😞 Ruim",
+            "gotoStepId": "32967001-111b-4833-86a1-266904a192b8"
+          }
+        ],
+        "nextStepId": "__none__",
+        "elseGotoStepId": "32967001-111b-4833-86a1-266904a192b8",
+        "saveToVariable": "",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "930b6803-59de-49ef-8799-a70288bc0064",
+      "type": "wait_for_reply",
+      "config": {
+        "__rfPos": {
+          "x": 263.778833347475,
+          "y": 378.3283946571917
+        },
+        "timeoutMs": 480000,
+        "nextStepId": "__none__",
+        "saveToVariable": "",
+        "timeoutGotoStepId": "8d9803ad-53c3-45e7-b511-b9d9745bb580",
+        "__hasExplicitEdges": true,
+        "receivedGotoStepId": "7b24fffa-b63c-4fc7-8c54-c14c54c8f0de"
+      }
+    },
+    {
+      "id": "c26d7e8b-f14a-4419-8ff8-6472a3c92969",
+      "type": "send_whatsapp_interactive",
+      "config": {
+        "body": "Oi! Notamos que ainda não recebemos os seus documentos. 😊\nConsegue nos enviar agora?",
+        "footer": "",
+        "header": "",
+        "__rfPos": {
+          "x": 959.4749517829476,
+          "y": 933.1369931546672
+        },
+        "buttons": [
+          {
+            "id": "btn_0",
+            "title": "Sim, vou enviar",
+            "gotoStepId": "35db313b-0975-4180-8c4c-77a92441eadb"
+          },
+          {
+            "id": "btn_1",
+            "title": "Preciso de mais tempo",
+            "gotoStepId": "5e47ec08-cc55-46c0-be15-d07600845869"
+          },
+          {
+            "id": "btn_2",
+            "title": "Não quero enviar",
+            "gotoStepId": "040eae10-a979-4cc9-bef5-c88e26d230ad"
+          }
+        ],
+        "nextStepId": "__none__",
+        "elseGotoStepId": "5e47ec08-cc55-46c0-be15-d07600845869",
+        "saveToVariable": "",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "8d9803ad-53c3-45e7-b511-b9d9745bb580",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 988.2015667367447,
+          "y": 1298.681109712233
+        },
+        "content": "Oi! Notamos que ainda não preencheu o formulário. Se precisar de ajuda, só nos avisar 😊\nConsegue nos enviar agora?",
+        "nextStepId": "8a9b7e0c-8b89-4f36-800c-0ae6a7ad811d",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "909fc6d7-6ebf-4bd9-859e-4f1da67a8a33",
+      "type": "move_stage",
+      "config": {
+        "__rfPos": {
+          "x": 258.2132470975098,
+          "y": 715.1280202827679
+        },
+        "stageId": "cmodk1kqc0003qp01olqsqctx",
+        "stageName": "2o Form preenchido",
+        "nextStepId": "1588c102-530a-4586-add1-ac5e554b168c",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "1588c102-530a-4586-add1-ac5e554b168c",
+      "type": "finish",
+      "config": {
+        "action": "stop",
+        "__rfPos": {
+          "x": 540.8251914070712,
+          "y": 845.3650627177502
+        },
+        "nextStepId": "__none__",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "0967210f-14c0-40cc-a4b7-9012067a0c89",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": -540.9031379460546,
+          "y": 786.8258271168464
+        },
+        "content": "Por último, além do formulário, por favor nos encaminhe por aqui:\n- Seu currículo atualizado ou a cópia carteira de trabalho \nDepois desta etapa já iremos agendar a entrevista.\nCaso tenha qualquer dúvida, só nos avisar. \nBora! 💪",
+        "nextStepId": "54afe876-1b83-4862-b67f-29bcab9e0386",
+        "__hasExplicitEdges": true
+      }
+    },
+    {
+      "id": "54afe876-1b83-4862-b67f-29bcab9e0386",
+      "type": "wait_for_reply",
+      "config": {
+        "__rfPos": {
+          "x": -178.9763710107416,
+          "y": 781.6491981619755
+        },
+        "timeoutMs": 480000,
+        "nextStepId": "2279b8ca-0c46-49b3-af23-0d2ffd809138",
+        "saveToVariable": "",
+        "timeoutGotoStepId": "",
+        "__hasExplicitEdges": true,
+        "receivedGotoStepId": "909fc6d7-6ebf-4bd9-859e-4f1da67a8a33"
+      }
+    },
+    {
+      "id": "2279b8ca-0c46-49b3-af23-0d2ffd809138",
+      "type": "send_whatsapp_message",
+      "config": {
+        "__rfPos": {
+          "x": 148.0902628074284,
+          "y": 974.4374192936803
+        },
+        "content": "Oi! Notamos que ainda não recebemos os seus documentos. 😊\nConsegue nos enviar agora?",
+        "nextStepId": "1588c102-530a-4586-add1-ac5e554b168c",
+        "__hasExplicitEdges": true
+      }
+    }
+  ],
+  "exportedAt": "2026-06-16T20:28:37.788Z"
+}

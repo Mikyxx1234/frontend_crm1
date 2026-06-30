@@ -8,6 +8,8 @@
 
 import { apiUrl } from "@/lib/api";
 
+import type { AdvancedDealFilters } from "@/components/pipeline/kanban-filters/types";
+
 import type { BoardStageDto, PipelineListItemDto, StatusFilter } from "./types";
 
 /** GET /api/pipelines */
@@ -60,6 +62,53 @@ export async function getBoard(
   if (!res.ok) {
     throw new Error(
       typeof data?.message === "string" ? data.message : "Erro ao carregar quadro",
+    );
+  }
+  if (Array.isArray(data)) return data as BoardStageDto[];
+  return (Array.isArray(data.stages) ? data.stages : []) as BoardStageDto[];
+}
+
+/**
+ * POST /api/pipelines/:id/board — busca/filtragem server-side varrendo
+ * TODO o pipeline (não só os 100 primeiros por coluna do GET).
+ *
+ * Por que existe: o GET pagina 100 deals por coluna; quando a busca é
+ * client-side em cima do que já carregou, deals nas posições 101+ nunca
+ * aparecem (ex.: deal #4129 em coluna com 671 cards). O POST aceita
+ * `filters.search` e usa `findContactIdsByPhoneDigits` server-side
+ * (telefone normalizado) + match em `Deal.number` quando numérico —
+ * achados que o filtro client-side jamais conseguiria.
+ *
+ * Modo de uso (de `useBoardSearch`): ativar SÓ quando há termo de busca
+ * digitado (≥2 chars + debounce). Sem busca, continuar usando `getBoard`.
+ */
+export async function getBoardFiltered(
+  pipelineId: string,
+  opts: {
+    status?: StatusFilter;
+    filters?: AdvancedDealFilters;
+    sort?: BoardSortParam;
+    perStage?: number;
+  },
+): Promise<BoardStageDto[]> {
+  const body: Record<string, unknown> = {};
+  body.status = opts.status && opts.status !== "OPEN" ? opts.status : "ALL";
+  if (opts.filters) body.filters = opts.filters;
+  if (opts.sort) {
+    body.sort = opts.sort.field;
+    body.direction = opts.sort.direction;
+  }
+  if (opts.perStage) body.perStage = opts.perStage;
+
+  const res = await fetch(apiUrl(`/api/pipelines/${pipelineId}/board`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao buscar no quadro",
     );
   }
   if (Array.isArray(data)) return data as BoardStageDto[];

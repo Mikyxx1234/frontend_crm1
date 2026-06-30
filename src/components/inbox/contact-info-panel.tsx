@@ -396,7 +396,7 @@ export function ContactInfoPanel({
                     const valueLabel = Number.isFinite(n) ? formatCurrency(n) : d.value;
                     return (
                       <li key={d.id} className="rounded-lg border border-border/60 bg-background/80 px-2.5 py-2 text-xs">
-                        <Link href={`/leads/${d.id}`} className="font-medium text-foreground hover:text-indigo-600">
+                        <Link href={`/pipeline/${d.id}`} className="font-medium text-foreground hover:text-indigo-600">
                           {d.title}
                         </Link>
                         <p className="mt-0.5 text-[10px] text-muted-foreground">

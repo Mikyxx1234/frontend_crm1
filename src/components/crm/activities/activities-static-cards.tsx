@@ -4,75 +4,64 @@ import { IconBolt, IconMapPin } from "@tabler/icons-react"
 
 export function ProductivityTipCard() {
   return (
-    <div
-      className="relative overflow-hidden rounded-[var(--radius-xl)] p-4 text-white shadow-[var(--glass-shadow)]"
-      style={{
-        background:
-          "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))",
-      }}
+    <section
+      aria-label="Dica de produtividade"
+      className="flex items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] border-l-4 border-l-[var(--brand-primary)] bg-[var(--glass-bg-base)] px-[18px] py-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full"
-        style={{
-          background: "color-mix(in srgb, white 12%, transparent)",
-        }}
-      />
-      <div className="relative flex items-center gap-2">
-        <span
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)]"
-          style={{
-            backgroundColor: "color-mix(in srgb, white 18%, transparent)",
-          }}
-        >
-          <IconBolt size={15} />
-        </span>
-        <p className="font-display text-[12px] font-bold uppercase tracking-[0.06em]">
-          Dica de Produtividade
+      <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+        <IconBolt size={20} stroke={2.2} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[var(--brand-primary)]">
+          Dica de produtividade
+        </p>
+        <p className="mt-0.5 font-body text-[13px] text-[var(--text-secondary)]">
+          Conecte seu calendário para sincronizar reuniões automaticamente e
+          receber lembretes no momento certo.
         </p>
       </div>
-      <p className="relative mt-2 font-body text-[12px] leading-snug opacity-90">
-        Conecte seu calendário para sincronizar reuniões automaticamente e
-        receber lembretes no momento certo.
-      </p>
       <button
         type="button"
         disabled
         title="Em breve"
-        className="relative mt-3 cursor-not-allowed rounded-[var(--radius-md)] px-3 py-1.5 font-display text-[11px] font-bold transition-opacity"
-        style={{
-          backgroundColor: "color-mix(in srgb, white 18%, transparent)",
-          color: "white",
-        }}
+        className="shrink-0 cursor-not-allowed rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--text-secondary)]"
       >
         Conectar agora
       </button>
-    </div>
+    </section>
   )
 }
 
 export function OperationsBaseCard() {
   return (
-    <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4 shadow-[var(--glass-shadow-sm)]">
-      <p className="mb-2 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
-        Base de Operações
+    <section
+      aria-label="Base de operações"
+      className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
+    >
+      <p className="mb-3 flex items-center gap-2 font-display text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[var(--text-muted)]">
+        <IconMapPin size={14} stroke={2.2} className="text-[var(--brand-primary)]" />
+        Base de operações
       </p>
       <div
-        className="flex h-28 items-center justify-center rounded-[var(--radius-md)] bg-[var(--glass-bg-subtle)]"
+        className="relative flex h-[120px] items-center justify-center overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)]"
         style={{
-          backgroundImage:
-            "radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--brand-primary) 12%, transparent), transparent 60%)",
+          background: `
+            radial-gradient(circle at 50% 45%, rgba(91,111,245,0.18), transparent 60%),
+            repeating-linear-gradient(0deg, var(--glass-border-subtle) 0 1px, transparent 1px 26px),
+            repeating-linear-gradient(90deg, var(--glass-border-subtle) 0 1px, transparent 1px 26px),
+            var(--glass-bg-overlay)
+          `,
         }}
+        role="img"
+        aria-label="Mapa: São Paulo, BR"
       >
-        <IconMapPin
-          size={28}
-          className="text-[var(--brand-primary)]"
-          stroke={2}
-        />
+        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]">
+          <IconMapPin size={20} stroke={2.2} />
+        </span>
       </div>
-      <p className="mt-2 text-center font-display text-[11px] font-bold text-[var(--text-secondary)]">
+      <p className="mt-2.5 text-center font-display text-[13px] font-bold text-[var(--text-secondary)]">
         São Paulo, BR
       </p>
-    </div>
+    </section>
   )
 }

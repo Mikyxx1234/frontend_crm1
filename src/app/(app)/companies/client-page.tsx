@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
@@ -16,10 +15,21 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { SearchInput } from "@/components/crm/search-input";
+import { PagePrimaryButton, PageSearchBar } from "@/components/crm/page-toolbar";
+import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { PaginationGlass } from "@/components/crm/pagination-glass";
 import { EmptyState } from "@/components/crm/empty-state";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { BadgeGlass } from "@/components/crm/badge-glass";
+import {
+  GlassModal,
+  GlassModalPanel,
+  GlassModalHeader,
+  GlassModalBody,
+  GlassModalFooter,
+} from "@/components/crm/glass-modal";
 
 import {
   useCompanies,
@@ -146,24 +156,22 @@ export default function V2CompaniesClientPage() {
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
-          icon={<IconBuilding size={22} />}
+          icon={<IconBuilding size={22} stroke={2.2} />}
           title="Empresas"
           description="Empresas cadastradas no CRM"
           center={
-            <SearchInput
+            <PageSearchBar
+              variant="compact"
               value={search}
               onChange={setSearch}
               placeholder="Buscar por nome, e-mail..."
+              aria-label="Buscar empresas"
             />
           }
           actions={
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
-            >
-              <IconPlus size={16} /> Nova empresa
-            </button>
+            <PagePrimaryButton type="button" onClick={() => setCreateOpen(true)}>
+              <IconPlus size={15} stroke={2.4} /> Nova empresa
+            </PagePrimaryButton>
           }
         />
 
@@ -173,20 +181,18 @@ export default function V2CompaniesClientPage() {
               {selected.size} selecionada{selected.size > 1 ? "s" : ""}
             </span>
             <div className="flex items-center gap-2">
-              <button
+              <ButtonGlass
+                variant="glass"
+                size="sm"
                 type="button"
                 onClick={() => setSelected(new Set())}
-                className="rounded-full px-3 py-1.5 font-display text-[12px] font-semibold text-[var(--text-secondary)] hover:bg-black/5"
+                className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
               >
                 Limpar
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmOpen(true)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-danger,#e11d48)] px-3.5 py-1.5 font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px"
-              >
+              </ButtonGlass>
+              <ButtonGlass variant="danger" size="sm" type="button" onClick={() => setConfirmOpen(true)}>
                 <IconTrash size={14} /> Excluir
-              </button>
+              </ButtonGlass>
             </div>
           </div>
         )}
@@ -210,8 +216,8 @@ export default function V2CompaniesClientPage() {
             />
           </div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
-            <div className="mb-2.5 grid grid-cols-[42px_2.2fr_1.3fr_1.2fr_1.5fr_1.7fr_0.8fr_44px] items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 pb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+            <div className={listTableHeadRowClass("grid-cols-[36px_2.2fr_1.3fr_1.2fr_1.5fr_1.7fr_0.8fr_38px] gap-3 px-3 py-2")}>
               <span>
                 <CheckboxGlass
                   checked={allChecked}
@@ -220,23 +226,21 @@ export default function V2CompaniesClientPage() {
                   aria-label="Selecionar todas"
                 />
               </span>
-              <span>Nome da Empresa</span>
-              <span>CNPJ</span>
-              <span>Telefone</span>
-              <span>E-mail</span>
-              <span>Endereço</span>
-              <span>Contatos</span>
-              <span className="text-right">Ações</span>
+              <ListColumnLabel>Nome da empresa</ListColumnLabel>
+              <ListColumnLabel>CNPJ</ListColumnLabel>
+              <ListColumnLabel>Telefone</ListColumnLabel>
+              <ListColumnLabel>E-mail</ListColumnLabel>
+              <ListColumnLabel>Endereço</ListColumnLabel>
+              <ListColumnLabel>Contatos</ListColumnLabel>
+              <ListColumnLabel align="right">Ações</ListColumnLabel>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
               {items.map((c) => (
                 <div
                   key={c.id}
-                  className={`grid grid-cols-[42px_2.2fr_1.3fr_1.2fr_1.5fr_1.7fr_0.8fr_44px] items-center gap-3.5 rounded-[var(--radius-lg)] border bg-[var(--glass-bg-overlay)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-200 hover:bg-[var(--glass-bg-base)] ${
-                    selected.has(c.id)
-                      ? "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]"
-                      : "border-[var(--glass-border-subtle)]"
+                  className={`grid grid-cols-[36px_2.2fr_1.3fr_1.2fr_1.5fr_1.7fr_0.8fr_38px] items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${
+                    selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""
                   }`}
                 >
                   <span>
@@ -247,16 +251,16 @@ export default function V2CompaniesClientPage() {
                     />
                   </span>
 
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <span
-                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] font-display text-[11px] font-bold text-white"
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] font-display text-[11px] font-bold text-white"
                       style={{ background: avatarColor(c.id) }}
                     >
                       {initials(c.name)}
                     </span>
                     <Link
                       href={`/companies/${c.id}`}
-                      className="group/name inline-flex min-w-0 items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+                      className="group/name inline-flex min-w-0 items-center gap-1.5 font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
                     >
                       <span className="truncate">{c.name}</span>
                       <IconPencil
@@ -280,21 +284,21 @@ export default function V2CompaniesClientPage() {
                   </div>
 
                   <div>
-                    <span className="inline-flex items-center rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--brand-primary)]">
-                      {c._count.contacts}
-                    </span>
+                    <BadgeGlass variant="enterprise">{c._count.contacts}</BadgeGlass>
                   </div>
 
                   <div className="flex justify-end">
-                    <button
+                    <ButtonGlass
+                      variant="icon"
+                      size="icon"
                       type="button"
                       onClick={() => setEditing(c)}
                       aria-label={`Editar ${c.name}`}
                       title="Editar empresa"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+                      className="h-8 w-8"
                     >
                       <IconPencil size={16} />
-                    </button>
+                    </ButtonGlass>
                   </div>
                 </div>
               ))}
@@ -342,62 +346,36 @@ function ConfirmDeleteDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") onCancel();
-    }
-    if (open) {
-      window.addEventListener("keydown", onEsc);
-      return () => window.removeEventListener("keydown", onEsc);
-    }
-  }, [open, onCancel]);
-
-  if (!open || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onCancel}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-[440px] max-w-[90vw] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-5 shadow-2xl"
-      >
-        <div className="mb-3 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger,#e11d48)_12%,transparent)] text-[var(--color-danger,#e11d48)]">
-            <IconAlertTriangle size={18} />
-          </span>
-          <h3 className="font-display text-base font-bold text-[var(--text-primary)]">
-            Excluir {count === 1 ? "empresa" : `${count} empresas`}?
-          </h3>
-        </div>
-        <p className="mb-4 font-body text-[13px] leading-relaxed text-[var(--text-secondary)]">
-          Esta ação não pode ser desfeita. Os contatos vinculados são
-          preservados (ficam sem empresa).
-        </p>
-        <div className="flex justify-end gap-2">
-          <button
+  return (
+    <GlassModal open={open} onOpenChange={(next) => !next && onCancel()}>
+      <GlassModalPanel className="w-[440px]">
+        <GlassModalHeader
+          title={`Excluir ${count === 1 ? "empresa" : `${count} empresas`}?`}
+          icon={
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] text-[var(--color-destructive)]">
+              <IconAlertTriangle size={18} />
+            </span>
+          }
+          description="Esta ação não pode ser desfeita. Os contatos vinculados são preservados (ficam sem empresa)."
+        />
+        <GlassModalFooter>
+          <ButtonGlass
+            variant="glass"
+            size="sm"
             type="button"
             onClick={onCancel}
             disabled={pending}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] hover:bg-black/5 disabled:opacity-60"
+            className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
           >
             Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={pending}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-danger,#e11d48)] px-4 py-1.5 font-display text-xs font-semibold text-white disabled:opacity-60"
-          >
+          </ButtonGlass>
+          <ButtonGlass variant="danger" size="sm" type="button" onClick={onConfirm} disabled={pending}>
             <IconTrash size={14} />
             {pending ? "Excluindo..." : "Excluir"}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+          </ButtonGlass>
+        </GlassModalFooter>
+      </GlassModalPanel>
+    </GlassModal>
   );
 }
 
@@ -427,19 +405,6 @@ function CreateCompanyDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") onOpenChange(false);
-    }
-    if (open) {
-      window.addEventListener("keydown", onEsc);
-      return () => window.removeEventListener("keydown", onEsc);
-    }
-  }, [open, onOpenChange]);
-
-  if (!open || typeof document === "undefined") return null;
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const n = name.trim();
@@ -461,87 +426,82 @@ function CreateCompanyDialog({
     );
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={() => onOpenChange(false)}
-    >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-        className="w-[460px] max-w-[90vw] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-5 shadow-2xl"
-      >
-        <h3 className="mb-4 font-display text-base font-bold text-[var(--text-primary)]">
-          Nova empresa
-        </h3>
+  return (
+    <GlassModal open={open} onOpenChange={onOpenChange}>
+      <GlassModalPanel as="form" onSubmit={handleSubmit} className="w-[460px]">
+        <GlassModalHeader title="Nova empresa" />
 
-        <FieldInput
-          label="Nome da Empresa *"
-          type="text"
-          required
-          autoFocus
-          value={name}
-          onChange={setName}
-          placeholder="Razão social ou nome fantasia"
-        />
-        <div className="grid grid-cols-2 gap-3">
+        <GlassModalBody>
           <FieldInput
-            label="CNPJ"
+            label="Nome da Empresa *"
             type="text"
-            value={cnpj}
-            onChange={setCnpj}
-            placeholder="00.000.000/0000-00"
+            required
+            autoFocus
+            value={name}
+            onChange={setName}
+            placeholder="Razão social ou nome fantasia"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <FieldInput
+              label="CNPJ"
+              type="text"
+              value={cnpj}
+              onChange={setCnpj}
+              placeholder="00.000.000/0000-00"
+            />
+            <FieldInput
+              label="Telefone"
+              type="tel"
+              value={phone}
+              onChange={setPhone}
+              placeholder="(11) 3333-4444"
+            />
+          </div>
+          <FieldInput
+            label="E-mail"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            placeholder="contato@empresa.com"
           />
           <FieldInput
-            label="Telefone"
-            type="tel"
-            value={phone}
-            onChange={setPhone}
-            placeholder="(11) 3333-4444"
+            label="Endereço da Empresa"
+            type="text"
+            value={address}
+            onChange={setAddress}
+            placeholder="Rua, número, bairro, cidade — UF"
           />
-        </div>
-        <FieldInput
-          label="E-mail"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="contato@empresa.com"
-        />
-        <FieldInput
-          label="Endereço da Empresa"
-          type="text"
-          value={address}
-          onChange={setAddress}
-          placeholder="Rua, número, bairro, cidade — UF"
-        />
 
-        {createMut.isError ? (
-          <p className="mb-3 text-[12px] text-[var(--color-danger,#e11d48)]">
-            {createMut.error instanceof Error
-              ? createMut.error.message
-              : "Erro ao criar empresa."}
-          </p>
-        ) : null}
+          {createMut.isError ? (
+            <p className="mb-3 text-[12px] text-[var(--color-danger-text)]">
+              {createMut.error instanceof Error
+                ? createMut.error.message
+                : "Erro ao criar empresa."}
+            </p>
+          ) : null}
+        </GlassModalBody>
 
-        <div className="flex justify-end gap-2">
-          <button
+        <GlassModalFooter>
+          <ButtonGlass
+            variant="glass"
+            size="sm"
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] hover:bg-black/5"
+            className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
           >
             Cancelar
-          </button>
-          <button
+          </ButtonGlass>
+          <ButtonGlass
+            variant="primary"
+            size="sm"
             type="submit"
             disabled={!name.trim() || createMut.isPending}
-            className="rounded-full bg-[var(--brand-primary)] px-4 py-1.5 font-display text-xs font-semibold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:opacity-60"
           >
             {createMut.isPending ? "Criando..." : "Criar"}
-          </button>
-        </div>
-      </form>
-    </div>,
-    document.body,
+          </ButtonGlass>
+        </GlassModalFooter>
+      </GlassModalPanel>
+    </GlassModal>
   );
 }
 
@@ -572,18 +532,7 @@ function EditCompanyDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    if (open) {
-      window.addEventListener("keydown", onEsc);
-      return () => window.removeEventListener("keydown", onEsc);
-    }
-  }, [open, onClose]);
-
-  if (!open || !company || typeof document === "undefined") return null;
+  if (!company) return null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -609,87 +558,82 @@ function EditCompanyDialog({
     );
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={handleSubmit}
-        className="w-[460px] max-w-[90vw] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white p-5 shadow-2xl"
-      >
-        <h3 className="mb-4 font-display text-base font-bold text-[var(--text-primary)]">
-          Editar empresa
-        </h3>
+  return (
+    <GlassModal open={open} onOpenChange={(next) => !next && onClose()}>
+      <GlassModalPanel as="form" onSubmit={handleSubmit} className="w-[460px]">
+        <GlassModalHeader title="Editar empresa" />
 
-        <FieldInput
-          label="Nome da Empresa *"
-          type="text"
-          required
-          autoFocus
-          value={name}
-          onChange={setName}
-          placeholder="Razão social ou nome fantasia"
-        />
-        <div className="grid grid-cols-2 gap-3">
+        <GlassModalBody>
           <FieldInput
-            label="CNPJ"
+            label="Nome da Empresa *"
             type="text"
-            value={cnpj}
-            onChange={setCnpj}
-            placeholder="00.000.000/0000-00"
+            required
+            autoFocus
+            value={name}
+            onChange={setName}
+            placeholder="Razão social ou nome fantasia"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <FieldInput
+              label="CNPJ"
+              type="text"
+              value={cnpj}
+              onChange={setCnpj}
+              placeholder="00.000.000/0000-00"
+            />
+            <FieldInput
+              label="Telefone"
+              type="tel"
+              value={phone}
+              onChange={setPhone}
+              placeholder="(11) 3333-4444"
+            />
+          </div>
+          <FieldInput
+            label="E-mail"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            placeholder="contato@empresa.com"
           />
           <FieldInput
-            label="Telefone"
-            type="tel"
-            value={phone}
-            onChange={setPhone}
-            placeholder="(11) 3333-4444"
+            label="Endereço da Empresa"
+            type="text"
+            value={address}
+            onChange={setAddress}
+            placeholder="Rua, número, bairro, cidade — UF"
           />
-        </div>
-        <FieldInput
-          label="E-mail"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="contato@empresa.com"
-        />
-        <FieldInput
-          label="Endereço da Empresa"
-          type="text"
-          value={address}
-          onChange={setAddress}
-          placeholder="Rua, número, bairro, cidade — UF"
-        />
 
-        {updateMut.isError ? (
-          <p className="mb-3 text-[12px] text-[var(--color-danger,#e11d48)]">
-            {updateMut.error instanceof Error
-              ? updateMut.error.message
-              : "Erro ao atualizar empresa."}
-          </p>
-        ) : null}
+          {updateMut.isError ? (
+            <p className="mb-3 text-[12px] text-[var(--color-danger-text)]">
+              {updateMut.error instanceof Error
+                ? updateMut.error.message
+                : "Erro ao atualizar empresa."}
+            </p>
+          ) : null}
+        </GlassModalBody>
 
-        <div className="flex justify-end gap-2">
-          <button
+        <GlassModalFooter>
+          <ButtonGlass
+            variant="glass"
+            size="sm"
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-1.5 font-display text-xs font-semibold text-[var(--text-secondary)] hover:bg-black/5"
+            className="border-transparent bg-transparent shadow-none text-[var(--text-secondary)] hover:bg-[color-mix(in_srgb,var(--text-primary)_8%,transparent)]"
           >
             Cancelar
-          </button>
-          <button
+          </ButtonGlass>
+          <ButtonGlass
+            variant="primary"
+            size="sm"
             type="submit"
             disabled={!name.trim() || updateMut.isPending}
-            className="rounded-full bg-[var(--brand-primary)] px-4 py-1.5 font-display text-xs font-semibold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:opacity-60"
           >
             {updateMut.isPending ? "Salvando..." : "Salvar"}
-          </button>
-        </div>
-      </form>
-    </div>,
-    document.body,
+          </ButtonGlass>
+        </GlassModalFooter>
+      </GlassModalPanel>
+    </GlassModal>
   );
 }
 
@@ -715,14 +659,13 @@ function FieldInput({
       <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
         {label}
       </span>
-      <input
+      <InputGlass
         type={type}
         required={required}
         autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
       />
     </label>
   );

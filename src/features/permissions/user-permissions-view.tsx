@@ -2,13 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Ban,
   ChevronDown,
   ChevronRight,
   Eye,
   Loader2,
+  MessageSquarePlus,
   Plus,
   Radio,
   Send,
+  Settings,
   Shield,
   Users,
   Workflow,
@@ -412,6 +415,9 @@ function UserScopeEditor({ userId }: { userId: string }) {
   const [pipelineIds, setPipelineIds] = useState<string[] | null>(null);
   const [channelViewIds, setChannelViewIds] = useState<string[] | null>(null);
   const [channelSendIds, setChannelSendIds] = useState<string[] | null>(null);
+  const [channelInitiateIds, setChannelInitiateIds] = useState<string[] | null>(null);
+  const [channelManageIds, setChannelManageIds] = useState<string[] | null>(null);
+  const [channelDenyIds, setChannelDenyIds] = useState<string[] | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -421,29 +427,29 @@ function UserScopeEditor({ userId }: { userId: string }) {
     setPipelineIds(normalizeScope(data.pipelineIds));
     setChannelViewIds(normalizeScope(data.channelViewIds));
     setChannelSendIds(normalizeScope(data.channelSendIds));
+    setChannelInitiateIds(normalizeScope(data.channelInitiateIds));
+    setChannelManageIds(normalizeScope(data.channelManageIds));
+    setChannelDenyIds(normalizeScope(data.channelDenyIds));
     setDirty(false);
   }, [data]);
 
-  function onChangePipelines(v: string[] | null) {
-    setPipelineIds(v);
+  const markDirty = (setter: (v: string[] | null) => void) => (v: string[] | null) => {
+    setter(v);
     setDirty(true);
     setSaved(false);
-  }
-  function onChangeChannelView(v: string[] | null) {
-    setChannelViewIds(v);
-    setDirty(true);
-    setSaved(false);
-  }
-  function onChangeChannelSend(v: string[] | null) {
-    setChannelSendIds(v);
-    setDirty(true);
-    setSaved(false);
-  }
+  };
 
   async function handleSave() {
     setError(null);
     try {
-      await update.mutateAsync({ pipelineIds, channelViewIds, channelSendIds });
+      await update.mutateAsync({
+        pipelineIds,
+        channelViewIds,
+        channelSendIds,
+        channelInitiateIds,
+        channelManageIds,
+        channelDenyIds,
+      });
       setDirty(false);
       setSaved(true);
     } catch (e) {
@@ -471,7 +477,7 @@ function UserScopeEditor({ userId }: { userId: string }) {
         icon={<Workflow className="size-3" style={{ color: "var(--text-muted)" }} />}
         options={pipelines.data ?? []}
         value={pipelineIds}
-        onChange={onChangePipelines}
+        onChange={markDirty(setPipelineIds)}
         loading={isLoading || pipelines.isLoading}
         allLabel="Todos os funis"
       />
@@ -481,19 +487,49 @@ function UserScopeEditor({ userId }: { userId: string }) {
         icon={<Eye className="size-3" style={{ color: "var(--text-muted)" }} />}
         options={channels.data ?? []}
         value={channelViewIds}
-        onChange={onChangeChannelView}
+        onChange={markDirty(setChannelViewIds)}
         loading={isLoading || channels.isLoading}
         allLabel="Todos os canais"
       />
 
       <ScopeMultiSelect
-        label="Canais — enviar mensagens"
+        label="Canais — responder mensagens"
         icon={<Send className="size-3" style={{ color: "var(--text-muted)" }} />}
         options={channels.data ?? []}
         value={channelSendIds}
-        onChange={onChangeChannelSend}
+        onChange={markDirty(setChannelSendIds)}
         loading={isLoading || channels.isLoading}
         allLabel="Todos os canais"
+      />
+
+      <ScopeMultiSelect
+        label="Canais — iniciar nova conversa"
+        icon={<MessageSquarePlus className="size-3" style={{ color: "var(--text-muted)" }} />}
+        options={channels.data ?? []}
+        value={channelInitiateIds}
+        onChange={markDirty(setChannelInitiateIds)}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
+
+      <ScopeMultiSelect
+        label="Canais — administrar (configurar/conectar)"
+        icon={<Settings className="size-3" style={{ color: "var(--text-muted)" }} />}
+        options={channels.data ?? []}
+        value={channelManageIds}
+        onChange={markDirty(setChannelManageIds)}
+        loading={isLoading || channels.isLoading}
+        allLabel="Todos os canais"
+      />
+
+      <ScopeMultiSelect
+        label="Canais bloqueados (nega tudo, exceto se o usuário administra o canal)"
+        icon={<Ban className="size-3" style={{ color: "var(--text-muted)" }} />}
+        options={channels.data ?? []}
+        value={channelDenyIds}
+        onChange={markDirty(setChannelDenyIds)}
+        loading={isLoading || channels.isLoading}
+        allLabel="Nenhum canal bloqueado"
       />
 
       <div className="flex items-center gap-2">

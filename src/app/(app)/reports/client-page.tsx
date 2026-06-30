@@ -2,7 +2,7 @@
 
 import { IconChartBar } from "@tabler/icons-react";
 
-import OldReportsPage from "@/app/old/reports/client-page";
+import OldReportsPage from "@/features/legacy-v1/reports";
 import { AppV2PageShell } from "../_v2-page-shell";
 
 /**
@@ -27,3 +27,4 @@ export default function ReportsV2ClientPage() {
     </AppV2PageShell>
   );
 }
+

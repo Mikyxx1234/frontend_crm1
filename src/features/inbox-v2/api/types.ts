@@ -166,6 +166,22 @@ export interface InboxMessageDto {
    */
   sendError?: string | null;
   metaError?: string | null;
+  /**
+   * Conexão (Channel) por onde ESTA mensagem trafegou. Permite distinguir,
+   * na mesma conversa, mensagens de contas distintas do mesmo canal (ex.: dois
+   * WhatsApps da org). `null` = histórica/sem vínculo → o frontend trata como
+   * "herda a conexão anterior" (sem marcador de troca). Resolver o label via
+   * `MessagesResponse.channels[channelId]`.
+   */
+  channelId?: string | null;
+}
+
+/** Resumo de uma conexão (Channel) — mesmo shape do ConnectionRefDto do backend. */
+export interface ConnectionRef {
+  id: string;
+  name: string;
+  type: string;
+  phoneNumber: string | null;
 }
 
 export interface SessionInfo {
@@ -178,5 +194,17 @@ export interface MessagesResponse {
   messages: InboxMessageDto[];
   pinnedNoteId: string | null;
   channelProvider: string | null;
+  /** Conexão ATUAL da conversa (último canal usado). Null se sem canal. */
+  channel?: ConnectionRef | null;
+  /** Mapa id→conexão de todos os canais referenciados (msgs + atual). */
+  channels?: Record<string, ConnectionRef>;
+  /**
+   * Pode responder nesta conversa? Derivado de `channel.send` do
+   * scope-grants (backend é fonte de verdade — POST messages aplica o mesmo
+   * enforcement). Default `true` quando o backend não envia o campo (compat
+   * com clients/backends antigos). Quando `false`, o composer deve entrar
+   * em modo leitura com aviso de "sem permissão pra enviar".
+   */
+  canReply?: boolean;
   session?: SessionInfo;
 }

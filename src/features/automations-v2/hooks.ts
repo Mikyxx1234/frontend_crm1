@@ -7,6 +7,7 @@ import {
   deleteAutomation,
   fetchAutomation,
   fetchAutomations,
+  replaceAutomation,
   saveAutomationSteps,
   toggleAutomationActive,
   updateAutomation,
@@ -18,9 +19,10 @@ import {
 } from "./api";
 
 import { isPreviewMode } from "@/lib/preview-mode";
+import { isPageMockMode } from "@/lib/page-mock-mode";
 
 function resolveEnabled(enabled: boolean | undefined): boolean {
-  return isPreviewMode() ? true : (enabled ?? true);
+  return isPreviewMode() || isPageMockMode() ? true : (enabled ?? true);
 }
 
 export function useAutomations(params: {
@@ -97,6 +99,23 @@ export function useUpdateAutomation() {
     { id: string; body: AutomationWriteBody }
   >({
     mutationFn: ({ id, body }) => updateAutomation(id, body),
+    onSuccess: (_d, vars) => invalidateAutomations(qc, vars.id),
+  });
+}
+
+/**
+ * Substituição completa via PUT (mesmo endpoint do `OldAutomationEditor`).
+ * Usado pelo fluxo de importação `.json` para enviar metadados + steps
+ * (com `id` original preservado) num único request.
+ */
+export function useReplaceAutomation() {
+  const qc = useQueryClient();
+  return useMutation<
+    AutomationDetailDto,
+    Error,
+    { id: string; body: AutomationWriteBody }
+  >({
+    mutationFn: ({ id, body }) => replaceAutomation(id, body),
     onSuccess: (_d, vars) => invalidateAutomations(qc, vars.id),
   });
 }

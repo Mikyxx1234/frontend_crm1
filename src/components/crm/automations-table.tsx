@@ -46,7 +46,7 @@ export function AutomationsTable({ automations }: AutomationsTableProps) {
               {items.map((a) => (
                 <tr
                   key={a.id}
-                  className="border-b border-[var(--glass-border-subtle)] transition-colors hover:bg-white/40"
+                  className="border-b border-[var(--glass-border-subtle)] transition-colors hover:bg-[var(--glass-bg-subtle)]"
                 >
                   {/* Nome + status dot */}
                   <td className="px-5 py-3.5">

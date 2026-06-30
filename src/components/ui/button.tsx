@@ -67,9 +67,9 @@ const buttonVariants = cva(
           "border border-primary/60 bg-transparent text-primary hover:bg-primary/10",
         // Glass — fundo translúcido com blur, padrão do design system
         secondary:
-          "bg-white/40 backdrop-blur border border-white/55 text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-white/60 hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
+          "bg-[var(--glass-bg-overlay)] backdrop-blur border border-[var(--glass-border)] text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)] hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
         // Fantasma sem fundo
-        ghost: "border border-white/20 text-[var(--color-ink-soft)] hover:bg-white/30 hover:text-foreground",
+        ghost: "border border-[var(--glass-border-subtle)] text-[var(--color-ink-soft)] hover:bg-[var(--glass-bg-overlay)] hover:text-foreground",
         // Link
         link: "text-primary underline-offset-4 hover:underline",
         // Lavanda — IA / Copilot
@@ -77,7 +77,7 @@ const buttonVariants = cva(
           "bg-lavender text-lavender-foreground shadow-[0_4px_14px_rgba(167,139,250,0.35)] hover:opacity-95 hover:-translate-y-px hover:shadow-[var(--shadow-lavender-glow)]",
         // Glass puro — superfície translúcida no plano da UI
         glass:
-          "bg-white/40 backdrop-blur border border-white/55 text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-white/60 hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
+          "bg-[var(--glass-bg-overlay)] backdrop-blur border border-[var(--glass-border)] text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)] hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
       },
       size: {
         default: "h-9 px-5 py-2",

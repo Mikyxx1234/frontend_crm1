@@ -15,7 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
-import { SettingsV2Shell } from "../_v2-shell";
+import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 // ─────────────────────────────────────────────────────────────────
@@ -55,6 +55,7 @@ async function fetchTags(): Promise<TagRow[]> {
 export default function TagsV2ClientPage() {
   return (
     <SettingsV2Shell
+      back={SETTINGS_HUB_BACK}
       title="Tags"
       description="Etiquetas de classificação para contatos e negócios"
     >
@@ -162,9 +163,9 @@ function TagsPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md">
       {/* ── Criar nova tag ── */}
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
+      <div className="border-b border-[var(--glass-border-subtle)] p-4">
         <p className="mb-3 font-display text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
           Nova tag
         </p>
@@ -231,7 +232,7 @@ function TagsPage() {
       </div>
 
       {/* ── Filtros + ação bulk ── */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3">
         <div className="flex items-center gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
           {TABS.map((tab) => (
             <button
@@ -251,7 +252,7 @@ function TagsPage() {
                   className={cn(
                     "min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold",
                     filter === tab.id
-                      ? "bg-white/20 text-white"
+                      ? "bg-[color-mix(in_srgb,white_20%,transparent)] text-white"
                       : tab.id === "sem-uso" && (tab.count ?? 0) > 0
                         ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
                         : "bg-[var(--glass-bg-strong)] text-[var(--text-secondary)]",
@@ -280,7 +281,7 @@ function TagsPage() {
       </div>
 
       {/* ── Lista de tags ── */}
-      <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+      <div>
         {isLoading ? (
           <div className="space-y-px p-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -376,7 +377,7 @@ function TagRowItem({
           />
         </TooltipGlass>
         {colorOpen && (
-          <div className="absolute left-0 top-full z-30 mt-1 flex flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-2 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <div className="absolute left-0 top-full z-30 mt-1 flex flex-wrap gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
             {TAG_COLORS.map((c) => (
               <button
                 key={c}

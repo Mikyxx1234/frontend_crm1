@@ -1,0 +1,448 @@
+"use client";
+
+/**
+ * SoftphoneWidget — chip flutuante global montado no `(app)/layout.tsx`.
+ *
+ * Responsabilidades:
+ *  1. Auto-connect ao logar: se o backend retornar credenciais SIP
+ *     (`GET /api/sip-extensions/me/credentials` 200), monta o `JsSIP.UA`
+ *     via `useSoftphone.connect()` automaticamente. Sem credenciais
+ *     (404), o widget fica oculto — nada polui a UI dos operadores sem
+ *     telefonia provisionada.
+ *  2. Persistência entre F5: o JsSIP é browser-side e morre a cada
+ *     reload; o auto-connect resolve isso ao montar o widget.
+ *  3. Status visível: chip discreto bottom-right com cor e label
+ *     refletindo o estado (Conectando / Ativo / Erro). Sem indicador, o
+ *     `DealCallButton` mostraria "Conecte o softphone" sem o operador
+ *     saber por que a conexão caiu.
+ *  4. UI de chamada: durante `call_ringing`/`call_active`/`call_held`,
+ *     expande pra mostrar número, duração e controles (Atender / Mute /
+ *     Hold / Encerrar). Sem isso não dá pra atender inbound nem
+ *     encerrar manualmente.
+ *
+ * O hook `useSoftphone` mantém o `JsSIP.UA` em variável de módulo
+ * (singleton), então este widget é o único lugar que precisa chamar
+ * `connect()` — `useDealDial` e qualquer outro consumidor herdam o
+ * mesmo UA via re-import do módulo.
+ */
+
+import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import {
+  IconPhone,
+  IconPhoneIncoming,
+  IconPhoneOff,
+  IconMicrophone,
+  IconMicrophoneOff,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconLoader2,
+  IconAlertTriangle,
+  IconRefresh,
+  IconX,
+  IconChevronRight,
+} from "@tabler/icons-react";
+
+import { cn } from "@/lib/utils";
+import { useSoftphone } from "../hooks/use-softphone";
+import { useCallsWidget } from "../hooks/use-calls-widget";
+import { getMyCredentials } from "../api/extensions";
+
+function formatDuration(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60).toString().padStart(2, "0");
+  const sec = (totalSec % 60).toString().padStart(2, "0");
+  return `${min}:${sec}`;
+}
+
+export function SoftphoneWidget() {
+  const { status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === "authenticated";
+
+  // Gate por widget `calls_history`: o softphone só monta quando a org
+  // tem a Telefonia ATIVA na Central de Widgets. Quem desinstala, deixa
+  // de ver o chip flutuante (e o DealCallButton também desliga via mesmo
+  // hook). Enquanto a query carrega, devolvemos `enabled=null` → render
+  // nada (evita flash do chip aparecendo e sumindo).
+  const callsWidget = useCallsWidget(isAuthenticated);
+
+  // Só busca credenciais quando o usuário está autenticado E o widget
+  // está habilitado. 404 (sem ramal) é tratado pelo `getMyCredentials`
+  // lançando erro, e o widget simplesmente não renderiza (handler abaixo).
+  const credentialsQuery = useQuery({
+    queryKey: ["softphone", "credentials"],
+    queryFn: getMyCredentials,
+    enabled: isAuthenticated && callsWidget.enabled === true,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const softphone = useSoftphone();
+  const [hidden, setHidden] = React.useState(false);
+
+  // Auto-connect quando temos credenciais E ainda não estamos conectados.
+  // `useSoftphone` é idempotente: chamar `connect()` com `moduleUA` já
+  // existente é no-op (early-return seta status="registered").
+  React.useEffect(() => {
+    if (!credentialsQuery.data) return;
+    if (softphone.status === "disconnected") {
+      void softphone.connect();
+    }
+    // Intencional: rodar quando as credenciais carregam OU quando o
+    // status volta a `disconnected` (ex.: erro de rede que matou o UA).
+  }, [credentialsQuery.data, softphone.status, softphone]);
+
+  if (sessionStatus !== "authenticated") return null;
+  if (callsWidget.enabled !== true) return null;
+  if (credentialsQuery.isLoading) return null;
+  if (credentialsQuery.isError || !credentialsQuery.data) return null;
+  if (hidden) return null;
+
+  const credentials = credentialsQuery.data;
+  const ramal = credentials.authUser;
+
+  const hasActiveCall =
+    softphone.status === "call_ringing" ||
+    softphone.status === "call_active" ||
+    softphone.status === "call_held";
+
+  return (
+    <div
+      className="fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-2"
+      role="region"
+      aria-label="Softphone"
+    >
+      {hasActiveCall && (
+        <CallPanel
+          status={softphone.status}
+          direction={softphone.callDirection}
+          remoteNumber={softphone.remoteNumber}
+          durationMs={softphone.durationMs}
+          muted={softphone.muted}
+          held={softphone.held}
+          onAnswer={softphone.answer}
+          onHangup={softphone.hangup}
+          onToggleMute={softphone.toggleMute}
+          onToggleHold={softphone.toggleHold}
+        />
+      )}
+
+      {!hasActiveCall && (
+        <StatusChip
+          status={softphone.status}
+          ramal={ramal}
+          error={softphone.error}
+          onReconnect={() => void softphone.connect()}
+          onHide={() => setHidden(true)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Chip de status (idle) ───────────────────────────────────────────────
+
+interface StatusChipProps {
+  status: ReturnType<typeof useSoftphone>["status"];
+  ramal: string;
+  error: string | null;
+  onReconnect: () => void;
+  onHide: () => void;
+}
+
+// localStorage pra lembrar a preferência do operador entre sessões — quem
+// gosta de ver "Softphone ativo • 1079" full não precisa colapsar de novo
+// toda vez que dá F5; quem prefere só o ícone idem.
+const COLLAPSED_STORAGE_KEY = "crm:softphone-chip.collapsed";
+
+function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipProps) {
+  // Disconnected aparece só durante a janela curta antes do auto-connect
+  // disparar; tratamos como "Conectando" pra não confundir o usuário com
+  // estado falso-negativo.
+  const isConnecting = status === "connecting" || status === "disconnected";
+  const isRegistered = status === "registered";
+  const isError = status === "error";
+
+  // Modo colapsado: só o estado Registered colapsa pra ícone redondo. Erros
+  // continuam expandidos (precisa ler a mensagem) e Connecting é transiente.
+  const [collapsed, setCollapsed] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1";
+  });
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(COLLAPSED_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* fail-silent */
+      }
+      return next;
+    });
+  };
+  const showCollapsed = collapsed && isRegistered;
+
+  // Forma colapsada: só ícone do telefone num círculo verde, expansível ao
+  // clicar. Mantém o "ping" pulsante pra dar feedback de que está ativo.
+  if (showCollapsed) {
+    return (
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        aria-label={`Expandir status do softphone (ramal ${ramal})`}
+        title={`Softphone ativo • Ramal ${ramal} — clique para expandir`}
+        className="group relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200/60 bg-emerald-50/90 text-emerald-900 shadow-lg backdrop-blur-md transition hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-950/70 dark:text-emerald-100 dark:hover:bg-emerald-900/70"
+      >
+        <span className="absolute right-1 top-1 flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        </span>
+        <IconPhone size={16} stroke={2.2} />
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "group inline-flex items-stretch overflow-hidden rounded-full border shadow-lg backdrop-blur-md transition",
+        isRegistered &&
+          "border-emerald-200/60 bg-emerald-50/90 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-950/70 dark:text-emerald-100",
+        isConnecting &&
+          "border-amber-200/60 bg-amber-50/90 text-amber-900 dark:border-amber-400/20 dark:bg-amber-950/70 dark:text-amber-100",
+        isError &&
+          "border-red-200/60 bg-red-50/90 text-red-900 dark:border-red-400/20 dark:bg-red-950/70 dark:text-red-100",
+      )}
+    >
+      <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium">
+        {isRegistered && (
+          <>
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            <IconPhone size={14} stroke={2.2} />
+            <span>
+              Softphone ativo • <strong>{ramal}</strong>
+            </span>
+          </>
+        )}
+        {isConnecting && (
+          <>
+            <IconLoader2 size={14} className="animate-spin" />
+            <span>Conectando softphone…</span>
+          </>
+        )}
+        {isError && (
+          <>
+            <IconAlertTriangle size={14} />
+            <span
+              className="max-w-[280px] truncate"
+              title={error ?? "Erro desconhecido"}
+            >
+              Softphone: {error ?? "erro"}
+            </span>
+            <button
+              type="button"
+              onClick={onReconnect}
+              aria-label="Tentar reconectar"
+              title="Tentar reconectar"
+              className="ml-1 inline-flex items-center justify-center rounded-full p-1 hover:bg-black/10 dark:hover:bg-white/10"
+            >
+              <IconRefresh size={12} />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Setinha de colapsar — só faz sentido em Registered (Conectando é
+          transiente, Erro precisa ficar visível pra leitura da mensagem). */}
+      {isRegistered && (
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label="Colapsar chip do softphone"
+          title="Colapsar (deixar só o ícone)"
+          className="inline-flex items-center justify-center border-l border-current/20 px-2 opacity-60 transition-opacity hover:opacity-100"
+        >
+          <IconChevronRight size={14} strokeWidth={2.2} />
+        </button>
+      )}
+
+      {/*
+        Botão de dispensar só faz sentido no estado de erro — em
+        Registered o operador quer ver o status; em Connecting é
+        transiente. Permitir esconder durante erro evita que o chip
+        vermelho fique atrapalhando visualmente se a conexão estiver
+        intencionalmente quebrada (ex.: VPN down).
+      */}
+      {isError && (
+        <button
+          type="button"
+          onClick={onHide}
+          aria-label="Esconder até reload"
+          title="Esconder até recarregar a página"
+          className="inline-flex items-center justify-center border-l border-current/20 px-2.5 opacity-60 transition-opacity hover:opacity-100"
+        >
+          <IconX size={12} strokeWidth={2.2} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Painel de chamada ativa ─────────────────────────────────────────────
+
+interface CallPanelProps {
+  status: ReturnType<typeof useSoftphone>["status"];
+  direction: "inbound" | "outbound" | null;
+  remoteNumber: string | null;
+  durationMs: number;
+  muted: boolean;
+  held: boolean;
+  onAnswer: () => void;
+  onHangup: () => void;
+  onToggleMute: () => void;
+  onToggleHold: () => void;
+}
+
+function CallPanel({
+  status,
+  direction,
+  remoteNumber,
+  durationMs,
+  muted,
+  held,
+  onAnswer,
+  onHangup,
+  onToggleMute,
+  onToggleHold,
+}: CallPanelProps) {
+  const isRinging = status === "call_ringing";
+  const isActive = status === "call_active" || status === "call_held";
+
+  return (
+    <div
+      className={cn(
+        "w-[280px] rounded-2xl border p-4 shadow-2xl backdrop-blur-xl",
+        "border-white/50 bg-white/85 text-slate-900",
+        "dark:border-white/10 dark:bg-slate-900/85 dark:text-slate-100",
+      )}
+      style={{
+        boxShadow: "var(--glass-shadow, 0 20px 60px rgba(0,0,0,0.18))",
+      }}
+      role="dialog"
+      aria-label="Chamada em andamento"
+    >
+      <div className="mb-3 flex items-center gap-2">
+        {isRinging ? (
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          </span>
+        ) : (
+          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+        )}
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          {isRinging
+            ? direction === "inbound"
+              ? "Chamada recebida"
+              : "Chamando…"
+            : direction === "inbound"
+              ? "Em chamada (entrada)"
+              : "Em chamada"}
+        </span>
+      </div>
+
+      <div className="mb-4 flex items-baseline justify-between gap-2">
+        <span className="truncate text-lg font-semibold">
+          {remoteNumber ?? "Desconhecido"}
+        </span>
+        {isActive && (
+          <span className="font-mono text-sm text-slate-500 dark:text-slate-400">
+            {formatDuration(durationMs)}
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        {isRinging && direction === "inbound" ? (
+          <>
+            <button
+              type="button"
+              onClick={onAnswer}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98]"
+            >
+              <IconPhoneIncoming size={16} />
+              Atender
+            </button>
+            <button
+              type="button"
+              onClick={onHangup}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
+            >
+              <IconPhoneOff size={16} />
+              Recusar
+            </button>
+          </>
+        ) : isRinging && direction === "outbound" ? (
+          // Outbound dialing (Api4com originando) — sem mute/hold, só
+          // permite cancelar antes do destino atender.
+          <button
+            type="button"
+            onClick={onHangup}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
+          >
+            <IconPhoneOff size={16} />
+            Cancelar
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onToggleMute}
+              aria-pressed={muted}
+              className={cn(
+                "inline-flex h-10 w-10 items-center justify-center rounded-full border transition",
+                muted
+                  ? "border-amber-500 bg-amber-500 text-white"
+                  : "border-slate-300 bg-white/60 text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10",
+              )}
+              title={muted ? "Reativar microfone" : "Silenciar microfone"}
+            >
+              {muted ? <IconMicrophoneOff size={16} /> : <IconMicrophone size={16} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={onToggleHold}
+              aria-pressed={held}
+              className={cn(
+                "inline-flex h-10 w-10 items-center justify-center rounded-full border transition",
+                held
+                  ? "border-indigo-500 bg-indigo-500 text-white"
+                  : "border-slate-300 bg-white/60 text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10",
+              )}
+              title={held ? "Retomar chamada" : "Colocar em espera"}
+            >
+              {held ? <IconPlayerPlay size={16} /> : <IconPlayerPause size={16} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={onHangup}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
+            >
+              <IconPhoneOff size={16} />
+              Encerrar
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default SoftphoneWidget;

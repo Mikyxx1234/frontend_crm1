@@ -120,8 +120,10 @@ export async function middleware(req: NextRequest) {
       return withSecurityHeaders(NextResponse.next());
     }
 
-    // Rotas /v2/* são sempre liberadas no sandbox de desenvolvimento.
-    if (pathname.startsWith("/v2")) {
+    // Rotas /v2/* são redirecionadas por next.config.ts (redirects) para
+    // o path canônico. Liberamos aqui para que o redirect ocorra sem
+    // loop de auth — o destino final já exige autenticação normalmente.
+    if (pathname.startsWith("/v2") || pathname.startsWith("/old")) {
       return withSecurityHeaders(NextResponse.next());
     }
 

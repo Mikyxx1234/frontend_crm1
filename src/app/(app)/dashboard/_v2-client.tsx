@@ -7,8 +7,10 @@ import { toast } from "sonner";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { PageHeader } from "@/components/crm/page-header";
-import { TabsGlass } from "@/components/crm/tabs-glass";
-import { ButtonGlass } from "@/components/crm/button-glass";
+import {
+  PageGhostButton,
+  PageSegmentedControl,
+} from "@/components/crm/page-toolbar";
 import { DealsDashboard } from "@/components/crm/dashboard/deals-dashboard";
 import { DashboardLayoutEditor } from "@/components/crm/dashboard/dashboard-layout-editor";
 import { ServiceOverview } from "@/components/crm/dashboard/service-overview";
@@ -37,6 +39,8 @@ import { resolveDashboardBlocks } from "@/lib/dashboard-blocks-catalog";
  * segmento `/v2/*` (que injeta `<NavRailV2 />` com hrefs novos). Sem
  * nada passado, mantém o `<NavRail />` legado.
  */
+const DASHBOARD_TABS = ["Negócios", "Atendimento"] as const;
+
 interface DashboardV2ClientPageProps {
   navRail?: React.ReactNode;
 }
@@ -81,35 +85,36 @@ export default function DashboardV2ClientPage({
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       {navRail ?? <NavRail />}
 
-      <main className="flex min-w-0 flex-col gap-4 overflow-y-auto pr-1">
+      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
-          icon={<IconLayoutDashboard size={22} />}
+          icon={<IconLayoutDashboard size={22} stroke={2.2} />}
           title="Dashboard"
           description="Visão geral de negócios e atendimento"
+          actions={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <PageSegmentedControl
+                size="compact"
+                aria-label="Visão do dashboard"
+                items={DASHBOARD_TABS.map((label, index) => ({
+                  value: String(index),
+                  label,
+                }))}
+                value={String(activeTab)}
+                onChange={(v) => {
+                  setActiveTab(Number(v));
+                  setEditing(false);
+                }}
+              />
+              {isDeals && !editing && dashboardQuery.data ? (
+                <PageGhostButton type="button" onClick={() => setEditing(true)}>
+                  <IconAdjustmentsHorizontal size={15} /> Editar dashboard
+                </PageGhostButton>
+              ) : null}
+            </div>
+          }
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <TabsGlass
-            tabs={["Negócios", "Atendimento"]}
-            activeTab={activeTab}
-            onChange={(i) => {
-              setActiveTab(i);
-              setEditing(false);
-            }}
-            className="max-w-[280px]"
-          />
-          {isDeals && !editing && dashboardQuery.data && (
-            <ButtonGlass
-              variant="glass"
-              size="sm"
-              onClick={() => setEditing(true)}
-            >
-              <IconAdjustmentsHorizontal size={15} />
-              Editar dashboard
-            </ButtonGlass>
-          )}
-        </div>
-
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
         {!editing && (
           <DashboardFilters
             filters={filters}
@@ -180,6 +185,7 @@ export default function DashboardV2ClientPage({
             {serviceQuery.data && <ServiceOverview data={serviceQuery.data} />}
           </QueryState>
         )}
+        </div>
       </main>
     </div>
   );

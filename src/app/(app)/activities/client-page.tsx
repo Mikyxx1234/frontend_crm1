@@ -2,10 +2,6 @@
 
 import { useMemo, useState } from "react"
 import { NavRailV2 } from "@/components/crm/nav-rail-v2"
-import { PageHeader } from "@/components/crm/page-header"
-import { GlassCard } from "@/components/crm/glass-card"
-import { ButtonGlass } from "@/components/crm/button-glass"
-import { EmptyState } from "@/components/crm/empty-state"
 import { ActivityCalendar } from "@/components/crm/activities/activity-calendar"
 import { ActivityRow } from "@/components/crm/activities/activity-row"
 import { ActivityComposer } from "@/components/crm/activities/activity-composer"
@@ -25,8 +21,14 @@ import {
   type Activity,
   type ActivityKind,
 } from "@/lib/activities-data"
+import { PageHeader } from "@/components/crm/page-header"
+import { PageDemoBanner } from "@/components/crm/page-demo-banner"
+import {
+  PagePrimaryButton,
+  PageSegmentedControl,
+} from "@/components/crm/page-toolbar"
 import { cn } from "@/lib/utils"
-import { IconChecklist, IconPlus, IconCalendarEvent } from "@tabler/icons-react"
+import { IconCalendarEvent, IconPlus } from "@tabler/icons-react"
 import {
   useActivities,
   useCreateActivity,
@@ -38,6 +40,8 @@ import {
   dtoToActivity,
   localDateTimeToIso,
 } from "@/features/directory-v2/activity-adapter"
+import { MOCK_ACTIVITIES_PAGE } from "@/features/directory-v2/mock-activities"
+import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode"
 
 type StatusFilter = "todas" | "pendentes" | "concluidas" | "atrasadas"
 
@@ -48,7 +52,29 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "atrasadas", label: "Atrasadas" },
 ]
 
-const isOverdue = (a: Activity) => a.status === "pendente" && new Date(a.start).getTime() < Date.now()
+const AGENDA_LEGEND: ActivityKind[] = ["tarefa", "reuniao", "ligacao", "evento"]
+
+const PANEL =
+  "rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow)] backdrop-blur-md"
+
+const isOverdue = (a: Activity) =>
+  a.status === "pendente" && new Date(a.start).getTime() < Date.now()
+
+function RightColumn({
+  items,
+  onSelectDate,
+}: {
+  items: Activity[]
+  onSelectDate: (d: Date) => void
+}) {
+  return (
+    <>
+      <ActivitiesUrgentCard items={items} onSelect={onSelectDate} />
+      <ActivitiesWeeklySummary items={items} />
+      <OperationsBaseCard />
+    </>
+  )
+}
 
 export default function V2ActivitiesClientPage() {
   const [viewDate, setViewDate] = useState(() => new Date())
@@ -57,25 +83,29 @@ export default function V2ActivitiesClientPage() {
   const [kindFilter, setKindFilter] = useState<ActivityKind | "all">("all")
   const [composerOpen, setComposerOpen] = useState(false)
 
-  // Backend wiring (substitui o seed local). Pegamos um lote grande
-  // pra evitar paginação no calendário; pode evoluir pra range-query.
   const activitiesQuery = useActivities({ perPage: 200 })
   const createMutation = useCreateActivity()
   const updateMutation = useUpdateActivity()
   const deleteMutation = useDeleteActivity()
 
+  const realDtos = activitiesQuery.data?.items ?? []
+  const isDemo = shouldAutoDemoEmpty({
+    realCount: realDtos.length,
+    hasFilters: false,
+    isLoading: activitiesQuery.isLoading,
+    isError: activitiesQuery.isError,
+  })
+
   const items: Activity[] = useMemo(
-    () => (activitiesQuery.data?.items ?? []).map(dtoToActivity).filter((a) => a.start),
-    [activitiesQuery.data?.items],
+    () => (isDemo ? MOCK_ACTIVITIES_PAGE.items : realDtos).map(dtoToActivity).filter((a) => a.start),
+    [isDemo, realDtos],
   )
 
-  // Atividades visíveis no calendário (após filtro de tipo)
   const calendarItems = useMemo(
     () => (kindFilter === "all" ? items : items.filter((a) => a.kind === kindFilter)),
     [items, kindFilter],
   )
 
-  // Atividades do dia selecionado, aplicando status + tipo
   const dayItems = useMemo(() => {
     const key = dateKey(selectedDate)
     return calendarItems
@@ -89,7 +119,6 @@ export default function V2ActivitiesClientPage() {
       .sort((a, b) => a.start.localeCompare(b.start))
   }, [calendarItems, selectedDate, statusFilter])
 
-  // Resumo por tipo no mês exibido
   const monthSummary = useMemo(() => {
     const m = viewDate.getMonth()
     const y = viewDate.getFullYear()
@@ -101,6 +130,15 @@ export default function V2ActivitiesClientPage() {
     }
     return counts
   }, [items, viewDate])
+
+  const monthTotal = useMemo(
+    () =>
+      items.filter((a) => {
+        const d = new Date(a.start)
+        return d.getMonth() === viewDate.getMonth() && d.getFullYear() === viewDate.getFullYear()
+      }).length,
+    [items, viewDate],
+  )
 
   const toggle = (id: string) => {
     const current = items.find((a) => a.id === id)
@@ -115,9 +153,7 @@ export default function V2ActivitiesClientPage() {
     })
   }
 
-  const remove = (id: string) => {
-    deleteMutation.mutate(id)
-  }
+  const remove = (id: string) => deleteMutation.mutate(id)
 
   const markAllDone = () => {
     const nowIso = new Date().toISOString()
@@ -148,48 +184,40 @@ export default function V2ActivitiesClientPage() {
     )
   }
 
+  const selectDate = (d: Date) => {
+    setSelectedDate(d)
+    setViewDate(d)
+  }
+
   const isToday = isSameDay(selectedDate, new Date())
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
-      <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">
+      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
-          icon={<IconChecklist size={22} />}
+          icon={<IconCalendarEvent size={22} stroke={2.2} />}
           title="Atividades"
           description="Agende e acompanhe tarefas, reuniões, ligações e eventos."
           actions={
-            <div className="flex items-center gap-2">
-              <div className="inline-flex rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5 shadow-[var(--glass-shadow-sm)]">
-                {STATUS_FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => setStatusFilter(f.key)}
-                    className={cn(
-                      "cursor-pointer rounded-full px-3 py-1 font-display text-[11px] font-bold transition-colors",
-                      statusFilter === f.key
-                        ? "bg-[var(--brand-primary)] text-white"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-              <ButtonGlass variant="primary" onClick={() => setComposerOpen(true)}>
-                <IconPlus size={16} /> Nova atividade
-              </ButtonGlass>
-            </div>
+            <PagePrimaryButton type="button" onClick={() => setComposerOpen(true)}>
+              <IconPlus size={15} stroke={2.4} /> Nova atividade
+            </PagePrimaryButton>
           }
         />
 
-        {/* Layout de 3 colunas: calendário + lista + urgentes/resumo */}
-        <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr] gap-3.5 overflow-hidden xl:grid-cols-[280px_1fr_300px]">
-          {/* Coluna esquerda: calendário + resumo por tipo */}
-          <div className="flex min-h-0 flex-col gap-3.5 overflow-auto">
-            <GlassCard className="p-4">
+        {isDemo && (
+          <PageDemoBanner>
+            Dados de exemplo — atividades ilustrativas para visualizar o calendário e a agenda.
+          </PageDemoBanner>
+        )}
+
+        {/* Layout 3 colunas */}
+        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_300px]">
+          {/* Coluna esquerda */}
+          <div className="flex min-h-0 flex-col gap-4 overflow-auto">
+            <section aria-label="Calendário" className={cn(PANEL, "p-4")}>
               <ActivityCalendar
                 viewDate={viewDate}
                 selectedDate={selectedDate}
@@ -197,44 +225,44 @@ export default function V2ActivitiesClientPage() {
                 onSelectDate={setSelectedDate}
                 onChangeMonth={setViewDate}
               />
-            </GlassCard>
+            </section>
 
-            {/* Resumo por tipo no mês */}
-            <GlassCard className="p-4">
-              <p className="mb-3 font-display text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+            <section aria-label="Tipos de atividade" className={cn(PANEL, "p-4")}>
+              <p className="mb-3 font-display text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[var(--text-muted)]">
                 Este mês
               </p>
-              <div className="flex flex-col gap-2">
-                {/* Botão "Todos" */}
+              <div className="flex flex-col gap-0.5">
                 <button
                   type="button"
                   onClick={() => setKindFilter("all")}
                   className={cn(
-                    "flex items-center justify-between rounded-[var(--radius-md)] px-2 py-1.5 transition-colors",
+                    "flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 py-2 transition-colors",
                     kindFilter === "all"
-                      ? "bg-[var(--glass-bg-overlay)]"
-                      : "hover:bg-[var(--glass-bg-subtle)]",
+                      ? "bg-[var(--color-enterprise-bg)]"
+                      : "hover:bg-[var(--glass-bg-overlay)]",
                   )}
                 >
-                  <span className="inline-flex items-center gap-2">
-                    <span
-                      className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)]"
-                      style={{
-                        backgroundColor: "rgba(91,111,245,0.12)",
-                        color: "var(--brand-primary)",
-                      }}
-                    >
-                      <IconCalendarEvent size={13} />
-                    </span>
-                    <span className="font-display text-[12px] font-semibold text-[var(--text-secondary)]">
-                      Todas
-                    </span>
+                  <span
+                    className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-md)]"
+                    style={{
+                      backgroundColor: "rgba(91,111,245,0.14)",
+                      color: "var(--color-task, var(--brand-primary))",
+                    }}
+                  >
+                    <IconCalendarEvent size={15} stroke={2.2} />
                   </span>
-                  <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">
-                    {items.filter((a) => {
-                      const d = new Date(a.start)
-                      return d.getMonth() === viewDate.getMonth() && d.getFullYear() === viewDate.getFullYear()
-                    }).length}
+                  <span
+                    className={cn(
+                      "flex-1 text-left font-display text-[13px] font-bold",
+                      kindFilter === "all"
+                        ? "text-[var(--brand-primary)]"
+                        : "text-[var(--text-secondary)]",
+                    )}
+                  >
+                    Todas
+                  </span>
+                  <span className="min-w-[24px] rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[7px] py-px text-center font-mono text-[12.5px] font-semibold text-[var(--text-muted)]">
+                    {monthTotal}
                   </span>
                 </button>
 
@@ -248,93 +276,143 @@ export default function V2ActivitiesClientPage() {
                       type="button"
                       onClick={() => setKindFilter(active ? "all" : kind)}
                       className={cn(
-                        "flex items-center justify-between rounded-[var(--radius-md)] px-2 py-1.5 transition-colors",
+                        "flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 py-2 transition-colors",
                         active
-                          ? "bg-[var(--glass-bg-overlay)]"
-                          : "hover:bg-[var(--glass-bg-subtle)]",
+                          ? "bg-[var(--color-enterprise-bg)]"
+                          : "hover:bg-[var(--glass-bg-overlay)]",
                       )}
                     >
-                      <span className="inline-flex items-center gap-2">
-                        <span
-                          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)]"
-                          style={{ backgroundColor: meta.softBg, color: meta.color }}
-                        >
-                          <Icon size={13} />
-                        </span>
-                        <span className="font-display text-[12px] font-semibold text-[var(--text-secondary)]">
-                          {meta.plural}
-                        </span>
+                      <span
+                        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-md)]"
+                        style={{ backgroundColor: meta.softBg, color: meta.color }}
+                      >
+                        <Icon size={15} stroke={2.2} />
                       </span>
-                      <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">
+                      <span
+                        className={cn(
+                          "flex-1 text-left font-display text-[13px] font-bold",
+                          active
+                            ? "text-[var(--brand-primary)]"
+                            : "text-[var(--text-secondary)]",
+                        )}
+                      >
+                        {meta.plural}
+                      </span>
+                      <span className="min-w-[24px] rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[7px] py-px text-center font-mono text-[12.5px] font-semibold text-[var(--text-muted)]">
                         {monthSummary[kind]}
                       </span>
                     </button>
                   )
                 })}
               </div>
-            </GlassCard>
+            </section>
           </div>
 
-          {/* Coluna do meio: lista de atividades do dia */}
-          <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
-            {/* Cabeçalho do dia */}
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="font-display text-[15px] font-bold capitalize text-[var(--text-primary)]">
-                  {longDateLabel(selectedDate)}
-                </p>
-                <p className="font-body text-[12px] text-[var(--text-muted)]">
-                  {dayItems.length} {dayItems.length === 1 ? "atividade" : "atividades"}
-                  {isToday ? " para hoje" : ""}
-                </p>
-              </div>
-              {dayItems.some((a) => a.status !== "concluida") && (
-                <button
-                  type="button"
-                  onClick={markAllDone}
-                  className="shrink-0 font-display text-[12px] font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-dark)]"
-                >
-                  Marcar todas como concluídas
-                </button>
-              )}
-            </div>
-
-            {/* Lista de atividades */}
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto pb-2">
-              {dayItems.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-md">
-                  <EmptyState
-                    icon={<IconCalendarEvent size={28} />}
-                    title="Nenhuma atividade neste dia"
-                    description="Clique em + Nova atividade para agendar algo."
-                  />
+          {/* Coluna central */}
+          <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
+            <section
+              aria-label="Agenda do dia"
+              className={cn(PANEL, "flex min-h-[520px] flex-1 flex-col overflow-hidden p-0")}
+            >
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--glass-border-subtle)] px-[18px] py-4">
+                <div className="min-w-0">
+                  <h2 className="font-display text-[17px] font-extrabold capitalize tracking-tight text-[var(--text-primary)]">
+                    {longDateLabel(selectedDate)}
+                  </h2>
+                  <p className="mt-px font-body text-[12.5px] text-[var(--text-muted)]">
+                    {dayItems.length}{" "}
+                    {dayItems.length === 1 ? "atividade" : "atividades"}
+                    {isToday ? " para hoje" : ""}
+                    {dayItems.some((a) => a.status !== "concluida") && (
+                      <>
+                        {" · "}
+                        <button
+                          type="button"
+                          onClick={markAllDone}
+                          className="cursor-pointer font-display font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-dark)]"
+                        >
+                          Marcar todas como concluídas
+                        </button>
+                      </>
+                    )}
+                  </p>
                 </div>
-              ) : (
-                dayItems.map((a) => (
-                  <ActivityRow
-                    key={a.id}
-                    activity={a}
-                    overdue={isOverdue(a)}
-                    onToggle={toggle}
-                    onDelete={remove}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <PageSegmentedControl
+                    size="compact"
+                    aria-label="Filtrar atividades"
+                    items={STATUS_FILTERS.map((f) => ({
+                      value: f.key,
+                      label: f.label,
+                    }))}
+                    value={statusFilter}
+                    onChange={(v) => setStatusFilter(v as StatusFilter)}
                   />
-                ))
-              )}
-
-              <div className="mt-1">
-                <ProductivityTipCard />
+                  <div className="flex flex-wrap items-center gap-2.5 font-body text-[11px] text-[var(--text-muted)]">
+                  {AGENDA_LEGEND.map((kind) => {
+                    const meta = ACTIVITY_KINDS[kind]
+                    return (
+                      <span key={kind} className="inline-flex items-center gap-1">
+                        <i
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: meta.color }}
+                        />
+                        {meta.label}
+                      </span>
+                    )
+                  })}
+                  </div>
+                </div>
               </div>
-            </div>
+
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-4">
+                {dayItems.length === 0 ? (
+                  <div className="flex flex-1 items-center justify-center p-10">
+                    <div className="max-w-[320px] text-center">
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
+                        <IconCalendarEvent size={28} />
+                      </div>
+                      <h3 className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
+                        Nenhuma atividade neste dia
+                      </h3>
+                      <p className="mt-1 mb-4 font-body text-[13px] text-[var(--text-muted)]">
+                        Clique em “Nova atividade” para agendar uma tarefa, reunião,
+                        ligação ou evento.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setComposerOpen(true)}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
+                      >
+                        <IconPlus size={16} stroke={2.5} /> Nova atividade
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  dayItems.map((a) => (
+                    <ActivityRow
+                      key={a.id}
+                      activity={a}
+                      overdue={isOverdue(a)}
+                      onToggle={toggle}
+                      onDelete={remove}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+
+            <ProductivityTipCard />
           </div>
 
-          {/* Coluna direita: urgentes + resumo semanal + mini-mapa (xl+) */}
-          <div className="hidden min-h-0 flex-col gap-3.5 overflow-auto xl:flex">
-            <ActivitiesUrgentCard items={items} onSelect={(d) => {
-              setSelectedDate(d)
-              setViewDate(d)
-            }} />
-            <ActivitiesWeeklySummary items={items} />
-            <OperationsBaseCard />
+          {/* Coluna direita — sidebar xl+ */}
+          <div className="hidden min-h-0 flex-col gap-4 overflow-auto xl:flex">
+            <RightColumn items={items} onSelectDate={selectDate} />
+          </div>
+
+          {/* Coluna direita — grid horizontal em telas médias */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:hidden lg:col-span-2">
+            <RightColumn items={items} onSelectDate={selectDate} />
           </div>
         </div>
       </main>

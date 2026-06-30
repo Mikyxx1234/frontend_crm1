@@ -1,0 +1,954 @@
+"use client";
+
+import { apiUrl } from "@/lib/api";
+/**
+ * Perfil do usuário logado.
+ *
+ * Layout inspirado na referência "Umbler Conta" (duas colunas num
+ * fundo claro, cards brancos em `rounded-[var(--radius-xl)]` com `shadow-[var(--glass-shadow)]`)
+ * adaptado ao **EduIT Premium Core**:
+ *
+ *  - ESQUERDA "Dados do seu perfil": avatar editável (upload), nome,
+ *    assinatura, telefone, toggle de mensagem de finalização + textarea.
+ *  - DIREITA "Tokens de Acesso": lista/empty state + dialog de criação
+ *    com exposição one-time da chave gerada.
+ *
+ * O upload de avatar faz POST em `/api/profile/avatar` e apenas atualiza
+ * o estado local com a URL retornada — a persistência efetiva em
+ * `User.avatarUrl` só acontece ao clicar em "Salvar" (evita deixar o
+ * registro em estado inconsistente caso o operador cancele o fluxo).
+ */
+
+import * as React from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import {
+  AlertTriangle,
+  Camera,
+  Check,
+  Copy,
+  Info,
+  Key,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { TooltipHost } from "@/components/ui/tooltip";
+import { useConfirm } from "@/hooks/use-confirm";
+import type { ChatThemeKey } from "@/lib/chat-theme";
+import {
+  CHAT_THEME_OPTIONS,
+  DEFAULT_CHAT_THEME,
+  isChatThemeKey,
+} from "@/lib/chat-theme";
+import { cn } from "@/lib/utils";
+import { AvatarCropDialog } from "@/components/profile/avatar-crop-dialog";
+import { SidebarCustomizationCard } from "@/features/sidebar/sidebar-customization";
+
+type Profile = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatarUrl: string | null;
+  phone: string | null;
+  signature: string | null;
+  closingMessage: string | null;
+  /** Ausente em builds antigos sem migration `add_user_chat_theme`. */
+  chatTheme?: string | null;
+};
+
+type ApiToken = {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+};
+
+function ChatThemeField({
+  profile,
+  queryClient,
+}: {
+  profile: Profile;
+  queryClient: ReturnType<typeof useQueryClient>;
+}) {
+  const current: ChatThemeKey = isChatThemeKey(profile.chatTheme)
+    ? profile.chatTheme
+    : DEFAULT_CHAT_THEME;
+
+  const themeMutation = useMutation({
+    mutationFn: async (key: ChatThemeKey) => {
+      const r = await fetch(apiUrl("/api/profile"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatTheme: key }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (
+          r.status === 503 &&
+          j &&
+          typeof j === "object" &&
+          "code" in j &&
+          (j as { code?: unknown }).code === "CHAT_THEME_COLUMN_MISSING"
+        ) {
+          // Degradação graciosa: builds/dev sem migration aplicada não devem
+          // quebrar o Settings. Mantém tema atual e informa o operador.
+          return {
+            ...profile,
+            chatTheme: current,
+            _chatThemeBlockedMessage:
+              typeof (j as { message?: unknown }).message === "string"
+                ? (j as { message: string }).message
+                : "Tema indisponível até aplicar migrations.",
+          } as Profile & { _chatThemeBlockedMessage: string };
+        }
+
+        throw new Error(
+          typeof (j as { message?: string }).message === "string"
+            ? (j as { message: string }).message
+            : "Erro ao salvar tema",
+        );
+      }
+      return j as Profile;
+    },
+    onSuccess: (data) => {
+      const blockedMsg =
+        data && typeof data === "object" && "_chatThemeBlockedMessage" in data
+          ? String((data as unknown as { _chatThemeBlockedMessage?: unknown })._chatThemeBlockedMessage ?? "")
+          : "";
+      if (blockedMsg) {
+        toast.warning(blockedMsg);
+        queryClient.setQueryData(["profile"], profile);
+        return;
+      }
+      toast.success("Tema do chat atualizado");
+      queryClient.setQueryData(["profile"], data);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          Tema das bolhas (inbox)
+        </p>
+        <p className="mt-1 text-[11px] leading-snug text-[var(--color-ink-muted)]">
+          Cor das mensagens enviadas e do fundo do histórico. Recebidas permanecem brancas; notas internas em cinza.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {CHAT_THEME_OPTIONS.map((theme) => {
+          const selected = current === theme.key;
+          return (
+            <button
+              key={theme.key}
+              type="button"
+              disabled={themeMutation.isPending}
+              onClick={() => themeMutation.mutate(theme.key)}
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-xl border-2 p-3 lumen-transition touch-target",
+                selected
+                  ? "border-primary bg-[var(--color-primary-soft)] shadow-[var(--shadow-sm)]"
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] hover:border-primary/30 hover:shadow-[var(--shadow-sm)]",
+              )}
+              aria-pressed={selected}
+              aria-label={`Tema ${theme.label}`}
+            >
+              <div
+                className="h-14 w-20 overflow-hidden rounded-lg border border-[var(--glass-border)] shadow-[var(--shadow-sm)]"
+                style={{ background: theme.preview.chatBg }}
+              >
+                <div className="flex justify-end p-1.5">
+                  <div
+                    className="rounded-[6px] rounded-br-[1px] px-2 py-1"
+                    style={{ background: theme.preview.bubbleBg }}
+                  >
+                    <p
+                      className="text-[8px] font-medium"
+                      style={{ color: theme.preview.bubbleText }}
+                    >
+                      Oi!
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-start p-1.5">
+                  <div className="rounded-[6px] rounded-bl-[1px] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 shadow-[var(--shadow-sm)]">
+                    <p className="text-[8px] font-medium text-[color:var(--chat-bubble-received-text)]">
+                      Olá!
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                {theme.label}
+              </span>
+              {selected ? (
+                <Check className="size-3.5 shrink-0 text-primary" aria-hidden />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function getInitials(name: string | null | undefined): string {
+  if (!name?.trim()) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
+export default function ProfilePage() {
+  const { update } = useSession();
+  const queryClient = useQueryClient();
+
+  const { data: profile, isLoading, isError, error, refetch, isFetching } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/api/profile"));
+      const text = await r.text();
+      let json: unknown;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        throw new Error(`Resposta inválida (${r.status}): ${text.slice(0, 120)}`);
+      }
+      if (!r.ok) {
+        const msg =
+          json && typeof json === "object" && "message" in json && typeof (json as { message?: unknown }).message === "string"
+            ? (json as { message: string }).message
+            : `Erro ao carregar perfil (HTTP ${r.status}).`;
+        throw new Error(msg);
+      }
+      return json as Profile;
+    },
+    retry: 1,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-16">
+        <Loader2 className="size-8 animate-spin text-[var(--color-ink-muted)]" aria-hidden />
+      </div>
+    );
+  }
+
+  if (isError || !profile) {
+    const msg =
+      error instanceof Error ? error.message : "Não foi possível carregar o perfil.";
+    return (
+      <div className="w-full rounded-[var(--radius-xl)] border border-[var(--color-danger)]/30 bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] p-8 text-center shadow-[var(--glass-shadow)]">
+        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-danger)_18%,transparent)] text-[var(--color-danger)]">
+          <AlertTriangle className="size-6" />
+        </div>
+        <h2 className="mt-4 font-display text-lg font-bold text-[var(--text-primary)]">
+          Não foi possível carregar seu perfil
+        </h2>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">{msg}</p>
+        <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
+          Se o erro mencionar coluna inexistente, a migration{" "}
+          <code className="rounded bg-[var(--glass-bg-overlay)] px-1.5 py-0.5">add_user_profile_fields</code>{" "}
+          ainda não foi aplicada no servidor (ex.:{" "}
+          <code className="rounded bg-[var(--glass-bg-overlay)] px-1.5 py-0.5">add_user_chat_theme</code>).
+        </p>
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--color-primary-dark)] disabled:opacity-60"
+        >
+          {isFetching ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <RefreshCw className="size-4" />
+          )}
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ProfileCard profile={profile} queryClient={queryClient} update={update} />
+        <TokensCard />
+      </div>
+
+      <SidebarCustomizationCard />
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────
+   CARD ESQUERDO — Dados do seu perfil
+   ──────────────────────────────────────────────────────────── */
+
+function ProfileCard({
+  profile,
+  queryClient,
+  update,
+}: {
+  profile: Profile;
+  queryClient: ReturnType<typeof useQueryClient>;
+  update: ReturnType<typeof useSession>["update"];
+}) {
+  const [name, setName] = React.useState(profile.name);
+  const [signature, setSignature] = React.useState(profile.signature ?? "");
+  const [phone, setPhone] = React.useState(profile.phone ?? "");
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(profile.avatarUrl);
+  const [closingEnabled, setClosingEnabled] = React.useState(
+    Boolean(profile.closingMessage),
+  );
+  const [closingMessage, setClosingMessage] = React.useState(profile.closingMessage ?? "");
+
+  // Sincroniza quando a query de perfil se atualiza (ex.: depois de salvar)
+  React.useEffect(() => {
+    setName(profile.name);
+    setSignature(profile.signature ?? "");
+    setPhone(profile.phone ?? "");
+    setAvatarUrl(profile.avatarUrl);
+    setClosingEnabled(Boolean(profile.closingMessage));
+    setClosingMessage(profile.closingMessage ?? "");
+  }, [profile]);
+
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+
+  // Arquivo aguardando crop. Quando o operador seleciona uma imagem,
+  // ela vai pra esse estado em vez de subir direto — o
+  // <AvatarCropDialog> abre automaticamente quando esse estado é
+  // não-nulo, e só faz o upload depois que o operador enquadrou.
+  const [pendingFile, setPendingFile] = React.useState<File | null>(null);
+
+  const uploadAvatar = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const r = await fetch(apiUrl("/api/profile/avatar"), {
+        method: "POST",
+        body: formData,
+      });
+      const j = (await r.json().catch(() => ({}))) as {
+        url?: string;
+        message?: string;
+      };
+      if (!r.ok || !j.url) {
+        throw new Error(j.message ?? "Erro ao enviar imagem.");
+      }
+      setAvatarUrl(j.url);
+      setPendingFile(null);
+      toast.success("Foto atualizada — clique em Salvar para aplicar.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro no upload");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const body = {
+        name: name.trim(),
+        avatarUrl: avatarUrl ?? "",
+        phone: phone.trim(),
+        signature: signature.trim(),
+        closingMessage: closingEnabled ? closingMessage.trim() : "",
+      };
+      const r = await fetch(apiUrl("/api/profile"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        throw new Error(
+          typeof (j as { message?: string }).message === "string"
+            ? (j as { message: string }).message
+            : "Erro ao salvar",
+        );
+      }
+      return j as Profile;
+    },
+    onSuccess: async (data) => {
+      toast.success("Perfil atualizado");
+      queryClient.setQueryData(["profile"], data);
+      await update({ name: data.name });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+      <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+        Dados do seu perfil
+      </h2>
+
+      {/* ── Avatar + banner ── */}
+      <div className="mt-6 flex items-start gap-5">
+        {/*
+          Avatar editável: clique no botão de camera dispara o <input type="file">
+          escondido. Preview imediato via `avatarUrl` local — persistência
+          real só ao clicar em "Salvar" abaixo (evita registro inconsistente).
+        */}
+        <div className="relative shrink-0">
+          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-[#fbcfe8] to-[#f9a8d4] ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt={name}
+                className="size-full object-cover"
+              />
+            ) : (
+              <span className="font-display text-2xl font-bold text-white drop-shadow">
+                {getInitials(name)}
+              </span>
+            )}
+          </div>
+          <TooltipHost
+            label="Alterar foto"
+            side="right"
+            className="absolute -bottom-1 -right-1"
+          >
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className={cn(
+                "inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-md transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]",
+                uploading && "cursor-wait opacity-80",
+              )}
+              aria-label="Alterar foto de perfil"
+            >
+              {uploading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Camera className="size-3.5" />
+              )}
+            </button>
+          </TooltipHost>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              // Em vez de subir direto, joga pro <AvatarCropDialog>
+              // pro operador escolher o enquadramento. O upload
+              // efetivo acontece em `onApply` lá embaixo.
+              if (f) setPendingFile(f);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        <div className="min-w-0 flex-1 text-right">
+          <p className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
+            {name || profile.name}
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">Português (Brasil)</p>
+          <p className="mt-1.5 text-[11px] leading-snug text-[var(--color-ink-muted)]">
+            Gerencie seus dados de acesso, idioma e assinatura pessoal do agente.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Formulário ── */}
+      <form
+        className="mt-8 space-y-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          saveMutation.mutate();
+        }}
+      >
+        <Field id="name" label="Nome" required>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            autoComplete="name"
+            className="h-11 rounded-xl border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-sm focus-visible:ring-[var(--color-primary)]/30"
+          />
+        </Field>
+
+        <Field
+          id="signature"
+          label="Assinatura"
+          hint="Aparece no final das suas mensagens. Vazio = usa seu nome."
+        >
+          <Input
+            id="signature"
+            value={signature}
+            onChange={(e) => setSignature(e.target.value)}
+            placeholder="Ex.: Marcelo · EduIT"
+            className="h-11 rounded-xl border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-sm focus-visible:ring-[var(--color-primary)]/30"
+          />
+        </Field>
+
+        <Field id="phone" label="Telefone">
+          <div className="flex h-11 items-center gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 focus-within:ring-2 focus-within:ring-[var(--color-primary)]/30">
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-[var(--glass-bg-subtle)] px-2 py-1 text-xs font-bold text-[var(--text-muted)]"
+              aria-hidden
+            >
+              <span className="text-sm leading-none">🇧🇷</span>
+            </span>
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(11) 96123-4567"
+              autoComplete="tel"
+              className="h-full flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            />
+          </div>
+        </Field>
+
+        <ChatThemeField profile={profile} queryClient={queryClient} />
+
+        {/* ── Toggle de mensagem de finalização ── */}
+        <div className="space-y-3 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <Switch
+              id="closing-toggle"
+              checked={closingEnabled}
+              onCheckedChange={setClosingEnabled}
+              aria-label="Mensagem de finalização de conversa"
+            />
+            <Label
+              htmlFor="closing-toggle"
+              className="cursor-pointer text-sm font-medium text-[var(--text-primary)]"
+            >
+              Mensagem de finalização de conversa
+            </Label>
+          </div>
+
+          {closingEnabled && (
+            <>
+              <div className="flex items-start gap-2 rounded-xl bg-[#eef2ff] px-3 py-2.5 text-[12px] leading-snug text-[#3730a3]">
+                <Info className="mt-0.5 size-3.5 shrink-0" />
+                <span>
+                  Se definida, tem precedência sobre a mensagem de finalização
+                  configurada na organização.
+                </span>
+              </div>
+
+              <Field
+                id="closing-message"
+                label="Sua mensagem de encerramento"
+              >
+                <textarea
+                  id="closing-message"
+                  value={closingMessage}
+                  onChange={(e) => setClosingMessage(e.target.value)}
+                  placeholder="Sua mensagem de encerramento"
+                  rows={4}
+                  className="w-full resize-y rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--color-ink-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
+                />
+              </Field>
+            </>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={saveMutation.isPending}
+          className={cn(
+            "mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors duration-150 hover:bg-[#4466d6] disabled:opacity-60",
+          )}
+        >
+          {saveMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Check className="size-4" />
+          )}
+          Salvar
+        </button>
+      </form>
+
+      {/*
+        Modal de enquadramento — abre automaticamente quando uma
+        imagem é selecionada (`pendingFile != null`). O upload real
+        só acontece em `onApply`, recebendo o JPEG já recortado.
+      */}
+      <AvatarCropDialog
+        file={pendingFile}
+        isApplying={uploading}
+        onCancel={() => setPendingFile(null)}
+        onApply={(cropped) => uploadAvatar(cropped)}
+      />
+    </section>
+  );
+}
+
+function Field({
+  id,
+  label,
+  hint,
+  required,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label
+        htmlFor={id}
+        className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+      >
+        {label}
+        {required ? <span className="ml-0.5 text-primary">*</span> : null}
+      </Label>
+      {children}
+      {hint ? <p className="text-[11px] text-[var(--color-ink-muted)]">{hint}</p> : null}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────
+   CARD DIREITO — Tokens de Acesso
+   ──────────────────────────────────────────────────────────── */
+
+function TokensCard() {
+  const confirm = useConfirm();
+  const queryClient = useQueryClient();
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [newTokenName, setNewTokenName] = React.useState("");
+  const [newTokenExpires, setNewTokenExpires] = React.useState("");
+  const [justCreated, setJustCreated] = React.useState<{
+    token: string;
+    prefix: string;
+  } | null>(null);
+
+  const { data: tokens = [], isLoading } = useQuery({
+    queryKey: ["api-tokens"],
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/api/settings/api-tokens"));
+      if (!r.ok) throw new Error("Erro ao carregar tokens");
+      return r.json() as Promise<ApiToken[]>;
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(apiUrl("/api/settings/api-tokens"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newTokenName.trim(),
+          expiresAt: newTokenExpires || undefined,
+        }),
+      });
+      const j = (await r.json().catch(() => ({}))) as {
+        id?: string;
+        token?: string;
+        prefix?: string;
+        message?: string;
+      };
+      if (!r.ok || !j.token || !j.prefix) {
+        throw new Error(j.message ?? "Erro ao criar token");
+      }
+      return { token: j.token, prefix: j.prefix };
+    },
+    onSuccess: (data) => {
+      setJustCreated(data);
+      setNewTokenName("");
+      setNewTokenExpires("");
+      queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await fetch(apiUrl(`/api/settings/api-tokens/${id}`), {
+        method: "DELETE",
+      });
+      if (!r.ok) throw new Error("Erro ao revogar token");
+      return r.json();
+    },
+    onSuccess: () => {
+      toast.success("Token revogado");
+      queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handleRevoke = async (token: ApiToken) => {
+    const ok = await confirm({
+      title: "Revogar token",
+      description: `Remover "${token.name}"? Aplicações usando este token perderão acesso imediatamente.`,
+      confirmLabel: "Revogar",
+      variant: "destructive",
+    });
+    if (ok) revokeMutation.mutate(token.id);
+  };
+
+  const copyToken = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success("Token copiado");
+    } catch {
+      toast.error("Copie manualmente — navegador bloqueou o clipboard.");
+    }
+  };
+
+  const hasTokens = tokens.length > 0;
+
+  return (
+    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+            Tokens de Acesso
+          </h2>
+          <p className="mt-1 max-w-md text-sm leading-snug text-[var(--text-muted)]">
+            Token é uma chave temporária usada para conectar apps ou APIs com
+            segurança, sem precisar de senha.
+          </p>
+        </div>
+        {hasTokens && (
+          <button
+            type="button"
+            onClick={() => {
+              setJustCreated(null);
+              setCreateOpen(true);
+            }}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6]"
+          >
+            <Plus className="size-3.5" />
+            Novo token
+          </button>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-14">
+          <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
+        </div>
+      ) : hasTokens ? (
+        <ul className="mt-6 space-y-2">
+          {tokens.map((t) => (
+            <li
+              key={t.id}
+              className="flex items-center gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-4 py-3"
+            >
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-primary">
+                <Key className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                  {t.name}
+                </p>
+                <p className="mt-0.5 font-mono text-[11px] text-[var(--color-ink-muted)]">
+                  {t.tokenPrefix}… ·{" "}
+                  {t.expiresAt
+                    ? `expira em ${new Date(t.expiresAt).toLocaleDateString()}`
+                    : "sem expiração"}
+                </p>
+              </div>
+              <TooltipHost label="Revogar" side="left">
+                <button
+                  type="button"
+                  onClick={() => handleRevoke(t)}
+                  disabled={revokeMutation.isPending}
+                  className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                  aria-label={`Revogar token ${t.name}`}
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </TooltipHost>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <TokensEmptyState onCreate={() => setCreateOpen(true)} />
+      )}
+
+      {/* ── Dialog de criação ── */}
+      <Dialog
+        open={createOpen}
+        onOpenChange={(v) => {
+          setCreateOpen(v);
+          if (!v) {
+            setJustCreated(null);
+            setNewTokenName("");
+            setNewTokenExpires("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          {justCreated ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display">Token criado</DialogTitle>
+                <DialogDescription>
+                  Copie agora — por segurança esta chave não será exibida novamente.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-2.5">
+                  <code className="flex-1 truncate font-mono text-xs text-[var(--text-secondary)]">
+                    {justCreated.token}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => copyToken(justCreated.token)}
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+                    aria-label="Copiar token"
+                  >
+                    <Copy className="size-4" />
+                  </button>
+                </div>
+                <div className="flex items-start gap-2 rounded-xl bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-[12px] leading-snug text-[var(--color-warning)]">
+                  <Info className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    Guarde em um gerenciador de segredos. Ao fechar esta janela
+                    o token não ficará mais acessível na íntegra — apenas o
+                    prefixo (<code>{justCreated.prefix}…</code>) aparecerá na lista.
+                  </span>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setCreateOpen(false)}>Concluído</Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display">Novo token</DialogTitle>
+                <DialogDescription>
+                  Dê um nome descritivo para identificar a integração que usará este token.
+                </DialogDescription>
+              </DialogHeader>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newTokenName.trim()) return;
+                  createMutation.mutate();
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="token-name" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    Nome
+                  </Label>
+                  <Input
+                    id="token-name"
+                    value={newTokenName}
+                    onChange={(e) => setNewTokenName(e.target.value)}
+                    placeholder="Ex.: Integração N8N"
+                    required
+                    autoFocus
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="token-expires" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    Expira em (opcional)
+                  </Label>
+                  <Input
+                    id="token-expires"
+                    type="date"
+                    value={newTokenExpires}
+                    onChange={(e) => setNewTokenExpires(e.target.value)}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCreateOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending || !newTokenName.trim()}>
+                    {createMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
+                    Gerar token
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="mt-4 flex flex-col items-center justify-center gap-4 py-10 text-center">
+      <div className="relative">
+        {/*
+          Ilustração minimalista: dois cards sobrepostos + sparkles. Evita
+          importar SVG externo, usando apenas Tailwind + ícones lucide.
+        */}
+        <div className="absolute -left-3 -top-2 size-14 -rotate-12 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-sm" />
+        <div className="absolute -right-3 -top-1 size-14 rotate-12 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-sm" />
+        <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[#eef2ff]">
+          <button
+            type="button"
+            onClick={onCreate}
+            className="inline-flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-[var(--shadow-indigo-glow)] transition-transform hover:scale-105"
+            aria-label="Criar primeiro token"
+          >
+            <Plus className="size-5" />
+          </button>
+        </div>
+        <Sparkles
+          className="absolute -right-6 top-0 size-3 text-slate-300"
+          aria-hidden
+        />
+        <Sparkles
+          className="absolute -left-5 bottom-0 size-4 text-slate-300"
+          aria-hidden
+        />
+      </div>
+      <p className="font-display text-sm font-bold text-[var(--text-primary)]">
+        Crie seu primeiro token!
+      </p>
+    </div>
+  );
+}
+

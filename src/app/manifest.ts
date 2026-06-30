@@ -88,10 +88,10 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: "/icon0", sizes: "192x192", type: "image/png" }],
       },
       {
-        name: "Tarefas",
-        short_name: "Tarefas",
+        name: "Atividades",
+        short_name: "Atividades",
         description: "Minhas atividades",
-        url: "/tasks",
+        url: "/activities",
         icons: [{ src: "/icon0", sizes: "192x192", type: "image/png" }],
       },
     ],

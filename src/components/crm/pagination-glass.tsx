@@ -75,7 +75,7 @@ export function PaginationGlass({
             type="button"
             onClick={onPrev}
             disabled={!canPrev}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-xs font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:text-[var(--text-muted)] disabled:opacity-60"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-xs font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed disabled:text-[var(--text-muted)] disabled:opacity-60"
           >
             <IconChevronLeft size={14} /> Anterior
           </button>
@@ -83,7 +83,7 @@ export function PaginationGlass({
             type="button"
             onClick={onNext}
             disabled={!canNext}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-xs font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:text-[var(--text-muted)] disabled:opacity-60"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-xs font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed disabled:text-[var(--text-muted)] disabled:opacity-60"
           >
             Próxima <IconChevronRight size={14} />
           </button>

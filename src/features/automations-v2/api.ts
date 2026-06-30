@@ -12,6 +12,8 @@
  */
 
 import { apiUrl } from "@/lib/api";
+import { isPageMockMode } from "@/lib/page-mock-mode";
+import { mockAutomationsPage } from "./mock-automations";
 
 async function getJson<T>(path: string, errLabel: string): Promise<T> {
   const res = await fetch(apiUrl(path));
@@ -88,6 +90,9 @@ export interface FetchAutomationsParams {
 export function fetchAutomations(
   params: FetchAutomationsParams = {},
 ): Promise<AutomationListPage> {
+  if (isPageMockMode()) {
+    return Promise.resolve(mockAutomationsPage(params));
+  }
   const sp = new URLSearchParams();
   if (params.active !== undefined) sp.set("active", String(params.active));
   if (params.search) sp.set("search", params.search);
@@ -150,12 +155,30 @@ export function toggleAutomationActive(id: string): Promise<AutomationListItemDt
 // CRUD + persistência de steps
 // ─────────────────────────────────────────────────────────────────
 
+/**
+ * Step embutido no PUT /api/automations/:id (formato legacy preservado pelo
+ * `OldAutomationEditor`). O `id` é OPCIONAL no envio mas, quando enviado,
+ * o backend mantém a chave — essencial para preservar as referências
+ * internas (`nextStepId`, `gotoStepId`, etc.) entre steps importados.
+ */
+export interface AutomationWriteStepPayload {
+  id?: string;
+  type: string;
+  config: unknown;
+}
+
 export interface AutomationWriteBody {
   name?: string;
   description?: string | null;
   triggerType?: string;
   triggerConfig?: unknown;
   active?: boolean;
+  /**
+   * Steps como sub-objeto do payload do PUT (rota legacy). Usado por
+   * `replaceAutomation` / `useReplaceAutomation`. O `createAutomation`
+   * (POST) e o `updateAutomation` (PATCH) NÃO consomem este campo.
+   */
+  steps?: AutomationWriteStepPayload[];
 }
 
 export interface AutomationStepInput {
@@ -180,6 +203,28 @@ export function updateAutomation(
   return sendJson<AutomationDetailDto>(
     `/api/automations/${id}`,
     "PATCH",
+    body,
+    "Erro ao atualizar automação.",
+  );
+}
+
+/**
+ * Substituição completa via `PUT /api/automations/:id` — mesmo endpoint
+ * usado pelo `OldAutomationEditor` para persistir o canvas (incluindo
+ * steps). Diferente do `saveAutomationSteps` (`PUT .../steps`), este
+ * caminho está confirmado em produção.
+ *
+ * Use-cases: importação de fluxo `.json` (preserva IDs originais dos
+ * steps para manter `nextStepId` / `gotoStepId` válidos) e qualquer
+ * outro fluxo que precise enviar steps + metadados num único PUT.
+ */
+export function replaceAutomation(
+  id: string,
+  body: AutomationWriteBody,
+): Promise<AutomationDetailDto> {
+  return sendJson<AutomationDetailDto>(
+    `/api/automations/${id}`,
+    "PUT",
     body,
     "Erro ao atualizar automação.",
   );

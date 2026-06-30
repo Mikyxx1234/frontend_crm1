@@ -4,6 +4,10 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/crm/page-header"
 import { SearchInput } from "@/components/crm/search-input"
+import {
+  PageGhostButton,
+  PagePrimaryButton,
+} from "@/components/crm/page-toolbar"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconFilter,
@@ -107,7 +111,7 @@ export function PipelineHeader({
   return (
     <div className="flex flex-col gap-3">
       <PageHeader
-        icon={<IconLayoutKanban size={22} />}
+        icon={<IconLayoutKanban size={22} stroke={2.2} />}
         title="Pipeline"
         description="Acompanhe e mova seus negócios pelas etapas do funil."
         center={
@@ -122,36 +126,23 @@ export function PipelineHeader({
         actions={
           hideActions ? undefined : (
             <div className="flex items-center gap-2">
-              <button
+              <PageGhostButton
                 ref={filtersButtonRef}
                 type="button"
                 onClick={onFiltersClick}
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[13px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white"
-                style={
-                  activeFiltersCount > 0
-                    ? {
-                        borderColor: "var(--brand-primary, #5b6ff5)",
-                        background: "rgba(91,111,245,0.12)",
-                      }
-                    : undefined
-                }
+                active={activeFiltersCount > 0}
+                className={activeFiltersCount > 0 ? "px-3.5" : undefined}
               >
                 <IconFilter size={15} /> Filtros
                 {activeFiltersCount > 0 && (
-                  <span
-                    className="inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums text-white"
-                    style={{ background: "var(--brand-primary, #5b6ff5)" }}
-                  >
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-[10px] font-bold tabular-nums text-white">
                     {activeFiltersCount}
                   </span>
                 )}
-              </button>
-              <button
-                type="button"
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 font-display text-[13px] font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-white"
-              >
+              </PageGhostButton>
+              <PageGhostButton type="button" className="px-3.5">
                 <IconBookmark size={15} /> Salvos
-              </button>
+              </PageGhostButton>
 
               <div className="flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
                 {(
@@ -177,14 +168,9 @@ export function PipelineHeader({
                 ))}
               </div>
 
-              <button
-                type="button"
-                onClick={onNewDeal}
-                disabled={!onNewDeal}
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-              >
-                <IconPlus size={16} /> Novo
-              </button>
+              <PagePrimaryButton type="button" onClick={onNewDeal} disabled={!onNewDeal}>
+                <IconPlus size={15} stroke={2.4} /> Novo
+              </PagePrimaryButton>
             </div>
           )
         }

@@ -4,18 +4,24 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   IconAlertTriangle,
+  IconAntennaBars5,
+  IconBan,
   IconBox,
   IconBuilding,
   IconChecklist,
   IconChevronRight,
   IconColumns,
   IconDeviceFloppy,
+  IconEye,
   IconFilter,
   IconLayoutSidebar,
   IconLoader2,
   IconMail,
+  IconMessagePlus,
   IconPhoto,
   IconPlus,
+  IconSend,
+  IconSettings,
   IconShieldCheck,
   IconTargetArrow,
   IconTrash,
@@ -33,15 +39,19 @@ import {
   useCreateGroup,
   useDeleteGroup,
   useGroup,
+  useGroupScopeGrants,
   usePermissionsCatalog,
   useRemoveGroupMember,
+  useScopeChannelOptions,
   useUpdateGroup,
+  useUpdateGroupScopeGrants,
 } from "./hooks";
 import type {
   GroupFieldGrantEntry,
   GroupScopeLevel,
   GroupStageGrantEntry,
 } from "./types";
+import { ScopeMultiSelect, normalizeScope } from "./user-permissions-view";
 
 // ─── Config da matriz ────────────────────────────────────────────────────────
 
@@ -313,7 +323,7 @@ export function GroupPermissionsEditor({
             type="button"
             onClick={() => onClose?.()}
             disabled={saving}
-            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-white disabled:opacity-60"
+            className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-[12.5px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
           >
             Cancelar
           </button>
@@ -401,7 +411,7 @@ export function GroupPermissionsEditor({
             <button
               type="button"
               onClick={() => onClose?.()}
-              className="w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2.5 font-display text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-white"
+              className="w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2.5 font-display text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
             >
               Cancelar
             </button>
@@ -496,6 +506,11 @@ export function GroupPermissionsEditor({
           {/* CAMPOS */}
           <FieldPanel grants={fieldGrants} setGrants={setFieldGrants} />
 
+          {/* CANAIS (scope-grants por grupo) — Bloco E (25/jun/26).
+              Só faz sentido pra grupos já criados (precisa de groupId
+              pra persistir o grant). */}
+          {!isNew && groupId && <GroupChannelScope groupId={groupId} />}
+
           {/* EXTRAS */}
           <Panel icon={<IconFilter size={18} />} title="Acessos extras">
             <ExtraToggle
@@ -528,7 +543,7 @@ export function GroupPermissionsEditor({
                 type="button"
                 disabled
                 title="Em breve — depende de catálogo de rotas"
-                className="self-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--brand-primary)] opacity-60 transition-colors hover:bg-white disabled:cursor-not-allowed"
+                className="self-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--brand-primary)] opacity-60 transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed"
               >
                 Configurar menu
               </button>
@@ -1143,5 +1158,133 @@ function ExtraToggle({
         />
       </button>
     </div>
+  );
+}
+
+/**
+ * Bloco E (25/jun/26) — Escopo de CANAIS por grupo. Eixo aditivo: o
+ * usuário recebe acesso ao canal se o grupo dele permitir (junto com
+ * grants de role e overrides pessoais). Deny bloqueia, exceto pra quem
+ * tem `manage` no mesmo canal (anti-lockout). Persiste via
+ * `PUT /api/groups/[id]/scope-grants`. Só efetivo com flag
+ * `rbac_granular_scope_v1` ativa na org.
+ */
+function GroupChannelScope({ groupId }: { groupId: string }) {
+  const { data, isLoading } = useGroupScopeGrants(groupId);
+  const channels = useScopeChannelOptions();
+  const update = useUpdateGroupScopeGrants(groupId);
+
+  const [channelViewIds, setChannelViewIds] = useState<string[] | null>(null);
+  const [channelSendIds, setChannelSendIds] = useState<string[] | null>(null);
+  const [channelInitiateIds, setChannelInitiateIds] = useState<string[] | null>(null);
+  const [channelManageIds, setChannelManageIds] = useState<string[] | null>(null);
+  const [channelDenyIds, setChannelDenyIds] = useState<string[] | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!data) return;
+    setChannelViewIds(normalizeScope(data.channelViewIds));
+    setChannelSendIds(normalizeScope(data.channelSendIds));
+    setChannelInitiateIds(normalizeScope(data.channelInitiateIds));
+    setChannelManageIds(normalizeScope(data.channelManageIds));
+    setChannelDenyIds(normalizeScope(data.channelDenyIds));
+    setDirty(false);
+  }, [data]);
+
+  const markDirty = (setter: (v: string[] | null) => void) => (v: string[] | null) => {
+    setter(v);
+    setDirty(true);
+    setSaved(false);
+  };
+
+  async function handleSave() {
+    setErr(null);
+    try {
+      await update.mutateAsync({
+        channelViewIds,
+        channelSendIds,
+        channelInitiateIds,
+        channelManageIds,
+        channelDenyIds,
+      });
+      setDirty(false);
+      setSaved(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erro ao salvar canais.");
+    }
+  }
+
+  return (
+    <Panel
+      icon={<IconAntennaBars5 size={18} />}
+      title="Acesso a canais"
+      sub="Aplicado a todos os membros do grupo (eixo aditivo)"
+    >
+      <div className="flex flex-col gap-3 px-[18px] py-4">
+        <ScopeMultiSelect
+          label="Canais — ver mensagens"
+          icon={<IconEye size={12} className="text-[var(--text-muted)]" />}
+          options={channels.data ?? []}
+          value={channelViewIds}
+          onChange={markDirty(setChannelViewIds)}
+          loading={isLoading || channels.isLoading}
+          allLabel="Todos os canais"
+        />
+        <ScopeMultiSelect
+          label="Canais — responder mensagens"
+          icon={<IconSend size={12} className="text-[var(--text-muted)]" />}
+          options={channels.data ?? []}
+          value={channelSendIds}
+          onChange={markDirty(setChannelSendIds)}
+          loading={isLoading || channels.isLoading}
+          allLabel="Todos os canais"
+        />
+        <ScopeMultiSelect
+          label="Canais — iniciar nova conversa"
+          icon={<IconMessagePlus size={12} className="text-[var(--text-muted)]" />}
+          options={channels.data ?? []}
+          value={channelInitiateIds}
+          onChange={markDirty(setChannelInitiateIds)}
+          loading={isLoading || channels.isLoading}
+          allLabel="Todos os canais"
+        />
+        <ScopeMultiSelect
+          label="Canais — administrar (configurar/conectar)"
+          icon={<IconSettings size={12} className="text-[var(--text-muted)]" />}
+          options={channels.data ?? []}
+          value={channelManageIds}
+          onChange={markDirty(setChannelManageIds)}
+          loading={isLoading || channels.isLoading}
+          allLabel="Todos os canais"
+        />
+        <ScopeMultiSelect
+          label="Canais bloqueados (nega tudo, exceto se também administra o canal)"
+          icon={<IconBan size={12} className="text-[var(--text-muted)]" />}
+          options={channels.data ?? []}
+          value={channelDenyIds}
+          onChange={markDirty(setChannelDenyIds)}
+          loading={isLoading || channels.isLoading}
+          allLabel="Nenhum canal bloqueado"
+        />
+
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!dirty || update.isPending}
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-display text-[12px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {update.isPending ? <IconLoader2 size={12} className="animate-spin" /> : null}
+            Salvar canais
+          </button>
+          {saved && !dirty && (
+            <span className="text-[11px] text-[var(--text-muted)]">Salvo</span>
+          )}
+          {err && <span className="text-[11px] text-[var(--color-destructive)]">{err}</span>}
+        </div>
+      </div>
+    </Panel>
   );
 }

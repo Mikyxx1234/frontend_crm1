@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { IconLayoutGrid } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { NavRail } from "@/components/crm/nav-rail";
+import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 
 import {
@@ -66,7 +66,7 @@ export default function WidgetsClientPage({
 
   return (
     <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
-      {navRail ?? <NavRail />}
+      {navRail ?? <NavRailV2 />}
 
       <main className="flex min-w-0 flex-col gap-4 overflow-y-auto pr-1">
         <PageHeader

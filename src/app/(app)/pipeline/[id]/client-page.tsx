@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -14,8 +14,10 @@ import {
   type DealRecord,
   type FunnelSegment,
 } from "@/components/crm/deal-details-panel";
+import { ChatWindow } from "@/components/inbox/chat-window";
 
 import { useBoard, useDealDetail } from "@/features/pipeline-v2/hooks";
+import type { DealContactConversation } from "@/features/pipeline-v2/api/deals";
 
 /**
  * /v2/pipeline/[id] — detalhe do negócio (página inteira).
@@ -68,12 +70,30 @@ interface DealDetailExtra {
   expectedClose?: string | null;
   value?: number | string | null;
   number?: number;
+  contact?: {
+    id?: string;
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    conversations?: DealContactConversation[];
+  } | null;
 }
 
 export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPageProps) {
   const router = useRouter();
   const dealQuery = useDealDetail(dealId);
   const deal = dealQuery.data as (typeof dealQuery.data & DealDetailExtra) | undefined;
+
+  const conversations = deal?.contact?.conversations ?? [];
+  const [selectedConv, setSelectedConv] = useState<DealContactConversation | null>(null);
+  const [autoLoaded, setAutoLoaded] = useState(false);
+
+  useEffect(() => {
+    if (deal && !autoLoaded && conversations.length > 0 && !selectedConv) {
+      setSelectedConv(conversations[0] ?? null);
+      setAutoLoaded(true);
+    }
+  }, [deal, autoLoaded, conversations, selectedConv]);
 
   // Para desenhar o funil precisamos da lista de stages do pipeline.
   // O endpoint /api/deals/:id já devolve `stage.pipelineId`.
@@ -193,7 +213,14 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
           <DealErrorPanel message="Negócio não encontrado." />
         )}
 
-        <ChatPlaceholder dealTitle={deal?.title ?? "Negócio"} />
+        <DealChatPanel
+          conversationId={selectedConv?.id ?? null}
+          conversationStatus={selectedConv?.status ?? undefined}
+          contactId={deal?.contact?.id}
+          conversations={conversations}
+          selectedConvId={selectedConv?.id ?? null}
+          onSelectConv={setSelectedConv}
+        />
       </div>
     </div>
   );
@@ -216,27 +243,69 @@ function DealErrorPanel({ message }: { message: string }) {
   );
 }
 
-function ChatPlaceholder({ dealTitle }: { dealTitle: string }) {
+function DealChatPanel({
+  conversationId,
+  conversationStatus,
+  contactId,
+  conversations,
+  selectedConvId,
+  onSelectConv,
+}: {
+  conversationId: string | null;
+  conversationStatus?: string;
+  contactId?: string;
+  conversations: DealContactConversation[];
+  selectedConvId: string | null;
+  onSelectConv: (conv: DealContactConversation) => void;
+}) {
+  if (conversations.length === 0) {
+    return (
+      <main className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-10 text-center backdrop-blur-md shadow-[var(--glass-shadow)]">
+        <div className="grid size-16 place-items-center rounded-[var(--radius-lg)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+          <IconMessageCircle size={28} />
+        </div>
+        <p className="text-[13px] text-[var(--text-muted)]">
+          Sem conversas vinculadas a este negócio.
+        </p>
+        <Link
+          href="/inbox"
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-sm font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)]"
+        >
+          <IconMessageCircle size={16} />
+          Abrir Inbox
+        </Link>
+      </main>
+    );
+  }
+
   return (
-    <main className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-10 text-center backdrop-blur-md shadow-[var(--glass-shadow)]">
-      <div className="grid size-16 place-items-center rounded-[var(--radius-lg)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-        <IconMessageCircle size={28} />
+    <main className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)]">
+      {conversations.length > 1 && (
+        <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-[var(--glass-border)] p-2">
+          {conversations.map((conv) => (
+            <button
+              key={conv.id}
+              type="button"
+              onClick={() => onSelectConv(conv)}
+              className={`rounded-lg px-3 py-1.5 text-[12px] font-bold transition-colors ${
+                selectedConvId === conv.id
+                  ? "bg-[var(--brand-primary)] text-white"
+                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]"
+              }`}
+            >
+              {conv.channel ?? conv.inboxName ?? conv.id.slice(0, 6)}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="min-h-0 flex-1">
+        <ChatWindow
+          conversationId={conversationId}
+          conversationStatus={conversationStatus}
+          contactId={contactId}
+          compactChrome
+        />
       </div>
-      <h2 className="font-display text-base font-bold text-[var(--text-primary)]">
-        Conversas de {dealTitle}
-      </h2>
-      <p className="max-w-md text-[13px] text-[var(--text-muted)]">
-        O chat completo deste negócio é acessado pela Inbox (`/v2/inbox`).
-        Próxima iteração vai embedar as mensagens aqui usando o mesmo binding
-        do Kanban.
-      </p>
-      <Link
-        href="/v2/inbox"
-        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2 font-display text-sm font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)]"
-      >
-        <IconMessageCircle size={16} />
-        Abrir Inbox
-      </Link>
     </main>
   );
 }

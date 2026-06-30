@@ -5,6 +5,305 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-06-26 — Aviso de ligação no chat + botão de ligar no inbox
+
+**Decisão.**
+1. **Render `messageType: "sip_call"`** no `MessageBubble` como linha
+   centralizada (ícone recebida/realizada/não-atendida + texto + hora). Como
+   inbox (`ChatArea`) e pipeline (`deal-chat-binding`) usam o mesmo
+   `MessageBubble`, uma única branch cobre os dois. `toMessageBubble` já
+   repassa `messageType`.
+2. **Botão de ligar no inbox**: `DealCallButton`/`useDealDial` passaram a
+   aceitar `dealId` opcional; o botão entra no `headerActionsSlot` do
+   `ChatArea` (ao lado do `ConversationActionsMenu`) usando telefone/contato
+   da conversa. Continua atrás do gate `useCallsWidget`.
+
+**Contexto.** Ligações não apareciam na conversa e o inbox não tinha como
+discar (só o pipeline tinha `DealCallButton`).
+
+**Alternativas descartadas.**
+- *Botão na phone-row do `ContactAside`*: o `headerActionsNode` do aside nem
+  era renderizado; o header do chat é o lugar natural e já visível.
+
+**Impacto.** Aditivo. O backend cria a `Message` `sip_call` via webhook.
+
+---
+
+### 2026-06-26 — Enviar produto em automação, produto no negócio e registro/gatilho de ligações
+
+**Decisão.** Quatro frentes entregues num ciclo só:
+1. **Ação `send_product`** no builder de automações (catálogo em
+   `lib/automation-workflow.ts`, ícone/grupo em `add-step-node.tsx`,
+   painel em `step-config-panel.tsx` com `ProductPicker` + textarea de
+   variáveis `{{produto.*}}`, item na `node-palette.tsx`).
+2. **Adicionar produto ao negócio** reusando o `DealProductsSection`
+   existente: no pipeline via novo slot `productsSlot` do `DealDetailPanel`
+   e no inbox dentro do `DealInline` do `ContactAside`.
+3. **Registro de ligações** via botão/auto **Sincronizar** na página
+   `/calls` (`POST /api/calls/sync`) + sync best-effort ~8s após o término
+   de uma ligação no `useSoftphone`.
+4. **Gatilhos `call_received`/`call_made`** expostos no
+   `trigger-config-fields.tsx` (filtro atendida/não atendida).
+
+**Contexto.** `send_product` espelha `send_whatsapp_message` (texto
+interpolado, sem card de catálogo Meta). O `DealProductsSection` já batia
+nas APIs de line items prontas — evitou duplicar UI. O registro de chamadas
+estava 100% dependente do webhook Api4com (frágil); o sync puxa o CDR
+oficial (`GET /calls`) e reconcilia.
+
+**Alternativas descartadas.**
+- *Nova UI de produtos no v2*: rejeitado — reusar `DealProductsSection`.
+- *Card de catálogo WhatsApp no send_product*: adiado — exige catálogo Meta.
+
+**Impacto.** Aditivo. Builder ganha 1 ação + 2 gatilhos; pipeline/inbox
+ganham seção de produtos; `/calls` passa a popular mesmo sem webhook.
+
+---
+
+### 2026-06-26 — Edição em massa de campos/tags no pipeline (worker-leads)
+
+**Decisão.** Adicionada a ação "Editar campos…" na `BulkActionsBar` do
+pipeline, que abre o `BulkEditFieldsDialog` e permite atualizar em massa:
+campos (nativos + personalizados) do **Negócio**, campos (nativos +
+personalizados) do **Contato vinculado** e **adicionar tags ao Negócio**.
+Tudo é processado de forma **assíncrona pelo worker-leads** (fila
+`leads-bulk`, job `bulk-update-fields`), com o `BulkOperationProgressDialog`
+já existente fazendo polling.
+
+**Contexto.** Já existia o trio rota `/api/deals/bulk/custom-fields` +
+payload `BulkUpdateFieldsPayload` + job `bulk-update-fields`, mas cobria
+**apenas custom fields de Deal**. Em vez de criar uma fila/rota nova, a
+infra existente foi **estendida de forma aditiva** (campos novos no payload
+são opcionais; o caminho antigo de `updates` segue idêntico). Isso reduz
+superfície de risco e reaproveita progresso/erros-por-item/idempotência já
+testados.
+
+**Alternativas descartadas.**
+- *Plugar na rota `/api/deals/bulk`* (move/won/lost/delete): rejeitado —
+  essa rota é sensível (status terminal, automações, triggers) e o escopo
+  de "editar campos" é ortogonal. Mantida intacta.
+- *Edição síncrona inline*: rejeitado — o usuário pediu explicitamente o
+  worker-leads e operações de N deals × M campos são pesadas (cada deal
+  abre transação própria no upsert).
+- *Bulk-editar campos nativos de Contato com unicidade* (ex.: email):
+  seguro no schema atual (Contact.email/phone **não** são `@unique`), mas
+  erros por-item são capturados em `BulkOperation.errors` sem travar o lote.
+
+**Impacto.** Semântica **skip-empty**: só os campos preenchidos no dialog
+são aplicados (vazio = não altera). Tags são resolvidas/criadas na rota
+(onde há `role` do usuário) e passam ao worker como `tagIds` já resolvidos.
+Gate de permissão: `deal:edit` (base) + `contact:edit` quando há alteração
+de campos de contato. Resolução do contato é por-deal no handler (contatos
+compartilhados recebem o mesmo upsert idempotente).
+
+---
+
+### 2026-06-24 — Telefonia como widget (`calls_history`)
+
+**Contexto.** A telefonia (página `/calls`, softphone flutuante global,
+botão "Ligar" nos cards do pipeline) era uma seção nativa do CRM, sempre
+ativa em todas as orgs. Operadores sem provisionamento Api4Com viam ícones
+e cards inúteis (chip "Conectando…" eterno, botão de ligar desabilitado),
+e admins não tinham como desligar a feature centralmente. O padrão da
+**Distribuição Inteligente** (`smart_distribution`) já tinha resolvido
+exatamente esse problema: módulo opt-in plugável via Central de Widgets.
+A consistência arquitetural pedia o mesmo tratamento pra telefonia.
+
+**Decisão.** Criado widget `calls_history` (INTERNAL, categoria
+"Comunicação", ícone `phone`) que gateia TRÊS pontos de entrada:
+
+1. **Página `/widgets/calls`** (era `/calls`) — histórico de chamadas
+   com fallback `NotEnabledState` + CTA pra `/widgets`.
+2. **`SoftphoneWidget`** (chip flutuante bottom-right) — não monta o
+   `JsSIP.UA` nem busca credenciais quando o widget está desinstalado.
+3. **`DealCallButton`** (botão "Ligar" no card) — some completamente
+   sem o widget.
+
+Gate centralizado no hook `useCallsWidget()` (`features/softphone/hooks`)
+— consome a query `useWidgets()` (cache compartilhado) e devolve
+`{ enabled: boolean | null, isLoading }`. O estado `null` durante load
+evita flash visual (chip aparecendo e sumindo).
+
+**Rota antiga `/calls`.** Mantida como **redirect 308** pra
+`/widgets/calls` (preserva favoritos, atalhos de navegador, links em
+e-mails antigos). O `_client.tsx` original foi deletado — não tinha
+mais consumidor.
+
+**Default `installed=true`.** Migration backend
+(`20260624140000_add_calls_history_widget`) faz seed do widget E instala
+`ACTIVE` em todas as orgs existentes. Sem esse backfill, qualquer cliente
+que já usa telefonia veria a feature sumir após deploy — quebra silenciosa
+inaceitável. Quem não quiser, desinstala em `/widgets`.
+
+**Permissão `nav:calls`.** Antes existia em `sidebar-catalog.ts` do
+frontend mas o backend não a tinha no catálogo de permissões — efeito
+prático: o item "Chamadas" só aparecia pra ADMIN (que tem `*`). Adicionada
+no catálogo backend (`permissions.ts`) e nos presets MANAGER e MEMBER,
+com `UPDATE roles` na mesma migration pra propagar às roles existentes.
+Não-breaking: ADMINs continuam vendo; MANAGER/MEMBER ganham acesso (era
+um bug latente, não regressão intencional).
+
+**Alternativa descartada.** Gateamento por `requiredPermission` puro (sem
+widget) — funcionaria pra esconder a página, mas não solucionaria o caso
+"admin quer desligar a feature pra toda a org sem mexer em RBAC de cada
+role". Widget é o ponto certo de toggle org-wide.
+
+**Impacto.**
+- `src/features/softphone/hooks/use-calls-widget.ts` (novo) — hook gate.
+- `src/features/softphone/components/softphone-widget.tsx` — gate +
+  setinha colapsa pro ícone (`localStorage` persiste preferência).
+- `src/features/softphone/components/deal-call-button.tsx` — gate.
+- `src/app/(app)/widgets/calls/{page,client-page}.tsx` (novo) — rota
+  + `NotEnabledState`/`SkeletonState`.
+- `src/app/(app)/calls/page.tsx` — virou redirect 308.
+- `src/lib/sidebar-catalog.ts` — `/calls` → `/widgets/calls`.
+- `src/features/widgets/mock.ts` + `_components/widget-card.tsx`
+  (`ICON_BY_KEY` ganhou `phone`, `INTERNAL_ROUTE_BY_SLUG` ganhou
+  `calls_history`).
+
+---
+
+### 2026-06-24 — Motivos de perda: toggle "Permitir outro" + gate na UI
+
+**Contexto.** Reporte do cliente em produção: a opção "Outro…" no dialog
+de marcar negócio como perdido vinha sendo usada como saída fácil pelos
+vendedores, gerando dezenas de motivos digitados livremente (variações
+de capitalização, typos, frases longas). O dataset ficou inutilizável
+pra análise de motivos de churn — qualquer dashboard que agrupa por
+`Deal.lostReason` virou ruído. A solução de simplesmente apagar o botão
+"Outro…" pra todo mundo quebraria orgs que dependem dele.
+
+**Decisão.** Nova setting per-tenant `deals.loss_reason_allow_other`
+(boolean, default `true`). Quando o admin desliga em
+Configurações → Motivos de perda, o `LossReasonDialog` esconde o botão
+"Outro…" e o textarea livre — só os motivos cadastrados ficam clicáveis.
+Default `true` é não-breaking: orgs que já usam continuam usando até o
+admin marcar explicitamente.
+
+Renderização do motivo no card já existia (`DealCard.lostReason` →
+chip vermelho com ícone), o problema sempre foi a entrada poluída.
+Por isso o ataque é só no dialog + validação backend, sem mexer no card.
+
+**Defesa em profundidade.** Esconder o botão na UI cobre o caminho feliz
+mas não impede chamada direta à API (`PUT /api/deals/[id]/status` com
+`lostReason: "qualquer coisa"`). O service `markDealLost` agora chama
+`assertLostReasonAllowed(reason)` antes do update; mesma helper roda em
+`moveDeal` e no path `move_stage` do `POST /api/deals/bulk`. Erro
+`INVALID_LOST_REASON` é traduzido pra 400 com mensagem explicativa.
+
+**Alternativas descartadas.**
+- *Hardcoded `enum LossReason`*: simples, mas inviável — cada org tem
+  motivos próprios (B2B vendas longas vs B2C educação vs prestação de
+  serviço). Setting + lista cadastrável já existia pra essa flexibilidade.
+- *Validar só na UI*: deixaria a API aberta. Vendedor curioso testando
+  no DevTools, integração externa (Zapier/Make chamando a API), worker
+  de import — tudo conseguiria furar. Centralizar em
+  `assertLostReasonAllowed` no service garante que qualquer caller fica
+  coberto sem repetir validação.
+- *Validar no Prisma extension*: poderia interceptar todo update com
+  `lostReason`, mas mistura camada de dados com regra de negócio org-scoped
+  e complica testes. Helper explícita chamada no service é mais clara.
+
+**Impacto.**
+- Frontend: `LossReasonDialog` lê `deals.loss_reason_allow_other` via
+  `/api/settings/org?key=...` (5min staleTime, mesma chave já cacheada
+  pelo settings page). Toggle no `settings/loss-reasons` espelha o
+  mesmo padrão visual do "Motivo obrigatório" existente.
+- Backend: helper `assertLostReasonAllowed` em `services/deals.ts`
+  exportada pra reuso. Chamadas inseridas em `markDealLost`, `moveDeal`,
+  bulk `mark_lost` e `move_stage`. Worker async `bulk-move-stage.job.ts`
+  já está coberto via validação no enqueue.
+
+---
+
+### 2026-06-23 — Softphone: widget global como ponto único de auto-connect
+
+**Contexto.** Após restaurar o módulo softphone (feat 572f06e do mfpi)
+e provisionar o ramal Api4com via `POST /api/sip-extensions/connect-api4com`,
+o operador via "Conectado! Ramal 1079" verde mas nenhuma chamada
+funcionava: `DealCallButton` mostrava tooltip "Conecte o softphone" e
+F5 voltava à tela de login Api4com. Causa raiz: o `SoftphoneWidget`
+montado em `(app)/layout.tsx` era um placeholder no-op que eu commitei
+pra desbloquear o build (mfpi entregou hook + componentes auxiliares
+mas não o widget global). Sem ele, `useSoftphone()` nunca era chamado
+no nível raiz, então o singleton `moduleUA` (que sobrevive remounts
+mas não reloads) nunca era instanciado.
+
+**Decisão.** O `SoftphoneWidget` é o único lugar da app que dispara
+`useSoftphone.connect()` automaticamente — `useDealDial`, `DealCallButton`
+e qualquer outro consumidor apenas leem o singleton via re-import do
+módulo do hook. Critério de auto-connect: `useSession()` autenticado
++ `GET /api/sip-extensions/me/credentials` retornou 200. Operadores
+sem ramal provisionado (404) não veem chip nenhum e nenhuma tentativa
+de registro SIP é feita — UI permanece limpa pra quem não usa softphone.
+
+**Forma do componente.** Chip flutuante `fixed bottom-4 right-4 z-[60]`
+seguindo o padrão estabelecido por `UpdateAvailableBanner` (mesmo z,
+lado oposto pra não colidir). Três estados visíveis quando idle (verde
+"Softphone ativo", amarelo "Conectando", vermelho com erro + reconectar).
+Painel expandido `w-[280px]` quando há chamada — necessário pra atender
+inbound e expor mute/hold/encerrar (sem isso seria impossível receber
+chamada). Inclui suporte a inbound mesmo o operador planejando só
+outbound — incremento marginal de código e o backend já suporta `newRTCSession`
+remote sem auto-answer.
+
+**Alternativas descartadas.**
+- *Auto-connect direto no layout via hook*: `(app)/layout.tsx` é Server
+  Component; misturar lógica client pesada nele dilui responsabilidade
+  e bloqueia o pre-render. Widget client isolado é a contraparte natural.
+- *Auto-connect dentro do `useSoftphone`*: tornaria o hook não-idempotente
+  (chamadores acidentais disparariam registros) e quebraria o padrão
+  React (hooks sem side-effects implícitos no render).
+- *Chamar `connect()` apenas no form Api4Com após sucesso*: resolveria
+  o caso de uso de conexão inicial, mas F5 continuaria quebrado. O
+  widget global resolve os dois — o `onSuccess` do form continua
+  invalidando o query de credenciais (pra disparar o auto-connect
+  declarativamente) e chama `connect()` defensivamente.
+- *UI invisível (só auto-connect)*: descartada pelo usuário após
+  análise — sem indicador, falha de registro SIP só seria descoberta
+  ao tentar ligar, péssima UX em produção.
+
+**Impacto.**
+- `DealCallButton.canDial` agora vira `true` automaticamente após login,
+  sem ação do operador — telefonia "just works" se o ramal foi provisionado.
+- `connectApi4Com` no form invalida a query `["softphone","credentials"]`
+  e chama `softphone.connect()` no `onSuccess` pra registrar SIP sem F5.
+- Carga adicional: 1 query (`/me/credentials`) por sessão autenticada
+  + 1 conexão WebSocket persistente pra SIP. Cache 5min, sem refetch
+  on focus. Sem ramal provisionado, zero overhead (early-return no widget).
+- Componentes auxiliares (`Api4ComConnectForm`, `ExtensionSettingsForm`,
+  `ProviderConfigForm`, `DealCallButton`, `CallHistoryList`, `CallHistoryFilters`)
+  continuam importados por subpath direto (`@/features/softphone/components/<arquivo>`).
+  Só `SoftphoneWidget` é barrel-exported via `@/features/softphone/components`.
+
+---
+
+### 2026-06-15 — Faxina total: remoção de `app/old/` e finalização da migração v1 → v2 [DECISÃO — agente OPUS/SONNET]
+
+**Decisão.** A pasta `app/old/` foi inteiramente removida. As 7 rotas que não tinham
+equivalente v2 ("órfãs") receberam rotas canônicas em `app/(app)/`. Os 14 componentes
+legados cross-importados foram movidos para `src/features/legacy-v1/`. O `DashboardShell`
+e o `SIDEBAR_ROLE_MATRIX` de `nav-visibility.ts` foram removidos (órfãos).
+
+**Redirects.** `next.config.ts` recebeu redirects permanentes `/old/:path*` → `/:path*`
+(com mapeamentos especiais para `/old/tasks` → `/activities` e `/old/leads/:id` → `/pipeline/:id`).
+O middleware foi atualizado para liberar `/old/*` antes da checagem de auth (para que o
+redirect do Next.js ocorra sem loop).
+
+**Gaps documentados.**
+- `/analytics`, `/analytics/inbox`, `/developers` **não** foram adicionados ao `SIDEBAR_CATALOG`
+  (requer sincronização com o catálogo backend read-only). Acessíveis por URL direta.
+- O erro TypeScript em `features/legacy-v1/settings/message-models/flows-id.tsx` (linha 151,
+  `FlowDefinitionInputField` shape) é **pré-existente** e não bloqueia o build (`ignoreBuildErrors: true`).
+- `ChatWindow` integrado em `/pipeline/[id]` carrega a primeira conversa do contato; a binding
+  completa (draft de IA, notas, timeline) fica disponível via `/inbox` por enquanto.
+
+**Por quê.** Elimina o dual-routing (v1 + v2 rodando em paralelo), simplifica o bundle,
+unifica a navegação no NavRailV2 e remove a penalidade de performance do `DashboardShell`
+legado (1350 LOC de JSX, framer-motion, múltiplos useQuery no mesmo componente).
+
+---
+
 ### 2026-06-15 — Diretório v2: edição na linha + vínculo contato↔empresa
 
 **Decisão.** As listagens v2 `/contacts` e `/companies` (`app/(app)/contacts/client-page.tsx`
@@ -1313,5 +1612,90 @@ acumulou melhora (tailwindNativePalette −157, bgWhiteAlpha −8,
 rawRoundedPx −7) sem regressões. Novas modais devem partir do
 `DialogContent`/`SheetContent` base ou replicar o bloco de tokens acima;
 nunca usar `bg-white`/`bg-card`/slate em superfície de modal.
+
+---
+
+### 2026-06-26 - Edição em massa "selecionar todos que batem no filtro" (>100)
+
+**Decisão.** A edição em massa de campos/tags passa a aceitar, além dos IDs
+explícitos selecionados, um `scope` que o **servidor** expande para os IDs
+reais: `POST /api/deals/bulk/custom-fields` aceita
+`scope: { pipelineId, status, filters, stageId? }`. O scope é resolvido por
+`resolveBoardDealIds()` (em `services/deals.ts`), que reaproveita exatamente
+`buildDealWhereFromFilters()` — a mesma engine do `POST /pipelines/:id/board`
+— somando status + visibilidade (MEMBER só vê os próprios) + escopo por
+pipeline (relação `stage.pipelineId`) ou por etapa. Teto rígido de **5000**
+deals por operação (`capped: true` na resposta avisa o frontend). No dialog
+(`BulkEditFieldsDialog`), um seletor de escopo oferece: "apenas selecionados",
+"todos da etapa X" (habilitado só quando toda a seleção está numa única etapa)
+e "todos do funil no filtro atual". `_v2-client` monta o `BulkScopeContext`
+(totais por coluna + etapa da seleção + filtros/busca ativos).
+
+**Contexto.** O board carrega no máximo 100 cards/coluna
+(`DEFAULT_BOARD_COLUMN_LIMIT`), então a seleção via checkbox cobria só os
+carregados — impossível editar mais que ~100. Resolver no servidor evita
+trafegar milhares de IDs e garante que "todos que batem no filtro" = o que o
+usuário vê (mesmo where do board).
+
+**Alternativas descartadas.**
+
+- **Só aumentar o limite da coluna (até 500) e selecionar os carregados.**
+  Paliativo: continua limitado, exige rolar/carregar e não escala.
+- **Resolver os IDs no worker (passar `scope` no payload da fila).** Mais
+  escalável, mas o `BulkOperation.total` não seria conhecido no enqueue e a
+  permissão/visibilidade teria que ser recomputada fora do request — preferiu-se
+  resolver na rota (onde já há sessão + role) e manter o worker recebendo IDs.
+
+**Impacto.** Apenas a edição de campos/tags ganhou scope; as demais ações em
+massa (mover/ganho/perdido/excluir) seguem por IDs explícitos. Reuso total da
+engine de filtro do board (sem duplicar regras). Worker `leads-worker` **não**
+tem auto-reload (`npx tsx` sem `--watch`): após mexer no job é preciso
+reiniciá-lo manualmente.
+
+---
+
+### 2026-06-26 - Canal/conexão por mensagem (qual WhatsApp na mesma conversa)
+
+**Decisão.** Rastrear a **conexão (`Channel`) por mensagem** para distinguir,
+dentro de UMA conversa, contas distintas do mesmo canal (ex.: dois números de
+WhatsApp da empresa). Adicionada coluna nullable `Message.channelId`
+(FK→`channels`, `ON DELETE SET NULL`) e o `channelId` é carimbado na ingestão
+inbound (Baileys `message-handler`, Meta `handler`) e nas saídas principais
+(rota `messages`, `attachments`, `template`, `forward`, `conversations/create`,
+resposta autônoma da IA em `piloting-actions`). Demais saídas de bot/sistema
+ficam com `channelId = null` → o frontend trata `null` como "herda a conexão
+anterior" (sem marcador falso).
+
+A rota `GET /conversations/:id/messages` passou a expor, por mensagem,
+`channelId`, mais `channel` (conexão ATUAL) e `channels` (mapa id→{name, type,
+phoneNumber}). O `GET /contacts/:id` inclui `channelRef` em cada conversa.
+
+UI: rótulo "Tipo · Apelido · Número" via `lib/connection-label.ts`. Chip de
+conexão no header do chat (`ChatArea`) e no header do contato do pipeline
+(`DealDetailPanel`); linha "Canal" no `contact-aside`; e um `ConnectionDivider`
+na timeline (inbox `ChatArea` + pipeline `deal-chat-binding`) que só aparece
+quando a conversa tem 2+ conexões distintas (com uma só, o chip do header basta).
+
+**Contexto.** A `Conversation` é única por `(contato, channel="whatsapp")` —
+quando o mesmo cliente fala por dois WhatsApps da org, o backend reaproveita a
+MESMA conversa e só atualiza `Conversation.channelId` para o último canal usado.
+Não havia nada na UI indicando por qual conexão a pessoa falava, e mensagens não
+guardavam a conexão de origem.
+
+**Alternativas descartadas.**
+
+- **Mostrar só a conexão atual da conversa (sem coluna em Message).** Simples,
+  mas não distingue mensagem-a-mensagem ("uma veio no WhatsApp A, outra no B").
+- **Separar em conversas distintas por conexão (cada WhatsApp = thread).**
+  Mudança grande de UX/dados e da regra de dedupe — alto risco; descartada.
+
+**Impacto / operação.** O projeto **não usa migrations versionadas** (sync via
+`prisma db push`), mas o **DB de dev tem drift** (colunas em `products` ausentes
+no schema) que impede um `db push` completo seguro. Por isso a coluna foi
+aplicada com SQL aditivo idempotente em
+`backend_crm1/prisma/manual/2026-06-26_message_channel.sql`
+(`prisma db execute`). Para produção, rodar o mesmo arquivo antes do deploy
+(o build gera o Prisma Client a partir do schema; a coluna precisa existir no DB).
+`Message.channelId` é nullable → mensagens históricas ficam sem rótulo.
 
 ---

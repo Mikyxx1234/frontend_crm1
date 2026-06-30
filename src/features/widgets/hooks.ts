@@ -12,12 +12,13 @@ import {
 import type { WidgetsResponse } from "./types";
 
 import { isPreviewMode } from "@/lib/preview-mode";
+import { isPageMockMode } from "@/lib/page-mock-mode";
 
 const WIDGETS_KEY = ["widgets"] as const;
 
-/** Em preview mode, ignora o guard de sessao e sempre dispara a query. */
+/** Em preview/mock mode, ignora o guard de sessao e sempre dispara a query. */
 function resolveEnabled(enabled: boolean | undefined): boolean {
-  return isPreviewMode() ? true : (enabled ?? true);
+  return isPreviewMode() || isPageMockMode() ? true : (enabled ?? true);
 }
 
 export function useWidgets(enabled?: boolean) {

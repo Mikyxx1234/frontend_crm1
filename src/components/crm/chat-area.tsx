@@ -11,11 +11,8 @@ import { MessageBubble, DaySeparator, ConnectionDivider, type Message } from "./
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
-  formatConnectionShort,
-  channelTypeLabel,
   type ConnectionRef,
 } from "@/lib/connection-label"
-import { IconAffiliate } from "@tabler/icons-react"
 import {
   IconPhone,
   IconVideo,
@@ -29,13 +26,17 @@ import {
   IconClock,
 } from "@tabler/icons-react"
 
-type ChatTabId = "conversa" | "notas" | "atividades" | "timeline"
+type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
 
 const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle },
   { id: "atividades", label: "Atividades", icon: IconChecklist },
   { id: "notas", label: "Notas", icon: IconNote },
   { id: "timeline", label: "Timeline", icon: IconClock },
+  // IB8: nova aba "Chamadas" no topo do inbox, espelhando a aba
+  // homonima do DealDetailPanel para padronizar acesso aos logs de
+  // telefonia entre os dois paineis.
+  { id: "chamadas", label: "Chamadas", icon: IconPhone },
 ]
 
 /**
@@ -109,6 +110,9 @@ interface ChatAreaProps {
   notesSlot?: React.ReactNode
   activitiesSlot?: React.ReactNode
   timelineSlot?: React.ReactNode
+  /** IB8: conteudo da aba "Chamadas" (logs de telefonia). Quando ausente,
+   *  a aba "Chamadas" nao aparece. */
+  callsSlot?: React.ReactNode
 }
 
 export function ChatArea({
@@ -137,6 +141,7 @@ export function ChatArea({
   notesSlot,
   activitiesSlot,
   timelineSlot,
+  callsSlot,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
@@ -144,7 +149,9 @@ export function ChatArea({
 
   // Abas opt-in: so aparecem quando ha conteudo para pelo menos uma aba
   // alem de "Conversa".
-  const tabsEnabled = Boolean(notesSlot || activitiesSlot || timelineSlot)
+  const tabsEnabled = Boolean(
+    notesSlot || activitiesSlot || timelineSlot || callsSlot,
+  )
   const [activeTab, setActiveTab] = useState<ChatTabId>("conversa")
 
   // Iniciais do agente nas bolhas outgoing. Prioridade: usuário
@@ -193,21 +200,25 @@ export function ChatArea({
               </BadgeGlass>
             )}
           </div>
-          {connection && (
-            <TooltipGlass
-              label={`Conversando por ${formatConnectionLabel(connection)}`}
-              side="bottom"
-            >
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-secondary)]">
-                <IconAffiliate size={12} className="text-[var(--brand-primary)]" />
-                {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
-              </span>
-            </TooltipGlass>
-          )}
+          {/* Chip de canal removido daqui: a informação já fica visível no
+              ContactAside (row "Canal" em Detalhes de Contato) tanto no inbox
+              quanto no deal detail (ver DD3 em `deal-detail-panel.tsx`). A
+              duplicação acima do chat poluía o header e foi removida a pedido
+              do operador. A prop `connection` segue sendo recebida e ignorada
+              aqui para manter compat com chamadores existentes. */}
         </div>
 
         {tabsEnabled && (
-          <ChatTabsBar activeTab={activeTab} onChange={setActiveTab} />
+          <ChatTabsBar
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            hiddenTabs={{
+              notas: !notesSlot,
+              atividades: !activitiesSlot,
+              timeline: !timelineSlot,
+              chamadas: !callsSlot,
+            }}
+          />
         )}
 
         <div className="ml-auto flex gap-1">
@@ -233,7 +244,9 @@ export function ChatArea({
             ? notesSlot
             : activeTab === "atividades"
               ? activitiesSlot
-              : timelineSlot}
+              : activeTab === "chamadas"
+                ? callsSlot
+                : timelineSlot}
         </div>
       ) : (
         <>
@@ -360,13 +373,16 @@ export function ChatArea({
 function ChatTabsBar({
   activeTab,
   onChange,
+  hiddenTabs,
 }: {
   activeTab: ChatTabId
   onChange: (id: ChatTabId) => void
+  /** Map de tabs ocultos. "conversa" e' sempre visivel. */
+  hiddenTabs?: Partial<Record<ChatTabId, boolean>>
 }) {
   return (
     <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
-      {CHAT_TABS.map((tab) => {
+      {CHAT_TABS.filter((t) => t.id === "conversa" || !hiddenTabs?.[t.id]).map((tab) => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
         return (

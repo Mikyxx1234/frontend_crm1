@@ -55,6 +55,8 @@ import {
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
+import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import {
   DealActivitiesTab,
@@ -331,11 +333,12 @@ export default function InboxV2ClientPage({
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       hideSearch={searchInHeader}
-      filterSlot={
-        searchInHeader ? null : (
-          <InboxFilterButton value={filters} onChange={setFilters} />
-        )
-      }
+      // Filtro sempre na ColumnConversa (ao lado do dropdown
+      // "Todas/Aguardando/Entrada/..."). Quando `pageHeader` está ativo, a
+      // busca sobe pro topo mas o filtro **fica** aqui — antes ele migrava
+      // pro canto direito superior junto da busca, distante do controle
+      // mais relacionado a ele (tabs de status).
+      filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
         count: tabCounts?.[t.id] ?? undefined,
@@ -504,6 +507,14 @@ export default function InboxV2ClientPage({
     <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
   );
   const activitiesSlot = <DealActivitiesTab />;
+  // IB8: aba "Chamadas" no topo do inbox, igual ao DealDetailPanel. Lista
+  // os logs de telefonia do contato ativo. Usamos `activeContactId` (nao
+  // o dealId) porque o historico de chamadas e' por contato.
+  const callsSlot = activeContactId ? (
+    <div className="flex-1 overflow-auto p-4">
+      <CallHistoryList embedded contactId={activeContactId} />
+    </div>
+  ) : null;
 
   const chatNode =
     chatContact && activeRow ? (
@@ -517,11 +528,9 @@ export default function InboxV2ClientPage({
         onUseTemplate={() => setTemplateOpen(true)}
         headerActionsSlot={
           <>
-            <DealCallButton
-              dealId={firstDealId}
-              phone={chatContact.phone || null}
-              contactId={activeContactId ?? undefined}
-            />
+            {/* DealCallButton movido pro ContactAside.headerActionsNode
+                (IB4). Mantemos so o ConversationActionsMenu (Encerrar/
+                Reabrir) aqui, que e contextual ao chat. */}
             <ConversationActionsMenu
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
@@ -553,6 +562,7 @@ export default function InboxV2ClientPage({
         notesSlot={notesSlot}
         activitiesSlot={activitiesSlot}
         timelineSlot={timelineSlot}
+        callsSlot={callsSlot}
       />
     ) : (
       <EmptyChatArea />
@@ -563,15 +573,53 @@ export default function InboxV2ClientPage({
       <ContactAside
         contact={contactAsideViewWithSlots}
         headerActionsNode={
-          <RequirePermission permission="conversation:reassign">
-            <AssigneePopover
-              conversationId={activeId}
-              currentAssigneeName={activeRow.assignedTo?.name}
-              currentAssigneeId={activeRow.assignedTo?.id ?? null}
+          <>
+            {/* DealCallButton movido pra ca (IB4): antes vivia no header
+                do chat (ChatArea.headerActionsSlot), com posicao distinta
+                do deal detail. Agora fica no topo do ContactAside,
+                proximo do AssigneePopover e do botao de colapso. */}
+            <DealCallButton
+              dealId={firstDealId}
+              phone={chatContact?.phone || null}
+              contactId={activeContactId ?? undefined}
             />
-          </RequirePermission>
+            <RequirePermission permission="conversation:reassign">
+              <AssigneePopover
+                conversationId={activeId}
+                currentAssigneeName={activeRow.assignedTo?.name}
+                currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              />
+            </RequirePermission>
+          </>
         }
         tagsNode={tagsNode}
+        contactTagsNode={
+          // IB7: tags do CONTATO (separadas das tags da conversa). Lista
+          // os chips ja aplicados + popover pra adicionar/remover.
+          // `contactDetail.tags` ja vem flatten do backend.
+          activeContactId ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(contactDetail?.tags ?? []).map((t) => (
+                <span
+                  key={t.id}
+                  className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
+                  style={{
+                    background: `${t.color ?? "#5b6ff5"}22`,
+                    color: t.color ?? "var(--brand-primary)",
+                    border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                  }}
+                >
+                  {t.name}
+                </span>
+              ))}
+              <ContactTagsPopover
+                contactId={activeContactId}
+                currentTags={contactDetail?.tags ?? []}
+                triggerVariant="icon"
+              />
+            </div>
+          ) : null
+        }
         collapsed={asideCollapsed}
         onToggleCollapse={() => setAsideCollapsed((v) => !v)}
         contactFieldConfigSlot={
@@ -632,7 +680,9 @@ export default function InboxV2ClientPage({
                 aria-label="Buscar conversas"
               />
             }
-            actions={<InboxFilterButton value={filters} onChange={setFilters} />}
+            // PageHeader sem botão de filtro: ele agora vive ao lado dos
+            // tabs de status na coluna de conversas (ver `filterSlot` acima).
+            actions={null}
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
@@ -774,7 +824,10 @@ function InboxStageDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+        // DD2: opaco real (sem backdrop-blur) — o token `--glass-bg-modal`
+        // tem 0.97 alpha e o blur dava sensacao de transparencia sobre
+        // o card. Cor fixa de superficie de menu cobre light/dark.
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
           {[...stages]
             .sort((a, b) => a.position - b.position)
             .map((s) => {

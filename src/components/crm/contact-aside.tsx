@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   DragDropContext,
   Droppable,
@@ -30,6 +30,7 @@ import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar"
 import { useSectionOrder } from "@/hooks/use-section-order"
+import { useFieldLayout } from "@/hooks/use-field-layout"
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -108,7 +109,13 @@ interface ContactAsideProps {
   contact: ContactDetails
   className?: string
   headerActionsNode?: React.ReactNode
+  /** Tags da CONVERSA atual (Conversation.tags). Renderiza com label
+   *  "Tags da conversa" para diferenciar de Contact.tags. */
   tagsNode?: React.ReactNode
+  /** DD9/IB7: Tags do CONTATO (Contact.tags). Renderiza num bloco
+   *  separado abaixo de tagsNode, com label "Tags do contato". Quando
+   *  ausente, o bloco nao aparece (compat com clientes legados). */
+  contactTagsNode?: React.ReactNode
   collapsed?: boolean
   onToggleCollapse?: () => void
   /** Slot legado — mantido por compatibilidade. Preferir os dois abaixo. */
@@ -344,31 +351,13 @@ function DealInline({
         </div>
       )}
 
-      {productName && (
-        <div className="mx-5 mb-4 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-4 py-3">
-          <p className="mb-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-            Produto
-          </p>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <IconTag size={14} className="shrink-0 text-[var(--brand-primary)]" />
-              <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-                {productName}
-              </span>
-            </div>
-            {(deal.value ?? 0) > 0 && (
-              <span className="shrink-0 font-display text-[13px] font-bold text-[var(--color-success,#059669)]">
-                {formatCurrency(deal.value ?? 0)}
-              </span>
-            )}
-          </div>
-          {isFilled(contact.formation) && (
-            <p className="mt-1.5 font-display text-[11px] text-[var(--text-muted)]">
-              {contact.formation}
-            </p>
-          )}
-        </div>
-      )}
+      {/* IB5 do questionario: card legado "Produto" (`deal.productName`)
+          removido. Antes existia em paralelo com a `DealProductsSection`
+          (abaixo) e ao adicionar um produto novo, este card legado nao
+          atualizava — o item aparecia so na secao moderna, dando a
+          impressao de "produto duplicado abaixo do card". A fonte agora
+          e unica: DealProductsSection com line items reais da API
+          /api/deals/:id/products. */}
 
       {fields.length > 0 && (
         <div className="px-5 pb-4">
@@ -416,6 +405,8 @@ export function ContactAside({
   contactFieldConfigSlot,
   dealFieldConfigSlot,
   fieldConfigSlot, // legado
+  headerActionsNode,
+  contactTagsNode,
 }: ContactAsideProps) {
   const course = contact.course ?? contact.product
   const deals = contact.deals ?? []
@@ -462,6 +453,25 @@ export function ContactAside({
     ASIDE_DEFAULT_ORDER,
   )
 
+  // IB6 do questionario: respeitar visibilidade configurada no
+  // FieldConfigPanel admin (context=inbox_lead_v2). Antes o toggle do
+  // "olho" no painel de config nao tinha efeito porque ContactAside
+  // ignorava o layout. Mapeamento sectionId interno -> id taxonomia.
+  const { sections: fieldLayoutSections } = useFieldLayout("inbox_lead_v2")
+  const sectionHiddenMap = useMemo(() => {
+    const FIELD_LAYOUT_TO_INTERNAL: Record<string, AsideSection> = {
+      negocios: "negocios",
+      detalhes_contato: "contato",
+      campos_personalizados: "campos-negocio",
+    }
+    const hidden: Partial<Record<AsideSection, boolean>> = {}
+    for (const section of fieldLayoutSections ?? []) {
+      const internal = FIELD_LAYOUT_TO_INTERNAL[section.id]
+      if (internal && section.hidden) hidden[internal] = true
+    }
+    return hidden
+  }, [fieldLayoutSections])
+
   function handleDragEnd(result: DropResult) {
     if (!result.destination) return
     reorder(result.source.index, result.destination.index)
@@ -498,18 +508,28 @@ export function ContactAside({
     >
       <div className="relative flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
 
-        {/* Botão de colapso flutuante */}
-        {onToggleCollapse && (
-          <TooltipGlass label="Recolher painel de contato" side="left">
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-              aria-label="Recolher painel de contato"
-            >
-              <IconLayoutSidebarRightCollapse size={17} />
-            </button>
-          </TooltipGlass>
+        {/* Header de acoes do contato (IB4 do questionario):
+            DealCallButton entra aqui via `headerActionsNode`. Antes ficava
+            no header do chat (chat-area.tsx headerActionsSlot), agora vive
+            ao lado do botao de colapso pra paridade com o deal detail (que
+            ja tinha o botao no header da sidebar). Mantemos absolute pra
+            nao deslocar o topo das secoes existentes. */}
+        {(headerActionsNode || onToggleCollapse) && (
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+            {headerActionsNode}
+            {onToggleCollapse && (
+              <TooltipGlass label="Recolher painel de contato" side="left">
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+                  aria-label="Recolher painel de contato"
+                >
+                  <IconLayoutSidebarRightCollapse size={17} />
+                </button>
+              </TooltipGlass>
+            )}
+          </div>
         )}
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -527,6 +547,8 @@ export function ContactAside({
                     resolvedDealPanelFields.length === 0 &&
                     !resolvedDealConfig
                   ) return null
+                  // IB6: bloco ocultado via FieldConfigPanel admin.
+                  if (sectionHiddenMap[sectionId]) return null
 
                   return (
                     <Draggable key={sectionId} draggableId={sectionId} index={index}>
@@ -605,13 +627,25 @@ export function ContactAside({
                                 </div>
                               )}
 
-                              {/* Tags do contato */}
+                              {/* Tags da CONVERSA (Conversation.tags).
+                                  Label antigo era "Tags" (generico), causava
+                                  confusao com Contact.tags. IB7: agora
+                                  separado abaixo. */}
                               {tagsNode && (
                                 <div className="mb-3">
                                   <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                                    Tags
+                                    Tags da conversa
                                   </p>
                                   {tagsNode}
+                                </div>
+                              )}
+                              {/* Tags do CONTATO (Contact.tags) — DD9/IB7. */}
+                              {contactTagsNode && (
+                                <div className="mb-3">
+                                  <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                                    Tags do contato
+                                  </p>
+                                  {contactTagsNode}
                                 </div>
                               )}
 

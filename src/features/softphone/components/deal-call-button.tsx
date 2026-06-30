@@ -27,9 +27,10 @@ export function DealCallButton({ dealId, phone, contactId }: DealCallButtonProps
         type="button"
         disabled={!canDial || loading}
         onClick={dial}
-        className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-emerald-400 transition-colors hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed"
+        aria-label={`Ligar para ${phone}`}
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 transition-colors hover:border-emerald-500/60 hover:bg-emerald-500/20 hover:text-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed v2-dark:text-emerald-400 v2-dark:hover:text-emerald-300"
       >
-        <IconPhone size={14} stroke={2.2} />
+        <IconPhone size={18} stroke={2.1} />
       </button>
     </TooltipGlass>
   );

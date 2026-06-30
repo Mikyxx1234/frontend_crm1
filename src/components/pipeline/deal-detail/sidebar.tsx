@@ -480,24 +480,38 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
               ) : (
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 text-sm text-foreground">
+                    {/* min-w-0 no flex aninhado: sem isso o `truncate` no
+                        nome do produto não engatava — nomes longos
+                        empurravam badges e estouravam o card. O irmão
+                        (badge "Serviço" + AvailabilityBadge) fica
+                        `shrink-0` pra não competir pelo espaço. */}
+                    <div className="flex min-w-0 items-center gap-2 text-sm text-foreground">
                       <Package className="size-4 shrink-0 text-primary-dark" />
-                      <span className="truncate font-medium">{item.productName}</span>
+                      <span className="min-w-0 truncate font-medium">{item.productName}</span>
                       {item.productType === "SERVICE" && (
-                        <span className="rounded bg-lavender-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
+                        <span className="shrink-0 rounded bg-lavender-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
                           Serviço
                         </span>
                       )}
-                      <AvailabilityBadge productId={item.productId} />
+                      <span className="shrink-0">
+                        <AvailabilityBadge productId={item.productId} />
+                      </span>
                     </div>
-                    {item.productType === "SERVICE" ? (
-                      <div className="mt-1 text-[var(--color-ink-soft)]">Valor fixo</div>
-                    ) : (
-                      <div className="mt-1 text-[var(--color-ink-soft)]">
-                        {item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}
-                        {item.discount > 0 && <span className="ml-1 text-warning">-{item.discount}%</span>}
-                      </div>
-                    )}
+                    {/* "Valor duplicado": antes mostrávamos `1 un × R$ 100,00`
+                        embaixo do nome E `R$ 100,00` à direita — quando qty=1
+                        e desconto=0 era pura redundância. Agora só mostramos
+                        o breakdown quando ele agrega informação (qty != 1
+                        OU há desconto). Serviço "Valor fixo" também era
+                        ruído, fica suprimido (o total à direita basta). */}
+                    {item.productType !== "SERVICE" &&
+                      (item.quantity !== 1 || item.discount > 0) && (
+                        <div className="mt-1 text-[var(--color-ink-soft)]">
+                          {item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}
+                          {item.discount > 0 && (
+                            <span className="ml-1 text-warning">-{item.discount}%</span>
+                          )}
+                        </div>
+                      )}
                     <ProductCustomFieldsInline productId={item.productId} />
                   </div>
                   <div className="flex shrink-0 items-center gap-1">

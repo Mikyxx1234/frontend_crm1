@@ -90,8 +90,34 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
       if (ctx?.prev) qc.setQueryData(key, ctx.prev);
       toast.error(err.message || "Falha ao mover deal");
     },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key });
+    onSuccess: (data, _vars) => {
+      // IB1: feedback visivel — antes a UI atualizava (ou nao) sem
+      // qualquer toast e o operador nao tinha certeza de que tinha
+      // funcionado. O backend POST /move retorna o deal direto
+      // (NextResponse.json(deal)) — nao envelopado em { deal }. O
+      // tipo do front diz `{ deal: BoardDealDto }`, mas na pratica
+      // o campo `stage.name` vem no nivel raiz. Aceitamos ambos
+      // pra robustez.
+      const root = data as
+        | { stage?: { name?: string }; deal?: { stage?: { name?: string } } }
+        | undefined;
+      const toName = root?.stage?.name ?? root?.deal?.stage?.name ?? null;
+      toast.success(
+        toName ? `Fase atualizada para "${toName}"` : "Fase atualizada",
+      );
+    },
+    onSettled: (_data, _err, vars) => {
+      // IB1: usar refetchQueries (em vez de invalidate) garante que as
+      // queries ativas no inbox sejam re-buscadas imediatamente — o
+      // invalidate marca como stale mas pode deixar a UI com o valor
+      // antigo ate o proximo trigger. `type: "active"` evita refetch
+      // de queries de outras orgs / paineis nao montados.
+      qc.refetchQueries({ queryKey: key, type: "active" });
+      qc.refetchQueries({ queryKey: ["contact-sidebar"], type: "active" });
+      qc.refetchQueries({ queryKey: dealDetailKey(vars.dealId), type: "active" });
+      // Catch-all: qualquer outro consumidor de board (ex.: kanban em
+      // outro pipeline) so' marca como stale.
+      qc.invalidateQueries({ queryKey: ["pipeline-board"], type: "inactive" });
     },
   });
 }

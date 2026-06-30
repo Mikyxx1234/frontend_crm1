@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   DragDropContext,
   Droppable,
@@ -42,12 +42,21 @@ import {
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
 import { useSectionOrder } from "@/hooks/use-section-order"
+import { useFieldLayout } from "@/hooks/use-field-layout"
 import { BadgeGlass } from "./badge-glass"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
-type SidebarSection = "principal" | "contato" | "campos"
-const SIDEBAR_DEFAULT_ORDER: SidebarSection[] = ["principal", "contato", "campos"]
-const SIDEBAR_STORAGE_KEY = "crm:deal-detail:sidebar-order"
+// Mudancas (DD4 + DD5 do questionario):
+//   - "principal" removido (so tinha Origem, que foi pro cabecalho fixo
+//     como Contact.source). Mantido no union pra absorver localStorage
+//     antigo — o render trata "principal" como `null`.
+//   - "produtos" adicionado: antes ficava abaixo da lista, fora do DnD;
+//     agora vira bloco arrastavel como os demais (paridade com inbox
+//     ContactAside).
+// A chave foi bumpada pra v3 pra invalidar a ordem antiga.
+type SidebarSection = "principal" | "contato" | "campos" | "produtos"
+const SIDEBAR_DEFAULT_ORDER: SidebarSection[] = ["contato", "produtos", "campos"]
+const SIDEBAR_STORAGE_KEY = "crm:deal-detail:sidebar-order:v3"
 import { ChatArea } from "./chat-area"
 import { type Message } from "./message-bubble"
 import { resolveHighlight, SEVERITY_COLORS } from "@/lib/highlight"
@@ -80,6 +89,10 @@ export interface DealDetail {
   owner?: DealOwner
   /** Status do deal — quando "LOST", o painel exibe o motivo da perda. */
   status?: "OPEN" | "WON" | "LOST" | null
+  /** Origem do contato (nativo). Antes vivia em `Deal.source` (campo
+   *  fantasma — backend nao persistia), agora puxado de Contact.source via
+   *  InlineNativeEditor. Editavel inline no cabecalho fixo da sidebar. */
+  contactSource?: string | null
   /** Motivo registrado ao marcar o deal como perdido (texto livre OU label
    *  cadastrado). Exibido em destaque no cabeçalho da sidebar. */
   lostReason?: string | null
@@ -104,6 +117,10 @@ interface DealDetailPanelProps {
   ownerSlot?: React.ReactNode
   sourceSlot?: React.ReactNode
   tagsSlot?: React.ReactNode
+  /** DD9: popover/slot de tags do CONTATO (Contact.tags), separado do
+   *  `tagsSlot` (que sao tags do Deal). Renderizado no FieldCard
+   *  "Dados de Contato" ao lado do label "Tags". */
+  contactTagsSlot?: React.ReactNode
   /**
    * Slots para conteudo dinamico do painel de chat. Quando passados,
    * substituem o bloco hardcoded do v0 e permitem plugar mensagens
@@ -202,6 +219,7 @@ export function DealDetailPanel({
   onClose,
   deal,
   callButtonSlot,
+  contactTagsSlot,
   moreActionsSlot,
   deleteSlot: _deleteSlot,
   contactEditSlot,
@@ -240,6 +258,26 @@ export function DealDetailPanel({
     SIDEBAR_STORAGE_KEY,
     SIDEBAR_DEFAULT_ORDER,
   )
+
+  // DD8 do questionario: respeitar visibilidade de blocos configurada via
+  // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
+  // Antes o painel era estatico e ignorava qualquer toggle de "olho" feito
+  // na config — o operador clicava "esconder Produtos" e nada acontecia.
+  // Mapeamento sectionId interno -> id da taxonomia field-layout.
+  const { sections: fieldLayoutSections } = useFieldLayout("deal_panel_v2")
+  const sectionHiddenMap = useMemo(() => {
+    const FIELD_LAYOUT_TO_INTERNAL: Record<string, SidebarSection> = {
+      dados_contato: "contato",
+      campos_negocio: "campos",
+      produtos: "produtos",
+    }
+    const hidden: Partial<Record<SidebarSection, boolean>> = {}
+    for (const section of fieldLayoutSections ?? []) {
+      const internal = FIELD_LAYOUT_TO_INTERNAL[section.id]
+      if (internal && section.hidden) hidden[internal] = true
+    }
+    return hidden
+  }, [fieldLayoutSections])
 
   // ── Resize da sidebar do detalhe (drag horizontal) ───────────────
   // Largura persistida em localStorage por operador. Min 280 evita
@@ -455,11 +493,17 @@ export function DealDetailPanel({
                 {contactEditSlot}
               </div>
               <div className="mt-px flex items-center gap-2 font-display text-xs text-[var(--text-muted)]">
+                {/* ID do negocio: deal.number (sequencial por org, ex.: #1234)
+                    e o identificador que o operador reconhece. Antes mostravamos
+                    deal.contactNumber primeiro (numero do CONTATO), o que
+                    confundia: dois deals do mesmo cliente exibiam o mesmo "#X".
+                    O cuid (`deal.id.slice(-6)`) so aparece em ultimo caso
+                    quando o backend nao serializou deal.number ainda. */}
                 <span>
-                  {deal.contactNumber != null
-                    ? `#${deal.contactNumber}`
-                    : deal.number != null
-                      ? `#${deal.number}`
+                  {deal.number != null
+                    ? `#${deal.number}`
+                    : deal.contactNumber != null
+                      ? `#${deal.contactNumber}`
                       : `#${deal.id.slice(-6).toUpperCase()}`}
                   {deal.phone ? ` · ${deal.phone}` : ""}
                 </span>
@@ -628,6 +672,36 @@ export function DealDetailPanel({
                   </button>
                 )}
               </div>
+
+              {/* Origem (Contact.source nativo) — DD5 do questionario.
+                  Antes era um bloco "principal" arrastavel renderizando
+                  sourceSlot que tentava persistir Deal.source (campo
+                  inexistente no schema). Movido pro cabecalho fixo, ao
+                  lado dos demais metadados do deal, e ligado ao campo
+                  nativo do contato. */}
+              <div className="mt-2 flex items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-3">
+                <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                  Origem
+                </span>
+                {deal.contactId ? (
+                  <InlineNativeEditor
+                    value={deal.contactSource ?? undefined}
+                    entityType="contact"
+                    entityId={deal.contactId}
+                    fieldKey="source"
+                    placeholder="Adicionar origem"
+                    invalidateKeys={[
+                      ["contact-sidebar", deal.contactId],
+                      ["deal-detail-v2", deal.id],
+                    ]}
+                    textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]"
+                  />
+                ) : (
+                  <span className="font-display text-[12px] italic text-[var(--text-muted)]">
+                    Vincule um contato para definir origem
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Conteúdo rolável: lista densa de campos */}
@@ -648,6 +722,10 @@ export function DealDetailPanel({
                       >
                         {sectionOrder.map((sectionId, index) => {
                           if (sectionId === "campos" && (!customFieldsSlot || customFieldsSlot.length === 0)) return null
+                          // DD8: bloco ocultado pelo admin via FieldConfigPanel
+                          // nao deve renderizar. `principal` ja retorna null
+                          // mais abaixo, entao nao precisa entrar aqui.
+                          if (sectionHiddenMap[sectionId]) return null
                           return (
                             <Draggable key={sectionId} draggableId={sectionId} index={index}>
                               {(provided, snapshot) => (
@@ -659,18 +737,14 @@ export function DealDetailPanel({
                                     snapshot.isDragging && "z-50 opacity-90",
                                   )}
                                 >
-                                  {sectionId === "principal" && (
-                                    <FieldCard
-                                      dragHandleProps={provided.dragHandleProps ?? undefined}
-                                      dragLabel="Arraste o bloco principal"
-                                    >
-                                      <FieldRow
-                                        label="Origem"
-                                        isLast
-                                        valueNode={sourceSlot ?? <PlaceholderValue text="Adicionar" />}
-                                      />
-                                    </FieldCard>
-                                  )}
+                                  {/* sectionId === "principal" intencionalmente
+                                      NAO renderiza nada: a unica row que existia
+                                      aqui (Origem) migrou pro cabecalho fixo
+                                      como Contact.source (DD5). Mantemos o
+                                      branch vazio porque clientes com a ordem
+                                      antiga em localStorage ainda passam por
+                                      este id antes da chave v2 substituir. */}
+                                  {sectionId === "principal" && null}
 
                                   {sectionId === "contato" && (
                                     <FieldCard
@@ -716,7 +790,6 @@ export function DealDetailPanel({
                                       />
                                       <FieldRow
                                         label="Email"
-                                        isLast
                                         valueNode={
                                           deal.contactId ? (
                                             <InlineNativeEditor
@@ -749,6 +822,64 @@ export function DealDetailPanel({
                                           )
                                         }
                                       />
+                                      {/* Canal: mostra a conexão atual da conversa
+                                          (ex.: "WhatsApp · Adm Dna Work · +55 (11) ...").
+                                          Padrão casado com `contact-aside.tsx` (inbox);
+                                          deal panel passou a expor a mesma info que o
+                                          aside compartilhado já mostrava — evita o
+                                          operador ter que abrir o inbox só pra ver
+                                          qual número está conversando. */}
+                                      {connection ? (
+                                        <FieldRow
+                                          label="Canal"
+                                          isLast={!contactTagsSlot}
+                                          valueNode={
+                                            <TooltipGlass
+                                              label={`Conversando por ${formatConnectionLabel(connection)}`}
+                                              side="left"
+                                            >
+                                              <span className="inline-flex items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                <IconAffiliate size={13} className="text-[var(--brand-primary)]" />
+                                                {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
+                                              </span>
+                                            </TooltipGlass>
+                                          }
+                                        />
+                                      ) : (
+                                        <FieldRow
+                                          label="Canal"
+                                          isLast={!contactTagsSlot}
+                                          valueNode={
+                                            <span className="font-display text-[13px] font-bold text-[var(--text-muted)]">
+                                              —
+                                            </span>
+                                          }
+                                        />
+                                      )}
+                                      {/* DD9: tags de Contato (Contact.tags),
+                                          distinto das tags do Deal (que estao
+                                          no header da sidebar via tagsSlot). */}
+                                      {contactTagsSlot && (
+                                        <FieldRow
+                                          label="Tags"
+                                          isLast
+                                          valueNode={contactTagsSlot}
+                                        />
+                                      )}
+                                    </FieldCard>
+                                  )}
+
+                                  {/* DD4: Produtos agora dentro do flow DnD.
+                                      O productsSlot ja vem renderizado pelo
+                                      caller (DealProductsSection); aqui so
+                                      embrulhamos num FieldCard com handle de
+                                      arrasto pra manter o visual consistente. */}
+                                  {sectionId === "produtos" && productsSlot && (
+                                    <FieldCard
+                                      title="Produtos"
+                                      dragHandleProps={provided.dragHandleProps ?? undefined}
+                                    >
+                                      {productsSlot}
                                     </FieldCard>
                                   )}
 
@@ -836,7 +967,9 @@ export function DealDetailPanel({
                 </DragDropContext>
               )}
 
-              {productsSlot && <div className="mt-5">{productsSlot}</div>}
+              {/* productsSlot agora vive dentro do DragDropContext acima
+                  (sectionId === "produtos"). DD4: paridade com o
+                  ContactAside do inbox, que ja tinha produtos arrastaveis. */}
             </div>
           </aside>
 

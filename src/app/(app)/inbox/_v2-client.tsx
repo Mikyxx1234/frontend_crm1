@@ -55,6 +55,7 @@ import {
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import {
   DealActivitiesTab,
@@ -582,6 +583,33 @@ export default function InboxV2ClientPage({
           </>
         }
         tagsNode={tagsNode}
+        contactTagsNode={
+          // IB7: tags do CONTATO (separadas das tags da conversa). Lista
+          // os chips ja aplicados + popover pra adicionar/remover.
+          // `contactDetail.tags` ja vem flatten do backend.
+          activeContactId ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(contactDetail?.tags ?? []).map((t) => (
+                <span
+                  key={t.id}
+                  className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
+                  style={{
+                    background: `${t.color ?? "#5b6ff5"}22`,
+                    color: t.color ?? "var(--brand-primary)",
+                    border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                  }}
+                >
+                  {t.name}
+                </span>
+              ))}
+              <ContactTagsPopover
+                contactId={activeContactId}
+                currentTags={contactDetail?.tags ?? []}
+                triggerVariant="icon"
+              />
+            </div>
+          ) : null
+        }
         collapsed={asideCollapsed}
         onToggleCollapse={() => setAsideCollapsed((v) => !v)}
         contactFieldConfigSlot={

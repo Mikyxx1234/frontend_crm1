@@ -97,6 +97,7 @@ import {
   useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
 import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-channels-modal";
+import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { FilterModalThreeCol } from "@/components/pipeline/kanban-filters/v2";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import {
@@ -1021,7 +1022,7 @@ export default function KanbanV2ClientPage({
                   <div className="flex-1 overflow-auto p-4">
                     <CallHistoryList
                       embedded
-                      contactId={dealContactId}
+                      contactId={dealContactId ?? undefined}
                     />
                   </div>
                 ),
@@ -1092,6 +1093,34 @@ export default function KanbanV2ClientPage({
           <RequirePermission permission="settings:custom_fields">
             <FieldConfigPanel entities={["deal"]} context="deal_panel_v2" />
           </RequirePermission>
+        }
+        contactTagsSlot={
+          // DD9: tags do contato (Contact.tags) ao lado de Telefone/Email
+          // no FieldCard "Dados de Contato". Separado de tagsSlot (Deal.tags
+          // — fica no header da sidebar). dealDetail.contact.tags ja vem
+          // serializado no detailInclude do backend.
+          dealDetailVm?.contactId ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(dealDetail?.contact?.tags ?? []).map((t) => (
+                <span
+                  key={t.id}
+                  className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
+                  style={{
+                    background: `${t.color ?? "#5b6ff5"}22`,
+                    color: t.color ?? "var(--brand-primary)",
+                    border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                  }}
+                >
+                  {t.name}
+                </span>
+              ))}
+              <ContactTagsPopover
+                contactId={dealDetailVm.contactId}
+                currentTags={dealDetail?.contact?.tags ?? []}
+                triggerVariant="icon"
+              />
+            </div>
+          ) : null
         }
       />
 

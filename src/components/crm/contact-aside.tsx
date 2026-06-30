@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   DragDropContext,
   Droppable,
@@ -30,6 +30,7 @@ import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar"
 import { useSectionOrder } from "@/hooks/use-section-order"
+import { useFieldLayout } from "@/hooks/use-field-layout"
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -108,7 +109,13 @@ interface ContactAsideProps {
   contact: ContactDetails
   className?: string
   headerActionsNode?: React.ReactNode
+  /** Tags da CONVERSA atual (Conversation.tags). Renderiza com label
+   *  "Tags da conversa" para diferenciar de Contact.tags. */
   tagsNode?: React.ReactNode
+  /** DD9/IB7: Tags do CONTATO (Contact.tags). Renderiza num bloco
+   *  separado abaixo de tagsNode, com label "Tags do contato". Quando
+   *  ausente, o bloco nao aparece (compat com clientes legados). */
+  contactTagsNode?: React.ReactNode
   collapsed?: boolean
   onToggleCollapse?: () => void
   /** Slot legado — mantido por compatibilidade. Preferir os dois abaixo. */
@@ -399,6 +406,7 @@ export function ContactAside({
   dealFieldConfigSlot,
   fieldConfigSlot, // legado
   headerActionsNode,
+  contactTagsNode,
 }: ContactAsideProps) {
   const course = contact.course ?? contact.product
   const deals = contact.deals ?? []
@@ -444,6 +452,25 @@ export function ContactAside({
     ASIDE_STORAGE_KEY,
     ASIDE_DEFAULT_ORDER,
   )
+
+  // IB6 do questionario: respeitar visibilidade configurada no
+  // FieldConfigPanel admin (context=inbox_lead_v2). Antes o toggle do
+  // "olho" no painel de config nao tinha efeito porque ContactAside
+  // ignorava o layout. Mapeamento sectionId interno -> id taxonomia.
+  const { sections: fieldLayoutSections } = useFieldLayout("inbox_lead_v2")
+  const sectionHiddenMap = useMemo(() => {
+    const FIELD_LAYOUT_TO_INTERNAL: Record<string, AsideSection> = {
+      negocios: "negocios",
+      detalhes_contato: "contato",
+      campos_personalizados: "campos-negocio",
+    }
+    const hidden: Partial<Record<AsideSection, boolean>> = {}
+    for (const section of fieldLayoutSections ?? []) {
+      const internal = FIELD_LAYOUT_TO_INTERNAL[section.id]
+      if (internal && section.hidden) hidden[internal] = true
+    }
+    return hidden
+  }, [fieldLayoutSections])
 
   function handleDragEnd(result: DropResult) {
     if (!result.destination) return
@@ -520,6 +547,8 @@ export function ContactAside({
                     resolvedDealPanelFields.length === 0 &&
                     !resolvedDealConfig
                   ) return null
+                  // IB6: bloco ocultado via FieldConfigPanel admin.
+                  if (sectionHiddenMap[sectionId]) return null
 
                   return (
                     <Draggable key={sectionId} draggableId={sectionId} index={index}>
@@ -598,13 +627,25 @@ export function ContactAside({
                                 </div>
                               )}
 
-                              {/* Tags do contato */}
+                              {/* Tags da CONVERSA (Conversation.tags).
+                                  Label antigo era "Tags" (generico), causava
+                                  confusao com Contact.tags. IB7: agora
+                                  separado abaixo. */}
                               {tagsNode && (
                                 <div className="mb-3">
                                   <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                                    Tags
+                                    Tags da conversa
                                   </p>
                                   {tagsNode}
+                                </div>
+                              )}
+                              {/* Tags do CONTATO (Contact.tags) — DD9/IB7. */}
+                              {contactTagsNode && (
+                                <div className="mb-3">
+                                  <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                                    Tags do contato
+                                  </p>
+                                  {contactTagsNode}
                                 </div>
                               )}
 

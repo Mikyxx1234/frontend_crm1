@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   DragDropContext,
   Droppable,
@@ -42,6 +42,7 @@ import {
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
 import { useSectionOrder } from "@/hooks/use-section-order"
+import { useFieldLayout } from "@/hooks/use-field-layout"
 import { BadgeGlass } from "./badge-glass"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
@@ -116,6 +117,10 @@ interface DealDetailPanelProps {
   ownerSlot?: React.ReactNode
   sourceSlot?: React.ReactNode
   tagsSlot?: React.ReactNode
+  /** DD9: popover/slot de tags do CONTATO (Contact.tags), separado do
+   *  `tagsSlot` (que sao tags do Deal). Renderizado no FieldCard
+   *  "Dados de Contato" ao lado do label "Tags". */
+  contactTagsSlot?: React.ReactNode
   /**
    * Slots para conteudo dinamico do painel de chat. Quando passados,
    * substituem o bloco hardcoded do v0 e permitem plugar mensagens
@@ -214,6 +219,7 @@ export function DealDetailPanel({
   onClose,
   deal,
   callButtonSlot,
+  contactTagsSlot,
   moreActionsSlot,
   deleteSlot: _deleteSlot,
   contactEditSlot,
@@ -252,6 +258,26 @@ export function DealDetailPanel({
     SIDEBAR_STORAGE_KEY,
     SIDEBAR_DEFAULT_ORDER,
   )
+
+  // DD8 do questionario: respeitar visibilidade de blocos configurada via
+  // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
+  // Antes o painel era estatico e ignorava qualquer toggle de "olho" feito
+  // na config — o operador clicava "esconder Produtos" e nada acontecia.
+  // Mapeamento sectionId interno -> id da taxonomia field-layout.
+  const { sections: fieldLayoutSections } = useFieldLayout("deal_panel_v2")
+  const sectionHiddenMap = useMemo(() => {
+    const FIELD_LAYOUT_TO_INTERNAL: Record<string, SidebarSection> = {
+      dados_contato: "contato",
+      campos_negocio: "campos",
+      produtos: "produtos",
+    }
+    const hidden: Partial<Record<SidebarSection, boolean>> = {}
+    for (const section of fieldLayoutSections ?? []) {
+      const internal = FIELD_LAYOUT_TO_INTERNAL[section.id]
+      if (internal && section.hidden) hidden[internal] = true
+    }
+    return hidden
+  }, [fieldLayoutSections])
 
   // ── Resize da sidebar do detalhe (drag horizontal) ───────────────
   // Largura persistida em localStorage por operador. Min 280 evita
@@ -696,6 +722,10 @@ export function DealDetailPanel({
                       >
                         {sectionOrder.map((sectionId, index) => {
                           if (sectionId === "campos" && (!customFieldsSlot || customFieldsSlot.length === 0)) return null
+                          // DD8: bloco ocultado pelo admin via FieldConfigPanel
+                          // nao deve renderizar. `principal` ja retorna null
+                          // mais abaixo, entao nao precisa entrar aqui.
+                          if (sectionHiddenMap[sectionId]) return null
                           return (
                             <Draggable key={sectionId} draggableId={sectionId} index={index}>
                               {(provided, snapshot) => (
@@ -799,10 +829,10 @@ export function DealDetailPanel({
                                           aside compartilhado já mostrava — evita o
                                           operador ter que abrir o inbox só pra ver
                                           qual número está conversando. */}
-                                      {connection && (
+                                      {connection ? (
                                         <FieldRow
                                           label="Canal"
-                                          isLast
+                                          isLast={!contactTagsSlot}
                                           valueNode={
                                             <TooltipGlass
                                               label={`Conversando por ${formatConnectionLabel(connection)}`}
@@ -815,16 +845,25 @@ export function DealDetailPanel({
                                             </TooltipGlass>
                                           }
                                         />
-                                      )}
-                                      {!connection && (
+                                      ) : (
                                         <FieldRow
                                           label="Canal"
-                                          isLast
+                                          isLast={!contactTagsSlot}
                                           valueNode={
                                             <span className="font-display text-[13px] font-bold text-[var(--text-muted)]">
                                               —
                                             </span>
                                           }
+                                        />
+                                      )}
+                                      {/* DD9: tags de Contato (Contact.tags),
+                                          distinto das tags do Deal (que estao
+                                          no header da sidebar via tagsSlot). */}
+                                      {contactTagsSlot && (
+                                        <FieldRow
+                                          label="Tags"
+                                          isLast
+                                          valueNode={contactTagsSlot}
                                         />
                                       )}
                                     </FieldCard>

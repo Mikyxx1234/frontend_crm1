@@ -151,23 +151,21 @@ export const DEFAULT_SECTIONS_DEAL_PANEL_V2: SectionConfig[] = [
     fields: [],
   },
   {
-    id: "principal",
-    label: "Principal",
-    fields: [
-      { id: "owner", label: "Responsável" },
-      { id: "value", label: "Venda" },
-      { id: "origin", label: "Origem" },
-      { id: "forecast", label: "Previsão" },
-      { id: "tags", label: "Tags" },
-    ],
-  },
-  {
     id: "dados_contato",
     label: "Dados de contato",
     fields: [
       { id: "phone", label: "Telefone" },
       { id: "email", label: "E-mail" },
+      { id: "channel", label: "Canal" },
     ],
+  },
+  // Adicionada em 2026-06-30 (DD4 + DD8): produtos vinculados ao
+  // negocio. Antes o bloco existia na UI mas nao no field-layout,
+  // entao o admin nao conseguia escondê-lo via FieldConfigPanel.
+  {
+    id: "produtos",
+    label: "Produtos",
+    fields: [{ id: "products_list", label: "Lista de produtos" }],
   },
   {
     id: "campos_negocio",

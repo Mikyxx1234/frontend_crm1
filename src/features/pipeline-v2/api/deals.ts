@@ -44,6 +44,14 @@ export interface DealContactWithConversations {
   phone?: string | null;
   avatarUrl?: string | null;
   conversations?: DealContactConversation[];
+  /** Origem nativa do contato (Contact.source). Selecionada no backend
+   *  detailInclude desde 2026-06-30; usada no cabecalho do deal detail
+   *  (DD5) via InlineNativeEditor. */
+  source?: string | null;
+  /** Tags do contato (Contact.tags), achatadas pelo backend para
+   *  `[{ id, name, color }]`. Usadas no `contactTagsSlot` do deal
+   *  detail (DD9) — distintas de `deal.tags` (tags do negocio). */
+  tags?: { id: string; name: string; color: string | null }[];
 }
 
 /** GET /api/deals/:id — detail panel */

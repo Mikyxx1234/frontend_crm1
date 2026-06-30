@@ -1212,12 +1212,37 @@ export default function PipelineSettingsClientPage() {
   // precisariam de paginação adicional; fora do escopo do bugfix atual.
   const { data: automationsData } = useAutomations({ perPage: 100, enabled: isAuthenticated });
 
+  // Persistência do último funil — mesma chave/lógica do `/pipeline`
+  // (ver `app/(app)/pipeline/_v2-client.tsx`). Trocar funil aqui ou lá deve
+  // ficar lembrado em ambos os lugares após F5.
+  const PIPELINE_STORAGE_KEY = "crm:pipeline:last-selected:v1";
+
   useEffect(() => {
-    if (!pipelineId && pipelines?.length) {
-      const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
-      setPipelineId(def.id);
+    if (pipelineId || !pipelines?.length) return;
+    let saved: string | null = null;
+    try {
+      saved = typeof window !== "undefined" ? localStorage.getItem(PIPELINE_STORAGE_KEY) : null;
+    } catch {
+      saved = null;
     }
+    if (saved && pipelines.some((p) => p.id === saved)) {
+      setPipelineId(saved);
+      return;
+    }
+    const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
+    setPipelineId(def.id);
   }, [pipelines, pipelineId]);
+
+  useEffect(() => {
+    if (!pipelineId) return;
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(PIPELINE_STORAGE_KEY, pipelineId);
+      }
+    } catch {
+      /* localStorage indisponível — ignorar */
+    }
+  }, [pipelineId]);
 
   const { data: board = [] } = useBoard({
     pipelineId,

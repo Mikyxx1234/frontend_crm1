@@ -716,7 +716,6 @@ export function DealDetailPanel({
                                       />
                                       <FieldRow
                                         label="Email"
-                                        isLast
                                         valueNode={
                                           deal.contactId ? (
                                             <InlineNativeEditor
@@ -749,6 +748,41 @@ export function DealDetailPanel({
                                           )
                                         }
                                       />
+                                      {/* Canal: mostra a conexão atual da conversa
+                                          (ex.: "WhatsApp · Adm Dna Work · +55 (11) ...").
+                                          Padrão casado com `contact-aside.tsx` (inbox);
+                                          deal panel passou a expor a mesma info que o
+                                          aside compartilhado já mostrava — evita o
+                                          operador ter que abrir o inbox só pra ver
+                                          qual número está conversando. */}
+                                      {connection && (
+                                        <FieldRow
+                                          label="Canal"
+                                          isLast
+                                          valueNode={
+                                            <TooltipGlass
+                                              label={`Conversando por ${formatConnectionLabel(connection)}`}
+                                              side="left"
+                                            >
+                                              <span className="inline-flex items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
+                                                <IconAffiliate size={13} className="text-[var(--brand-primary)]" />
+                                                {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
+                                              </span>
+                                            </TooltipGlass>
+                                          }
+                                        />
+                                      )}
+                                      {!connection && (
+                                        <FieldRow
+                                          label="Canal"
+                                          isLast
+                                          valueNode={
+                                            <span className="font-display text-[13px] font-bold text-[var(--text-muted)]">
+                                              —
+                                            </span>
+                                          }
+                                        />
+                                      )}
                                     </FieldCard>
                                   )}
 

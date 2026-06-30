@@ -331,11 +331,12 @@ export default function InboxV2ClientPage({
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       hideSearch={searchInHeader}
-      filterSlot={
-        searchInHeader ? null : (
-          <InboxFilterButton value={filters} onChange={setFilters} />
-        )
-      }
+      // Filtro sempre na ColumnConversa (ao lado do dropdown
+      // "Todas/Aguardando/Entrada/..."). Quando `pageHeader` está ativo, a
+      // busca sobe pro topo mas o filtro **fica** aqui — antes ele migrava
+      // pro canto direito superior junto da busca, distante do controle
+      // mais relacionado a ele (tabs de status).
+      filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
         count: tabCounts?.[t.id] ?? undefined,
@@ -632,7 +633,9 @@ export default function InboxV2ClientPage({
                 aria-label="Buscar conversas"
               />
             }
-            actions={<InboxFilterButton value={filters} onChange={setFilters} />}
+            // PageHeader sem botão de filtro: ele agora vive ao lado dos
+            // tabs de status na coluna de conversas (ver `filterSlot` acima).
+            actions={null}
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"

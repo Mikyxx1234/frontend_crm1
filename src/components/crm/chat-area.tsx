@@ -11,11 +11,8 @@ import { MessageBubble, DaySeparator, ConnectionDivider, type Message } from "./
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
-  formatConnectionShort,
-  channelTypeLabel,
   type ConnectionRef,
 } from "@/lib/connection-label"
-import { IconAffiliate } from "@tabler/icons-react"
 import {
   IconPhone,
   IconVideo,
@@ -193,17 +190,12 @@ export function ChatArea({
               </BadgeGlass>
             )}
           </div>
-          {connection && (
-            <TooltipGlass
-              label={`Conversando por ${formatConnectionLabel(connection)}`}
-              side="bottom"
-            >
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-secondary)]">
-                <IconAffiliate size={12} className="text-[var(--brand-primary)]" />
-                {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
-              </span>
-            </TooltipGlass>
-          )}
+          {/* Chip de canal removido daqui: a informação já fica visível no
+              ContactAside (row "Canal" em Detalhes de Contato) tanto no inbox
+              quanto no deal detail (ver DD3 em `deal-detail-panel.tsx`). A
+              duplicação acima do chat poluía o header e foi removida a pedido
+              do operador. A prop `connection` segue sendo recebida e ignorada
+              aqui para manter compat com chamadores existentes. */}
         </div>
 
         {tabsEnabled && (

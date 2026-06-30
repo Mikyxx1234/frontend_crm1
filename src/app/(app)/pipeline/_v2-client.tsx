@@ -220,12 +220,42 @@ export default function KanbanV2ClientPage({
   const { data: pipelines } = usePipelines(isAuthenticated);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
 
+  // Persistência do último funil selecionado (operador da DNAWork: ao trocar
+  // pra "TESTE funil2" e dar F5, voltava pro padrão). Ordem de prioridade
+  // ao abrir a página: (1) último salvo em localStorage se ainda existir nos
+  // pipelines da org, (2) pipeline `isDefault`, (3) primeiro da lista.
+  // `localStorage` em vez de cookie pra ficar por aba/usuário sem custo de
+  // servidor; chave inclui ":v1" pra invalidação futura.
+  const PIPELINE_STORAGE_KEY = "crm:pipeline:last-selected:v1";
+
   useEffect(() => {
-    if (!pipelineId && pipelines?.length) {
-      const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
-      setPipelineId(def.id);
+    if (pipelineId || !pipelines?.length) return;
+    let saved: string | null = null;
+    try {
+      saved = typeof window !== "undefined" ? localStorage.getItem(PIPELINE_STORAGE_KEY) : null;
+    } catch {
+      saved = null;
     }
+    if (saved && pipelines.some((p) => p.id === saved)) {
+      setPipelineId(saved);
+      return;
+    }
+    const def = pipelines.find((p) => p.isDefault) ?? pipelines[0];
+    setPipelineId(def.id);
   }, [pipelines, pipelineId]);
+
+  // Sincroniza qualquer mudança de pipelineId pro localStorage. Mantém em sync
+  // mesmo se a troca vier de outro caminho (ex.: deep link futuro).
+  useEffect(() => {
+    if (!pipelineId) return;
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(PIPELINE_STORAGE_KEY, pipelineId);
+      }
+    } catch {
+      /* localStorage indisponível (modo privado, quota cheia) — ignorar */
+    }
+  }, [pipelineId]);
 
   const boardSort = useMemo<BoardSortParam | undefined>(() => {
     if (sortKey === "created_newest") return { field: "createdAt", direction: "desc" };
@@ -1022,17 +1052,21 @@ export default function KanbanV2ClientPage({
             return (
               <div className="flex flex-wrap items-center gap-1.5">
                 {visibleTags.map((t) => (
-                  <span
-                    key={t.id}
-                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
-                    style={{
-                      background: `${t.color ?? "#5b6ff5"}22`,
-                      color: t.color ?? "var(--brand-primary)",
-                      border: `1px solid ${t.color ?? "#5b6ff5"}44`,
-                    }}
-                  >
-                    {t.name}
-                  </span>
+                  // Mesmo padrão do card kanban: max-w + truncate + tooltip.
+                  // Sem isso, tags longas no header do deal detail estouravam
+                  // o slot e empurravam o resto do cabeçalho.
+                  <TooltipGlass key={t.id} label={t.name} side="top">
+                    <span
+                      className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                      style={{
+                        background: `${t.color ?? "#5b6ff5"}22`,
+                        color: t.color ?? "var(--brand-primary)",
+                        border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                      }}
+                    >
+                      {t.name}
+                    </span>
+                  </TooltipGlass>
                 ))}
                 {hiddenTags.length > 0 && (
                   <TooltipGlass
@@ -1178,8 +1212,13 @@ function StageDropdown({
       </button>
 
       {open && (
+        // Opacidade: usar `--glass-bg-modal` (~97% opaco) em vez de
+        // `--glass-bg-strong` (~32% opaco). O strong fica legível só sobre
+        // fundos uniformes; este dropdown abre sobre o kanban com cards
+        // coloridos, ficava muito transparente e dificultava a leitura.
+        // Padrão casado com o `InboxStageDropdown` (que já usa modal).
         <div
-          className="absolute left-0 top-full z-50 mt-1.5 min-w-[200px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md"
+          className="absolute left-0 top-full z-50 mt-1.5 min-w-[200px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md"
         >
           {[...stages]
             .sort((a, b) => a.position - b.position)
@@ -1505,17 +1544,23 @@ function DroppableColumn({
                         return (
                           <>
                             {visibleTags.map((t) => (
-                              <span
-                                key={t.id}
-                                className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide"
-                                style={{
-                                  background: `${t.color || "#5b6ff5"}22`,
-                                  color: t.color || "var(--brand-primary)",
-                                  border: `1px solid ${t.color || "#5b6ff5"}44`,
-                                }}
-                              >
-                                {t.name}
-                              </span>
+                              // max-w + truncate evita que nomes longos
+                              // ("Lead Estagiário Suporte SP" etc.) estourem
+                              // a largura do card kanban (300px). Tooltip
+                              // mostra o nome completo no hover. Padrão já
+                              // usado no inbox v2 (`inbox/_v2-client.tsx`).
+                              <TooltipGlass key={t.id} label={t.name} side="top">
+                                <span
+                                  className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide max-w-[110px] truncate"
+                                  style={{
+                                    background: `${t.color || "#5b6ff5"}22`,
+                                    color: t.color || "var(--brand-primary)",
+                                    border: `1px solid ${t.color || "#5b6ff5"}44`,
+                                  }}
+                                >
+                                  {t.name}
+                                </span>
+                              </TooltipGlass>
                             ))}
                             {hiddenTags.length > 0 && (
                               <TooltipGlass

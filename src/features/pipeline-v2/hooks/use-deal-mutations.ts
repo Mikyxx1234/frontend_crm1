@@ -90,8 +90,15 @@ export function useMoveDeal(pipelineId: string | null, status: StatusFilter = "O
       if (ctx?.prev) qc.setQueryData(key, ctx.prev);
       toast.error(err.message || "Falha ao mover deal");
     },
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
       qc.invalidateQueries({ queryKey: key });
+      // IB1: o StagePicker e' usado tanto no pipeline (board) quanto no
+      // inbox (ContactAside). No inbox, o board nao esta carregado —
+      // a fase exibida vem de `contact-sidebar` e `deal-detail-v2`.
+      // Sem invalidar esses caches, o backend muda a fase mas a UI
+      // continua mostrando a antiga ate refresh.
+      qc.invalidateQueries({ queryKey: ["contact-sidebar"] });
+      qc.invalidateQueries({ queryKey: dealDetailKey(vars.dealId) });
     },
   });
 }

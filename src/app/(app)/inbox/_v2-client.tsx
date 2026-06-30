@@ -56,6 +56,7 @@ import {
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
+import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import {
   DealActivitiesTab,
@@ -506,6 +507,14 @@ export default function InboxV2ClientPage({
     <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
   );
   const activitiesSlot = <DealActivitiesTab />;
+  // IB8: aba "Chamadas" no topo do inbox, igual ao DealDetailPanel. Lista
+  // os logs de telefonia do contato ativo. Usamos `activeContactId` (nao
+  // o dealId) porque o historico de chamadas e' por contato.
+  const callsSlot = activeContactId ? (
+    <div className="flex-1 overflow-auto p-4">
+      <CallHistoryList embedded contactId={activeContactId} />
+    </div>
+  ) : null;
 
   const chatNode =
     chatContact && activeRow ? (
@@ -553,6 +562,7 @@ export default function InboxV2ClientPage({
         notesSlot={notesSlot}
         activitiesSlot={activitiesSlot}
         timelineSlot={timelineSlot}
+        callsSlot={callsSlot}
       />
     ) : (
       <EmptyChatArea />

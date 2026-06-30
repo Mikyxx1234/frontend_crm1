@@ -6,6 +6,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { Check, ChevronDown, Package, Pencil, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { CustomFieldsSection } from "@/components/contacts/custom-fields-section";
@@ -295,6 +296,21 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
     queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
   };
 
+  // Extrai a mensagem de erro retornada pelo backend (`{ message: string }`)
+  // para que `onError` consiga mostrar um toast informativo em vez do
+  // genérico "Erro" — antes desta mudança o erro era engolido em silêncio
+  // (sintoma: usuário clicava "Remover", nada acontecia visualmente).
+  async function readErrorMessage(res: Response, fallback: string): Promise<string> {
+    try {
+      const data = await res.json();
+      const msg = (data as { message?: unknown })?.message;
+      if (typeof msg === "string" && msg.trim()) return msg;
+    } catch {
+      /* ignore parse error */
+    }
+    return fallback;
+  }
+
   const addMutation = useMutation({
     mutationFn: async (productId: string) => {
       const res = await fetch(apiUrl(`/api/deals/${dealId}/products`), {
@@ -302,13 +318,14 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId }),
       });
-      if (!res.ok) throw new Error("Erro");
+      if (!res.ok) throw new Error(await readErrorMessage(res, "Falha ao adicionar produto."));
     },
     onSuccess: () => {
       invalidate();
       setShowAdd(false);
       setSearch("");
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const updateMutation = useMutation({
@@ -318,20 +335,25 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Erro");
+      if (!res.ok) throw new Error(await readErrorMessage(res, "Falha ao atualizar item."));
     },
     onSuccess: () => {
       invalidate();
       setEditingItem(null);
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const removeMutation = useMutation({
     mutationFn: async (itemId: string) => {
       const res = await fetch(apiUrl(`/api/deals/${dealId}/products/${itemId}`), { method: "DELETE" });
-      if (!res.ok) throw new Error("Erro");
+      if (!res.ok) throw new Error(await readErrorMessage(res, "Falha ao remover produto."));
     },
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success("Produto removido.");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const totalValue = items.reduce((s, i) => s + i.total, 0);

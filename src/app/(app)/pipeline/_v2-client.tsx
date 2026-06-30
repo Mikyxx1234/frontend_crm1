@@ -580,6 +580,8 @@ export default function KanbanV2ClientPage({
       avatarColor: avatarColorSlugFromName(contactName),
       phone: dealDetail.contact?.phone ?? undefined,
       email: dealDetail.contact?.email ?? null,
+      contactSource:
+        (dealDetail.contact as { source?: string | null } | null)?.source ?? null,
       value: dealDetail.value ?? null,
       online: undefined,
       stage: activeDealStageName,
@@ -955,24 +957,11 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        sourceSlot={
-          activeDealId ? (
-            <InlineEditText
-              dealId={activeDealId}
-              field="source"
-              value={dealDetail?.source ?? null}
-              placeholder="Adicionar origem"
-              pipelineId={pipelineId}
-              statusFilter={status}
-              display={(v) => (
-                <span className="inline-flex items-center gap-1.5 font-display text-[13px] font-semibold text-[var(--text-primary)]">
-                  {v && v.trim() ? v : <span className="italic text-[var(--text-muted)]">Adicionar</span>}
-                  <IconPencil size={12} className="opacity-50" />
-                </span>
-              )}
-            />
-          ) : undefined
-        }
+        // sourceSlot removido (DD5): antes tentava persistir Deal.source,
+        // mas esse campo nao existe no schema (backend silenciosamente
+        // ignorava o PUT). A row "Origem" foi movida pro cabecalho fixo
+        // do DealDetailPanel usando Contact.source nativo via
+        // InlineNativeEditor.
         customFieldsSlot={(() => {
           // Mesma lógica do toContactAside: mescla inboxLeadPanelFields (contato) +
           // dealInboxPanelFields[activeDealId] (campos do negócio ativo),

@@ -344,31 +344,13 @@ function DealInline({
         </div>
       )}
 
-      {productName && (
-        <div className="mx-5 mb-4 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-4 py-3">
-          <p className="mb-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-            Produto
-          </p>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <IconTag size={14} className="shrink-0 text-[var(--brand-primary)]" />
-              <span className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-                {productName}
-              </span>
-            </div>
-            {(deal.value ?? 0) > 0 && (
-              <span className="shrink-0 font-display text-[13px] font-bold text-[var(--color-success,#059669)]">
-                {formatCurrency(deal.value ?? 0)}
-              </span>
-            )}
-          </div>
-          {isFilled(contact.formation) && (
-            <p className="mt-1.5 font-display text-[11px] text-[var(--text-muted)]">
-              {contact.formation}
-            </p>
-          )}
-        </div>
-      )}
+      {/* IB5 do questionario: card legado "Produto" (`deal.productName`)
+          removido. Antes existia em paralelo com a `DealProductsSection`
+          (abaixo) e ao adicionar um produto novo, este card legado nao
+          atualizava — o item aparecia so na secao moderna, dando a
+          impressao de "produto duplicado abaixo do card". A fonte agora
+          e unica: DealProductsSection com line items reais da API
+          /api/deals/:id/products. */}
 
       {fields.length > 0 && (
         <div className="px-5 pb-4">
@@ -416,6 +398,7 @@ export function ContactAside({
   contactFieldConfigSlot,
   dealFieldConfigSlot,
   fieldConfigSlot, // legado
+  headerActionsNode,
 }: ContactAsideProps) {
   const course = contact.course ?? contact.product
   const deals = contact.deals ?? []
@@ -498,18 +481,28 @@ export function ContactAside({
     >
       <div className="relative flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
 
-        {/* Botão de colapso flutuante */}
-        {onToggleCollapse && (
-          <TooltipGlass label="Recolher painel de contato" side="left">
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-              aria-label="Recolher painel de contato"
-            >
-              <IconLayoutSidebarRightCollapse size={17} />
-            </button>
-          </TooltipGlass>
+        {/* Header de acoes do contato (IB4 do questionario):
+            DealCallButton entra aqui via `headerActionsNode`. Antes ficava
+            no header do chat (chat-area.tsx headerActionsSlot), agora vive
+            ao lado do botao de colapso pra paridade com o deal detail (que
+            ja tinha o botao no header da sidebar). Mantemos absolute pra
+            nao deslocar o topo das secoes existentes. */}
+        {(headerActionsNode || onToggleCollapse) && (
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+            {headerActionsNode}
+            {onToggleCollapse && (
+              <TooltipGlass label="Recolher painel de contato" side="left">
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+                  aria-label="Recolher painel de contato"
+                >
+                  <IconLayoutSidebarRightCollapse size={17} />
+                </button>
+              </TooltipGlass>
+            )}
+          </div>
         )}
 
         <DragDropContext onDragEnd={handleDragEnd}>

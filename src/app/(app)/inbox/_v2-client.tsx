@@ -518,11 +518,9 @@ export default function InboxV2ClientPage({
         onUseTemplate={() => setTemplateOpen(true)}
         headerActionsSlot={
           <>
-            <DealCallButton
-              dealId={firstDealId}
-              phone={chatContact.phone || null}
-              contactId={activeContactId ?? undefined}
-            />
+            {/* DealCallButton movido pro ContactAside.headerActionsNode
+                (IB4). Mantemos so o ConversationActionsMenu (Encerrar/
+                Reabrir) aqui, que e contextual ao chat. */}
             <ConversationActionsMenu
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
@@ -564,13 +562,24 @@ export default function InboxV2ClientPage({
       <ContactAside
         contact={contactAsideViewWithSlots}
         headerActionsNode={
-          <RequirePermission permission="conversation:reassign">
-            <AssigneePopover
-              conversationId={activeId}
-              currentAssigneeName={activeRow.assignedTo?.name}
-              currentAssigneeId={activeRow.assignedTo?.id ?? null}
+          <>
+            {/* DealCallButton movido pra ca (IB4): antes vivia no header
+                do chat (ChatArea.headerActionsSlot), com posicao distinta
+                do deal detail. Agora fica no topo do ContactAside,
+                proximo do AssigneePopover e do botao de colapso. */}
+            <DealCallButton
+              dealId={firstDealId}
+              phone={chatContact?.phone || null}
+              contactId={activeContactId ?? undefined}
             />
-          </RequirePermission>
+            <RequirePermission permission="conversation:reassign">
+              <AssigneePopover
+                conversationId={activeId}
+                currentAssigneeName={activeRow.assignedTo?.name}
+                currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              />
+            </RequirePermission>
+          </>
         }
         tagsNode={tagsNode}
         collapsed={asideCollapsed}

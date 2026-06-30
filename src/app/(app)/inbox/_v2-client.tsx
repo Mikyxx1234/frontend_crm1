@@ -824,7 +824,10 @@ function InboxStageDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+        // DD2: opaco real (sem backdrop-blur) — o token `--glass-bg-modal`
+        // tem 0.97 alpha e o blur dava sensacao de transparencia sobre
+        // o card. Cor fixa de superficie de menu cobre light/dark.
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
           {[...stages]
             .sort((a, b) => a.position - b.position)
             .map((s) => {

@@ -1234,9 +1234,12 @@ function StageDropdown({
         // `--glass-bg-strong` (~32% opaco). O strong fica legível só sobre
         // fundos uniformes; este dropdown abre sobre o kanban com cards
         // coloridos, ficava muito transparente e dificultava a leitura.
-        // Padrão casado com o `InboxStageDropdown` (que já usa modal).
+        // Padrão casado com o `InboxStageDropdown`: opaco real (`bg-white`)
+        // em vez de `--glass-bg-modal` + blur. O token tem 0.97 alpha e o
+        // backdrop-blur dava sensacao de translucidez por cima de cards e
+        // texto do header (DD2 - jun/26).
         <div
-          className="absolute left-0 top-full z-50 mt-1.5 min-w-[200px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] backdrop-blur-md"
+          className="absolute left-0 top-full z-50 mt-1.5 min-w-[200px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
         >
           {[...stages]
             .sort((a, b) => a.position - b.position)

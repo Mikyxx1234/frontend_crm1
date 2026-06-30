@@ -72,12 +72,20 @@ function isAutomationForStage(
   triggerType: string,
   pipelineId: string,
   stageId: string,
+  active: boolean,
 ): boolean {
+  // Automações desativadas (active=false) somem do editor — usado para a
+  // semântica de "Excluir" (unbind), que desativa em vez de DELETE pra
+  // permitir religar via /automations sem perder steps. Continuam visíveis
+  // na página de listagem de automações.
+  if (!active) return false;
   if (!cfg) return false;
   const cfgPipeline = typeof cfg.pipelineId === "string" ? cfg.pipelineId : undefined;
   if (cfgPipeline && cfgPipeline !== pipelineId) return false;
   if (cfg.stageId === stageId) return true;
   if (triggerType === "stage_changed" && cfg.toStageId === stageId) return true;
+  // Trigger "Quando sair desta etapa" — fromStageId aponta pro estágio fonte.
+  if (triggerType === "stage_changed" && cfg.fromStageId === stageId) return true;
   return false;
 }
 
@@ -119,6 +127,45 @@ interface Automation {
   name: string;
   /** Descrição / ação secundária */
   description?: string;
+  /**
+   * ID real da automação backend que originou este card. Preenchido SEMPRE
+   * (mesmo quando `id` é sintético tipo `local-auto-...`) para que o save
+   * consiga clonar/atualizar a automação correta. Para cards hidratados
+   * direto do backend, vale o próprio `id`.
+   */
+  baseAutomationId?: string;
+}
+
+/**
+ * Converte um label visível (PT-BR, dos `STAGE_TRIGGER_LABELS` e
+ * `BACKEND_TRIGGER_LABELS`) no par `{ triggerType, triggerConfig }` que o
+ * backend grava em `Automation`. Usado pelo `handleSaveAll` quando persiste
+ * mudanças locais (criar/mover/trocar trigger).
+ */
+function triggerFromLabel(
+  label: string,
+  pipelineId: string,
+  stageId: string,
+): { triggerType: string; triggerConfig: Record<string, unknown> } | null {
+  switch (label) {
+    case "Quando criado nesta etapa":
+    case "Quando negócio for criado":
+      return { triggerType: "deal_created", triggerConfig: { pipelineId, stageId } };
+    case "Quando entra nesta etapa":
+      return { triggerType: "stage_changed", triggerConfig: { pipelineId, toStageId: stageId } };
+    case "Quando sair desta etapa":
+      return { triggerType: "stage_changed", triggerConfig: { pipelineId, fromStageId: stageId } };
+    case "Quando negócio for ganho":
+      return { triggerType: "deal_won", triggerConfig: { pipelineId } };
+    case "Quando negócio for perdido":
+      return { triggerType: "deal_lost", triggerConfig: { pipelineId } };
+    case "Quando mensagem for recebida":
+      return { triggerType: "message_received", triggerConfig: { pipelineId, stageId } };
+    case "Execução manual":
+      return { triggerType: "manual", triggerConfig: { pipelineId } };
+    default:
+      return null;
+  }
 }
 
 interface StageConfig {
@@ -1187,6 +1234,18 @@ export default function PipelineSettingsClientPage() {
     colors: Record<string, string>;
   }>({ order: [], names: {}, colors: {} });
 
+  // Snapshot das automações vinculadas a cada estágio — usado pelo diff em
+  // `handleSaveAll` para decidir quais automações criar (clone), mover
+  // (PUT triggerConfig), trocar trigger ou desativar (unbind). Capturado no
+  // mesmo useEffect que hidrata `stageAutomationsMap` para garantir
+  // consistência entre baseline e estado inicial visível.
+  const automationsBaselineRef = useRef<
+    Map<
+      string,
+      { stageId: string; trigger: string; triggerType: string; triggerConfig: Record<string, unknown> | null }
+    >
+  >(new Map());
+
   const [saving, setSaving] = useState(false);
 
   const queryClient = useQueryClient();
@@ -1212,27 +1271,49 @@ export default function PipelineSettingsClientPage() {
   // `triggerConfig.{pipelineId,stageId,toStageId,fromStageId}` (ver
   // `services/automation-executor.ts` no backend e a investigação em
   // 39521bd5-3e91-4916-8a54-7b76693baa7e).
+  //
+  // Além de popular `stageAutomationsMap` para render, captura o baseline em
+  // `automationsBaselineRef` — é nele que `handleSaveAll` se ancora para
+  // calcular o diff (criar/mover/unbind) ao salvar.
   useEffect(() => {
     if (!pipelineId || !automationsData?.items || board.length === 0) {
       return;
     }
     const map: Record<string, Automation[]> = {};
+    const baselineNext = new Map<
+      string,
+      { stageId: string; trigger: string; triggerType: string; triggerConfig: Record<string, unknown> | null }
+    >();
     for (const stage of board) {
       const matches: Automation[] = [];
       for (const dto of automationsData.items) {
         const cfg = (dto.triggerConfig ?? null) as Record<string, unknown> | null;
-        if (!isAutomationForStage(cfg, dto.triggerType, pipelineId, stage.id)) {
+        if (!isAutomationForStage(cfg, dto.triggerType, pipelineId, stage.id, dto.active)) {
           continue;
         }
+        const label = labelForBackendTrigger(dto.triggerType, cfg, stage.id);
         matches.push({
           id: dto.id,
+          baseAutomationId: dto.id,
           name: dto.name,
           description: dto.description ?? undefined,
-          stageTrigger: labelForBackendTrigger(dto.triggerType, cfg, stage.id),
+          stageTrigger: label,
         });
+        // Cada automação real só pode estar em 1 estágio (1 triggerConfig).
+        // Se já entrou aqui, ignora repetição em outros estágios — defensivo
+        // contra triggerConfigs anômalos com múltiplos casamentos.
+        if (!baselineNext.has(dto.id)) {
+          baselineNext.set(dto.id, {
+            stageId: stage.id,
+            trigger: label,
+            triggerType: dto.triggerType,
+            triggerConfig: cfg,
+          });
+        }
       }
       map[stage.id] = matches;
     }
+    automationsBaselineRef.current = baselineNext;
     setStageAutomationsMap(map);
   }, [pipelineId, automationsData?.items, board]);
 
@@ -1259,8 +1340,28 @@ export default function PipelineSettingsClientPage() {
       if (id.startsWith("local-stage-")) continue;
       if (base.colors[id] !== undefined && base.colors[id] !== color) return true;
     }
+    // ─── Automações ─────────────────────────────────────────────────
+    // (a) Qualquer card sintético (Adicionar/Copiar) é mudança.
+    // (b) ID real do baseline ausente do mapa = unbind/excluir.
+    // (c) ID real em estágio diferente do baseline = move.
+    // (d) ID real com label de trigger diferente do baseline = edit do gatilho.
+    const automationsBaseline = automationsBaselineRef.current;
+    const seenRealIds = new Set<string>();
+    for (const [stageId, list] of Object.entries(stageAutomationsMap)) {
+      for (const auto of list) {
+        if (auto.id.startsWith("local-auto-")) return true;
+        seenRealIds.add(auto.id);
+        const prev = automationsBaseline.get(auto.id);
+        if (!prev) return true; // ID real que não existia no baseline (defensivo)
+        if (prev.stageId !== stageId) return true;
+        if (prev.trigger !== auto.stageTrigger) return true;
+      }
+    }
+    for (const id of automationsBaseline.keys()) {
+      if (!seenRealIds.has(id)) return true;
+    }
     return false;
-  }, [stageOrder, stageNameOverrides, stageColorOverrides]);
+  }, [stageOrder, stageNameOverrides, stageColorOverrides, stageAutomationsMap]);
 
   const handleSaveAll = useCallback(async () => {
     if (!pipelineId || saving) return;
@@ -1332,15 +1433,133 @@ export default function PipelineSettingsClientPage() {
         }
       }
 
+      // 4) Persistir mudanças em automações por estágio.
+      //    Fonte da verdade: `stageAutomationsMap` (estado atual) vs
+      //    `automationsBaselineRef.current` (snapshot do último hidrate).
+      //    IDs locais (`local-auto-*`) precisam ser remapeados para os ids
+      //    reais dos estágios recém-criados — usa o `localToRealId`.
+      const automationsBaseline = automationsBaselineRef.current;
+      const realIdsSeen = new Set<string>();
+
+      type AutomationOp =
+        | { kind: "create"; stageRealId: string; baseId: string; label: string }
+        | { kind: "update"; id: string; stageRealId: string; label: string }
+        | { kind: "unbind"; id: string };
+
+      const ops: AutomationOp[] = [];
+
+      for (const [stageIdLocal, list] of Object.entries(stageAutomationsMap)) {
+        const stageRealId = localToRealId.get(stageIdLocal) ?? stageIdLocal;
+        for (const auto of list) {
+          if (auto.id.startsWith("local-auto-")) {
+            const baseId = auto.baseAutomationId;
+            if (!baseId) continue; // defensivo — não deveria acontecer
+            ops.push({ kind: "create", stageRealId, baseId, label: auto.stageTrigger });
+            continue;
+          }
+          realIdsSeen.add(auto.id);
+          const prev = automationsBaseline.get(auto.id);
+          if (!prev) continue; // ID real sem baseline — ignorado (defensivo)
+          if (prev.stageId !== stageRealId || prev.trigger !== auto.stageTrigger) {
+            ops.push({ kind: "update", id: auto.id, stageRealId, label: auto.stageTrigger });
+          }
+        }
+      }
+
+      // IDs reais do baseline ausentes do mapa atual → unbind (active=false).
+      for (const id of automationsBaseline.keys()) {
+        if (!realIdsSeen.has(id)) {
+          ops.push({ kind: "unbind", id });
+        }
+      }
+
+      for (const op of ops) {
+        if (op.kind === "create") {
+          // Busca o detalhe da automação base (inclui steps) — necessário
+          // para clonar fielmente o fluxo no novo registro.
+          const detailRes = await fetch(apiUrl(`/api/automations/${op.baseId}`), {
+            credentials: "include",
+          });
+          if (!detailRes.ok) {
+            const body = await detailRes.json().catch(() => ({}));
+            throw new Error(body?.message ?? "Falha ao carregar automação base para clonar.");
+          }
+          const detail = (await detailRes.json()) as {
+            name: string;
+            description: string | null;
+            steps?: { type: string; config: unknown }[];
+          };
+
+          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId);
+          if (!tr) {
+            throw new Error(`Gatilho desconhecido: "${op.label}".`);
+          }
+
+          // Steps são clonados SEM `id` — o backend gera novos cuids. Quem
+          // depende de referências internas entre steps (`nextStepId`,
+          // `gotoStepId` etc.) precisa reabrir o canvas para revalidar — fora
+          // do escopo deste fix; aqui só replicamos o snapshot tal qual.
+          const cloneBody = {
+            name: detail.name,
+            description: detail.description ?? undefined,
+            triggerType: tr.triggerType,
+            triggerConfig: tr.triggerConfig,
+            steps: (detail.steps ?? []).map((s) => ({ type: s.type, config: s.config })),
+          };
+
+          const createRes = await fetch(apiUrl(`/api/automations`), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(cloneBody),
+          });
+          if (!createRes.ok) {
+            const body = await createRes.json().catch(() => ({}));
+            throw new Error(body?.message ?? "Falha ao criar automação no estágio.");
+          }
+        } else if (op.kind === "update") {
+          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId);
+          if (!tr) {
+            throw new Error(`Gatilho desconhecido: "${op.label}".`);
+          }
+          const res = await fetch(apiUrl(`/api/automations/${op.id}`), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ triggerType: tr.triggerType, triggerConfig: tr.triggerConfig }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body?.message ?? "Falha ao atualizar automação.");
+          }
+        } else {
+          // unbind: desativa preservando triggerConfig/steps. Para religar:
+          // ativar de novo em /automations (volta a aparecer no editor).
+          const res = await fetch(apiUrl(`/api/automations/${op.id}`), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ active: false }),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body?.message ?? "Falha ao desativar automação.");
+          }
+        }
+      }
+
       toast.success("Alterações salvas.");
       // Revalida o board — useEffect re-inicializa overrides com baseline novo.
       await queryClient.invalidateQueries({ queryKey: boardKey(pipelineId, "OPEN") });
+      // Revalida automações — força re-hidratação de `stageAutomationsMap` e
+      // do `automationsBaselineRef` com o estado pós-save.
+      await queryClient.invalidateQueries({ queryKey: ["v2-automations"], exact: false });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar alterações.");
     } finally {
       setSaving(false);
     }
-  }, [pipelineId, saving, stageOrder, stageNameOverrides, stageColorOverrides, queryClient]);
+  }, [pipelineId, saving, stageOrder, stageNameOverrides, stageColorOverrides, stageAutomationsMap, queryClient]);
 
   // Monta os estágios na ordem local, mesclando overrides.
   // IDs com prefixo "local-stage-" são etapas criadas localmente (ainda não
@@ -1557,7 +1776,11 @@ export default function PipelineSettingsClientPage() {
       if (!autoDto) return;
 
       const newAuto: Automation = {
-        id: `${addAutomationStageId}-${automationId}-${Date.now()}`,
+        // Prefixo `local-auto-add-` sinaliza ao `handleSaveAll` que precisa
+        // CLONAR (POST /api/automations) a automação base ao salvar — preserva
+        // a original em /automations e cria uma nova vinculada ao estágio.
+        id: `local-auto-add-${automationId}-${Date.now()}`,
+        baseAutomationId: automationId,
         stageTrigger: STAGE_TRIGGER_LABELS[trigger] ?? trigger,
         name: autoDto.name,
         description: autoDto.description ?? undefined,
@@ -1593,6 +1816,10 @@ export default function PipelineSettingsClientPage() {
       const autoDto = automationsData?.items.find((a) => a.id === automationId);
       const updatedAuto: Automation = {
         ...automation,
+        // Se o usuário trocou a automação base no drawer, atualiza o
+        // `baseAutomationId` — `handleSaveAll` saberá apontar o triggerConfig
+        // para o backend correto (e clonar steps se necessário).
+        baseAutomationId: autoDto?.id ?? automation.baseAutomationId,
         stageTrigger: STAGE_TRIGGER_LABELS[trigger] ?? trigger,
         name: autoDto?.name ?? automation.name,
         description: autoDto?.description ?? automation.description,
@@ -1620,9 +1847,14 @@ export default function PipelineSettingsClientPage() {
 
   const handleCopyAutomation = useCallback(
     (automation: Automation, targetStageId: string, _sourceStageId: string) => {
+      // Preserva o `baseAutomationId` real (mesmo se estiver copiando uma cópia
+      // ainda não salva) — `handleSaveAll` precisa do ID real do backend pra
+      // duplicar a automação (POST /api/automations + steps clonados).
+      const baseId = automation.baseAutomationId ?? automation.id;
       const copy: Automation = {
         ...automation,
-        id: `${targetStageId}-${automation.id}-copy-${Date.now()}`,
+        id: `local-auto-copy-${baseId}-${Date.now()}`,
+        baseAutomationId: baseId,
       };
       setStageAutomationsMap((prev) => ({
         ...prev,

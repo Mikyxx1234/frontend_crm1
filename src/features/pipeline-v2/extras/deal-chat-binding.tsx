@@ -34,7 +34,9 @@ import {
   useInboxRealtime,
   useMessages,
   usePinNote,
+  useSelectedOutboundChannel,
   useSendMessage,
+  useWhatsappChannels,
 } from "@/features/inbox-v2/hooks";
 import {
   formatDayLabel,
@@ -133,6 +135,20 @@ export function useDealChatBinding(params: {
   const pinMutation = usePinNote(effectiveConversationId);
   const addToLogMutation = useAddNoteToLog(dealId ?? null);
 
+  // Seletor de canal — mesmo widget/hook do /inbox. Aparece só quando a
+  // org tem >1 WhatsApp CONNECTED. Default = canal "atual" da conversa.
+  const { data: whatsappChannels } = useWhatsappChannels(
+    !!effectiveConversationId,
+  );
+  const conversationChannelId = messagesResp?.channel?.id ?? null;
+  const { selectedChannelId, setSelectedChannelId } = useSelectedOutboundChannel(
+    {
+      conversationId: effectiveConversationId,
+      conversationChannelId,
+      availableChannels: whatsappChannels,
+    },
+  );
+
   // Deriva sessionExpired da mesma fonte do /inbox: prioriza `session.active`
   // do backend; se o objeto `session` não vier, cai no heurístico de 24h
   // baseado em `lastInboundAt`. O override por prop continua válido (ex.:
@@ -198,7 +214,13 @@ export function useDealChatBinding(params: {
     const t = draft.trim();
     if (!t || !effectiveConversationId) return;
     sendMutation.mutate(
-      { content: t },
+      {
+        content: t,
+        // Override só quando o canal escolhido difere do atual da conversa.
+        ...(selectedChannelId && selectedChannelId !== conversationChannelId
+          ? { channelId: selectedChannelId }
+          : {}),
+      },
       {
         onSuccess: () => setDraft(""),
         onError: (e: Error) => toast.error(e.message || "Falha ao enviar"),
@@ -321,6 +343,10 @@ export function useDealChatBinding(params: {
       onExternalTemplateConsumed={() => setExternalTemplate(null)}
       signatureAllowed={convFeatures.agentSignatureEnabled}
       signatureEditable={convFeatures.agentSignatureEditable}
+      availableChannels={whatsappChannels}
+      selectedChannelId={selectedChannelId}
+      conversationChannelId={conversationChannelId}
+      onSelectChannel={setSelectedChannelId}
     />
   ) : null;
 

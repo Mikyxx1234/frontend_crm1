@@ -32,7 +32,12 @@ export function useSendMessage(conversationId: string | null) {
   return useMutation<
     { message: InboxMessageDto; metaError?: string },
     Error,
-    { content: string; asNote?: boolean; replyToId?: string | null }
+    {
+      content: string;
+      asNote?: boolean;
+      replyToId?: string | null;
+      channelId?: string | null;
+    }
   >({
     mutationFn: (vars) =>
       sendMessage(conversationId as string, vars),
@@ -76,12 +81,18 @@ export function useSendAttachment(conversationId: string | null) {
   return useMutation<
     { message: InboxMessageDto },
     Error,
-    { file: File | Blob; caption?: string; fileName?: string }
+    {
+      file: File | Blob;
+      caption?: string;
+      fileName?: string;
+      channelId?: string | null;
+    }
   >({
     mutationFn: (vars) =>
       sendAttachment(conversationId as string, vars.file, {
         caption: vars.caption,
         fileName: vars.fileName,
+        channelId: vars.channelId,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });

@@ -118,6 +118,7 @@ export function CreateChannelDialog({
   const [webhookInfo, setWebhookInfo] = useState<{
     callbackUrl: string;
     verifyToken: string;
+    webhookId: string;
     warning?: string | null;
   } | null>(null);
   const [webhookLoading, setWebhookLoading] = useState(false);
@@ -158,15 +159,22 @@ export function CreateChannelDialog({
       const data = (await res.json()) as {
         callbackUrl?: string;
         verifyToken?: string;
+        webhookId?: string;
         warning?: string | null;
         message?: string;
       };
-      if (!res.ok || !data.callbackUrl || !data.verifyToken) {
+      if (
+        !res.ok ||
+        !data.callbackUrl ||
+        !data.verifyToken ||
+        !data.webhookId
+      ) {
         throw new Error(data.message ?? "Falha ao gerar dados de webhook.");
       }
       setWebhookInfo({
         callbackUrl: data.callbackUrl,
         verifyToken: data.verifyToken,
+        webhookId: data.webhookId,
         warning: data.warning ?? null,
       });
       setWebhookModalOpen(true);
@@ -255,9 +263,12 @@ export function CreateChannelDialog({
             accessToken: accessToken.trim(),
             phoneNumberId: phoneNumberId.trim(),
             wabaId: businessAccountId.trim(),
-            // Se o usuario abriu o painel Webhook, salva o token gerado
-            // para o handshake da Meta funcionar com o app proprio dele.
+            // Se o usuario abriu o painel Webhook, persiste tanto o
+            // verifyToken quanto o webhookId (id aleatorio no path da
+            // callback URL) pra que /api/webhooks/meta/<webhookId> resolva
+            // o canal + org no handshake e nas mensagens de entrada.
             verifyToken: webhookInfo?.verifyToken,
+            webhookId: webhookInfo?.webhookId,
           }),
         });
         const data = (await res.json()) as { message?: string };

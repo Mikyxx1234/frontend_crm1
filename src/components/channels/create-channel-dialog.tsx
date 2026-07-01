@@ -116,6 +116,7 @@ export function CreateChannelDialog({
   // "Webhook" gera Callback URL + Verify Token e persiste o token no
   // canal ao clicar "Criar canal" (Channel.config.verifyToken).
   const [webhookInfo, setWebhookInfo] = useState<{
+    channelId: string;
     callbackUrl: string;
     verifyToken: string;
     webhookId: string;
@@ -155,8 +156,15 @@ export function CreateChannelDialog({
     setWebhookLoading(true);
     setError(null);
     try {
-      const res = await fetch(apiUrl("/api/channels/meta/webhook-info"));
+      // POST pre-cria o canal em status CONNECTING pra que o handshake
+      // Meta encontre o webhookId no banco no "Verify and save".
+      const res = await fetch(apiUrl("/api/channels/meta/webhook-info"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || undefined }),
+      });
       const data = (await res.json()) as {
+        channelId?: string;
         callbackUrl?: string;
         verifyToken?: string;
         webhookId?: string;
@@ -165,6 +173,7 @@ export function CreateChannelDialog({
       };
       if (
         !res.ok ||
+        !data.channelId ||
         !data.callbackUrl ||
         !data.verifyToken ||
         !data.webhookId
@@ -172,6 +181,7 @@ export function CreateChannelDialog({
         throw new Error(data.message ?? "Falha ao gerar dados de webhook.");
       }
       setWebhookInfo({
+        channelId: data.channelId,
         callbackUrl: data.callbackUrl,
         verifyToken: data.verifyToken,
         webhookId: data.webhookId,
@@ -263,10 +273,11 @@ export function CreateChannelDialog({
             accessToken: accessToken.trim(),
             phoneNumberId: phoneNumberId.trim(),
             wabaId: businessAccountId.trim(),
-            // Se o usuario abriu o painel Webhook, persiste tanto o
-            // verifyToken quanto o webhookId (id aleatorio no path da
-            // callback URL) pra que /api/webhooks/meta/<webhookId> resolva
-            // o canal + org no handshake e nas mensagens de entrada.
+            // Se o usuario abriu o painel Webhook, o canal ja foi
+            // pre-criado (status CONNECTING) com webhookId+verifyToken.
+            // Passar channelId aqui faz manual-cloud fazer UPDATE em vez
+            // de criar duplicado.
+            channelId: webhookInfo?.channelId,
             verifyToken: webhookInfo?.verifyToken,
             webhookId: webhookInfo?.webhookId,
           }),

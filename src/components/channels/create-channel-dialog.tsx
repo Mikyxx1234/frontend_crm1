@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  Copy,
   Globe,
   Loader2,
   Mail,
@@ -14,6 +15,7 @@ import {
   QrCode,
   Share2,
   Sparkles,
+  Webhook,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -109,6 +111,15 @@ export function CreateChannelDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showManualConfig, setShowManualConfig] = useState(false);
+  // Webhook opcional para clientes que preferem usar o proprio App Meta:
+  // "Webhook" gera Callback URL + Verify Token e persiste o token no
+  // canal ao clicar "Criar canal" (Channel.config.verifyToken).
+  const [webhookInfo, setWebhookInfo] = useState<{
+    callbackUrl: string;
+    verifyToken: string;
+  } | null>(null);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const embeddedSignup = useEmbeddedSignup();
 
@@ -124,7 +135,42 @@ export function CreateChannelDialog({
     setError(null);
     setSubmitting(false);
     setShowManualConfig(false);
+    setWebhookInfo(null);
+    setWebhookLoading(false);
+    setCopiedField(null);
     embeddedSignup.reset();
+  }
+
+  async function fetchWebhookInfo() {
+    setWebhookLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(apiUrl("/api/channels/meta/webhook-info"));
+      const data = (await res.json()) as {
+        callbackUrl?: string;
+        verifyToken?: string;
+        message?: string;
+      };
+      if (!res.ok || !data.callbackUrl || !data.verifyToken) {
+        throw new Error(data.message ?? "Falha ao gerar dados de webhook.");
+      }
+      setWebhookInfo({
+        callbackUrl: data.callbackUrl,
+        verifyToken: data.verifyToken,
+      });
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Falha ao gerar webhook.");
+    } finally {
+      setWebhookLoading(false);
+    }
+  }
+
+  function copyToClipboard(value: string, field: string) {
+    if (!value) return;
+    void navigator.clipboard.writeText(value).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    });
   }
 
   function handleOpenChange(next: boolean) {
@@ -197,6 +243,9 @@ export function CreateChannelDialog({
             accessToken: accessToken.trim(),
             phoneNumberId: phoneNumberId.trim(),
             wabaId: businessAccountId.trim(),
+            // Se o usuario abriu o painel Webhook, salva o token gerado
+            // para o handshake da Meta funcionar com o app proprio dele.
+            verifyToken: webhookInfo?.verifyToken,
           }),
         });
         const data = (await res.json()) as { message?: string };
@@ -513,6 +562,77 @@ export function CreateChannelDialog({
               </div>
             ) : null}
 
+            {webhookInfo && step === 3 && effectiveProvider === "META_CLOUD_API" ? (
+              <div className="space-y-3 rounded-xl border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-3 text-sm">
+                <div className="flex items-start gap-2">
+                  <Webhook className="mt-0.5 size-4 shrink-0 text-[var(--brand-primary)]" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-[var(--text-primary)]">
+                      Webhook para o painel Meta
+                    </p>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                      Cole estes valores em <span className="font-mono">developers.facebook.com</span> → seu app → WhatsApp → Configuração. Salve o canal aqui antes de clicar em &quot;Verify and save&quot; no painel Meta.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                    Callback URL
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={webhookInfo.callbackUrl}
+                      className="font-mono text-xs"
+                      onFocus={(e) => e.currentTarget.select()}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="px-3"
+                      onClick={() => copyToClipboard(webhookInfo.callbackUrl, "url")}
+                    >
+                      {copiedField === "url" ? (
+                        <Check className="size-3.5 text-[var(--color-success)]" />
+                      ) : (
+                        <Copy className="size-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                    Verify Token (Token de acesso)
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={webhookInfo.verifyToken}
+                      className="font-mono text-xs"
+                      onFocus={(e) => e.currentTarget.select()}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="px-3"
+                      onClick={() => copyToClipboard(webhookInfo.verifyToken, "token")}
+                    >
+                      {copiedField === "token" ? (
+                        <Check className="size-3.5 text-[var(--color-success)]" />
+                      ) : (
+                        <Copy className="size-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)]">
+                    Este token será salvo no canal ao clicar em &quot;Criar canal&quot;.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             {error ? (
               <p className="text-sm text-[var(--color-danger-text)]" role="alert">
                 {error}
@@ -542,7 +662,23 @@ export function CreateChannelDialog({
           ) : (
             <span />
           )}
-          <div className="flex flex-1 justify-end gap-2">
+          <div className="flex flex-1 flex-wrap justify-end gap-2">
+            {step === 3 && effectiveProvider === "META_CLOUD_API" ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-1.5"
+                disabled={webhookLoading}
+                onClick={() => void fetchWebhookInfo()}
+              >
+                {webhookLoading ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Webhook className="size-3.5" />
+                )}
+                Webhook
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="ghost"

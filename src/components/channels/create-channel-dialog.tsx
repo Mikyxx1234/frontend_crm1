@@ -125,6 +125,10 @@ export function CreateChannelDialog({
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [webhookModalOpen, setWebhookModalOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  // App Secret do App Meta proprio do cliente (necessario pra validar
+  // assinatura x-hub-signature-256 dos POSTs recebidos). Coletado no modal
+  // Webhook porque o fluxo manual usa o App Meta proprio do cliente.
+  const [appSecret, setAppSecret] = useState("");
 
   const embeddedSignup = useEmbeddedSignup();
 
@@ -144,6 +148,7 @@ export function CreateChannelDialog({
     setWebhookLoading(false);
     setWebhookModalOpen(false);
     setCopiedField(null);
+    setAppSecret("");
     embeddedSignup.reset();
   }
 
@@ -262,6 +267,14 @@ export function CreateChannelDialog({
         );
         return;
       }
+      // Se o usuario abriu o modal Webhook (App Meta proprio), o App Secret
+      // e obrigatorio pra validar assinatura dos POSTs recebidos.
+      if (webhookInfo && !appSecret.trim()) {
+        setError(
+          "Cole o App Secret do seu App Meta no botão Webhook antes de criar o canal.",
+        );
+        return;
+      }
       setSubmitting(true);
       setError(null);
       try {
@@ -280,6 +293,7 @@ export function CreateChannelDialog({
             channelId: webhookInfo?.channelId,
             verifyToken: webhookInfo?.verifyToken,
             webhookId: webhookInfo?.webhookId,
+            appSecret: appSecret.trim() || undefined,
           }),
         });
         const data = (await res.json()) as { message?: string };
@@ -760,6 +774,25 @@ export function CreateChannelDialog({
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)]">
                   Este token será salvo no canal ao clicar em &quot;Criar canal&quot;.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  App Secret
+                </Label>
+                <Input
+                  type="password"
+                  value={appSecret}
+                  onChange={(e) => setAppSecret(e.target.value)}
+                  placeholder="App Secret do seu App Meta (obrigatório)"
+                  className="font-mono text-xs"
+                  autoComplete="off"
+                />
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Meta Developers → Configurações → Básico → App Secret →
+                  &quot;Mostrar&quot;. Usado para validar a assinatura dos
+                  webhooks recebidos.
                 </p>
               </div>
 

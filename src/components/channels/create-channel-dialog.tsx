@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronLeft,
   Copy,
+  ExternalLink,
   Globe,
   Loader2,
   Mail,
@@ -119,6 +120,7 @@ export function CreateChannelDialog({
     verifyToken: string;
   } | null>(null);
   const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookModalOpen, setWebhookModalOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const embeddedSignup = useEmbeddedSignup();
@@ -137,11 +139,17 @@ export function CreateChannelDialog({
     setShowManualConfig(false);
     setWebhookInfo(null);
     setWebhookLoading(false);
+    setWebhookModalOpen(false);
     setCopiedField(null);
     embeddedSignup.reset();
   }
 
   async function fetchWebhookInfo() {
+    // Se ja temos, so reabre o modal.
+    if (webhookInfo) {
+      setWebhookModalOpen(true);
+      return;
+    }
     setWebhookLoading(true);
     setError(null);
     try {
@@ -158,6 +166,7 @@ export function CreateChannelDialog({
         callbackUrl: data.callbackUrl,
         verifyToken: data.verifyToken,
       });
+      setWebhookModalOpen(true);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Falha ao gerar webhook.");
     } finally {
@@ -562,77 +571,6 @@ export function CreateChannelDialog({
               </div>
             ) : null}
 
-            {webhookInfo && step === 3 && effectiveProvider === "META_CLOUD_API" ? (
-              <div className="space-y-3 rounded-xl border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-3 text-sm">
-                <div className="flex items-start gap-2">
-                  <Webhook className="mt-0.5 size-4 shrink-0 text-[var(--brand-primary)]" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-[var(--text-primary)]">
-                      Webhook para o painel Meta
-                    </p>
-                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                      Cole estes valores em <span className="font-mono">developers.facebook.com</span> → seu app → WhatsApp → Configuração. Salve o canal aqui antes de clicar em &quot;Verify and save&quot; no painel Meta.
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    Callback URL
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      readOnly
-                      value={webhookInfo.callbackUrl}
-                      className="font-mono text-xs"
-                      onFocus={(e) => e.currentTarget.select()}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="px-3"
-                      onClick={() => copyToClipboard(webhookInfo.callbackUrl, "url")}
-                    >
-                      {copiedField === "url" ? (
-                        <Check className="size-3.5 text-[var(--color-success)]" />
-                      ) : (
-                        <Copy className="size-3.5" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    Verify Token (Token de acesso)
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      readOnly
-                      value={webhookInfo.verifyToken}
-                      className="font-mono text-xs"
-                      onFocus={(e) => e.currentTarget.select()}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="px-3"
-                      onClick={() => copyToClipboard(webhookInfo.verifyToken, "token")}
-                    >
-                      {copiedField === "token" ? (
-                        <Check className="size-3.5 text-[var(--color-success)]" />
-                      ) : (
-                        <Copy className="size-3.5" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-[var(--text-muted)]">
-                    Este token será salvo no canal ao clicar em &quot;Criar canal&quot;.
-                  </p>
-                </div>
-              </div>
-            ) : null}
-
             {error ? (
               <p className="text-sm text-[var(--color-danger-text)]" role="alert">
                 {error}
@@ -719,6 +657,116 @@ export function CreateChannelDialog({
         </DialogFooter>
         <DialogClose />
       </DialogContent>
+
+      <Dialog open={webhookModalOpen} onOpenChange={setWebhookModalOpen}>
+        <DialogContent size="md" panelClassName="max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="text-left">
+            <DialogTitle className="flex items-center gap-2">
+              <Webhook className="size-5 text-[var(--brand-primary)]" />
+              Webhook
+            </DialogTitle>
+            <DialogDescription>
+              Visualizar webhook da conexão
+            </DialogDescription>
+          </DialogHeader>
+
+          {webhookInfo ? (
+            <div className="mt-2 space-y-5">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  Webhook URL
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={webhookInfo.callbackUrl}
+                    className="font-mono text-xs"
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="px-3"
+                    onClick={() => copyToClipboard(webhookInfo.callbackUrl, "url")}
+                    aria-label="Copiar Webhook URL"
+                  >
+                    {copiedField === "url" ? (
+                      <Check className="size-3.5 text-[var(--color-success)]" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  Token de verificação
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={webhookInfo.verifyToken}
+                    className="font-mono text-xs"
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="px-3"
+                    onClick={() => copyToClipboard(webhookInfo.verifyToken, "token")}
+                    aria-label="Copiar Token de verificação"
+                  >
+                    {copiedField === "token" ? (
+                      <Check className="size-3.5 text-[var(--color-success)]" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Este token será salvo no canal ao clicar em &quot;Criar canal&quot;.
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <a
+                  href="https://developers.facebook.com/apps/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-primary)] hover:underline"
+                >
+                  <ExternalLink className="size-3.5" />
+                  Meta Developers
+                </a>
+              </div>
+
+              <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  Com as informações acima, configure:
+                </p>
+                <ol className="mt-2 ml-5 list-decimal space-y-1 text-xs text-[var(--text-muted)]">
+                  <li>Acessar Meta Developers</li>
+                  <li>No menu à esquerda, clique em &quot;WhatsApp &gt; Configuração&quot;</li>
+                  <li>Clique em &quot;Editar&quot;, na área de Webhook</li>
+                  <li>Informe o valor de &quot;Webhook URL&quot; no campo &quot;URL de retorno de chamada&quot;</li>
+                  <li>Informe o valor de &quot;Token de verificação&quot; no campo &quot;Verificar token&quot;</li>
+                  <li>Clique em &quot;Verificar e salvar&quot; para finalizar a configuração</li>
+                </ol>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="mt-4 flex-row justify-end gap-2 border-t bg-[var(--glass-bg-overlay)] px-6 py-3">
+            <Button type="button" onClick={() => setWebhookModalOpen(false)}>
+              Voltar
+            </Button>
+          </DialogFooter>
+          <DialogClose />
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

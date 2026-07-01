@@ -35,7 +35,7 @@ import {
 } from "@/features/automations-v2/hooks"
 import { dtoToAutomation } from "@/features/automations-v2/automation-adapter"
 import { MOCK_AUTOMATIONS_PAGE } from "@/features/automations-v2/mock-automations"
-import { shouldAutoDemoEmpty } from "@/lib/page-mock-mode"
+import { isPageMockMode } from "@/lib/page-mock-mode"
 import { AUTOMATION_TRIGGER_TYPES } from "@/lib/automation-workflow"
 import { useConfirm } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
@@ -59,12 +59,11 @@ export default function V2AutomationsClientPage() {
 
   const realDtos = automationsQuery.data?.items ?? []
   const hasFilters = query.trim().length > 0 || filter !== 0
-  const isDemo = shouldAutoDemoEmpty({
-    realCount: realDtos.length,
-    hasFilters,
-    isLoading: automationsQuery.isLoading,
-    isError: automationsQuery.isError,
-  })
+  // Automacoes: nao mostra mocks pra org nova (realCount=0). Isso confundia
+  // usuarios reais em prod, que viam automacoes "fantasma" sem conseguir
+  // desligar/apagar. Modo demo agora exige ativacao explicita (URL
+  // ?mock=1, env NEXT_PUBLIC_MOCK_PAGES=1 ou preview v0).
+  const isDemo = isPageMockMode() && !hasFilters
 
   const items = useMemo(
     () => (isDemo ? MOCK_AUTOMATIONS_PAGE.items : realDtos).map(dtoToAutomation),

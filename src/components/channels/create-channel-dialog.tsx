@@ -118,6 +118,7 @@ export function CreateChannelDialog({
   const [webhookInfo, setWebhookInfo] = useState<{
     callbackUrl: string;
     verifyToken: string;
+    warning?: string | null;
   } | null>(null);
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [webhookModalOpen, setWebhookModalOpen] = useState(false);
@@ -157,6 +158,7 @@ export function CreateChannelDialog({
       const data = (await res.json()) as {
         callbackUrl?: string;
         verifyToken?: string;
+        warning?: string | null;
         message?: string;
       };
       if (!res.ok || !data.callbackUrl || !data.verifyToken) {
@@ -165,6 +167,7 @@ export function CreateChannelDialog({
       setWebhookInfo({
         callbackUrl: data.callbackUrl,
         verifyToken: data.verifyToken,
+        warning: data.warning ?? null,
       });
       setWebhookModalOpen(true);
     } catch (e: unknown) {
@@ -672,6 +675,13 @@ export function CreateChannelDialog({
 
           {webhookInfo ? (
             <div className="mt-2 space-y-5">
+              {webhookInfo.warning ? (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                  <strong>Atenção:</strong> {webhookInfo.warning} Confira se a
+                  URL abaixo aponta pro domínio público do backend antes de
+                  colar no painel Meta.
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                   Webhook URL

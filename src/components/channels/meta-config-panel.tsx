@@ -76,6 +76,12 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   const initialVerifyToken =
     typeof cfg.verifyToken === "string" ? cfg.verifyToken : "";
   const wasEmbeddedSignup = cfg.embeddedSignup === true;
+  // Canal do "App Meta global do CRM" (conexao manual token-based ou embedded
+  // signup): a Meta entrega o webhook usando o App Secret / Verify Token
+  // globais do CRM — o cliente NAO precisa mexer no painel Meta. Detectamos
+  // pela ausencia de appSecret proprio no config (embedded signup nunca grava;
+  // canais criados via /api/channels/manual-cloud tambem nao).
+  const isGlobalApp = !initialAppSecret;
 
   const [channelName, setChannelName] = useState(channel.name);
   const [defaultPipelineId, setDefaultPipelineId] = useState<string | null>(
@@ -94,6 +100,13 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   const [esError, setEsError] = useState<string | null>(null);
   const [esSuccess, setEsSuccess] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  // "Avancado (app proprio)": revela o bloco legacy de Verify Token / Callback
+  // URL / App Secret para canais que nasceram no modelo antigo (App Meta do
+  // cliente). Default: revelado apenas para canais legacy.
+  const [showAdvanced, setShowAdvanced] = useState(!isGlobalApp);
+  const [manualReconnecting, setManualReconnecting] = useState(false);
+  const [manualReconnectError, setManualReconnectError] = useState<string | null>(null);
+  const [manualReconnectSuccess, setManualReconnectSuccess] = useState(false);
 
   const embeddedSignup = useEmbeddedSignup();
 
@@ -211,7 +224,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               {initialWaba || "—"}
             </span>
           </li>
-          {!wasEmbeddedSignup && (
+          {!isGlobalApp && (
             <li className="flex justify-between gap-2">
               <span>App Secret</span>
               <span className="font-mono text-xs text-[var(--text-primary)]">
@@ -219,25 +232,118 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               </span>
             </li>
           )}
-          {wasEmbeddedSignup && (
+          {isGlobalApp && (
             <li className="flex justify-between gap-2">
               <span>Origem</span>
               <span className="text-xs text-[var(--text-primary)]">
-                Embedded Signup (App Secret via Integrações)
+                {wasEmbeddedSignup
+                  ? "Embedded Signup (App global do CRM)"
+                  : "Conexão manual (App global do CRM)"}
               </span>
             </li>
           )}
         </ul>
       </div>
 
+      {isGlobalApp ? (
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-success)]/30 bg-[var(--color-success)]/[0.06] p-4 text-sm">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="size-5 shrink-0 text-[var(--color-success)]" />
+            <div className="flex-1 space-y-2">
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">Webhook automático ativo</p>
+                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                  Esta conexão usa o App Meta do CRM. O webhook foi assinado automaticamente no seu WABA — nenhuma configuração no painel Meta é necessária.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={manualReconnecting}
+                  onClick={() => {
+                    setManualReconnectError(null);
+                    setManualReconnectSuccess(false);
+                    setManualReconnecting(true);
+                    const tokenToUse = accessToken.trim() || initialToken;
+                    if (!tokenToUse) {
+                      setManualReconnectError(
+                        "Informe o Token de acesso abaixo para reconectar.",
+                      );
+                      setManualReconnecting(false);
+                      return;
+                    }
+                    fetch(apiUrl("/api/channels/manual-cloud"), {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        channelId: channel.id,
+                        name: channelName.trim() || channel.name,
+                        accessToken: tokenToUse,
+                        phoneNumberId: phoneNumberId.trim(),
+                        wabaId: businessAccountId.trim(),
+                      }),
+                    })
+                      .then(async (res) => {
+                        const data = (await res.json()) as { message?: string };
+                        if (!res.ok) {
+                          throw new Error(data.message ?? "Erro ao reconectar.");
+                        }
+                        setManualReconnectSuccess(true);
+                        setAccessToken("");
+                        void queryClient.invalidateQueries({ queryKey: ["channels"] });
+                        void queryClient.invalidateQueries({
+                          queryKey: ["channel", channel.id],
+                        });
+                        onSaved?.();
+                      })
+                      .catch((err: unknown) => {
+                        setManualReconnectError(
+                          err instanceof Error ? err.message : "Erro ao reconectar.",
+                        );
+                      })
+                      .finally(() => setManualReconnecting(false));
+                  }}
+                >
+                  {manualReconnecting ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-3.5" />
+                  )}
+                  Reconectar / atualizar webhook
+                </Button>
+                <button
+                  type="button"
+                  className="text-xs text-[var(--text-muted)] underline-offset-2 hover:underline"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                >
+                  {showAdvanced ? "Ocultar configuração avançada" : "Configuração avançada (app próprio)"}
+                </button>
+              </div>
+              {manualReconnectError ? (
+                <p className="text-xs text-[var(--color-danger-text)]">{manualReconnectError}</p>
+              ) : null}
+              {manualReconnectSuccess ? (
+                <p className="text-xs text-[var(--color-success)]">
+                  Webhook reassinado e credenciais atualizadas.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showAdvanced ? (
       <div className="rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-4 text-sm">
         <div className="flex items-start gap-3">
           <Webhook className="size-5 shrink-0 text-[var(--brand-primary)]" />
           <div className="flex-1 space-y-3">
             <div>
-              <p className="font-semibold text-[var(--text-primary)]">Webhook desta organizacao</p>
+              <p className="font-semibold text-[var(--text-primary)]">Webhook desta organizacao (app próprio)</p>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                Configure ESTA URL e ESTE token no painel Meta (developers.facebook.com → seu app → WhatsApp → Configuracao).
+                Use este bloco somente se você mantém um App Meta próprio. Configure a URL e o token abaixo no painel Meta (developers.facebook.com → seu app → WhatsApp → Configuracao).
               </p>
             </div>
 
@@ -361,6 +467,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
           </div>
         </div>
       </div>
+      ) : null}
 
       {embeddedSignup.isConfigured ? (
         <>
@@ -531,11 +638,14 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
             onChange={(e) => setBusinessAccountId(e.target.value)}
           />
         </div>
-        {wasEmbeddedSignup ? (
+        {isGlobalApp ? (
           <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2">
             <p className="text-xs text-[var(--text-muted)]">
-              Este canal foi conectado via Embedded Signup. O App Secret é gerenciado
-              em <span className="font-medium text-[var(--text-primary)]">Configurações → Integrações</span>.
+              {wasEmbeddedSignup
+                ? "Este canal foi conectado via Embedded Signup."
+                : "Este canal usa o App Meta global do CRM."}{" "}
+              A assinatura do webhook é validada com o App Secret global — não é
+              necessário informar o App Secret aqui.
             </p>
           </div>
         ) : (

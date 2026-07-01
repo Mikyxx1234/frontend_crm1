@@ -106,7 +106,6 @@ export function CreateChannelDialog({
   const [accessToken, setAccessToken] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [businessAccountId, setBusinessAccountId] = useState("");
-  const [appSecret, setAppSecret] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showManualConfig, setShowManualConfig] = useState(false);
@@ -122,7 +121,6 @@ export function CreateChannelDialog({
     setAccessToken("");
     setPhoneNumberId("");
     setBusinessAccountId("");
-    setAppSecret("");
     setError(null);
     setSubmitting(false);
     setShowManualConfig(false);
@@ -177,30 +175,48 @@ export function CreateChannelDialog({
       return;
     }
     const prov = providerForType(channelType, provider);
-    let config: Record<string, string> = {};
 
+    // Meta Cloud API manual: usa a rota dedicada que provisiona o webhook
+    // automaticamente (subscribed_apps no App Meta global do CRM) e retorna
+    // o canal ja CONNECTED. Sem App Secret e sem passos manuais no painel Meta.
     if (prov === "META_CLOUD_API") {
-      if (!accessToken.trim() || !phoneNumberId.trim() || !businessAccountId.trim() || !appSecret.trim()) {
-        setError("Preencha Access Token, Phone Number ID, Business Account ID e App Secret.");
+      if (!accessToken.trim() || !phoneNumberId.trim() || !businessAccountId.trim()) {
+        setError(
+          "Preencha Token de acesso, ID do número de telefone e WABA ID.",
+        );
         return;
       }
-      config = {
-        accessToken: accessToken.trim(),
-        phoneNumberId: phoneNumberId.trim(),
-        businessAccountId: businessAccountId.trim(),
-        appSecret: appSecret.trim(),
-      };
+      setSubmitting(true);
+      setError(null);
+      try {
+        const res = await fetch(apiUrl("/api/channels/manual-cloud"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            accessToken: accessToken.trim(),
+            phoneNumberId: phoneNumberId.trim(),
+            wabaId: businessAccountId.trim(),
+          }),
+        });
+        const data = (await res.json()) as { message?: string };
+        if (!res.ok) {
+          throw new Error(data.message ?? "Erro ao conectar canal.");
+        }
+        onCreated?.();
+        handleOpenChange(false);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Erro ao conectar canal.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
     }
 
     setSubmitting(true);
     setError(null);
     const phonePayload =
-      prov === "BAILEYS_MD"
-        ? ""
-        : phoneNumber.trim() ||
-          (prov === "META_CLOUD_API" && phoneNumberId.trim()
-            ? phoneNumberId.trim()
-            : "");
+      prov === "BAILEYS_MD" ? "" : phoneNumber.trim() || "";
 
     try {
       const res = await fetch(apiUrl("/api/channels"), {
@@ -210,7 +226,6 @@ export function CreateChannelDialog({
           name: name.trim(),
           type: channelType,
           provider: prov,
-          config: Object.keys(config).length ? config : undefined,
           phoneNumber: phonePayload || undefined,
         }),
       });
@@ -357,7 +372,6 @@ export function CreateChannelDialog({
                           <p className="mt-1 text-xs text-[var(--text-muted)]">
                             Obtenha credenciais automaticamente com login Meta.
                             Token, Phone ID e WABA ID são configurados de forma segura.
-                            O App Secret é lido de Configurações â†’ Integrações.
                           </p>
                           <Button
                             type="button"
@@ -429,20 +443,9 @@ export function CreateChannelDialog({
                                 placeholder="ID da conta WhatsApp Business"
                               />
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="ch-secret">App Secret do seu App</Label>
-                              <Input
-                                id="ch-secret"
-                                type="password"
-                                autoComplete="off"
-                                value={appSecret}
-                                onChange={(e) => setAppSecret(e.target.value)}
-                                placeholder="Chave secreta do seu app Meta"
-                              />
-                              <p className="text-xs text-[var(--text-muted)]">
-                                Configurações â†’ Básico no painel do seu app Meta. Necessário para verificar webhooks vindos do seu app.
-                              </p>
-                            </div>
+                            <p className="text-xs text-[var(--text-muted)]">
+                              O webhook é configurado automaticamente pelo CRM ao finalizar. Você não precisa mexer no painel Meta.
+                            </p>
                           </div>
                         ) : null}
                       </div>
@@ -479,20 +482,9 @@ export function CreateChannelDialog({
                             placeholder="ID da conta WhatsApp Business"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="ch-secret">App Secret do seu App</Label>
-                          <Input
-                            id="ch-secret"
-                            type="password"
-                            autoComplete="off"
-                            value={appSecret}
-                            onChange={(e) => setAppSecret(e.target.value)}
-                            placeholder="Chave secreta do seu app Meta"
-                          />
-                          <p className="text-xs text-[var(--text-muted)]">
-                            Configurações â†’ Básico no painel do seu app Meta. Necessário para verificar webhooks vindos do seu app.
-                          </p>
-                        </div>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          O webhook é configurado automaticamente pelo CRM ao finalizar. Você não precisa mexer no painel Meta.
+                        </p>
                       </>
                     )}
                   </>

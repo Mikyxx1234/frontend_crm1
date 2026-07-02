@@ -556,8 +556,9 @@ export function DealDetailPanel({
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                {/* Botão "Ligar" — softphone Api4Com */}
-                {callButtonSlot}
+                {/* Botão "Ligar" movido pro header da TabsBar (canto direito,
+                    ao lado do kebab da conversa). Mantemos aqui somente o
+                    kebab de acoes do deal + engrenagem. */}
                 {/* Kebab (ações do deal) */}
                 {moreActionsSlot}
                 {/* Gear (configuração de campos) */}
@@ -1056,6 +1057,7 @@ export function DealDetailPanel({
                 onSearchChange={setSearchQuery}
                 conversationId={conversationId}
                 isResolved={isResolved}
+                callButtonSlot={callButtonSlot}
               />
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
@@ -1105,6 +1107,7 @@ function TabsBar({
   onSearchChange,
   conversationId,
   isResolved,
+  callButtonSlot,
 }: {
   activeTab: TabId
   onChange: (id: TabId) => void
@@ -1114,6 +1117,9 @@ function TabsBar({
   onSearchChange?: (q: string) => void
   conversationId?: string | null
   isResolved?: boolean
+  /** Botao "Ligar" (softphone) — renderizado no canto direito, ao lado do
+   *  kebab de acoes da conversa. Antes vivia no header do card do deal. */
+  callButtonSlot?: React.ReactNode
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -1209,6 +1215,12 @@ function TabsBar({
         ) : (
           <div className="flex-1" />
         )}
+
+        {/* Botao "Ligar" (softphone) — vive aqui pra ficar ao lado do
+            kebab, canto direito do container da conversa. Antes ficava
+            no header do card do deal, mas ergonomicamente pertence
+            proximo da conversa (mesma logica do inbox). */}
+        {callButtonSlot}
 
         {/* Kebab de ações do header — lupa + encerrar conversa */}
         {hasConversaActions && (

@@ -27,6 +27,13 @@ on:
     branches: [main, DEV_BRANCH]
   workflow_dispatch:
 
+# Cancela runs anteriores da MESMA branch ainda em andamento quando um push
+# novo chega. Evita fila/desperdicio quando voce empurra varios commits
+# seguidos (o ultimo e o que importa pro deploy).
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: mikyxx1234/frontend_crm1
@@ -100,6 +107,16 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      # Cacheia o node_modules INTEIRO (nao so o ~/.npm). Chave exata pelo
+      # hash do package-lock.json: se as deps nao mudaram, restauramos
+      # node_modules pronto e pulamos o `npm ci` (economiza ~40s/build).
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       # Cache separado para .next/cache (webpack incremental). Chave inclui
       # hash de src/** para cache exato; restore-keys dao fallback progressivo:
       # 1) mesma branch + mesmo source (hit exato, mais rapido)
@@ -114,7 +131,10 @@ jobs:
             nextjs-${{ github.ref_name }}-
             nextjs-main-
 
+      # So roda npm ci quando o cache de node_modules NAO bateu (deps
+      # mudaram). Cache hit => pula direto pro build.
       - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Build Next.js

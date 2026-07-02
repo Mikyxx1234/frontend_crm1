@@ -3,10 +3,12 @@
 import type { ChannelProvider, ChannelStatus, ChannelType } from "@/lib/prisma-enum-types";
 import {
   AtSign,
+  Clock,
   Globe,
   Loader2,
   Mail,
   MessageCircle,
+  Phone,
   QrCode,
   RefreshCw,
   Settings,
@@ -14,10 +16,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { GlassCard } from "@/components/crm/glass-card";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { cn, formatDateTime } from "@/lib/utils";
 
@@ -36,57 +34,77 @@ const TYPE_LABELS: Record<ChannelType, string> = {
   WEBCHAT: "Webchat",
 };
 
-function TypeIcon({ type, className }: { type: ChannelType; className?: string }) {
-  const cnBase = cn("size-5 shrink-0", className);
+/**
+ * Cor de marca por canal — pinta o fundo do ícone (glyph branco). Espelha
+ * o mockup DS v2 (channels.html), usando as cores oficiais de cada rede.
+ */
+const TYPE_COLOR: Record<ChannelType, string> = {
+  WHATSAPP: "#25D366",
+  INSTAGRAM: "#d6296b",
+  FACEBOOK: "#1877F2",
+  EMAIL: "var(--brand-primary)",
+  WEBCHAT: "var(--brand-primary)",
+};
+
+function TypeIcon({ type }: { type: ChannelType }) {
+  const cls = "size-[22px] shrink-0";
   switch (type) {
     case "WHATSAPP":
-      return <MessageCircle className={cnBase} style={{ color: "#25D366" }} />;
+      return <MessageCircle className={cls} />;
     case "INSTAGRAM":
-      return <AtSign className={cn(cnBase, "text-pink-600")} />;
+      return <AtSign className={cls} />;
     case "FACEBOOK":
-      return <Share2 className={cnBase} style={{ color: "#1877F2" }} />;
+      return <Share2 className={cls} />;
     case "EMAIL":
-      return <Mail className={cnBase} />;
+      return <Mail className={cls} />;
     case "WEBCHAT":
-      return <Globe className={cnBase} />;
+      return <Globe className={cls} />;
     default:
-      return <MessageCircle className={cnBase} />;
+      return <MessageCircle className={cls} />;
   }
 }
 
-function statusBadgeVariant(
-  status: ChannelStatus,
-): "success" | "secondary" | "warning" | "default" | "destructive" {
-  switch (status) {
-    case "CONNECTED":
-      return "success";
-    case "DISCONNECTED":
-      return "secondary";
-    case "CONNECTING":
-      return "warning";
-    case "QR_READY":
-      return "default";
-    case "FAILED":
-      return "destructive";
-    default:
-      return "secondary";
-  }
-}
+type BadgeStyle = {
+  label: string;
+  wrap: string;
+  dot: string;
+  ping?: boolean;
+};
 
-function statusLabel(status: ChannelStatus): string {
+function badgeStyle(status: ChannelStatus): BadgeStyle {
   switch (status) {
     case "CONNECTED":
-      return "Conectado";
-    case "DISCONNECTED":
-      return "Desconectado";
+      return {
+        label: "Conectado",
+        wrap: "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
+        dot: "bg-[var(--color-success)]",
+        ping: true,
+      };
     case "CONNECTING":
-      return "Conectando";
+      return {
+        label: "Conectando",
+        wrap: "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
+        dot: "bg-[var(--color-warn)]",
+      };
     case "QR_READY":
-      return "Aguardando QR";
+      return {
+        label: "Aguardando QR",
+        wrap: "bg-[var(--color-info-bg)] text-[var(--brand-primary)]",
+        dot: "bg-[var(--brand-primary)]",
+      };
     case "FAILED":
-      return "Falhou";
+      return {
+        label: "Falhou",
+        wrap: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
+        dot: "bg-[var(--color-danger-text)]",
+      };
+    case "DISCONNECTED":
     default:
-      return status;
+      return {
+        label: "Desconectado",
+        wrap: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
+        dot: "bg-[var(--color-danger-text)]",
+      };
   }
 }
 
@@ -103,19 +121,17 @@ export type ChannelCardProps = {
 };
 
 /**
- * ChannelCard v2
- * ──────────────
- * Layout compacto DS v2:
- *  - header com icon + nome + tipo/provedor + status badge
- *  - body com telefone e ultima conexao
- *  - footer com Switch (ativo/inativo) a esquerda e botoes de acao icon-only
- *    (engrenagem = configurar, lixeira = excluir) a direita
- *  - QR/CONNECTING mostra botao dedicado "Ver QR"
- *  - FAILED mostra CTA "Reconectar"
+ * ChannelCard — DS v2 (fiel ao mockup channels.html)
+ * ──────────────────────────────────────────────────
+ *  - faixa de status vertical à esquerda (cinza off / verde on)
+ *  - ícone com cor da marca (glyph branco) + nome + "tipo · provider"
+ *  - badge de status com dot (Conectado/Desconectado/…)
+ *  - linhas de detalhe (Telefone / Última conexão) com ícone + separador
+ *  - rodapé: toggle Ativo/Inativo + ações (QR/Reconectar/Configurar/Excluir)
  *
- * O toggle mapeia CONNECTED <-> DISCONNECTED. Estados intermediarios
- * (CONNECTING, QR_READY) o toggle fica desabilitado -- o usuario resolve
- * via botao "Ver QR" ou "Reconectar".
+ * O toggle mapeia CONNECTED <-> DISCONNECTED. Estados intermediários
+ * (CONNECTING, QR_READY) desabilitam o toggle — resolve-se via "Ver QR"
+ * ou "Reconectar".
  */
 export function ChannelCard({
   channel,
@@ -131,104 +147,126 @@ export function ChannelCard({
   const { status, id } = channel;
   const lastAt = channel.lastConnectedAt
     ? formatDateTime(channel.lastConnectedAt)
-    : "—";
+    : null;
 
   const isActive = status === "CONNECTED";
   const isTogglePending = isConnectPending || isDisconnectPending;
   const isIntermediate = status === "CONNECTING" || status === "QR_READY";
   const canToggle = !isTogglePending && !isIntermediate;
+  const badge = badgeStyle(status);
+  const iconColor = TYPE_COLOR[channel.type];
 
   const handleToggle = (next: boolean) => {
     if (!canToggle) return;
-    if (next) {
-      onConnect(id);
-    } else {
-      onDisconnect(id);
-    }
+    if (next) onConnect(id);
+    else onDisconnect(id);
   };
 
+  const iconBtn =
+    "flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:bg-white hover:text-[var(--brand-primary)]";
+
   return (
-    <GlassCard className="flex flex-col overflow-hidden p-0 transition-shadow hover:shadow-[var(--glass-shadow-lg)]">
-      <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className={cn(
-              "flex size-11 shrink-0 items-center justify-center rounded-xl border bg-[var(--glass-bg-overlay)]",
-              channel.type === "WHATSAPP" && "border-[#25D366]/25 bg-[#25D366]/5",
-            )}
+    <article
+      className={cn(
+        "relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
+      )}
+    >
+      {/* Faixa de status vertical à esquerda */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-y-0 left-0 w-1",
+          isActive ? "bg-[var(--color-success)]" : "bg-[var(--text-muted)] opacity-45",
+        )}
+      />
+
+      {/* Topo: ícone + nome/sub + badge */}
+      <div className="flex items-start gap-[13px] px-5 pb-[14px] pt-[18px]">
+        <span
+          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] text-white"
+          style={{ background: iconColor }}
+        >
+          <TypeIcon type={channel.type} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3
+            className="truncate font-display text-[16.5px] font-extrabold tracking-[-0.3px] text-[var(--text-primary)]"
+            title={channel.name}
           >
-            <TypeIcon type={channel.type} />
-          </div>
-          <div className="min-w-0">
-            <h3 className="truncate font-display text-base font-bold text-[var(--text-primary)]">
-              {channel.name}
-            </h3>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--text-muted)]">
-              <span>{TYPE_LABELS[channel.type]}</span>
-              <span className="text-muted-foreground/60">·</span>
-              <span
-                className={cn(
-                  "font-medium",
-                  channel.provider === "BAILEYS_MD"
-                    ? "text-[#25D366]"
-                    : "text-[var(--text-muted)]",
-                )}
-              >
-                {PROVIDER_LABELS[channel.provider]}
-              </span>
-            </div>
+            {channel.name}
+          </h3>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-[var(--text-muted)]">
+            <span>{TYPE_LABELS[channel.type]}</span>
+            <span className="opacity-50">·</span>
+            <span>{PROVIDER_LABELS[channel.provider]}</span>
           </div>
         </div>
-
-        {status === "CONNECTED" ? (
-          <Badge
-            variant="success"
-            className="shrink-0 gap-1.5 border-transparent shadow-none"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#22c55e]" />
+        <span
+          className={cn(
+            "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11px] font-bold tracking-[0.2px]",
+            badge.wrap,
+          )}
+        >
+          {badge.ping ? (
+            <span className="relative flex size-1.5">
+              <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-75", badge.dot)} />
+              <span className={cn("relative inline-flex size-1.5 rounded-full", badge.dot)} />
             </span>
-            Conectado
-          </Badge>
-        ) : (
-          <Badge variant={statusBadgeVariant(status)} className="shrink-0">
-            {statusLabel(status)}
-          </Badge>
-        )}
+          ) : (
+            <span className={cn("size-1.5 shrink-0 rounded-full", badge.dot)} />
+          )}
+          {badge.label}
+        </span>
       </div>
 
-      <Separator />
-
-      <div className="flex flex-1 flex-col gap-2 px-5 py-4 text-sm text-[var(--text-muted)]">
-        <div className="flex justify-between gap-2">
-          <span>Telefone</span>
-          <span className="truncate font-medium text-[var(--text-primary)]">
+      {/* Detalhes */}
+      <div className="flex flex-col px-5 pb-[14px]">
+        <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] py-2">
+          <span className="flex items-center gap-[7px] text-[12.5px] text-[var(--text-muted)]">
+            <Phone className="size-[15px] opacity-70" />
+            Telefone
+          </span>
+          <span
+            className={cn(
+              "text-[13px] font-semibold tabular-nums text-[var(--text-secondary)]",
+              !channel.phoneNumber && "font-medium text-[var(--text-muted)] opacity-50",
+            )}
+          >
             {channel.phoneNumber ?? "—"}
           </span>
         </div>
-        <div className="flex justify-between gap-2">
-          <span>Última conexão</span>
-          <span className="shrink-0 font-medium text-[var(--text-primary)]">
-            {lastAt}
+        <div className="flex items-center justify-between py-2">
+          <span className="flex items-center gap-[7px] text-[12.5px] text-[var(--text-muted)]">
+            <Clock className="size-[15px] opacity-70" />
+            Última conexão
+          </span>
+          <span
+            className={cn(
+              "text-[13px] font-semibold tabular-nums text-[var(--text-secondary)]",
+              !lastAt && "font-medium text-[var(--text-muted)] opacity-50",
+            )}
+          >
+            {lastAt ?? "—"}
           </span>
         </div>
-        {status === "FAILED" ? (
-          <p className="mt-1 text-xs text-[var(--color-danger)]">
-            Falha na conexão. Verifique credenciais ou tente reconectar.
-          </p>
-        ) : null}
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-5 py-3">
-        <div className="flex items-center gap-2.5">
+      {/* Rodapé: toggle + ações */}
+      <div className="mt-auto flex items-center gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-5 py-[13px]">
+        <div className="flex items-center gap-[9px]">
           <Switch
             checked={isActive}
             onCheckedChange={handleToggle}
             disabled={!canToggle}
             aria-label={isActive ? "Desativar canal" : "Ativar canal"}
+            className={isActive ? "bg-[var(--color-success)]" : undefined}
           />
-          <span className="text-xs font-medium text-[var(--text-muted)]">
+          <span
+            className={cn(
+              "font-display text-[13px] font-bold",
+              isActive ? "text-[var(--color-success)]" : "text-[var(--text-muted)]",
+            )}
+          >
             {isTogglePending ? (
               <span className="inline-flex items-center gap-1">
                 <Loader2 className="size-3 animate-spin" />
@@ -242,50 +280,51 @@ export function ChannelCard({
           </span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-2">
           {status === "QR_READY" || status === "CONNECTING" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 border-blue-500/40 bg-blue-500/10 px-2.5 text-blue-700 hover:bg-blue-500/20 dark:text-blue-100"
+            <button
+              type="button"
+              className={cn(iconBtn, "w-auto gap-1.5 px-2.5 text-[12px] font-semibold")}
               onClick={() => onOpenQr(channel)}
+              title="Ver QR Code"
             >
-              <QrCode className="size-3.5" />
+              <QrCode className="size-4" />
               QR
-            </Button>
+            </button>
           ) : null}
 
           {status === "FAILED" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 border-amber-500/40 bg-amber-500/10 px-2.5 text-amber-900 hover:bg-amber-500/20 dark:text-amber-100"
+            <button
+              type="button"
+              className={cn(iconBtn, "w-auto gap-1.5 px-2.5 text-[12px] font-semibold")}
               onClick={() => onConnect(id)}
               disabled={isConnectPending}
+              title="Reconectar"
             >
               {isConnectPending ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <RefreshCw className="size-3.5" />
+                <RefreshCw className="size-4" />
               )}
               Reconectar
-            </Button>
+            </button>
           ) : null}
 
-          <Button
-            size="sm"
-            variant="ghost"
-            className="size-8 p-0 text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]"
+          <button
+            type="button"
+            className={iconBtn}
             onClick={() => onConfigure(channel)}
             aria-label="Configurar canal"
             title="Configurar"
           >
             <Settings className="size-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="size-8 p-0 text-[var(--text-muted)] hover:bg-destructive/10 hover:text-destructive"
+          </button>
+          <button
+            type="button"
+            className={cn(
+              iconBtn,
+              "hover:border-[var(--color-danger-text)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]",
+            )}
             onClick={() => onDelete(id)}
             disabled={isDeletePending}
             aria-label="Excluir canal"
@@ -296,9 +335,9 @@ export function ChannelCard({
             ) : (
               <Trash2 className="size-4" />
             )}
-          </Button>
+          </button>
         </div>
       </div>
-    </GlassCard>
+    </article>
   );
 }

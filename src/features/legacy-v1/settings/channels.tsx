@@ -214,9 +214,12 @@ export default function SettingsChannelsPage({
       ) : null}
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
+        >
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 rounded-[var(--radius-lg)]" />
+            <Skeleton key={i} className="h-[232px] rounded-[var(--radius-xl)]" />
           ))}
         </div>
       ) : channels.length === 0 ? (
@@ -244,7 +247,10 @@ export default function SettingsChannelsPage({
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
+        >
           {filteredChannels.map((ch) => (
             <ChannelCard
               key={ch.id}

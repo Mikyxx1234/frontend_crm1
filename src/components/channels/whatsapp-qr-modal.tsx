@@ -228,8 +228,9 @@ export function WhatsappQrModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         panelClassName={cn(
-          "max-w-md overflow-hidden border-2 border-[#25D366]/20 bg-gradient-to-b from-[var(--glass-bg-overlay)] to-[#25D366]/[0.04] p-0 shadow-2xl sm:max-w-md"
+          "max-w-md border-2 border-[#25D366]/20 bg-gradient-to-b from-[var(--glass-bg-overlay)] to-[#25D366]/[0.04] shadow-2xl sm:max-w-md"
         )}
+        bodyClassName="p-0 gap-0"
       >
         <div className="relative px-6 pb-6 pt-8">
           <DialogClose />

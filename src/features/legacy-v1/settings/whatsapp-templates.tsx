@@ -848,7 +848,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       ) : null}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent size="xl" panelClassName="max-h-[min(90vh,720px)] overflow-y-auto">
+        <DialogContent size="xl" panelClassName="max-h-[min(90vh,720px)]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageCircle className="size-5 text-[var(--brand-primary)]" />
@@ -1163,7 +1163,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       </Dialog>
 
       <Dialog open={!!previewRow} onOpenChange={(open) => { if (!open) setPreviewRow(null); }}>
-        <DialogContent size="xl" panelClassName="max-h-[min(88vh,640px)] overflow-y-auto">
+        <DialogContent size="xl" panelClassName="max-h-[min(88vh,640px)]">
           <DialogHeader>
             <DialogTitle className="font-mono text-base">{previewRow?.name ?? "Template"}</DialogTitle>
             <DialogDescription>

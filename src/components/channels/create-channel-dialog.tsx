@@ -350,7 +350,7 @@ export function CreateChannelDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         size="lg"
-        panelClassName="max-h-[90vh] overflow-y-auto"
+        panelClassName="max-h-[90vh]"
         className="p-0"
       >
         <div className="p-6">
@@ -698,7 +698,7 @@ export function CreateChannelDialog({
       </DialogContent>
 
       <Dialog open={webhookModalOpen} onOpenChange={setWebhookModalOpen}>
-        <DialogContent size="md" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="md" panelClassName="max-h-[90vh]">
           <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2">
               <Webhook className="size-5 text-[var(--brand-primary)]" />

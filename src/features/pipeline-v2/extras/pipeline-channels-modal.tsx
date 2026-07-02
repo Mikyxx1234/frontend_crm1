@@ -150,7 +150,7 @@ export function PipelineChannelsModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent size="md" panelClassName="gap-0 p-0 overflow-hidden">
+      <DialogContent size="md" bodyClassName="gap-0 p-0">
         <DialogHeader className="flex-row items-start gap-3 px-5 pb-4 pt-5 border-b border-[var(--glass-border-subtle)]">
           <div
             aria-hidden

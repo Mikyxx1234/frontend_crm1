@@ -896,7 +896,7 @@ export default function AutomationDetailPage() {
 
       {/* ═══ Config dialog ═══ */}
       <Dialog open={configOpen} onOpenChange={setConfigOpen}>
-        <DialogContent size="lg" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="lg" panelClassName="max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Configuração</DialogTitle>
             <DialogDescription>
@@ -991,7 +991,7 @@ export default function AutomationDetailPage() {
 
       {/* ═══ Logs dialog ═══ */}
       <Dialog open={logsOpen} onOpenChange={setLogsOpen}>
-        <DialogContent size="xl" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="xl" panelClassName="max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Execuções</DialogTitle>
             <DialogDescription>
@@ -1026,7 +1026,7 @@ export default function AutomationDetailPage() {
 
       {/* ═══ Step logs dialog ═══ */}
       <Dialog open={Boolean(stepLogsId)} onOpenChange={(open) => { if (!open) setStepLogsId(null); }}>
-        <DialogContent size="xl" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="xl" panelClassName="max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Eventos — {stepLogsLabel}</DialogTitle>
             <DialogDescription>

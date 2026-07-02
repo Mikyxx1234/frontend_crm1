@@ -41,7 +41,6 @@ import {
   IconAlertTriangle,
   IconRefresh,
   IconX,
-  IconChevronRight,
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
@@ -184,9 +183,9 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
   };
   const showCollapsed = collapsed && isRegistered;
 
-  // Colapsado: bolinha discreta com ping pulsante. Menor que antes (32px
-  // vs 40px) pra ficar mais proximo do peso visual de um "presence
-  // indicator" (DS v2), nao um botao completo.
+  // Colapsado: tile quadrado (rounded) discreto com ping pulsante — espelha
+  // o ícone do card expandido pra manter coesão visual (DS v2). Clique
+  // reexpande o card completo.
   if (showCollapsed) {
     return (
       <button
@@ -194,23 +193,60 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
         onClick={toggleCollapsed}
         aria-label={`Expandir status do softphone (ramal ${ramal})`}
         title={`Softphone ativo • Ramal ${ramal} — clique para expandir`}
-        className="group relative inline-flex size-8 items-center justify-center rounded-full border border-emerald-500/25 bg-emerald-500/10 text-emerald-700 shadow-sm backdrop-blur-sm transition hover:bg-emerald-500/20 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-200"
+        className="group relative inline-flex size-9 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 shadow-sm backdrop-blur-md transition hover:bg-emerald-500/20 dark:border-emerald-400/20 dark:bg-emerald-500/15 dark:text-emerald-300"
       >
         <span className="absolute -right-0.5 -top-0.5 flex h-1.5 w-1.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
         </span>
-        <IconPhone size={13} stroke={2.2} />
+        <IconPhone size={16} stroke={2.2} />
       </button>
     );
   }
 
+  // Registrado (expandido): card com tile de ícone verde, selo "REGISTRADO"
+  // + ramal e botão vermelho pra colapsar. Fiel ao mockup fornecido.
+  if (isRegistered) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--glass-border)] bg-white/90 p-2 shadow-lg backdrop-blur-md dark:border-white/10 dark:bg-slate-900/85">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/12 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
+          <IconPhone size={18} stroke={2.2} />
+        </span>
+
+        <div className="min-w-0 pr-0.5">
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            <span className="text-[10.5px] font-bold uppercase tracking-[0.7px] text-emerald-600 dark:text-emerald-400">
+              Registrado
+            </span>
+          </div>
+          <div className="text-[14px] font-bold leading-tight tabular-nums text-slate-900 dark:text-slate-100">
+            Ramal {ramal}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label="Colapsar chip do softphone"
+          title="Colapsar"
+          className="ml-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-600 transition hover:bg-red-500/20 dark:bg-red-500/15 dark:text-red-300"
+        >
+          <IconX size={16} strokeWidth={2.4} />
+        </button>
+      </div>
+    );
+  }
+
+  // Conectando (transiente) e Erro continuam como pill fino — só o estado
+  // Registrado usa o card. Erro fica expandido pra leitura da mensagem.
   return (
     <div
       className={cn(
         "group inline-flex h-8 items-center overflow-hidden rounded-full border shadow-sm backdrop-blur-md transition",
-        isRegistered &&
-          "border-emerald-500/25 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-100",
         isConnecting &&
           "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-100",
         isError &&
@@ -218,18 +254,6 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
       )}
     >
       <div className="inline-flex items-center gap-1.5 pl-2.5 pr-2 text-[12px] font-medium">
-        {isRegistered && (
-          <>
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            </span>
-            <IconPhone size={12} stroke={2.2} />
-            <span className="tabular-nums">
-              Ramal <strong className="font-semibold">{ramal}</strong>
-            </span>
-          </>
-        )}
         {isConnecting && (
           <>
             <IconLoader2 size={12} className="animate-spin" />
@@ -257,20 +281,6 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
           </>
         )}
       </div>
-
-      {/* Colapsar so no Registered (Conectando e transiente, Erro precisa
-          ficar visivel). Botao icon-only compacto sem borda vertical. */}
-      {isRegistered && (
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-label="Colapsar chip do softphone"
-          title="Colapsar"
-          className="inline-flex h-full items-center justify-center border-l border-current/15 px-1.5 opacity-50 transition-opacity hover:opacity-100"
-        >
-          <IconChevronRight size={12} strokeWidth={2.2} />
-        </button>
-      )}
 
       {isError && (
         <button

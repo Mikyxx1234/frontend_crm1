@@ -1,0 +1,106 @@
+name: Build & Deploy
+
+# Buildamos a imagem no GitHub Actions (com cache persistente entre runs
+# via `type=gha`), publicamos em ghcr.io e disparamos um webhook do
+# Easypanel pra ele apenas fazer `docker pull` + restart. Deploy fim-a-fim
+# cai de 5-10 min pra ~30-60s.
+#
+# Setup no GitHub (Settings -> Secrets and variables -> Actions):
+#
+#   Variables (Repository variables):
+#     API_BASE_PROD          Ex: https://crm-backend.easypanel.host
+#     API_BASE_DEV           Ex: https://crm-dev-backend.ca31ey.easypanel.host
+#     NEXTAUTH_URL_PROD      Ex: https://crm.easypanel.host
+#     NEXTAUTH_URL_DEV       Ex: https://crm-dev-frontend.ca31ey.easypanel.host
+#
+#   Secrets:
+#     NEXTAUTH_SECRET_PROD           (mesmo valor do NEXTAUTH_SECRET em prod)
+#     NEXTAUTH_SECRET_DEV            (idem para dev)
+#     EASYPANEL_WEBHOOK_PROD         URL do webhook do servico frontend em prod
+#     EASYPANEL_WEBHOOK_DEV          URL do webhook do servico frontend em dev
+#
+# Setup no Easypanel (por servico):
+#   Source: Docker Image
+#   Image:  ghcr.io/mikyxx1234/frontend_crm1:latest   (prod)
+#           ghcr.io/mikyxx1234/frontend_crm1:dev      (dev)
+#   Registry credentials: crie um GitHub PAT com escopo `read:packages` e
+#     cadastre em Easypanel -> Registries. (Se o pacote estiver public,
+#     nao precisa autenticar.)
+#   Deploy webhook: copie do Easypanel (Settings do servico -> Deployments
+#     -> Deploy Hook) e coloque em EASYPANEL_WEBHOOK_PROD/DEV.
+
+on:
+  push:
+    branches: [main, DEV_BRANCH]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: mikyxx1234/frontend_crm1
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "TAG=latest"                                     >> "$GITHUB_OUTPUT"
+            echo "API_BASE=${{ vars.API_BASE_PROD }}"             >> "$GITHUB_OUTPUT"
+            echo "NEXTAUTH_URL=${{ vars.NEXTAUTH_URL_PROD }}"     >> "$GITHUB_OUTPUT"
+            echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_PROD }}" >> "$GITHUB_OUTPUT"
+            echo "WEBHOOK=${{ secrets.EASYPANEL_WEBHOOK_PROD }}"  >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG=dev"                                        >> "$GITHUB_OUTPUT"
+            echo "API_BASE=${{ vars.API_BASE_DEV }}"              >> "$GITHUB_OUTPUT"
+            echo "NEXTAUTH_URL=${{ vars.NEXTAUTH_URL_DEV }}"      >> "$GITHUB_OUTPUT"
+            echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "WEBHOOK=${{ secrets.EASYPANEL_WEBHOOK_DEV }}"   >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # Tags: tag do env (latest/dev) + SHA para rollback facil.
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.env.outputs.TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          # NEXT_PUBLIC_* precisa entrar no bundle no momento do build --
+          # Next.js nao suporta injecao em runtime pra essas envs. Se
+          # rodar a mesma imagem em prod+dev, teria que rebuildar.
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ steps.env.outputs.API_BASE }}
+            NEXTAUTH_URL=${{ steps.env.outputs.NEXTAUTH_URL }}
+            NEXTAUTH_SECRET=${{ steps.env.outputs.NEXTAUTH_SECRET }}
+            AUTH_SECRET=${{ steps.env.outputs.NEXTAUTH_SECRET }}
+          # Cache em GitHub Actions -- primeiro build ~7min, subsequentes
+          # ~2min (so recompila o que mudou, deps ficam cachadas).
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trigger Easypanel redeploy
+        if: steps.env.outputs.WEBHOOK != ''
+        run: |
+          echo "Chamando webhook do Easypanel..."
+          curl -fsSL -X POST "${{ steps.env.outputs.WEBHOOK }}" \
+            -H "User-Agent: github-actions/frontend_crm1" \
+            || echo "WARN: webhook falhou (nao bloqueia o job)"

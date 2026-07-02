@@ -663,20 +663,12 @@ export function ContactAside({
                                     textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
                                   />
                                 </Row>
-                                <Row label="Telefone">
-                                  <InlineNativeEditor
-                                    value={native("phone", contact.phone)}
-                                    entityType="contact"
-                                    entityId={contact.contactId}
-                                    fieldKey="phone"
-                                    inputType="tel"
-                                    placeholder="Adicionar telefone"
-                                    editMode={contactEditMode}
-                                    invalidateKeys={contactInvalidateKeys}
-                                    onSaved={(v) => setNativeValues((p) => ({ ...p, phone: v }))}
-                                    textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
-                                  />
-                                </Row>
+                                {/* Row "Telefone" movida daqui pro header
+                                    do ChatArea (proximo ao kebab). Reduz
+                                    duplicidade de campo e coloca o numero
+                                    a um clique da acao de ligar. Edicao
+                                    inline continua acessivel via botao de
+                                    edit do painel (Nome/Email etc.). */}
                                 <Row label="Email">
                                   <InlineNativeEditor
                                     value={native("email", contact.email)}

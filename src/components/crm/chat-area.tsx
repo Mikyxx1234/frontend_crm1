@@ -221,12 +221,31 @@ export function ChatArea({
           />
         )}
 
-        <div className="ml-auto flex gap-1">
+        <div className="ml-auto flex items-center gap-1.5">
+          {/* Telefone do contato movido do ContactAside pra ca (proximo
+              ao kebab) — reduz duplicidade de campo no aside e coloca a
+              info mais util (numero) a um clique de distancia da acao
+              principal. tel: link aciona o discador do sistema; softphone
+              intercepta em paginas com dial habilitado (useDealDial). */}
+          {contact.phone && (
+            <TooltipGlass label={`Ligar para ${contact.phone}`} side="bottom">
+              <a
+                href={`tel:${contact.phone}`}
+                onClick={(e) => {
+                  if (onPhoneClick) {
+                    e.preventDefault();
+                    onPhoneClick();
+                  }
+                }}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-2.5 font-mono text-[12px] font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary)]/40 hover:bg-[var(--brand-primary)]/10"
+              >
+                <IconPhone size={13} stroke={2.2} />
+                <span className="tabular-nums">{contact.phone}</span>
+              </a>
+            </TooltipGlass>
+          )}
           {headerActionsSlot ?? (
             <>
-              <IconBtn title="Ligar" onClick={onPhoneClick}>
-                <IconPhone size={18} />
-              </IconBtn>
               <IconBtn title="Vídeo chamada" onClick={onVideoClick}>
                 <IconVideo size={18} />
               </IconBtn>

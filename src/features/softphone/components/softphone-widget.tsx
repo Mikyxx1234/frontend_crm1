@@ -184,8 +184,9 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
   };
   const showCollapsed = collapsed && isRegistered;
 
-  // Forma colapsada: só ícone do telefone num círculo verde, expansível ao
-  // clicar. Mantém o "ping" pulsante pra dar feedback de que está ativo.
+  // Colapsado: bolinha discreta com ping pulsante. Menor que antes (32px
+  // vs 40px) pra ficar mais proximo do peso visual de um "presence
+  // indicator" (DS v2), nao um botao completo.
   if (showCollapsed) {
     return (
       <button
@@ -193,13 +194,13 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
         onClick={toggleCollapsed}
         aria-label={`Expandir status do softphone (ramal ${ramal})`}
         title={`Softphone ativo • Ramal ${ramal} — clique para expandir`}
-        className="group relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200/60 bg-emerald-50/90 text-emerald-900 shadow-lg backdrop-blur-md transition hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-950/70 dark:text-emerald-100 dark:hover:bg-emerald-900/70"
+        className="group relative inline-flex size-8 items-center justify-center rounded-full border border-emerald-500/25 bg-emerald-500/10 text-emerald-700 shadow-sm backdrop-blur-sm transition hover:bg-emerald-500/20 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-200"
       >
-        <span className="absolute right-1 top-1 flex h-2 w-2">
+        <span className="absolute -right-0.5 -top-0.5 flex h-1.5 w-1.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
         </span>
-        <IconPhone size={16} stroke={2.2} />
+        <IconPhone size={13} stroke={2.2} />
       </button>
     );
   }
@@ -207,86 +208,79 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
   return (
     <div
       className={cn(
-        "group inline-flex items-stretch overflow-hidden rounded-full border shadow-lg backdrop-blur-md transition",
+        "group inline-flex h-8 items-center overflow-hidden rounded-full border shadow-sm backdrop-blur-md transition",
         isRegistered &&
-          "border-emerald-200/60 bg-emerald-50/90 text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-950/70 dark:text-emerald-100",
+          "border-emerald-500/25 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-100",
         isConnecting &&
-          "border-amber-200/60 bg-amber-50/90 text-amber-900 dark:border-amber-400/20 dark:bg-amber-950/70 dark:text-amber-100",
+          "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-100",
         isError &&
-          "border-red-200/60 bg-red-50/90 text-red-900 dark:border-red-400/20 dark:bg-red-950/70 dark:text-red-100",
+          "border-red-500/30 bg-red-500/10 text-red-900 dark:border-red-400/25 dark:bg-red-500/15 dark:text-red-100",
       )}
     >
-      <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium">
+      <div className="inline-flex items-center gap-1.5 pl-2.5 pr-2 text-[12px] font-medium">
         {isRegistered && (
           <>
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-            <IconPhone size={14} stroke={2.2} />
-            <span>
-              Softphone ativo • <strong>{ramal}</strong>
+            <IconPhone size={12} stroke={2.2} />
+            <span className="tabular-nums">
+              Ramal <strong className="font-semibold">{ramal}</strong>
             </span>
           </>
         )}
         {isConnecting && (
           <>
-            <IconLoader2 size={14} className="animate-spin" />
-            <span>Conectando softphone…</span>
+            <IconLoader2 size={12} className="animate-spin" />
+            <span>Conectando…</span>
           </>
         )}
         {isError && (
           <>
-            <IconAlertTriangle size={14} />
+            <IconAlertTriangle size={12} />
             <span
-              className="max-w-[280px] truncate"
+              className="max-w-[240px] truncate"
               title={error ?? "Erro desconhecido"}
             >
-              Softphone: {error ?? "erro"}
+              {error ?? "Erro no softphone"}
             </span>
             <button
               type="button"
               onClick={onReconnect}
               aria-label="Tentar reconectar"
               title="Tentar reconectar"
-              className="ml-1 inline-flex items-center justify-center rounded-full p-1 hover:bg-black/10 dark:hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-full p-1 hover:bg-black/10 dark:hover:bg-white/10"
             >
-              <IconRefresh size={12} />
+              <IconRefresh size={11} />
             </button>
           </>
         )}
       </div>
 
-      {/* Setinha de colapsar — só faz sentido em Registered (Conectando é
-          transiente, Erro precisa ficar visível pra leitura da mensagem). */}
+      {/* Colapsar so no Registered (Conectando e transiente, Erro precisa
+          ficar visivel). Botao icon-only compacto sem borda vertical. */}
       {isRegistered && (
         <button
           type="button"
           onClick={toggleCollapsed}
           aria-label="Colapsar chip do softphone"
-          title="Colapsar (deixar só o ícone)"
-          className="inline-flex items-center justify-center border-l border-current/20 px-2 opacity-60 transition-opacity hover:opacity-100"
+          title="Colapsar"
+          className="inline-flex h-full items-center justify-center border-l border-current/15 px-1.5 opacity-50 transition-opacity hover:opacity-100"
         >
-          <IconChevronRight size={14} strokeWidth={2.2} />
+          <IconChevronRight size={12} strokeWidth={2.2} />
         </button>
       )}
 
-      {/*
-        Botão de dispensar só faz sentido no estado de erro — em
-        Registered o operador quer ver o status; em Connecting é
-        transiente. Permitir esconder durante erro evita que o chip
-        vermelho fique atrapalhando visualmente se a conexão estiver
-        intencionalmente quebrada (ex.: VPN down).
-      */}
       {isError && (
         <button
           type="button"
           onClick={onHide}
           aria-label="Esconder até reload"
-          title="Esconder até recarregar a página"
-          className="inline-flex items-center justify-center border-l border-current/20 px-2.5 opacity-60 transition-opacity hover:opacity-100"
+          title="Esconder até recarregar"
+          className="inline-flex h-full items-center justify-center border-l border-current/15 px-1.5 opacity-50 transition-opacity hover:opacity-100"
         >
-          <IconX size={12} strokeWidth={2.2} />
+          <IconX size={11} strokeWidth={2.2} />
         </button>
       )}
     </div>

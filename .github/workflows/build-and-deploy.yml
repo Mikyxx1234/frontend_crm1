@@ -132,8 +132,17 @@ jobs:
             AUTH_SECRET=${{ steps.env.outputs.NEXTAUTH_SECRET }}
           # Cache em GitHub Actions -- primeiro build ~7min, subsequentes
           # ~2min (so recompila o que mudou, deps ficam cachadas).
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          #
+          # Scope por branch + fallback pra main: `main` sempre popula seu
+          # proprio cache, e `DEV_BRANCH` (ou qualquer outra) consegue ler
+          # da `main` quando o cache proprio esta frio. Antes, so
+          # `cache-from: type=gha` usava scope=<branch> implicito, entao
+          # DEV nao aproveitava as camadas cacheadas em main -> builds de
+          # DEV rodavam 5min vs 2min em main.
+          cache-from: |
+            type=gha,scope=${{ github.ref_name }}
+            type=gha,scope=main
+          cache-to: type=gha,scope=${{ github.ref_name }},mode=max
 
       - name: Trigger Easypanel redeploy
         if: steps.env.outputs.WEBHOOK != ''

@@ -1,7 +1,14 @@
 node_modules
-.next
 .git
 .env
 .env.*
 !.env.example
 *.md
+# Exclui .next inteiro mas re-inclui apenas os outputs do pre-build
+# que o Dockerfile.prebuilt precisa copiar. O Dockerfile original
+# (build inline) reconstroi tudo dentro do container, entao nao e afetado.
+.next
+!.next/standalone
+!.next/standalone/**
+!.next/static
+!.next/static/**

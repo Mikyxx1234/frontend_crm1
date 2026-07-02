@@ -1,9 +1,12 @@
 name: Build & Deploy
 
-# Buildamos a imagem no GitHub Actions (com cache persistente entre runs
-# via `type=gha`), publicamos em ghcr.io e disparamos um webhook do
-# Easypanel pra ele apenas fazer `docker pull` + restart. Deploy fim-a-fim
-# cai de 5-10 min pra ~30-60s.
+# Estrategia pre-built: `next build` roda diretamente no runner GHA com
+# actions/cache para node_modules (.next/cache). Depois, o Docker apenas
+# empacota o output standalone (Dockerfile.prebuilt -- sem npm install,
+# sem compilacao). Resultado esperado:
+#
+#   Antes (build inline no Docker): ~3-4 min por push
+#   Depois (pre-built + cache quente): ~1-1.5 min por push
 #
 # Setup no GitHub (Settings -> Secrets and variables -> Actions):
 #
@@ -18,16 +21,6 @@ name: Build & Deploy
 #     NEXTAUTH_SECRET_DEV            (idem para dev)
 #     EASYPANEL_WEBHOOK_PROD         URL do webhook do servico frontend em prod
 #     EASYPANEL_WEBHOOK_DEV          URL do webhook do servico frontend em dev
-#
-# Setup no Easypanel (por servico):
-#   Source: Docker Image
-#   Image:  ghcr.io/mikyxx1234/frontend_crm1:latest   (prod)
-#           ghcr.io/mikyxx1234/frontend_crm1:dev      (dev)
-#   Registry credentials: crie um GitHub PAT com escopo `read:packages` e
-#     cadastre em Easypanel -> Registries. (Se o pacote estiver public,
-#     nao precisa autenticar.)
-#   Deploy webhook: copie do Easypanel (Settings do servico -> Deployments
-#     -> Deploy Hook) e coloque em EASYPANEL_WEBHOOK_PROD/DEV.
 
 on:
   push:
@@ -65,7 +58,6 @@ jobs:
           S_WEBHOOK_PROD: ${{ secrets.EASYPANEL_WEBHOOK_PROD }}
           S_WEBHOOK_DEV: ${{ secrets.EASYPANEL_WEBHOOK_DEV }}
         run: |
-          # Escolhe conjunto de vars conforme branch.
           if [ "$BRANCH_REF" = "refs/heads/main" ]; then
             TAG=latest
             API_BASE="$V_API_BASE_PROD"
@@ -79,13 +71,11 @@ jobs:
             NEXTAUTH_SECRET="$S_NEXTAUTH_SECRET_DEV"
             WEBHOOK="$S_WEBHOOK_DEV"
           fi
-          # Trim de \r e \n em todos (defesa contra copy/paste ruim).
           TAG=$(printf '%s' "$TAG" | tr -d '\r\n')
           API_BASE=$(printf '%s' "$API_BASE" | tr -d '\r\n')
           NEXTAUTH_URL=$(printf '%s' "$NEXTAUTH_URL" | tr -d '\r\n')
           NEXTAUTH_SECRET=$(printf '%s' "$NEXTAUTH_SECRET" | tr -d '\r\n')
           WEBHOOK=$(printf '%s' "$WEBHOOK" | tr -d '\r\n')
-          # Emite outputs no formato key=value (agora garantidamente 1 linha).
           {
             echo "TAG=$TAG"
             echo "API_BASE=$API_BASE"
@@ -93,8 +83,6 @@ jobs:
             echo "NEXTAUTH_SECRET=$NEXTAUTH_SECRET"
             echo "WEBHOOK=$WEBHOOK"
           } >> "$GITHUB_OUTPUT"
-          # Debug: mostra se algum obrigatorio veio vazio (ajuda a
-          # diagnosticar variables/secrets nao configurados).
           echo "::group::env resolved (values masked)"
           [ -n "$TAG" ]             && echo "TAG=<set>"             || echo "TAG=<EMPTY>"
           [ -n "$API_BASE" ]        && echo "API_BASE=<set>"        || echo "API_BASE=<EMPTY>"
@@ -103,6 +91,41 @@ jobs:
           [ -n "$WEBHOOK" ]         && echo "WEBHOOK=<set>"         || echo "WEBHOOK=<EMPTY>"
           echo "::endgroup::"
 
+      # ── Build Next.js fora do Docker ─────────────────────────────────────
+      # actions/setup-node com cache: 'npm' cacheia node_modules baseado no
+      # hash do package-lock.json. npm ci fica em ~5-10s quando cache quente.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Cache separado para .next/cache (webpack incremental). Chave inclui
+      # hash de src/** para cache exato; restore-keys dao fallback progressivo:
+      # 1) mesma branch + mesmo source (hit exato, mais rapido)
+      # 2) mesma branch (webpack usa cache parcial)
+      # 3) main (DEV_BRANCH herda cache da main quando proprio esta frio)
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ github.ref_name }}-${{ hashFiles('src/**', 'package-lock.json') }}
+          restore-keys: |
+            nextjs-${{ github.ref_name }}-
+            nextjs-main-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ steps.env.outputs.API_BASE }}
+          NEXTAUTH_URL: ${{ steps.env.outputs.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ steps.env.outputs.NEXTAUTH_SECRET }}
+          AUTH_SECRET: ${{ steps.env.outputs.NEXTAUTH_SECRET }}
+        run: npm run build
+
+      # ── Empacotar em imagem Docker (so COPY, ~10s) ───────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -117,32 +140,15 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: Dockerfile.prebuilt
           push: true
-          # Tags: tag do env (latest/dev) + SHA para rollback facil.
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.env.outputs.TAG }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          # NEXT_PUBLIC_* precisa entrar no bundle no momento do build --
-          # Next.js nao suporta injecao em runtime pra essas envs. Se
-          # rodar a mesma imagem em prod+dev, teria que rebuildar.
-          build-args: |
-            NEXT_PUBLIC_API_BASE_URL=${{ steps.env.outputs.API_BASE }}
-            NEXTAUTH_URL=${{ steps.env.outputs.NEXTAUTH_URL }}
-            NEXTAUTH_SECRET=${{ steps.env.outputs.NEXTAUTH_SECRET }}
-            AUTH_SECRET=${{ steps.env.outputs.NEXTAUTH_SECRET }}
-          # Cache em GitHub Actions -- primeiro build ~7min, subsequentes
-          # ~2min (so recompila o que mudou, deps ficam cachadas).
-          #
-          # Scope por branch + fallback pra main: `main` sempre popula seu
-          # proprio cache, e `DEV_BRANCH` (ou qualquer outra) consegue ler
-          # da `main` quando o cache proprio esta frio. Antes, so
-          # `cache-from: type=gha` usava scope=<branch> implicito, entao
-          # DEV nao aproveitava as camadas cacheadas em main -> builds de
-          # DEV rodavam 5min vs 2min em main.
-          cache-from: |
-            type=gha,scope=${{ github.ref_name }}
-            type=gha,scope=main
-          cache-to: type=gha,scope=${{ github.ref_name }},mode=max
+          # Cache minimo: a imagem pre-built nao tem layers de build pesadas,
+          # entao mode=min e suficiente (so cacheia a camada base do SO).
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
 
       - name: Trigger Easypanel redeploy
         if: steps.env.outputs.WEBHOOK != ''

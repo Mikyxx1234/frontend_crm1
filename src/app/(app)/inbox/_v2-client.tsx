@@ -528,9 +528,16 @@ export default function InboxV2ClientPage({
         onUseTemplate={() => setTemplateOpen(true)}
         headerActionsSlot={
           <>
-            {/* DealCallButton movido pro ContactAside.headerActionsNode
-                (IB4). Mantemos so o ConversationActionsMenu (Encerrar/
-                Reabrir) aqui, que e contextual ao chat. */}
+            {/* DealCallButton volta pro header do chat, ao lado do chip
+                de telefone e do kebab. Antes vivia no ContactAside, mas
+                duplicava o chip de "Ligar para <numero>" que ja fica
+                no header. Consolidamos a acao aqui pra remover ruido
+                visual no aside. */}
+            <DealCallButton
+              dealId={firstDealId}
+              phone={chatContact?.phone || null}
+              contactId={activeContactId ?? undefined}
+            />
             <ConversationActionsMenu
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
@@ -574,15 +581,10 @@ export default function InboxV2ClientPage({
         contact={contactAsideViewWithSlots}
         headerActionsNode={
           <>
-            {/* DealCallButton movido pra ca (IB4): antes vivia no header
-                do chat (ChatArea.headerActionsSlot), com posicao distinta
-                do deal detail. Agora fica no topo do ContactAside,
-                proximo do AssigneePopover e do botao de colapso. */}
-            <DealCallButton
-              dealId={firstDealId}
-              phone={chatContact?.phone || null}
-              contactId={activeContactId ?? undefined}
-            />
+            {/* DealCallButton devolvido pro header do chat (ao lado do
+                chip de telefone). Aqui no aside ficam so acoes de
+                atribuicao / colapso pra evitar duplicidade do "Ligar
+                para <numero>" que ja aparece no header do inbox. */}
             <RequirePermission permission="conversation:reassign">
               <AssigneePopover
                 conversationId={activeId}

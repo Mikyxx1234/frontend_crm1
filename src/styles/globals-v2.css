@@ -448,6 +448,24 @@
   background: rgba(255, 255, 255, 0.22);
 }
 
+/* ── Scrollbar dentro de <dialog> ──────────────────────────────────
+   O <dialog> é portado via createPortal para document.body, ficando
+   fora de .v2-root. Sem estas regras o browser renderiza o scrollbar
+   nativo default (largo, fora do padrão visual DS v2).
+   Espelha as regras de .v2-root ::-webkit-scrollbar acima. */
+dialog ::-webkit-scrollbar          { width: 6px; height: 6px; }
+dialog ::-webkit-scrollbar-track    { background: transparent; }
+dialog ::-webkit-scrollbar-thumb    { background: rgba(15,23,42,0.12); border-radius: 9999px; transition: background 150ms ease; }
+dialog ::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.28); }
+dialog ::-webkit-scrollbar-button   { display: none; height: 0; width: 0; }
+dialog ::-webkit-scrollbar-corner   { background: transparent; }
+dialog *  { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,0.18) transparent; }
+
+/* Dark mode para dialogs */
+.v2-dark dialog ::-webkit-scrollbar-thumb       { background: rgba(255,255,255,0.10); }
+.v2-dark dialog ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+.v2-dark dialog *  { scrollbar-color: rgba(255,255,255,0.12) transparent; }
+
 /* Background do layout dark */
 .v2-dark .bg-\[var\(--bg-base\)\] {
   background-color: var(--bg-base);

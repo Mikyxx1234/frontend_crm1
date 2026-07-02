@@ -315,7 +315,7 @@ export default function SettingsChannelsPage({
           if (!o) setMetaChannel(null);
         }}
       >
-        <DialogContent size="lg" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle>Configurar Meta Cloud API</DialogTitle>
           </DialogHeader>

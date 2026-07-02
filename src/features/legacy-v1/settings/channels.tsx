@@ -74,7 +74,6 @@ export default function SettingsChannelsPage({
   const [simpleName, setSimpleName] = useState("");
   const [simplePhone, setSimplePhone] = useState("");
   const [simplePipelineId, setSimplePipelineId] = useState<string | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const { data: channels = [], isLoading, isError, error } = useQuery({
     queryKey: ["channels"],
@@ -263,9 +262,10 @@ export default function SettingsChannelsPage({
               onConfigure={openConfigure}
               onDelete={async (id) => {
                 const ok = await confirm({
-                  title: "Excluir canal",
-                  description: "Tem certeza que deseja excluir este canal? Esta ação não pode ser desfeita.",
-                  confirmLabel: "Excluir",
+                  title: `Excluir canal "${ch.name}"?`,
+                  description:
+                    "Atenção: as conversas vinculadas a este canal serão desvinculadas — o histórico permanece no banco, mas ficará sem canal associado e não será mais possível enviar novas mensagens por aqui. Esta ação não pode ser desfeita.",
+                  confirmLabel: "Excluir canal",
                   variant: "destructive",
                 });
                 if (ok) deleteMutation.mutate(id);
@@ -382,51 +382,6 @@ export default function SettingsChannelsPage({
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!deleteConfirmId}
-        onOpenChange={(o) => { if (!o) { setDeleteConfirmId(null); deleteMutation.reset(); } }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Excluir canal</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-[var(--text-muted)]">
-            Tem certeza que deseja excluir este canal? Esta ação não pode ser desfeita.
-            Todas as conversas vinculadas permanecerão no histórico.
-          </p>
-          {deleteMutation.isError ? (
-            <p className="rounded-[var(--radius-md)] border border-[var(--color-danger)]/30 bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] px-3 py-2 text-sm text-[var(--color-danger)]">
-              {deleteMutation.error instanceof Error
-                ? deleteMutation.error.message
-                : "Erro ao excluir canal."}
-            </p>
-          ) : null}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeleteConfirmId(null)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={() => {
-                if (deleteConfirmId) {
-                  deleteMutation.mutate(deleteConfirmId, {
-                    onSuccess: () => setDeleteConfirmId(null),
-                  });
-                }
-              }}
-            >
-              {deleteMutation.isPending ? "Excluindo…" : "Excluir"}
-            </Button>
-          </DialogFooter>
-          <DialogClose />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

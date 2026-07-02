@@ -9,16 +9,16 @@ import {
   MessageCircle,
   QrCode,
   RefreshCw,
-  Settings2,
+  Settings,
   Share2,
   Trash2,
-  Unplug,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/crm/glass-card";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { cn, formatDateTime } from "@/lib/utils";
 
 import type { ApiChannel } from "./types";
@@ -55,7 +55,7 @@ function TypeIcon({ type, className }: { type: ChannelType; className?: string }
 }
 
 function statusBadgeVariant(
-  status: ChannelStatus
+  status: ChannelStatus,
 ): "success" | "secondary" | "warning" | "default" | "destructive" {
   switch (status) {
     case "CONNECTED":
@@ -82,45 +82,12 @@ function statusLabel(status: ChannelStatus): string {
     case "CONNECTING":
       return "Conectando";
     case "QR_READY":
-      return "QR pronto";
+      return "Aguardando QR";
     case "FAILED":
       return "Falhou";
     default:
       return status;
   }
-}
-
-function StatusDot({
-  status,
-  pulse,
-}: {
-  status: ChannelStatus;
-  pulse?: boolean;
-}) {
-  const color =
-    status === "CONNECTED"
-      ? "bg-[#22c55e]"
-      : status === "QR_READY"
-        ? "bg-blue-500"
-        : status === "FAILED"
-          ? "bg-destructive"
-          : status === "CONNECTING"
-            ? "bg-amber-500"
-            : "bg-muted-foreground/50";
-
-  return (
-    <span className="relative flex h-2 w-2 shrink-0">
-      {pulse ? (
-        <span
-          className={cn(
-            "absolute inline-flex h-full w-full animate-ping rounded-full opacity-60",
-            color
-          )}
-        />
-      ) : null}
-      <span className={cn("relative inline-flex h-2 w-2 rounded-full", color)} />
-    </span>
-  );
 }
 
 export type ChannelCardProps = {
@@ -135,6 +102,21 @@ export type ChannelCardProps = {
   isDeletePending?: boolean;
 };
 
+/**
+ * ChannelCard v2
+ * ──────────────
+ * Layout compacto DS v2:
+ *  - header com icon + nome + tipo/provedor + status badge
+ *  - body com telefone e ultima conexao
+ *  - footer com Switch (ativo/inativo) a esquerda e botoes de acao icon-only
+ *    (engrenagem = configurar, lixeira = excluir) a direita
+ *  - QR/CONNECTING mostra botao dedicado "Ver QR"
+ *  - FAILED mostra CTA "Reconectar"
+ *
+ * O toggle mapeia CONNECTED <-> DISCONNECTED. Estados intermediarios
+ * (CONNECTING, QR_READY) o toggle fica desabilitado -- o usuario resolve
+ * via botao "Ver QR" ou "Reconectar".
+ */
 export function ChannelCard({
   channel,
   onConnect,
@@ -151,62 +133,74 @@ export function ChannelCard({
     ? formatDateTime(channel.lastConnectedAt)
     : "—";
 
+  const isActive = status === "CONNECTED";
+  const isTogglePending = isConnectPending || isDisconnectPending;
+  const isIntermediate = status === "CONNECTING" || status === "QR_READY";
+  const canToggle = !isTogglePending && !isIntermediate;
+
+  const handleToggle = (next: boolean) => {
+    if (!canToggle) return;
+    if (next) {
+      onConnect(id);
+    } else {
+      onDisconnect(id);
+    }
+  };
+
   return (
     <GlassCard className="flex flex-col overflow-hidden p-0 transition-shadow hover:shadow-[var(--glass-shadow-lg)]">
-      <div className="space-y-3 px-6 pb-4 pt-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div
-              className={cn(
-                "flex size-11 shrink-0 items-center justify-center rounded-xl border bg-[var(--glass-bg-overlay)]",
-                channel.type === "WHATSAPP" && "border-[#25D366]/25 bg-[#25D366]/5"
-              )}
-            >
-              <TypeIcon type={channel.type} />
-            </div>
-            <div className="min-w-0">
-              <h3 className="truncate font-display text-base font-bold text-[var(--text-primary)]">{channel.name}</h3>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[var(--text-muted)]">
-                <span className="inline-flex items-center gap-1.5 text-xs">
-                  <StatusDot
-                    status={status}
-                    pulse={status === "CONNECTED" || status === "QR_READY"}
-                  />
-                  {TYPE_LABELS[channel.type]}
-                </span>
-                <span className="text-muted-foreground/60">·</span>
-                <span className={cn(
-                  "text-xs font-medium",
+      <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className={cn(
+              "flex size-11 shrink-0 items-center justify-center rounded-xl border bg-[var(--glass-bg-overlay)]",
+              channel.type === "WHATSAPP" && "border-[#25D366]/25 bg-[#25D366]/5",
+            )}
+          >
+            <TypeIcon type={channel.type} />
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-base font-bold text-[var(--text-primary)]">
+              {channel.name}
+            </h3>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--text-muted)]">
+              <span>{TYPE_LABELS[channel.type]}</span>
+              <span className="text-muted-foreground/60">·</span>
+              <span
+                className={cn(
+                  "font-medium",
                   channel.provider === "BAILEYS_MD"
                     ? "text-[#25D366]"
-                    : "text-muted-foreground"
-                )}>
-                  {PROVIDER_LABELS[channel.provider]}
-                </span>
-              </div>
+                    : "text-[var(--text-muted)]",
+                )}
+              >
+                {PROVIDER_LABELS[channel.provider]}
+              </span>
             </div>
           </div>
-
-          {status === "CONNECTED" ? (
-            <Badge
-              variant="success"
-              className="shrink-0 gap-1.5 border-transparent shadow-none"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#22c55e]" />
-              </span>
-              Conectado
-            </Badge>
-          ) : (
-            <Badge variant={statusBadgeVariant(status)}>{statusLabel(status)}</Badge>
-          )}
         </div>
+
+        {status === "CONNECTED" ? (
+          <Badge
+            variant="success"
+            className="shrink-0 gap-1.5 border-transparent shadow-none"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#22c55e]" />
+            </span>
+            Conectado
+          </Badge>
+        ) : (
+          <Badge variant={statusBadgeVariant(status)} className="shrink-0">
+            {statusLabel(status)}
+          </Badge>
+        )}
       </div>
 
       <Separator />
 
-      <div className="flex flex-1 flex-col gap-2 px-6 py-4 text-sm text-[var(--text-muted)]">
+      <div className="flex flex-1 flex-col gap-2 px-5 py-4 text-sm text-[var(--text-muted)]">
         <div className="flex justify-between gap-2">
           <span>Telefone</span>
           <span className="truncate font-medium text-[var(--text-primary)]">
@@ -215,133 +209,95 @@ export function ChannelCard({
         </div>
         <div className="flex justify-between gap-2">
           <span>Última conexão</span>
-          <span className="shrink-0 font-medium text-[var(--text-primary)]">{lastAt}</span>
+          <span className="shrink-0 font-medium text-[var(--text-primary)]">
+            {lastAt}
+          </span>
         </div>
+        {status === "FAILED" ? (
+          <p className="mt-1 text-xs text-[var(--color-danger)]">
+            Falha na conexão. Verifique credenciais ou tente reconectar.
+          </p>
+        ) : null}
       </div>
 
-      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 py-4">
-        {status === "DISCONNECTED" ? (
-          <>
-            <Button
-              size="sm"
-              className="gap-1.5"
-              onClick={() => onConnect(id)}
-              disabled={isConnectPending}
-            >
-              {isConnectPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
-              Conectar
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => onConfigure(channel)}
-            >
-              <Settings2 className="size-4" />
-              Configurar
-            </Button>
-          </>
-        ) : null}
-
-        {status === "CONNECTED" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={() => onDisconnect(id)}
-            disabled={isDisconnectPending}
-          >
-            {isDisconnectPending ? (
-              <Loader2 className="size-4 animate-spin" />
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-5 py-3">
+        <div className="flex items-center gap-2.5">
+          <Switch
+            checked={isActive}
+            onCheckedChange={handleToggle}
+            disabled={!canToggle}
+            aria-label={isActive ? "Desativar canal" : "Ativar canal"}
+          />
+          <span className="text-xs font-medium text-[var(--text-muted)]">
+            {isTogglePending ? (
+              <span className="inline-flex items-center gap-1">
+                <Loader2 className="size-3 animate-spin" />
+                {isActive ? "Desativando…" : "Ativando…"}
+              </span>
+            ) : isActive ? (
+              "Ativo"
             ) : (
-              <Unplug className="size-4" />
+              "Inativo"
             )}
-            Desconectar
-          </Button>
-        ) : null}
+          </span>
+        </div>
 
-        {status === "QR_READY" ? (
-          <>
-            <Button
-              size="sm"
-              className="gap-1.5 bg-blue-600 text-white hover:bg-blue-600/90"
-              onClick={() => onOpenQr(channel)}
-            >
-              <QrCode className="size-4" />
-              Ver QR Code
-            </Button>
+        <div className="flex items-center gap-1">
+          {status === "QR_READY" || status === "CONNECTING" ? (
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5"
-              onClick={() => onConfigure(channel)}
-            >
-              <Settings2 className="size-4" />
-              Configurar
-            </Button>
-          </>
-        ) : null}
-
-        {status === "CONNECTING" ? (
-          <>
-            <Button
-              size="sm"
-              className="gap-1.5 bg-blue-600 text-white hover:bg-blue-600/90"
+              className="h-8 gap-1.5 border-blue-500/40 bg-blue-500/10 px-2.5 text-blue-700 hover:bg-blue-500/20 dark:text-blue-100"
               onClick={() => onOpenQr(channel)}
             >
-              <QrCode className="size-4" />
-              Ver QR Code
+              <QrCode className="size-3.5" />
+              QR
             </Button>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 shrink-0 animate-spin text-amber-600" />
-              <span>Conectando…</span>
-            </div>
-          </>
-        ) : null}
+          ) : null}
 
-        {status === "FAILED" ? (
-          <>
+          {status === "FAILED" ? (
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-950 hover:bg-amber-500/20 dark:text-amber-100"
+              className="h-8 gap-1.5 border-amber-500/40 bg-amber-500/10 px-2.5 text-amber-900 hover:bg-amber-500/20 dark:text-amber-100"
               onClick={() => onConnect(id)}
               disabled={isConnectPending}
             >
               {isConnectPending ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <RefreshCw className="size-4" />
+                <RefreshCw className="size-3.5" />
               )}
               Reconectar
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => onConfigure(channel)}
-            >
-              <Settings2 className="size-4" />
-              Configurar
-            </Button>
-            <p className="w-full text-xs text-destructive">
-              Falha na conexão. Verifique credenciais ou tente novamente.
-            </p>
-          </>
-        ) : null}
+          ) : null}
 
-        <Button
-          size="sm"
-          variant="ghost"
-          className="ml-auto gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => onDelete(id)}
-          disabled={isDeletePending}
-        >
-          {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-          Excluir
-        </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="size-8 p-0 text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]"
+            onClick={() => onConfigure(channel)}
+            aria-label="Configurar canal"
+            title="Configurar"
+          >
+            <Settings className="size-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="size-8 p-0 text-[var(--text-muted)] hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => onDelete(id)}
+            disabled={isDeletePending}
+            aria-label="Excluir canal"
+            title="Excluir"
+          >
+            {isDeletePending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </GlassCard>
   );

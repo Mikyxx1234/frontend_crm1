@@ -13,8 +13,9 @@ interface WidgetsBentoProps {
 }
 
 /**
- * Grid responsivo estilo bento para os widgets. Em telas pequenas vira
- * coluna unica; a partir de `sm` usa 2 colunas e, em `xl`, 3 colunas.
+ * Grid responsivo dos widgets — DS v2 (fiel ao mockup widgets.html):
+ * `repeat(auto-fill, minmax(360px, 1fr))` com gap de 16px. Preenche
+ * automaticamente conforme a largura, sem breakpoints fixos.
  */
 export function WidgetsBento({
   widgets,
@@ -24,7 +25,7 @@ export function WidgetsBento({
   onUninstall,
 }: WidgetsBentoProps) {
   return (
-    <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(360px,1fr))] gap-4">
       {widgets.map((widget) => (
         <WidgetCard
           key={widget.slug}

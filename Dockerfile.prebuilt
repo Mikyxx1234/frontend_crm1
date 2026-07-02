@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1
+#
+# Dockerfile para deploy pre-buildado via GitHub Actions.
+#
+# O `next build` e executado no proprio workflow GHA (com actions/cache
+# para node_modules e .next/cache). Este Dockerfile apenas empacota o
+# output standalone + static gerado la.
+#
+# Resultado: Docker build ~10s vs ~2-3min com build inline no Dockerfile
+# original, porque nao ha npm install nem compilacao aqui.
+#
+# Uso: requer que .next/standalone e .next/static existam no contexto
+# (o workflow GHA garante isso apos `npm run build`).
+
+FROM node:22-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+      openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nextjs
+
+COPY --chown=nextjs:nodejs public ./public
+COPY --chown=nextjs:nodejs .next/standalone ./
+COPY --chown=nextjs:nodejs .next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+CMD ["node", "server.js"]

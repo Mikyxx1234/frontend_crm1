@@ -424,13 +424,13 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
           Nenhum produto vinculado
         </div>
       ) : (
-        <div className={cn("space-y-2", compact && "space-y-1.5")}>
+        <div className={cn("space-y-1.5", compact && "space-y-1")}>
           {items.map((item) => (
             <div
               key={item.id}
               className={cn(
-                "rounded-2xl border border-primary/20 bg-linear-to-br from-blue-50 to-white px-4 py-3.5 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
-                compact && "py-3",
+                "group rounded-xl border border-primary/20 bg-linear-to-br from-blue-50 to-white px-3 py-2 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+                compact && "py-1.5",
               )}
             >
               {editingItem === item.id && item.productType !== "SERVICE" ? (
@@ -478,64 +478,76 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Package className="size-3.5 shrink-0 text-primary-dark" />
                   <div className="min-w-0 flex-1">
-                    {/* min-w-0 no flex aninhado: sem isso o `truncate` no
-                        nome do produto não engatava — nomes longos
-                        empurravam badges e estouravam o card. O irmão
-                        (badge "Serviço" + AvailabilityBadge) fica
-                        `shrink-0` pra não competir pelo espaço. */}
-                    <div className="flex min-w-0 items-center gap-2 text-sm text-foreground">
-                      <Package className="size-4 shrink-0 text-primary-dark" />
-                      <span className="min-w-0 truncate font-medium">{item.productName}</span>
-                      {item.productType === "SERVICE" && (
-                        <span className="shrink-0 rounded bg-lavender-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
-                          Serviço
-                        </span>
-                      )}
-                      <span className="shrink-0">
-                        <AvailabilityBadge productId={item.productId} />
-                      </span>
+                    {/* Nome pode quebrar em 2 linhas se longo; libera mais
+                        espaço horizontal pra ele. Badges (Serviço,
+                        Availability) vao pra linha 2 pra nao roubar espaço. */}
+                    <div
+                      className="line-clamp-2 text-sm font-medium leading-tight text-foreground"
+                      title={item.productName}
+                    >
+                      {item.productName}
                     </div>
-                    {/* "Valor duplicado": antes mostrávamos `1 un × R$ 100,00`
-                        embaixo do nome E `R$ 100,00` à direita — quando qty=1
-                        e desconto=0 era pura redundância. Agora só mostramos
-                        o breakdown quando ele agrega informação (qty != 1
-                        OU há desconto). Serviço "Valor fixo" também era
-                        ruído, fica suprimido (o total à direita basta). */}
-                    {item.productType !== "SERVICE" &&
-                      (item.quantity !== 1 || item.discount > 0) && (
-                        <div className="mt-1 text-[var(--color-ink-soft)]">
-                          {item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}
-                          {item.discount > 0 && (
-                            <span className="ml-1 text-warning">-{item.discount}%</span>
+                    {(item.productType === "SERVICE" ||
+                      (item.productType !== "SERVICE" &&
+                        (item.quantity !== 1 || item.discount > 0))) && (
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-[var(--color-ink-soft)]">
+                        {item.productType === "SERVICE" ? (
+                          <span className="rounded bg-lavender-soft px-1.5 py-0.5 font-semibold text-accent">
+                            Serviço
+                          </span>
+                        ) : null}
+                        {item.productType !== "SERVICE" &&
+                          (item.quantity !== 1 || item.discount > 0) && (
+                            <span>
+                              {item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}
+                              {item.discount > 0 && (
+                                <span className="ml-1 text-warning">-{item.discount}%</span>
+                              )}
+                            </span>
                           )}
-                        </div>
-                      )}
+                        <AvailabilityBadge productId={item.productId} />
+                      </div>
+                    )}
                     <ProductCustomFieldsInline productId={item.productId} />
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <span className="text-sm font-semibold tabular-nums text-slate-950">{formatCurrency(item.total)}</span>
-                    {item.productType !== "SERVICE" && (
-                      <button type="button" onClick={() => startEdit(item)} className="rounded p-0.5 opacity-40 hover:opacity-100">
-                        <Pencil className="size-2.5" />
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <span className="text-sm font-semibold tabular-nums text-slate-950">
+                      {formatCurrency(item.total)}
+                    </span>
+                    {/* Acoes so aparecem no hover pra nao competir com o
+                        nome. Em touch (sem hover) tap no card revela via
+                        focus-within. */}
+                    <div className="ml-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                      {item.productType !== "SERVICE" && (
+                        <button
+                          type="button"
+                          onClick={() => startEdit(item)}
+                          className="rounded p-1 text-ink-muted hover:bg-primary/10 hover:text-primary"
+                          aria-label="Editar item"
+                        >
+                          <Pencil className="size-3" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const ok = await confirmDialog({
+                            title: "Remover item",
+                            description: "Remover este item?",
+                            confirmLabel: "Remover",
+                            variant: "destructive",
+                          });
+                          if (ok) removeMutation.mutate(item.id);
+                        }}
+                        className="rounded p-1 text-ink-muted hover:bg-destructive/10 hover:text-destructive"
+                        aria-label="Remover item"
+                      >
+                        <X className="size-3" />
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const ok = await confirmDialog({
-                          title: "Remover item",
-                          description: "Remover este item?",
-                          confirmLabel: "Remover",
-                          variant: "destructive",
-                        });
-                        if (ok) removeMutation.mutate(item.id);
-                      }}
-                      className="rounded p-0.5 opacity-40 hover:text-destructive hover:opacity-100"
-                    >
-                      <X className="size-2.5" />
-                    </button>
+                    </div>
                   </div>
                 </div>
               )}

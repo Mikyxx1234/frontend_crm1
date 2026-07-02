@@ -50,20 +50,58 @@ jobs:
 
       - name: Resolve environment
         id: env
+        # Passar vars/secrets via `env:` (nao inline via ${{ }}) evita
+        # que valores com newline/aspas colados no GitHub UI quebrem o
+        # parser de $GITHUB_OUTPUT. Alem disso, trim manual com `tr -d '\n\r'`
+        # remove qualquer whitespace acidental (Enter no fim do paste).
+        env:
+          BRANCH_REF: ${{ github.ref }}
+          V_API_BASE_PROD: ${{ vars.API_BASE_PROD }}
+          V_API_BASE_DEV: ${{ vars.API_BASE_DEV }}
+          V_NEXTAUTH_URL_PROD: ${{ vars.NEXTAUTH_URL_PROD }}
+          V_NEXTAUTH_URL_DEV: ${{ vars.NEXTAUTH_URL_DEV }}
+          S_NEXTAUTH_SECRET_PROD: ${{ secrets.NEXTAUTH_SECRET_PROD }}
+          S_NEXTAUTH_SECRET_DEV: ${{ secrets.NEXTAUTH_SECRET_DEV }}
+          S_WEBHOOK_PROD: ${{ secrets.EASYPANEL_WEBHOOK_PROD }}
+          S_WEBHOOK_DEV: ${{ secrets.EASYPANEL_WEBHOOK_DEV }}
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "TAG=latest"                                     >> "$GITHUB_OUTPUT"
-            echo "API_BASE=${{ vars.API_BASE_PROD }}"             >> "$GITHUB_OUTPUT"
-            echo "NEXTAUTH_URL=${{ vars.NEXTAUTH_URL_PROD }}"     >> "$GITHUB_OUTPUT"
-            echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_PROD }}" >> "$GITHUB_OUTPUT"
-            echo "WEBHOOK=${{ secrets.EASYPANEL_WEBHOOK_PROD }}"  >> "$GITHUB_OUTPUT"
+          # Escolhe conjunto de vars conforme branch.
+          if [ "$BRANCH_REF" = "refs/heads/main" ]; then
+            TAG=latest
+            API_BASE="$V_API_BASE_PROD"
+            NEXTAUTH_URL="$V_NEXTAUTH_URL_PROD"
+            NEXTAUTH_SECRET="$S_NEXTAUTH_SECRET_PROD"
+            WEBHOOK="$S_WEBHOOK_PROD"
           else
-            echo "TAG=dev"                                        >> "$GITHUB_OUTPUT"
-            echo "API_BASE=${{ vars.API_BASE_DEV }}"              >> "$GITHUB_OUTPUT"
-            echo "NEXTAUTH_URL=${{ vars.NEXTAUTH_URL_DEV }}"      >> "$GITHUB_OUTPUT"
-            echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_DEV }}" >> "$GITHUB_OUTPUT"
-            echo "WEBHOOK=${{ secrets.EASYPANEL_WEBHOOK_DEV }}"   >> "$GITHUB_OUTPUT"
+            TAG=dev
+            API_BASE="$V_API_BASE_DEV"
+            NEXTAUTH_URL="$V_NEXTAUTH_URL_DEV"
+            NEXTAUTH_SECRET="$S_NEXTAUTH_SECRET_DEV"
+            WEBHOOK="$S_WEBHOOK_DEV"
           fi
+          # Trim de \r e \n em todos (defesa contra copy/paste ruim).
+          TAG=$(printf '%s' "$TAG" | tr -d '\r\n')
+          API_BASE=$(printf '%s' "$API_BASE" | tr -d '\r\n')
+          NEXTAUTH_URL=$(printf '%s' "$NEXTAUTH_URL" | tr -d '\r\n')
+          NEXTAUTH_SECRET=$(printf '%s' "$NEXTAUTH_SECRET" | tr -d '\r\n')
+          WEBHOOK=$(printf '%s' "$WEBHOOK" | tr -d '\r\n')
+          # Emite outputs no formato key=value (agora garantidamente 1 linha).
+          {
+            echo "TAG=$TAG"
+            echo "API_BASE=$API_BASE"
+            echo "NEXTAUTH_URL=$NEXTAUTH_URL"
+            echo "NEXTAUTH_SECRET=$NEXTAUTH_SECRET"
+            echo "WEBHOOK=$WEBHOOK"
+          } >> "$GITHUB_OUTPUT"
+          # Debug: mostra se algum obrigatorio veio vazio (ajuda a
+          # diagnosticar variables/secrets nao configurados).
+          echo "::group::env resolved (values masked)"
+          [ -n "$TAG" ]             && echo "TAG=<set>"             || echo "TAG=<EMPTY>"
+          [ -n "$API_BASE" ]        && echo "API_BASE=<set>"        || echo "API_BASE=<EMPTY>"
+          [ -n "$NEXTAUTH_URL" ]    && echo "NEXTAUTH_URL=<set>"    || echo "NEXTAUTH_URL=<EMPTY>"
+          [ -n "$NEXTAUTH_SECRET" ] && echo "NEXTAUTH_SECRET=<set>" || echo "NEXTAUTH_SECRET=<EMPTY>"
+          [ -n "$WEBHOOK" ]         && echo "WEBHOOK=<set>"         || echo "WEBHOOK=<EMPTY>"
+          echo "::endgroup::"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

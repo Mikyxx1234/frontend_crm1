@@ -372,13 +372,31 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
   };
 
   return (
+    // Sem `title`/`description`: o wrapper externo (FieldCard "Produtos" no
+    // deal-detail-panel) ja provê o rótulo da seção. Aqui ficam só o botão
+    // "+" (add) e a contagem inline no ancoramento visual. Antes tínhamos
+    // "PRODUTOS" duplicado (FieldCard + SidebarSection) + subtitle "Itens
+    // vinculados ao negócio." — puramente decorativo, roubando ~40px de
+    // altura útil.
     <SidebarSection
-      title={`Produtos${items.length > 0 ? ` (${items.length})` : ""}`}
-      description="Itens vinculados ao negócio."
       action={
-        <Button type="button" variant="ghost" size="icon" className="size-7 rounded-lg" onClick={() => setShowAdd((v) => !v)}>
-          <Plus className="size-3" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {items.length > 0 && (
+            <span className="font-display text-[11px] font-semibold tabular-nums text-[var(--color-ink-soft)]">
+              {items.length} {items.length === 1 ? "item" : "itens"}
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 rounded-lg"
+            onClick={() => setShowAdd((v) => !v)}
+            aria-label={showAdd ? "Fechar busca de produto" : "Adicionar produto"}
+          >
+            <Plus className="size-3" />
+          </Button>
+        </div>
       }
     >
       {showAdd && (

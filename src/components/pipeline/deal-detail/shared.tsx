@@ -171,24 +171,33 @@ export function SidebarSection({
   contentClassName,
   children,
 }: {
-  title: string;
+  /** Titulo do header. Se omitido, so renderiza header quando existir `action`
+   *  (util pra secoes que ja tem titulo em wrapper externo, ex: FieldCard). */
+  title?: string;
   description?: string;
   action?: React.ReactNode;
   className?: string;
   contentClassName?: string;
   children: React.ReactNode;
 }) {
+  const showHeader = Boolean(title) || Boolean(action);
   return (
     <section className={cn("border-b border-border/90 pb-4", className)}>
-      <div className="mb-2.5 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
-            {title}
-          </h3>
-          {description ? <p className="mt-0.5 text-xs text-slate-500">{description}</p> : null}
+      {showHeader && (
+        <div className={cn("flex items-start justify-between gap-3", title && "mb-2.5")}>
+          {title ? (
+            <div className="min-w-0">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                {title}
+              </h3>
+              {description ? <p className="mt-0.5 text-xs text-slate-500">{description}</p> : null}
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" />
+          )}
+          {action}
         </div>
-        {action}
-      </div>
+      )}
       <div className={contentClassName}>{children}</div>
     </section>
   );

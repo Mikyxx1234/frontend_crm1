@@ -10,7 +10,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { IconBriefcase as Briefcase, IconCalendarRange as CalendarRange, IconSlidersHorizontal as SlidersHorizontal, IconTag as TagIcon, IconUsers as UsersIcon, IconWand as Wand2, IconBolt as Zap, IconX as X } from "@tabler/icons-react";
+import { IconBriefcase as Briefcase, IconCalendarRange as CalendarRange, IconAdjustmentsHorizontal as SlidersHorizontal, IconTag as TagIcon, IconUsers as UsersIcon, IconWand as Wand2, IconBolt as Zap, IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

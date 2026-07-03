@@ -9,7 +9,7 @@
 "use client";
 
 import * as React from "react";
-import { IconSlidersHorizontal as SlidersHorizontal, IconChevronDown as ChevronDown, IconX as X } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal as SlidersHorizontal, IconChevronDown as ChevronDown, IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

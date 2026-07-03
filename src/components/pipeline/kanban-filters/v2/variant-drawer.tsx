@@ -9,7 +9,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { IconSlidersHorizontal as SlidersHorizontal, IconX as X } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal as SlidersHorizontal, IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

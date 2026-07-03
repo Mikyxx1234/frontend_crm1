@@ -343,7 +343,7 @@ export function CatalogsManager() {
         aria-label="Catálogos da organização"
         className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]"
       >
-        <header className="sticky top-0 z-[1] flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3.5 v2-dark:bg-[var(--glass-bg-modal)]">
+        <header className="sticky top-0 z-10 flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3.5 v2-dark:bg-[var(--glass-bg-modal)]">
           <span
             aria-hidden
             className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"

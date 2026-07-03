@@ -172,7 +172,7 @@ export function UpdateAvailableBanner() {
 
   return (
     <div
-      className="fixed bottom-4 left-[5.5rem] z-[60] flex flex-col items-start gap-2"
+      className="fixed bottom-4 left-[5.5rem] z-(--z-sheet) flex flex-col items-start gap-2"
       role="region"
       aria-label="Atualizações disponíveis"
     >

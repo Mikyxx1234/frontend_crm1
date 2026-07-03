@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/crm/page-header";
 import { GlassCard } from "@/components/crm/glass-card";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { InputGlass } from "@/components/crm/input-glass";
+import { SelectNative } from "@/components/ui/select";
 import { EmptyState } from "@/components/crm/empty-state";
 import {
   useAddContactNote,
@@ -229,17 +230,16 @@ export default function ContactDetailClientPage({ id }: { id: string }) {
                     />
                   </Field>
                   <Field label="Estágio do ciclo de vida">
-                    <select
+                    <SelectNative
                       value={edit.lifecycleStage}
                       onChange={(e) => set("lifecycleStage", e.target.value)}
-                      className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
                     >
                       {LIFECYCLE_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
                           {o.label}
                         </option>
                       ))}
-                    </select>
+                    </SelectNative>
                   </Field>
                   <Field label="Empresa" icon={<IconBuilding size={14} />}>
                     <div className="flex items-center gap-2 px-1 py-2.5 font-body text-[13px] text-[var(--text-secondary)]">

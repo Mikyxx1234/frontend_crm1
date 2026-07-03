@@ -316,7 +316,7 @@ export function ConversationColumn({
         createPortal(
           <div
             role="listbox"
-            className="fixed z-[100] flex flex-col gap-0.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+            className="fixed z-(--z-above) flex flex-col gap-0.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-xl"
             style={{
               top: dropdownPos.top,
               left: dropdownPos.left,

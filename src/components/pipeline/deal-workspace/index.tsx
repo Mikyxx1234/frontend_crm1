@@ -505,7 +505,7 @@ export function DealWorkspace({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18 }}
                   onClick={() => setConvListOpen(false)}
-                  className="fixed inset-0 z-[65] bg-slate-900/30 backdrop-blur-sm"
+                  className="fixed inset-0 z-(--z-sheet) bg-slate-900/30 backdrop-blur-sm"
                 />
                 <motion.aside
                   key="conv-list-panel"
@@ -514,7 +514,7 @@ export function DealWorkspace({
                   exit={{ x: "-100%" }}
                   transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
-                    "fixed inset-y-0 left-0 z-[66] flex w-[88vw] max-w-sm flex-col",
+                    "fixed inset-y-0 left-0 z-(--z-modal) flex w-[88vw] max-w-sm flex-col",
                     "border-r border-white/40 bg-white/65 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
                   )}
                 >
@@ -558,7 +558,7 @@ export function DealWorkspace({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="absolute inset-0 z-[55] flex items-start justify-center overflow-y-auto bg-black/25 px-4 py-10 backdrop-blur-md"
+                className="absolute inset-0 z-(--z-overlay) flex items-start justify-center overflow-y-auto bg-black/25 px-4 py-10 backdrop-blur-md"
                 onClick={(e: React.MouseEvent) => { if (e.target === e.currentTarget) setEditing(false); }}
               >
                 <motion.div

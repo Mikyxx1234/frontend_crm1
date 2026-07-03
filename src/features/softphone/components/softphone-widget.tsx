@@ -109,7 +109,7 @@ export function SoftphoneWidget() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-2"
+      className="fixed bottom-4 right-4 z-(--z-sheet) flex flex-col items-end gap-2"
       role="region"
       aria-label="Softphone"
     >

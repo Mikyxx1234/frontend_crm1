@@ -1,6 +1,7 @@
 "use client";
 
 import { IconFilter } from "@tabler/icons-react";
+import { SelectNative } from "@/components/ui/select";
 import type { ListCallsFilters, CallDirection, CallStatus } from "../api/types";
 
 interface CallHistoryFiltersProps {
@@ -13,24 +14,24 @@ export function CallHistoryFilters({ filters, onChange }: CallHistoryFiltersProp
     <div className="flex items-center gap-2">
       <IconFilter size={14} className="text-[var(--text-muted)]" />
 
-      <select
+      <SelectNative
         value={filters.direction ?? ""}
         onChange={(e) =>
           onChange({ ...filters, direction: (e.target.value || undefined) as CallDirection | undefined, page: 1 })
         }
-        className="h-7 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-transparent px-2 text-xs text-[var(--text-primary)]"
+        className="h-7 text-xs"
       >
         <option value="">Todas direções</option>
         <option value="INBOUND">Recebidas</option>
         <option value="OUTBOUND">Realizadas</option>
-      </select>
+      </SelectNative>
 
-      <select
+      <SelectNative
         value={filters.status ?? ""}
         onChange={(e) =>
           onChange({ ...filters, status: (e.target.value || undefined) as CallStatus | undefined, page: 1 })
         }
-        className="h-7 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-transparent px-2 text-xs text-[var(--text-primary)]"
+        className="h-7 text-xs"
       >
         <option value="">Todos status</option>
         <option value="COMPLETED">Completadas</option>
@@ -38,7 +39,7 @@ export function CallHistoryFilters({ filters, onChange }: CallHistoryFiltersProp
         <option value="ANSWERED">Atendidas</option>
         <option value="BUSY">Ocupado</option>
         <option value="FAILED">Falhou</option>
-      </select>
+      </SelectNative>
     </div>
   );
 }

@@ -95,7 +95,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 px-3 pb-3 backdrop-blur-sm md:items-center md:p-6"
+      className="fixed inset-0 z-(--z-above) flex items-end justify-center bg-black/40 px-3 pb-3 backdrop-blur-sm md:items-center md:p-6"
       role="presentation"
       onClick={dismiss}
       onKeyDown={(e) => {

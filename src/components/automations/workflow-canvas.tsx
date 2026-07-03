@@ -1490,7 +1490,7 @@ function WorkflowCanvasInner({
         {nodeMenu && (
           <>
             <div
-              className="fixed inset-0 z-[55]"
+              className="fixed inset-0 z-(--z-overlay)"
               onClick={closeNodeMenu}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -1498,7 +1498,7 @@ function WorkflowCanvasInner({
               }}
             />
             <div
-              className="fixed z-[60] min-w-[168px] overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[var(--glass-shadow)] backdrop-blur-md"
+              className="fixed z-(--z-sheet) min-w-[168px] overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[var(--glass-shadow)] backdrop-blur-md"
               style={{ top: nodeMenu.y, left: nodeMenu.x }}
             >
               <button

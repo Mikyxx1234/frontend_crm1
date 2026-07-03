@@ -894,7 +894,7 @@ function StageDropdown({
       {open ? (
         <div
           className={cn(
-            "absolute left-0 top-[calc(100%+6px)] z-[100] min-w-[220px] w-max max-w-[min(100vw-2rem,320px)]",
+            "absolute left-0 top-[calc(100%+6px)] z-(--z-above) min-w-[220px] w-max max-w-[min(100vw-2rem,320px)]",
             ds.popover.base,
           )}
         >

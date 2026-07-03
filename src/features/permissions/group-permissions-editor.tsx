@@ -303,7 +303,7 @@ export function GroupPermissionsEditor({
   return (
     <div className="flex flex-col gap-4">
       {/* ACTION BAR — sticky header with Cancel/Save, mirroring the mockup */}
-      <header className="sticky top-0 z-[3] -mx-1 flex flex-wrap items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
+      <header className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
         <span
           aria-hidden
           className="flex size-[38px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]"

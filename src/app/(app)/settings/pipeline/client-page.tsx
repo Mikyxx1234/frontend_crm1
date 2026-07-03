@@ -215,7 +215,7 @@ function CopyToStageModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/25 backdrop-blur-[2px]"
+      className="fixed inset-0 z-(--z-sheet) flex items-center justify-center bg-foreground/25 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div

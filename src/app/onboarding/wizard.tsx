@@ -6,6 +6,7 @@ import { useMemo, useRef, useState } from "react";
 import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconBuilding as Building2, IconCheck as Check, IconFlag as Flag, IconPhoto as ImageIcon, IconLayoutKanban as Kanban, IconLink as LinkIcon, IconLoader2 as Loader2, IconLogout as LogOut, IconPalette as Palette, IconRadio as Radio, IconPlayerSkipForward as SkipForward, IconTrash as Trash2, IconUpload as Upload, IconUsers as Users } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import { SelectNative } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -419,11 +420,11 @@ function StepEmpresa(props: {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="size">Tamanho</Label>
-          <select
+          <SelectNative
             id="size"
             value={props.size}
             onChange={(e) => props.setSize(e.target.value)}
-            className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm"
+            className="h-10 text-sm"
           >
             <option value="">Selecione...</option>
             <option value="1-10">1-10</option>
@@ -431,7 +432,7 @@ function StepEmpresa(props: {
             <option value="51-200">51-200</option>
             <option value="201-500">201-500</option>
             <option value="500+">500+</option>
-          </select>
+          </SelectNative>
         </div>
         <div>
           <Label htmlFor="phone">Telefone de contato</Label>
@@ -836,18 +837,18 @@ function StepTime(props: {
               </div>
               <div className="w-40">
                 <Label className="text-xs">Papel</Label>
-                <select
+                <SelectNative
                   value={m.role}
                   onChange={(e) =>
                     props.updateTeamMember(i, {
                       role: e.target.value as "MANAGER" | "MEMBER",
                     })
                   }
-                  className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm"
+                  className="h-10 text-sm"
                 >
                   <option value="MEMBER">Membro</option>
                   <option value="MANAGER">Gestor</option>
-                </select>
+                </SelectNative>
               </div>
               <Button
                 type="button"

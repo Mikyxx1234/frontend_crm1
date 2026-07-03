@@ -1240,7 +1240,7 @@ function TabsBar({
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-full z-[200] mt-1.5 w-52 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
+              <div className="absolute right-0 top-full z-(--z-above) mt-1.5 w-52 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-1 shadow-[var(--glass-shadow)] backdrop-blur-md">
                 {/* Buscar na conversa */}
                 {activeTab === "conversa" && onSearchOpen && (
                   <button

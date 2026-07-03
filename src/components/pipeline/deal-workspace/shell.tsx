@@ -21,8 +21,8 @@ import { cn } from "@/lib/utils";
 //  - Foco inicial no botao Fechar (focus-trap leve — nao prendemos foco
 //    porque o conteudo interno tem inputs/menus de portal que precisariam
 //    sair do escopo);
-//  - z-[60] cobre <aside> da dashboard-shell (z-40), mas portais Radix
-//    (Tooltip, Dialog, Confirm) ficam acima (z-[70]+ por default).
+//  - z-(--z-sheet) [60] cobre <aside> da dashboard-shell (z-40), mas portais Radix
+//    (Tooltip, Dialog, Confirm) ficam acima (--z-radix: 90 por default).
 // ─────────────────────────────────────────────────────────────────────────────
 
 type WorkspaceShellProps = {
@@ -89,13 +89,13 @@ export function WorkspaceShell({
           exit={{ opacity: 0, x: 16 }}
           transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
           className={cn(
-            "fixed inset-0 z-[60] flex flex-col overflow-hidden",
+            "fixed inset-0 z-(--z-sheet) flex flex-col overflow-hidden",
             "font-display text-foreground",
           )}
           style={{ background: "var(--bg-gradient)" }}
         >
           {!hideFloatingClose ? (
-            <div className="pointer-events-none absolute right-4 top-3 z-[70] sm:right-6 sm:top-4">
+            <div className="pointer-events-none absolute right-4 top-3 z-(--z-modal) sm:right-6 sm:top-4">
               <TooltipHost label="Fechar (Esc)" side="bottom">
                 <button
                   ref={closeRef}

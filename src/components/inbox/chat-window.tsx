@@ -318,7 +318,7 @@ function AttachPopover({
       >
         <Plus className="size-5" strokeWidth={2} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="z-[60] min-w-[208px] rounded-xl border border-black/5 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
+      <DropdownMenuContent className="z-(--z-popover) min-w-[208px] rounded-xl border border-black/5 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
         <DropdownMenuItem
           className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           onClick={onFile}

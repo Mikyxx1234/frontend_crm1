@@ -1885,7 +1885,7 @@ interface ImportExportModalProps {
 function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps) {
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/25 px-4 py-4 backdrop-blur-[2px] sm:px-6 sm:py-6"
+      className="fixed inset-0 z-(--z-modal) flex items-center justify-center bg-black/25 px-4 py-4 backdrop-blur-[2px] sm:px-6 sm:py-6"
       onClick={onClose}
     >
       <div

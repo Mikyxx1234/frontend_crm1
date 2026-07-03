@@ -4,6 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { IconArrowsLeftRight as ArrowLeftRight, IconCalendar as Calendar, IconChevronDown as ChevronDown, IconFilter as Filter, IconRotate2 as RotateCcw } from "@tabler/icons-react";
+import { SelectNative } from "@/components/ui/select";
 import {
   useDashboardStore,
   type ComparisonMode,
@@ -127,15 +128,15 @@ export function FiltersBar() {
             "size-3.5",
             comparisonMode !== "off" ? "text-primary" : "text-muted-foreground",
           )} />
-          <select
+          <SelectNative
             value={comparisonMode}
             onChange={(e) => setComparison(e.target.value as ComparisonMode)}
-            className="h-7 border-0 bg-transparent text-xs font-medium text-foreground outline-none"
+            className="h-7 text-xs"
           >
             {COMPARISON_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>{o.label}</option>
             ))}
-          </select>
+          </SelectNative>
         </div>
 
         {/* Advanced filters toggle */}
@@ -218,16 +219,16 @@ function FilterSelect({
       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <select
+      <SelectNative
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-7 rounded-lg border border-border/60 bg-white px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/20"
+        className="h-7 text-xs"
       >
         {showAll && <option value="">Todos</option>}
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
-      </select>
+      </SelectNative>
     </div>
   );
 }

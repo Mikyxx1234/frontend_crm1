@@ -5,6 +5,7 @@ import { IconMail as Mail, IconPlus as Plus, IconTrash as Trash2, IconRefresh as
 import { toast } from "sonner";
 
 import { TabsGlass } from "@/components/crm/tabs-glass";
+import { SelectNative } from "@/components/ui/select";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 import { ConnectEmailModal } from "@/features/email-v2";
@@ -441,15 +442,15 @@ function RuleForm({
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Campo
           </span>
-          <select
+          <SelectNative
             value={conditionField}
             onChange={(e) => setConditionField(e.target.value as EmailRuleField)}
-            className="px-3 py-2 text-[13px] rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] focus:outline-none focus:border-[var(--brand-primary)]"
+            className="text-[13px]"
           >
             <option value="FROM">Enviado de</option>
             <option value="TO">Enviado para</option>
             <option value="SUBJECT">Assunto</option>
-          </select>
+          </SelectNative>
         </label>
 
         <label className="flex flex-col gap-1.5">
@@ -471,14 +472,14 @@ function RuleForm({
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Ação
           </span>
-          <select
+          <SelectNative
             value={action}
             onChange={(e) => setAction(e.target.value as EmailRuleAction)}
-            className="px-3 py-2 text-[13px] rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] focus:outline-none focus:border-[var(--brand-primary)]"
+            className="text-[13px]"
           >
             <option value="MOVE">Mover para pasta</option>
             <option value="TRASH">Excluir (mover para lixeira)</option>
-          </select>
+          </SelectNative>
         </label>
 
         {action === "MOVE" && (
@@ -486,18 +487,18 @@ function RuleForm({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Pasta de destino
             </span>
-            <select
+            <SelectNative
               value={targetFolderId}
               onChange={(e) => setTargetFolderId(e.target.value)}
               disabled={folders.length === 0}
-              className="px-3 py-2 text-[13px] rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] focus:outline-none focus:border-[var(--brand-primary)] disabled:opacity-50"
+              className="text-[13px]"
             >
               {folders.length === 0 ? (
                 <option value="">Nenhuma pasta — crie no Inbox</option>
               ) : (
                 folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)
               )}
-            </select>
+            </SelectNative>
           </label>
         )}
       </div>

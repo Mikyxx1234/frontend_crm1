@@ -434,7 +434,7 @@ function InboxCategorySelect({
 
         {selectOpen ? (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-[70] overflow-hidden rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-slate-700 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-(--z-popover) overflow-hidden rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-slate-700 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
             style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
             role="listbox"
             aria-label="Categoria da inbox"

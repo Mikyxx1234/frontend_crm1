@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { IconCheck as Check, IconCopy as Copy, IconLoader2 as Loader2, IconPower as Power, IconShieldCheck as ShieldCheck, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
+import { SelectNative } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -343,16 +344,16 @@ export default function OrganizationDetailClient({
             <Label htmlFor="invite-role" className="text-xs">
               Papel
             </Label>
-            <select
+            <SelectNative
               id="invite-role"
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as Role)}
-              className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-sm"
+              className="h-10 text-sm"
             >
               <option value="ADMIN">Admin (abre wizard)</option>
               <option value="MANAGER">Gestor</option>
               <option value="MEMBER">Membro</option>
-            </select>
+            </SelectNative>
           </div>
           <div className="flex items-end">
             <Button type="submit" disabled={busy === "invite"}>

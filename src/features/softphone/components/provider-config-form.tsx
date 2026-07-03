@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2, IconPlus, IconWebhook } from "@tabler/icons-react";
+import { SelectNative } from "@/components/ui/select";
 
 const BASE = "/api";
 
@@ -95,26 +96,26 @@ export function ProviderConfigForm() {
         >
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--text-muted)]">Provedor</label>
-            <select
+            <SelectNative
               value={providerKey}
               onChange={(e) => setProviderKey(e.target.value)}
-              className="h-8 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-transparent px-2 text-sm"
+              className="h-8 text-sm"
             >
               <option value="api4com">Api4Com</option>
               <option value="generic_sip">PBX Genérico</option>
-            </select>
+            </SelectNative>
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--text-muted)]">Auth Mode</label>
-            <select
+            <SelectNative
               value={authMode}
               onChange={(e) => setAuthMode(e.target.value)}
-              className="h-8 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-transparent px-2 text-sm"
+              className="h-8 text-sm"
             >
               <option value="TOKEN">Token</option>
               <option value="HMAC">HMAC</option>
-            </select>
+            </SelectNative>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -130,15 +131,15 @@ export function ProviderConfigForm() {
 
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--text-muted)]">Recording Delivery</label>
-            <select
+            <SelectNative
               value={recordingDelivery}
               onChange={(e) => setRecordingDelivery(e.target.value)}
-              className="h-8 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-transparent px-2 text-sm"
+              className="h-8 text-sm"
             >
               <option value="URL">URL (mp3)</option>
               <option value="INLINE">Inline</option>
               <option value="FETCH_LATER">Buscar depois</option>
-            </select>
+            </SelectNative>
           </div>
 
           {mutation.isError && (

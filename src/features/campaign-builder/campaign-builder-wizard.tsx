@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select";
 import { pageHeaderDescriptionClass, pageHeaderTitleClass } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
@@ -156,20 +157,20 @@ export function CampaignBuilderWizard() {
             <>
               <div className="space-y-2">
                 <Label>Tipo</Label>
-                <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                <SelectNative
+                  className="h-10 text-sm"
                   value={type}
                   onChange={(e) => setType(e.target.value as typeof type)}
                 >
                   <option value="TEMPLATE">Template Meta</option>
                   <option value="TEXT">Texto livre</option>
                   <option value="AUTOMATION">Automação</option>
-                </select>
+                </SelectNative>
               </div>
               <div className="space-y-2">
                 <Label>Canal</Label>
-                <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                <SelectNative
+                  className="h-10 text-sm"
                   value={channelId}
                   onChange={(e) => setChannelId(e.target.value)}
                 >
@@ -181,7 +182,7 @@ export function CampaignBuilderWizard() {
                         {c.name}
                       </option>
                     ))}
-                </select>
+                </SelectNative>
               </div>
             </>
           ) : null}
@@ -189,8 +190,8 @@ export function CampaignBuilderWizard() {
           {step === 1 ? (
             <div className="space-y-2">
               <Label>Automação (obrigatória só no tipo automação)</Label>
-              <select
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              <SelectNative
+                className="h-10 text-sm"
                 value={automationId}
                 onChange={(e) => setAutomationId(e.target.value)}
                 disabled={type !== "AUTOMATION"}
@@ -203,7 +204,7 @@ export function CampaignBuilderWizard() {
                       {a.name}
                     </option>
                   ))}
-              </select>
+              </SelectNative>
             </div>
           ) : null}
 
@@ -211,8 +212,8 @@ export function CampaignBuilderWizard() {
             <>
               <div className="space-y-2">
                 <Label>Segmento</Label>
-                <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                <SelectNative
+                  className="h-10 text-sm"
                   value={segmentId}
                   onChange={(e) => setSegmentId(e.target.value)}
                 >
@@ -222,7 +223,7 @@ export function CampaignBuilderWizard() {
                       {s.name}
                     </option>
                   ))}
-                </select>
+                </SelectNative>
               </div>
               {previewMutation.data ? (
                 <p className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">

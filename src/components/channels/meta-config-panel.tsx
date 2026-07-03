@@ -742,7 +742,7 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
       </div>
 
       <Dialog open={webhookOpen} onOpenChange={setWebhookOpen}>
-        <DialogContent size="md" className="z-[60]">
+        <DialogContent size="md" className="z-(--z-sheet)">
           <DialogClose />
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

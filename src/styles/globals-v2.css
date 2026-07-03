@@ -110,11 +110,13 @@
 
   /* ── Escala fechada de z-index (DS-008) ───────────────────────────
      Camadas do manual (cap. 6.8). Nunca usar valor fora da escala.
-     10–40 (sticky/fixed in-page) já são utilitários nativos z-10..z-40.
-     50 = modais/sheets (padrão Radix do projeto).                    */
-  --z-overlay:  50;  /* modais, sheets, drawers                       */
-  --z-popover:  80;  /* menus/popovers portalados em document.body    */
-  --z-radix:    90;  /* poppers Radix — sempre acima de popover custom*/
+     10–40 (sticky/fixed in-page) já são utilitários nativos z-10..z-40.  */
+  --z-overlay:  50;  /* backdrops/overlays semitransparentes            */
+  --z-sheet:    60;  /* painéis flutuantes (deal-workspace, drawers)    */
+  --z-modal:    70;  /* modais customizados acima de sheets             */
+  --z-popover:  80;  /* menus/popovers portalados em document.body      */
+  --z-radix:    90;  /* poppers Radix — sempre acima de popover custom  */
+  --z-above:   100;  /* acima de portais Radix (onboarding, emergencial)*/
 
   /* ── Tokens de input / formulário ─────────────────────────────── */
   --input-bg:           var(--glass-bg-overlay);
@@ -204,8 +206,11 @@
 
   /* Escala fechada de z-index (DS-008) — espelho do @theme */
   --z-overlay:  50;
+  --z-sheet:    60;
+  --z-modal:    70;
   --z-popover:  80;
   --z-radix:    90;
+  --z-above:   100;
 
   /* Tokens de input */
   --input-bg:           rgba(255, 255, 255, 0.72);

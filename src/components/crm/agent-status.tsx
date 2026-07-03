@@ -191,7 +191,7 @@ export function AgentStatusPopup({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/30 backdrop-blur-md"
+      className="fixed inset-0 z-(--z-above) flex items-center justify-center bg-black/30 backdrop-blur-md"
       style={{ animation: "fade-in 0.2s ease" }}
     >
       <div

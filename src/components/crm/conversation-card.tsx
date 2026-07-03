@@ -144,7 +144,7 @@ function channelBadge(channel: string | null | undefined): {
   const c = (channel ?? "").toLowerCase().trim();
   if (!c) return null;
   if (c === "whatsapp" || c === "wa")
-    return { Icon: IconBrandWhatsapp, bg: "#25D366", fg: "#FFFFFF", title: "WhatsApp" };
+    return { Icon: IconBrandWhatsapp, bg: "var(--channel-whatsapp)", fg: "#FFFFFF", title: "WhatsApp" };
   if (c === "instagram" || c === "ig")
     return {
       Icon: IconBrandInstagram,
@@ -153,15 +153,15 @@ function channelBadge(channel: string | null | undefined): {
       title: "Instagram",
     };
   if (c === "facebook" || c === "fb")
-    return { Icon: IconBrandFacebook, bg: "#1877F2", fg: "#FFFFFF", title: "Facebook" };
+    return { Icon: IconBrandFacebook, bg: "var(--channel-facebook)", fg: "#FFFFFF", title: "Facebook" };
   if (c === "meta" || c === "messenger")
-    return { Icon: IconBrandMessenger, bg: "#0084FF", fg: "#FFFFFF", title: "Messenger" };
+    return { Icon: IconBrandMessenger, bg: "var(--channel-messenger)", fg: "#FFFFFF", title: "Messenger" };
   if (c === "telegram" || c === "tg")
-    return { Icon: IconBrandTelegram, bg: "#229ED9", fg: "#FFFFFF", title: "Telegram" };
+    return { Icon: IconBrandTelegram, bg: "var(--channel-telegram)", fg: "#FFFFFF", title: "Telegram" };
   if (c === "email" || c === "mail")
-    return { Icon: IconMail, bg: "#6B7280", fg: "#FFFFFF", title: "E-mail" };
+    return { Icon: IconMail, bg: "var(--channel-email)", fg: "#FFFFFF", title: "E-mail" };
   if (c === "webchat" || c === "form" || c === "site" || c === "landing")
-    return { Icon: IconForms, bg: "#5b6ff5", fg: "#FFFFFF", title: "Formulário" };
+    return { Icon: IconForms, bg: "var(--channel-webchat)", fg: "#FFFFFF", title: "Formulário" };
   return null;
 }
 

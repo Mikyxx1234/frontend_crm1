@@ -39,11 +39,11 @@ const TYPE_LABELS: Record<ChannelType, string> = {
  * o mockup DS v2 (channels.html), usando as cores oficiais de cada rede.
  */
 const TYPE_COLOR: Record<ChannelType, string> = {
-  WHATSAPP: "#25D366",
-  INSTAGRAM: "#d6296b",
-  FACEBOOK: "#1877F2",
-  EMAIL: "var(--brand-primary)",
-  WEBCHAT: "var(--brand-primary)",
+  WHATSAPP: "var(--channel-whatsapp)",
+  INSTAGRAM: "var(--channel-instagram)",
+  FACEBOOK: "var(--channel-facebook)",
+  EMAIL: "var(--channel-email)",
+  WEBCHAT: "var(--channel-webchat)",
 };
 
 function TypeIcon({ type }: { type: ChannelType }) {

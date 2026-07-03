@@ -238,6 +238,15 @@
   --wa-field-bg:      #f7f8fa;
   --wa-field-border:  #e3e6ea;
   --wa-header:        #075e54;
+
+  /* ── Canais — cores de marca (fixas, sem dark mode override) ─────────────── */
+  --channel-whatsapp:  #25d366;
+  --channel-instagram: #e1306c;
+  --channel-facebook:  #1877f2;
+  --channel-messenger: #0084ff;
+  --channel-telegram:  #229ed9;
+  --channel-email:     var(--brand-primary);
+  --channel-webchat:   var(--brand-primary);
 }
 
 /* ──────────────────────────────────────────────────────────────────

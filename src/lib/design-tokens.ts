@@ -46,6 +46,7 @@ export const dt = {
       "inline-flex items-center gap-1.5 rounded-[4px] border border-border bg-card px-2.5 py-1 text-[12px] font-medium text-primary shadow-[var(--shadow-sm)]",
   },
 
+  // TODO DS-004: add --workspace-leader-bg/border tokens to globals-v2.css
   /** Header petróleo do DealWorkspace (coluna esquerda compacta). */
   workspace: {
     leader:

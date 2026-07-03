@@ -304,7 +304,7 @@ export function ContactInfoPanel({
                 onValueChange={(v) => setLifecycleLocal(v)}
                 triggerClassName="h-9 w-full border-indigo-500/20 text-xs"
               />
-                <Button type="button" size="sm" variant="secondary" className="h-8 text-xs"
+                <Button type="button" size="sm" variant="glass" className="h-8 text-xs"
                   disabled={lifecycleMutation.isPending || lifecycleLocal === data.lifecycleStage}
                   onClick={() => lifecycleMutation.mutate(lifecycleLocal)}>
                   {lifecycleMutation.isPending ? "Salvando…" : "Aplicar estágio"}

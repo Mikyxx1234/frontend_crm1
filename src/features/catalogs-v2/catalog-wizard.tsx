@@ -318,7 +318,7 @@ export function CatalogWizard({ onDone, onCancel, catalog }: Props) {
                   Verifique a conexão com o servidor e tente novamente.
                 </p>
               </div>
-              <Button size="sm" variant="secondary" onClick={() => refetch()}>
+              <Button size="sm" variant="glass" onClick={() => refetch()}>
                 Tentar novamente
               </Button>
             </div>

@@ -160,7 +160,7 @@ export default function AIAgentsPage() {
       />
 
       {aiDisabled ? (
-        <div className="rounded-xl border border-amber-300/70 bg-amber-50/60 p-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="rounded-xl border border-amber-300/70 bg-[var(--color-amber-soft)]/60 p-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" />
             <div className="min-w-0 flex-1">
@@ -182,7 +182,7 @@ export default function AIAgentsPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-amber-300/60 bg-amber-50/40 p-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="rounded-xl border border-dashed border-amber-300/60 bg-[var(--color-amber-soft)]/40 p-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
           <div className="flex items-start gap-2">
             <CircleAlert className="mt-0.5 size-4 shrink-0" />
             <div>
@@ -221,7 +221,7 @@ export default function AIAgentsPage() {
                 <div className="flex items-start gap-3">
                   <Avatar className="size-11">
                     <AvatarImage src={a.avatarUrl ?? undefined} />
-                    <AvatarFallback className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">
+                    <AvatarFallback className="bg-[var(--color-indigo-soft)] text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">
                       {getInitials(a.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -231,7 +231,7 @@ export default function AIAgentsPage() {
                       {a.active ? (
                         <Badge
                           variant="secondary"
-                          className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+                          className="bg-[var(--color-success-subtle)] text-emerald-700 hover:bg-[var(--color-success-subtle)] dark:bg-emerald-950 dark:text-emerald-200"
                         >
                           Ativo
                         </Badge>
@@ -372,7 +372,7 @@ export default function AIAgentsPage() {
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="rounded-xl border border-dashed border-border/80 py-16 text-center">
-      <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-indigo-50 text-[var(--color-brand-primary)] dark:bg-indigo-950 dark:text-indigo-300">
+        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-[var(--color-indigo-soft)] text-[var(--color-brand-primary)] dark:bg-indigo-950 dark:text-indigo-300">
         <Bot className="size-8" />
       </div>
       <h3 className="mt-4 text-base font-semibold">Nenhum agente IA ainda</h3>

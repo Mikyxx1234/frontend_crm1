@@ -539,11 +539,11 @@ Todas as respostas de erro incluem um campo "message" com detalhes:
 /* ────────────────────────────────────────────── */
 
 const METHOD_COLORS: Record<HttpMethod, string> = {
-  GET: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  POST: "bg-blue-100 text-blue-700 border-blue-200",
-  PUT: "bg-amber-100 text-amber-700 border-amber-200",
-  DELETE: "bg-red-100 text-red-700 border-red-200",
-  PATCH: "bg-purple-100 text-purple-700 border-purple-200",
+  GET: "bg-[var(--color-success-subtle)] text-emerald-700 border-[var(--color-success-subtle)]",
+  POST: "bg-[var(--color-indigo-soft)] text-blue-700 border-[var(--color-primary-soft)]",
+  PUT: "bg-[var(--color-amber-soft)] text-[var(--color-amber-text)] border-[var(--color-amber-soft)]",
+  DELETE: "bg-[var(--color-danger-subtle)] text-red-700 border-[var(--color-danger-subtle)]",
+  PATCH: "bg-[var(--color-lavender-soft)] text-purple-700 border-[var(--color-lavender-soft)]",
 };
 
 function MethodBadge({ method }: { method: HttpMethod }) {

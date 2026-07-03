@@ -562,7 +562,7 @@ export function WhatsappCallChip({
                 : cs === "DENIED" || effectivelyExpired
                   ? "text-destructive"
                   : cs === "REQUESTED"
-                    ? "text-sky-400"
+                    ? "text-[var(--color-sky)]"
                     : "text-ink-subtle",
             )}
             strokeWidth={2.2}

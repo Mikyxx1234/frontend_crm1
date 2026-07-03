@@ -150,7 +150,7 @@ export function ServiceOverview({ data }: { data: ServiceOverviewData }) {
           subtitle="Ao longo do dia (minutos)"
           legend={[
             { label: "Resposta", color: "var(--brand-primary)" },
-            { label: "1ª resposta", color: "#a78bfa" },
+            { label: "1ª resposta", color: "var(--color-lavender)" },
           ]}
         >
           <div className="h-[240px] w-full">
@@ -165,8 +165,8 @@ export function ServiceOverview({ data }: { data: ServiceOverviewData }) {
                       <stop offset="100%" stopColor="var(--brand-primary)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="grad-primeira" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="#a78bfa" stopOpacity={0} />
+                      <stop offset="0%" stopColor="var(--color-lavender)" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="var(--color-lavender)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" vertical={false} />
@@ -174,7 +174,7 @@ export function ServiceOverview({ data }: { data: ServiceOverviewData }) {
                   <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "var(--text-muted)" }} width={28} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area type="monotone" dataKey="resposta" name="Resposta" stroke="var(--brand-primary)" strokeWidth={2.5} fill="url(#grad-resposta)" />
-                  <Area type="monotone" dataKey="primeira" name="1ª resposta" stroke="#a78bfa" strokeWidth={2.5} fill="url(#grad-primeira)" />
+                  <Area type="monotone" dataKey="primeira" name="1ª resposta" stroke="var(--color-lavender)" strokeWidth={2.5} fill="url(#grad-primeira)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}

@@ -293,7 +293,7 @@ export default function InboxAnalyticsPage() {
               {data.byAgent.length > 0 ? (
                 <div className="space-y-0">
                   {/* Header */}
-                  <div className="grid grid-cols-4 gap-2 border-b border-gray-100 pb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] dark:border-gray-800">
+                  <div className="grid grid-cols-4 gap-2 border-b border-[var(--color-border-soft)] pb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] dark:border-gray-800">
                     <span>Agente</span>
                     <span className="text-center">Conversas</span>
                     <span className="text-center">Msgs Env.</span>
@@ -329,7 +329,7 @@ export default function InboxAnalyticsPage() {
                           agent.avgResponseMinutes <= 5
                             ? "text-[var(--color-success)] dark:text-emerald-400"
                             : agent.avgResponseMinutes <= 30
-                              ? "text-amber-600 dark:text-amber-400"
+                              ? "text-[var(--color-warning)] dark:text-amber-400"
                               : "text-[var(--color-destructive)] dark:text-red-400"
                         )}
                       >
@@ -413,13 +413,13 @@ function MetricCard({
   isText?: boolean;
 }) {
   const colors = {
-    blue: "from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/20 text-blue-600 dark:text-blue-400",
+    blue: "from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/20 text-[var(--color-brand-primary)] dark:text-blue-400",
     emerald:
-      "from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-emerald-900/20 text-emerald-600 dark:text-emerald-400",
+      "from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-emerald-900/20 text-[var(--color-success)] dark:text-emerald-400",
     amber:
-      "from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-amber-900/20 text-amber-600 dark:text-amber-400",
+      "from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-amber-900/20 text-[var(--color-warning)] dark:text-amber-400",
     purple:
-      "from-purple-50 to-purple-100/50 dark:from-purple-950/40 dark:to-purple-900/20 text-purple-600 dark:text-purple-400",
+      "from-purple-50 to-purple-100/50 dark:from-purple-950/40 dark:to-purple-900/20 text-[var(--color-lavender)] dark:text-purple-400",
   };
 
   return (

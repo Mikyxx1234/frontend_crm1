@@ -137,7 +137,7 @@ export default function AiSettingsPage() {
           {statusQuery.isLoading ? (
             <Skeleton className="h-20 w-full" />
           ) : status?.configured ? (
-            <div className="rounded-lg border border-emerald-200/60 bg-emerald-50/60 p-3 text-sm dark:border-emerald-800/60 dark:bg-emerald-950/30">
+            <div className="rounded-lg border border-[var(--color-success-subtle)]/60 bg-emerald-50/60 p-3 text-sm dark:border-emerald-800/60 dark:bg-emerald-950/30">
               <div className="flex items-start gap-2 text-emerald-900 dark:text-emerald-200">
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -151,7 +151,7 @@ export default function AiSettingsPage() {
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-amber-200/60 bg-amber-50/60 p-3 text-sm dark:border-amber-800/60 dark:bg-amber-950/30">
+            <div className="rounded-lg border border-[var(--color-amber-soft)]/60 bg-[var(--color-amber-soft)]/60 p-3 text-sm dark:border-amber-800/60 dark:bg-amber-950/30">
               <div className="flex items-start gap-2 text-amber-900 dark:text-amber-200">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -273,7 +273,7 @@ export default function AiSettingsPage() {
           className={cn(
             "rounded-lg border p-3 text-sm",
             testResult.ok
-              ? "border-emerald-200/60 bg-emerald-50/60 text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+              ? "border-[var(--color-success-subtle)]/60 bg-emerald-50/60 text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-200"
               : "border-destructive/40 bg-destructive/5 text-destructive",
           )}
         >
@@ -328,7 +328,7 @@ function StatusBadge({
     return (
       <Badge
         variant="secondary"
-        className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+        className="bg-[var(--color-success-subtle)] text-emerald-700 hover:bg-[var(--color-success-subtle)] dark:bg-emerald-950 dark:text-emerald-200"
       >
         Ativa
       </Badge>
@@ -337,7 +337,7 @@ function StatusBadge({
   return (
     <Badge
       variant="secondary"
-      className="bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-200"
+        className="bg-[var(--color-amber-soft)] text-[var(--color-amber-text)] hover:bg-[var(--color-amber-soft)] dark:bg-amber-950 dark:text-amber-200"
     >
       Desativada
     </Badge>

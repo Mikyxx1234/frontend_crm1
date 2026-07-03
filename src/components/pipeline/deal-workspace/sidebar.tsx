@@ -125,7 +125,7 @@ export function WorkspaceCompactDealLeader({
             onChange={onStageChange}
             isPending={stagePending}
             petroleumHeader
-            chevronClassName="text-sky-400/60"
+            chevronClassName="text-[var(--color-sky)]/60"
             className="text-[12px] font-semibold text-sky-300 transition-colors hover:text-sky-200"
           />
           {numVal > 0 ? (
@@ -835,7 +835,7 @@ function StageDropdown({
             <ChevronDown
               className={cn(
                 "size-3 shrink-0 transition-transform",
-                chevronClassName ?? "text-sky-400/60",
+                chevronClassName ?? "text-[var(--color-sky)]/60",
                 open && "rotate-180",
               )}
               strokeWidth={2.5}

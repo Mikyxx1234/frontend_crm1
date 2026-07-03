@@ -270,7 +270,7 @@ export function DealStageSelector({
                       className={cn(
                         "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12px] font-bold tracking-tight text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
                         isCurrent &&
-                          "cursor-default bg-blue-50/60 text-blue-700",
+                          "cursor-default bg-[var(--color-indigo-soft)]/60 text-blue-700",
                       )}
                     >
                       <span
@@ -616,7 +616,7 @@ export function DealOutcomeButtons({
           "min-w-0 flex-1",
           dealStatus === "LOST"
             ? "bg-[var(--color-danger)] text-white"
-            : "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] hover:bg-rose-100",
+            : "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] hover:bg-[var(--color-rose-soft)]",
         )}
       >
         <XCircle className="size-3.5" strokeWidth={2} />

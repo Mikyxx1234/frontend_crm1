@@ -34,7 +34,7 @@ const kickerByCategory: Record<string, string> = {
 const toneColor: Record<NonNullable<FlowOption["tone"]>, string> = {
   default: "#94a3b8",
   success: "#16a34a",
-  danger: "#ef4444",
+  danger: "var(--color-destructive)",
 }
 
 /** Dot de conexão (handle) estilizado conforme o DS */

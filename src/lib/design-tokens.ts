@@ -93,7 +93,7 @@ export const dt = {
       "rounded-full border border-[var(--color-success)]/25 bg-[var(--color-success-soft)] px-3 py-0.5 font-display text-[11px] font-semibold text-[var(--color-success)] shadow-[var(--glass-shadow-sm)] backdrop-blur",
     /** Card de sessão 24h encerrada (footer compactChrome) — ver `chat-window.tsx`. */
     sessionExpiredCard:
-      "mx-3 my-2 flex items-center gap-3 rounded-xl border border-red-200 bg-card px-3 py-2.5 shadow-[0_2px_8px_rgba(220,38,38,0.08)]",
+      "mx-3 my-2 flex items-center gap-3 rounded-xl border border-[var(--color-danger-subtle)] bg-card px-3 py-2.5 shadow-[0_2px_8px_rgba(220,38,38,0.08)]",
     noteLabel: "text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground",
   },
 

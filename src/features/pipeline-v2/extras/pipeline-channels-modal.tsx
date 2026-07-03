@@ -61,16 +61,16 @@ function getChannelStyle(type: ChannelType): {
 } {
   switch (type) {
     case "WHATSAPP":
-      return { Icon: IconBrandWhatsapp, bg: "#10b981" };
+      return { Icon: IconBrandWhatsapp, bg: "var(--color-success)" };
     case "INSTAGRAM":
-      return { Icon: IconBrandInstagram, bg: "#a78bfa" };
+      return { Icon: IconBrandInstagram, bg: "var(--color-lavender)" };
     case "FACEBOOK":
       return { Icon: IconBrandFacebook, bg: "#3b82f6" };
     case "EMAIL":
-      return { Icon: IconMail, bg: "#0ea5e9" };
+      return { Icon: IconMail, bg: "var(--color-sky)" };
     case "WEBCHAT":
     default:
-      return { Icon: IconMessage, bg: "#5b6ff5" };
+      return { Icon: IconMessage, bg: "var(--color-primary)" };
   }
 }
 

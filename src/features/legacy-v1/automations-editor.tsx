@@ -284,7 +284,7 @@ function LogsTableView({
                       ) : adTracking.adResolveStatus ? (
                         <div>
                           <span className="text-muted-foreground">Ad ID:</span>{" "}
-                          <span className="font-mono text-amber-600">
+                          <span className="font-mono text-[var(--color-warning)]">
                             ({adTracking.adResolveStatus}
                             {adTracking.adResolveError ? `: ${adTracking.adResolveError}` : ""})
                           </span>
@@ -719,7 +719,7 @@ export default function AutomationDetailPage() {
 
         {/* Unsaved indicator — pílula âmbar */}
         {dirty && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-extrabold tracking-tight text-amber-700 ring-1 ring-amber-200">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-amber-soft)] px-2.5 py-0.5 text-[11px] font-extrabold tracking-tight text-[var(--color-amber-text)] ring-1 ring-amber-200">
             <span className="size-1.5 animate-pulse-soft rounded-full bg-amber-500" />
             Alterações não salvas
           </span>
@@ -733,8 +733,8 @@ export default function AutomationDetailPage() {
             className={cn(
               "flex items-center gap-2 rounded-full px-3 py-1 ring-1 transition-colors",
               active
-                ? "bg-emerald-50 ring-emerald-200"
-                : "bg-[var(--color-bg-subtle)] ring-slate-200"
+                ? "bg-emerald-50 ring-[var(--color-success-subtle)]"
+                : "bg-[var(--color-bg-subtle)] ring-[var(--color-border-soft)]"
             )}
           >
             <span
@@ -841,7 +841,7 @@ export default function AutomationDetailPage() {
       </div>
 
       {saveMutation.isError && (
-        <div className="shrink-0 border-b border-rose-200/60 bg-rose-50/70 px-4 py-2 text-[12px] font-bold text-rose-700 backdrop-blur-sm">
+        <div className="shrink-0 border-b border-[var(--color-danger-subtle)]/60 bg-rose-50/70 px-4 py-2 text-[12px] font-bold text-rose-700 backdrop-blur-sm">
           {(saveMutation.error as Error).message}
         </div>
       )}

@@ -228,7 +228,7 @@ function StageColumn({ stage, metric }: { stage: StageRow; metric: Metric }) {
                       : idx === 1
                         ? "bg-[var(--glass-bg-base)] text-foreground"
                         : idx === 2
-                          ? "bg-orange-100 text-orange-700"
+                          ? "bg-[var(--color-warn-subtle)] text-orange-700"
                           : "bg-[var(--glass-bg-overlay)] text-muted-foreground",
                   )}
                 >

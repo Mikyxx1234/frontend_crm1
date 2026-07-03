@@ -43,7 +43,7 @@ export type AnimatedEdgeData = {
 const VARIANT_STROKE: Record<AnimatedEdgeVariant, string> = {
   default: "url(#edge-grad-default)",
   button: "url(#edge-grad-button)",
-  else: "#f59e0b",
+  else: "var(--color-warning)",
   timeout: "#94a3b8",
   add: "#cbd5e1",
 };
@@ -75,7 +75,7 @@ export function AnimatedEdgeDefs() {
       <defs>
         <linearGradient id="edge-grad-default" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="var(--color-primary)" />
-          <stop offset="100%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="var(--color-cyan)" />
         </linearGradient>
         <linearGradient id="edge-grad-button" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="var(--color-primary)" />

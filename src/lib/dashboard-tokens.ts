@@ -103,13 +103,13 @@ export type BentoAccent =
   | "slate";
 
 export const bentoAccentMap: Record<BentoAccent, { bg: string; text: string; solid: string }> = {
-  blue: { bg: "bg-blue-50", text: "text-primary", solid: "var(--color-primary)" },
+  blue: { bg: "bg-[var(--color-indigo-soft)]", text: "text-primary", solid: "var(--color-primary)" },
   emerald: { bg: "bg-[var(--color-success-bg)]", text: "text-[var(--color-success-text)]", solid: "var(--color-success)" },
   amber: { bg: "bg-[var(--color-warn-bg)]", text: "text-[var(--color-warning)]", solid: "var(--color-warning)" },
-  violet: { bg: "bg-violet-50", text: "text-violet-600", solid: "#8b5cf6" }, // no token match for #8b5cf6 (--brand-secondary is #a78bfa)
-  rose: { bg: "bg-[var(--color-danger-bg)]", text: "text-[var(--color-danger-text)]", solid: "#f43f5e" }, // no token match (--color-danger is #ef4444, different shade)
+  violet: { bg: "bg-violet-50", text: "text-[var(--color-lavender)]", solid: "#8b5cf6" }, // no token match for #8b5cf6 (--brand-secondary is #a78bfa)
+  rose: { bg: "bg-[var(--color-danger-bg)]", text: "text-[var(--color-danger-text)]", solid: "var(--color-rose)" },
   indigo: { bg: "bg-[var(--color-info-bg)]", text: "text-[var(--brand-primary)]", solid: "var(--brand-primary)" }, // indigo-600 ≈ --brand-primary (#5b6ff5)
-  cyan: { bg: "bg-cyan-50", text: "text-cyan-600", solid: "#06b6d4" }, // no CSS var token for cyan
+  cyan: { bg: "bg-cyan-50", text: "text-[var(--color-cyan)]", solid: "var(--color-cyan)" },
   slate: { bg: "bg-[var(--glass-bg-base)]", text: "text-foreground", solid: "#475569" }, // --text-muted is #4b5563, close but different semantic
 };
 

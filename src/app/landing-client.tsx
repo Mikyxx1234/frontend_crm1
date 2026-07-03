@@ -73,7 +73,7 @@ export function LandingClient() {
       </section>
 
       <footer className="border-t border-[var(--glass-border-subtle)] py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-zinc-300 md:flex-row md:justify-between md:text-left">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-[var(--color-text-muted)] md:flex-row md:justify-between md:text-left">
           <span>© {new Date().getFullYear()} EduIT CRM. Todos os direitos reservados.</span>
           <span>
             Já tem conta?{" "}
@@ -101,7 +101,7 @@ function Header() {
       </div>
       <Link
         href="/login"
-        className="text-sm font-semibold text-zinc-300 hover:text-white"
+        className="text-sm font-semibold text-[var(--color-text-muted)] hover:text-white"
       >
         Entrar →
       </Link>
@@ -125,7 +125,7 @@ function Feature({
       </div>
       <div>
         <div className="font-semibold text-white">{label}</div>
-        <div className="text-xs text-zinc-300">{desc}</div>
+        <div className="text-xs text-[var(--color-text-muted)]">{desc}</div>
       </div>
     </li>
   );

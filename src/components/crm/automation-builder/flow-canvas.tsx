@@ -65,7 +65,7 @@ const nodeTypes = { automation: AutomationNode }
 const edgeTone: Record<string, string> = {
   default: "#a9b4c7",
   success: "#16a34a",
-  danger: "#ef4444",
+  danger: "var(--color-destructive)",
 }
 
 let idSeq = 0

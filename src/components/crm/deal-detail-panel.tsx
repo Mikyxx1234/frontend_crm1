@@ -204,7 +204,7 @@ interface DealDetailPanelProps {
 const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
 
 // Paleta do funil segmentado (estilo Kommo) — uma cor por etapa.
-const FUNNEL_PALETTE = ["#94a3b8", "#5b6ff5", "#a78bfa", "#f59e0b", "#ec4899", "#10b981"]
+const FUNNEL_PALETTE = ["#94a3b8", "var(--color-primary)", "var(--color-lavender)", "var(--color-warning)", "#ec4899", "var(--color-success)"]
 
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: number }>; count?: number }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },

@@ -209,7 +209,7 @@ function TurnRow({ turn }: { turn: Turn }) {
           <Wrench className="size-3" /> tool: {turn.name}
         </div>
         <details className="mt-1">
-          <summary className="cursor-pointer text-[10px] text-amber-800/80 dark:text-amber-300/70">
+          <summary className="cursor-pointer text-[10px] text-[var(--color-amber-text)]/80 dark:text-amber-300/70">
             args / result
           </summary>
           <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/70 p-2 text-[10px] leading-tight">

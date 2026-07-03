@@ -39,7 +39,7 @@ export function GotoNode({ data, selected }: NodeProps<GotoNodeData>) {
         className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
       <div className="flex items-start gap-3 px-3.5 py-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-500 ring-1 ring-sky-100">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-sky-soft)] text-[var(--color-sky)] ring-1 ring-sky-100">
           <CornerDownRight className="size-4" strokeWidth={2.4} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">

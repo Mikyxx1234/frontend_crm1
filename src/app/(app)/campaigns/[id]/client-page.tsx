@@ -205,7 +205,7 @@ export default function CampaignDetailClientPage() {
           icon={<IconMessage2 size={18} />}
           label="Responderam"
           value={stats?.repliedCount ?? campaign.repliedCount ?? 0}
-          tone="text-sky-600"
+          tone="text-[var(--color-sky)]"
           rate={stats?.replyRate}
         />
         <StatCard
@@ -328,7 +328,7 @@ export default function CampaignDetailClientPage() {
                             </button>
                           ) : null}
                           {r.repliedAt ? (
-                            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-display text-[10px] font-bold text-sky-600">
+                            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-display text-[10px] font-bold text-[var(--color-sky)]">
                               Respondeu
                             </span>
                           ) : null}

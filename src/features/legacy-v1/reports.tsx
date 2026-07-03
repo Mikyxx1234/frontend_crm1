@@ -294,7 +294,7 @@ export default function ReportsClientPage() {
                   ? "Cobrado pela Meta (pricing_analytics)"
                   : "Estimativa local — sincronize com a Meta para o valor oficial"
               }
-              color={usingMetaCost ? "text-emerald-600" : "text-amber-600"}
+              color={usingMetaCost ? "text-[var(--color-success)]" : "text-amber-600"}
               bg={usingMetaCost ? "bg-emerald-100" : "bg-amber-100"}
             />
             <KpiCard
@@ -420,7 +420,7 @@ export default function ReportsClientPage() {
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/40">
               <div className="border-b border-emerald-200/70 px-5 py-3">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  <CheckCircle2 className="size-4 text-[var(--color-success)]" />
                   Custos oficiais Meta (pricing_analytics)
                 </h2>
                 <p className="mt-0.5 text-[11px] text-emerald-800/80">

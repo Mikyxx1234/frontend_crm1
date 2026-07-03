@@ -153,7 +153,7 @@ export default function LossReasonsPage() {
           className="text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
         >
           {isRequired ? (
-            <ToggleRight className="size-8 text-cyan-600" />
+            <ToggleRight className="size-8 text-[var(--color-cyan)]" />
           ) : (
             <ToggleLeft className="size-8 text-[var(--color-ink-muted)]" />
           )}
@@ -181,7 +181,7 @@ export default function LossReasonsPage() {
           aria-label={allowOther ? "Desligar motivo personalizado" : "Ligar motivo personalizado"}
         >
           {allowOther ? (
-            <ToggleRight className="size-8 text-cyan-600" />
+            <ToggleRight className="size-8 text-[var(--color-cyan)]" />
           ) : (
             <ToggleLeft className="size-8 text-[var(--color-ink-muted)]" />
           )}

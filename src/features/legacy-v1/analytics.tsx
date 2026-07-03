@@ -219,7 +219,7 @@ export default function AnalyticsPage() {
                       "rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-all",
                       active
                         ? "bg-primary text-white shadow-sm"
-                        : "bg-[var(--color-bg-subtle)] text-[var(--color-ink-soft)] hover:bg-slate-100",
+                        : "bg-[var(--color-bg-subtle)] text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-muted)]",
                     )}
                   >
                     {p.label}

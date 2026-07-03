@@ -224,7 +224,7 @@ export function ProductPolicyPanel({
                 >
                   <span className="font-medium">{f.label}</span>
                   {f.source === "custom" && (
-                    <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                    <span className="rounded-full bg-[var(--color-lavender-soft)] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-purple-700 dark:bg-purple-950 dark:text-purple-300">
                       custom
                     </span>
                   )}
@@ -253,7 +253,7 @@ export function ProductPolicyPanel({
             "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-medium transition-colors",
             selected.size === 0
               ? "cursor-not-allowed border-border text-muted-foreground/60"
-              : "border-indigo-500 bg-[var(--color-info-bg)] text-[var(--brand-primary)] hover:bg-indigo-100 dark:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-200",
+              : "border-indigo-500 bg-[var(--color-info-bg)] text-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)] dark:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-200",
           )}
         >
           <Sparkles className="size-3.5" />

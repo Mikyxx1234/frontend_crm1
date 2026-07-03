@@ -373,7 +373,7 @@ function LogsTableView({
                         {row.metaWebhookEvent.eventType}
                       </span>
                       {row.metaWebhookEvent.signatureValid ? (
-                        <span className="text-[9px] font-medium normal-case text-emerald-600">assinatura ok</span>
+                        <span className="text-[9px] font-medium normal-case text-[var(--color-success)]">assinatura ok</span>
                       ) : (
                         <span className="text-[9px] font-medium normal-case text-amber-600">assinatura não verificada</span>
                       )}
@@ -740,7 +740,7 @@ export default function AutomationDetailPage() {
             <span
               className={cn(
                 "text-[11px] font-semibold uppercase tracking-widest",
-                active ? "text-emerald-700" : "text-slate-500"
+                active ? "text-emerald-700" : "text-[var(--color-text-secondary)]"
               )}
             >
               {active ? "Ativa" : "Inativa"}
@@ -776,7 +776,7 @@ export default function AutomationDetailPage() {
                 "flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-bold tracking-tight transition-all",
                 copilotOpen
                   ? "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:-translate-y-px"
-                  : "border border-border bg-white text-foreground hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm",
+                  : "border border-border bg-[var(--color-bg-card)] text-foreground hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm",
               )}
             >
               <Sparkles className="size-3.5" strokeWidth={2.4} />

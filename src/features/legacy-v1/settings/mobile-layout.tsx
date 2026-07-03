@@ -334,7 +334,7 @@ export function MobileLayoutClientPage() {
                           desc.required
                             ? "cursor-not-allowed bg-[var(--glass-bg-subtle)] text-[var(--color-ink-muted)]"
                             : d.enabled
-                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                              ? "bg-[var(--color-success-subtle)] text-emerald-700 hover:bg-emerald-200"
                               : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)] hover:bg-slate-300",
                         )}
                       >
@@ -366,13 +366,13 @@ export function MobileLayoutClientPage() {
           {/* Save bar (sticky) */}
           <div className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]/95 p-4 shadow-[var(--glass-shadow)] backdrop-blur">
             {saved && (
-              <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-600">
+              <span className="flex items-center gap-1.5 text-sm font-bold text-[var(--color-success)]">
                 <Check className="size-4" />
                 Salvo
               </span>
             )}
             {dirty && !saved && (
-              <span className="text-sm text-amber-600">Você tem alterações não salvas.</span>
+              <span className="text-sm text-[var(--color-warning)]">Você tem alterações não salvas.</span>
             )}
             <Button
               type="button"

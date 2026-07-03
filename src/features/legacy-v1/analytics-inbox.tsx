@@ -327,10 +327,10 @@ export default function InboxAnalyticsPage() {
                         className={cn(
                           "text-center tabular-nums font-medium",
                           agent.avgResponseMinutes <= 5
-                            ? "text-emerald-600 dark:text-emerald-400"
+                            ? "text-[var(--color-success)] dark:text-emerald-400"
                             : agent.avgResponseMinutes <= 30
                               ? "text-amber-600 dark:text-amber-400"
-                              : "text-red-600 dark:text-red-400"
+                              : "text-[var(--color-destructive)] dark:text-red-400"
                         )}
                       >
                         {formatMinutes(agent.avgResponseMinutes)}
@@ -359,7 +359,7 @@ export default function InboxAnalyticsPage() {
                 {data.totalMessages > 0 ? (
                   <>
                     <div
-                      className="flex items-center justify-center bg-blue-500 text-[9px] font-bold text-[var(--color-text-inverse)] transition-all duration-500"
+                      className="flex items-center justify-center bg-[var(--color-primary)] text-[9px] font-bold text-[var(--color-text-inverse)] transition-all duration-500"
                       style={{
                         width: `${(data.inboundMessages / data.totalMessages) * 100}%`,
                       }}
@@ -381,7 +381,7 @@ export default function InboxAnalyticsPage() {
               </div>
               <div className="flex shrink-0 gap-4 text-xs">
                 <span className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-full bg-blue-500" />
+                  <span className="size-2.5 rounded-full bg-[var(--color-primary)]" />
                   <span className="text-[var(--color-text-secondary)]">Recebidas</span>
                 </span>
                 <span className="flex items-center gap-1.5">

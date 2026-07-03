@@ -815,7 +815,7 @@ export default function TeamV2ClientPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="size-4 text-violet-500" />
+              <KeyRound className="size-4 text-[var(--color-lavender)]" />
               Trocar senha
             </DialogTitle>
             <DialogDescription>

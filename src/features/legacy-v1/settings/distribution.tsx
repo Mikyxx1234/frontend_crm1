@@ -238,7 +238,7 @@ export default function DistributionSettingsPage() {
                 >
                   <Power
                     className={
-                      rule.isActive ? "size-4 text-emerald-600" : "size-4 text-muted-foreground"
+                      rule.isActive ? "size-4 text-[var(--color-success)]" : "size-4 text-muted-foreground"
                     }
                   />
                 </Button>

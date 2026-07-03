@@ -41,11 +41,11 @@ function ActorBadge({
     AI: { Icon: Bot, cls: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/50 dark:text-fuchsia-300" },
     AUTOMATION: {
       Icon: Workflow,
-      cls: "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300",
+      cls: "bg-[var(--color-lavender-soft)] text-purple-700 dark:bg-purple-950/50 dark:text-purple-300",
     },
     INTEGRATION: {
       Icon: Webhook,
-      cls: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300",
+      cls: "bg-[var(--color-cyan-soft)] text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300",
     },
     SYSTEM: { Icon: Cog, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-gray-900 dark:text-[var(--text-muted)]" },
   } as const;

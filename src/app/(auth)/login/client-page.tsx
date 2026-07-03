@@ -187,7 +187,7 @@ function LoginForm() {
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
                   <motion.path
                     d="M4 12.5l5 5L20 6.5"
-                    stroke="#5b6ff5"
+                    stroke="var(--brand-primary)"
                     strokeWidth={3}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -237,7 +237,7 @@ function LoginForm() {
           <div
             className="mb-4 flex size-16 items-center justify-center rounded-2xl text-white"
             style={{
-              background: "linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%)",
+              background: "linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)",
               boxShadow: "0 12px 32px -8px rgba(91,111,245,0.55)",
             }}
           >
@@ -252,11 +252,11 @@ function LoginForm() {
           className="glass-overlay w-full rounded-[32px] p-8"
         >
           <div className="mb-4">
-            <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-[#374151]">
+            <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-[var(--text-secondary)]">
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6b7280]" aria-hidden />
+              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
               <input
                 id="email"
                 name="email"
@@ -267,17 +267,17 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-9 pr-4 text-[14px] text-[#1f2937] placeholder:text-[#6b7280] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-9 pr-4 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
           </div>
 
           <div className="mb-6">
-            <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-[#374151]">
+            <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-[var(--text-secondary)]">
               Senha
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6b7280]" aria-hidden />
+              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
               <input
                 ref={passwordRef}
                 id="password"
@@ -292,16 +292,16 @@ function LoginForm() {
                 aria-invalid={!!error}
                 aria-describedby={error ? "login-error" : undefined}
                 className={cn(
-                  "h-11 w-full rounded-full border bg-white/80 pl-9 pr-11 text-[14px] text-[#1f2937] placeholder:text-[#6b7280] backdrop-blur transition-all focus:outline-none focus:ring-2 disabled:opacity-50",
+                  "h-11 w-full rounded-full border bg-white/80 pl-9 pr-11 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:outline-none focus:ring-2 disabled:opacity-50",
                   error
-                    ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                    ? "border-[var(--color-danger)]/40 focus:border-[var(--color-danger)] focus:ring-[var(--color-danger)]/20"
                     : "border-white/70 focus:border-primary focus:ring-primary/20",
                 )}
               />
               <button
                 type="button"
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] transition-colors hover:text-[#1f2937]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
               >
@@ -320,10 +320,10 @@ function LoginForm() {
               animate={{ opacity: 1, x: [0, -8, 8, -6, 6, -3, 3, 0] }}
               transition={{ duration: 0.45, ease: "easeInOut" }}
               className={cn(
-                "mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50/90 px-3 py-2 text-[13px] font-medium leading-snug text-red-700 backdrop-blur shadow-[0_4px_12px_-4px_rgba(220,38,38,0.18)]",
+                "mb-4 flex items-start gap-2 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-3 py-2 text-[13px] font-medium leading-snug text-[var(--color-danger)] backdrop-blur shadow-[0_4px_12px_-4px_rgba(220,38,38,0.18)]",
               )}
             >
-              <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden />
+              <AlertCircle className="mt-0.5 size-4 shrink-0 text-[var(--color-danger)]" aria-hidden />
               <span className="flex-1">{error}</span>
             </motion.div>
           ) : null}
@@ -333,7 +333,7 @@ function LoginForm() {
             disabled={loading}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-full text-[14px] font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
             style={{
-              background: "linear-gradient(135deg, #5b6ff5 0%, #3d52e8 100%)",
+              background: "linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)",
               boxShadow: "0 6px 20px -4px rgba(91,111,245,0.45)",
             }}
           >
@@ -353,7 +353,7 @@ function LoginForm() {
           {previewAllowed ? (
             <a
               href={`/api/preview-login?redirect=${encodeURIComponent(callbackUrl)}`}
-              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full border border-amber-400/60 bg-amber-50/80 text-[13px] font-medium text-amber-900 backdrop-blur transition-all hover:bg-amber-100/90 active:scale-[0.98]"
+              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-full border border-[var(--color-warning)]/60 bg-[var(--color-warning)]/10 text-[13px] font-medium text-[var(--color-warning)] backdrop-blur transition-all hover:bg-[var(--color-warning)]/20 active:scale-[0.98]"
               title="Disponível apenas em ambientes de preview (v0.dev). Pula a autenticação."
             >
               <Eye className="size-4" />
@@ -361,7 +361,7 @@ function LoginForm() {
             </a>
           ) : null}
 
-          <p className="mt-4 text-center text-[13px] text-[#374151]">
+          <p className="mt-4 text-center text-[13px] text-[var(--text-secondary)]">
             Não tem uma conta?{" "}
             <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
               Criar conta

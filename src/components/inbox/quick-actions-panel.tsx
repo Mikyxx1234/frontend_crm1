@@ -54,9 +54,9 @@ function getAISuggestions(lastInboundAt?: string | null): { icon: React.ElementT
 }
 
 const URGENCY_STYLE = {
-  high: "border-red-200 bg-red-50 text-red-700",
-  medium: "border-amber-200 bg-amber-50 text-amber-700",
-  low: "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]",
+  high: "border-[var(--color-danger)]/40 bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
+  medium: "border-[var(--color-warning)]/40 bg-[var(--color-warn-bg)] text-[var(--color-warning)]",
+  low: "border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
 };
 
 export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSendTemplate, onCreateDeal, onAddTask }: Props) {
@@ -102,69 +102,69 @@ export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSe
   const nextActivity = activities.find((a) => !a.completed);
 
   return (
-    <div className="flex w-[240px] shrink-0 flex-col border-l border-[#e2e8f0] bg-white">
-      <div className="border-b border-[#e2e8f0] px-4 py-3">
-        <span className="text-[13px] font-semibold text-[#1e40af]">Ações Rápidas</span>
+    <div className="flex w-[240px] shrink-0 flex-col border-l border-[var(--glass-border-subtle)] bg-white">
+      <div className="border-b border-[var(--glass-border-subtle)] px-4 py-3">
+        <span className="text-[13px] font-semibold text-[var(--brand-primary)]">Ações Rápidas</span>
       </div>
 
       <div className="scrollbar-thin flex-1 overflow-y-auto">
         {/* ═══ AÇÕES DO CONTATO ═══ */}
         <div className="p-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">Contato</p>
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Contato</p>
           <div className="grid grid-cols-2 gap-2">
             {contactPhone && (
               <a href={`tel:${contactPhone}`}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-[#10b981]/10">
-                  <Phone className="size-4 text-[#10b981]" />
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--color-success)]/10">
+                  <Phone className="size-4 text-[var(--color-success)]" />
                 </div>
-                <span className="text-[11px] font-medium text-[#1e293b]">Ligar</span>
+                <span className="text-[11px] font-medium text-[var(--text-primary)]">Ligar</span>
               </a>
             )}
             <button type="button" onClick={onSendTemplate}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-[#3b82f6]/10">
-                <FileText className="size-4 text-[#3b82f6]" />
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
+                <FileText className="size-4 text-[var(--brand-primary)]" />
               </div>
-              <span className="text-[11px] font-medium text-[#1e293b]">Template</span>
+              <span className="text-[11px] font-medium text-[var(--text-primary)]">Template</span>
             </button>
           </div>
         </div>
 
         {/* ═══ AÇÕES DO NEGÓCIO ═══ */}
-        <div className="border-t border-[#e2e8f0] p-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">Negócio</p>
+        <div className="border-t border-[var(--glass-border-subtle)] p-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Negócio</p>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={onCreateDeal}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-[#f59e0b]/10">
-                <Target className="size-4 text-[#f59e0b]" />
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--color-warning)]/10">
+                <Target className="size-4 text-[var(--color-warning)]" />
               </div>
-              <span className="text-[11px] font-medium text-[#1e293b]">Proposta</span>
+              <span className="text-[11px] font-medium text-[var(--text-primary)]">Proposta</span>
             </button>
             <button type="button" onClick={onAddTask}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[#e2e8f0] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-[#8b5cf6]/10">
-                <Plus className="size-4 text-[#8b5cf6]" />
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--brand-secondary)]/10">
+                <Plus className="size-4 text-[var(--brand-secondary)]" />
               </div>
-              <span className="text-[11px] font-medium text-[#1e293b]">Tarefa</span>
+              <span className="text-[11px] font-medium text-[var(--text-primary)]">Tarefa</span>
             </button>
           </div>
 
           {stages.length > 0 && (
             <div className="mt-3">
-              <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[#94a3b8]">
+              <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 <ArrowRightLeft className="size-2.5" /> Alterar etapa
               </p>
               <SelectNative
                 onChange={(e) => { if (e.target.value) moveDealMutation.mutate(e.target.value); }}
                 disabled={moveDealMutation.isPending}
-                className="h-8 w-full rounded-lg border-[#e2e8f0] text-[11px]">
+                className="h-8 w-full rounded-lg border-[var(--glass-border-subtle)] text-[11px]">
                 <option value="">Selecionar etapa...</option>
                 {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </SelectNative>
               {moveDealMutation.isPending && (
-                <div className="mt-1 flex items-center gap-1 text-[10px] text-[#64748b]">
+                <div className="mt-1 flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
                   <Loader2 className="size-3 animate-spin" /> Movendo...
                 </div>
               )}
@@ -173,29 +173,29 @@ export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSe
         </div>
 
         {/* ═══ PRÓXIMA AÇÃO ═══ */}
-        <div className="border-t border-[#e2e8f0] p-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">
+        <div className="border-t border-[var(--glass-border-subtle)] p-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
             <Calendar className="mb-0.5 mr-1 inline size-3" /> Próxima ação
           </p>
           {nextActivity ? (
-            <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-2.5">
-              <p className="text-[12px] font-semibold text-[#1e293b]">{nextActivity.title}</p>
-              <p className="mt-0.5 text-[10px] text-[#94a3b8]">
+            <div className="rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] p-2.5">
+              <p className="text-[12px] font-semibold text-[var(--text-primary)]">{nextActivity.title}</p>
+              <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">
                 {TYPE_LABEL[nextActivity.type] ?? nextActivity.type} · {formatDistanceToNow(new Date(nextActivity.createdAt), { addSuffix: true, locale: ptBR })}
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border-2 border-dashed border-[#e2e8f0] p-2.5 text-center">
-              <p className="text-[11px] text-[#94a3b8]">Nenhuma ação pendente</p>
+            <div className="rounded-xl border-2 border-dashed border-[var(--glass-border-subtle)] p-2.5 text-center">
+              <p className="text-[11px] text-[var(--text-muted)]">Nenhuma ação pendente</p>
             </div>
           )}
         </div>
 
         {/* ═══ SUGESTÕES IA ═══ */}
         {suggestions.length > 0 && (
-          <div className="border-t border-[#e2e8f0] p-4">
-            <p className="mb-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">
-              <Sparkles className="size-3 text-[#f59e0b]" /> Sugestões IA
+          <div className="border-t border-[var(--glass-border-subtle)] p-4">
+            <p className="mb-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+              <Sparkles className="size-3 text-[var(--color-warning)]" /> Sugestões IA
             </p>
             <div className="space-y-1.5">
               {suggestions.map((s, i) => {
@@ -212,12 +212,12 @@ export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSe
         )}
 
         {/* ═══ HISTÓRICO ═══ */}
-        <div className="border-t border-[#e2e8f0] p-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">
+        <div className="border-t border-[var(--glass-border-subtle)] p-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
             <Clock className="mb-0.5 mr-1 inline size-3" /> Histórico
           </p>
           {activities.length === 0 ? (
-            <p className="text-[11px] text-[#94a3b8]">Nenhuma atividade registrada</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Nenhuma atividade registrada</p>
           ) : (
             <div className="space-y-0">
               {activities.slice(0, 5).map((a, idx) => {
@@ -226,14 +226,14 @@ export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSe
                 return (
                   <div key={a.id} className="flex gap-2">
                     <div className="flex flex-col items-center">
-                      <div className={cn("flex size-5 shrink-0 items-center justify-center rounded-md", a.completed ? "bg-[#10b981]/10" : "bg-[#f8fafc]")}>
-                        <Icon className={cn("size-2.5", a.completed ? "text-[#10b981]" : "text-[#64748b]")} />
+                      <div className={cn("flex size-5 shrink-0 items-center justify-center rounded-md", a.completed ? "bg-[var(--color-success)]/10" : "bg-[var(--glass-bg-subtle)]")}>
+                        <Icon className={cn("size-2.5", a.completed ? "text-[var(--color-success)]" : "text-[var(--text-muted)]")} />
                       </div>
-                      {!isLast && <div className="w-px flex-1 bg-[#e2e8f0]" />}
+                      {!isLast && <div className="w-px flex-1 bg-[var(--glass-border-subtle)]" />}
                     </div>
                     <div className="min-w-0 pb-2.5">
-                      <p className="truncate text-[11px] font-medium text-[#1e293b]">{a.title}</p>
-                      <p className="text-[9px] text-[#94a3b8]">
+                      <p className="truncate text-[11px] font-medium text-[var(--text-primary)]">{a.title}</p>
+                      <p className="text-[9px] text-[var(--text-muted)]">
                         {TYPE_LABEL[a.type] ?? a.type} · {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true, locale: ptBR })}
                       </p>
                     </div>

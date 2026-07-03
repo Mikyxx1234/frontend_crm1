@@ -83,23 +83,23 @@ function ReleaseCard({ release }: { release: Release }) {
   return (
     <div className="rounded-xl border border-white/40 bg-white/60 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <h4 className="text-sm font-semibold text-[var(--text-primary)] dark:text-slate-100">
           {release.version === "unreleased"
             ? "Em desenvolvimento"
             : `v${release.version}`}
         </h4>
         {release.date && (
-          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+          <span className="text-[11px] text-[var(--text-muted)] dark:text-slate-400">
             {release.date}
           </span>
         )}
       </div>
       {ordered.map((key) => (
         <div key={key} className="mt-2 first:mt-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] dark:text-slate-400">
             {SECTION_LABEL[key] ?? key}
           </p>
-          <ul className="mt-1 list-disc space-y-1 pl-4 text-[12.5px] leading-snug text-slate-700 dark:text-slate-200">
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-[12.5px] leading-snug text-[var(--text-secondary)] dark:text-slate-200">
             {release.sections[key]!.slice(0, 5).map((item, i) => (
               <li key={i}>{item}</li>
             ))}
@@ -181,7 +181,7 @@ export function UpdateAvailableBanner() {
           className={cn(
             "max-h-[70vh] w-[min(420px,calc(100vw-2rem))] overflow-auto rounded-2xl border p-3 shadow-2xl",
             "border-white/50 bg-white/80 backdrop-blur-xl",
-            "dark:border-white/10 dark:bg-slate-900/80",
+            "dark:border-white/10 dark:bg-[var(--glass-bg-strong)]/80",
           )}
           style={{
             background: "var(--glass-bg-overlay, rgba(255,255,255,0.85))",
@@ -190,8 +190,8 @@ export function UpdateAvailableBanner() {
         >
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <IconSparkles size={18} className="text-indigo-500" />
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <IconSparkles size={18} className="text-[var(--brand-primary)]" />
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] dark:text-slate-100">
                 Novidades em v{APP_VERSION}
               </h3>
             </div>
@@ -199,7 +199,7 @@ export function UpdateAvailableBanner() {
               type="button"
               onClick={() => setExpanded(false)}
               aria-label="Fechar"
-              className="rounded-md p-1 text-slate-500 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
+              className="rounded-md p-1 text-[var(--text-muted)] hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
             >
               <IconX size={16} />
             </button>
@@ -215,7 +215,7 @@ export function UpdateAvailableBanner() {
             <button
               type="button"
               onClick={handleDismiss}
-              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98]"
+              className="rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--brand-primary)]/90 active:scale-[0.98]"
             >
               Entendi
             </button>
@@ -235,7 +235,7 @@ export function UpdateAvailableBanner() {
         className={cn(
           "group inline-flex items-stretch overflow-hidden rounded-full border shadow-lg backdrop-blur-md transition",
           "border-white/50 bg-white/80 text-slate-800 hover:bg-white",
-          "dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-100 dark:hover:bg-slate-900",
+          "dark:border-white/10 dark:bg-[var(--glass-bg-strong)]/80 dark:text-slate-100 dark:hover:bg-[var(--glass-bg-strong)]",
         )}
       >
         <button
@@ -246,20 +246,20 @@ export function UpdateAvailableBanner() {
           aria-controls="update-banner-panel"
         >
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--brand-primary)] opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--brand-primary)]" />
           </span>
-          <IconSparkles size={16} className="text-indigo-500" />
+          <IconSparkles size={16} className="text-[var(--brand-primary)]" />
           <span>
             Novidades em <strong>v{APP_VERSION}</strong>
           </span>
-          <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
+          <span className="rounded-full bg-[var(--brand-primary)]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)] dark:bg-[var(--brand-primary)]/20 dark:text-[var(--brand-primary)]">
             {totalItems}
           </span>
           <IconChevronUp
             size={14}
             className={cn(
-              "text-slate-400 transition-transform",
+              "text-[var(--text-muted)] transition-transform",
               expanded && "rotate-180",
             )}
           />
@@ -271,8 +271,8 @@ export function UpdateAvailableBanner() {
           aria-label="Dispensar e não mostrar mais"
           title="Não mostrar mais esta versão"
           className={cn(
-            "inline-flex items-center justify-center border-l px-2.5 text-slate-400 transition-colors",
-            "border-white/40 hover:bg-black/5 hover:text-slate-700",
+            "inline-flex items-center justify-center border-l px-2.5 text-[var(--text-muted)] transition-colors",
+            "border-white/40 hover:bg-black/5 hover:text-[var(--text-secondary)]",
             "dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-slate-100",
           )}
         >

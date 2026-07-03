@@ -193,11 +193,11 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
         onClick={toggleCollapsed}
         aria-label={`Expandir status do softphone (ramal ${ramal})`}
         title={`Softphone ativo • Ramal ${ramal} — clique para expandir`}
-        className="group relative inline-flex size-9 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 shadow-sm backdrop-blur-md transition hover:bg-emerald-500/20 dark:border-emerald-400/20 dark:bg-emerald-500/15 dark:text-emerald-300"
+        className="group relative inline-flex size-9 items-center justify-center rounded-xl border border-[var(--color-success)]/20 bg-[var(--color-success-bg)] text-[var(--color-success-text)] shadow-sm backdrop-blur-md transition hover:bg-[var(--color-success)]/20 dark:border-[var(--color-success)]/20 dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]"
       >
         <span className="absolute -right-0.5 -top-0.5 flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-success)] opacity-60" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
         </span>
         <IconPhone size={16} stroke={2.2} />
       </button>
@@ -208,22 +208,22 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
   // + ramal e botão vermelho pra colapsar. Fiel ao mockup fornecido.
   if (isRegistered) {
     return (
-      <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--glass-border)] bg-white/90 p-2 shadow-lg backdrop-blur-md dark:border-white/10 dark:bg-slate-900/85">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/12 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
+      <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--glass-border)] bg-white/90 p-2 shadow-lg backdrop-blur-md dark:border-white/10 dark:bg-[var(--glass-bg-panel)]">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-success-bg)] text-[var(--color-success-text)] dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]">
           <IconPhone size={18} stroke={2.2} />
         </span>
 
         <div className="min-w-0 pr-0.5">
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-success)] opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
             </span>
-            <span className="text-[10.5px] font-bold uppercase tracking-[0.7px] text-emerald-600 dark:text-emerald-400">
+            <span className="text-[10.5px] font-bold uppercase tracking-[0.7px] text-[var(--color-success-text)] dark:text-[var(--color-success)]">
               Registrado
             </span>
           </div>
-          <div className="text-[14px] font-bold leading-tight tabular-nums text-slate-900 dark:text-slate-100">
+          <div className="text-[14px] font-bold leading-tight tabular-nums text-[var(--text-primary)]">
             Ramal {ramal}
           </div>
         </div>
@@ -233,7 +233,7 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
           onClick={toggleCollapsed}
           aria-label="Colapsar chip do softphone"
           title="Colapsar"
-          className="ml-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-600 transition hover:bg-red-500/20 dark:bg-red-500/15 dark:text-red-300"
+          className="ml-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] transition hover:bg-[var(--color-danger)]/20 dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-danger)]"
         >
           <IconX size={16} strokeWidth={2.4} />
         </button>
@@ -248,9 +248,9 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
       className={cn(
         "group inline-flex h-8 items-center overflow-hidden rounded-full border shadow-sm backdrop-blur-md transition",
         isConnecting &&
-          "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-100",
+          "border-[var(--color-warning)]/30 bg-[var(--color-warn-bg)] text-[var(--color-warning)] dark:border-[var(--color-warning)]/25 dark:bg-[var(--color-warning)]/15 dark:text-[var(--color-warning)]",
         isError &&
-          "border-red-500/30 bg-red-500/10 text-red-900 dark:border-red-400/25 dark:bg-red-500/15 dark:text-red-100",
+          "border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:border-[var(--color-danger)]/25 dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-danger)]",
       )}
     >
       <div className="inline-flex items-center gap-1.5 pl-2.5 pr-2 text-[12px] font-medium">
@@ -331,8 +331,8 @@ function CallPanel({
     <div
       className={cn(
         "w-[280px] rounded-2xl border p-4 shadow-2xl backdrop-blur-xl",
-        "border-white/50 bg-white/85 text-slate-900",
-        "dark:border-white/10 dark:bg-slate-900/85 dark:text-slate-100",
+        "border-white/50 bg-white/85 text-[var(--text-primary)]",
+        "dark:border-white/10 dark:bg-[var(--glass-bg-panel)]",
       )}
       style={{
         boxShadow: "var(--glass-shadow, 0 20px 60px rgba(0,0,0,0.18))",
@@ -343,13 +343,13 @@ function CallPanel({
       <div className="mb-3 flex items-center gap-2">
         {isRinging ? (
           <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-success)] opacity-70" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[var(--color-success)]" />
           </span>
         ) : (
-          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[var(--color-success)]" />
         )}
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
           {isRinging
             ? direction === "inbound"
               ? "Chamada recebida"
@@ -365,7 +365,7 @@ function CallPanel({
           {remoteNumber ?? "Desconhecido"}
         </span>
         {isActive && (
-          <span className="font-mono text-sm text-slate-500 dark:text-slate-400">
+          <span className="font-mono text-sm text-[var(--text-muted)]">
             {formatDuration(durationMs)}
           </span>
         )}
@@ -377,7 +377,7 @@ function CallPanel({
             <button
               type="button"
               onClick={onAnswer}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98]"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--color-success)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--color-success)] active:scale-[0.98]"
             >
               <IconPhoneIncoming size={16} />
               Atender
@@ -385,7 +385,7 @@ function CallPanel({
             <button
               type="button"
               onClick={onHangup}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--color-danger)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--color-danger)] active:scale-[0.98]"
             >
               <IconPhoneOff size={16} />
               Recusar
@@ -397,7 +397,7 @@ function CallPanel({
           <button
             type="button"
             onClick={onHangup}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--color-danger)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--color-danger)] active:scale-[0.98]"
           >
             <IconPhoneOff size={16} />
             Cancelar
@@ -411,8 +411,8 @@ function CallPanel({
               className={cn(
                 "inline-flex h-10 w-10 items-center justify-center rounded-full border transition",
                 muted
-                  ? "border-amber-500 bg-amber-500 text-white"
-                  : "border-slate-300 bg-white/60 text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10",
+                  ? "border-[var(--color-warning)] bg-[var(--color-warning)] text-white"
+                  : "border-[var(--glass-border)] bg-white/60 text-[var(--text-secondary)] hover:bg-[var(--glass-bg-subtle)] dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10",
               )}
               title={muted ? "Reativar microfone" : "Silenciar microfone"}
             >
@@ -426,8 +426,8 @@ function CallPanel({
               className={cn(
                 "inline-flex h-10 w-10 items-center justify-center rounded-full border transition",
                 held
-                  ? "border-indigo-500 bg-indigo-500 text-white"
-                  : "border-slate-300 bg-white/60 text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10",
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                  : "border-[var(--glass-border)] bg-white/60 text-[var(--text-secondary)] hover:bg-[var(--glass-bg-subtle)] dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10",
               )}
               title={held ? "Retomar chamada" : "Colocar em espera"}
             >
@@ -437,7 +437,7 @@ function CallPanel({
             <button
               type="button"
               onClick={onHangup}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--color-danger)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--color-danger)] active:scale-[0.98]"
             >
               <IconPhoneOff size={16} />
               Encerrar

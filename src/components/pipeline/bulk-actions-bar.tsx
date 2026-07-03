@@ -273,16 +273,16 @@ export function BulkActionsBar({
             Forçamos um fundo sólido navy + borda visível em dark para a barra
             ficar legível sobre o body/board. `!` necessário pra vencer o
             `bg-transparent`/`text-primary` do variant outline do <Button>. */}
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 px-5 py-3 text-card-foreground shadow-2xl shadow-black/20 backdrop-blur-lg dark:!border-slate-700 dark:!bg-slate-900 dark:!text-slate-100 dark:shadow-black/60">
-          <div className="mr-2 flex items-center gap-2 border-r border-border pr-4 dark:border-slate-700/70">
-            <CheckCircle2 className="size-4 text-[var(--brand-accent)] dark:text-cyan-400" />
-            <span className="text-[13px] font-bold text-foreground dark:text-slate-100">
+        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 px-5 py-3 text-card-foreground shadow-2xl shadow-black/20 backdrop-blur-lg dark:!border-[var(--glass-border)] dark:!bg-[var(--glass-bg-strong)] dark:!text-[var(--text-primary)] dark:shadow-black/60">
+          <div className="mr-2 flex items-center gap-2 border-r border-border pr-4 dark:border-[var(--glass-border)]/70">
+            <CheckCircle2 className="size-4 text-[var(--brand-accent)] dark:text-[var(--color-info)]" />
+            <span className="text-[13px] font-bold text-foreground dark:text-[var(--text-primary)]">
               {selectedCount} selecionado{selectedCount !== 1 ? "s" : ""}
             </span>
             <button
               type="button"
               onClick={onClear}
-              className="ml-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              className="ml-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground dark:text-[var(--text-muted)] dark:hover:bg-[var(--glass-bg-panel)] dark:hover:text-[var(--text-primary)]"
             >
               <X className="size-3.5" />
             </button>
@@ -295,7 +295,7 @@ export function BulkActionsBar({
               size="sm"
               variant="outline"
               onClick={() => setMoveOpen((v) => !v)}
-              className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:hover:!bg-slate-700 dark:hover:!text-white"
+              className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-[var(--glass-border)] dark:!bg-[var(--glass-bg-panel)] dark:!text-[var(--text-primary)] dark:hover:!bg-[var(--glass-bg-strong)] dark:hover:!text-[var(--text-primary)]"
               disabled={mutation.isPending}
             >
               <ArrowRightLeft className="size-3.5" />
@@ -321,7 +321,7 @@ export function BulkActionsBar({
                   >
                     <span
                       className="size-2 rounded-full"
-                      style={{ backgroundColor: s.color ?? "#2563eb" }}
+                      style={{ backgroundColor: s.color ?? "var(--brand-primary)" }}
                     />
                     {s.name}
                   </button>
@@ -337,7 +337,7 @@ export function BulkActionsBar({
               size="sm"
               variant="outline"
               onClick={() => setOwnerOpen((v) => !v)}
-              className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:hover:!bg-slate-700 dark:hover:!text-white"
+              className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-[var(--glass-border)] dark:!bg-[var(--glass-bg-panel)] dark:!text-[var(--text-primary)] dark:hover:!bg-[var(--glass-bg-strong)] dark:hover:!text-[var(--text-primary)]"
               disabled={mutation.isPending}
             >
               <UserCog className="size-3.5" />
@@ -379,7 +379,7 @@ export function BulkActionsBar({
             size="sm"
             variant="outline"
             onClick={() => setEditFieldsOpen(true)}
-            className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:hover:!bg-slate-700 dark:hover:!text-white"
+            className="h-8 gap-1.5 rounded-xl text-[12px] dark:!border-[var(--glass-border)] dark:!bg-[var(--glass-bg-panel)] dark:!text-[var(--text-primary)] dark:hover:!bg-[var(--glass-bg-strong)] dark:hover:!text-[var(--text-primary)]"
             disabled={mutation.isPending}
           >
             <Pencil className="size-3.5" />
@@ -390,7 +390,7 @@ export function BulkActionsBar({
           <Button
             type="button"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl border border-[var(--color-success)]/40 bg-[var(--color-success-bg)] text-[12px] text-[var(--color-success-text)] shadow-none hover:bg-[var(--color-success-bg)] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
+            className="h-8 gap-1.5 rounded-xl border border-[var(--color-success)]/40 bg-[var(--color-success-bg)] text-[12px] text-[var(--color-success-text)] shadow-none hover:bg-[var(--color-success-bg)] dark:border-[var(--color-success)]/40 dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)] dark:hover:bg-[var(--color-success)]/25"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate({ dealIds, action: "mark_won" })}
           >
@@ -402,7 +402,7 @@ export function BulkActionsBar({
           <Button
             type="button"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-bg)] text-[12px] text-[var(--color-danger-text)] shadow-none hover:bg-[var(--color-danger-bg)] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+            className="h-8 gap-1.5 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-bg)] text-[12px] text-[var(--color-danger-text)] shadow-none hover:bg-[var(--color-danger-bg)] dark:border-[var(--color-danger)]/40 dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-danger)] dark:hover:bg-[var(--color-danger)]/25"
             disabled={mutation.isPending}
             onClick={() => setLostOpen(true)}
           >
@@ -415,7 +415,7 @@ export function BulkActionsBar({
             type="button"
             size="sm"
             variant="ghost"
-            className="h-8 gap-1.5 rounded-xl text-[12px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive dark:!text-slate-300 dark:hover:!bg-rose-500/20 dark:hover:!text-rose-300"
+            className="h-8 gap-1.5 rounded-xl text-[12px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive dark:!text-[var(--text-secondary)] dark:hover:!bg-[var(--color-danger)]/20 dark:hover:!text-[var(--color-danger)]"
             disabled={mutation.isPending}
             onClick={() => setDeleteOpen(true)}
           >
@@ -507,12 +507,12 @@ export function BulkActionsBar({
             "fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 text-[13px] font-semibold shadow-2xl shadow-black/20 backdrop-blur-lg transition-all animate-in slide-in-from-bottom-4 fade-in",
             isDark && "dark",
             progressDoneStatus === "COMPLETED"
-              ? "border-[var(--color-success)]/50 bg-[var(--color-success-bg)] text-[var(--color-success-text)] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
+                  ? "border-[var(--color-success)]/50 bg-[var(--color-success-bg)] text-[var(--color-success-text)] dark:border-[var(--color-success)]/40 dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]"
               : progressDoneStatus === "FAILED"
-                ? "border-[var(--color-danger)]/50 bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300"
+                ? "border-[var(--color-danger)]/50 bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:border-[var(--color-danger)]/40 dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-danger)]"
                 : progressDoneStatus === "PARTIAL"
-                  ? "border-[var(--color-warning)]/50 bg-[var(--color-warn-bg)] text-[var(--color-warning)] dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300"
-                  : "border-border bg-card/95 text-card-foreground dark:!border-slate-700 dark:!bg-slate-900 dark:!text-slate-100",
+                  ? "border-[var(--color-warning)]/50 bg-[var(--color-warn-bg)] text-[var(--color-warning)] dark:border-[var(--color-warning)]/40 dark:bg-[var(--color-warning)]/15 dark:text-[var(--color-warning)]"
+                  : "border-border bg-card/95 text-card-foreground dark:!border-[var(--glass-border)] dark:!bg-[var(--glass-bg-strong)] dark:!text-[var(--text-primary)]",
           )}
         >
           {progressDoneStatus ? (

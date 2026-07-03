@@ -135,25 +135,25 @@ export const ACTIVITY_TYPES = [
 ];
 
 export const LIFECYCLE_OPTIONS = [
-  { value: "SUBSCRIBER", label: "Assinante", color: "bg-gray-400" },
-  { value: "LEAD", label: "Lead", color: "bg-blue-500" },
-  { value: "MQL", label: "MQL", color: "bg-amber-500" },
-  { value: "SQL", label: "SQL", color: "bg-orange-500" },
-  { value: "OPPORTUNITY", label: "Oportunidade", color: "bg-purple-500" },
-  { value: "CUSTOMER", label: "Cliente", color: "bg-emerald-500" },
-  { value: "EVANGELIST", label: "Evangelista", color: "bg-pink-500" },
-  { value: "OTHER", label: "Outro", color: "bg-gray-400" },
+  { value: "SUBSCRIBER", label: "Assinante", color: "bg-[var(--text-muted)]" },
+  { value: "LEAD", label: "Lead", color: "bg-[var(--brand-primary)]" },
+  { value: "MQL", label: "MQL", color: "bg-[var(--color-warning)]" },
+  { value: "SQL", label: "SQL", color: "bg-[var(--color-warning)]" },
+  { value: "OPPORTUNITY", label: "Oportunidade", color: "bg-[var(--brand-secondary)]" },
+  { value: "CUSTOMER", label: "Cliente", color: "bg-[var(--color-success)]" },
+  { value: "EVANGELIST", label: "Evangelista", color: "bg-[var(--brand-accent)]" },
+  { value: "OTHER", label: "Outro", color: "bg-[var(--text-muted)]" },
 ] as const;
 
 export const LIFECYCLE_COLORS: Record<string, string> = {
-  SUBSCRIBER: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-  LEAD: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  MQL: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  SQL: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-  OPPORTUNITY: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-  CUSTOMER: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-  EVANGELIST: "bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300",
-  OTHER: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  SUBSCRIBER: "bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
+  LEAD: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
+  MQL: "bg-[var(--color-warning)]/10 text-[var(--color-warning)]",
+  SQL: "bg-[var(--color-warning)]/15 text-[var(--color-warning)]",
+  OPPORTUNITY: "bg-[var(--brand-secondary)]/10 text-[var(--brand-secondary)]",
+  CUSTOMER: "bg-[var(--color-success)]/10 text-[var(--color-success)]",
+  EVANGELIST: "bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]",
+  OTHER: "bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
 };
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -187,10 +187,10 @@ export function SidebarSection({
         <div className={cn("flex items-start justify-between gap-3", title && "mb-2.5")}>
           {title ? (
             <div className="min-w-0">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                 {title}
               </h3>
-              {description ? <p className="mt-0.5 text-xs text-slate-500">{description}</p> : null}
+              {description ? <p className="mt-0.5 text-xs text-[var(--text-muted)]">{description}</p> : null}
             </div>
           ) : (
             <div className="min-w-0 flex-1" />
@@ -218,14 +218,14 @@ export function MiniInfoCard({
     <div
       className={cn(
         "rounded-xl border px-3 py-2.5 shadow-sm",
-        tone === "success" && "border-emerald-100 bg-emerald-50/70",
-        tone === "warning" && "border-amber-100 bg-amber-50/70",
+        tone === "success" && "border-[var(--color-success)]/20 bg-[var(--color-success)]/10",
+        tone === "warning" && "border-[var(--color-warning)]/20 bg-[var(--color-warning)]/10",
         tone === "default" && "border-border bg-[var(--color-bg-subtle)]/80",
       )}
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
-      <div className="mt-1 text-[15px] font-semibold text-slate-900">{value}</div>
-      {hint ? <div className="mt-1 text-xs text-slate-500">{hint}</div> : null}
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{label}</p>
+      <div className="mt-1 text-[15px] font-semibold text-[var(--text-primary)]">{value}</div>
+      {hint ? <div className="mt-1 text-xs text-[var(--text-muted)]">{hint}</div> : null}
     </div>
   );
 }
@@ -246,7 +246,7 @@ export function CompactRow({
       <span
         className={cn(
           "truncate text-foreground",
-          copyable && text !== "—" && "cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400",
+          copyable && text !== "—" && "cursor-pointer hover:text-[var(--brand-primary)]",
         )}
         onClick={() => {
           if (copyable && text !== "—") navigator.clipboard.writeText(text);

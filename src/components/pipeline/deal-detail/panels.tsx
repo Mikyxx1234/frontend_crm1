@@ -46,7 +46,7 @@ export function DealTabs({
         <TabsList className="h-auto rounded-xl border border-border bg-[var(--color-bg-subtle)] p-1 shadow-sm">
           <TabsTrigger
             value="conversations"
-            className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-[var(--text-primary)] data-[state=active]:shadow-sm"
           >
             <MessageSquare className="size-3.5" /> Conversas
             {conversationsCount > 0 && (
@@ -57,7 +57,7 @@ export function DealTabs({
           </TabsTrigger>
           <TabsTrigger
             value="activities"
-            className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-[var(--text-primary)] data-[state=active]:shadow-sm"
           >
             <Calendar className="size-3.5" /> Atividades
             {activitiesCount > 0 && (
@@ -68,7 +68,7 @@ export function DealTabs({
           </TabsTrigger>
           <TabsTrigger
             value="notes"
-            className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-[var(--text-primary)] data-[state=active]:shadow-sm"
           >
             <FileText className="size-3.5" /> Notas
             {notesCount > 0 && (
@@ -79,7 +79,7 @@ export function DealTabs({
           </TabsTrigger>
           <TabsTrigger
             value="timeline"
-            className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+            className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-[var(--text-primary)] data-[state=active]:shadow-sm"
           >
             <Clock className="size-3.5" /> Timeline
           </TabsTrigger>
@@ -342,8 +342,8 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
                     onClick={() => toggleMut.mutate(a.id)}
                     disabled={toggleMut.isPending}
                     className={cn(
-                      "relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-emerald-400",
-                      a.completed ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40" : "border-border bg-muted/40",
+                      "relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-[var(--color-success)]/50",
+                      a.completed ? "border-[var(--color-success)]/40 bg-[var(--color-success)]/10" : "border-border bg-muted/40",
                     )}
                   >
                     {ACTIVITY_TYPES.find((t) => t.value === a.type)?.icon ?? "📌"}
@@ -353,16 +353,16 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
                   <div className="flex items-center gap-2">
                     <span className={cn("text-sm font-medium", a.completed && "line-through text-muted-foreground")}>{a.title}</span>
                     {a.completed ? (
-                      <CheckCircle2 className="size-3.5 text-emerald-500" />
+                      <CheckCircle2 className="size-3.5 text-[var(--color-success)]" />
                     ) : (
-                      <Circle className="size-3.5 text-slate-300" />
+                      <Circle className="size-3.5 text-[var(--glass-border)]" />
                     )}
                     <TooltipHost label="Excluir atividade" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
                       <button
                         type="button"
                         onClick={() => deleteMut.mutate(a.id)}
                         disabled={deleteMut.isPending}
-                        className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-red-50 hover:text-red-500"
+                        className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
                         aria-label="Excluir atividade"
                       >
                         <Trash2 className="size-3" />
@@ -446,7 +446,7 @@ export function NotesPanel({ notes, contactId, dealId, onCreated }: NotesPanelPr
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Escreva uma nota…"
           rows={2}
-          className="min-h-[44px] flex-1 resize-none rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm shadow-inner outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="min-h-[44px] flex-1 resize-none rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm shadow-inner outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -457,7 +457,7 @@ export function NotesPanel({ notes, contactId, dealId, onCreated }: NotesPanelPr
         <Button
           type="submit"
           size="icon"
-          className="size-11 shrink-0 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+          className="size-11 shrink-0 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/90"
           disabled={!draft.trim() || mutation.isPending}
         >
           {mutation.isPending ? <Loader2 className="size-5 animate-spin" /> : <Plus className="size-5" />}

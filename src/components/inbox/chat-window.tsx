@@ -306,8 +306,8 @@ function HighlightedText({
             className={cn(
               "rounded-[2px] px-px",
               isCurrentMatch
-                ? "bg-[#f59e0b] text-white"
-                : "bg-[#fef3c7] text-[#92400e]",
+                ? "bg-[var(--color-warning)] text-white"
+                : "bg-[var(--color-warn-bg)] text-[var(--color-warning)]",
             )}
           >
             {part}
@@ -1564,7 +1564,7 @@ export function ChatWindow({
   if (isError)
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center bg-[var(--chat-bg)] p-6">
-        <div className="rounded-[16px] border border-destructive/30 bg-destructive/5 px-5 py-3 text-[14px] text-destructive">
+        <div className="rounded-[var(--radius-xl)] border border-destructive/30 bg-destructive/5 px-5 py-3 text-[14px] text-destructive">
           {error instanceof Error
             ? error.message
             : "Erro ao carregar mensagens."}
@@ -2736,7 +2736,7 @@ export function ChatWindow({
                       </div>
 
                       {m.sendStatus === "failed" && (
-                        <div className="flex items-center gap-2 rounded-b-[16px] border-t border-[rgba(239,68,68,0.2)] bg-destructive/5 px-3.5 py-2">
+                        <div className="flex items-center gap-2 rounded-b-[var(--radius-xl)] border-t border-[rgba(239,68,68,0.2)] bg-destructive/5 px-3.5 py-2">
                           <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
                           <span className="flex-1 truncate text-[11px] text-destructive">
                             {m.sendError ? summarizeSendError(m.sendError) : "Falha ao enviar"}
@@ -2956,7 +2956,7 @@ export function ChatWindow({
                     type="button"
                     onClick={() => cancelScheduledMutation.mutate(sm.id)}
                     disabled={cancelScheduledMutation.isPending}
-                    className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-info transition-colors hover:bg-sky-200 disabled:opacity-50"
+                    className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-info transition-colors hover:bg-[var(--color-info)]/20 disabled:opacity-50"
                   >
                     <X className="size-3" /> Cancelar
                   </button>
@@ -3008,7 +3008,7 @@ export function ChatWindow({
           />
 
           {activePanel === "task" && (
-            <div className="rounded-t-[16px] border border-b-0 border-border bg-card p-4">
+            <div className="rounded-t-[var(--radius-xl)] border border-b-0 border-border bg-card p-4">
               <div className="mb-3 flex items-center gap-2">
                 <CheckSquare className="size-4 text-success" />
                 <span className="text-[14px] font-semibold text-info">
@@ -3065,7 +3065,7 @@ export function ChatWindow({
           )}
 
           {activePanel === "schedule" && (
-            <div className="rounded-t-[16px] border border-b-0 border-border bg-card p-4">
+            <div className="rounded-t-[var(--radius-xl)] border border-b-0 border-border bg-card p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Clock className="size-4 text-info" />
                 <span className="text-[14px] font-semibold text-info">
@@ -3259,7 +3259,7 @@ export function ChatWindow({
           <div
             className={cn(rowMax, compactChrome ? "px-2 pt-1.5" : "px-6 pt-2")}
           >
-            <div className="flex items-start gap-2 rounded-t-[16px] bg-[var(--chat-bg)] px-4 py-2.5">
+            <div className="flex items-start gap-2 rounded-t-[var(--radius-xl)] bg-[var(--chat-bg)] px-4 py-2.5">
               <div className="min-w-0 flex-1 border-l-[3px] border-accent pl-3">
                 {replyTo.senderName && (
                   <p className="text-[11px] font-semibold text-accent">
@@ -3284,7 +3284,7 @@ export function ChatWindow({
           <div
             className={cn(rowMax, compactChrome ? "px-2 pt-1.5" : "px-6 pt-2")}
           >
-            <div className="flex items-center gap-2 rounded-[16px] bg-[var(--chat-bg)] px-4 py-2.5">
+            <div className="flex items-center gap-2 rounded-[var(--radius-xl)] bg-[var(--chat-bg)] px-4 py-2.5">
               <Paperclip className="size-4 text-muted-foreground" />
               <span className="max-w-[200px] truncate text-[14px] font-medium text-foreground">
                 {pendingFile.name}
@@ -3306,7 +3306,7 @@ export function ChatWindow({
           <div
             className={cn(rowMax, compactChrome ? "px-2 pt-2" : "px-6 pt-3")}
           >
-            <div className="rounded-[16px] border border-success/30 bg-success/5 p-4">
+            <div className="rounded-[var(--radius-xl)] border border-success/30 bg-success/5 p-4">
               <div className="flex items-start gap-3">
                 <LayoutTemplate className="mt-0.5 size-5 shrink-0 text-success" />
                 <div className="min-w-0 flex-1">
@@ -3328,7 +3328,7 @@ export function ChatWindow({
                     {renderedTemplatePreview || pendingTemplate.content}
                   </p>
                   {templatePlaceholders.length > 0 && (
-                    <div className="mt-3 space-y-2 rounded-[12px] border border-success/20 bg-white p-3">
+                    <div className="mt-3 space-y-2 rounded-[var(--radius-lg)] border border-success/20 bg-white p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Preencha as variaveis do template
                       </p>
@@ -3358,7 +3358,7 @@ export function ChatWindow({
                       })}
                     </div>
                   )}
-                  <div className="mt-3 space-y-2 rounded-[12px] border border-border/40 bg-white/80 p-3">
+                  <div className="mt-3 space-y-2 rounded-[var(--radius-lg)] border border-border/40 bg-white/80 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Flow (opcional)
                     </p>
@@ -4038,10 +4038,10 @@ function TemplateBadge({ content }: { content: string }) {
   // praticamente ilegível. Marketing/Utility também só tinham variante
   // clara, então em dark mode amber-50/sky-50 sumiam.
   const colors = isMkt
-    ? "border-warning/40/60 bg-warning-soft text-warning dark:border-warning/40/50 dark:bg-warning/20 dark:text-amber-100"
+    ? "border-warning/40/60 bg-warning-soft text-warning dark:border-warning/40/50 dark:bg-warning/20 dark:text-[var(--color-warning)]"
     : isUtility
-      ? "border-primary/40/60 bg-primary-soft text-info dark:border-primary/40/50 dark:bg-sky-400/20 dark:text-sky-100"
-      : "border-primary/40/60 bg-primary-soft text-primary-dark dark:border-primary/40/50 dark:bg-indigo-400/25 dark:text-indigo-50";
+      ? "border-primary/40/60 bg-primary-soft text-info dark:border-primary/40/50 dark:bg-[var(--color-info)]/20 dark:text-[var(--color-info)]"
+      : "border-primary/40/60 bg-primary-soft text-primary-dark dark:border-primary/40/50 dark:bg-[var(--brand-secondary)]/25 dark:text-[var(--brand-secondary)]";
 
   return (
     <div className="group/tpl relative mb-1.5">
@@ -4232,7 +4232,7 @@ function SystemEventRow({
             )}
           </div>
           <div className="flex items-center justify-center gap-2 px-1">
-            <span className="rounded-md bg-white/80 px-2 py-1 text-[12px] font-bold tabular-nums text-ink-muted line-through decoration-slate-400/60">
+            <span className="rounded-md bg-white/80 px-2 py-1 text-[12px] font-bold tabular-nums text-ink-muted line-through decoration-[var(--text-muted)]/60">
               {oldPhone}
             </span>
             <ArrowRight
@@ -4944,7 +4944,7 @@ function AudioMessage({
       <div className="flex min-w-[220px] max-w-[320px] flex-col gap-1">
         <div
           className={cn(
-            "font-display flex items-center gap-2 rounded-[6px] px-2 py-1.5",
+            "font-display flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5",
             playerSurface,
           )}
         >
@@ -5070,7 +5070,7 @@ function AudioMessage({
                       ? "text-[color:var(--chat-bubble-sent-check-read)]"
                       : "text-[color:var(--chat-bubble-sent-time)]"
                     : isRead
-                      ? "text-[#06b6d4]"
+                      ? "text-[var(--color-info)]"
                       : "text-[var(--color-ink-muted)]",
                 )}
                 strokeWidth={2.5}

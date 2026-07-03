@@ -142,7 +142,7 @@ export function DealQueueSortMenu({
             aria-expanded={sortOpen}
             aria-label={`Ordenar fila: ${SORT_LABELS[sortMode]}`}
             className={cn(
-              "inline-flex items-center justify-center rounded-lg border border-border bg-white font-semibold tracking-tight text-foreground shadow-[var(--shadow-sm)] transition-colors hover:border-border hover:bg-slate-50",
+              "inline-flex items-center justify-center rounded-lg border border-border bg-white font-semibold tracking-tight text-foreground shadow-[var(--shadow-sm)] transition-colors hover:border-border hover:bg-[var(--glass-bg-subtle)]",
               iconOnly
                 ? "size-8 shrink-0 p-0"
                 : cn(
@@ -317,7 +317,7 @@ function PreviewLastMessage({ deal }: { deal: BoardDeal }) {
   const m = deal.lastMessage;
 
   if (!m?.content?.trim()) {
-    return <span className="italic text-slate-300">Sem mensagens</span>;
+    return <span className="italic text-[var(--text-faint)]">Sem mensagens</span>;
   }
 
   const content = m.content.trim();
@@ -328,7 +328,7 @@ function PreviewLastMessage({ deal }: { deal: BoardDeal }) {
     return (
       <span className="flex items-center gap-1 text-[var(--color-ink-muted)]">
         {isOut ? <span className="text-[var(--color-ink-muted)]">Você: </span> : null}
-        <Mic className="size-3 shrink-0 text-[#a855f7]" />
+        <Mic className="size-3 shrink-0 text-[var(--brand-secondary)]" />
         <span>Áudio</span>
       </span>
     );
@@ -338,7 +338,7 @@ function PreviewLastMessage({ deal }: { deal: BoardDeal }) {
     return (
       <span className="flex items-center gap-1 text-[var(--color-ink-muted)]">
         {isOut ? <span className="text-[var(--color-ink-muted)]">Você: </span> : null}
-        <ImageIcon className="size-3 shrink-0 text-[#3b82f6]" />
+        <ImageIcon className="size-3 shrink-0 text-[var(--brand-primary)]" />
         <span>Imagem</span>
       </span>
     );
@@ -348,7 +348,7 @@ function PreviewLastMessage({ deal }: { deal: BoardDeal }) {
     return (
       <span className="flex items-center gap-1 text-[var(--color-ink-muted)]">
         {isOut ? <span className="text-[var(--color-ink-muted)]">Você: </span> : null}
-        <Video className="size-3 shrink-0 text-[#ec4899]" />
+        <Video className="size-3 shrink-0 text-[var(--brand-accent)]" />
         <span>Vídeo</span>
       </span>
     );
@@ -358,7 +358,7 @@ function PreviewLastMessage({ deal }: { deal: BoardDeal }) {
     return (
       <span className="flex items-center gap-1 text-[var(--color-ink-muted)]">
         {isOut ? <span className="text-[var(--color-ink-muted)]">Você: </span> : null}
-        <FileText className="size-3 shrink-0 text-[#f97316]" />
+        <FileText className="size-3 shrink-0 text-[var(--color-warning)]" />
         <span>Documento</span>
       </span>
     );
@@ -541,14 +541,14 @@ function DealProductLine({
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "group flex w-full items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-left transition-all hover:border-slate-400",
+          "group flex w-full items-center gap-2 rounded-xl border border-dashed border-[var(--glass-border)] bg-white px-3 py-2 text-left transition-all hover:border-[var(--glass-border)]",
           compactCta &&
             "inline-flex w-auto max-w-full justify-end border-0 bg-transparent px-0 py-0 shadow-none hover:border-0",
           open &&
-            "border-solid border-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.12)]",
+            "border-solid border-[var(--brand-primary)] shadow-[0_0_0_3px_rgba(37,99,235,0.12)]",
           compactCta &&
             open &&
-            "rounded-md border border-dashed border-slate-300 px-2 py-1",
+            "rounded-md border border-dashed border-[var(--glass-border)] px-2 py-1",
         )}
       >
         <Plus
@@ -590,7 +590,7 @@ function DealProductLine({
             }}
             className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
           >
-            <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2">
               <Search
                 className="size-3.5 shrink-0 text-[var(--color-ink-muted)]"
                 strokeWidth={2.5}
@@ -601,7 +601,7 @@ function DealProductLine({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar produto..."
-                className="w-full bg-transparent text-[13px] text-slate-800 outline-none placeholder:text-[var(--color-ink-muted)]"
+                className="w-full bg-transparent text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--color-ink-muted)]"
               />
               {search && (
                 <button
@@ -637,7 +637,7 @@ function DealProductLine({
                         strokeWidth={2.5}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[13px] font-bold tracking-tight text-slate-800">
+                        <div className="truncate text-[13px] font-bold tracking-tight text-[var(--text-primary)]">
                           {product.name}
                         </div>
                         {product.sku && (
@@ -691,7 +691,7 @@ function StageInlinePicker({
   });
 
   const currentStage = stages.find((s) => s.id === deal.stageId) ?? null;
-  const stageColor = currentStage?.color ?? "#94a3b8";
+  const stageColor = currentStage?.color ?? "var(--text-muted)";
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
@@ -733,7 +733,7 @@ function StageInlinePicker({
           className={cn(
             "shrink-0 text-[var(--color-ink-muted)] transition-transform group-hover:text-[var(--color-ink-soft)]",
             pill ? "size-3" : "size-3.5",
-            open && "rotate-180 text-blue-600",
+            open && "rotate-180 text-[var(--brand-primary)]",
           )}
           strokeWidth={2.5}
         />
@@ -759,7 +759,7 @@ function StageInlinePicker({
             }}
             className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+              <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                 Mover para
               </span>
@@ -793,17 +793,17 @@ function StageInlinePicker({
                       className={cn(
                         "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-normal text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
                         isCurrent &&
-                          "cursor-default bg-blue-50/60 text-blue-700",
+                          "cursor-default bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
                       )}
                     >
                       <span
                         className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: stage.color ?? "#94a3b8" }}
+                        style={{ backgroundColor: stage.color ?? "var(--text-muted)" }}
                       />
                       <span className="truncate">{stage.name}</span>
                       {isCurrent && (
                         <Check
-                          className="ml-auto size-3.5 text-blue-600"
+                          className="ml-auto size-3.5 text-[var(--brand-primary)]"
                           strokeWidth={2.5}
                         />
                       )}
@@ -933,7 +933,7 @@ function DealCard({
   const contactTitle = deal.contact?.name ?? `#${deal.number ?? "—"}`;
   const headline = deal.contact?.name ?? deal.title;
   const contactAvatarColor =
-    (deal.contact as { avatarColor?: string } | null | undefined)?.avatarColor ?? "#6366f1";
+    (deal.contact as { avatarColor?: string } | null | undefined)?.avatarColor ?? "var(--brand-primary)";
   const timeLabel = formatRelativeShort(deal.lastMessage?.createdAt ?? deal.createdAt);
   const stageRawIdx = stages.findIndex((s) => s.id === deal.stageId);
   const stageProgressPct =
@@ -981,10 +981,10 @@ function DealCard({
       className={cn(
         // NÃO usar `overflow-hidden`: o popover de responsável precisa
         // escapar do card. Ativo = rail azul + fundo blue-50 (WhatsApp refinado).
-        "group relative cursor-pointer select-none bg-white text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:bg-slate-900",
+        "group relative cursor-pointer select-none bg-white text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40 dark:bg-[var(--glass-bg-panel)]",
         isActive
-          ? "border-l-2 border-l-blue-500 bg-blue-50 dark:bg-blue-500/10"
-          : "hover:bg-slate-50 dark:hover:bg-slate-800/50",
+          ? "border-l-2 border-l-[var(--brand-primary)] bg-[var(--brand-primary)]/10"
+          : "hover:bg-[var(--glass-bg-subtle)] dark:hover:bg-[var(--glass-bg-overlay)]",
         wasRecentlyMoved && "ring-2 ring-inset ring-cyan-400/45",
       )}
     >
@@ -1072,12 +1072,12 @@ function DealCard({
             className="overflow-hidden"
           >
             <div
-              className="border-t border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900"
+              className="border-t border-[var(--glass-border-subtle)] bg-white dark:border-[var(--glass-border)] dark:bg-[var(--glass-bg-panel)]"
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
             >
-              <div className="border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/40">
+              <div className="border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-3 py-2 dark:border-[var(--glass-border)] dark:bg-[var(--glass-bg-overlay)]">
                 <div className="flex items-center gap-2">
-                  <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-overlay)]">
                     <div
                       className="absolute inset-y-0 left-0 rounded-full transition-all"
                       style={{ width: `${stageProgressPct}%`, backgroundColor: stageBarColor }}
@@ -1104,7 +1104,7 @@ function DealCard({
                           e.stopPropagation();
                           onOpenFullDeal(deal.id);
                         }}
-                        className="inline-flex size-6 items-center justify-center rounded text-slate-300 transition-colors hover:text-blue-500"
+                        className="inline-flex size-6 items-center justify-center rounded text-[var(--text-faint)] transition-colors hover:text-[var(--brand-primary)]"
                         aria-label="Abrir deal completo"
                       >
                         <ExternalLink className="size-3" strokeWidth={2.25} />
@@ -1120,8 +1120,8 @@ function DealCard({
                     onClick={(e) => { e.stopPropagation(); setLayoutMode((v) => !v); }}
                     className={cn(
                       "flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
-                      hasAgentOverride ? "text-primary/70 hover:text-primary" : "text-slate-400 hover:text-slate-600",
-                      "hover:bg-slate-100",
+                      hasAgentOverride ? "text-primary/70 hover:text-primary" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                      "hover:bg-[var(--glass-bg-subtle)]",
                     )}
                   >
                     <Settings2 className="size-3" />
@@ -1132,7 +1132,7 @@ function DealCard({
                 {layoutMode ? (
                   <div className="flex flex-col gap-1 px-3 py-2">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-700">
+                      <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
                         {isAdmin ? "Padrão da org" : "Meu layout"}
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -1140,7 +1140,7 @@ function DealCard({
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); resetAgent(); setLayoutMode(false); }}
-                            className="rounded-md px-2 py-0.5 text-[10px] text-slate-400 hover:bg-slate-100"
+                            className="rounded-md px-2 py-0.5 text-[10px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)]"
                           >
                             Resetar
                           </button>
@@ -1165,7 +1165,7 @@ function DealCard({
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setLayoutMode(false); }}
-                          className="rounded-md px-2 py-0.5 text-[10px] text-slate-400 hover:bg-slate-100"
+                          className="rounded-md px-2 py-0.5 text-[10px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)]"
                         >
                           Cancelar
                         </button>
@@ -1175,15 +1175,15 @@ function DealCard({
                       <div
                         key={section.id}
                         className={cn(
-                          "flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2",
+                          "flex items-center gap-2 rounded-lg border border-[var(--glass-border-subtle)] bg-white px-3 py-2",
                           section.hidden && "opacity-40",
                         )}
                       >
-                        <span className="flex-1 text-[12px] font-medium text-slate-700">{section.label}</span>
+                        <span className="flex-1 text-[12px] font-medium text-[var(--text-secondary)]">{section.label}</span>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); }}
-                          className="flex size-5 items-center justify-center rounded text-slate-400 hover:bg-slate-100"
+                          className="flex size-5 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)]"
                         >
                           {section.hidden
                             ? <EyeOff className="size-3" />
@@ -1236,7 +1236,7 @@ function DealCard({
                     )}
                   >
                     {ownerMutation.isPending ? (
-                      <Loader2 className="size-3.5 shrink-0 animate-spin text-slate-400" />
+                      <Loader2 className="size-3.5 shrink-0 animate-spin text-[var(--text-muted)]" />
                     ) : deal.owner ? (
                       <>
                         <ChatAvatar
@@ -1249,12 +1249,12 @@ function DealCard({
                           channel={null}
                           hideCartoon
                         />
-                        <span className="text-[11px] font-medium text-slate-700">{deal.owner.name}</span>
+                        <span className="text-[11px] font-medium text-[var(--text-secondary)]">{deal.owner.name}</span>
                       </>
                     ) : (
-                      <span className="text-[11px] italic text-slate-300">Sem responsável</span>
+                      <span className="text-[11px] italic text-[var(--text-faint)]">Sem responsável</span>
                     )}
-                    <ChevronDown className="size-3 shrink-0 text-slate-300" strokeWidth={2.5} />
+                    <ChevronDown className="size-3 shrink-0 text-[var(--text-faint)]" strokeWidth={2.5} />
                   </button>
                 </SidebarField>
 
@@ -1268,19 +1268,19 @@ function DealCard({
                   className={cn(dt.card.rowSm, "w-full")}
                 >
                   <div className="flex items-center gap-1.5">
-                    <Phone className="size-3 text-slate-400" aria-hidden />
-                    <span className="text-[11px] text-slate-400">Contato</span>
+                    <Phone className="size-3 text-[var(--text-muted)]" aria-hidden />
+                    <span className="text-[11px] text-[var(--text-muted)]">Contato</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {!contactOpen && deal.contact?.phone ? (
-                      <span className="text-[10px] text-slate-300 tabular-nums">
+                      <span className="text-[10px] text-[var(--text-faint)] tabular-nums">
                         {deal.contact.phone.length > 9
                           ? `${deal.contact.phone.slice(0, 9)}···`
                           : deal.contact.phone}
                       </span>
                     ) : null}
                     <ChevronDown
-                      className={cn("size-3 text-slate-300 transition-transform", contactOpen && "rotate-180")}
+                      className={cn("size-3 text-[var(--text-faint)] transition-transform", contactOpen && "rotate-180")}
                       aria-hidden
                     />
                   </div>

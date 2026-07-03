@@ -26,9 +26,9 @@ const STATUS_LABEL: Record<AgentPresenceStatus, string> = {
 };
 
 const STATUS_DOT: Record<AgentPresenceStatus, string> = {
-  ONLINE: "bg-[#22c55e]",
-  AWAY: "bg-amber-500",
-  OFFLINE: "bg-slate-400",
+  ONLINE: "bg-[var(--color-online)]",
+  AWAY: "bg-[var(--color-warning)]",
+  OFFLINE: "bg-[var(--text-muted)]",
 };
 
 export type AgentCapacityTone = "healthy" | "busy" | "overloaded";
@@ -104,35 +104,35 @@ export function PresenceDashboard({
     ONLINE: {
       label: "Online",
       description: "Recebe novas conversas",
-      dot: "bg-emerald-500",
-      iconBg: "bg-emerald-50",
+      dot: "bg-[var(--color-online)]",
+      iconBg: "bg-[var(--color-success)]/10",
       iconBorder: "border-transparent",
-      activeBg: "bg-emerald-50",
-      activeText: "text-emerald-900",
-      activeDesc: "text-emerald-700",
-      check: "text-emerald-500",
+      activeBg: "bg-[var(--color-success)]/10",
+      activeText: "text-[var(--color-success)]",
+      activeDesc: "text-[var(--color-success)]",
+      check: "text-[var(--color-success)]",
     },
     AWAY: {
       label: "Ausente",
       description: "Pausa temporária",
-      dot: "bg-amber-400",
-      iconBg: "bg-amber-50",
-      iconBorder: "border-amber-200",
-      activeBg: "bg-amber-50",
-      activeText: "text-amber-900",
-      activeDesc: "text-amber-700",
-      check: "text-amber-500",
+      dot: "bg-[var(--color-warning)]",
+      iconBg: "bg-[var(--color-warning)]/10",
+      iconBorder: "border-[var(--color-warning)]/30",
+      activeBg: "bg-[var(--color-warning)]/10",
+      activeText: "text-[var(--color-warning)]",
+      activeDesc: "text-[var(--color-warning)]",
+      check: "text-[var(--color-warning)]",
     },
     OFFLINE: {
       label: "Offline",
       description: "Indisponível",
-      dot: "bg-slate-400",
-      iconBg: "bg-slate-50",
-      iconBorder: "border-slate-200",
-      activeBg: "bg-slate-50",
-      activeText: "text-slate-700",
-      activeDesc: "text-slate-500",
-      check: "text-slate-400",
+      dot: "bg-[var(--text-muted)]",
+      iconBg: "bg-[var(--glass-bg-subtle)]",
+      iconBorder: "border-[var(--glass-border-subtle)]",
+      activeBg: "bg-[var(--glass-bg-subtle)]",
+      activeText: "text-[var(--text-secondary)]",
+      activeDesc: "text-[var(--text-muted)]",
+      check: "text-[var(--text-muted)]",
     },
   };
 
@@ -144,24 +144,24 @@ export function PresenceDashboard({
           className={cn(
             "group text-left transition-colors",
             compact
-              ? "inline-flex max-w-full items-center gap-1.5 rounded-full bg-slate-100 px-2 py-1 hover:bg-slate-200/90"
-              : "relative flex w-full items-center gap-1.5 rounded-lg border border-border/70 bg-white px-2 py-1 shadow-sm hover:border-slate-300",
+              ? "inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--glass-bg-subtle)] px-2 py-1 hover:bg-[var(--glass-bg-subtle)]"
+              : "relative flex w-full items-center gap-1.5 rounded-lg border border-border/70 bg-white px-2 py-1 shadow-sm hover:border-[var(--glass-border)]",
           )}
         >
           {compact ? (
             <>
               <span className="relative flex size-2 shrink-0 items-center justify-center">
                 {isOnline ? (
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#22c55e] opacity-50" />
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--color-online)] opacity-50" />
                 ) : null}
                 <span
                   className={cn("relative inline-flex size-1.5 rounded-full", STATUS_DOT[status])}
                 />
               </span>
-              <span className="truncate text-[10px] font-medium text-slate-600">
+              <span className="truncate text-[10px] font-medium text-[var(--text-secondary)]">
                 {STATUS_LABEL[status]}
               </span>
-              <ChevronDown size={10} className="shrink-0 text-slate-400" />
+              <ChevronDown size={10} className="shrink-0 text-[var(--text-muted)]" />
             </>
           ) : (
             <>
@@ -174,7 +174,7 @@ export function PresenceDashboard({
                 />
                 <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 flex size-2 items-center justify-center">
                   {isOnline && (
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#22c55e] opacity-75" />
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--color-online)] opacity-75" />
                   )}
                   <span
                     className={cn(
@@ -199,10 +199,10 @@ export function PresenceDashboard({
 
         <DropdownMenuContent
           align="end"
-          className="z-[70] min-w-[208px] rounded-xl border border-slate-200 dark:border-slate-700 p-1 shadow-[0_12px_40px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
+          className="z-[70] min-w-[208px] rounded-xl border border-[var(--glass-border-subtle)] dark:border-slate-700 p-1 shadow-[0_12px_40px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
           style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
         >
-          <p className="px-2 pb-1 pt-0.5 font-sans text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          <p className="px-2 pb-1 pt-0.5 font-sans text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)] dark:text-slate-500">
             Status de atendimento
           </p>
 
@@ -219,15 +219,15 @@ export function PresenceDashboard({
                 }}
                 className={cn(
                   "flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors",
-                  active ? config.activeBg : "hover:bg-slate-50",
+                  active ? config.activeBg : "hover:bg-[var(--glass-bg-subtle)]",
                 )}
               >
                 <span className={cn("size-2 shrink-0 rounded-full", config.dot)} />
                 <div className="min-w-0 flex-1 text-left">
-                  <p className={cn("text-[13px] font-semibold leading-tight", active ? config.activeText : "text-slate-700 dark:text-slate-100")}>
+                  <p className={cn("text-[13px] font-semibold leading-tight", active ? config.activeText : "text-[var(--text-secondary)] dark:text-slate-100")}>
                     {config.label}
                   </p>
-                  <p className={cn("text-[11px] leading-tight", active ? config.activeDesc : "text-slate-400 dark:text-slate-400")}>
+                  <p className={cn("text-[11px] leading-tight", active ? config.activeDesc : "text-[var(--text-muted)] dark:text-slate-400")}>
                     {config.description}
                   </p>
                 </div>
@@ -239,11 +239,11 @@ export function PresenceDashboard({
           <DropdownMenuSeparator className="my-1" />
 
           <DropdownMenuItem
-            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50"
+            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--glass-bg-subtle)]"
             onClick={() => router.push(manageHref)}
           >
-            <CalendarDays className="size-3.5 shrink-0 text-slate-400 dark:text-slate-500" strokeWidth={2} />
-            <p className="text-left text-[13px] font-medium text-slate-500 dark:text-slate-300">Configurar horários</p>
+            <CalendarDays className="size-3.5 shrink-0 text-[var(--text-muted)] dark:text-slate-500" strokeWidth={2} />
+            <p className="text-left text-[13px] font-medium text-[var(--text-muted)] dark:text-slate-300">Configurar horários</p>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -447,7 +447,7 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
             <div
               key={item.id}
               className={cn(
-                "group rounded-xl border border-primary/20 bg-linear-to-br from-blue-50 to-white px-3 py-2 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+                "group rounded-xl border border-primary/20 bg-linear-to-br from-[var(--brand-primary)]/5 to-transparent px-3 py-2 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
                 compact && "py-1.5",
               )}
             >
@@ -532,7 +532,7 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
                     <ProductCustomFieldsInline productId={item.productId} />
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5">
-                    <span className="text-sm font-semibold tabular-nums text-slate-950">
+                    <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
                       {formatCurrency(item.total)}
                     </span>
                     {/* Acoes so aparecem no hover pra nao competir com o
@@ -748,7 +748,7 @@ function StageDropdown({
         <div className="flex min-w-0 items-center gap-2.5">
           <span
             className="size-3 shrink-0 rounded-full"
-            style={{ backgroundColor: current?.color ?? "#cbd5e1" }}
+            style={{ backgroundColor: current?.color ?? "var(--glass-border)" }}
             aria-hidden
           />
           <span className="truncate text-sm font-semibold text-foreground">
@@ -770,7 +770,7 @@ function StageDropdown({
               className="h-full transition-all"
               style={{
                 flex: 1,
-                backgroundColor: isPast ? (stage.color ?? "#cbd5e1") : "transparent",
+                backgroundColor: isPast ? (stage.color ?? "var(--glass-border)") : "transparent",
                 marginRight: i < stages.length - 1 ? 1 : 0,
               }}
             />
@@ -786,7 +786,7 @@ function StageDropdown({
           <div className="max-h-[320px] overflow-y-auto">
             {stages.map((stage) => {
               const isActive = stage.id === currentStageId;
-              const color = stage.color ?? "#cbd5e1";
+              const color = stage.color ?? "var(--glass-border)";
               return (
                 <button
                   key={stage.id}
@@ -809,7 +809,9 @@ function StageDropdown({
                   )}
                   <span
                     className="truncate"
-                    style={{ color: isActive ? "#0f172a" : "#475569" }}
+                    style={{
+                    color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                  }}
                   >
                     {stage.name}
                   </span>
@@ -956,7 +958,7 @@ function TagComposerInline({
                   onClick={() => setColor(paletteColor)}
                   className={cn(
                     "size-3.5 rounded-full border transition",
-                    color === paletteColor ? "scale-110 border-slate-500 ring-2 ring-black/10" : "border-white",
+                    color === paletteColor ? "scale-110 border-[var(--text-muted)] ring-2 ring-black/10" : "border-white",
                   )}
                   style={{ backgroundColor: paletteColor }}
                   aria-label={`Selecionar cor ${paletteColor}`}
@@ -1078,7 +1080,7 @@ function PresenceDot({
         "inline-flex size-2.5 rounded-full ring-2 ring-white",
         status === "ONLINE" && "bg-success",
         status === "AWAY" && "bg-warning",
-        status === "OFFLINE" && "bg-slate-400",
+        status === "OFFLINE" && "bg-[var(--text-muted)]",
         className,
       )}
       aria-hidden

@@ -238,7 +238,7 @@ export function TeamTable({
                               {isTop ? (
                                 <Badge
                                   variant="secondary"
-                                  className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300"
+                                  className="bg-indigo-500/15 text-[var(--brand-primary)] dark:text-indigo-300"
                                 >
                                   Destaque
                                 </Badge>

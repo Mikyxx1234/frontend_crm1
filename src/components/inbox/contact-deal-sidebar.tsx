@@ -60,11 +60,11 @@ const LIFECYCLE_LABELS: Record<string, string> = {
 };
 
 function getEngagement(lastInboundAt?: string | null) {
-  if (!lastInboundAt) return { label: "Sem interação", icon: Snowflake, color: "text-blue-400", bg: "bg-primary-soft" } as const;
+  if (!lastInboundAt) return { label: "Sem interação", icon: Snowflake, color: "text-[var(--color-info)]", bg: "bg-primary-soft" } as const;
   const hours = (Date.now() - new Date(lastInboundAt).getTime()) / 3_600_000;
   if (hours < 1) return { label: "Alto", icon: Flame, color: "text-destructive", bg: "bg-destructive-soft" } as const;
   if (hours < 24) return { label: "Médio", icon: Sun, color: "text-warning", bg: "bg-warning-soft" } as const;
-  return { label: "Baixo", icon: Snowflake, color: "text-blue-400", bg: "bg-primary-soft" } as const;
+  return { label: "Baixo", icon: Snowflake, color: "text-[var(--color-info)]", bg: "bg-primary-soft" } as const;
 }
 
 function parseStoredBoolean(raw: string | null): boolean | null {

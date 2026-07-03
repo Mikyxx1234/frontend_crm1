@@ -79,7 +79,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
       )}
       {data.incomplete && (
         <TooltipHost label="Configuração incompleta — esse passo vai falhar em runtime" side="top">
-          <span className="absolute -right-1.5 -top-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-md ring-2 ring-white">
+          <span className="absolute -right-1.5 -top-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-[var(--color-warning)] text-white shadow-md ring-2 ring-white">
             <AlertTriangle className="size-3" strokeWidth={2.6} />
           </span>
         </TooltipHost>
@@ -112,7 +112,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           <TooltipHost label="Remover passo" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -131,7 +131,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           {buttons.map((btn, i) => (
             <div
               key={btn.id || i}
-              className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5 last:border-b-0"
+              className="relative flex h-8 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5 last:border-b-0"
             >
               <span className={cn("size-1.5 shrink-0 rounded-full", buttonDot)} />
               <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-foreground">
@@ -154,8 +154,8 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
       {(data.hasElse || data.hasTimeout) && (
         <div className="border-t border-[var(--glass-border-subtle)]">
           {data.hasElse && (
-            <div className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5 last:border-b-0">
-              <HelpCircle className="size-3 shrink-0 text-amber-500" strokeWidth={2.4} />
+            <div className="relative flex h-8 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5 last:border-b-0">
+              <HelpCircle className="size-3 shrink-0 text-[var(--color-warn)]" strokeWidth={2.4} />
               <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-warn)]">
                 Outra resposta
               </span>
@@ -163,12 +163,12 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
                 type="source"
                 position={Position.Right}
                 id="else"
-                className="size-3! border-2! border-white! bg-amber-500!"
+                className="size-3! border-2! border-white! bg-[var(--color-warning)]!"
               />
             </div>
           )}
           {data.hasTimeout && (
-            <div className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5 last:border-b-0">
+            <div className="relative flex h-8 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5 last:border-b-0">
               <Clock className="size-3 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.4} />
               <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-[var(--text-muted)]">
                 Sem resposta

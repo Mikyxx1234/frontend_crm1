@@ -165,7 +165,7 @@ export function CustomFieldsSection({
         </button>
         <button
           type="button"
-          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-emerald-700")}
+          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-[var(--color-success-text)]")}
           onClick={onSave}
           disabled={saveMutation.isPending}
           aria-label="Salvar campos"
@@ -220,7 +220,7 @@ export function CustomFieldsSection({
         </button>
         <button
           type="button"
-          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-emerald-700")}
+          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-[var(--color-success-text)]")}
           onClick={onSave}
           disabled={saveMutation.isPending}
           aria-label="Salvar campos"
@@ -278,7 +278,7 @@ export function CustomFieldsSection({
         </button>
         <button
           type="button"
-          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-emerald-700")}
+          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-[var(--color-success-text)]")}
           onClick={onSave}
           disabled={saveMutation.isPending}
           aria-label="Salvar campos"

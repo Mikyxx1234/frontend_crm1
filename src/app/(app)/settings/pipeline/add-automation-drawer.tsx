@@ -344,7 +344,7 @@ export function AddAutomationDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--text-primary)]"
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)]"
           >
             <IconX size={17} />
           </button>
@@ -425,7 +425,7 @@ export function AddAutomationDrawer({
         </div>
 
         {/* Rodapé fixo */}
-        <div className="flex items-center justify-end gap-2.5 border-t border-[var(--glass-border-subtle)] bg-slate-50/80 px-6 py-4">
+        <div className="flex items-center justify-end gap-2.5 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)]/80 px-6 py-4">
           <button
             type="button"
             onClick={onClose}

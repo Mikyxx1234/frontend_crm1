@@ -507,7 +507,7 @@ function PendingQueueBlock({
         "overflow-hidden rounded-[var(--radius-xl)] border backdrop-blur-md",
         isEmpty
           ? "border-[var(--glass-border)] bg-[var(--glass-bg-base,rgba(255,255,255,0.82))] shadow-[var(--glass-shadow)]"
-          : "border-amber-300/40 bg-amber-50/80 shadow-[var(--glass-shadow)]",
+          : "border-amber-300/40 bg-[var(--color-warn-bg)]/80 shadow-[var(--glass-shadow)]",
       )}
     >
       <div className="flex items-start gap-3 p-4">
@@ -517,7 +517,7 @@ function PendingQueueBlock({
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
             isEmpty
               ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
-              : "bg-amber-100 text-[var(--color-warn)]",
+              : "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
           )}
         >
           {isEmpty ? (
@@ -541,7 +541,7 @@ function PendingQueueBlock({
             type="button"
             onClick={onRetry}
             disabled={retrying}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-amber-300/50 bg-[var(--color-warn-bg)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:bg-amber-100 disabled:opacity-50"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-amber-300/50 bg-[var(--color-warn-bg)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:bg-[var(--color-warn-bg)] disabled:opacity-50"
           >
             {retrying ? (
               <IconLoader2 size={14} className="animate-spin" />

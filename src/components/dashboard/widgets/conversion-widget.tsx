@@ -42,7 +42,7 @@ export function ConversionWidget() {
           {total > 0 && (
             <>
               <div
-                className="rounded-l-full bg-emerald-500 transition-all"
+                className="rounded-l-full bg-[var(--color-success)] transition-all"
                 style={{ width: `${(wonDeals / total) * 100}%` }}
               />
               <div

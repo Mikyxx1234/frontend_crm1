@@ -23,8 +23,8 @@ type Agent = {
 };
 
 const STATUS_META: Record<AgentPresence, { label: string; tone: string; dot: string }> = {
-  ONLINE:  { label: "Online",   tone: "text-[var(--color-success-text)]", dot: "bg-emerald-500" },
-  AWAY:    { label: "Ausente",  tone: "text-[var(--color-warn)]",   dot: "bg-amber-500" },
+  ONLINE:  { label: "Online",   tone: "text-[var(--color-success-text)]", dot: "bg-[var(--color-success)]" },
+  AWAY:    { label: "Ausente",  tone: "text-[var(--color-warn)]",   dot: "bg-[var(--color-warning)]" },
   OFFLINE: { label: "Offline",  tone: "text-muted-foreground", dot: "bg-muted-foreground/60" },
 };
 

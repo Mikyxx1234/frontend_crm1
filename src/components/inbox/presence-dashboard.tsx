@@ -202,7 +202,7 @@ export function PresenceDashboard({
           className="z-(--z-popover) min-w-[208px] rounded-xl border border-[var(--glass-border-subtle)] dark:border-slate-700 p-1 shadow-[0_12px_40px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
           style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
         >
-          <p className="px-2 pb-1 pt-0.5 font-sans text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)] dark:text-slate-500">
+          <p className="px-2 pb-1 pt-0.5 font-sans text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             Status de atendimento
           </p>
 
@@ -227,7 +227,7 @@ export function PresenceDashboard({
                   <p className={cn("text-[13px] font-semibold leading-tight", active ? config.activeText : "text-[var(--text-secondary)] dark:text-slate-100")}>
                     {config.label}
                   </p>
-                  <p className={cn("text-[11px] leading-tight", active ? config.activeDesc : "text-[var(--text-muted)] dark:text-slate-400")}>
+                  <p className={cn("text-[11px] leading-tight", active ? config.activeDesc : "text-[var(--text-muted)] dark:text-[var(--text-muted)]")}>
                     {config.description}
                   </p>
                 </div>
@@ -242,8 +242,8 @@ export function PresenceDashboard({
             className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--glass-bg-subtle)]"
             onClick={() => router.push(manageHref)}
           >
-            <CalendarDays className="size-3.5 shrink-0 text-[var(--text-muted)] dark:text-slate-500" strokeWidth={2} />
-            <p className="text-left text-[13px] font-medium text-[var(--text-muted)] dark:text-slate-300">Configurar horários</p>
+            <CalendarDays className="size-3.5 shrink-0 text-[var(--text-muted)] dark:text-[var(--text-muted)]" strokeWidth={2} />
+            <p className="text-left text-[13px] font-medium text-[var(--text-muted)] dark:text-[var(--text-faint)]">Configurar horários</p>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

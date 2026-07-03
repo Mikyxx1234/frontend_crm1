@@ -58,7 +58,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
           <TooltipHost label="Remover pergunta" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -119,7 +119,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
         type="source"
         position={Position.Bottom}
         id="timeout"
-        className="size-3! border-2! border-white! bg-amber-500!"
+        className="size-3! border-2! border-white! bg-[var(--color-warning)]!"
         style={{ left: "50%" }}
       />
     </div>

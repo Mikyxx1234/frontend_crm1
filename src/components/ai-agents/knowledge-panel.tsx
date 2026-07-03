@@ -187,7 +187,7 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
               key={d.id}
               className="flex items-start gap-3 rounded-xl border bg-card p-3"
             >
-              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-[var(--brand-primary)] dark:bg-indigo-950 dark:text-indigo-300">
+              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-info-bg)] text-[var(--brand-primary)] dark:bg-indigo-950 dark:text-indigo-300">
                 <FileText className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -237,7 +237,7 @@ function StatusBadge({ status }: { status: KnowledgeDoc["status"] }) {
       return (
         <Badge
           variant="secondary"
-          className="gap-1 bg-emerald-100 text-[var(--color-success-text)] hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+          className="gap-1 bg-[var(--color-success-bg)] text-[var(--color-success-text)] hover:bg-[var(--color-success-bg)] dark:bg-emerald-950 dark:text-emerald-200"
         >
           <CheckCircle2 className="size-3" /> Pronto
         </Badge>

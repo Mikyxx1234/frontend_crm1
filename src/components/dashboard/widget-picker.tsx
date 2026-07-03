@@ -25,7 +25,7 @@ const CATEGORY_ICONS: Record<WidgetCategory, typeof BarChart3> = {
 const CATEGORY_ACCENTS: Record<WidgetCategory, string> = {
   sales: "text-violet-600 bg-violet-500/10",
   service: "text-cyan-600 bg-cyan-500/10",
-  team: "text-[var(--color-warn)] bg-amber-500/10",
+  team: "text-[var(--color-warn)] bg-[var(--color-warning)]/10",
 };
 
 type Props = {

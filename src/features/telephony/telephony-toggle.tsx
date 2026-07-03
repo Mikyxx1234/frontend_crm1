@@ -68,7 +68,7 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
         onClick={() => mutation.mutate(!enabled)}
         className={cn(
           "relative h-5 w-9 rounded-full transition-colors",
-          enabled ? "bg-emerald-500" : "bg-[var(--glass-border)]",
+          enabled ? "bg-[var(--color-success)]" : "bg-[var(--glass-border)]",
           mutation.isPending && "opacity-50",
         )}
       >

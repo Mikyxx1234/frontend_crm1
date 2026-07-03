@@ -63,7 +63,7 @@ export function SortableSidebar({
           className={cn(
             "absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md px-2 py-1",
             "text-[10px] font-medium text-[var(--text-muted)] transition-colors",
-            "hover:bg-slate-100 hover:text-slate-600",
+            "hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-secondary)]",
             hasAgentOverride && "text-primary/60 hover:text-primary",
           )}
           aria-label="Personalizar layout"
@@ -92,7 +92,7 @@ export function SortableSidebar({
                 onResetAgent();
                 onToggleEditMode();
               }}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-[var(--text-muted)] hover:bg-slate-100 hover:text-slate-600"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-secondary)]"
             >
               <RotateCcw className="size-3" />
               Resetar
@@ -148,7 +148,7 @@ export function SortableSidebar({
             }}
             className={cn(
               "flex items-center gap-2 rounded-lg border border-[var(--glass-border-subtle)] bg-white px-3 py-2.5 transition-all select-none",
-              !section.fixed && "cursor-grab hover:border-slate-200 hover:shadow-sm active:cursor-grabbing",
+              !section.fixed && "cursor-grab hover:border-[var(--glass-border)] hover:shadow-sm active:cursor-grabbing",
               section.fixed && "opacity-50",
               dragging === section.id && "opacity-40 ring-2 ring-primary/20",
               section.hidden && "opacity-40",
@@ -162,7 +162,7 @@ export function SortableSidebar({
               <button
                 type="button"
                 onClick={() => toggleHidden(section.id)}
-                className="flex size-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-slate-100 hover:text-slate-600"
+                className="flex size-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-secondary)]"
                 aria-label={section.hidden ? "Mostrar seção" : "Ocultar seção"}
               >
                 {section.hidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -183,7 +183,7 @@ export function SortableSidebar({
       <button
         type="button"
         onClick={onToggleEditMode}
-        className="mx-3 mb-3 rounded-lg border border-[var(--glass-border-subtle)] py-1.5 text-[11px] text-[var(--text-muted)] hover:bg-slate-50"
+        className="mx-3 mb-3 rounded-lg border border-[var(--glass-border-subtle)] py-1.5 text-[11px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)]"
       >
         Cancelar
       </button>

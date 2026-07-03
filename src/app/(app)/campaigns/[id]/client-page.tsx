@@ -220,11 +220,11 @@ export default function CampaignDetailClientPage() {
         <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
           <div className="flex h-3 overflow-hidden rounded-full bg-[var(--glass-bg-subtle)]">
             <div
-              className="bg-emerald-500 transition-all duration-500"
+              className="bg-[var(--color-success)] transition-all duration-500"
               style={{ width: `${pctSent}%` }}
             />
             <div
-              className="bg-red-500 transition-all duration-500"
+              className="bg-[var(--color-danger)] transition-all duration-500"
               style={{ width: `${pctFailed}%` }}
             />
           </div>
@@ -248,7 +248,7 @@ export default function CampaignDetailClientPage() {
                 className="flex items-center justify-between gap-3 font-body text-[12px]"
               >
                 <span className="truncate text-[var(--text-secondary)]">{r.reason}</span>
-                <span className="shrink-0 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
+                <span className="shrink-0 rounded-full border border-red-500/30 bg-[var(--color-danger)]/10 px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
                   {r.count}
                 </span>
               </div>
@@ -340,7 +340,7 @@ export default function CampaignDetailClientPage() {
                         </div>
                       </div>
                       {r.errorMessage && expandedErrors.has(r.id) ? (
-                        <p className="mt-1.5 whitespace-pre-wrap break-words rounded-[var(--radius-md)] border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 font-body text-[11px] leading-relaxed text-[var(--color-danger-text)]">
+                        <p className="mt-1.5 whitespace-pre-wrap break-words rounded-[var(--radius-md)] border border-red-500/20 bg-[var(--color-danger)]/5 px-2.5 py-1.5 font-body text-[11px] leading-relaxed text-[var(--color-danger-text)]">
                           {r.errorMessage}
                         </p>
                       ) : null}
@@ -473,7 +473,7 @@ function HeaderBtn({
       disabled={disabled}
       className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 font-display text-[12.5px] font-semibold transition-colors disabled:opacity-50 ${
         danger
-          ? "border-red-500/30 bg-red-500/10 text-[var(--color-danger-text)] hover:bg-red-500/20"
+          ? "border-red-500/30 bg-[var(--color-danger)]/10 text-[var(--color-danger-text)] hover:bg-[var(--color-danger)]/20"
           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/35"
       }`}
     >

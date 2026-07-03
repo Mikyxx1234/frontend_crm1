@@ -87,7 +87,7 @@ export const stepColor: Record<string, string> = {
   assign_owner: "text-teal-500",
   add_tag: "text-emerald-500",
   remove_tag: "text-[var(--color-danger)]",
-  update_field: "text-amber-500",
+  update_field: "text-[var(--color-warn)]",
   create_activity: "text-violet-500",
   send_whatsapp_message: "text-green-600",
   send_whatsapp_template: "text-green-500",

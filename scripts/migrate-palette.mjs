@@ -68,14 +68,28 @@ const MAP = [
   // ── Info (blue/indigo) ────────────────────────────
   ["text-blue-600",   "text-[var(--color-info)]"],
   ["text-blue-500",   "text-[var(--color-info)]"],
+  ["text-blue-400",   "text-[var(--color-info)]"],
+  ["text-indigo-700", "text-[var(--brand-primary)]"],
   ["text-indigo-600", "text-[var(--brand-primary)]"],
   ["text-indigo-500", "text-[var(--brand-primary)]"],
+  ["bg-indigo-50",    "bg-[var(--color-info-bg)]"],
+  // ── Sucesso extras ────────────────────────────────
+  ["bg-emerald-500",  "bg-[var(--color-success)]"],
+  ["bg-emerald-100",  "bg-[var(--color-success-bg)]"],
+  // ── Alerta extras ─────────────────────────────────
+  ["text-amber-500",  "text-[var(--color-warn)]"],
+  ["bg-amber-500",    "bg-[var(--color-warning)]"],
+  ["bg-amber-100",    "bg-[var(--color-warn-bg)]"],
+  // ── Perigo extras ─────────────────────────────────
+  ["bg-rose-500",     "bg-[var(--color-danger)]"],
+  ["bg-red-500",      "bg-[var(--color-danger)]"],
 ];
 
 // Builds a regex that matches the class as a word boundary
+// Handles variant prefixes like hover:, dark:, focus: by using \b
 function makeRe(cls) {
   const escaped = cls.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?<=[\\s"'\`{(\\[])${escaped}(?=[\\s"'\`})[\\]])`, "g");
+  return new RegExp(`\\b${escaped}\\b`, "g");
 }
 
 const REPLACEMENTS = MAP.map(([from, to]) => ({ from, to, re: makeRe(from) }));
@@ -89,7 +103,7 @@ function walk(dir, results = []) {
     const rel  = relative("src", full);
     if (e.isDirectory()) {
       if (!["node_modules", ".next"].includes(e.name)) walk(full, results);
-    } else if (e.isFile() && /\.(tsx|ts|css)$/.test(e.name)) {
+    } else if (e.isFile() && /\.(tsx|ts)$/.test(e.name)) {
       if (!SKIP.some((s) => rel.includes(s))) results.push(full);
     }
   }

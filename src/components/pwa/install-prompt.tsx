@@ -78,7 +78,7 @@ export function InstallPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Dispensar"
-        className="absolute right-2 top-2 rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
+        className="absolute right-2 top-2 rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--color-ink-soft)]"
       >
         <X className="size-4" />
       </button>

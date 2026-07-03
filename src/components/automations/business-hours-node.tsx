@@ -29,7 +29,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
       <Handle
         type="target"
         position={Position.Left}
-        className="size-3! border-2! border-white! bg-amber-500!"
+        className="size-3! border-2! border-white! bg-[var(--color-warning)]!"
       />
       <div
         className={cn(
@@ -40,7 +40,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
         )}
       >
         <div className="-rotate-45 px-2 text-center">
-          <span className="mx-auto mb-1 inline-flex size-7 items-center justify-center rounded-lg bg-[var(--color-warn-bg)] text-amber-500 ring-1 ring-amber-100">
+          <span className="mx-auto mb-1 inline-flex size-7 items-center justify-center rounded-lg bg-[var(--color-warn-bg)] text-[var(--color-warn)] ring-1 ring-amber-100">
             <Clock className="size-3.5" strokeWidth={2.4} />
           </span>
           <p className="text-[12px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
@@ -54,7 +54,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
           <TooltipHost label="Remover passo" side="top">
             <button
               type="button"
-              className="absolute -right-12 -top-2 flex size-7 -rotate-45 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="absolute -right-12 -top-2 flex size-7 -rotate-45 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -71,14 +71,14 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
         position={Position.Right}
         id="true"
         style={{ top: "40%" }}
-        className="size-3! border-2! border-white! bg-emerald-500! shadow-green-glow!"
+        className="size-3! border-2! border-white! bg-[var(--color-success)]! shadow-green-glow!"
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="false"
         style={{ left: "50%" }}
-        className="size-3! border-2! border-white! bg-rose-500!"
+        className="size-3! border-2! border-white! bg-[var(--color-danger)]!"
       />
       <span className="pointer-events-none absolute right-0 top-[36%] inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-[var(--color-success-text)] ring-1 ring-emerald-100">
         DENTRO

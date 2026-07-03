@@ -47,7 +47,7 @@ function ActorBadge({
       Icon: Webhook,
       cls: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300",
     },
-    SYSTEM: { Icon: Cog, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-gray-900 dark:text-gray-400" },
+    SYSTEM: { Icon: Cog, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-gray-900 dark:text-[var(--text-muted)]" },
   } as const;
   const { Icon, cls } = map[type];
   return (

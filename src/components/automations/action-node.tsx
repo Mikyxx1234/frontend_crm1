@@ -90,7 +90,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
       )}
       {data.incomplete && (
         <TooltipHost label="Configuração incompleta — esse passo vai falhar em runtime" side="top">
-          <span className="absolute -right-1.5 -top-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-md ring-2 ring-white">
+          <span className="absolute -right-1.5 -top-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-[var(--color-warning)] text-white shadow-md ring-2 ring-white">
             <AlertTriangle className="size-3" strokeWidth={2.6} />
           </span>
         </TooltipHost>

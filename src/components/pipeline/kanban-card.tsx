@@ -219,9 +219,9 @@ export function KanbanCard({
   // não mais barra-borda lateral 3px. Mantém o sinal visual sem
   // colar uma cor saturada no card inteiro.
   const attentionDot = deal.isRotting
-    ? "bg-amber-500"
+    ? "bg-[var(--color-warning)]"
     : deal.priority === "HIGH"
-      ? "bg-red-500"
+      ? "bg-[var(--color-danger)]"
       : null;
 
   return (
@@ -362,7 +362,7 @@ export function KanbanCard({
                       soft chip (sem borda) alinhado ao DNA Chat. */}
                   {inboundPreview ? (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--color-ink-muted)]">
-                      <MessageCircle className="size-3 shrink-0 text-[var(--color-info)] dark:text-blue-400" strokeWidth={2} />
+                      <MessageCircle className="size-3 shrink-0 text-[var(--color-info)] dark:text-[var(--color-info)]" strokeWidth={2} />
                       <p className="min-w-0 flex-1 truncate">{inboundPreview}</p>
                       {interaction ? <span className="shrink-0 tabular-nums">{interaction}</span> : null}
                     </div>
@@ -412,7 +412,7 @@ export function KanbanCard({
                           className={cn(
                             "inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[11px] font-medium tabular-nums",
                             deal.hasOverdueActivity
-                              ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:bg-red-500/15 dark:text-red-300"
+                              ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:bg-[var(--color-danger)]/15 dark:text-red-300"
                               : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
                           )}
                         >
@@ -738,7 +738,7 @@ function PresenceDot({
         // Ring usa `--color-card` (branco em light, navy em dark) — evita
         // o anel branco fixo que ficava destoante sobre cards escuros.
         "inline-flex size-2 rounded-full ring-2 ring-[var(--color-card)]",
-        status === "ONLINE" && "bg-emerald-500",
+        status === "ONLINE" && "bg-[var(--color-success)]",
         status === "AWAY" && "bg-amber-400",
         status === "OFFLINE" && "bg-slate-400 dark:bg-slate-500",
         className,

@@ -119,7 +119,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
           <h2 className="font-display text-[20px] font-extrabold tracking-tight text-[var(--text-primary)] dark:text-slate-50">
             {current.title}
           </h2>
-          <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-ink-soft)] dark:text-slate-300">
+          <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-ink-soft)] dark:text-[var(--text-faint)]">
             {current.body}
           </p>
         </div>

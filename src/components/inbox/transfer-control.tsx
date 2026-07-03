@@ -105,7 +105,7 @@ export function TransferControl({
                 onAssign(null);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900"
+              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--text-primary)]"
             >
               <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--glass-bg-base)] text-[var(--color-ink-muted)]">
                 <UserMinus className="size-3.5" />

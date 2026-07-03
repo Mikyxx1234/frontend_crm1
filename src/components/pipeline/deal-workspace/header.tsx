@@ -99,7 +99,7 @@ export function DealChatActionBar({
         <button
           type="button"
           onClick={onOpenConversationList}
-          className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] hover:bg-slate-50"
+          className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] hover:bg-[var(--glass-bg-subtle)]"
           aria-label="Conversas"
         >
           <Menu className="size-3.5" strokeWidth={2} />
@@ -118,7 +118,7 @@ export function DealChatActionBar({
             <button
               type="button"
               onClick={onSearch}
-              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] hover:bg-slate-50"
+              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] hover:bg-[var(--glass-bg-subtle)]"
               aria-label="Buscar na conversa (Ctrl+F)"
             >
               <Search className="size-3.5" strokeWidth={2.2} />
@@ -135,7 +135,7 @@ export function DealChatActionBar({
               type="button"
               onClick={onClose}
               aria-label={closeLabel}
-              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 active:scale-95"
+              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 active:scale-95"
             >
               <X className="size-3.5" strokeWidth={2.2} />
             </button>
@@ -383,7 +383,7 @@ export function DealWorkspaceToolbarMenuItems({
           >
             <button
               type="button"
-              className="w-full rounded-md px-2 py-1.5 text-left text-[12px] font-medium text-foreground hover:bg-slate-50"
+              className="w-full rounded-md px-2 py-1.5 text-left text-[12px] font-medium text-foreground hover:bg-[var(--glass-bg-subtle)]"
             >
               Tags da conversa…
             </button>
@@ -392,7 +392,7 @@ export function DealWorkspaceToolbarMenuItems({
       ) : null}
       {onEdit ? (
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-slate-50 focus:bg-slate-50"
+          className="gap-2 px-2 py-1.5 text-[13px] hover:bg-[var(--glass-bg-subtle)] focus:bg-[var(--glass-bg-subtle)]"
           onClick={onEdit}
         >
           Editar negócio
@@ -400,7 +400,7 @@ export function DealWorkspaceToolbarMenuItems({
       ) : null}
       {onDelete ? (
         <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-[13px] text-[var(--color-destructive)] hover:bg-slate-50 focus:bg-slate-50 focus:text-[var(--color-destructive)]"
+          className="gap-2 px-2 py-1.5 text-[13px] text-[var(--color-destructive)] hover:bg-[var(--glass-bg-subtle)] focus:bg-[var(--glass-bg-subtle)] focus:text-[var(--color-destructive)]"
           onClick={onDelete}
         >
           Excluir negócio
@@ -414,7 +414,7 @@ export function DealWorkspaceToolbarMenu(props: DealWorkspaceToolbarMenuItemsPro
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="size-7 shrink-0 rounded-md p-0 text-[var(--color-ink-soft)] hover:bg-slate-50"
+        className="size-7 shrink-0 rounded-md p-0 text-[var(--color-ink-soft)] hover:bg-[var(--glass-bg-subtle)]"
         aria-label="Mais ações"
       >
         <MoreHorizontal className="size-3.5" strokeWidth={2} />

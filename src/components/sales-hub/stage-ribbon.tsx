@@ -64,7 +64,7 @@ export function StageRibbon({
             compact ? "h-8 min-h-8" : "h-9 min-h-9",
             selectedStageId === null
               ? "bg-primary text-[var(--color-primary-foreground)]"
-              : "bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700",
+              : "bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:bg-slate-200 dark:bg-slate-800 dark:text-[var(--text-faint)] dark:hover:bg-slate-700",
           )}
         >
           <span>Todos</span>
@@ -73,7 +73,7 @@ export function StageRibbon({
               "mt-px text-[9px] font-bold tabular-nums",
               selectedStageId === null
                 ? "text-[var(--color-primary-foreground)]/80"
-                : "text-[var(--text-muted)] dark:text-slate-500",
+                : "text-[var(--text-muted)] dark:text-[var(--text-muted)]",
             )}
           >
             {totalDeals}

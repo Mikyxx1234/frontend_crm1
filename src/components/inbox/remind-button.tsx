@@ -141,7 +141,7 @@ export function RemindButton({
           aria-label="Criar lembrete"
           aria-expanded={open}
           className={cn(
-            "flex size-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-slate-100 hover:text-slate-800 active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-slate-800 dark:hover:text-slate-100",
+            "flex size-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)] active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-slate-800 dark:hover:text-slate-100",
             open && "bg-[var(--glass-bg-base)] text-[var(--text-primary)] dark:bg-slate-800 dark:text-slate-100",
           )}
         >
@@ -206,7 +206,7 @@ export function RemindButton({
               })}
             </div>
 
-            <p className="mt-2 px-3 text-[10px] font-medium text-[var(--color-ink-muted)] dark:text-slate-500">
+            <p className="mt-2 px-3 text-[10px] font-medium text-[var(--color-ink-muted)] dark:text-[var(--text-muted)]">
               Aparece em <span className="font-bold">Tarefas</span> e na timeline do contato.
             </p>
           </div>

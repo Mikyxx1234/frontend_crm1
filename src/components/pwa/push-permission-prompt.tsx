@@ -93,7 +93,7 @@ export function PushPermissionPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Dispensar"
-        className="absolute right-2 top-2 rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
+        className="absolute right-2 top-2 rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--color-ink-soft)]"
       >
         <X className="size-4" />
       </button>
@@ -128,7 +128,7 @@ export function PushPermissionPrompt() {
             <button
               type="button"
               onClick={dismiss}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold text-[var(--text-muted)] transition-colors hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-foreground"
             >
               <BellOff className="size-3.5" strokeWidth={2.4} />
               Agora não

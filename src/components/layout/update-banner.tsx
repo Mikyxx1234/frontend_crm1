@@ -89,14 +89,14 @@ function ReleaseCard({ release }: { release: Release }) {
             : `v${release.version}`}
         </h4>
         {release.date && (
-          <span className="text-[11px] text-[var(--text-muted)] dark:text-slate-400">
+          <span className="text-[11px] text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             {release.date}
           </span>
         )}
       </div>
       {ordered.map((key) => (
         <div key={key} className="mt-2 first:mt-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] dark:text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             {SECTION_LABEL[key] ?? key}
           </p>
           <ul className="mt-1 list-disc space-y-1 pl-4 text-[12.5px] leading-snug text-[var(--text-secondary)] dark:text-slate-200">
@@ -199,7 +199,7 @@ export function UpdateAvailableBanner() {
               type="button"
               onClick={() => setExpanded(false)}
               aria-label="Fechar"
-              className="rounded-md p-1 text-[var(--text-muted)] hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
+              className="rounded-md p-1 text-[var(--text-muted)] hover:bg-black/5 dark:text-[var(--text-faint)] dark:hover:bg-white/10"
             >
               <IconX size={16} />
             </button>

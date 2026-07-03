@@ -91,7 +91,7 @@ export function ConversationsPanel({
                 className={cn(
                   "inline-flex size-8 items-center justify-center rounded-full",
                   "border border-border bg-white text-[var(--text-muted)]",
-                  "transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-800 active:scale-95",
+                  "transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--text-primary)] active:scale-95",
                 )}
               >
                 <ArrowLeft className="size-4" />

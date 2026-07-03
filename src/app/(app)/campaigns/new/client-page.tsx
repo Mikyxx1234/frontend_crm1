@@ -614,8 +614,8 @@ function AudiencePreview({
     <div
       className={`rounded-[var(--radius-md)] border p-4 ${
         count > 0
-          ? "border-emerald-500/30 bg-emerald-500/5"
-          : "border-amber-500/30 bg-amber-500/5"
+          ? "border-emerald-500/30 bg-[var(--color-success)]/5"
+          : "border-amber-500/30 bg-[var(--color-warning)]/5"
       }`}
     >
       <p className="font-display text-[15px] font-bold text-[var(--text-primary)]">

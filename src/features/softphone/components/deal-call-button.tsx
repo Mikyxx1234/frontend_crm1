@@ -28,7 +28,7 @@ export function DealCallButton({ dealId, phone, contactId }: DealCallButtonProps
         disabled={!canDial || loading}
         onClick={dial}
         aria-label={`Ligar para ${phone}`}
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 transition-colors hover:border-emerald-500/60 hover:bg-emerald-500/20 hover:text-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed v2-dark:text-emerald-400 v2-dark:hover:text-emerald-300"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-500/30 bg-[var(--color-success)]/10 text-emerald-500 transition-colors hover:border-emerald-500/60 hover:bg-[var(--color-success)]/20 hover:text-[var(--color-success-text)] disabled:opacity-40 disabled:cursor-not-allowed v2-dark:text-emerald-400 v2-dark:hover:text-emerald-300"
       >
         <IconPhone size={18} stroke={2.1} />
       </button>

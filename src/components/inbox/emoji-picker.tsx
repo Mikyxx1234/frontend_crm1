@@ -83,7 +83,7 @@ export function EmojiPicker({
               className={cn(
                 "shrink-0 rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
                 activeCategory === i
-                  ? "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300"
+                  ? "bg-indigo-500/15 text-[var(--brand-primary)] dark:text-indigo-300"
                   : "text-muted-foreground hover:bg-muted/60"
               )}
             >

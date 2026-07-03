@@ -118,7 +118,7 @@ function TemplateItemWithConfirm({
     return (
       <div className="rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_8%,transparent)] px-2.5 py-2.5">
         <div className="mb-2 flex items-start gap-1.5">
-          <IconAlertTriangle size={14} className="mt-px shrink-0 text-amber-500" />
+          <IconAlertTriangle size={14} className="mt-px shrink-0 text-[var(--color-warn)]" />
           <p className="text-[11.5px] leading-snug text-[var(--text-primary)]">
             <span className="font-semibold">&ldquo;{tpl.name}&rdquo;</span> já
             foi enviado por{" "}

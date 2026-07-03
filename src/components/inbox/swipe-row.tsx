@@ -8,7 +8,7 @@ type SwipeAction = {
   key: string;
   label: string;
   icon: React.ReactNode;
-  /** Cor de fundo Tailwind (ex.: "bg-emerald-500"). */
+  /** Cor de fundo Tailwind (ex.: "bg-[var(--color-success)]"). */
   bg: string;
   onTrigger: () => void | Promise<void>;
 };

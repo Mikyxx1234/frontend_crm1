@@ -69,7 +69,7 @@ export function PresetBar() {
       </div>
 
       {preset === "custom" && (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-warn)]">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/30 bg-[var(--color-warning)]/5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-warn)]">
           <Activity className="size-3" /> Personalizado
         </span>
       )}

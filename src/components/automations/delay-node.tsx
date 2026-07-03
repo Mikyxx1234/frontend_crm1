@@ -54,7 +54,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
           <TooltipHost label="Remover atraso" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();

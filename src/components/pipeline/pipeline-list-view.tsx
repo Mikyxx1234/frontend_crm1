@@ -181,10 +181,10 @@ export function PipelineListView({
 
   // DNA Chat: ícones de sort em slate, ativo em blue (não cyan).
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="size-3 text-[var(--text-faint)] dark:text-slate-600" strokeWidth={2} />;
+    if (sortField !== field) return <ArrowUpDown className="size-3 text-[var(--text-faint)] dark:text-[var(--text-secondary)]" strokeWidth={2} />;
     return sortDir === "asc"
-      ? <ArrowUp className="size-3 text-[var(--color-info)] dark:text-blue-400" strokeWidth={2} />
-      : <ArrowDown className="size-3 text-[var(--color-info)] dark:text-blue-400" strokeWidth={2} />;
+      ? <ArrowUp className="size-3 text-[var(--color-info)] dark:text-[var(--color-info)]" strokeWidth={2} />
+      : <ArrowDown className="size-3 text-[var(--color-info)] dark:text-[var(--color-info)]" strokeWidth={2} />;
   };
 
   const formatCurrency = (val: number | string) => {

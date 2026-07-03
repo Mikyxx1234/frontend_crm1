@@ -142,12 +142,12 @@ export function SavedFiltersMenu({
                 className="flex-1 text-left"
               >
                 <div className="flex items-center gap-1.5">
-                  <Bookmark className="size-3 text-[var(--color-info)] dark:text-blue-400" />
+                  <Bookmark className="size-3 text-[var(--color-info)] dark:text-[var(--color-info)]" />
                   <span className="truncate text-[12px] font-semibold text-foreground">
                     {f.name}
                   </span>
                   {f.isDefault && (
-                    <Star className="size-3 fill-amber-400 text-amber-500" aria-label="Padrão" />
+                    <Star className="size-3 fill-amber-400 text-[var(--color-warn)]" aria-label="Padrão" />
                   )}
                 </div>
                 <div className="mt-0.5 flex items-center gap-2 text-[10px] text-[var(--color-ink-muted)]">
@@ -169,8 +169,8 @@ export function SavedFiltersMenu({
                     type="button"
                     onClick={() => onToggleDefault(f)}
                     className={cn(
-                      "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-amber-600 dark:hover:text-amber-400",
-                      f.isDefault && "text-amber-500",
+                      "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-warn)] dark:hover:text-amber-400",
+                      f.isDefault && "text-[var(--color-warn)]",
                     )}
                   >
                     {f.isDefault ? <StarOff className="size-3" /> : <Star className="size-3" />}
@@ -197,7 +197,7 @@ export function SavedFiltersMenu({
                         });
                         if (ok) onDelete(f);
                       }}
-                      className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-red-600 dark:hover:text-red-400"
+                      className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-danger-text)] dark:hover:text-[var(--color-danger)]"
                     >
                       <Trash2 className="size-3" />
                     </button>

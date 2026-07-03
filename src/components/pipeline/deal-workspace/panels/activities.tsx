@@ -116,7 +116,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                 "flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border",
                 "bg-[var(--color-bg-subtle)]/60 px-3.5 py-3 text-left text-[13px]",
                 "tracking-tight text-[var(--text-muted)] transition-colors",
-                "hover:border-[var(--color-primary)]/40 hover:bg-white hover:text-slate-800",
+                "hover:border-[var(--color-primary)]/40 hover:bg-white hover:text-[var(--text-primary)]",
               )}
             >
               <Plus className="size-4 text-primary" strokeWidth={2.4} />
@@ -322,7 +322,7 @@ function ActivityTimeline({
                       aria-label="Excluir"
                       className={cn(
                         "shrink-0 rounded-full p-1 text-[var(--color-ink-muted)] opacity-0",
-                        "transition-all hover:bg-rose-50 hover:text-rose-500",
+                        "transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
                         "group-hover:opacity-100",
                       )}
                     >

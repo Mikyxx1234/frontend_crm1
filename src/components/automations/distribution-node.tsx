@@ -49,7 +49,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
 
       {/* Header */}
       <div className="flex items-start gap-3 px-3.5 py-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[var(--brand-primary)] ring-1 ring-indigo-100">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-info-bg)] text-[var(--brand-primary)] ring-1 ring-indigo-100">
           <Route className="size-4" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
@@ -64,7 +64,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
           <TooltipHost label="Remover passo" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -79,7 +79,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
 
       {/* Saidas (IF Sim/Nao) — cada linha com handle proprio a direita */}
       <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
-        <div className="relative flex h-9 items-center gap-2 border-b border-slate-100/80 px-3.5">
+        <div className="relative flex h-9 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5">
           <CircleCheckBig className="size-3.5 shrink-0 text-emerald-500" strokeWidth={2.4} />
           <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-success-text)]">
             Distribuído
@@ -88,7 +88,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
             type="source"
             position={Position.Right}
             id="true"
-            className="size-3! border-2! border-white! bg-emerald-500! shadow-green-glow!"
+            className="size-3! border-2! border-white! bg-[var(--color-success)]! shadow-green-glow!"
           />
         </div>
         <div className="relative flex h-9 items-center gap-2 px-3.5">
@@ -100,7 +100,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
             type="source"
             position={Position.Right}
             id="false"
-            className="size-3! border-2! border-white! bg-rose-500!"
+            className="size-3! border-2! border-white! bg-[var(--color-danger)]!"
           />
         </div>
       </div>

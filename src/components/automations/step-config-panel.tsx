@@ -2622,7 +2622,7 @@ function ConditionStepConfig({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-destructive hover:bg-rose-50"
+                className="h-7 px-2 text-destructive hover:bg-[var(--color-danger-bg)]"
                 onClick={() => removeBranch(bIdx)}
               >
                 Remover
@@ -2745,7 +2745,7 @@ function ConditionStepConfig({
         + Adicionar próxima condição (OU)
       </Button>
 
-      <div className="space-y-1.5 rounded-lg border border-rose-100 bg-rose-50/40 p-3">
+      <div className="space-y-1.5 rounded-lg border border-rose-100 bg-[var(--color-danger-bg)]/40 p-3">
         <Label className="text-[11px] text-[var(--color-danger-text)]">
           Nenhuma das condições → ir para
         </Label>

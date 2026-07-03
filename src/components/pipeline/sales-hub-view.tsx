@@ -78,7 +78,7 @@ function SalesHubChatEmptyState({
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-white p-8 dark:bg-slate-900">
       <MessageSquareOff
-        className="size-7 text-[var(--text-faint)] dark:text-slate-600"
+        className="size-7 text-[var(--text-faint)] dark:text-[var(--text-secondary)]"
         strokeWidth={1.5}
       />
       <p className="text-[16px] font-semibold tracking-tight text-foreground">

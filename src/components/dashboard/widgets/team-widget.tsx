@@ -56,7 +56,7 @@ export function TeamWidget() {
               <tr key={u.userId} className="border-b border-[var(--glass-border-subtle)]">
                 <td className="py-2.5 pr-3">
                   {idx === 0 ? (
-                    <Trophy className="size-4 text-amber-500" />
+                    <Trophy className="size-4 text-[var(--color-warn)]" />
                   ) : (
                     <span className="font-bold text-muted-foreground">{idx + 1}</span>
                   )}

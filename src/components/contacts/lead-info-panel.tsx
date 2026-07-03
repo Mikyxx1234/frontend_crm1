@@ -19,10 +19,10 @@ import { cn, formatCurrency, tagPillStyle, tagStyle } from "@/lib/utils";
 const LIFECYCLE_OPTIONS = [
   { value: "SUBSCRIBER", label: "Assinante", color: "bg-gray-400" },
   { value: "LEAD", label: "Lead", color: "bg-blue-500" },
-  { value: "MQL", label: "MQL", color: "bg-amber-500" },
+  { value: "MQL", label: "MQL", color: "bg-[var(--color-warning)]" },
   { value: "SQL", label: "SQL", color: "bg-orange-500" },
   { value: "OPPORTUNITY", label: "Oportunidade", color: "bg-purple-500" },
-  { value: "CUSTOMER", label: "Cliente", color: "bg-emerald-500" },
+  { value: "CUSTOMER", label: "Cliente", color: "bg-[var(--color-success)]" },
   { value: "EVANGELIST", label: "Evangelista", color: "bg-pink-500" },
   { value: "OTHER", label: "Outro", color: "bg-gray-400" },
 ] as const;

@@ -64,7 +64,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
           <TooltipHost label="Remover espera" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -79,7 +79,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
 
       {/* Condition rows */}
       <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
-        <div className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5">
+        <div className="relative flex h-8 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5">
           <MessageCircle className="size-3 shrink-0 text-emerald-500" strokeWidth={2.4} />
           <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-success-text)]">
             Até a mensagem recebida
@@ -88,7 +88,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
             type="source"
             position={Position.Right}
             id="received"
-            className="size-3! border-2! border-white! bg-emerald-500!"
+            className="size-3! border-2! border-white! bg-[var(--color-success)]!"
             style={{ top: "50%", transform: "translateY(-50%)" }}
           />
         </div>

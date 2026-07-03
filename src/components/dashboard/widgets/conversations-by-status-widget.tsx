@@ -29,8 +29,8 @@ export function ConversationsByStatusWidget() {
   const other = Math.max(0, total - open - resolved);
 
   const rows: StatusRow[] = [
-    { label: "Em aberto", count: open, tone: "text-[var(--color-warn)]", dot: "bg-amber-500" },
-    { label: "Resolvidas", count: resolved, tone: "text-[var(--color-success-text)]", dot: "bg-emerald-500" },
+    { label: "Em aberto", count: open, tone: "text-[var(--color-warn)]", dot: "bg-[var(--color-warning)]" },
+    { label: "Resolvidas", count: resolved, tone: "text-[var(--color-success-text)]", dot: "bg-[var(--color-success)]" },
     { label: "Outras", count: other, tone: "text-muted-foreground", dot: "bg-muted-foreground" },
   ];
 

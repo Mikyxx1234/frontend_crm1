@@ -224,7 +224,7 @@ function StageColumn({ stage, metric }: { stage: StageRow; metric: Metric }) {
                   className={cn(
                     "inline-flex size-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold",
                     idx === 0
-                      ? "bg-amber-100 text-[var(--color-warn)]"
+                      ? "bg-[var(--color-warn-bg)] text-[var(--color-warn)]"
                       : idx === 1
                         ? "bg-[var(--glass-bg-base)] text-foreground"
                         : idx === 2

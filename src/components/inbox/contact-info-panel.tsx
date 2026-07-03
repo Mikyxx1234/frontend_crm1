@@ -265,13 +265,13 @@ export function ContactInfoPanel({
               <div className="space-y-2 text-sm">
                 <p className="font-medium text-foreground">{data.name}</p>
                 {data.email && (
-                  <a href={`mailto:${data.email}`} className="flex items-center gap-2 text-muted-foreground hover:text-indigo-600">
+                  <a href={`mailto:${data.email}`} className="flex items-center gap-2 text-muted-foreground hover:text-[var(--brand-primary)]">
                     <Mail className="size-3.5 shrink-0" />
                     <span className="truncate text-xs">{data.email}</span>
                   </a>
                 )}
                 {data.phone && (
-                  <a href={`tel:${data.phone}`} className="flex items-center gap-2 text-muted-foreground hover:text-indigo-600">
+                  <a href={`tel:${data.phone}`} className="flex items-center gap-2 text-muted-foreground hover:text-[var(--brand-primary)]">
                     <Phone className="size-3.5 shrink-0" />
                     <span className="text-xs">{data.phone}</span>
                   </a>
@@ -384,7 +384,7 @@ export function ContactInfoPanel({
                     const valueLabel = Number.isFinite(n) ? formatCurrency(n) : d.value;
                     return (
                       <li key={d.id} className="rounded-lg border border-border/60 bg-background/80 px-2.5 py-2 text-xs">
-                        <Link href={`/pipeline/${d.id}`} className="font-medium text-foreground hover:text-indigo-600">
+                        <Link href={`/pipeline/${d.id}`} className="font-medium text-foreground hover:text-[var(--brand-primary)]">
                           {d.title}
                         </Link>
                         <p className="mt-0.5 text-[10px] text-muted-foreground">

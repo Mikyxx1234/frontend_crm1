@@ -85,7 +85,7 @@ function WebhookFallback({
   onCopy: (url: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-amber-400/40 bg-amber-500/10 p-3 text-amber-100">
+    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-amber-400/40 bg-[var(--color-warning)]/10 p-3 text-amber-100">
       <div className="inline-flex items-start gap-1.5 text-xs">
         <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
         <span>
@@ -143,7 +143,7 @@ function ConnectedSummary({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-emerald-400/30 bg-emerald-500/10 p-3 text-emerald-100">
+      <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-emerald-400/30 bg-[var(--color-success)]/10 p-3 text-emerald-100">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2">
             <IconPhoneCheck size={16} className="mt-0.5 flex-shrink-0 text-emerald-300" />
@@ -172,7 +172,7 @@ function ConnectedSummary({
               type="button"
               onClick={onDisconnect}
               disabled={disconnecting}
-              className="inline-flex h-7 items-center gap-1 rounded border border-red-300/30 bg-red-500/10 px-2 text-[11px] font-medium text-red-100 transition hover:bg-red-500/20 disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1 rounded border border-red-300/30 bg-[var(--color-danger)]/10 px-2 text-[11px] font-medium text-red-100 transition hover:bg-[var(--color-danger)]/20 disabled:opacity-50"
               title="Apaga o ramal salvo. Você poderá reconectar depois com outra conta."
             >
               {disconnecting ? (

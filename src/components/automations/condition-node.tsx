@@ -100,7 +100,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
             <TooltipHost label="Remover condição" side="top">
               <button
                 type="button"
-                className="flex size-6 items-center justify-center rounded-md text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+                className="flex size-6 items-center justify-center rounded-md text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation();
                   data.onDelete?.();
@@ -138,7 +138,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
                 type="source"
                 position={Position.Right}
                 id={`branch:${branch.id}`}
-                className="size-2.5! border-2! border-white! bg-emerald-500!"
+                className="size-2.5! border-2! border-white! bg-[var(--color-success)]!"
                 style={{ top: "50%" }}
               />
             </li>
@@ -156,7 +156,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
               type="source"
               position={Position.Right}
               id="else"
-              className="size-2.5! border-2! border-white! bg-rose-500!"
+              className="size-2.5! border-2! border-white! bg-[var(--color-danger)]!"
               style={{ top: "50%" }}
             />
           </li>

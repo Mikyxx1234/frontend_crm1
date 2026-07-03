@@ -102,7 +102,7 @@ export function SidebarCustomizationCard() {
           </p>
         </div>
         {dirty && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-warn)]">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-warning)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-warn)]">
             Alterações não salvas
           </span>
         )}
@@ -114,7 +114,7 @@ export function SidebarCustomizationCard() {
             <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
           </div>
         ) : isError ? (
-          <div className="flex items-start gap-2 rounded-2xl border border-red-100 bg-red-50/60 px-4 py-3 text-sm text-[var(--color-danger-text)]">
+          <div className="flex items-start gap-2 rounded-2xl border border-red-100 bg-[var(--color-danger-bg)]/60 px-4 py-3 text-sm text-[var(--color-danger-text)]">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>
               {error instanceof Error
@@ -162,7 +162,7 @@ export function SidebarCustomizationCard() {
                         onClick={() => move(idx, idx - 1)}
                         disabled={idx === 0}
                         aria-label={`Mover ${meta.title} para cima`}
-                        className="text-[var(--text-muted)] transition-colors hover:text-slate-700 disabled:opacity-30"
+                        className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] disabled:opacity-30"
                       >
                         <ChevronUp className="size-4" />
                       </button>
@@ -171,7 +171,7 @@ export function SidebarCustomizationCard() {
                         onClick={() => move(idx, idx + 1)}
                         disabled={idx === items.length - 1}
                         aria-label={`Mover ${meta.title} para baixo`}
-                        className="text-[var(--text-muted)] transition-colors hover:text-slate-700 disabled:opacity-30"
+                        className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] disabled:opacity-30"
                       >
                         <ChevronDown className="size-4" />
                       </button>

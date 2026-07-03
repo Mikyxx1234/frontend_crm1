@@ -108,7 +108,7 @@ export const bentoAccentMap: Record<BentoAccent, { bg: string; text: string; sol
   amber: { bg: "bg-[var(--color-warn-bg)]", text: "text-[var(--color-warning)]", solid: "var(--color-warning)" },
   violet: { bg: "bg-violet-50", text: "text-violet-600", solid: "#8b5cf6" }, // no token match for #8b5cf6 (--brand-secondary is #a78bfa)
   rose: { bg: "bg-[var(--color-danger-bg)]", text: "text-[var(--color-danger-text)]", solid: "#f43f5e" }, // no token match (--color-danger is #ef4444, different shade)
-  indigo: { bg: "bg-indigo-50", text: "text-[var(--brand-primary)]", solid: "var(--brand-primary)" }, // indigo-600 ≈ --brand-primary (#5b6ff5)
+  indigo: { bg: "bg-[var(--color-info-bg)]", text: "text-[var(--brand-primary)]", solid: "var(--brand-primary)" }, // indigo-600 ≈ --brand-primary (#5b6ff5)
   cyan: { bg: "bg-cyan-50", text: "text-cyan-600", solid: "#06b6d4" }, // no CSS var token for cyan
   slate: { bg: "bg-[var(--glass-bg-base)]", text: "text-foreground", solid: "#475569" }, // --text-muted is #4b5563, close but different semantic
 };

@@ -187,7 +187,7 @@ export function DealStageSelector({
         aria-haspopup="listbox"
         aria-expanded={stageOpen}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 text-left transition-all hover:border-slate-300 dark:bg-slate-800/50 dark:hover:border-slate-600",
+          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 text-left transition-all hover:border-[var(--glass-border)] dark:bg-slate-800/50 dark:hover:border-slate-600",
           stageOpen &&
             "border-blue-600 bg-white shadow-[0_0_0_3px_rgba(37,99,235,0.12)] dark:bg-slate-800/80",
           moveMutation.isPending && "cursor-wait opacity-60",
@@ -214,8 +214,8 @@ export function DealStageSelector({
             menos evidente. */}
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-[var(--text-muted)] transition-transform dark:text-slate-400",
-            stageOpen && "rotate-180 text-[var(--color-info)] dark:text-blue-400",
+            "size-4 shrink-0 text-[var(--text-muted)] transition-transform dark:text-[var(--text-muted)]",
+            stageOpen && "rotate-180 text-[var(--color-info)] dark:text-[var(--color-info)]",
           )}
           strokeWidth={2.5}
         />
@@ -595,8 +595,8 @@ export function DealOutcomeButtons({
           baseChip,
           "min-w-0 flex-1",
           dealStatus === "WON"
-            ? "bg-emerald-500 text-white"
-            : "bg-[var(--color-success-bg)] text-[var(--color-success-text)] hover:bg-emerald-100",
+            ? "bg-[var(--color-success)] text-white"
+            : "bg-[var(--color-success-bg)] text-[var(--color-success-text)] hover:bg-[var(--color-success-bg)]",
         )}
       >
         <Trophy className="size-3.5" strokeWidth={2} />
@@ -615,7 +615,7 @@ export function DealOutcomeButtons({
           baseChip,
           "min-w-0 flex-1",
           dealStatus === "LOST"
-            ? "bg-rose-500 text-white"
+            ? "bg-[var(--color-danger)] text-white"
             : "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] hover:bg-rose-100",
         )}
       >

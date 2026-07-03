@@ -60,7 +60,7 @@ export function DatePicker({
         onClick={() => setOpen((current) => !current)}
         className={cn(
           "flex h-8 w-full items-center justify-between rounded-lg border border-border bg-white px-2.5 text-left text-[13px] text-foreground transition",
-          "hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200",
+          "hover:border-[var(--glass-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200",
           disabled && "cursor-not-allowed opacity-60",
         )}
       >
@@ -76,7 +76,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={() => setVisibleMonth((current) => subMonths(current, 1))}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--glass-bg-base)] hover:text-foreground"
               aria-label="Mês anterior"
             >
               <ChevronLeft className="size-4" />
@@ -87,7 +87,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={() => setVisibleMonth((current) => addMonths(current, 1))}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--glass-bg-base)] hover:text-foreground"
               aria-label="Próximo mês"
             >
               <ChevronRight className="size-4" />
@@ -116,7 +116,7 @@ export function DatePicker({
                   className={cn(
                     "flex h-8 items-center justify-center rounded-lg text-xs font-medium transition",
                     isSelected && "bg-slate-900 text-white",
-                    !isSelected && inMonth && "text-foreground hover:bg-slate-100",
+                    !isSelected && inMonth && "text-foreground hover:bg-[var(--glass-bg-base)]",
                     !inMonth && "text-[var(--text-faint)] hover:bg-[var(--color-bg-subtle)]",
                   )}
                 >

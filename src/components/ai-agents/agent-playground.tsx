@@ -204,7 +204,7 @@ export function AgentPlayground({
 function TurnRow({ turn }: { turn: Turn }) {
   if (turn.role === "tool") {
     return (
-      <div className="rounded-lg border border-amber-300/50 bg-amber-50/50 p-2 text-[11px] dark:border-amber-700/50 dark:bg-amber-950/20">
+      <div className="rounded-lg border border-amber-300/50 bg-[var(--color-warn-bg)]/50 p-2 text-[11px] dark:border-amber-700/50 dark:bg-amber-950/20">
         <div className="flex items-center gap-1 font-medium text-amber-900 dark:text-amber-200">
           <Wrench className="size-3" /> tool: {turn.name}
         </div>

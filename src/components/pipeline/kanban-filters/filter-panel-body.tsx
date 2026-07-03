@@ -438,7 +438,7 @@ function CustomFieldRow({
         <button
           type="button"
           onClick={onRemove}
-          className="text-[var(--text-muted)] hover:text-red-500"
+          className="text-[var(--text-muted)] hover:text-[var(--color-danger)]"
           aria-label="Remover"
         >
           <span className="text-[11px]">×</span>

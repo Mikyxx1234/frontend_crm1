@@ -80,7 +80,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
       {/* Saidas (IF Sim/Nao) — cada linha com handle proprio a direita */}
       <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
         <div className="relative flex h-9 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5">
-          <CircleCheckBig className="size-3.5 shrink-0 text-emerald-500" strokeWidth={2.4} />
+          <CircleCheckBig className="size-3.5 shrink-0 text-[var(--color-success)]" strokeWidth={2.4} />
           <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-success-text)]">
             Distribuído
           </span>

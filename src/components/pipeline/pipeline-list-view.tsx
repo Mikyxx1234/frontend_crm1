@@ -252,7 +252,7 @@ export function PipelineListView({
                   key={deal.id}
                   className={cn(
                     "cursor-pointer border-b border-[var(--glass-border-subtle)] transition-colors hover:bg-[var(--color-bg-subtle)] dark:border-slate-800",
-                    selectedDeals.has(deal.id) && "bg-blue-50/50 hover:bg-blue-50/70 dark:bg-blue-500/10 dark:hover:bg-blue-500/15",
+                    selectedDeals.has(deal.id) && "bg-blue-50/50 hover:bg-blue-50/70 dark:bg-[var(--color-info)]/10 dark:hover:bg-[var(--color-info)]/15",
                   )}
                 >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>

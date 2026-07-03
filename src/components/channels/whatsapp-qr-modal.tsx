@@ -328,7 +328,7 @@ export function WhatsappQrModal({
                   />
                 </div>
                 <div
-                  className="pointer-events-none absolute -inset-2 rounded-3xl bg-blue-500/10 blur-xl"
+                  className="pointer-events-none absolute -inset-2 rounded-3xl bg-[var(--color-info)]/10 blur-xl"
                   aria-hidden
                 />
               </div>

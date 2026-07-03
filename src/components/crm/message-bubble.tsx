@@ -193,7 +193,7 @@ function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
     return <IconClock size={12} className="shrink-0 text-white/70" aria-label="Enviando" />
   }
   if (status === "failed") {
-    return <IconAlertCircle size={13} className="shrink-0 text-[#fca5a5]" aria-label="Falha no envio" />
+    return <IconAlertCircle size={13} className="shrink-0 text-[var(--wa-tick-fail)]" aria-label="Falha no envio" />
   }
   if (status === "sent") {
     return <IconCheck size={14} className="shrink-0 text-white/75" aria-label="Enviada" />
@@ -202,7 +202,7 @@ function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
   return (
     <IconChecks
       size={15}
-      className={cn("shrink-0", status === "read" ? "text-[#7fd4ff]" : "text-white/75")}
+      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read)]" : "text-white/75")}
       aria-label={status === "read" ? "Lida" : "Entregue"}
     />
   )
@@ -227,7 +227,7 @@ function StatusIndicator({
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="pointer-events-auto inline-flex cursor-help items-center">
-          <IconAlertCircle size={13} className="shrink-0 text-[#fca5a5]" aria-label="Falha no envio" />
+          <IconAlertCircle size={13} className="shrink-0 text-[var(--wa-tick-fail)]" aria-label="Falha no envio" />
         </span>
       </TooltipTrigger>
       <TooltipContent
@@ -880,7 +880,7 @@ export function MessageBubble({
               <div className={cn(
                 "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
                 isBot
-                  ? "bg-[#475569]"
+                  ? "bg-[var(--text-muted)]"
                   : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
               )}>
                 {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
@@ -898,7 +898,7 @@ export function MessageBubble({
             "relative min-w-0 rounded-[var(--radius-lg)] px-[14px] py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
-                ? "rounded-br-[4px] bg-[#1e293b] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
+                ? "rounded-br-[4px] bg-[var(--brand-gradient-end)] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
                 : "rounded-br-[4px] bg-[var(--brand-primary)] text-white shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
               : "rounded-bl-[4px] text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}

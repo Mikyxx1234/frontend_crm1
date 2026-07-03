@@ -114,7 +114,7 @@ export function TemplateGallery({ onApplyTemplate, onStartBlank }: TemplateGalle
 function HeroCard({ onStartBlank, total }: { onStartBlank: () => void; total: number }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-black/6 bg-linear-to-br from-slate-900 via-slate-900 to-indigo-950 p-5 text-white sm:p-6">
-      <div className="absolute -right-16 -top-16 size-56 rounded-full bg-blue-500/20 blur-3xl" />
+      <div className="absolute -right-16 -top-16 size-56 rounded-full bg-[var(--color-info)]/20 blur-3xl" />
       <div className="absolute -bottom-20 -left-10 size-56 rounded-full bg-violet-500/15 blur-3xl" />
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

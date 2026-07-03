@@ -21,7 +21,7 @@ export function SessionAlert({
   return (
     <div
       className={cn(
-        "mx-6 mb-4 flex items-center gap-3.5 rounded-[var(--radius-lg)] border border-[#F5C2B0] bg-[#FDE8E2] px-5 py-4",
+        "mx-6 mb-4 flex items-center gap-3.5 rounded-[var(--radius-lg)] border border-[var(--color-session-border)] bg-[var(--color-session-bg)] px-5 py-4",
         className,
       )}
     >
@@ -29,13 +29,13 @@ export function SessionAlert({
         <IconAlertTriangle size={18} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="font-display text-sm font-bold text-[#6B2118]">{title}</div>
-        <div className="mt-px text-xs text-[#8A4034]">{body}</div>
+        <div className="font-display text-sm font-bold text-[var(--color-session-text)]">{title}</div>
+        <div className="mt-px text-xs text-[var(--color-session-subtext)]">{body}</div>
       </div>
       <button
         type="button"
         onClick={onUseTemplate}
-        className="cursor-pointer rounded-full border border-[#F5C2B0] bg-white px-[22px] py-[9px] font-display text-[13px] font-bold text-[#6B2118] transition-colors hover:bg-[#FDF5F2]"
+        className="cursor-pointer rounded-full border border-[var(--color-session-border)] bg-white px-[22px] py-[9px] font-display text-[13px] font-bold text-[var(--color-session-text)] transition-colors hover:bg-[var(--color-session-hover-bg)]"
       >
         {actionLabel}
       </button>

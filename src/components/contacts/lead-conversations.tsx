@@ -260,7 +260,7 @@ function ActivitiesTab({ activities }: { activities: ActivityRow[] }) {
                   {ACTIVITY_TYPE_LABEL[a.type] ?? a.type}
                 </Badge>
                 {a.completed && (
-                  <CheckCircle2 className="size-3.5 text-emerald-500" />
+                  <CheckCircle2 className="size-3.5 text-[var(--color-success)]" />
                 )}
               </div>
               {a.description && (

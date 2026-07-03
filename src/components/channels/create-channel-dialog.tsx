@@ -398,7 +398,7 @@ export function CreateChannelDialog({
                   onClick={() => setProvider("META_CLOUD_API")}
                   className={cn(
                     "rounded-xl border-2 p-4 text-left transition-all",
-                    "border-blue-500/20 bg-blue-500/5 hover:border-blue-500/40",
+                    "border-blue-500/20 bg-[var(--color-info)]/5 hover:border-blue-500/40",
                     provider === "META_CLOUD_API" &&
                       "ring-2 ring-[var(--brand-primary)] ring-offset-2"
                   )}
@@ -447,7 +447,7 @@ export function CreateChannelDialog({
                   <>
                     {showEmbeddedSignup ? (
                       <div className="space-y-3">
-                        <div className="rounded-xl border-2 border-blue-500/20 bg-blue-500/5 p-4">
+                        <div className="rounded-xl border-2 border-blue-500/20 bg-[var(--color-info)]/5 p-4">
                           <p className="text-sm font-medium text-[var(--text-primary)]">
                             Conectar via Facebook
                           </p>

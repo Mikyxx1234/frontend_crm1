@@ -1103,7 +1103,7 @@ function MiniToggle({
         onClick={() => onChange(!checked)}
         className={cn(
           "relative inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full transition-colors",
-          checked ? "bg-[var(--brand-primary)]" : "bg-[#cbd5e1]",
+          checked ? "bg-[var(--brand-primary)]" : "bg-[var(--toggle-bg-off)]",
         )}
       >
         <span
@@ -1147,7 +1147,7 @@ function ExtraToggle({
         onClick={() => onChange(!checked)}
         className={cn(
           "relative mt-0.5 inline-flex h-[22px] w-[38px] shrink-0 items-center rounded-full transition-colors",
-          checked ? "bg-[var(--brand-primary)]" : "bg-[#cbd5e1]",
+          checked ? "bg-[var(--brand-primary)]" : "bg-[var(--toggle-bg-off)]",
         )}
       >
         <span

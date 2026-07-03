@@ -413,7 +413,7 @@ export function KanbanCard({
                             "inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[11px] font-medium tabular-nums",
                             deal.hasOverdueActivity
                               ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:bg-[var(--color-danger)]/15 dark:text-red-300"
-                              : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+                              : "bg-blue-50 text-blue-700 dark:bg-[var(--color-info)]/15 dark:text-blue-300",
                           )}
                         >
                           {deal.hasOverdueActivity ? (

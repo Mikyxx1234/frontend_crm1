@@ -50,6 +50,7 @@ const MAP = [
   // ── Sucesso (emerald) ─────────────────────────────
   ["text-emerald-700","text-[var(--color-success-text)]"],
   ["text-emerald-600","text-[var(--color-success-text)]"],
+  ["text-emerald-500","text-[var(--color-success)]"],
   ["bg-emerald-50",   "bg-[var(--color-success-bg)]"],
   // ── Alerta (amber) ────────────────────────────────
   ["text-amber-700",  "text-[var(--color-warn)]"],
@@ -73,6 +74,7 @@ const MAP = [
   ["text-indigo-600", "text-[var(--brand-primary)]"],
   ["text-indigo-500", "text-[var(--brand-primary)]"],
   ["bg-indigo-50",    "bg-[var(--color-info-bg)]"],
+  ["bg-blue-500",     "bg-[var(--color-info)]"],
   // ── Sucesso extras ────────────────────────────────
   ["bg-emerald-500",  "bg-[var(--color-success)]"],
   ["bg-emerald-100",  "bg-[var(--color-success-bg)]"],

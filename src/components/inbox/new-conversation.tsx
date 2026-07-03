@@ -185,7 +185,7 @@ export function NewConversationButton({
 
             {selected && (
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
-                <Wifi className="size-3 text-emerald-500" />
+                <Wifi className="size-3 text-[var(--color-success)]" />
                 <span>Envio via WhatsApp Business API (Meta Oficial)</span>
               </div>
             )}

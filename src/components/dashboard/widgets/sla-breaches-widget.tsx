@@ -52,7 +52,7 @@ export function SlaBreachesWidget() {
           : "border-rose-500/30 bg-[var(--color-danger)]/5",
       )}>
         {withinSla ? (
-          <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
+          <CheckCircle2 className="size-5 shrink-0 text-[var(--color-success)]" />
         ) : (
           <AlertTriangle className="size-5 shrink-0 text-[var(--color-danger)]" />
         )}

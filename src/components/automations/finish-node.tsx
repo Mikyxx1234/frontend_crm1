@@ -25,7 +25,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
       className={cn(
         "group/node relative min-w-[200px] max-w-[260px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
-          ? "border-rose-400/60 ring-2 ring-rose-300/30 shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)]"
+          ? "border-[var(--color-danger)]/60 ring-2 ring-[var(--color-danger)]/30 shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)]"
           : "border-[var(--glass-border)] shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[0_10px_30px_-10px_rgba(244,63,94,0.3)]"
       )}
     >
@@ -50,7 +50,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
           <div className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-[var(--glass-bg-subtle)] blur-2xl" />
 
           <div className="relative flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--glass-bg-subtle)] ring-1 ring-white/30 backdrop-blur-sm">
               <StopCircle className="size-4" strokeWidth={2.4} aria-hidden />
             </span>
             <div className="min-w-0 flex-1">

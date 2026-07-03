@@ -48,8 +48,8 @@ export function SlaBreachesWidget() {
       <div className={cn(
         "flex items-center gap-2 rounded-xl border px-3 py-2.5",
         withinSla
-          ? "border-emerald-500/30 bg-[var(--color-success)]/5"
-          : "border-rose-500/30 bg-[var(--color-danger)]/5",
+          ? "border-[var(--color-success)]/30 bg-[var(--color-success)]/5"
+          : "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5",
       )}>
         {withinSla ? (
           <CheckCircle2 className="size-5 shrink-0 text-[var(--color-success)]" />

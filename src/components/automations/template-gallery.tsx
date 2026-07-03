@@ -39,7 +39,7 @@ const ACCENT_STYLES: Record<
   amber: { bg: "bg-[var(--color-warn-bg)]", text: "text-[var(--color-warning)]", ring: "ring-[var(--color-warning)]/20" },
   violet: { bg: "bg-[var(--brand-secondary)]/10", text: "text-[var(--brand-secondary)]", ring: "ring-[var(--brand-secondary)]/20" },
   rose: { bg: "bg-[var(--color-danger-bg)]", text: "text-[var(--color-danger-text)]", ring: "ring-[var(--color-danger)]/20" },
-  cyan: { bg: "bg-cyan-50", text: "text-cyan-700", ring: "ring-cyan-200/70" },
+  cyan: { bg: "bg-[var(--color-cyan-soft)]", text: "text-[var(--color-cyan)]", ring: "ring-[var(--color-cyan)]/70" },
   indigo: { bg: "bg-[var(--brand-primary)]/10", text: "text-[var(--brand-primary)]", ring: "ring-[var(--brand-primary)]/20" },
   fuchsia: { bg: "bg-[var(--brand-accent)]/10", text: "text-[var(--brand-accent)]", ring: "ring-[var(--brand-accent)]/20" },
 };
@@ -87,7 +87,7 @@ export function TemplateGallery({ onApplyTemplate, onStartBlank }: TemplateGalle
               <span
                 className={cn(
                   "inline-flex items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums",
-                  active ? "bg-white/20 text-white" : "bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
+                  active ? "bg-[var(--glass-bg-subtle)] text-white" : "bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
                 )}
               >
                 {f.count}
@@ -115,7 +115,7 @@ function HeroCard({ onStartBlank, total }: { onStartBlank: () => void; total: nu
   return (
     <div className="relative overflow-hidden rounded-2xl border border-black/6 bg-linear-to-br from-slate-900 via-slate-900 to-indigo-950 p-5 text-white sm:p-6">
       <div className="absolute -right-16 -top-16 size-56 rounded-full bg-[var(--color-info)]/20 blur-3xl" />
-      <div className="absolute -bottom-20 -left-10 size-56 rounded-full bg-violet-500/15 blur-3xl" />
+      <div className="absolute -bottom-20 -left-10 size-56 rounded-full bg-[var(--color-lavender)]/15 blur-3xl" />
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
@@ -138,7 +138,7 @@ function HeroCard({ onStartBlank, total }: { onStartBlank: () => void; total: nu
         <button
           type="button"
           onClick={onStartBlank}
-          className="group inline-flex shrink-0 items-center gap-2 rounded-xl border border-[var(--glass-border-subtle)] bg-white/5 px-4 py-2.5 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-subtle)]"
+          className="group inline-flex shrink-0 items-center gap-2 rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-4 py-2.5 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-subtle)]"
         >
           <Plus className="size-4" />
           Começar do zero

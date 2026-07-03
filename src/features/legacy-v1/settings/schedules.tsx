@@ -42,14 +42,14 @@ type AgentRow = {
 
 const STATUS_LABELS: Record<AgentOnlineStatus, string> = { ONLINE: "Online", OFFLINE: "Offline", AWAY: "Ausente" };
 const STATUS_COLORS: Record<AgentOnlineStatus, string> = {
-  ONLINE: "bg-[#00d4aa] text-white",
-  OFFLINE: "bg-[#e2e8f0] text-[#64748b]",
-  AWAY: "bg-[#f59e0b] text-white",
+  ONLINE: "bg-[var(--color-teal)] text-white",
+  OFFLINE: "bg-slate-200 text-[var(--color-ink-subtle)]",
+  AWAY: "bg-[var(--color-warning)] text-white",
 };
 const STATUS_DOT: Record<AgentOnlineStatus, string> = {
-  ONLINE: "bg-[#00d4aa]",
-  OFFLINE: "bg-[#94a3b8]",
-  AWAY: "bg-[#f59e0b]",
+  ONLINE: "bg-[var(--color-teal)]",
+  OFFLINE: "bg-[var(--color-text-muted)]",
+  AWAY: "bg-[var(--color-warning)]",
 };
 
 const WEEKDAYS = [
@@ -216,7 +216,7 @@ export default function SchedulesPage() {
                         disabled={statusMutation.isPending}
                         className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium lumen-transition hover:opacity-80", STATUS_COLORS[status])}
                       >
-                        <span className={cn("size-1.5 rounded-full", status === "ONLINE" ? "bg-[var(--glass-bg-overlay)]" : status === "AWAY" ? "bg-[var(--glass-bg-overlay)]" : "bg-[#64748b]")} />
+                        <span className={cn("size-1.5 rounded-full", status === "ONLINE" ? "bg-[var(--glass-bg-overlay)]" : status === "AWAY" ? "bg-[var(--glass-bg-overlay)]" : "bg-[var(--color-ink-subtle)]")} />
                         {STATUS_LABELS[status]}
                       </button>
                     </td>
@@ -255,7 +255,7 @@ export default function SchedulesPage() {
                             <TooltipHost key={wd.value} label={wd.label} side="top">
                               <span className={cn(
                                 "inline-flex size-7 items-center justify-center rounded-lg text-[10px] font-medium",
-                                active ? "bg-[#1e40af] text-white" : "bg-muted text-muted-foreground"
+                                active ? "bg-blue-800 text-white" : "bg-muted text-muted-foreground"
                               )}>{wd.short.charAt(0)}</span>
                             </TooltipHost>
                           );
@@ -323,7 +323,7 @@ export default function SchedulesPage() {
                       className={cn(
                         "inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium lumen-transition",
                         active
-                          ? "bg-[#1e40af] text-white shadow-sm"
+                          ? "bg-blue-800 text-white shadow-sm"
                           : "border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] text-[var(--text-muted)] hover:border-[var(--brand-primary)] hover:text-[var(--text-primary)]"
                       )}>
                       {active && <Check className="size-3" />}

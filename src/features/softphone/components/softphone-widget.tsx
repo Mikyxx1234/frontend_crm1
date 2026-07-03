@@ -208,7 +208,7 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
   // + ramal e botão vermelho pra colapsar. Fiel ao mockup fornecido.
   if (isRegistered) {
     return (
-      <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--glass-border)] bg-white/90 p-2 shadow-lg backdrop-blur-md dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-panel)]">
+      <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2 shadow-lg backdrop-blur-md dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-panel)]">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-success-bg)] text-[var(--color-success-text)] dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]">
           <IconPhone size={18} stroke={2.2} />
         </span>

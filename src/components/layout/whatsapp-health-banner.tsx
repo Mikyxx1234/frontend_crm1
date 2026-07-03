@@ -124,8 +124,8 @@ export function WhatsAppHealthBanner() {
       className={cn(
         "mb-3 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm",
         isCritical
-          ? "border-red-300 bg-[var(--color-danger-bg)] text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100"
-          : "border-amber-300 bg-[var(--color-warn-bg)] text-[var(--color-warn-text)] dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100",
+          ? "border-[var(--color-danger)]/60 bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100"
+          : "border-[var(--color-warn)]/60 bg-[var(--color-warn-bg)] text-[var(--color-warn-text)] dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100",
       )}
     >
       <Icon className={cn("mt-0.5 size-5 shrink-0", isCritical ? "text-[var(--color-danger-text)] dark:text-red-300" : "text-[var(--color-warn)] dark:text-amber-300")} />
@@ -148,7 +148,7 @@ export function WhatsAppHealthBanner() {
             rel="noopener noreferrer"
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-semibold underline-offset-2 hover:underline",
-              isCritical ? "text-red-900 dark:text-red-200" : "text-[var(--color-warn-text)] dark:text-[var(--color-warning)]/70",
+              isCritical ? "text-[var(--color-danger-text)] dark:text-red-200" : "text-[var(--color-warn-text)] dark:text-[var(--color-warning)]/70",
             )}
           >
             Abrir painel da Meta
@@ -162,8 +162,8 @@ export function WhatsAppHealthBanner() {
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-semibold",
                 isCritical
-                  ? "border-red-300 bg-[var(--glass-bg-overlay)] text-red-900 hover:bg-[var(--color-bg-card)] dark:border-red-800 dark:bg-red-950/40 dark:text-red-100"
-                  : "border-amber-300 bg-[var(--glass-bg-overlay)] text-[var(--color-warn-text)] hover:bg-[var(--color-bg-card)] dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100",
+                  ? "border-[var(--color-danger)]/60 bg-[var(--glass-bg-overlay)] text-[var(--color-danger-text)] hover:bg-[var(--color-bg-card)] dark:border-red-800 dark:bg-red-950/40 dark:text-red-100"
+                  : "border-[var(--color-warn)]/60 bg-[var(--glass-bg-overlay)] text-[var(--color-warn-text)] hover:bg-[var(--color-bg-card)] dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100",
                 isFetching && "opacity-60",
               )}
             >
@@ -184,7 +184,7 @@ export function WhatsAppHealthBanner() {
           onClick={handleDismiss}
           aria-label="Silenciar aviso por 30 minutos"
           className={cn(
-            "-mr-1 -mt-1 rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5",
+            "-mr-1 -mt-1 rounded-md p-1 hover:bg-black/5 dark:hover:bg-[var(--glass-bg-subtle)]",
             isCritical ? "text-[var(--color-danger-text)] dark:text-red-200" : "text-[var(--color-warn)] dark:text-[var(--color-warning)]/70",
           )}
         >

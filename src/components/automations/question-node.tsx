@@ -32,9 +32,9 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
     <div
       className={cn(
         "group/node relative min-w-[230px] max-w-[290px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
-        selected
-          ? "border-violet-400/60 ring-2 ring-violet-300/30 shadow-[0_10px_30px_-10px_rgba(139,92,246,0.4)]"
-          : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-violet-300/50 hover:shadow-[0_10px_30px_-10px_rgba(139,92,246,0.3)]"
+          selected
+            ? "border-[var(--color-lavender)]/60 ring-2 ring-[var(--color-lavender)]/30 shadow-[0_10px_30px_-10px_rgba(139,92,246,0.4)]"
+            : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-[var(--color-lavender)]/50 hover:shadow-[0_10px_30px_-10px_rgba(139,92,246,0.3)]"
       )}
     >
       <Handle
@@ -43,7 +43,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
         className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
       <div className="flex items-start gap-3 px-3.5 py-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-500 ring-1 ring-violet-100">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-lavender-soft)] text-[var(--color-lavender)] ring-1 ring-[var(--color-lavender)]/15">
           <HelpCircle className="size-4" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
@@ -76,7 +76,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
           {buttons.map((btn, i) => (
             <span
               key={i}
-              className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-bold tracking-tight text-violet-700 ring-1 ring-violet-100"
+              className="inline-flex items-center rounded-full bg-[var(--color-lavender-soft)] px-2 py-0.5 text-[10px] font-bold tracking-tight text-[var(--color-lavender)] ring-1 ring-[var(--color-lavender)]/15"
             >
               {btn.text}
             </span>
@@ -95,12 +95,12 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-[var(--color-success)]/15">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-[var(--color-destructive)]/15">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>
@@ -113,7 +113,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
         type="source"
         position={Position.Right}
         id="answered"
-        className="size-3! border-2! border-white! bg-violet-500!"
+        className="size-3! border-2! border-white! bg-[var(--color-lavender)]!"
       />
       <Handle
         type="source"

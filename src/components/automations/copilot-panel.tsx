@@ -104,10 +104,10 @@ export function CopilotPanel(props: CopilotPanelProps) {
   const [tab, setTab] = useState<"audit" | "chat">("audit");
 
   return (
-    <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-border/60 bg-white/90 backdrop-blur-xl">
-      <div className="flex shrink-0 items-center justify-between border-b border-border/60 bg-linear-to-r from-[#eef4ff]/40 to-white px-4 py-2.5">
+    <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-border/60 bg-[var(--glass-bg-overlay)] backdrop-blur-xl">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/60 bg-linear-to-r from-[var(--color-primary-soft)]/40 to-white px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-primary to-[#6f8cf5] text-white shadow-[var(--shadow-indigo-glow)]">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-primary to-[var(--brand-primary-light)] text-white shadow-[var(--shadow-indigo-glow)]">
             <Sparkles className="size-3.5" strokeWidth={2.6} />
           </div>
           <div className="flex flex-col leading-tight">
@@ -622,7 +622,7 @@ function PatchDiffCard({
   return (
     <div
       className={cn(
-        "w-full max-w-[92%] rounded-xl border bg-linear-to-br from-white to-[#f8faff] p-3 shadow-sm transition-opacity",
+        "w-full max-w-[92%] rounded-xl border bg-linear-to-br from-white to-[var(--color-primary-soft)] p-3 shadow-sm transition-opacity",
         patch.applied && "opacity-60",
         patch.dismissed && "opacity-40",
       )}

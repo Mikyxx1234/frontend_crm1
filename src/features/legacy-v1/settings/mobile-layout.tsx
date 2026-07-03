@@ -378,7 +378,7 @@ export function MobileLayoutClientPage() {
               type="button"
               onClick={save}
               disabled={!dirty || saveMutation.isPending}
-              className="h-11 gap-2 rounded-full bg-primary px-6 text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[#4466d6]"
+              className="h-11 gap-2 rounded-full bg-primary px-6 text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[var(--brand-primary-hover)]"
             >
               {saveMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -422,7 +422,7 @@ function IPhoneMockup({ bottomNav }: { bottomNav: MobileModuleId[] }) {
         className="relative aspect-[9/19.5] w-full max-w-[320px] rounded-full border-[10px] border-slate-900 bg-slate-900 shadow-[var(--glass-shadow)]"
       >
         {/* Tela */}
-        <div className="absolute inset-0 overflow-hidden rounded-3xl bg-[#f4f7fa]">
+        <div className="absolute inset-0 overflow-hidden rounded-3xl bg-[var(--color-primary-soft)]">
           {/* Notch */}
           <div className="absolute left-1/2 top-0 z-20 h-6 w-32 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
           {/* Top bar (status bar imitada) */}

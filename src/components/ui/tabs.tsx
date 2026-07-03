@@ -114,7 +114,7 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
           // TabsTrigger glass: ativa = pill branca translúcida + texto brand
           "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3.5 py-1 font-display text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50",
           selected
-            ? "border border-[var(--glass-border)] bg-white/70 text-primary shadow-[var(--glass-shadow-sm)] font-semibold backdrop-blur"
+            ? "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-primary shadow-[var(--glass-shadow-sm)] font-semibold backdrop-blur"
             : "text-[var(--color-ink-soft)] hover:text-foreground hover:bg-[var(--glass-bg-panel)]",
           className
         )}

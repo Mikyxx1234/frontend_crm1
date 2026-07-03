@@ -102,7 +102,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
             type="source"
             position={Position.Right}
             id="timeout"
-            className="size-3! border-2! border-white! bg-slate-400!"
+            className="size-3! border-2! border-white! bg-[var(--color-status-offline)]!"
             style={{ top: "50%", transform: "translateY(-50%)" }}
           />
         </div>
@@ -131,12 +131,12 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-[var(--color-success)]/15">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-[var(--color-destructive)]/15">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>

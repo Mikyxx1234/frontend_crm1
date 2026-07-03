@@ -278,7 +278,7 @@ export function WorkspaceSidebar({
       : undefined;
 
     const kommoRow =
-      "flex items-center justify-between border-b border-white/30 px-4 py-2.5 transition-colors hover:bg-[var(--glass-bg-panel)]";
+      "flex items-center justify-between border-b border-[var(--glass-border)] px-4 py-2.5 transition-colors hover:bg-[var(--glass-bg-panel)]";
 
     const renderSection = (section: SectionConfig) => {
       switch (section.id) {
@@ -350,7 +350,7 @@ export function WorkspaceSidebar({
           );
         case "produtos":
           return (
-            <div key="produtos" className="border-b border-white/30">
+            <div key="produtos" className="border-b border-[var(--glass-border)]">
               <div className="flex items-center justify-between px-4 pt-2">
                 <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Produtos</span>
                 <TooltipHost label={compactProductsAddOpen ? "Fechar" : "Adicionar produto"} side="left">
@@ -367,7 +367,7 @@ export function WorkspaceSidebar({
         case "contato":
           return (
             <div key="contato">
-              <div className="mt-1 border-t border-white/30">
+              <div className="mt-1 border-t border-[var(--glass-border)]">
                 <div className="flex items-center justify-between px-4 pt-3 pb-1">
                   <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Contato</span>
                   <button type="button" onClick={(e) => { e.stopPropagation(); editingBasic ? saveBasic() : startEdit(); }} className="text-[var(--color-ink-muted)] transition-colors hover:text-primary">
@@ -399,7 +399,7 @@ export function WorkspaceSidebar({
         case "campos_contato":
           return (
             <div key="campos_contato">
-              <SidebarSectionHeading className="mt-1 border-t border-white/30">Campos do contato</SidebarSectionHeading>
+              <SidebarSectionHeading className="mt-1 border-t border-[var(--glass-border)]">Campos do contato</SidebarSectionHeading>
               <CustomFieldsSection contactId={contact.id} variant="kompact" />
             </div>
           );
@@ -1139,7 +1139,7 @@ function PresenceDot({
         size === "sm" ? "size-1.5 ring-[1.5px]" : "size-2.5 ring-2",
         status === "ONLINE" && "bg-[var(--color-success)]",
         status === "AWAY" && "bg-warning",
-        status === "OFFLINE" && "bg-slate-400",
+        status === "OFFLINE" && "bg-[var(--color-status-offline)]",
       )}
       aria-hidden
     />

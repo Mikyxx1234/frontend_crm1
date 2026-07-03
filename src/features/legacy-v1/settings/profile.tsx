@@ -409,7 +409,7 @@ function ProfileCard({
           real só ao clicar em "Salvar" abaixo (evita registro inconsistente).
         */}
         <div className="relative shrink-0">
-          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-[#fbcfe8] to-[#f9a8d4] ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]">
+          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-pink-200 to-pink-300 ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -545,7 +545,7 @@ function ProfileCard({
 
           {closingEnabled && (
             <>
-              <div className="flex items-start gap-2 rounded-xl bg-[#eef2ff] px-3 py-2.5 text-[12px] leading-snug text-[#3730a3]">
+              <div className="flex items-start gap-2 rounded-xl bg-[var(--color-primary-soft)] px-3 py-2.5 text-[12px] leading-snug text-[var(--color-primary-dark)]">
                 <Info className="mt-0.5 size-3.5 shrink-0" />
                 <span>
                   Se definida, tem precedência sobre a mensagem de finalização
@@ -574,7 +574,7 @@ function ProfileCard({
           type="submit"
           disabled={saveMutation.isPending}
           className={cn(
-            "mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors duration-150 hover:bg-[#4466d6] disabled:opacity-60",
+            "mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors duration-150 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60",
           )}
         >
           {saveMutation.isPending ? (
@@ -738,7 +738,7 @@ function TokensCard() {
               setJustCreated(null);
               setCreateOpen(true);
             }}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6]"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--brand-primary-hover)]"
           >
             <Plus className="size-3.5" />
             Novo token
@@ -757,7 +757,7 @@ function TokensCard() {
               key={t.id}
               className="flex items-center gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-4 py-3"
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-primary">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary">
                 <Key className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -915,7 +915,7 @@ function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
         */}
         <div className="absolute -left-3 -top-2 size-14 -rotate-12 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-sm" />
         <div className="absolute -right-3 -top-1 size-14 rotate-12 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-sm" />
-        <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[#eef2ff]">
+          <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)]">
           <button
             type="button"
             onClick={onCreate}

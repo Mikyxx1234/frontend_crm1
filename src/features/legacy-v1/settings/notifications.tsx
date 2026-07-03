@@ -47,7 +47,7 @@ export default function NotificationsSettingsPage() {
               "flex size-12 shrink-0 items-center justify-center rounded-2xl text-white",
               isSubscribed
                 ? "bg-[var(--color-success)] shadow-green-glow"
-                : "bg-[#06b6d4] shadow-[var(--shadow-lavender-glow)]",
+                : "bg-cyan-500 shadow-[var(--shadow-lavender-glow)]",
             )}
           >
             {isSubscribed ? (
@@ -100,7 +100,7 @@ export default function NotificationsSettingsPage() {
                   "text-sm font-bold transition-colors active:scale-[0.97]",
                   isSubscribed
                     ? "bg-slate-900 text-white hover:bg-slate-800"
-                    : "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[#4466d6]",
+                    : "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[var(--brand-primary-hover)]",
                   "disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
                 )}
               >

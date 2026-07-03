@@ -43,14 +43,14 @@ const TYPES: {
     description: "Direct e comentários",
     icon: AtSign,
     cardClass:
-      "border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-violet-500/10 hover:border-pink-500/40",
+      "border-[var(--color-pink)]/25 bg-gradient-to-br from-[var(--color-pink)]/10 to-[var(--color-lavender)]/10 hover:border-[var(--color-pink)]/40",
   },
   {
     type: "FACEBOOK",
     label: "Facebook",
     description: "Messenger e páginas",
     icon: Share2,
-    cardClass: "border-blue-600/25 bg-blue-600/5 hover:border-blue-600/40",
+    cardClass: "border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 hover:border-[var(--color-primary)]/40",
   },
   {
     type: "EMAIL",
@@ -64,7 +64,7 @@ const TYPES: {
     label: "Webchat",
     description: "Widget no site",
     icon: Globe,
-    cardClass: "border-cyan-500/25 bg-cyan-500/5 hover:border-cyan-500/40",
+    cardClass: "border-[var(--color-cyan)]/25 bg-[var(--color-cyan)]/5 hover:border-[var(--color-cyan)]/40",
   },
 ];
 
@@ -697,7 +697,7 @@ export function CreateChannelDialog({
           {webhookInfo ? (
             <div className="mt-2 space-y-5">
               {webhookInfo.warning ? (
-                <div className="rounded-md border border-amber-300 bg-[var(--color-warn-bg)] p-3 text-xs text-[var(--color-warn-text)] dark:border-amber-700 dark:bg-amber-950 dark:text-[var(--color-warning)]/70">
+                <div className="rounded-md border border-[var(--color-warn-border)] bg-[var(--color-warn-bg)] p-3 text-xs text-[var(--color-warn-text)] dark:text-[var(--color-warning)]/70">
                   <strong>Atenção:</strong> {webhookInfo.warning} Confira se a
                   URL abaixo aponta pro domínio público do backend antes de
                   colar no painel Meta.

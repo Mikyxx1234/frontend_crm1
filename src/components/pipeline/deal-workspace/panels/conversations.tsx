@@ -79,7 +79,7 @@ export function ConversationsPanel({
         <div
           className={cn(
             "flex items-center gap-2 border-b border-[var(--glass-border-subtle)]",
-            "bg-white/90 px-3 py-2 backdrop-blur-sm sm:px-4",
+            "bg-[var(--glass-bg-overlay)] px-3 py-2 backdrop-blur-sm sm:px-4",
           )}
         >
           {conversations.length > 1 ? (
@@ -160,7 +160,7 @@ export function ConversationsPanel({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[#f4f7fa]">
+    <div className="flex min-h-0 flex-1 flex-col bg-[var(--color-primary-soft)]">
       {conversations.length === 0 ? (
         <CenterMessage icon={<Send className="size-12 text-[var(--text-faint)]" />}>
           Abrindo conversa...
@@ -196,10 +196,10 @@ export function ConversationsPanel({
                   className={cn(
                     "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest",
                     c.status === "OPEN"
-                      ? "border-emerald-200 bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
+                      ? "border-[var(--color-success)]/30 bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
                       : c.status === "RESOLVED"
                       ? "border-border bg-[var(--color-bg-subtle)] text-[var(--text-muted)]"
-                      : "border-amber-200 bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
+                      : "border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
                   )}
                 >
                   {STATUS_LABEL[c.status] ?? c.status}

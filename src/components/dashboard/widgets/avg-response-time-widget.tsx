@@ -86,7 +86,7 @@ export function AvgResponseTimeWidget() {
       )}
 
       {worst && worst.avgResponseMinutes > globalAvg * 1.5 && (
-        <div className="rounded-lg border border-amber-500/30 bg-[var(--color-warning)]/5 px-3 py-2">
+        <div className="rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/5 px-3 py-2">
           <p className="text-[11px] font-medium text-[var(--color-warn)]">
             <span className="font-bold">{worst.userName}</span> está{" "}
             {((worst.avgResponseMinutes / globalAvg - 1) * 100).toFixed(0)}% acima da média.

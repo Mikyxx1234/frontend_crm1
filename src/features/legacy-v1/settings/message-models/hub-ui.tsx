@@ -202,7 +202,7 @@ export function HubChip({
         <span
           className={cn(
             "rounded-[var(--radius-full)] px-1.5 text-[11px]",
-            active ? "bg-white/25" : "bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)]",
+            active ? "bg-[var(--glass-bg)]" : "bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)]",
           )}
         >
           {count}

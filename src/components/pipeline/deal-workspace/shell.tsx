@@ -104,7 +104,7 @@ export function WorkspaceShell({
                   aria-label={closeLabel}
                   className={cn(
                     "pointer-events-auto inline-flex size-8 items-center justify-center rounded-full",
-                    "border border-[var(--glass-border)] bg-white/70 text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur",
+                    "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur",
                     "transition-all hover:bg-[var(--glass-bg-base)] hover:text-foreground hover:shadow-[var(--glass-shadow)]",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                     "active:scale-95",

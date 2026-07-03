@@ -416,7 +416,7 @@ export function Api4ComConnectForm() {
               setPassword("");
               mutation.reset();
             }}
-            className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] px-3 text-xs text-[var(--text-muted)] transition-colors hover:bg-white/5"
+            className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] px-3 text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)]"
           >
             Cancelar
           </button>

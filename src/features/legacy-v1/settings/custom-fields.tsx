@@ -242,7 +242,7 @@ export default function CustomFieldsPage() {
                     <Badge variant="destructive" className="text-[10px]">Obrigatório</Badge>
                   )}
                   {(f.entity === "contact" || f.entity === "deal") && f.showInInboxLeadPanel && (
-                    <Badge className="border border-[#00d4aa]/40 bg-[#00d4aa]/10 text-[10px] font-semibold text-[#0f766e]">
+                    <Badge className="border border-[var(--color-teal)]/40 bg-[var(--color-teal)]/10 text-[10px] font-semibold text-[#0f766e]">
                       Painel Inbox
                     </Badge>
                   )}

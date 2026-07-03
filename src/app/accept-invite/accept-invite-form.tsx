@@ -94,10 +94,10 @@ export default function AcceptInviteForm({
             <img
               src={organization.logoUrl}
               alt=""
-              className="h-10 w-10 rounded-lg bg-white/20 object-contain p-1"
+              className="h-10 w-10 rounded-lg bg-[var(--glass-bg-subtle)] object-contain p-1"
             />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 font-bold">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--glass-bg-subtle)] font-bold">
               {organization.name.slice(0, 2).toUpperCase()}
             </div>
           )}

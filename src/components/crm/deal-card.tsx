@@ -78,9 +78,9 @@ const tagStyles: Record<TagType, string> = {
   hot: "bg-[rgba(239,68,68,0.12)] text-[var(--color-danger-text)] border-[rgba(239,68,68,0.20)]",
   warm: "bg-[var(--color-lead-bg)] text-[var(--color-warning-text)] border-[rgba(245,158,11,0.25)]",
   cold: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)] border-[rgba(91,111,245,0.25)]",
-  vip: "bg-[rgba(167,139,250,0.15)] text-[#6d28d9] border-[rgba(167,139,250,0.25)]",
+  vip: "bg-[rgba(167,139,250,0.15)] text-violet-800 border-[rgba(167,139,250,0.25)]",
   partner: "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[rgba(16,185,129,0.25)]",
-  ref: "bg-[rgba(244,114,182,0.12)] text-[#be185d] border-[rgba(244,114,182,0.25)]",
+  ref: "bg-[rgba(244,114,182,0.12)] text-pink-700 border-[rgba(244,114,182,0.25)]",
 }
 
 export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode }: DealCardProps) {

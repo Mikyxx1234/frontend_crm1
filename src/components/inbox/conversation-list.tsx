@@ -279,7 +279,7 @@ export function InboxListHeader({
       )}
 
       <div className="flex items-center gap-1.5 px-3 pb-2">
-        <div className="flex h-9 flex-1 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 backdrop-blur transition-all focus-within:border-primary focus-within:bg-white/75 focus-within:ring-[3px] focus-within:ring-primary/15">
+        <div className="flex h-9 flex-1 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 backdrop-blur transition-all focus-within:border-primary focus-within:bg-[var(--glass-bg-overlay)] focus-within:ring-[3px] focus-within:ring-primary/15">
           <Search className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2} />
           <input
             value={search}
@@ -298,7 +298,7 @@ export function InboxListHeader({
             type="button"
             onClick={onToggleFilters}
             className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/70 hover:text-foreground",
+              "flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-[var(--glass-bg-overlay)] hover:text-foreground",
               showFilters && "border-primary/40 bg-primary/15 text-primary",
             )}
           >
@@ -1021,7 +1021,7 @@ function ConversationItem({
       {...staggerItem}
       layout
       className={cn(
-        "group relative flex w-full cursor-pointer gap-2 border-b border-white/30 px-3 py-2.5 transition-all duration-150 hover:bg-[var(--glass-bg-panel)] dark:border-white/5 dark:hover:bg-white/5",
+        "group relative flex w-full cursor-pointer gap-2 border-b border-[var(--glass-border)] px-3 py-2.5 transition-all duration-150 hover:bg-[var(--glass-bg-panel)] dark:border-[var(--glass-border-subtle)] dark:hover:bg-[var(--glass-bg-subtle)]",
         active && "border-l-2 border-l-primary bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] dark:bg-[var(--glass-bg-subtle)]",
         !active && unread && "bg-primary/8 hover:bg-primary/12 dark:bg-primary/15 dark:hover:bg-primary/20",
         !active && !unread && "bg-transparent",

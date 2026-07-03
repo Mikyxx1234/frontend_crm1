@@ -1422,7 +1422,7 @@ function WorkflowCanvasInner({
       {/* Canvas area — radial gradients no fundo dão profundidade
           "engenharia premium" sem competir com os nodes. */}
       <div
-        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[#eef1f7] bg-[radial-gradient(ellipse_at_top_left,rgba(80,125,241,0.08)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.06)_0%,transparent_55%)]"
+        className="automation-canvas relative min-h-0 min-w-0 flex-1 bg-[var(--color-primary-soft)] bg-[radial-gradient(ellipse_at_top_left,rgba(80,125,241,0.08)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.06)_0%,transparent_55%)]"
         onDrop={onDrop}
         onDragOver={onDragOver}
       >
@@ -1462,7 +1462,7 @@ function WorkflowCanvasInner({
             className="m-4! overflow-hidden rounded-2xl! border! border-[var(--glass-border)]! bg-[var(--glass-bg-base)]! shadow-[var(--shadow-lg)]! backdrop-blur-xl! [&>button]:border-0! [&>button]:bg-transparent! [&>button]:text-[var(--color-ink-soft)]! [&>button:hover]:bg-primary/10! [&>button:hover]:text-primary!"
           />
           <MiniMap
-            className="m-4! overflow-hidden rounded-2xl! border! border-[var(--glass-border)]! bg-white/70! shadow-[var(--shadow-lg)]! backdrop-blur-xl!"
+            className="m-4! overflow-hidden rounded-2xl! border! border-[var(--glass-border)]! bg-[var(--glass-bg-overlay)]! shadow-[var(--shadow-lg)]! backdrop-blur-xl!"
             maskColor={isDark ? "rgba(0,0,0,0.30)" : "rgba(13,27,62,0.06)"}
             nodeColor={(n) => {
               if (isAddStepNodeId(n.id)) return "transparent";

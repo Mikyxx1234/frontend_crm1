@@ -99,7 +99,7 @@ export function PushPermissionPrompt() {
       </button>
 
       <div className="flex items-start gap-3 pr-6">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#06b6d4] text-white shadow-[var(--shadow-lavender-glow)]">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-500 text-white shadow-[var(--shadow-lavender-glow)]">
           <Bell className="size-5" strokeWidth={2.4} />
         </div>
         <div className="min-w-0 flex-1">

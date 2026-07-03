@@ -1820,7 +1820,7 @@ export function ChatWindow({
           className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[var(--glass-bg-panel)] p-6 backdrop-blur-sm"
           aria-hidden
         >
-          <div className="flex max-w-md flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-primary/60 bg-white/70 px-8 py-7 text-center shadow-2xl backdrop-blur-md">
+          <div className="flex max-w-md flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-primary/60 bg-[var(--glass-bg-overlay)] px-8 py-7 text-center shadow-2xl backdrop-blur-md">
             <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
               <Upload className="size-6" />
             </span>
@@ -2896,7 +2896,7 @@ export function ChatWindow({
               return (
                 <div
                   key={sm.id}
-                  className="flex items-center gap-2 rounded-xl bg-white/70 px-3 py-1.5 text-[12px] text-info"
+                  className="flex items-center gap-2 rounded-xl bg-[var(--glass-bg-overlay)] px-3 py-1.5 text-[12px] text-info"
                 >
                   <Clock
                     className="size-3.5 shrink-0 text-info"
@@ -3511,7 +3511,7 @@ export function ChatWindow({
 
         {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
         {compactChrome ? (
-          <footer className="relative shrink-0 overflow-visible border-t border-[var(--glass-border)] bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
+          <footer className="relative shrink-0 overflow-visible border-t border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
             <SlashCommandMenu
               state={slash.state}
               onSelectItem={slash.onSelectItem}
@@ -3658,14 +3658,14 @@ export function ChatWindow({
                   <AudioRecorder
                     onSend={sendAudio}
                     disabled={isBusy}
-                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-4"
+                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-[var(--glass-bg-overlay)] hover:text-foreground [&_svg]:!size-4"
                   />
                 </div>
               </div>
             </div>
           </footer>
         ) : (
-          <footer className="relative border-t border-[var(--glass-border)] bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
+          <footer className="relative border-t border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
             <SlashCommandMenu
               state={slash.state}
               onSelectItem={slash.onSelectItem}
@@ -3851,7 +3851,7 @@ export function ChatWindow({
                     <AudioRecorder
                       onSend={sendAudio}
                       disabled={isBusy}
-                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-5"
+                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-[var(--glass-bg-overlay)] hover:text-foreground [&_svg]:!size-5"
                     />
                   </div>
                 </div>

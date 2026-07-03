@@ -42,14 +42,14 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
         Editar
       </span>
       {/* Header com gradient brand */}
-      <div className="relative overflow-hidden bg-linear-to-br from-primary via-[#5a87ff] to-[#7b9bff] px-4 py-3 text-white">
+      <div className="relative overflow-hidden bg-linear-to-br from-primary via-[var(--brand-primary-light)] to-[var(--brand-primary-light)] px-4 py-3 text-white">
         {/* Brilho neon sutil no topo */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/70 to-transparent" />
         {/* Halo radial decorativo no canto */}
         <div className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-[var(--glass-bg-subtle)] blur-2xl" />
 
         <div className="relative flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--glass-bg-subtle)] ring-1 ring-white/30 backdrop-blur-sm">
             <Zap className="size-4 text-white" strokeWidth={2.6} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">

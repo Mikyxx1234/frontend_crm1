@@ -178,7 +178,7 @@ export function SidebarCustomizationCard() {
                     </div>
                   </div>
 
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-primary">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary">
                     <Icon size={18} />
                   </div>
 

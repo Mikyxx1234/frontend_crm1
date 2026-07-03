@@ -412,8 +412,8 @@ export function KanbanCard({
                           className={cn(
                             "inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium tabular-nums",
                             deal.hasOverdueActivity
-                              ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:bg-[var(--color-danger)]/15 dark:text-red-300"
-                              : "bg-blue-50 text-blue-700 dark:bg-[var(--color-info)]/15 dark:text-blue-300",
+                              ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-destructive)]"
+                              : "bg-[var(--color-primary)]/5 text-[var(--color-primary)] dark:bg-[var(--color-info)]/15 dark:text-[var(--color-primary)]",
                           )}
                         >
                           {deal.hasOverdueActivity ? (
@@ -739,8 +739,8 @@ function PresenceDot({
         // o anel branco fixo que ficava destoante sobre cards escuros.
         "inline-flex size-2 rounded-full ring-2 ring-[var(--color-card)]",
         status === "ONLINE" && "bg-[var(--color-success)]",
-        status === "AWAY" && "bg-amber-400",
-        status === "OFFLINE" && "bg-slate-400 dark:bg-slate-500",
+        status === "AWAY" && "bg-[var(--color-status-away)]",
+        status === "OFFLINE" && "bg-[var(--color-status-offline)]",
         className,
       )}
       aria-hidden

@@ -34,10 +34,10 @@ const GROUP_VISUAL: Record<
   string,
   { Icon: LucideIcon; tone: string; bg: string; ring: string; fg: string }
 > = {
-  Mensagens:    { Icon: MessageSquare, tone: "blue",    bg: "bg-blue-50",    ring: "ring-blue-200/70",    fg: "text-[var(--color-info)]" },
-  Salesbot:     { Icon: Bot,           tone: "violet",  bg: "bg-violet-50",  ring: "ring-violet-200/70",  fg: "text-violet-600" },
-  Acoes:        { Icon: Zap,           tone: "amber",   bg: "bg-[var(--color-warn-bg)]",   ring: "ring-amber-200/70",   fg: "text-[var(--color-warn)]" },
-  Logica:       { Icon: GitBranch,     tone: "cyan",    bg: "bg-cyan-50",    ring: "ring-cyan-200/70",    fg: "text-cyan-600" },
+  Mensagens:    { Icon: MessageSquare, tone: "blue",    bg: "bg-[var(--color-primary)]/8",       ring: "ring-[var(--color-primary)]/70",    fg: "text-[var(--color-info)]" },
+  Salesbot:     { Icon: Bot,           tone: "violet",  bg: "bg-[var(--color-lavender-soft)]",   ring: "ring-[var(--color-lavender)]/70",   fg: "text-[var(--color-lavender)]" },
+  Acoes:        { Icon: Zap,           tone: "amber",   bg: "bg-[var(--color-warn-bg)]",         ring: "ring-[var(--color-warn)]/70",       fg: "text-[var(--color-warn)]" },
+  Logica:       { Icon: GitBranch,     tone: "cyan",    bg: "bg-[var(--color-cyan-soft)]",       ring: "ring-[var(--color-cyan)]/70",       fg: "text-[var(--color-cyan)]" },
   Integracoes:  { Icon: Globe,         tone: "slate",   bg: "bg-[var(--glass-bg-overlay)]",  ring: "ring-[var(--glass-border)]",   fg: "text-[var(--text-muted)]" },
 };
 

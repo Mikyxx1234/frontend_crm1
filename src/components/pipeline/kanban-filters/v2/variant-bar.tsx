@@ -69,7 +69,7 @@ export function FilterBar({
             <span
               className={cn(
                 "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
-                open || activeCount > 0 ? "bg-white/25 text-white" : "bg-[var(--brand-primary)] text-white",
+                open || activeCount > 0 ? "bg-[var(--glass-bg)] text-white" : "bg-[var(--brand-primary)] text-white",
               )}
             >
               {activeCount}

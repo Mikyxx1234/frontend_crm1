@@ -730,12 +730,12 @@ function StepBranding(props: {
             <img
               src={props.logoUrl}
               alt=""
-              className="h-10 w-10 rounded-lg bg-white/20 object-contain p-1"
+              className="h-10 w-10 rounded-lg bg-[var(--glass-bg-subtle)] object-contain p-1"
               onError={() => setImgError(true)}
               onLoad={() => setImgError(false)}
             />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--glass-bg-subtle)]">
               <ImageIcon className="size-5 text-white/70" aria-hidden />
             </div>
           )}

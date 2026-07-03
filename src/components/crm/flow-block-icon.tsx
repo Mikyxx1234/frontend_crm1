@@ -210,7 +210,7 @@ export const blockCategories: { id: BlockCategory; label: string; types: string[
 
 /** Classes do "chip" de ícone por tom — mantido para componentes legados (mini-flow, etc.) */
 export const toneIconClasses: Record<BlockMeta["tone"], string> = {
-  trigger: "bg-white/25 text-white",
+  trigger: "bg-[var(--glass-bg)] text-white",
   action: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
   salesbot: "bg-[rgba(167,139,250,0.18)] text-[var(--brand-secondary)]",
   final: "bg-[rgba(239,68,68,0.14)] text-[var(--color-danger)]",

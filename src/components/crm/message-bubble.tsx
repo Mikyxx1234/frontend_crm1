@@ -468,7 +468,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
     : "bg-[var(--brand-primary)]/5 text-[var(--text-secondary)] border-[var(--glass-border-subtle)]"
   // Botão "Transcrever": pill com fundo sólido para garantir contraste em qualquer cor de bolha.
   const btnBase = isOutgoing
-    ? "bg-white/20 text-white hover:bg-[var(--glass-bg-panel)]"
+    ? "bg-[var(--glass-bg-subtle)] text-white hover:bg-[var(--glass-bg-panel)]"
     : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20"
 
   return (
@@ -498,7 +498,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-opacity",
-            isOutgoing ? "bg-white/20 hover:bg-[var(--glass-bg-panel)]" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
+            isOutgoing ? "bg-[var(--glass-bg-subtle)] hover:bg-[var(--glass-bg-panel)]" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
             !url && "opacity-40 cursor-not-allowed",
           )}
         >
@@ -652,12 +652,12 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
         download
         className={cn(
           "flex min-w-[200px] max-w-[280px] items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 transition-colors",
-          isOutgoing ? "bg-[var(--glass-bg-subtle)] hover:bg-white/25" : "bg-[var(--glass-bg-strong)] hover:bg-[var(--glass-bg-overlay)]",
+          isOutgoing ? "bg-[var(--glass-bg-subtle)] hover:bg-[var(--glass-bg)]" : "bg-[var(--glass-bg-strong)] hover:bg-[var(--glass-bg-overlay)]",
         )}
       >
         <div className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)]",
-          isOutgoing ? "bg-white/20" : "bg-[var(--brand-primary)]/10",
+          isOutgoing ? "bg-[var(--glass-bg-subtle)]" : "bg-[var(--brand-primary)]/10",
         )}>
           <IconFile size={18} className={isOutgoing ? "text-white" : "text-[var(--brand-primary)]"} />
         </div>

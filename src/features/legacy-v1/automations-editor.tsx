@@ -15,7 +15,7 @@ const WorkflowCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-[#f0f4f8]">
+      <div className="flex h-full w-full items-center justify-center bg-[var(--color-primary-soft)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     ),
@@ -698,11 +698,11 @@ export default function AutomationDetailPage() {
           glassmorphism + pill buttons + glow no Salvar — alinhado ao
           design system EduIT Premium. ActiveSwitch local mantido pra
           não desalinhar com os outros usos no Config dialog. */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border/60 bg-white/85 px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border/60 bg-[var(--glass-bg-overlay)] px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
         {/* Breadcrumb */}
         <Link
           href={listHref}
-          className="group/back flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-[var(--color-ink-soft)] transition-colors hover:bg-[#eef4ff]/60 hover:text-primary"
+          className="group/back flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-primary-soft)]/60 hover:text-primary"
         >
           <ArrowLeft className="size-4 transition-transform group-hover/back:-translate-x-0.5" strokeWidth={2.4} />
           Automações
@@ -776,7 +776,7 @@ export default function AutomationDetailPage() {
                 "flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-bold tracking-tight transition-all",
                 copilotOpen
                   ? "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:-translate-y-px"
-                  : "border border-border bg-white text-foreground hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm",
+                  : "border border-border bg-white text-foreground hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm",
               )}
             >
               <Sparkles className="size-3.5" strokeWidth={2.4} />
@@ -788,7 +788,7 @@ export default function AutomationDetailPage() {
             <button
               type="button"
               onClick={handleAutoAlign}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm"
             >
               <Sparkles className="size-3.5" strokeWidth={2.4} />
               Auto alinhar
@@ -799,7 +799,7 @@ export default function AutomationDetailPage() {
             <button
               type="button"
               onClick={handleExportJson}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm"
             >
               <Download className="size-3.5" strokeWidth={2.4} />
               Exportar JSON
@@ -831,7 +831,7 @@ export default function AutomationDetailPage() {
               "flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-extrabold tracking-tight text-white shadow-[var(--shadow-indigo-glow)] transition-all",
               !hydrated || saveMutation.isPending || !name.trim()
                 ? "cursor-not-allowed opacity-60"
-                : "hover:-translate-y-px hover:bg-[#4466d6] hover:shadow-[0_14px_30px_-6px_rgba(80,125,241,0.45)]"
+                : "hover:-translate-y-px hover:bg-[var(--brand-primary-hover)] hover:shadow-[0_14px_30px_-6px_rgba(80,125,241,0.45)]"
             )}
           >
             <Save className="size-3.5" strokeWidth={2.4} />

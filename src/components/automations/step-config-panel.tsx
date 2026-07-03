@@ -2589,7 +2589,7 @@ function ConditionStepConfig({
 
   return (
     <>
-      <div className="rounded-lg border border-cyan-100 bg-cyan-50/40 p-3">
+      <div className="rounded-lg border border-[var(--color-cyan)]/15 bg-[var(--color-cyan-soft)] p-3">
         <p className="text-[12px] font-semibold text-[var(--text-primary)]">
           Condições em cascata
         </p>
@@ -2607,7 +2607,7 @@ function ConditionStepConfig({
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded bg-cyan-50 text-[11px] font-bold text-cyan-600 ring-1 ring-cyan-100">
+              <span className="flex size-6 items-center justify-center rounded bg-[var(--color-cyan-soft)] text-[11px] font-bold text-[var(--color-cyan)] ring-1 ring-[var(--color-cyan)]/15">
                 {bIdx + 1}
               </span>
               <Input
@@ -2745,7 +2745,7 @@ function ConditionStepConfig({
         + Adicionar próxima condição (OU)
       </Button>
 
-      <div className="space-y-1.5 rounded-lg border border-rose-100 bg-[var(--color-danger-bg)]/40 p-3">
+      <div className="space-y-1.5 rounded-lg border border-[var(--color-danger)]/20 bg-[var(--color-danger-bg)]/40 p-3">
         <Label className="text-[11px] text-[var(--color-danger-text)]">
           Nenhuma das condições → ir para
         </Label>
@@ -2917,7 +2917,7 @@ function AssignOwnerStepConfig({
       </div>
 
       {selectedType === "AI" && selectedId && (
-        <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-[12px] leading-relaxed text-violet-900">
+        <div className="rounded-lg border border-[var(--color-lavender)]/30 bg-[var(--color-lavender-soft)] p-3 text-[12px] leading-relaxed text-[var(--color-text-primary)]">
           <p className="mb-1 font-semibold">
             🤖 Handoff pra agente IA
           </p>
@@ -2985,7 +2985,7 @@ function TransferToAIAgentStepConfig({
 
   return (
     <>
-      <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-[11px] leading-relaxed text-violet-900">
+      <div className="rounded-lg border border-[var(--color-lavender)]/30 bg-[var(--color-lavender-soft)] p-3 text-[11px] leading-relaxed text-[var(--color-text-primary)]">
         <p className="mb-1 font-semibold">Como funciona</p>
         <p>
           Este passo atribui a conversa a um <b>agente de IA</b>. A partir
@@ -3389,14 +3389,14 @@ function MediaStepConfig({
           </Button>
 
           {hasFile && uploadedFileName && (
-            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-[var(--color-success-bg)] px-2.5 py-1.5">
+            <div className="flex items-center gap-2 rounded-md border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-2.5 py-1.5">
               <svg className="size-4 shrink-0 text-[var(--color-success-text)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <span className="flex-1 truncate text-xs font-medium text-emerald-800">
+              <span className="flex-1 truncate text-xs font-medium text-[var(--color-success-text)]">
                 {uploadedFileName}
               </span>
               <button
                 type="button"
-                className="text-xs text-[var(--color-success-text)] underline hover:text-emerald-800"
+                className="text-xs text-[var(--color-success-text)] underline hover:text-[var(--color-success-text)]"
                 onClick={() => {
                   setDraft((d) => ({ ...d, mediaUrl: "", uploadedFileName: "" }));
                 }}

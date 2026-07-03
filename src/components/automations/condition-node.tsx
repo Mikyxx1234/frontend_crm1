@@ -70,20 +70,20 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
       <Handle
         type="target"
         position={Position.Left}
-        className="size-3! border-2! border-white! bg-cyan-500!"
+        className="size-3! border-2! border-white! bg-[var(--color-cyan)]!"
       />
 
       <div
         className={cn(
           "relative w-[300px] overflow-hidden rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
           selected
-            ? "border-cyan-400 shadow-[var(--shadow-lavender-glow)] ring-2 ring-cyan-300/30"
-            : "border-cyan-200/80 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-cyan-300 hover:shadow-[var(--shadow-lavender-glow)]"
+            ? "border-[var(--color-cyan)] shadow-[var(--shadow-lavender-glow)] ring-2 ring-[var(--color-cyan)]/30"
+            : "border-[var(--color-cyan)]/80 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-[var(--color-cyan)] hover:shadow-[var(--shadow-lavender-glow)]"
         )}
       >
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-cyan-100/70 bg-cyan-50/50 px-3 py-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--color-bg-card)] text-cyan-500 ring-1 ring-cyan-100">
+        <div className="flex items-center gap-2 border-b border-[var(--color-cyan)]/70 bg-[var(--color-cyan-soft)] px-3 py-2">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--color-bg-card)] text-[var(--color-cyan)] ring-1 ring-[var(--color-cyan)]/15">
             <GitBranch className="size-3.5" strokeWidth={2.4} />
           </span>
           <div className="min-w-0 flex-1">
@@ -118,9 +118,9 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
           {branches.map((branch, idx) => (
             <li
               key={branch.id}
-              className="relative flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2 last:border-b-0 hover:bg-cyan-50/30"
+              className="relative flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2 last:border-b-0 hover:bg-[var(--color-cyan-soft)]"
             >
-              <span className="flex size-5 shrink-0 items-center justify-center rounded bg-cyan-50 text-[10px] font-bold tabular-nums text-cyan-600 ring-1 ring-cyan-100">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded bg-[var(--color-cyan-soft)] text-[10px] font-bold tabular-nums text-[var(--color-cyan)] ring-1 ring-[var(--color-cyan)]/15">
                 {idx + 1}
               </span>
               <div className="min-w-0 flex-1">
@@ -130,7 +130,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
                   </p>
                 )}
                 <p className="truncate text-[11px] font-medium tracking-tight text-[var(--color-ink-soft)]">
-                  <Filter className="mr-1 inline size-2.5 text-cyan-500" strokeWidth={2.4} />
+                  <Filter className="mr-1 inline size-2.5 text-[var(--color-cyan)]" strokeWidth={2.4} />
                   Se {ruleSummary(branch)}
                 </p>
               </div>

@@ -111,7 +111,7 @@ export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSe
           <div className="grid grid-cols-2 gap-2">
             {contactPhone && (
               <a href={`tel:${contactPhone}`}
-                className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+                className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[var(--color-teal)] hover:shadow-md">
                 <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--color-success)]/10">
                   <Phone className="size-4 text-[var(--color-success)]" />
                 </div>
@@ -119,7 +119,7 @@ export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSe
               </a>
             )}
             <button type="button" onClick={onSendTemplate}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[var(--color-teal)] hover:shadow-md">
               <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
                 <FileText className="size-4 text-[var(--brand-primary)]" />
               </div>
@@ -133,14 +133,14 @@ export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSe
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Negócio</p>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={onCreateDeal}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[var(--color-teal)] hover:shadow-md">
               <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--color-warning)]/10">
                 <Target className="size-4 text-[var(--color-warning)]" />
               </div>
               <span className="text-[11px] font-medium text-[var(--text-primary)]">Proposta</span>
             </button>
             <button type="button" onClick={onAddTask}
-              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[#00d4aa] hover:shadow-md">
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-[var(--glass-border-subtle)] bg-white p-3 text-center lumen-transition hover:-translate-y-0.5 hover:border-[var(--color-teal)] hover:shadow-md">
               <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--brand-secondary)]/10">
                 <Plus className="size-4 text-[var(--brand-secondary)]" />
               </div>

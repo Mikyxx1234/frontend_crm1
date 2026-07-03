@@ -112,7 +112,7 @@ export function NodePalette({ className }: { className?: string }) {
                       e.dataTransfer.setData(PALETTE_DRAG_TYPE, type);
                       e.dataTransfer.effectAllowed = "copy";
                     }}
-                    className="group/item flex w-full cursor-grab items-center gap-2.5 rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--color-bg-card)] px-2.5 py-2 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/30 hover:bg-[#eef4ff]/40 hover:shadow-[var(--shadow-indigo-glow)] active:cursor-grabbing"
+                    className="group/item flex w-full cursor-grab items-center gap-2.5 rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--color-bg-card)] px-2.5 py-2 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/30 hover:bg-[var(--color-primary-soft)]/40 hover:shadow-[var(--shadow-indigo-glow)] active:cursor-grabbing"
                   >
                     <span
                       className={cn(

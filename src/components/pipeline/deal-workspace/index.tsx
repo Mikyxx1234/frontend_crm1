@@ -414,7 +414,7 @@ export function DealWorkspace({
                       "shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium transition-all backdrop-blur",
                       active
                         ? "border-primary/30 bg-[var(--color-primary-soft)] text-primary shadow-[var(--glass-shadow-sm)]"
-                        : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] hover:bg-white/75",
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] hover:bg-[var(--glass-bg-overlay)]",
                     )}
                   >
                     {c.inboxName?.trim() || "Conversa"}
@@ -518,7 +518,7 @@ export function DealWorkspace({
                     "border-r border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
                   )}
                 >
-                  <div className="flex shrink-0 items-center justify-between border-b border-[var(--glass-border)] bg-white/45 px-4 py-3 backdrop-blur">
+                  <div className="flex shrink-0 items-center justify-between border-b border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-3 backdrop-blur">
                     <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-muted)]">
                       Conversas
                     </span>
@@ -527,7 +527,7 @@ export function DealWorkspace({
                         type="button"
                         onClick={() => setConvListOpen(false)}
                         aria-label="Fechar"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white/70 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-[var(--glass-bg-base)] hover:text-foreground active:scale-95"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-[var(--glass-bg-base)] hover:text-foreground active:scale-95"
                       >
                         <X className="size-4" />
                       </button>
@@ -579,7 +579,7 @@ export function DealWorkspace({
                       type="button"
                       onClick={() => setEditing(false)}
                       aria-label="Fechar edição"
-                      className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white/70 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-[var(--glass-bg-base)] hover:text-foreground active:scale-95"
+                      className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-[var(--glass-bg-base)] hover:text-foreground active:scale-95"
                     >
                       <X className="size-4" />
                     </button>

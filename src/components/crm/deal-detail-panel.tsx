@@ -1170,7 +1170,7 @@ function TabsBar({
                     <span
                       className={cn(
                         "rounded-full px-1.5 font-display text-[10px] font-bold",
-                        isActive ? "bg-white/25 text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
+                        isActive ? "bg-[var(--glass-bg)] text-white" : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
                       )}
                     >
                       {tab.count}

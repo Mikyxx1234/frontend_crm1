@@ -267,7 +267,7 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 w-full rounded-full border border-white/70 bg-[var(--glass-bg-base)] pl-9 pr-4 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                className="h-11 w-full rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-base)] pl-9 pr-4 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
           </div>
@@ -295,7 +295,7 @@ function LoginForm() {
                   "h-11 w-full rounded-full border bg-[var(--glass-bg-base)] pl-9 pr-11 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:outline-none focus:ring-2 disabled:opacity-50",
                   error
                     ? "border-[var(--color-danger)]/40 focus:border-[var(--color-danger)] focus:ring-[var(--color-danger)]/20"
-                    : "border-white/70 focus:border-primary focus:ring-primary/20",
+                    : "border-[var(--glass-border)] focus:border-primary focus:ring-primary/20",
                 )}
               />
               <button

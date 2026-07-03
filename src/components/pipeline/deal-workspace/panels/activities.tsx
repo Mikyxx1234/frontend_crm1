@@ -21,13 +21,13 @@ const TYPE_VISUAL: Record<
   string,
   { Icon: LucideIcon; bg: string; ring: string; fg: string }
 > = {
-  CALL:     { Icon: PhoneCall,     bg: "bg-cyan-50",     ring: "ring-cyan-200/70",     fg: "text-cyan-700" },
-  EMAIL:    { Icon: Mail,          bg: "bg-[var(--color-success-bg)]",  ring: "ring-emerald-200/70",  fg: "text-[var(--color-success-text)]" },
-  MEETING:  { Icon: Users,         bg: "bg-violet-50",   ring: "ring-violet-200/70",   fg: "text-violet-700" },
-  TASK:     { Icon: CheckCircle2,  bg: "bg-blue-50",     ring: "ring-blue-200/70",     fg: "text-blue-700" },
-  NOTE:     { Icon: MessageCircle, bg: "bg-[var(--color-bg-subtle)]",    ring: "ring-slate-200/70",    fg: "text-[var(--color-ink-soft)]" },
-  WHATSAPP: { Icon: MessageCircle, bg: "bg-green-50",    ring: "ring-green-200/70",    fg: "text-green-700" },
-  OTHER:    { Icon: Calendar,      bg: "bg-[var(--color-warn-bg)]",    ring: "ring-amber-200/70",    fg: "text-[var(--color-warn)]" },
+  CALL:     { Icon: PhoneCall,     bg: "bg-[var(--color-cyan-soft)]",              ring: "ring-[var(--color-cyan)]/70",        fg: "text-[var(--color-cyan)]" },
+  EMAIL:    { Icon: Mail,          bg: "bg-[var(--color-success-bg)]",             ring: "ring-[var(--color-success)]/70",     fg: "text-[var(--color-success-text)]" },
+  MEETING:  { Icon: Users,         bg: "bg-[var(--color-lavender-soft)]",          ring: "ring-[var(--color-lavender)]/70",    fg: "text-[var(--color-lavender)]" },
+  TASK:     { Icon: CheckCircle2,  bg: "bg-[var(--color-primary)]/8",              ring: "ring-[var(--color-primary)]/70",     fg: "text-[var(--color-primary)]" },
+  NOTE:     { Icon: MessageCircle, bg: "bg-[var(--color-bg-subtle)]",              ring: "ring-[var(--color-border-soft)]",    fg: "text-[var(--color-ink-soft)]" },
+  WHATSAPP: { Icon: MessageCircle, bg: "bg-[var(--color-success-soft)]",           ring: "ring-[var(--color-success)]/70",     fg: "text-[var(--color-success-text)]" },
+  OTHER:    { Icon: Calendar,      bg: "bg-[var(--color-warn-bg)]",                ring: "ring-[var(--color-warn)]/70",        fg: "text-[var(--color-warn)]" },
 };
 
 type ActivitiesPanelProps = {

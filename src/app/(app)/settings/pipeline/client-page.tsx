@@ -372,7 +372,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-white/0 text-white/60 transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-white"
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-transparent text-white/60 transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-white"
             >
               <IconDots size={14} />
             </button>
@@ -408,7 +408,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
         {/* Nome + toggle */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--glass-bg-subtle)]">
               <IconBolt size={14} className="text-white" />
             </div>
             <p className="truncate font-display text-[13.5px] font-bold text-white">
@@ -436,7 +436,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setCopyModalOpen(true); }}
-          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/20 py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-[var(--glass-bg-panel)]"
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-[var(--glass-bg-panel)]"
         >
           <IconCopy size={12} />
           Duplicar
@@ -576,8 +576,8 @@ function StageOptionsMenu({
               Alterar cor
             </span>
             <span
-              className="h-4 w-4 rounded-full border border-white/30"
-              style={{ background: currentColor }}
+              className="h-4 w-4 rounded-full border border-[var(--glass-border)]"
+            style={{ background: currentColor }}
             />
           </button>
 

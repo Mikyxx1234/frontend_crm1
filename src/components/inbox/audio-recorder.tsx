@@ -71,7 +71,7 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
           onClick={startRecording}
           disabled={disabled}
           className={cn(
-            "flex size-[52px] items-center justify-center rounded-full bg-[#2563eb] text-white shadow-sm lumen-transition hover:scale-105 hover:brightness-110 disabled:opacity-50",
+            "flex size-[52px] items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-sm lumen-transition hover:scale-105 hover:brightness-110 disabled:opacity-50",
             className,
           )}
           aria-label="Gravar áudio"
@@ -90,7 +90,7 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
             type="button"
             onClick={discard}
             aria-label="Cancelar gravação"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#64748b] lumen-transition hover:scale-105 hover:bg-muted hover:text-destructive"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-subtle)] lumen-transition hover:scale-105 hover:bg-muted hover:text-destructive"
           >
             <Trash2 className="size-4" />
           </button>
@@ -131,7 +131,7 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
           onClick={send}
           disabled={disabled}
           aria-label="Enviar áudio"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-white shadow-sm lumen-transition hover:scale-105 hover:brightness-110 disabled:opacity-50"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-sm lumen-transition hover:scale-105 hover:brightness-110 disabled:opacity-50"
         >
           <Send className="size-4" />
         </button>

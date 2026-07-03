@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { IconRobot as Bot, IconWorkflow as Workflow, IconWebhook as Webhook, IconUser as UserIcon, IconSettings as Cog } from "@tabler/icons-react";
+import { IconRobot as Bot, IconHierarchy as Workflow, IconWebhook as Webhook, IconUser as UserIcon, IconSettings as Cog } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import {

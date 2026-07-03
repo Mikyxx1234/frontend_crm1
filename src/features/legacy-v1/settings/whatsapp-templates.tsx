@@ -1,11 +1,11 @@
-Ôªø"use client";
+"use client";
 
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconAlertTriangle as AlertTriangle, IconArrowLeft as ArrowLeft, IconBookOpen as BookOpen, IconCheck as Check, IconCircleCheck as CheckCircle2, IconClipboard as ClipboardCopy, IconClock as Clock, IconEye as Eye, IconInfoCircle as Info, IconStack as Layers, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconRefresh as RefreshCw, IconSearch as Search, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconArrowLeft as ArrowLeft, IconBook2 as BookOpen, IconCheck as Check, IconCircleCheck as CheckCircle2, IconClipboard as ClipboardCopy, IconClock as Clock, IconEye as Eye, IconInfoCircle as Info, IconStack as Layers, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconRefresh as RefreshCw, IconSearch as Search, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/hooks/use-confirm";
@@ -77,8 +77,8 @@ type ListResponse = {
 
 const STATUS_PT: Record<string, string> = {
   APPROVED: "Aprovado",
-  PENDING: "Em an√°lise",
-  PENDING_APPROVAL: "Em an√°lise",
+  PENDING: "Em an·lise",
+  PENDING_APPROVAL: "Em an·lise",
   REJECTED: "Rejeitado",
   PAUSED: "Pausado",
   DISABLED: "Desativado",
@@ -88,18 +88,18 @@ const STATUS_PT: Record<string, string> = {
 
 const QUALITY_PT: Record<string, string> = {
   GREEN: "Alta",
-  YELLOW: "M√©dia",
+  YELLOW: "MÈdia",
   RED: "Baixa",
-  UNKNOWN: "‚Äî",
-  NONE: "‚Äî",
+  UNKNOWN: "ó",
+  NONE: "ó",
 };
 
-/** A Meta √†s vezes envia `rejected_reason: "NONE"` mesmo com status APPROVED ‚Äî n√£o √© rejei√ß√£o real. */
+/** A Meta ‡s vezes envia `rejected_reason: "NONE"` mesmo com status APPROVED ó n„o È rejeiÁ„o real. */
 /**
- * Heur√≠stica de identifica√ß√£o de templates do tipo "permiss√£o de liga√ß√£o"
- * (Call Permission Request). A Meta exp√µe essa tipagem via `sub_category =
- * CALL_PERMISSIONS_REQUEST` para templates WhatsApp Business Calling ‚Äî e,
- * por conven√ß√£o, os operadores nomeiam esses templates come√ßando com
+ * HeurÌstica de identificaÁ„o de templates do tipo "permiss„o de ligaÁ„o"
+ * (Call Permission Request). A Meta expıe essa tipagem via `sub_category =
+ * CALL_PERMISSIONS_REQUEST` para templates WhatsApp Business Calling ó e,
+ * por convenÁ„o, os operadores nomeiam esses templates comeÁando com
  * `call_permission`. Capturamos os dois sinais para robustez.
  */
 function isCallPermissionTemplate(row: Pick<MetaTemplateRow, "name" | "sub_category">): boolean {
@@ -159,7 +159,7 @@ function extractBodyText(components: unknown[] | undefined): string {
   return "";
 }
 
-/** Extrai textos exib√≠veis dos componentes retornados pela Graph API. */
+/** Extrai textos exibÌveis dos componentes retornados pela Graph API. */
 function componentPreviewBlocks(components: unknown[] | undefined): { title: string; body: string }[] {
   if (!components?.length) return [];
   const blocks: { title: string; body: string }[] = [];
@@ -182,7 +182,7 @@ function componentPreviewBlocks(components: unknown[] | undefined): { title: str
         const bt = typeof btn.text === "string" ? btn.text : "";
         if (bt) {
           blocks.push({
-            title: `Bot√£o ¬∑ ${String(btn.type ?? "?")}`,
+            title: `Bot„o ∑ ${String(btn.type ?? "?")}`,
             body: bt,
           });
         }
@@ -205,7 +205,7 @@ class TemplateBoundary extends React.Component<
       return (
         <div className="w-full space-y-4">
           <Link href="/settings" className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-            <ArrowLeft className="size-4" /> Configura√ß√µes
+            <ArrowLeft className="size-4" /> ConfiguraÁıes
           </Link>
           <div className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[var(--color-danger-bg)] p-6 text-sm">
             <div className="mb-2 flex items-center gap-2 font-bold text-[var(--color-danger)]">
@@ -314,11 +314,11 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
   const [addSecurityRecommendation, setAddSecurityRecommendation] = React.useState(true);
   const [codeExpirationMinutes, setCodeExpirationMinutes] = React.useState(10);
   const [otpType, setOtpType] = React.useState("COPY_CODE");
-  const [otpButtonText, setOtpButtonText] = React.useState("Copiar c√≥digo");
+  const [otpButtonText, setOtpButtonText] = React.useState("Copiar cÛdigo");
   const [quickTexts, setQuickTexts] = React.useState<string[]>([""]);
   const [urlRows, setUrlRows] = React.useState<{ text: string; url: string }[]>([{ text: "", url: "" }]);
   const [rawJson, setRawJson] = React.useState(
-    '{\n  "name": "meu_template",\n  "language": "pt_BR",\n  "category": "MARKETING",\n  "parameter_format": "POSITIONAL",\n  "components": [\n    { "type": "BODY", "text": "Ol√° {{1}}" }\n  ]\n}',
+    '{\n  "name": "meu_template",\n  "language": "pt_BR",\n  "category": "MARKETING",\n  "parameter_format": "POSITIONAL",\n  "components": [\n    { "type": "BODY", "text": "Ol· {{1}}" }\n  ]\n}',
   );
 
   const { data: flowDefsList = [] } = useQuery({
@@ -337,7 +337,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
 
   const [flowAssistEnabled, setFlowAssistEnabled] = React.useState(false);
   const [flowPickId, setFlowPickId] = React.useState("");
-  const [flowButtonText, setFlowButtonText] = React.useState("Abrir formul√°rio");
+  const [flowButtonText, setFlowButtonText] = React.useState("Abrir formul·rio");
   const [flowActionMeta, setFlowActionMeta] = React.useState<"NAVIGATE" | "DATA_EXCHANGE">("NAVIGATE");
 
   React.useEffect(() => {
@@ -363,7 +363,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       return j;
     },
     onSuccess: () => {
-      toast.success("Template enviado √† Meta para an√°lise.");
+      toast.success("Template enviado ‡ Meta para an·lise.");
       queryClient.invalidateQueries({ queryKey: ["meta-whatsapp-templates"] });
       setCreateOpen(false);
       resetForm();
@@ -398,7 +398,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
     setCreateMode("assisted");
     setFlowAssistEnabled(false);
     setFlowPickId("");
-    setFlowButtonText("Abrir formul√°rio");
+    setFlowButtonText("Abrir formul·rio");
     setFlowActionMeta("NAVIGATE");
   }
 
@@ -443,7 +443,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
     try {
       parsed = JSON.parse(rawJson) as Record<string, unknown>;
     } catch {
-      toast.error("JSON inv√°lido.");
+      toast.error("JSON inv·lido.");
       return;
     }
     createMutation.mutate({ raw: true, payload: parsed });
@@ -456,7 +456,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
           href="/settings"
           className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
         >
-          <ArrowLeft className="size-4" /> Configura√ß√µes
+          <ArrowLeft className="size-4" /> ConfiguraÁıes
         </Link>
       )}
 
@@ -477,16 +477,16 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
           </>
         }
       >
-        Lista, cria√ß√£o e exclus√£o na conta comercial (WABA). Tipos suportados no assistente:{" "}
+        Lista, criaÁ„o e exclus„o na conta comercial (WABA). Tipos suportados no assistente:{" "}
         <strong className="font-bold text-[var(--text-secondary)]">UTILITY</strong>,{" "}
         <strong className="font-bold text-[var(--text-secondary)]">MARKETING</strong> e{" "}
-        <strong className="font-bold text-[var(--text-secondary)]">AUTHENTICATION</strong>. O assistente tamb√©m permite{" "}
-        <strong className="font-bold text-[var(--text-secondary)]">bot√£o Flow</strong> com{" "}
+        <strong className="font-bold text-[var(--text-secondary)]">AUTHENTICATION</strong>. O assistente tambÈm permite{" "}
+        <strong className="font-bold text-[var(--text-secondary)]">bot„o Flow</strong> com{" "}
         <code className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1 py-0.5 font-mono text-[11px] text-[var(--text-secondary)]">
           flow_id
         </code>{" "}
-        publicado no CRM (aba Flows). Carrossel e permiss√£o de liga√ß√£o continuam no modo{" "}
-        <strong className="font-bold text-[var(--text-secondary)]">JSON avan√ßado</strong>.
+        publicado no CRM (aba Flows). Carrossel e permiss„o de ligaÁ„o continuam no modo{" "}
+        <strong className="font-bold text-[var(--text-secondary)]">JSON avanÁado</strong>.
         <div className="mt-2.5 flex flex-wrap items-center gap-4">
           <a
             href={DOCS_LIST}
@@ -510,14 +510,14 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
           >
-            <Phone className="size-3.5" /> Permiss√£o de liga√ß√£o
+            <Phone className="size-3.5" /> Permiss„o de ligaÁ„o
           </a>
         </div>
       </HubSubHeader>
 
       <HubStatGrid>
         <HubStat tone="success" icon={<CheckCircle2 className="size-5" />} value={countApproved} label="Aprovados pela Meta" />
-        <HubStat tone="warn" icon={<Clock className="size-5" />} value={countPending} label="Em revis√£o" />
+        <HubStat tone="warn" icon={<Clock className="size-5" />} value={countPending} label="Em revis„o" />
         <HubStat tone="brand" icon={<MessageSquare className="size-5" />} value={rows.length} label="Templates na WABA" />
         <HubStat tone="violet" icon={<UserCheck className="size-5" />} value={countAgent} label="Habilitados p/ Agente" />
       </HubStatGrid>
@@ -537,7 +537,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       {isError ? (
         <HubCallout tone="danger" icon={<AlertTriangle className="size-[18px]" />}>
           {error instanceof Error ? error.message : "Erro ao falar com a Meta."}{" "}
-          Se aparecer configura√ß√£o em falta, confira no servidor{" "}
+          Se aparecer configuraÁ„o em falta, confira no servidor{" "}
           <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-danger)]">
             META_WHATSAPP_*
           </code>{" "}
@@ -570,8 +570,8 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
         </HubToolbar>
 
         <p className="px-[18px] pt-3 text-[12px] text-[var(--text-muted)]">
-          Com a lista a carregar, o token no servidor j√° tem acesso √† WABA.{" "}
-          <strong className="font-bold text-[var(--text-secondary)]">Dica:</strong> n√£o reutilize o mesmo nome de template
+          Com a lista a carregar, o token no servidor j· tem acesso ‡ WABA.{" "}
+          <strong className="font-bold text-[var(--text-secondary)]">Dica:</strong> n„o reutilize o mesmo nome de template
           enquanto outro com esse nome estiver pendente na Meta.
         </p>
 
@@ -585,7 +585,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
           <div className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
             <AlertTriangle className="size-9 text-[var(--color-danger)] opacity-70" />
             <p className="text-[13px] text-[var(--text-muted)]">
-              N√£o foi poss√≠vel carregar os templates da WABA. Veja o aviso acima.
+              N„o foi possÌvel carregar os templates da WABA. Veja o aviso acima.
             </p>
           </div>
         ) : filteredRows.length === 0 ? (
@@ -614,7 +614,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     </span>
                   </TooltipHost>
                 </th>
-                <th className="w-[120px] text-right">A√ß√µes</th>
+                <th className="w-[120px] text-right">AÁıes</th>
               </tr>
             </thead>
             <tbody>
@@ -625,7 +625,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                 const q =
                   scoreRaw && !/^none$/i.test(String(scoreRaw))
                     ? QUALITY_PT[String(scoreRaw).toUpperCase()] ?? scoreRaw
-                    : "‚Äî";
+                    : "ó";
                 const rejectReason = meaningfulRejectedReason(row.status, row.rejected_reason);
                 const cfg = configByMetaId.get(row.id);
                 const isEditingLabel = editingLabelId === row.id;
@@ -668,7 +668,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                       <div className="flex items-center gap-2">
                         <span>{row.name}</span>
                         {isCallPermission ? (
-                          <TooltipHost label="Template de permiss√£o de liga√ß√£o (Business Calling API)" side="top">
+                          <TooltipHost label="Template de permiss„o de ligaÁ„o (Business Calling API)" side="top">
                             <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-info)] ring-1 ring-[color-mix(in_srgb,var(--color-info)_30%,transparent)]">
                               <Phone className="size-2.5" />
                               Voz
@@ -713,12 +713,12 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3.5 align-middle tabular-nums text-[var(--text-muted)]">{row.language ?? "‚Äî"}</td>
+                    <td className="px-4 py-3.5 align-middle tabular-nums text-[var(--text-muted)]">{row.language ?? "ó"}</td>
                     <td className="px-4 py-3.5 align-middle">
                       <span className="text-xs text-[var(--text-secondary)]">
-                        {row.category ?? "‚Äî"}
+                        {row.category ?? "ó"}
                         {row.sub_category ? (
-                          <span className="text-[var(--text-muted)]"> ¬∑ {row.sub_category}</span>
+                          <span className="text-[var(--text-muted)]"> ∑ {row.sub_category}</span>
                         ) : null}
                       </span>
                     </td>
@@ -745,7 +745,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     <td className="px-4 py-3.5 align-middle text-xs text-[var(--text-secondary)]">{q}</td>
                     <td className="px-4 py-3.5 text-center align-middle">
                       <TooltipHost
-                        label={cfg?.agentEnabled ? "Liberado para agentes ‚Äî clique para bloquear" : "Bloqueado para agentes ‚Äî clique para liberar"}
+                        label={cfg?.agentEnabled ? "Liberado para agentes ó clique para bloquear" : "Bloqueado para agentes ó clique para liberar"}
                         side="left"
                       >
                         <button
@@ -807,7 +807,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                             onClick={async () => {
                               const ok = await confirmDialog({
                                 title: "Excluir template",
-                                description: `Excluir o template "${row.name}" na Meta? Esta a√ß√£o n√£o pode ser desfeita.`,
+                                description: `Excluir o template "${row.name}" na Meta? Esta aÁ„o n„o pode ser desfeita.`,
                                 confirmLabel: "Excluir",
                                 variant: "destructive",
                               });
@@ -841,7 +841,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       ) : null}
       {afterStack.length > 0 ? (
         <Button type="button" variant="ghost" size="sm" onClick={() => setAfterStack([])}>
-          Voltar ao in√≠cio da lista
+          Voltar ao inÌcio da lista
         </Button>
       ) : null}
 
@@ -853,7 +853,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               Novo template na Meta
             </DialogTitle>
             <DialogDescription>
-              O template segue para an√°lise autom√°tica da Meta. Campos vari√°veis:{" "}
+              O template segue para an·lise autom·tica da Meta. Campos vari·veis:{" "}
               <code className="font-mono text-xs text-[var(--text-secondary)]">{"{{1}}"}</code> (POSITIONAL) ou nomes em NAMED, conforme a doc.
             </DialogDescription>
           </DialogHeader>
@@ -873,7 +873,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               size="sm"
               onClick={() => setCreateMode("json")}
             >
-              JSON avan√ßado
+              JSON avanÁado
             </Button>
           </div>
 
@@ -889,7 +889,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               <p className="text-xs text-[var(--text-muted)]">
                 Use para <strong className="font-bold text-[var(--text-secondary)]">FLOW</strong>,{" "}
                 <strong className="font-bold text-[var(--text-secondary)]">carousel</strong>,{" "}
-                <strong className="font-bold text-[var(--text-secondary)]">call permission request</strong>, MPM, etc. ‚Äî copie a estrutura dos exemplos da Meta e
+                <strong className="font-bold text-[var(--text-secondary)]">call permission request</strong>, MPM, etc. ó copie a estrutura dos exemplos da Meta e
                 ajuste nomes/IDs.
               </p>
             </div>
@@ -926,10 +926,10 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               </div>
               {category !== "AUTHENTICATION" ? (
                 <div>
-                  <Label>Formato de par√¢metros</Label>
+                  <Label>Formato de par‚metros</Label>
                   <DropdownGlass
                     options={[
-                      { value: "POSITIONAL", label: "POSITIONAL ({{1}}, {{2}}‚Ä¶)" },
+                      { value: "POSITIONAL", label: "POSITIONAL ({{1}}, {{2}}Ö)" },
                       { value: "NAMED", label: "NAMED (nomes na doc Meta)" },
                     ]}
                     value={parameterFormat}
@@ -942,10 +942,10 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               {category !== "AUTHENTICATION" ? (
                 <>
                   <div>
-                    <Label>Cabe√ßalho</Label>
+                    <Label>CabeÁalho</Label>
                     <DropdownGlass
                       options={[
-                        { value: "NONE", label: "Sem cabe√ßalho" },
+                        { value: "NONE", label: "Sem cabeÁalho" },
                         { value: "TEXT", label: "TEXT" },
                       ]}
                       value={headerFormat}
@@ -955,7 +955,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                   </div>
                   {headerFormat === "TEXT" ? (
                     <div>
-                      <Label>Texto do cabe√ßalho</Label>
+                      <Label>Texto do cabeÁalho</Label>
                       <Input value={headerText} onChange={(e) => setHeaderText(e.target.value)} />
                     </div>
                   ) : null}
@@ -963,7 +963,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               ) : null}
 
               <div>
-                <Label>Corpo {category === "AUTHENTICATION" ? "(ex.: {{1}} √© seu c√≥digo)" : ""}</Label>
+                <Label>Corpo {category === "AUTHENTICATION" ? "(ex.: {{1}} È seu cÛdigo)" : ""}</Label>
                 <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="text-sm" />
               </div>
 
@@ -975,10 +975,10 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                       checked={addSecurityRecommendation}
                       onChange={(e) => setAddSecurityRecommendation(e.target.checked)}
                     />
-                    Recomenda√ß√£o de seguran√ßa (Meta)
+                    RecomendaÁ„o de seguranÁa (Meta)
                   </label>
                   <div>
-                    <Label>Expira√ß√£o do c√≥digo (minutos)</Label>
+                    <Label>ExpiraÁ„o do cÛdigo (minutos)</Label>
                     <Input
                       type="number"
                       min={1}
@@ -1000,18 +1000,18 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     />
                   </div>
                   <div>
-                    <Label>Texto do bot√£o OTP</Label>
+                    <Label>Texto do bot„o OTP</Label>
                     <Input value={otpButtonText} onChange={(e) => setOtpButtonText(e.target.value)} />
                   </div>
                 </div>
               ) : (
                 <>
                   <div>
-                    <Label>Rodap√© (opcional)</Label>
+                    <Label>RodapÈ (opcional)</Label>
                     <Input value={footer} onChange={(e) => setFooter(e.target.value)} />
                   </div>
                   <div>
-                    <Label className="text-xs text-[var(--text-muted)]">Bot√µes r√°pidos (um por linha)</Label>
+                    <Label className="text-xs text-[var(--text-muted)]">Botıes r·pidos (um por linha)</Label>
                     {quickTexts.map((q, i) => (
                       <Input
                         key={i}
@@ -1036,7 +1036,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     </Button>
                   </div>
                   <div>
-                    <Label className="text-xs text-[var(--text-muted)]">Bot√µes URL</Label>
+                    <Label className="text-xs text-[var(--text-muted)]">Botıes URL</Label>
                     {urlRows.map((r, i) => (
                       <div key={i} className="mb-2 flex gap-2">
                         <Input
@@ -1076,7 +1076,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                         checked={flowAssistEnabled}
                         onChange={(e) => setFlowAssistEnabled(e.target.checked)}
                       />
-                      Bot√£o WhatsApp Flow (assistido)
+                      Bot„o WhatsApp Flow (assistido)
                     </label>
                     {flowAssistEnabled ? (
                       <div className="mt-3 space-y-2">
@@ -1089,7 +1089,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                             }))}
                             value={flowPickId || undefined}
                             onValueChange={(v) => setFlowPickId(v)}
-                            placeholder="‚Äî escolha ‚Äî"
+                            placeholder="ó escolha ó"
                             triggerClassName="mt-1 w-full"
                           />
                           {publishedFlows.length === 0 ? (
@@ -1099,14 +1099,14 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                                 href="/settings/message-models?tab=flows"
                                 className="font-bold text-[var(--brand-primary)] underline-offset-2 hover:underline"
                               >
-                                Modelos ‚Üí Flows
+                                Modelos ? Flows
                               </Link>
                               .
                             </p>
                           ) : null}
                         </div>
                         <div>
-                          <Label>Texto do bot√£o (m√°x. 25)</Label>
+                          <Label>Texto do bot„o (m·x. 25)</Label>
                           <Input
                             value={flowButtonText}
                             onChange={(e) => setFlowButtonText(e.target.value.slice(0, 25))}
@@ -1165,14 +1165,14 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
           <DialogHeader>
             <DialogTitle className="font-mono text-base">{previewRow?.name ?? "Template"}</DialogTitle>
             <DialogDescription>
-              {previewRow?.language ?? "‚Äî"} ¬∑ {previewRow?.status ?? "‚Äî"}
+              {previewRow?.language ?? "ó"} ∑ {previewRow?.status ?? "ó"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {previewRow && componentPreviewBlocks(previewRow.components).length === 0 ? (
               <p className="text-sm text-[var(--text-muted)]">
-                N√£o h√° campo de texto nos componentes devolvidos pela API (pode ocorrer em tipos especiais).
-                Consulte o conte√∫do no{" "}
+                N„o h· campo de texto nos componentes devolvidos pela API (pode ocorrer em tipos especiais).
+                Consulte o conte˙do no{" "}
                 <a
                   href="https://business.facebook.com/latest/whatsapp_manager/message_templates"
                   target="_blank"
@@ -1208,7 +1208,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
   );
 }
 
-/** Real√ßa vari√°veis {{...}} dentro do corpo no preview do bal√£o. */
+/** RealÁa vari·veis {{...}} dentro do corpo no preview do bal„o. */
 function highlightTemplateVars(text: string): React.ReactNode {
   const parts = text.split(/(\{\{.*?\}\})/g);
   return parts.map((p, i) =>
@@ -1227,9 +1227,9 @@ function highlightTemplateVars(text: string): React.ReactNode {
 }
 
 /**
- * Pr√©-visualiza√ß√£o do bal√£o WhatsApp em tempo real (modo assistido do modal
- * "Novo template na Meta"). Apenas apresenta√ß√£o: consome o estado j√° existente
- * do formul√°rio, sem chamadas de API. Cores ISOLADAS em --wa-* (n√£o tokens
+ * PrÈ-visualizaÁ„o do bal„o WhatsApp em tempo real (modo assistido do modal
+ * "Novo template na Meta"). Apenas apresentaÁ„o: consome o estado j· existente
+ * do formul·rio, sem chamadas de API. Cores ISOLADAS em --wa-* (n„o tokens
  * globais), por serem cores de marca do canal.
  */
 function WhatsappTemplatePreview({
@@ -1265,8 +1265,8 @@ function WhatsappTemplatePreview({
   }
 
   return (
-    <aside aria-label="Pr√©-visualiza√ß√£o do WhatsApp" className="space-y-2">
-      <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">Pr√©-visualiza√ß√£o</p>
+    <aside aria-label="PrÈ-visualizaÁ„o do WhatsApp" className="space-y-2">
+      <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">PrÈ-visualizaÁ„o</p>
       <div
         className="overflow-hidden rounded-[22px] border-[5px] shadow-[var(--glass-shadow)]"
         style={{ borderColor: "var(--wa-frame)", background: "var(--wa-bg)" }}
@@ -1283,7 +1283,7 @@ function WhatsappTemplatePreview({
               <p className="mb-1 font-bold">{headerText}</p>
             ) : null}
             <p className="whitespace-pre-line leading-relaxed">
-              {body.trim() ? highlightTemplateVars(body) : "Corpo da mensagem‚Ä¶"}
+              {body.trim() ? highlightTemplateVars(body) : "Corpo da mensagemÖ"}
             </p>
             {!isAuth && footer.trim() ? (
               <p className="mt-1.5 text-[10px]" style={{ color: "var(--wa-text-muted)" }}>{footer}</p>

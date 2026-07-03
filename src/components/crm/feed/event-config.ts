@@ -10,7 +10,7 @@
  * Tipos nao mapeados caem em FALLBACK_CONFIG e geram descricao vazia.
  */
 
-import { IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconRobot as Bot, IconCalendarCheck as CalendarCheck, IconCircleCheck as CheckCircle2, IconClock as Clock, IconEdit as Edit3, IconMessage as MessageSquare, IconMessagePlus as MessageSquarePlus, IconPackage as Package, IconPhone as Phone, IconPhoneMissed as PhoneMissed, IconSend as Send, IconNote as StickyNote, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserCheck as UserCheck, IconUserCog as UserCog, IconUserMinus as UserMinus, IconUserPlus as UserPlus, IconUsers as Users, IconWorkflow as Workflow, IconCircleX as XCircle, IconRefresh as RefreshCw, IconRotateCounterClockwise as RotateCcw } from "@tabler/icons-react"
+import { IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconRobot as Bot, IconCalendarCheck as CalendarCheck, IconCircleCheck as CheckCircle2, IconClock as Clock, IconEdit as Edit3, IconMessage as MessageSquare, IconMessagePlus as MessageSquarePlus, IconPackage as Package, IconPhone as Phone, IconPhoneEnd as PhoneMissed, IconSend as Send, IconNote as StickyNote, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserCheck as UserCheck, IconUserCog as UserCog, IconUserMinus as UserMinus, IconUserPlus as UserPlus, IconUsers as Users, IconHierarchy as Workflow, IconCircleX as XCircle, IconRefresh as RefreshCw, IconRotate2 as RotateCcw } from "@tabler/icons-react"
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";

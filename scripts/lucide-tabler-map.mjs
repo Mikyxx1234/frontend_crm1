@@ -32,11 +32,11 @@ export const ICON_MAP = {
   BellOff:                "IconBellOff",
   BellPlus:               "IconBellPlus",
   Book:                   "IconBook",
-  BookOpen:               "IconBookOpen",
+  BookOpen:               "IconBook2",
   Bookmark:               "IconBookmark",
   Bot:                    "IconRobot",
-  BotMessageSquare:       "IconMessageBot",
-  Boxes:                  "IconBoxes",
+  BotMessageSquare:       "IconRobotFace",
+  Boxes:                  "IconBoxMultiple",
   Briefcase:              "IconBriefcase",
   BriefcaseBusiness:      "IconBriefcase2",
   Building2:              "IconBuilding",
@@ -48,7 +48,7 @@ export const ICON_MAP = {
   CalendarClock:          "IconCalendarClock",
   CalendarDays:           "IconCalendar",
   CalendarPlus:           "IconCalendarPlus",
-  CalendarRange:          "IconCalendarRange",
+  CalendarRange:          "IconCalendarStats",
   Camera:                 "IconCamera",
   ChartBar:               "IconChartBar",
   Check:                  "IconCheck",
@@ -107,7 +107,7 @@ export const ICON_MAP = {
   // ── H ────────────────────────────────────────────────────────────
   Hand:                   "IconHandStop",
   HandCoins:              "IconCoins",
-  Handshake:              "IconHandshake",
+  Handshake:              "IconHeartHandshake",
   Hash:                   "IconHash",
   HeartHandshake:         "IconHeartHandshake",
   Headphones:             "IconHeadphones",
@@ -133,7 +133,7 @@ export const ICON_MAP = {
   LayoutGrid:             "IconLayoutGrid",
   LayoutList:             "IconLayoutList",
   LayoutPanelTop:         "IconLayoutNavbar",
-  LayoutTemplate:         "IconLayoutTemplate",
+  LayoutTemplate:         "IconTemplate",
   Layers:                 "IconStack",
   LifeBuoy:               "IconLifebuoy",
   Link:                   "IconLink",
@@ -169,7 +169,7 @@ export const ICON_MAP = {
 
   // ── P ────────────────────────────────────────────────────────────
   Package:                "IconPackage",
-  PackageMinus:           "IconPackageMinus",
+  PackageMinus:           "IconPackageOff",
   Palette:                "IconPalette",
   PanelRight:             "IconLayoutSidebarRight",
   PanelRightClose:        "IconLayoutSidebarRightCollapse",
@@ -180,7 +180,7 @@ export const ICON_MAP = {
   Phone:                  "IconPhone",
   PhoneCall:              "IconPhoneCall",
   PhoneIncoming:          "IconPhoneIncoming",
-  PhoneMissed:            "IconPhoneMissed",
+  PhoneMissed:            "IconPhoneEnd",
   PhoneOff:               "IconPhoneOff",
   PhoneOutgoing:          "IconPhoneOutgoing",
   Pin:                    "IconPin",
@@ -200,7 +200,7 @@ export const ICON_MAP = {
   RefreshCw:              "IconRefresh",
   Repeat:                 "IconRepeat",
   Reply:                  "IconArrowBackUp",
-  RotateCcw:              "IconRotateCounterClockwise",
+  RotateCcw:              "IconRotate2",
   Route:                  "IconRoute",
 
   // ── S ────────────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ export const ICON_MAP = {
   Webhook:                "IconWebhook",
   Wifi:                   "IconWifi",
   WifiOff:                "IconWifiOff",
-  Workflow:               "IconWorkflow",
+  Workflow:               "IconHierarchy",
   Wrench:                 "IconTool",
 
   // ── X ────────────────────────────────────────────────────────────

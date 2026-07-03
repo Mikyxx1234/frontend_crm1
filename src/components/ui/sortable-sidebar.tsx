@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { IconEye as Eye, IconEyeOff as EyeOff, IconGripVertical as GripVertical, IconRotateCounterClockwise as RotateCcw, IconDeviceFloppy as Save, IconAdjustments as Settings2 } from "@tabler/icons-react";
+import { IconEye as Eye, IconEyeOff as EyeOff, IconGripVertical as GripVertical, IconRotate2 as RotateCcw, IconDeviceFloppy as Save, IconAdjustments as Settings2 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import type { SectionConfig } from "@/lib/field-layout";

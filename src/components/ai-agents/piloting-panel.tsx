@@ -18,7 +18,7 @@ import { apiUrl } from "@/lib/api";
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { IconAlertTriangle as AlertTriangle, IconBan as Ban, IconRobot as Bot, IconCalendarClock as CalendarClock, IconChecks as CheckCheck, IconClock as Clock, IconEye as Eye, IconHandshake as Handshake, IconKeyboard as Keyboard, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSparkles as Sparkles, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconBan as Ban, IconRobot as Bot, IconCalendarClock as CalendarClock, IconChecks as CheckCheck, IconClock as Clock, IconEye as Eye, IconHeartHandshake as Handshake, IconKeyboard as Keyboard, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSparkles as Sparkles, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";

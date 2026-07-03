@@ -1,6 +1,6 @@
 "use client";
 
-import { IconPencil as Pencil, IconRotateCounterClockwise as RotateCcw, IconTrash as Trash2, IconTrophy as Trophy, IconCircleX as XCircle } from "@tabler/icons-react";
+import { IconPencil as Pencil, IconRotate2 as RotateCcw, IconTrash as Trash2, IconTrophy as Trophy, IconCircleX as XCircle } from "@tabler/icons-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

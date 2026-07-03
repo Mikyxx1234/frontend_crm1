@@ -17,7 +17,7 @@
  */
 
 import type { Icon as LucideIcon } from "@tabler/icons-react";
-import { IconAlarm as AlarmClock, IconRosetteDiscountCheck as BadgeCheck, IconCake as Cake, IconCalendarClock as CalendarClock, IconClipboardList as ClipboardList, IconSchool as GraduationCap, IconCoins as HandCoins, IconHandshake as Handshake, IconHeartHandshake as HeartHandshake, IconMessageHeart as MessageSquareHeart, IconRepeat as Repeat, IconSparkles as Sparkles, IconTarget as Target, IconUsers as Users, IconBolt as Zap } from "@tabler/icons-react";
+import { IconAlarm as AlarmClock, IconRosetteDiscountCheck as BadgeCheck, IconCake as Cake, IconCalendarClock as CalendarClock, IconClipboardList as ClipboardList, IconSchool as GraduationCap, IconCoins as HandCoins, IconHeartHandshake as Handshake, IconHeartHandshake as HeartHandshake, IconMessageHeart as MessageSquareHeart, IconRepeat as Repeat, IconSparkles as Sparkles, IconTarget as Target, IconUsers as Users, IconBolt as Zap } from "@tabler/icons-react";
 
 export type AutomationTemplateStep = {
   id: string;

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type KnowledgeDoc = {
   id: string;
@@ -42,6 +43,7 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
   const [title, setTitle] = React.useState("");
   const [content, setContent] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   const { data: docs = [], isLoading } = useQuery({
     queryKey: ["ai-agent-knowledge", agentId],
@@ -216,9 +218,13 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
                 size="icon"
                 variant="ghost"
                 className="size-8 text-destructive/70 hover:text-destructive"
-                onClick={() => {
-                  if (confirm(`Excluir documento "${d.title}"?`))
-                    deleteMut.mutate(d.id);
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: `Excluir documento "${d.title}"?`,
+                    confirmLabel: "Excluir",
+                    destructive: true,
+                  });
+                  if (ok) deleteMut.mutate(d.id);
                 }}
                 disabled={deleteMut.isPending}
               >
@@ -228,6 +234,7 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
           ))}
         </div>
       )}
+      {dialog}
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 import { ProductDialog } from "@/features/products-v2/product-dialog";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
@@ -220,9 +221,16 @@ export function CatalogsManager() {
   const [editing, setEditing] = React.useState<CatalogView | null>(null);
   const [newProductCatalogId, setNewProductCatalogId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
+  const { confirm, dialog } = useConfirm();
 
-  function handleDelete(id: string, name: string) {
-    if (!confirm(`Excluir o catálogo "${name}"? Os produtos ficarão sem catálogo.`)) return;
+  async function handleDelete(id: string, name: string) {
+    const ok = await confirm({
+      title: `Excluir o catálogo "${name}"?`,
+      description: "Os produtos ficarão sem catálogo.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
     deleteMutation.mutate(id, {
       onSuccess: () => toast.success("Catálogo excluído."),
       onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao excluir"),
@@ -455,6 +463,7 @@ export function CatalogsManager() {
           )}
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   );
 }

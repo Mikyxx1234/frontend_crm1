@@ -24,6 +24,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 import type { SavedFilter } from "./types";
 
@@ -57,6 +58,7 @@ export function SavedFiltersMenu({
     null,
   );
   const [isDark, setIsDark] = React.useState(false);
+  const { confirm: confirmDelete, dialog: confirmDialog } = useConfirm();
 
   React.useEffect(() => {
     if (typeof document === "undefined") return;
@@ -89,6 +91,8 @@ export function SavedFiltersMenu({
       const target = e.target as Node;
       if (ref.current?.contains(target)) return;
       if (anchorRef?.current?.contains(target)) return;
+      // Cliques dentro do confirm dialog (portal Radix no body) não fecham o menu
+      if (target instanceof Element && target.closest('[role="alertdialog"]')) return;
       onOpenChange(false);
     }
     function onEsc(e: KeyboardEvent) {
@@ -104,7 +108,7 @@ export function SavedFiltersMenu({
 
   if (!open || !pos || typeof document === "undefined") return null;
 
-  return createPortal(
+  const menu = createPortal(
     // Portal no <body> + posição fixed + cor literal inline: blindagem
     // total contra stacking/backdrop-filter de ancestrais.
     <div
@@ -114,7 +118,7 @@ export function SavedFiltersMenu({
         top: pos.top,
         right: pos.right,
         width: 288,
-        zIndex: 9999,
+        zIndex: "var(--z-popover)",
         backgroundColor: isDark ? "#1a2238" : "#ffffff",
         isolation: "isolate",
       }}
@@ -194,8 +198,13 @@ export function SavedFiltersMenu({
                   <TooltipGlass label="Excluir" side="top">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm(`Excluir filtro "${f.name}"?`)) onDelete(f);
+                      onClick={async () => {
+                        const ok = await confirmDelete({
+                          title: `Excluir filtro "${f.name}"?`,
+                          confirmLabel: "Excluir",
+                          destructive: true,
+                        });
+                        if (ok) onDelete(f);
                       }}
                       className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-red-600 dark:hover:text-red-400"
                     >
@@ -210,6 +219,13 @@ export function SavedFiltersMenu({
       </div>
     </div>,
     document.body,
+  );
+
+  return (
+    <>
+      {menu}
+      {confirmDialog}
+    </>
   );
 }
 

@@ -63,7 +63,7 @@ export function FilterModalThreeCol({
   const section: SectionProps = { draft, options, optionsLoading, optionsError, setDraftField, toggleArray };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-(--z-popover) flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onMouseDown={() => onOpenChange(false)} aria-hidden />
       <div
         role="dialog"

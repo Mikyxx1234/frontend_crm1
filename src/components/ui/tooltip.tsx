@@ -99,7 +99,7 @@ export const TooltipContent = React.forwardRef<
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-[9999] w-max max-w-xs",
+          "z-(--z-popover) w-max max-w-xs",
           "rounded-lg border border-border bg-popover px-2.5 py-1.5",
           "text-[11px] font-semibold text-popover-foreground",
           "shadow-[var(--shadow-lg)]",

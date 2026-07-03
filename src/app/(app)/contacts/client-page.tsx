@@ -28,12 +28,13 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { Chip } from "@/components/crm/chip";
 import { InputGlass } from "@/components/crm/input-glass";
 import {
-  GlassModal,
-  GlassModalPanel,
-  GlassModalHeader,
-  GlassModalBody,
-  GlassModalFooter,
-} from "@/components/crm/glass-modal";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import {
   useContacts,
@@ -366,25 +367,25 @@ function ConfirmDeleteDialog({
   onConfirm: () => void;
 }) {
   return (
-    <GlassModal open={open} onOpenChange={(next) => !next && onCancel()}>
-      <GlassModalPanel className="w-[440px]">
-        <GlassModalHeader
-          title={`Excluir ${count === 1 ? "contato" : `${count} contatos`}?`}
-          icon={
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] text-[var(--color-destructive)]">
+    <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] text-[var(--color-destructive)]">
               <IconAlertTriangle size={18} />
             </span>
-          }
-          description={
-            <>
-              Esta ação não pode ser desfeita.{" "}
-              {count === 1 ? "O contato será removido" : "Os contatos serão removidos"} junto com as
-              conversas, mensagens, notas e atividades vinculadas. Negócios associados são preservados
-              (ficam sem contato).
-            </>
-          }
-        />
-        <GlassModalFooter>
+            <DialogTitle className="text-base">
+              {`Excluir ${count === 1 ? "contato" : `${count} contatos`}?`}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-[13px] leading-relaxed">
+            Esta ação não pode ser desfeita.{" "}
+            {count === 1 ? "O contato será removido" : "Os contatos serão removidos"} junto com as
+            conversas, mensagens, notas e atividades vinculadas. Negócios associados são preservados
+            (ficam sem contato).
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
           <ButtonGlass
             variant="glass"
             size="sm"
@@ -399,9 +400,9 @@ function ConfirmDeleteDialog({
             <IconTrash size={14} />
             {pending ? "Excluindo..." : "Excluir"}
           </ButtonGlass>
-        </GlassModalFooter>
-      </GlassModalPanel>
-    </GlassModal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -452,11 +453,14 @@ function CreateContactDialog({
   }
 
   return (
-    <GlassModal open={open} onOpenChange={onOpenChange}>
-      <GlassModalPanel as="form" onSubmit={handleSubmit}>
-        <GlassModalHeader title="Novo contato" />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="md">
+        <form onSubmit={handleSubmit}>
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-base">Novo contato</DialogTitle>
+        </DialogHeader>
 
-        <GlassModalBody>
+        <div>
           <label className="mb-3 block">
             <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Nome *
@@ -516,9 +520,9 @@ function CreateContactDialog({
                 : "Erro ao criar contato."}
             </p>
           ) : null}
-        </GlassModalBody>
+        </div>
 
-        <GlassModalFooter>
+        <DialogFooter>
           <ButtonGlass
             variant="glass"
             size="sm"
@@ -536,9 +540,10 @@ function CreateContactDialog({
           >
             {createMut.isPending ? "Criando..." : "Criar"}
           </ButtonGlass>
-        </GlassModalFooter>
-      </GlassModalPanel>
-    </GlassModal>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -595,11 +600,14 @@ function EditContactDialog({
   }
 
   return (
-    <GlassModal open={open} onOpenChange={(next) => !next && onClose()}>
-      <GlassModalPanel as="form" onSubmit={handleSubmit}>
-        <GlassModalHeader title="Editar contato" />
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent size="md">
+        <form onSubmit={handleSubmit}>
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-base">Editar contato</DialogTitle>
+        </DialogHeader>
 
-        <GlassModalBody>
+        <div>
           <label className="mb-3 block">
             <span className="mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Nome *
@@ -659,9 +667,9 @@ function EditContactDialog({
                 : "Erro ao atualizar contato."}
             </p>
           ) : null}
-        </GlassModalBody>
+        </div>
 
-        <GlassModalFooter>
+        <DialogFooter>
           <ButtonGlass
             variant="glass"
             size="sm"
@@ -679,9 +687,10 @@ function EditContactDialog({
           >
             {updateMut.isPending ? "Salvando..." : "Salvar"}
           </ButtonGlass>
-        </GlassModalFooter>
-      </GlassModalPanel>
-    </GlassModal>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

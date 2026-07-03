@@ -789,10 +789,10 @@
 /* ── Radix poppers (DropdownMenu/Select/Popover/Tooltip) ──
  * Garante que o conteúdo flutuante do Radix (portalado para o body com
  * z-index: auto) fique acima de popovers customizados de z alto, como o
- * painel de filtros do inbox (z-[10000]). Sem isso, os dropdowns abrem
+ * painel de filtros do inbox (z-(--z-popover)). Sem isso, os dropdowns abrem
  * ATRÁS do painel e parecem "não carregar nada". */
 [data-radix-popper-content-wrapper] {
-  z-index: 10001 !important;
+  z-index: var(--z-radix, 90) !important;
 }
 
 /* ── Animação das barras do gravador de áudio (AudioRecorderButton) ── */

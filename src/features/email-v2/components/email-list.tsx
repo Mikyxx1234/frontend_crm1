@@ -376,7 +376,7 @@ function ContextMenu({
     <div
       ref={ref}
       role="menu"
-      style={{ position: "fixed", top: pos.y, left: pos.x, zIndex: 9999 }}
+      style={{ position: "fixed", top: pos.y, left: pos.x, zIndex: "var(--z-popover)" }}
       className="min-w-[220px] py-1 rounded-[var(--radius-lg)] bg-[var(--glass-bg-base)] border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg,0_10px_30px_rgba(0,0,0,0.18))] text-[13px] font-display"
     >
       {onToggleRead && (

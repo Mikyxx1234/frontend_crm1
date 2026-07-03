@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type AiStatus = {
   configured: boolean;
@@ -61,6 +62,7 @@ export default function AiSettingsPage() {
   const [showKey, setShowKey] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   const statusQuery = useQuery({
     queryKey: ["ai-settings-status"],
@@ -253,10 +255,15 @@ export default function AiSettingsPage() {
               variant="ghost"
               size="sm"
               className="text-destructive/80 hover:text-destructive"
-              onClick={() => {
-                if (!confirm("Remover a chave da OpenAI? Os agentes de IA ficarão indisponíveis até que uma nova chave seja configurada."))
-                  return;
-                removeMutation.mutate();
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Remover a chave da OpenAI?",
+                  description:
+                    "Os agentes de IA ficarão indisponíveis até que uma nova chave seja configurada.",
+                  confirmLabel: "Remover",
+                  destructive: true,
+                });
+                if (ok) removeMutation.mutate();
               }}
               disabled={removeMutation.isPending}
             >
@@ -308,6 +315,7 @@ export default function AiSettingsPage() {
           </div>
         </div>
       )}
+      {dialog}
     </div>
   );
 }

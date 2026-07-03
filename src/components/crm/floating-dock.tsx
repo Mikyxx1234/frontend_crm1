@@ -201,7 +201,7 @@ export function DockButton({
               transform: "translateY(-50%)",
             }}
             className={cn(
-              "pointer-events-none z-[9999] whitespace-nowrap rounded-[var(--radius-md)]",
+              "pointer-events-none z-(--z-popover) whitespace-nowrap rounded-[var(--radius-md)]",
               "border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] backdrop-blur-md",
               "px-2.5 py-1 text-[12px] font-semibold text-[var(--text-primary)]",
               "shadow-[var(--glass-shadow)]",

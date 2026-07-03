@@ -21,6 +21,7 @@ import {
   type ConnectApi4ComResponse,
 } from "../api/extensions";
 import { useSoftphone } from "../hooks/use-softphone";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 /**
  * Bloco de feedback pós-conexão — extraído pra que o discriminated
@@ -291,6 +292,8 @@ export function Api4ComConnectForm() {
     },
   });
 
+  const { confirm, dialog } = useConfirm();
+
   const copyUrl = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
@@ -330,14 +333,15 @@ export function Api4ComConnectForm() {
           copied={copied}
           onCopy={copyUrl}
           onReconnect={() => setShowForm(true)}
-          onDisconnect={() => {
-            if (
-              window.confirm(
-                "Desconectar sua conta Api4Com?\n\nO ramal salvo será apagado e você precisará informar e-mail + senha de novo pra usar telefonia. Chamadas em andamento serão encerradas.",
-              )
-            ) {
-              disconnectMutation.mutate();
-            }
+          onDisconnect={async () => {
+            const ok = await confirm({
+              title: "Desconectar sua conta Api4Com?",
+              description:
+                "O ramal salvo será apagado e você precisará informar e-mail + senha de novo pra usar telefonia. Chamadas em andamento serão encerradas.",
+              confirmLabel: "Desconectar",
+              destructive: true,
+            });
+            if (ok) disconnectMutation.mutate();
           }}
           disconnecting={disconnectMutation.isPending}
         />
@@ -346,6 +350,7 @@ export function Api4ComConnectForm() {
             {(disconnectMutation.error as Error)?.message ?? "Falha ao desconectar"}
           </p>
         )}
+        {dialog}
       </div>
     );
   }

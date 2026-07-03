@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconTrash } from "@tabler/icons-react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 import { LossReasonDialog } from "@/components/pipeline/loss-reason-dialog";
 import { useDeleteDeal, useSetDealStatus } from "@/features/pipeline-v2/hooks";
@@ -40,6 +41,7 @@ export function DealActionsMenu({
 
   const setStatus = useSetDealStatus(pipelineId, statusFilter);
   const deleteDealMut = useDeleteDeal(pipelineId, statusFilter);
+  const { confirm, dialog } = useConfirm();
 
   useEffect(() => {
     if (!open) return;
@@ -94,7 +96,7 @@ export function DealActionsMenu({
         <div
           ref={dropdownRef}
           className="w-52 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_32px_rgba(15,20,40,0.16)] backdrop-blur-xl"
-          style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right, zIndex: 9999 }}
+          style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right, zIndex: "var(--z-popover)" }}
           role="menu"
         >
           {currentStatus !== "LOST" && (
@@ -134,11 +136,14 @@ export function DealActionsMenu({
           <button
             type="button"
             disabled={!dealId || deleteDealMut.isPending}
-            onClick={() => {
+            onClick={async () => {
               if (!dealId) return;
-              const ok = window.confirm(
-                "Excluir este negocio? Esta acao nao pode ser desfeita.",
-              );
+              const ok = await confirm({
+                title: "Excluir negócio?",
+                description: "Esta ação não pode ser desfeita.",
+                confirmLabel: "Excluir",
+                destructive: true,
+              });
               if (!ok) return;
               deleteDealMut.mutate(
                 { dealId },
@@ -157,6 +162,8 @@ export function DealActionsMenu({
         </div>,
         document.body,
       )}
+
+      {dialog}
 
       {/* Tabulação do motivo da perda (catálogo + "Outro") */}
       <LossReasonDialog
@@ -193,12 +200,16 @@ export function DealDeleteButton({
   trigger,
 }: DealDeleteButtonProps) {
   const deleteDealMut = useDeleteDeal(pipelineId, statusFilter);
+  const { confirm, dialog } = useConfirm();
 
-  function handleClick() {
+  async function handleClick() {
     if (!dealId) return;
-    const ok = window.confirm(
-      "Excluir este negócio? Esta ação não pode ser desfeita.",
-    );
+    const ok = await confirm({
+      title: "Excluir negócio?",
+      description: "Esta ação não pode ser desfeita.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
     if (!ok) return;
     deleteDealMut.mutate(
       { dealId },
@@ -207,17 +218,20 @@ export function DealDeleteButton({
   }
 
   return (
-    <TooltipGlass label="Excluir negócio" side="bottom">
-      <button
-        type="button"
-        disabled={!dealId || deleteDealMut.isPending}
-        onClick={handleClick}
-        className="inline-flex disabled:opacity-60"
-        aria-label="Excluir negócio"
-      >
-        {trigger}
-      </button>
-    </TooltipGlass>
+    <>
+      <TooltipGlass label="Excluir negócio" side="bottom">
+        <button
+          type="button"
+          disabled={!dealId || deleteDealMut.isPending}
+          onClick={handleClick}
+          className="inline-flex disabled:opacity-60"
+          aria-label="Excluir negócio"
+        >
+          {trigger}
+        </button>
+      </TooltipGlass>
+      {dialog}
+    </>
   );
 }
 

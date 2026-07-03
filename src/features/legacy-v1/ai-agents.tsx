@@ -51,6 +51,7 @@ import {
 import { ARCHETYPES } from "@/lib/ai-agents/archetypes";
 import { TOOLS_CATALOG } from "@/lib/ai-agents/tools-catalog";
 import { cn, getInitials } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type AgentRow = {
   id: string;
@@ -101,6 +102,7 @@ export default function AIAgentsPage() {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [testing, setTesting] = React.useState<{ id: string; name: string } | null>(null);
   const [creating, setCreating] = React.useState(false);
+  const { confirm, dialog } = useConfirm();
 
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ["ai-agents"],
@@ -138,10 +140,14 @@ export default function AIAgentsPage() {
     },
   });
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Excluir agente "${name}"?\n\nAtenção: essa ação é definitiva.`))
-      return;
-    deleteMutation.mutate(id);
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: `Excluir agente "${name}"?`,
+      description: "Atenção: essa ação é definitiva.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (ok) deleteMutation.mutate(id);
   };
 
   return (
@@ -367,6 +373,7 @@ export default function AIAgentsPage() {
           queryClient.invalidateQueries({ queryKey: ["ai-agents"] });
         }}
       />
+      {dialog}
     </div>
   );
 }

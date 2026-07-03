@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Role = "ADMIN" | "MANAGER" | "MEMBER";
 type Status = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
@@ -73,6 +74,7 @@ export default function OrganizationDetailClient({
   organization,
 }: OrganizationDetailProps) {
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const [status, setStatus] = useState<Status>(organization.status);
   const [invites, setInvites] = useState<Invite[]>(organization.invites);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -147,13 +149,15 @@ export default function OrganizationDetailClient({
   }
 
   async function removeUser(user: User) {
-    const ok = confirm(
-      `Excluir o usuario ${user.name} (${user.email})?\n\n` +
-        "Essa operacao anonimiza os dados do usuario e bloqueia o " +
-        "login. Os registros historicos (deals, conversas, notas) " +
-        "sao mantidos com atribuicao 'Usuario removido' para preservar " +
-        "a auditoria. Operacao irreversivel.",
-    );
+    const ok = await confirm({
+      title: `Excluir o usuário ${user.name}?`,
+      description:
+        `Essa operação anonimiza os dados de ${user.email} e bloqueia o login. ` +
+        "Os registros históricos (deals, conversas, notas) são mantidos com " +
+        "atribuição 'Usuário removido' para preservar a auditoria. Operação irreversível.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
     if (!ok) return;
     setError(null);
     setBusy(`user:${user.id}`);
@@ -271,9 +275,14 @@ export default function OrganizationDetailClient({
             <Button
               variant="destructive"
               disabled={busy !== null}
-              onClick={() => {
-                if (!confirm("Arquivar essa organização? Usuários perdem acesso.")) return;
-                updateStatus("ARCHIVED");
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Arquivar essa organização?",
+                  description: "Usuários perdem acesso.",
+                  confirmLabel: "Arquivar",
+                  destructive: true,
+                });
+                if (ok) updateStatus("ARCHIVED");
               }}
             >
               {busy === "status:ARCHIVED" ? (
@@ -466,6 +475,7 @@ export default function OrganizationDetailClient({
           </ul>
         )}
       </section>
+      {dialog}
     </div>
   );
 }

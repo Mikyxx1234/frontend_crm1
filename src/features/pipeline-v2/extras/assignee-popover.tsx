@@ -87,7 +87,7 @@ export function AssigneePopover({
               top: position.top,
               left: position.left,
               width: 256,
-              zIndex: 9999,
+              zIndex: "var(--z-popover)",
               background: "rgba(255, 255, 255, 0.98)",
               backdropFilter: "blur(16px)",
               WebkitBackdropFilter: "blur(16px)",

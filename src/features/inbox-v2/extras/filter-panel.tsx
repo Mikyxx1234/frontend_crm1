@@ -236,7 +236,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 width: 280,
                 isolation: "isolate",
               }}
-              className="z-[10000] flex max-h-[80vh] flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
+              className="z-(--z-popover) flex max-h-[80vh] flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] bg-white shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:bg-[var(--glass-bg-modal)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">

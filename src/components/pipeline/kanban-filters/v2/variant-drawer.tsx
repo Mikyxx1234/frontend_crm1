@@ -62,7 +62,7 @@ export function FilterDrawer({
   const section: SectionProps = { draft, options, optionsLoading, optionsError, setDraftField, toggleArray };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999]">
+    <div className="fixed inset-0 z-(--z-popover)">
       <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]" onMouseDown={() => onOpenChange(false)} aria-hidden />
       <aside
         role="dialog"

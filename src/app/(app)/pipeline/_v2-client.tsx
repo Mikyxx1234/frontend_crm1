@@ -1383,7 +1383,7 @@ function CardMoveDropdown({
             position: "absolute",
             top: coords.top,
             left: coords.left,
-            zIndex: 9999,
+            zIndex: "var(--z-popover)",
             transform: "translate(-100%, -100%)",
             marginBottom: "6px",
           }}

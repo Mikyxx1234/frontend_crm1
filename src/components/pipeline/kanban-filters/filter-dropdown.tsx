@@ -98,7 +98,7 @@ export function FilterDropdown({
       {/* Overlay escuro semitransparente — clicar fecha */}
       <div
         aria-hidden="true"
-        style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+        style={{ position: "fixed", inset: 0, zIndex: "var(--z-popover)" }}
         className="bg-black/40 backdrop-blur-[2px]"
         onMouseDown={() => onOpenChange(false)}
       />
@@ -117,7 +117,7 @@ export function FilterDropdown({
           width: `min(${width}px, calc(100vw - 32px))`,
           height: maxHeight,          /* altura explícita: permite flex-1 interno crescer */
           maxHeight,
-          zIndex: 9999,
+          zIndex: "var(--z-popover)",
           backgroundColor: isDark ? "#13192d" : "#ffffff",
           isolation: "isolate",
         }}

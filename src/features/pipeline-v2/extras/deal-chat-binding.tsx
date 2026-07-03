@@ -363,7 +363,7 @@ export function useDealChatBinding(params: {
   const templateModal =
     templateOpen && effectiveConversationId ? (
       <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
         onClick={() => setTemplateOpen(false)}
       >
         <div onClick={(e) => e.stopPropagation()}>

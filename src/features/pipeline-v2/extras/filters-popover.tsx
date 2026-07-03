@@ -107,7 +107,7 @@ export function FiltersPopover({
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed z-[9999] w-[320px] rounded-[var(--radius-lg)] border shadow-2xl"
+      className="fixed z-(--z-popover) w-[320px] rounded-[var(--radius-lg)] border shadow-2xl"
       style={{
         top,
         right,

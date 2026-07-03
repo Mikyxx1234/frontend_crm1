@@ -24,12 +24,13 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { InputGlass } from "@/components/crm/input-glass";
 import { BadgeGlass } from "@/components/crm/badge-glass";
 import {
-  GlassModal,
-  GlassModalPanel,
-  GlassModalHeader,
-  GlassModalBody,
-  GlassModalFooter,
-} from "@/components/crm/glass-modal";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import {
   useCompanies,
@@ -347,18 +348,22 @@ function ConfirmDeleteDialog({
   onConfirm: () => void;
 }) {
   return (
-    <GlassModal open={open} onOpenChange={(next) => !next && onCancel()}>
-      <GlassModalPanel className="w-[440px]">
-        <GlassModalHeader
-          title={`Excluir ${count === 1 ? "empresa" : `${count} empresas`}?`}
-          icon={
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] text-[var(--color-destructive)]">
+    <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] text-[var(--color-destructive)]">
               <IconAlertTriangle size={18} />
             </span>
-          }
-          description="Esta ação não pode ser desfeita. Os contatos vinculados são preservados (ficam sem empresa)."
-        />
-        <GlassModalFooter>
+            <DialogTitle className="text-base">
+              {`Excluir ${count === 1 ? "empresa" : `${count} empresas`}?`}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-[13px] leading-relaxed">
+            Esta ação não pode ser desfeita. Os contatos vinculados são preservados (ficam sem empresa).
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
           <ButtonGlass
             variant="glass"
             size="sm"
@@ -373,9 +378,9 @@ function ConfirmDeleteDialog({
             <IconTrash size={14} />
             {pending ? "Excluindo..." : "Excluir"}
           </ButtonGlass>
-        </GlassModalFooter>
-      </GlassModalPanel>
-    </GlassModal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -427,11 +432,14 @@ function CreateCompanyDialog({
   }
 
   return (
-    <GlassModal open={open} onOpenChange={onOpenChange}>
-      <GlassModalPanel as="form" onSubmit={handleSubmit} className="w-[460px]">
-        <GlassModalHeader title="Nova empresa" />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="md">
+        <form onSubmit={handleSubmit}>
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-base">Nova empresa</DialogTitle>
+        </DialogHeader>
 
-        <GlassModalBody>
+        <div>
           <FieldInput
             label="Nome da Empresa *"
             type="text"
@@ -479,9 +487,9 @@ function CreateCompanyDialog({
                 : "Erro ao criar empresa."}
             </p>
           ) : null}
-        </GlassModalBody>
+        </div>
 
-        <GlassModalFooter>
+        <DialogFooter>
           <ButtonGlass
             variant="glass"
             size="sm"
@@ -499,9 +507,10 @@ function CreateCompanyDialog({
           >
             {createMut.isPending ? "Criando..." : "Criar"}
           </ButtonGlass>
-        </GlassModalFooter>
-      </GlassModalPanel>
-    </GlassModal>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -559,11 +568,14 @@ function EditCompanyDialog({
   }
 
   return (
-    <GlassModal open={open} onOpenChange={(next) => !next && onClose()}>
-      <GlassModalPanel as="form" onSubmit={handleSubmit} className="w-[460px]">
-        <GlassModalHeader title="Editar empresa" />
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent size="md">
+        <form onSubmit={handleSubmit}>
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-base">Editar empresa</DialogTitle>
+        </DialogHeader>
 
-        <GlassModalBody>
+        <div>
           <FieldInput
             label="Nome da Empresa *"
             type="text"
@@ -611,9 +623,9 @@ function EditCompanyDialog({
                 : "Erro ao atualizar empresa."}
             </p>
           ) : null}
-        </GlassModalBody>
+        </div>
 
-        <GlassModalFooter>
+        <DialogFooter>
           <ButtonGlass
             variant="glass"
             size="sm"
@@ -631,9 +643,10 @@ function EditCompanyDialog({
           >
             {updateMut.isPending ? "Salvando..." : "Salvar"}
           </ButtonGlass>
-        </GlassModalFooter>
-      </GlassModalPanel>
-    </GlassModal>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

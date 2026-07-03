@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn, pipelineDealMatchesSearch } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 /**
  * ConversationItem mínimo que o SalesHub precisa pra resolver a conversa
@@ -419,15 +420,17 @@ export function SalesHubView({
     return () => clearTimeout(t);
   }, []);
 
+  const { confirm: confirmDelete, dialog: confirmDeleteDialog } = useConfirm();
+
   const handleDeleteDealFromHub = useCallback(async () => {
     if (!activeDeal) return;
-    if (
-      !window.confirm(
-        "Excluir este negócio? Esta ação não pode ser desfeita.",
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDelete({
+      title: "Excluir negócio?",
+      description: "Esta ação não pode ser desfeita.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
     const res = await fetch(apiUrl(`/api/deals/${activeDeal.id}`), {
       method: "DELETE",
     });
@@ -444,7 +447,7 @@ export function SalesHubView({
     handleDeselectDeal();
     queryClient.invalidateQueries({ queryKey: ["pipeline-board", pipelineId] });
     queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-  }, [activeDeal, handleDeselectDeal, pipelineId, queryClient]);
+  }, [activeDeal, confirmDelete, handleDeselectDeal, pipelineId, queryClient]);
 
   const funnelStages = useMemo(
     () =>
@@ -810,6 +813,7 @@ export function SalesHubView({
           </ul>
         </DialogContent>
       </Dialog>
+      {confirmDeleteDialog}
     </div>
   );
 }

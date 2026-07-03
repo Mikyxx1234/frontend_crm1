@@ -586,7 +586,7 @@ function DealProductLine({
               top: pos.top,
               left: pos.left,
               width: Math.max(pos.width, 280),
-              zIndex: 9999,
+              zIndex: "var(--z-popover)",
             }}
             className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
           >
@@ -755,7 +755,7 @@ function StageInlinePicker({
               top: pos.top,
               left: pos.left,
               width: Math.max(pos.width, 280),
-              zIndex: 9999,
+              zIndex: "var(--z-popover)",
             }}
             className="overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)]"
           >
@@ -1326,7 +1326,7 @@ function DealCard({
               top: ownerPopoverPos.top,
               left: ownerPopoverPos.left,
               width: Math.max(ownerPopoverPos.width, 280),
-              zIndex: 9999,
+              zIndex: "var(--z-popover)",
             }}
             className="max-h-72 overflow-hidden rounded-2xl border border-border bg-white shadow-[var(--shadow-lg)]"
           >

@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   PIPELINE_TEMPLATE_LIST,
   type PipelineTemplateId,
@@ -65,6 +66,7 @@ type TeamInvite = { email: string; role: "MANAGER" | "MEMBER" };
 
 export default function OnboardingWizard({ initialOrganization }: Props) {
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -154,9 +156,12 @@ export default function OnboardingWizard({ initialOrganization }: Props) {
   }
 
   async function handleSkipAll() {
-    const ok = window.confirm(
-      "Pular o onboarding? Voce cai direto no CRM com as configuracoes basicas. Logo, pipeline, time e canal podem ser ajustados depois em /settings.",
-    );
+    const ok = await confirm({
+      title: "Pular o onboarding?",
+      description:
+        "Você cai direto no CRM com as configurações básicas. Logo, pipeline, time e canal podem ser ajustados depois em Configurações.",
+      confirmLabel: "Pular",
+    });
     if (!ok) return;
     setError(null);
     setSaving(true);
@@ -171,9 +176,12 @@ export default function OnboardingWizard({ initialOrganization }: Props) {
   }
 
   async function handleLogout() {
-    const ok = window.confirm(
-      "Sair da conta? Voce volta pra tela inicial. Os dados ja preenchidos ficam salvos na sua organizacao.",
-    );
+    const ok = await confirm({
+      title: "Sair da conta?",
+      description:
+        "Você volta pra tela inicial. Os dados já preenchidos ficam salvos na sua organização.",
+      confirmLabel: "Sair",
+    });
     if (!ok) return;
     await signOut({ callbackUrl: "/" });
   }
@@ -382,6 +390,7 @@ export default function OnboardingWizard({ initialOrganization }: Props) {
           </div>
         </div>
       </main>
+      {dialog}
     </div>
   );
 }

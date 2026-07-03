@@ -143,7 +143,7 @@ export function ProviderConfigForm() {
           </div>
 
           {mutation.isError && (
-            <p className="text-xs text-red-400">{(mutation.error as Error)?.message}</p>
+            <p className="text-xs text-[var(--color-danger)]">{(mutation.error as Error)?.message}</p>
           )}
 
           <div className="flex gap-2">

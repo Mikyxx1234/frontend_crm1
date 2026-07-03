@@ -47,7 +47,7 @@ export function ExtensionSettingsForm() {
       ))}
 
       {mutation.isError && (
-        <p className="text-xs text-red-400">
+        <p className="text-xs text-[var(--color-danger)]">
           {(mutation.error as Error)?.message ?? "Erro ao salvar"}
         </p>
       )}

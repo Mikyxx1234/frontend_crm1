@@ -53,8 +53,8 @@ export function ConversionWidget() {
           )}
         </div>
         <div className="flex justify-between text-[10px]">
-          <span className="font-semibold text-emerald-600">{wonDeals} ganhos</span>
-          <span className="font-semibold text-red-500">{lostDeals} perdidos</span>
+          <span className="font-semibold text-[var(--color-success-text)]">{wonDeals} ganhos</span>
+          <span className="font-semibold text-[var(--color-danger)]">{lostDeals} perdidos</span>
         </div>
       </div>
 

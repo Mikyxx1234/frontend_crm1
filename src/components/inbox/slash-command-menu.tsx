@@ -444,7 +444,7 @@ const KIND_ICON: Record<SlashItemKind, React.ComponentType<{ className?: string 
 
 const KIND_ICON_COLOR: Record<SlashItemKind, string> = {
   "internal-template": "text-primary",
-  "meta-template": "text-emerald-600",
+  "meta-template": "text-[var(--color-success-text)]",
 };
 
 export function SlashCommandMenu({

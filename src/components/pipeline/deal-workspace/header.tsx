@@ -421,7 +421,7 @@ export function DealWorkspaceToolbarMenu(props: DealWorkspaceToolbarMenuItemsPro
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="z-50 min-w-[200px] max-w-[min(280px,calc(100vw-2rem))] rounded-xl border border-slate-100 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
+        className="z-50 min-w-[200px] max-w-[min(280px,calc(100vw-2rem))] rounded-xl border border-[var(--glass-border-subtle)] bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]"
       >
         <DealWorkspaceToolbarMenuItems {...props} />
       </DropdownMenuContent>

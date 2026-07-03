@@ -185,13 +185,13 @@ export default function CampaignDetailClientPage() {
           icon={<IconSend size={18} />}
           label="Enviados"
           value={sent}
-          tone="text-emerald-600"
+          tone="text-[var(--color-success-text)]"
         />
         <StatCard
           icon={<IconCircleCheck size={18} />}
           label="Entregues"
           value={stats?.deliveredCount ?? campaign.deliveredCount}
-          tone="text-emerald-600"
+          tone="text-[var(--color-success-text)]"
           rate={stats?.deliveryRate}
         />
         <StatCard
@@ -212,7 +212,7 @@ export default function CampaignDetailClientPage() {
           icon={<IconAlertTriangle size={18} />}
           label="Falhas"
           value={failed}
-          tone="text-red-600"
+          tone="text-[var(--color-danger-text)]"
         />
       </div>
 
@@ -248,7 +248,7 @@ export default function CampaignDetailClientPage() {
                 className="flex items-center justify-between gap-3 font-body text-[12px]"
               >
                 <span className="truncate text-[var(--text-secondary)]">{r.reason}</span>
-                <span className="shrink-0 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 font-display text-[11px] font-bold text-red-600">
+                <span className="shrink-0 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
                   {r.count}
                 </span>
               </div>
@@ -322,7 +322,7 @@ export default function CampaignDetailClientPage() {
                               type="button"
                               onClick={() => toggleError(r.id)}
                               title={r.errorMessage}
-                              className="max-w-[180px] truncate font-body text-[10.5px] text-red-600 underline-offset-2 hover:underline"
+                              className="max-w-[180px] truncate font-body text-[10.5px] text-[var(--color-danger-text)] underline-offset-2 hover:underline"
                             >
                               {r.errorMessage}
                             </button>
@@ -340,7 +340,7 @@ export default function CampaignDetailClientPage() {
                         </div>
                       </div>
                       {r.errorMessage && expandedErrors.has(r.id) ? (
-                        <p className="mt-1.5 whitespace-pre-wrap break-words rounded-[var(--radius-md)] border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 font-body text-[11px] leading-relaxed text-red-600">
+                        <p className="mt-1.5 whitespace-pre-wrap break-words rounded-[var(--radius-md)] border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 font-body text-[11px] leading-relaxed text-[var(--color-danger-text)]">
                           {r.errorMessage}
                         </p>
                       ) : null}
@@ -473,7 +473,7 @@ function HeaderBtn({
       disabled={disabled}
       className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 font-display text-[12.5px] font-semibold transition-colors disabled:opacity-50 ${
         danger
-          ? "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20"
+          ? "border-red-500/30 bg-red-500/10 text-[var(--color-danger-text)] hover:bg-red-500/20"
           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/35"
       }`}
     >

@@ -875,7 +875,7 @@ function PropertiesColumn({
             {optionsLoading ? (
               <p className="text-[11px] text-[var(--text-muted)]">Carregando…</p>
             ) : optionsError ? (
-              <p className="text-[11px] text-red-500">Erro: {optionsError}</p>
+              <p className="text-[11px] text-[var(--color-danger)]">Erro: {optionsError}</p>
             ) : (
               <div className="flex items-center gap-1.5">
                 <DropdownGlass

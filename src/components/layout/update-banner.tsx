@@ -234,7 +234,7 @@ export function UpdateAvailableBanner() {
       <div
         className={cn(
           "group inline-flex items-stretch overflow-hidden rounded-full border shadow-lg backdrop-blur-md transition",
-          "border-white/50 bg-white/80 text-slate-800 hover:bg-white",
+          "border-white/50 bg-white/80 text-[var(--text-primary)] hover:bg-white",
           "dark:border-white/10 dark:bg-[var(--glass-bg-strong)]/80 dark:text-slate-100 dark:hover:bg-[var(--glass-bg-strong)]",
         )}
       >

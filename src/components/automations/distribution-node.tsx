@@ -33,7 +33,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
         "group/node relative min-w-[244px] max-w-[300px] rounded-lg border bg-white transition-all duration-200",
         selected
           ? "border-indigo-400/60 shadow-[0_10px_30px_-10px_rgba(99,102,241,0.4)] ring-2 ring-indigo-300/30"
-          : "border-slate-100 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-indigo-400/60 hover:shadow-[0_10px_30px_-10px_rgba(99,102,241,0.3)]"
+          : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-indigo-400/60 hover:shadow-[0_10px_30px_-10px_rgba(99,102,241,0.3)]"
       )}
     >
       {data.stepIndex != null && (
@@ -49,14 +49,14 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
 
       {/* Header */}
       <div className="flex items-start gap-3 px-3.5 py-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500 ring-1 ring-indigo-100">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[var(--brand-primary)] ring-1 ring-indigo-100">
           <Route className="size-4" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-slate-900">
+          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
             {data.label}
           </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
+          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
             {data.summary}
           </p>
         </div>
@@ -78,10 +78,10 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
       </div>
 
       {/* Saidas (IF Sim/Nao) — cada linha com handle proprio a direita */}
-      <div className="border-t border-slate-100 bg-linear-to-b from-slate-50/40 to-transparent">
+      <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
         <div className="relative flex h-9 items-center gap-2 border-b border-slate-100/80 px-3.5">
           <CircleCheckBig className="size-3.5 shrink-0 text-emerald-500" strokeWidth={2.4} />
-          <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-emerald-700">
+          <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-success-text)]">
             Distribuído
           </span>
           <Handle
@@ -92,8 +92,8 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
           />
         </div>
         <div className="relative flex h-9 items-center gap-2 px-3.5">
-          <CircleSlash className="size-3.5 shrink-0 text-rose-500" strokeWidth={2.4} />
-          <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-rose-600">
+          <CircleSlash className="size-3.5 shrink-0 text-[var(--color-danger)]" strokeWidth={2.4} />
+          <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-danger-text)]">
             Sem agente
           </span>
           <Handle

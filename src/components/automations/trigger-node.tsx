@@ -69,7 +69,7 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
 
       {/* Body — resumo */}
       <div className="px-4 py-2.5">
-        <p className="line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
+        <p className="line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
           {data.summary}
         </p>
       </div>
@@ -79,19 +79,19 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
         <TooltipHost label="Ver eventos" side="bottom">
           <button
             type="button"
-            className="group/stats flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
+            className="group/stats flex w-full items-center gap-2 border-t border-[var(--glass-border-subtle)] px-4 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
             onClick={(e) => {
               e.stopPropagation();
               data.onStatsClick?.();
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-emerald-100">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-rose-100">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>

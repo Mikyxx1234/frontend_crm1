@@ -226,7 +226,7 @@ export function CampaignBuilderWizard() {
                 </SelectNative>
               </div>
               {previewMutation.data ? (
-                <p className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                <p className="rounded-md border border-emerald-300 bg-[var(--color-success-bg)] px-3 py-2 text-sm text-emerald-800">
                   Preview: {previewMutation.data.data.count} contatos elegíveis.
                 </p>
               ) : null}

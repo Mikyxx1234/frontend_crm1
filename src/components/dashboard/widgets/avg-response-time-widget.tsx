@@ -61,7 +61,7 @@ export function AvgResponseTimeWidget() {
                   </span>
                   <span className={cn(
                     "font-bold tabular-nums",
-                    isBest ? "text-emerald-600" : "text-muted-foreground",
+                    isBest ? "text-[var(--color-success-text)]" : "text-muted-foreground",
                   )}>
                     {formatMinutes(agent.avgResponseMinutes)}
                   </span>
@@ -87,7 +87,7 @@ export function AvgResponseTimeWidget() {
 
       {worst && worst.avgResponseMinutes > globalAvg * 1.5 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-          <p className="text-[11px] font-medium text-amber-700">
+          <p className="text-[11px] font-medium text-[var(--color-warn)]">
             <span className="font-bold">{worst.userName}</span> está{" "}
             {((worst.avgResponseMinutes / globalAvg - 1) * 100).toFixed(0)}% acima da média.
           </p>

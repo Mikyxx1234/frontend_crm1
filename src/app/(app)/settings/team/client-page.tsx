@@ -716,7 +716,7 @@ export default function TeamV2ClientPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Permissões iniciais</span>
                 {inviteIsAdmin ? (
-                  <span className="text-[11px] font-semibold uppercase text-amber-600">
+                  <span className="text-[11px] font-semibold uppercase text-[var(--color-warn)]">
                     Admin · tudo liberado
                   </span>
                 ) : (

@@ -31,8 +31,8 @@ export function ComparisonBadge({ current, previous, format, invertColors }: Pro
   const colorClass = isNeutral
     ? "text-muted-foreground"
     : (isPositive === greenIsGood)
-      ? "text-emerald-600"
-      : "text-red-500";
+      ? "text-[var(--color-success-text)]"
+      : "text-[var(--color-danger)]";
 
   const Icon = isNeutral ? Minus : isPositive ? TrendingUp : TrendingDown;
 

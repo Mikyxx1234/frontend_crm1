@@ -33,7 +33,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
         "group/node relative min-w-[250px] max-w-[310px] rounded-lg border bg-white transition-all duration-200",
         selected
           ? "border-orange-400/60 ring-2 ring-orange-300/30 shadow-[0_10px_30px_-10px_rgba(249,115,22,0.4)]"
-          : "border-slate-100 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"
+          : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"
       )}
     >
       {data.stepIndex != null && (
@@ -53,10 +53,10 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
           <Pause className="size-4" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-slate-900">
+          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
             {data.label}
           </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
+          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
             {data.summary}
           </p>
         </div>
@@ -78,10 +78,10 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
       </div>
 
       {/* Condition rows */}
-      <div className="border-t border-slate-100 bg-linear-to-b from-slate-50/40 to-transparent">
+      <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
         <div className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5">
           <MessageCircle className="size-3 shrink-0 text-emerald-500" strokeWidth={2.4} />
-          <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-emerald-700">
+          <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-success-text)]">
             Até a mensagem recebida
           </span>
           <Handle
@@ -95,7 +95,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
 
         <div className="relative flex h-8 items-center gap-2 px-3.5">
           <Clock className="size-3 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.4} />
-          <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-slate-500">
+          <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-[var(--text-muted)]">
             {data.timeoutLabel || "Cronômetro"}
           </span>
           <Handle
@@ -124,19 +124,19 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
         <TooltipHost label="Ver eventos" side="bottom">
           <button
             type="button"
-            className="flex w-full items-center gap-2 border-t border-slate-100 px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
+            className="flex w-full items-center gap-2 border-t border-[var(--glass-border-subtle)] px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
             onClick={(e) => {
               e.stopPropagation();
               data.onStatsClick?.();
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-emerald-100">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-rose-100">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>

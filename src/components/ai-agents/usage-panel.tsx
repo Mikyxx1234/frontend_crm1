@@ -182,8 +182,8 @@ function RunRow({ run }: { run: Stats["lastRuns"][number] }) {
           isError
             ? "bg-destructive/15 text-destructive"
             : run.status === "HANDOFF"
-              ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-200"
-              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200"
+              ? "bg-amber-100 text-[var(--color-warn)] dark:bg-amber-950 dark:text-amber-200"
+              : "bg-emerald-100 text-[var(--color-success-text)] dark:bg-emerald-950 dark:text-emerald-200"
         }`}
       >
         {isError ? (

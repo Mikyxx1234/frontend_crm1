@@ -107,10 +107,10 @@ export const bentoAccentMap: Record<BentoAccent, { bg: string; text: string; sol
   emerald: { bg: "bg-[var(--color-success-bg)]", text: "text-[var(--color-success-text)]", solid: "var(--color-success)" },
   amber: { bg: "bg-[var(--color-warn-bg)]", text: "text-[var(--color-warning)]", solid: "var(--color-warning)" },
   violet: { bg: "bg-violet-50", text: "text-violet-600", solid: "#8b5cf6" }, // no token match for #8b5cf6 (--brand-secondary is #a78bfa)
-  rose: { bg: "bg-rose-50", text: "text-rose-600", solid: "#f43f5e" }, // no token match (--color-danger is #ef4444, different shade)
-  indigo: { bg: "bg-indigo-50", text: "text-indigo-600", solid: "var(--brand-primary)" }, // indigo-600 ≈ --brand-primary (#5b6ff5)
+  rose: { bg: "bg-[var(--color-danger-bg)]", text: "text-[var(--color-danger-text)]", solid: "#f43f5e" }, // no token match (--color-danger is #ef4444, different shade)
+  indigo: { bg: "bg-indigo-50", text: "text-[var(--brand-primary)]", solid: "var(--brand-primary)" }, // indigo-600 ≈ --brand-primary (#5b6ff5)
   cyan: { bg: "bg-cyan-50", text: "text-cyan-600", solid: "#06b6d4" }, // no CSS var token for cyan
-  slate: { bg: "bg-slate-100", text: "text-foreground", solid: "#475569" }, // --text-muted is #4b5563, close but different semantic
+  slate: { bg: "bg-[var(--glass-bg-base)]", text: "text-foreground", solid: "#475569" }, // --text-muted is #4b5563, close but different semantic
 };
 
 /** Grid bento mais denso (6 colunas) usado em dashboards com 6+ KPIs. */

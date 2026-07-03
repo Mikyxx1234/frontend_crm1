@@ -247,7 +247,7 @@ function ActivitiesTab({ activities }: { activities: ActivityRow[] }) {
               className={cn(
                 "relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm",
                 a.completed
-                  ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40"
+                  ? "border-emerald-500/40 bg-[var(--color-success-bg)] dark:bg-emerald-950/40"
                   : "border-border bg-muted/40"
               )}
             >

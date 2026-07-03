@@ -326,7 +326,7 @@ export function DealWorkspace({
           <Loader2 className="size-8 animate-spin text-[var(--color-ink-muted)]" />
         </div>
       ) : !deal ? (
-        <div className="flex h-full items-center justify-center text-[14px] tracking-tight text-slate-500">
+        <div className="flex h-full items-center justify-center text-[14px] tracking-tight text-[var(--text-muted)]">
           Negocio nao encontrado.
         </div>
       ) : (

@@ -76,18 +76,18 @@ export function DatePicker({
             <button
               type="button"
               onClick={() => setVisibleMonth((current) => subMonths(current, 1))}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-slate-100 hover:text-foreground"
               aria-label="Mês anterior"
             >
               <ChevronLeft className="size-4" />
             </button>
-            <div className="text-sm font-semibold text-slate-900">
+            <div className="text-sm font-semibold text-[var(--text-primary)]">
               {format(visibleMonth, "MMMM yyyy", { locale: ptBR })}
             </div>
             <button
               type="button"
               onClick={() => setVisibleMonth((current) => addMonths(current, 1))}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-slate-100 hover:text-foreground"
               aria-label="Próximo mês"
             >
               <ChevronRight className="size-4" />
@@ -117,7 +117,7 @@ export function DatePicker({
                     "flex h-8 items-center justify-center rounded-lg text-xs font-medium transition",
                     isSelected && "bg-slate-900 text-white",
                     !isSelected && inMonth && "text-foreground hover:bg-slate-100",
-                    !inMonth && "text-slate-300 hover:bg-[var(--color-bg-subtle)]",
+                    !inMonth && "text-[var(--text-faint)] hover:bg-[var(--color-bg-subtle)]",
                   )}
                 >
                   {format(day, "d")}
@@ -133,7 +133,7 @@ export function DatePicker({
                 onChange("");
                 setOpen(false);
               }}
-              className="text-xs font-medium text-slate-500 transition hover:text-foreground"
+              className="text-xs font-medium text-[var(--text-muted)] transition hover:text-foreground"
             >
               Limpar
             </button>
@@ -145,7 +145,7 @@ export function DatePicker({
                 setVisibleMonth(today);
                 setOpen(false);
               }}
-              className="text-xs font-medium text-slate-900 transition hover:text-foreground"
+              className="text-xs font-medium text-[var(--text-primary)] transition hover:text-foreground"
             >
               Hoje
             </button>

@@ -129,7 +129,7 @@ export function AgentPlayground({
         <DialogClose />
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="size-4 text-indigo-500" />
+            <Sparkles className="size-4 text-[var(--brand-primary)]" />
             Playground — {agentName}
           </DialogTitle>
         </DialogHeader>

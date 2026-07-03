@@ -78,7 +78,7 @@ export function ConversationsPanel({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
         <div
           className={cn(
-            "flex items-center gap-2 border-b border-slate-100",
+            "flex items-center gap-2 border-b border-[var(--glass-border-subtle)]",
             "bg-white/90 px-3 py-2 backdrop-blur-sm sm:px-4",
           )}
         >
@@ -90,7 +90,7 @@ export function ConversationsPanel({
                 aria-label="Voltar"
                 className={cn(
                   "inline-flex size-8 items-center justify-center rounded-full",
-                  "border border-border bg-white text-slate-500",
+                  "border border-border bg-white text-[var(--text-muted)]",
                   "transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-800 active:scale-95",
                 )}
               >
@@ -100,14 +100,14 @@ export function ConversationsPanel({
           ) : null}
           <ChannelBadge channel={selected.channel} />
           {selected.inboxName ? (
-            <span className="text-[12px] font-semibold tracking-tight text-slate-500">
+            <span className="text-[12px] font-semibold tracking-tight text-[var(--text-muted)]">
               {selected.inboxName}
             </span>
           ) : null}
           <span
             className={cn(
               "ml-auto inline-flex items-center rounded-full border border-border bg-[var(--color-bg-subtle)]",
-              "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500",
+              "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]",
             )}
           >
             {STATUS_LABEL[selected.status] ?? selected.status}
@@ -137,8 +137,8 @@ export function ConversationsPanel({
   if (autoCreateMutation.isError) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-        <MessageSquare className="mb-3 size-12 text-slate-300" />
-        <p className="text-sm text-rose-600">
+        <MessageSquare className="mb-3 size-12 text-[var(--text-faint)]" />
+        <p className="text-sm text-[var(--color-danger-text)]">
           {autoCreateMutation.error instanceof Error
             ? autoCreateMutation.error.message
             : "Erro ao abrir chat."}
@@ -162,7 +162,7 @@ export function ConversationsPanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[#f4f7fa]">
       {conversations.length === 0 ? (
-        <CenterMessage icon={<Send className="size-12 text-slate-300" />}>
+        <CenterMessage icon={<Send className="size-12 text-[var(--text-faint)]" />}>
           Abrindo conversa...
         </CenterMessage>
       ) : (
@@ -174,7 +174,7 @@ export function ConversationsPanel({
                 type="button"
                 onClick={() => onSelect(c)}
                 className={cn(
-                  "group flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white",
+                  "group flex w-full items-center gap-3 rounded-2xl border border-[var(--glass-border-subtle)] bg-white",
                   "px-4 py-3 text-left transition-all",
                   "hover:border-[var(--color-primary)]/30 hover:shadow-[var(--shadow-indigo-glow)] active:scale-[0.99]",
                 )}
@@ -183,7 +183,7 @@ export function ConversationsPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     {c.inboxName ? (
-                      <span className="truncate text-[14px] font-bold tracking-tight text-slate-900">
+                      <span className="truncate text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
                         {c.inboxName}
                       </span>
                     ) : null}
@@ -196,10 +196,10 @@ export function ConversationsPanel({
                   className={cn(
                     "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest",
                     c.status === "OPEN"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      ? "border-emerald-200 bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
                       : c.status === "RESOLVED"
-                      ? "border-border bg-[var(--color-bg-subtle)] text-slate-500"
-                      : "border-amber-200 bg-amber-50 text-amber-700",
+                      ? "border-border bg-[var(--color-bg-subtle)] text-[var(--text-muted)]"
+                      : "border-amber-200 bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
                   )}
                 >
                   {STATUS_LABEL[c.status] ?? c.status}
@@ -217,7 +217,7 @@ function CenterMessage({ icon, children }: { icon: React.ReactNode; children: Re
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
       <div className="mb-3">{icon}</div>
-      <p className="text-[14px] font-medium tracking-tight text-slate-500">{children}</p>
+      <p className="text-[14px] font-medium tracking-tight text-[var(--text-muted)]">{children}</p>
     </div>
   );
 }

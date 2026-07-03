@@ -37,7 +37,7 @@ function ActorBadge({
   type: "HUMAN" | "AI" | "AUTOMATION" | "INTEGRATION" | "SYSTEM";
 }) {
   const map = {
-    HUMAN: { Icon: UserIcon, cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" },
+    HUMAN: { Icon: UserIcon, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-slate-800 dark:text-slate-200" },
     AI: { Icon: Bot, cls: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/50 dark:text-fuchsia-300" },
     AUTOMATION: {
       Icon: Workflow,
@@ -47,7 +47,7 @@ function ActorBadge({
       Icon: Webhook,
       cls: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300",
     },
-    SYSTEM: { Icon: Cog, cls: "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400" },
+    SYSTEM: { Icon: Cog, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-gray-900 dark:text-gray-400" },
   } as const;
   const { Icon, cls } = map[type];
   return (

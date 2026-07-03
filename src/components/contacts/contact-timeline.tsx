@@ -59,8 +59,8 @@ function itemVisuals(item: TimelineItem) {
     const a = item.activity;
     return {
       Icon: ACTIVITY_ICONS[a.type] ?? FileText,
-      ringClass: "ring-emerald-500/30 text-emerald-700",
-      bgClass: "bg-emerald-50 dark:bg-emerald-950/40",
+      ringClass: "ring-emerald-500/30 text-[var(--color-success-text)]",
+      bgClass: "bg-[var(--color-success-bg)] dark:bg-emerald-950/40",
       title: a.title,
       subtitle: a.description,
       userName: a.user.name,
@@ -71,7 +71,7 @@ function itemVisuals(item: TimelineItem) {
     return {
       Icon: StickyNote,
       ringClass: "ring-amber-500/30 text-amber-800",
-      bgClass: "bg-amber-50 dark:bg-amber-950/40",
+      bgClass: "bg-[var(--color-warn-bg)] dark:bg-amber-950/40",
       title: "Anotação",
       subtitle: item.note.content,
       userName: item.note.user.name,

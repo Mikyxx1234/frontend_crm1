@@ -108,7 +108,7 @@ function Section({
         className="flex w-full items-center gap-2 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
       >
         {open ? <ChevronDown className="size-3.5 shrink-0" /> : <ChevronRight className="size-3.5 shrink-0" />}
-        <Icon className="size-3.5 shrink-0 text-indigo-500" />
+        <Icon className="size-3.5 shrink-0 text-[var(--brand-primary)]" />
         {title}
       </button>
       {open ? <div className="space-y-2 pb-3">{children}</div> : null}
@@ -228,7 +228,7 @@ export function ContactInfoPanel({
     <aside className={cn("flex w-[300px] shrink-0 flex-col border-l border-border/60 bg-muted/20", className)}>
       <div className="flex items-center justify-between border-b border-border/60 px-3 py-2.5">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Info className="size-4 text-indigo-500" />
+          <Info className="size-4 text-[var(--brand-primary)]" />
           Contato
         </div>
         {onClose && (
@@ -254,7 +254,7 @@ export function ContactInfoPanel({
             <div className="py-3">
               <Link
                 href={`/contacts/${data.id}`}
-                className="text-base font-semibold text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+                className="text-base font-semibold text-[var(--brand-primary)] underline-offset-2 hover:underline dark:text-indigo-400"
               >
                 Ver perfil completo →
               </Link>

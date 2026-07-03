@@ -87,10 +87,10 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
             <GitBranch className="size-3.5" strokeWidth={2.4} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-extrabold tracking-tighter text-slate-900">
+            <p className="truncate text-[12px] font-extrabold tracking-tighter text-[var(--text-primary)]">
               {data.label}
             </p>
-            <p className="truncate text-[10px] font-medium tracking-tight text-slate-500">
+            <p className="truncate text-[10px] font-medium tracking-tight text-[var(--text-muted)]">
               {hasBranches
                 ? `${branches.length} condição${branches.length > 1 ? "s" : ""}`
                 : "Clique para configurar"}
@@ -118,14 +118,14 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
           {branches.map((branch, idx) => (
             <li
               key={branch.id}
-              className="relative flex items-center gap-2 border-b border-slate-100 px-3 py-2 last:border-b-0 hover:bg-cyan-50/30"
+              className="relative flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2 last:border-b-0 hover:bg-cyan-50/30"
             >
               <span className="flex size-5 shrink-0 items-center justify-center rounded bg-cyan-50 text-[10px] font-bold tabular-nums text-cyan-600 ring-1 ring-cyan-100">
                 {idx + 1}
               </span>
               <div className="min-w-0 flex-1">
                 {branch.label && (
-                  <p className="truncate text-[11px] font-bold tracking-tight text-slate-800">
+                  <p className="truncate text-[11px] font-bold tracking-tight text-[var(--text-primary)]">
                     {branch.label}
                   </p>
                 )}
@@ -146,10 +146,10 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
 
           {/* Else / Nenhuma das condições */}
           <li className="relative flex items-center gap-2 border-t border-border bg-[var(--color-bg-subtle)]/60 px-3 py-2">
-            <span className="flex size-5 shrink-0 items-center justify-center rounded bg-rose-50 text-[10px] font-bold text-rose-600 ring-1 ring-rose-100">
+            <span className="flex size-5 shrink-0 items-center justify-center rounded bg-[var(--color-danger-bg)] text-[10px] font-bold text-[var(--color-danger-text)] ring-1 ring-rose-100">
               ⊘
             </span>
-            <p className="flex-1 truncate text-[11px] font-medium italic tracking-tight text-slate-500">
+            <p className="flex-1 truncate text-[11px] font-medium italic tracking-tight text-[var(--text-muted)]">
               Nenhuma das condições
             </p>
             <Handle

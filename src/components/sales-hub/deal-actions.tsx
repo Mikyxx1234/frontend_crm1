@@ -214,8 +214,8 @@ export function DealStageSelector({
             menos evidente. */}
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-slate-500 transition-transform dark:text-slate-400",
-            stageOpen && "rotate-180 text-blue-600 dark:text-blue-400",
+            "size-4 shrink-0 text-[var(--text-muted)] transition-transform dark:text-slate-400",
+            stageOpen && "rotate-180 text-[var(--color-info)] dark:text-blue-400",
           )}
           strokeWidth={2.5}
         />
@@ -236,7 +236,7 @@ export function DealStageSelector({
             className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)] dark:bg-slate-800 dark:shadow-[0_20px_48px_-16px_rgba(0,0,0,0.6)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-700">
+            <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2 dark:border-slate-700">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                 Mover para
               </span>
@@ -280,7 +280,7 @@ export function DealStageSelector({
                       <span className="truncate">{stage.name}</span>
                       {isCurrent && (
                         <Check
-                          className="ml-auto size-3.5 text-blue-600"
+                          className="ml-auto size-3.5 text-[var(--color-info)]"
                           strokeWidth={2.5}
                         />
                       )}
@@ -596,7 +596,7 @@ export function DealOutcomeButtons({
           "min-w-0 flex-1",
           dealStatus === "WON"
             ? "bg-emerald-500 text-white"
-            : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+            : "bg-[var(--color-success-bg)] text-[var(--color-success-text)] hover:bg-emerald-100",
         )}
       >
         <Trophy className="size-3.5" strokeWidth={2} />
@@ -616,7 +616,7 @@ export function DealOutcomeButtons({
           "min-w-0 flex-1",
           dealStatus === "LOST"
             ? "bg-rose-500 text-white"
-            : "bg-rose-50 text-rose-700 hover:bg-rose-100",
+            : "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] hover:bg-rose-100",
         )}
       >
         <XCircle className="size-3.5" strokeWidth={2} />

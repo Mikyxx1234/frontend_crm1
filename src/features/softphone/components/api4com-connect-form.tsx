@@ -346,7 +346,7 @@ export function Api4ComConnectForm() {
           disconnecting={disconnectMutation.isPending}
         />
         {disconnectMutation.isError && (
-          <p className="text-xs text-red-400">
+          <p className="text-xs text-[var(--color-danger)]">
             {(disconnectMutation.error as Error)?.message ?? "Falha ao desconectar"}
           </p>
         )}
@@ -386,7 +386,7 @@ export function Api4ComConnectForm() {
       />
 
       {mutation.isError && (
-        <p className="text-xs text-red-400">
+        <p className="text-xs text-[var(--color-danger)]">
           {(mutation.error as Error)?.message ?? "Falha ao conectar"}
         </p>
       )}

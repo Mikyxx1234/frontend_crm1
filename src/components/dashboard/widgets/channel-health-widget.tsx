@@ -20,9 +20,9 @@ type HealthResponse = {
 };
 
 const SEVERITY_STYLES: Record<HealthSeverity, { tone: string; icon: typeof CheckCircle2; label: string }> = {
-  ok: { tone: "text-emerald-600", icon: CheckCircle2, label: "Operacional" },
-  warning: { tone: "text-amber-600", icon: TriangleAlert, label: "Atenção" },
-  critical: { tone: "text-rose-600", icon: AlertOctagon, label: "Crítico" },
+  ok: { tone: "text-[var(--color-success-text)]", icon: CheckCircle2, label: "Operacional" },
+  warning: { tone: "text-[var(--color-warn)]", icon: TriangleAlert, label: "Atenção" },
+  critical: { tone: "text-[var(--color-danger-text)]", icon: AlertOctagon, label: "Crítico" },
   unknown: { tone: "text-muted-foreground", icon: TriangleAlert, label: "Indisponível" },
 };
 

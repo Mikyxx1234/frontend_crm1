@@ -67,10 +67,10 @@ export function TeamWidget() {
                     Conv. {convRate.toFixed(0)}%
                   </p>
                 </td>
-                <td className="py-2.5 pr-3 text-right tabular-nums font-bold text-emerald-600">
+                <td className="py-2.5 pr-3 text-right tabular-nums font-bold text-[var(--color-success-text)]">
                   {u.dealsWon}
                 </td>
-                <td className="py-2.5 pr-3 text-right tabular-nums text-red-500">
+                <td className="py-2.5 pr-3 text-right tabular-nums text-[var(--color-danger)]">
                   {u.dealsLost}
                 </td>
                 <td className="py-2.5 pr-3 text-right tabular-nums font-bold">

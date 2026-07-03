@@ -243,12 +243,12 @@ export function DealDetail({ dealId, open, onOpenChange, pipelineId, boardStages
             />
 
             {/* ── Two-column body ──
-                DNA Chat: shell branco, divisor hairline (border-slate-100)
+                DNA Chat: shell branco, divisor hairline (border-[var(--glass-border-subtle)])
                 em vez de cinza-bloco. Sidebar perde o fundo cinza para
                 ficar flat e respirável; só o divisor vertical separa as
                 colunas. */}
             <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-white md:grid-cols-[420px_minmax(0,1fr)] xl:grid-cols-[460px_minmax(0,1fr)]">
-              <div className="hidden min-h-0 border-slate-100 md:block md:border-r">
+              <div className="hidden min-h-0 border-[var(--glass-border-subtle)] md:block md:border-r">
                 <div className="scrollbar-thin h-full overflow-y-auto overscroll-contain px-5 py-5">
                   {contact ? (
                     <DealSidebar

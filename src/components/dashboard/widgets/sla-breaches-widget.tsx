@@ -38,7 +38,7 @@ export function SlaBreachesWidget() {
       <div className="text-center">
         <p className={cn(
           "text-4xl font-extrabold tabular-nums",
-          withinSla ? "text-emerald-600" : "text-rose-600",
+          withinSla ? "text-[var(--color-success-text)]" : "text-[var(--color-danger-text)]",
         )}>
           {avg > 0 ? formatted : "—"}
         </p>
@@ -54,7 +54,7 @@ export function SlaBreachesWidget() {
         {withinSla ? (
           <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
         ) : (
-          <AlertTriangle className="size-5 shrink-0 text-rose-500" />
+          <AlertTriangle className="size-5 shrink-0 text-[var(--color-danger)]" />
         )}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-foreground">

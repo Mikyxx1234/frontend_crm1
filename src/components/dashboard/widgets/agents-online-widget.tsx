@@ -23,8 +23,8 @@ type Agent = {
 };
 
 const STATUS_META: Record<AgentPresence, { label: string; tone: string; dot: string }> = {
-  ONLINE:  { label: "Online",   tone: "text-emerald-600", dot: "bg-emerald-500" },
-  AWAY:    { label: "Ausente",  tone: "text-amber-600",   dot: "bg-amber-500" },
+  ONLINE:  { label: "Online",   tone: "text-[var(--color-success-text)]", dot: "bg-emerald-500" },
+  AWAY:    { label: "Ausente",  tone: "text-[var(--color-warn)]",   dot: "bg-amber-500" },
   OFFLINE: { label: "Offline",  tone: "text-muted-foreground", dot: "bg-muted-foreground/60" },
 };
 
@@ -58,14 +58,14 @@ export function AgentsOnlineWidget() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
-        <StatusTile count={online.length} label="Online" Icon={Briefcase} tone="text-emerald-600" />
-        <StatusTile count={away.length} label="Ausente" Icon={Moon} tone="text-amber-600" />
+        <StatusTile count={online.length} label="Online" Icon={Briefcase} tone="text-[var(--color-success-text)]" />
+        <StatusTile count={away.length} label="Ausente" Icon={Moon} tone="text-[var(--color-warn)]" />
         <StatusTile count={offline.length} label="Offline" Icon={WifiOff} tone="text-muted-foreground" />
       </div>
 
       {voiceReady > 0 && (
         <p className="text-center text-[11px] text-muted-foreground">
-          <span className="font-bold text-emerald-600">{voiceReady}</span> prontos
+          <span className="font-bold text-[var(--color-success-text)]">{voiceReady}</span> prontos
           para ligações por voz.
         </p>
       )}

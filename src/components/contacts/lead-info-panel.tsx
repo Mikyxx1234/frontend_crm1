@@ -167,7 +167,7 @@ export function LeadInfoPanel({ contact, onUpdate, isUpdating }: Props) {
               <Button type="button" variant="ghost" size="icon" className="size-7" onClick={() => setEditingBasic(false)}>
                 <X className="size-3.5" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="size-7 text-emerald-600" onClick={saveBasic} disabled={isUpdating}>
+              <Button type="button" variant="ghost" size="icon" className="size-7 text-[var(--color-success-text)]" onClick={saveBasic} disabled={isUpdating}>
                 <Check className="size-3.5" />
               </Button>
             </div>

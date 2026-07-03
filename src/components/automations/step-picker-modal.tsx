@@ -34,9 +34,9 @@ const GROUP_VISUAL: Record<
   string,
   { Icon: LucideIcon; tone: string; bg: string; ring: string; fg: string }
 > = {
-  Mensagens:    { Icon: MessageSquare, tone: "blue",    bg: "bg-blue-50",    ring: "ring-blue-200/70",    fg: "text-blue-600" },
+  Mensagens:    { Icon: MessageSquare, tone: "blue",    bg: "bg-blue-50",    ring: "ring-blue-200/70",    fg: "text-[var(--color-info)]" },
   Salesbot:     { Icon: Bot,           tone: "violet",  bg: "bg-violet-50",  ring: "ring-violet-200/70",  fg: "text-violet-600" },
-  Acoes:        { Icon: Zap,           tone: "amber",   bg: "bg-amber-50",   ring: "ring-amber-200/70",   fg: "text-amber-600" },
+  Acoes:        { Icon: Zap,           tone: "amber",   bg: "bg-[var(--color-warn-bg)]",   ring: "ring-amber-200/70",   fg: "text-[var(--color-warn)]" },
   Logica:       { Icon: GitBranch,     tone: "cyan",    bg: "bg-cyan-50",    ring: "ring-cyan-200/70",    fg: "text-cyan-600" },
   Integracoes:  { Icon: Globe,         tone: "slate",   bg: "bg-[var(--glass-bg-overlay)]",  ring: "ring-[var(--glass-border)]",   fg: "text-[var(--text-muted)]" },
 };

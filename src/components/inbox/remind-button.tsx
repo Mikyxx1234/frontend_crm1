@@ -141,8 +141,8 @@ export function RemindButton({
           aria-label="Criar lembrete"
           aria-expanded={open}
           className={cn(
-            "flex size-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-slate-800 dark:hover:text-slate-100",
-            open && "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+            "flex size-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-slate-100 hover:text-slate-800 active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-slate-800 dark:hover:text-slate-100",
+            open && "bg-[var(--glass-bg-base)] text-[var(--text-primary)] dark:bg-slate-800 dark:text-slate-100",
           )}
         >
           <BellPlus size={18} strokeWidth={2.2} />
@@ -170,7 +170,7 @@ export function RemindButton({
           >
             <div className="mb-2 flex items-center gap-2 px-1">
               <Bell className="size-4 text-primary" strokeWidth={2.2} />
-              <h3 className="text-[13px] font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+              <h3 className="text-[13px] font-extrabold tracking-tight text-[var(--text-primary)] dark:text-slate-100">
                 Lembrar de {contactName}
               </h3>
             </div>
@@ -191,10 +191,10 @@ export function RemindButton({
                     )}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="text-[13px] font-bold text-slate-800 dark:text-slate-100">
+                      <div className="text-[13px] font-bold text-[var(--text-primary)] dark:text-slate-100">
                         {p.label}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-[var(--color-ink-muted)]">
+                      <div className="text-[11px] text-[var(--text-muted)] dark:text-[var(--color-ink-muted)]">
                         {p.description}
                       </div>
                     </div>

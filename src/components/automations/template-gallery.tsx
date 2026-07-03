@@ -129,7 +129,7 @@ function HeroCard({ onStartBlank, total }: { onStartBlank: () => void; total: nu
             <h2 className="text-[18px] font-extrabold tracking-tight sm:text-[20px]">
               Comece com um fluxo pronto
             </h2>
-            <p className="mt-1 max-w-lg text-[12px] text-slate-300 sm:text-[13px]">
+            <p className="mt-1 max-w-lg text-[12px] text-[var(--text-faint)] sm:text-[13px]">
               {total} automações inspiradas nas práticas mais usadas do mercado — adapte os detalhes e ative em minutos.
             </p>
           </div>

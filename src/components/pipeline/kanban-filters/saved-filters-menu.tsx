@@ -142,7 +142,7 @@ export function SavedFiltersMenu({
                 className="flex-1 text-left"
               >
                 <div className="flex items-center gap-1.5">
-                  <Bookmark className="size-3 text-blue-500 dark:text-blue-400" />
+                  <Bookmark className="size-3 text-[var(--color-info)] dark:text-blue-400" />
                   <span className="truncate text-[12px] font-semibold text-foreground">
                     {f.name}
                   </span>

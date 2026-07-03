@@ -190,7 +190,7 @@ export function KanbanColumn({
               ) : null}
               {unreadInColumn > 0 ? (
                 <TooltipHost label={`${unreadInColumn} mensagem(ns) não lida(s) nesta etapa`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-emerald-50/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
+                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-emerald-50/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-success-text)] dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
                     <MessageCircle className="size-3" />
                     {unreadInColumn}
                   </span>

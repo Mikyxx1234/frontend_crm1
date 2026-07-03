@@ -103,10 +103,10 @@ export function PushPermissionPrompt() {
           <Bell className="size-5" strokeWidth={2.4} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[14px] font-extrabold tracking-tight text-slate-900">
+          <p className="font-display text-[14px] font-extrabold tracking-tight text-[var(--text-primary)]">
             Receba mensagens em tempo real
           </p>
-          <p className="mt-0.5 text-[12px] font-medium leading-tight text-slate-500">
+          <p className="mt-0.5 text-[12px] font-medium leading-tight text-[var(--text-muted)]">
             Avisamos no celular quando um cliente responder, mesmo com o
             app fechado.
           </p>
@@ -128,7 +128,7 @@ export function PushPermissionPrompt() {
             <button
               type="button"
               onClick={dismiss}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold text-[var(--text-muted)] transition-colors hover:bg-slate-100 hover:text-foreground"
             >
               <BellOff className="size-3.5" strokeWidth={2.4} />
               Agora não

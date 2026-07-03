@@ -119,8 +119,8 @@ function TrendPill({ value }: { value: number }) {
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold",
         isUp
-          ? "bg-emerald-50 text-emerald-600"
-          : "bg-rose-50 text-rose-600",
+          ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
+          : "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
       )}
     >
       <Icon className="size-3" strokeWidth={2.5} />
@@ -144,10 +144,10 @@ function MetricSkeleton({ accent }: { accent: BentoAccent }) {
         >
           <span className={cn("size-5 animate-pulse rounded bg-white/60", tone.text)} />
         </span>
-        <span className="h-5 w-14 animate-pulse rounded-full bg-slate-100" />
+        <span className="h-5 w-14 animate-pulse rounded-full bg-[var(--glass-bg-base)]" />
       </div>
-      <span className="block h-3 w-24 animate-pulse rounded bg-slate-100" />
-      <span className="mt-2 block h-8 w-32 animate-pulse rounded bg-slate-100" />
+      <span className="block h-3 w-24 animate-pulse rounded bg-[var(--glass-bg-base)]" />
+      <span className="mt-2 block h-8 w-32 animate-pulse rounded bg-[var(--glass-bg-base)]" />
     </div>
   );
 }

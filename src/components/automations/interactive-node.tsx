@@ -66,7 +66,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
         selected
           ? cn(accentBorder, "ring-2", accentRing, accentShadow.split(" ")[0])
           : cn(
-              "border-slate-100 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px",
+              "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px",
               `hover:${accentBorder}`,
               accentShadow.split(" ")[1]
             )
@@ -101,10 +101,10 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           <Icon className="size-4" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-slate-900">
+          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
             {data.label}
           </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
+          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
             {data.summary}
           </p>
         </div>
@@ -127,7 +127,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
 
       {/* Button rows — cada um com seu handle */}
       {buttons.length > 0 && (
-        <div className="border-t border-slate-100 bg-linear-to-b from-slate-50/40 to-transparent">
+        <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
           {buttons.map((btn, i) => (
             <div
               key={btn.id || i}
@@ -152,11 +152,11 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           (não mais Bottom) pra manter o padrão visual dos demais handles
           e permitir conectar facilmente ao próximo card à direita. */}
       {(data.hasElse || data.hasTimeout) && (
-        <div className="border-t border-slate-100">
+        <div className="border-t border-[var(--glass-border-subtle)]">
           {data.hasElse && (
             <div className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5 last:border-b-0">
               <HelpCircle className="size-3 shrink-0 text-amber-500" strokeWidth={2.4} />
-              <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-amber-700">
+              <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-warn)]">
                 Outra resposta
               </span>
               <Handle
@@ -170,7 +170,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           {data.hasTimeout && (
             <div className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5 last:border-b-0">
               <Clock className="size-3 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.4} />
-              <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-slate-500">
+              <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-[var(--text-muted)]">
                 Sem resposta
               </span>
               <Handle
@@ -194,19 +194,19 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
         <TooltipHost label="Ver eventos" side="bottom">
           <button
             type="button"
-            className="flex w-full items-center gap-2 border-t border-slate-100 px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
+            className="flex w-full items-center gap-2 border-t border-[var(--glass-border-subtle)] px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
             onClick={(e) => {
               e.stopPropagation();
               data.onStatsClick?.();
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-emerald-100">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-rose-100">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>

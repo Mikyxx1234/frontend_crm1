@@ -81,7 +81,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
 
         {data.summary && (
           <div className="px-4 py-2.5">
-            <p className="line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
+            <p className="line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
               {data.summary}
             </p>
           </div>

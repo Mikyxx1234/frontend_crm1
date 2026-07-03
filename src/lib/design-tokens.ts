@@ -78,7 +78,7 @@ export const dt = {
     time: {
       sent: "text-[10px] tabular-nums",
       received: "text-[10px] tabular-nums text-[color:var(--chat-bubble-received-time)]",
-      note: "text-[10px] tabular-nums text-slate-400",
+      note: "text-[10px] tabular-nums text-[var(--text-muted)]",
     },
     check: {
       sent: "text-[color:var(--chat-bubble-sent-time)]",

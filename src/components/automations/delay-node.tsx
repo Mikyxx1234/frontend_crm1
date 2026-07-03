@@ -25,7 +25,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
         "group/node relative min-w-[210px] max-w-[270px] rounded-lg border bg-white transition-all duration-200",
         selected
           ? "border-orange-400/60 ring-2 ring-orange-300/30 shadow-[0_10px_30px_-10px_rgba(249,115,22,0.4)]"
-          : "border-slate-100 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"
+          : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"
       )}
     >
       {data.stepIndex != null && (
@@ -43,10 +43,10 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
           <Timer className="size-4" strokeWidth={2.4} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-slate-900">
+          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
             {data.label}
           </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
+          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
             {data.summary}
           </p>
         </div>

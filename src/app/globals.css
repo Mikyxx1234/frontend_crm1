@@ -504,7 +504,7 @@
 
 .dark .hover\:border-white\/55:hover { border-color: rgba(255, 255, 255, 0.14); }
 
-/* `bg-slate-50` e `border-slate-100` aparecem como background sutil de
+/* `bg-[var(--glass-bg-subtle)]` e `border-[var(--glass-border-subtle)]` aparecem como background sutil de
    menus e dividers. No dark eles ficam quase preto pra preservar contraste. */
 .dark .bg-slate-50 { background-color: rgba(255, 255, 255, 0.04); }
 .dark .hover\:bg-slate-50:hover { background-color: rgba(255, 255, 255, 0.06); }

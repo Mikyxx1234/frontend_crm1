@@ -22,12 +22,12 @@ const TYPE_VISUAL: Record<
   { Icon: LucideIcon; bg: string; ring: string; fg: string }
 > = {
   CALL:     { Icon: PhoneCall,     bg: "bg-cyan-50",     ring: "ring-cyan-200/70",     fg: "text-cyan-700" },
-  EMAIL:    { Icon: Mail,          bg: "bg-emerald-50",  ring: "ring-emerald-200/70",  fg: "text-emerald-700" },
+  EMAIL:    { Icon: Mail,          bg: "bg-[var(--color-success-bg)]",  ring: "ring-emerald-200/70",  fg: "text-[var(--color-success-text)]" },
   MEETING:  { Icon: Users,         bg: "bg-violet-50",   ring: "ring-violet-200/70",   fg: "text-violet-700" },
   TASK:     { Icon: CheckCircle2,  bg: "bg-blue-50",     ring: "ring-blue-200/70",     fg: "text-blue-700" },
   NOTE:     { Icon: MessageCircle, bg: "bg-[var(--color-bg-subtle)]",    ring: "ring-slate-200/70",    fg: "text-[var(--color-ink-soft)]" },
   WHATSAPP: { Icon: MessageCircle, bg: "bg-green-50",    ring: "ring-green-200/70",    fg: "text-green-700" },
-  OTHER:    { Icon: Calendar,      bg: "bg-amber-50",    ring: "ring-amber-200/70",    fg: "text-amber-700" },
+  OTHER:    { Icon: Calendar,      bg: "bg-[var(--color-warn-bg)]",    ring: "ring-amber-200/70",    fg: "text-[var(--color-warn)]" },
 };
 
 type ActivitiesPanelProps = {
@@ -115,7 +115,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
               className={cn(
                 "flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border",
                 "bg-[var(--color-bg-subtle)]/60 px-3.5 py-3 text-left text-[13px]",
-                "tracking-tight text-slate-500 transition-colors",
+                "tracking-tight text-[var(--text-muted)] transition-colors",
                 "hover:border-[var(--color-primary)]/40 hover:bg-white hover:text-slate-800",
               )}
             >
@@ -170,7 +170,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="rounded-full px-4 text-[12px] font-bold text-slate-500"
+                  className="rounded-full px-4 text-[12px] font-bold text-[var(--text-muted)]"
                   onClick={() => { setOpen(false); setTitle(""); setDesc(""); setScheduled(""); }}
                 >
                   Cancelar
@@ -290,23 +290,23 @@ function ActivityTimeline({
                         {ACTIVITY_TYPES.find((t) => t.value === a.type)?.label ?? a.type}
                       </span>
                       {a.completed ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-emerald-600">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--color-success-text)]">
                           <CheckCircle2 className="size-3" /> Concluida
                         </span>
                       ) : (
-                        <Circle className="size-3 text-slate-300" />
+                        <Circle className="size-3 text-[var(--text-faint)]" />
                       )}
                     </div>
                     <p
                       className={cn(
-                        "mt-1 text-[14px] font-bold tracking-tight text-slate-900",
+                        "mt-1 text-[14px] font-bold tracking-tight text-[var(--text-primary)]",
                         a.completed && "line-through decoration-slate-300",
                       )}
                     >
                       {a.title}
                     </p>
                     {a.description ? (
-                      <p className="mt-0.5 line-clamp-2 text-[12px] tracking-tight text-slate-500">
+                      <p className="mt-0.5 line-clamp-2 text-[12px] tracking-tight text-[var(--text-muted)]">
                         {a.description}
                       </p>
                     ) : null}

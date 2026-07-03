@@ -86,7 +86,7 @@ export function CustomFieldsSection({
           key={f.fieldId}
           className={`flex items-center gap-3 px-3.5 py-2.5 ${i < fields.length - 1 ? "border-b border-border/80" : ""}`}
         >
-          <Label className="w-[40%] shrink-0 text-xs font-medium text-slate-500">{f.label}</Label>
+          <Label className="w-[40%] shrink-0 text-xs font-medium text-[var(--text-muted)]">{f.label}</Label>
           {editing ? (
             <div className="min-w-0 flex-1">
               {f.type === "SELECT" && f.options.length > 0 ? (
@@ -135,7 +135,7 @@ export function CustomFieldsSection({
               )}
             </div>
           ) : (
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-primary)]">
               {f.value || <span className="font-normal text-[var(--color-ink-muted)]">—</span>}
             </span>
           )}
@@ -165,7 +165,7 @@ export function CustomFieldsSection({
         </button>
         <button
           type="button"
-          className={cn(compactDlToolbarBtn, "text-emerald-600 hover:text-emerald-700")}
+          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-emerald-700")}
           onClick={onSave}
           disabled={saveMutation.isPending}
           aria-label="Salvar campos"
@@ -220,7 +220,7 @@ export function CustomFieldsSection({
         </button>
         <button
           type="button"
-          className={cn(compactDlToolbarBtn, "text-emerald-600 hover:text-emerald-700")}
+          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-emerald-700")}
           onClick={onSave}
           disabled={saveMutation.isPending}
           aria-label="Salvar campos"
@@ -278,7 +278,7 @@ export function CustomFieldsSection({
         </button>
         <button
           type="button"
-          className={cn(compactDlToolbarBtn, "text-emerald-600 hover:text-emerald-700")}
+          className={cn(compactDlToolbarBtn, "text-[var(--color-success-text)] hover:text-emerald-700")}
           onClick={onSave}
           disabled={saveMutation.isPending}
           aria-label="Salvar campos"
@@ -319,7 +319,7 @@ export function CustomFieldsSection({
               type="button"
               variant="ghost"
               size="icon"
-              className="size-7 rounded-xl text-emerald-600"
+              className="size-7 rounded-xl text-[var(--color-success-text)]"
               onClick={onSave}
               disabled={saveMutation.isPending}
             >

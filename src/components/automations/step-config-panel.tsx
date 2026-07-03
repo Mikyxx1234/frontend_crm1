@@ -306,13 +306,13 @@ function VariableShortcutTextarea({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => applyToken(opt.token)}
             >
-              <span className="mt-0.5 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+              <span className="mt-0.5 rounded bg-[var(--glass-bg-base)] px-1.5 py-0.5 font-mono text-[10px] text-foreground">
                 {opt.token}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[12px] font-semibold text-foreground">{opt.label}</span>
                 {opt.hint ? (
-                  <span className="block truncate text-[10px] text-slate-500">{opt.hint}</span>
+                  <span className="block truncate text-[10px] text-[var(--text-muted)]">{opt.hint}</span>
                 ) : null}
               </span>
             </button>
@@ -1590,11 +1590,11 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </p>
                 <ul className="space-y-1">
                   <li>
-                    <span className="font-semibold text-emerald-600">Distribuído</span>{" "}
+                    <span className="font-semibold text-[var(--color-success-text)]">Distribuído</span>{" "}
                     (saída verde) — havia agente disponível e o lead foi atribuído.
                   </li>
                   <li>
-                    <span className="font-semibold text-rose-600">Sem agente</span>{" "}
+                    <span className="font-semibold text-[var(--color-danger-text)]">Sem agente</span>{" "}
                     (saída vermelha) — ninguém elegível no momento; o lead entra na
                     fila de espera e você escolhe o que fazer aqui.
                   </li>
@@ -2590,10 +2590,10 @@ function ConditionStepConfig({
   return (
     <>
       <div className="rounded-lg border border-cyan-100 bg-cyan-50/40 p-3">
-        <p className="text-[12px] font-semibold text-slate-800">
+        <p className="text-[12px] font-semibold text-[var(--text-primary)]">
           Condições em cascata
         </p>
-        <p className="text-[11px] leading-relaxed text-slate-500">
+        <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
           O fluxo avalia cada condição na ordem. A primeira que baterem todas as
           regras (E) dispara seu caminho. Se nenhuma baterem, segue o caminho{" "}
           <span className="font-semibold">Nenhuma das condições</span>.
@@ -2746,7 +2746,7 @@ function ConditionStepConfig({
       </Button>
 
       <div className="space-y-1.5 rounded-lg border border-rose-100 bg-rose-50/40 p-3">
-        <Label className="text-[11px] text-rose-700">
+        <Label className="text-[11px] text-[var(--color-danger-text)]">
           Nenhuma das condições → ir para
         </Label>
         <DropdownGlass
@@ -3389,14 +3389,14 @@ function MediaStepConfig({
           </Button>
 
           {hasFile && uploadedFileName && (
-            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
-              <svg className="size-4 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-[var(--color-success-bg)] px-2.5 py-1.5">
+              <svg className="size-4 shrink-0 text-[var(--color-success-text)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
               <span className="flex-1 truncate text-xs font-medium text-emerald-800">
                 {uploadedFileName}
               </span>
               <button
                 type="button"
-                className="text-xs text-emerald-600 underline hover:text-emerald-800"
+                className="text-xs text-[var(--color-success-text)] underline hover:text-emerald-800"
                 onClick={() => {
                   setDraft((d) => ({ ...d, mediaUrl: "", uploadedFileName: "" }));
                 }}

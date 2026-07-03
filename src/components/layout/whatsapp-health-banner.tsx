@@ -124,11 +124,11 @@ export function WhatsAppHealthBanner() {
       className={cn(
         "mb-3 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm",
         isCritical
-          ? "border-red-300 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100"
-          : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100",
+          ? "border-red-300 bg-[var(--color-danger-bg)] text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100"
+          : "border-amber-300 bg-[var(--color-warn-bg)] text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100",
       )}
     >
-      <Icon className={cn("mt-0.5 size-5 shrink-0", isCritical ? "text-red-600 dark:text-red-300" : "text-amber-600 dark:text-amber-300")} />
+      <Icon className={cn("mt-0.5 size-5 shrink-0", isCritical ? "text-[var(--color-danger-text)] dark:text-red-300" : "text-[var(--color-warn)] dark:text-amber-300")} />
       <div className="min-w-0 flex-1">
         <p className="font-semibold leading-tight">
           {isCritical ? "WhatsApp com problema crítico" : "WhatsApp com aviso"}
@@ -185,7 +185,7 @@ export function WhatsAppHealthBanner() {
           aria-label="Silenciar aviso por 30 minutos"
           className={cn(
             "-mr-1 -mt-1 rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5",
-            isCritical ? "text-red-700 dark:text-red-200" : "text-amber-700 dark:text-amber-200",
+            isCritical ? "text-[var(--color-danger-text)] dark:text-red-200" : "text-[var(--color-warn)] dark:text-amber-200",
           )}
         >
           <X className="size-4" />

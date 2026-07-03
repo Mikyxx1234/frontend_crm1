@@ -162,7 +162,7 @@ export function ProductPolicyPanel({
   return (
     <div className={cn("space-y-4", compact ? "" : "rounded-xl border bg-muted/10 p-4")}>
       <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-[var(--brand-primary)] dark:bg-indigo-950 dark:text-indigo-300">
           <Package className="size-4" />
         </div>
         <div className="min-w-0 flex-1">

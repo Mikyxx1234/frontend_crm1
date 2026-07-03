@@ -85,14 +85,14 @@ function FunnelTooltip({
       ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(row.conversionFromPrevious)}% da etapa anterior`
       : "Etapa inicial";
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.2)]">
+    <div className="rounded-2xl border border-[var(--glass-border-subtle)] bg-white px-3.5 py-2.5 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.2)]">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
         {row.stageName}
       </p>
-      <p className="mt-0.5 text-[14px] font-bold tracking-tight text-slate-900">
+      <p className="mt-0.5 text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
         {row.dealCount} negócio{row.dealCount === 1 ? "" : "s"}
       </p>
-      <p className="text-[11px] font-semibold text-slate-500">
+      <p className="text-[11px] font-semibold text-[var(--text-muted)]">
         {formatCurrency(row.totalValue)}
       </p>
       <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--color-ink-muted)]">
@@ -125,23 +125,23 @@ export function FunnelChart({
       {/* Header */}
       <div className="mb-6">
         <span className={bentoLabelClass}>Pipeline Health</span>
-        <h3 className="mt-1 text-[18px] font-bold tracking-tight text-slate-900">
+        <h3 className="mt-1 text-[18px] font-bold tracking-tight text-[var(--text-primary)]">
           Funil de Conversão
         </h3>
       </div>
 
       {!pipelineId ? (
-        <p className="py-12 text-center text-[13px] font-medium text-slate-500">
+        <p className="py-12 text-center text-[13px] font-medium text-[var(--text-muted)]">
           Selecione um pipeline para ver o funil.
         </p>
       ) : isLoading ? (
         <div className="h-[360px] w-full animate-pulse rounded-2xl bg-[var(--color-bg-subtle)]" />
       ) : isError ? (
-        <p className="py-12 text-center text-[13px] font-medium text-slate-500">
+        <p className="py-12 text-center text-[13px] font-medium text-[var(--text-muted)]">
           Não foi possível carregar o funil.
         </p>
       ) : chartData.length === 0 ? (
-        <p className="py-12 text-center text-[13px] font-medium text-slate-500">
+        <p className="py-12 text-center text-[13px] font-medium text-[var(--text-muted)]">
           Nenhuma etapa neste pipeline.
         </p>
       ) : (
@@ -208,7 +208,7 @@ export function FunnelChart({
                       <span className="truncate text-[11px] font-bold uppercase tracking-wide text-foreground">
                         {stage.stageName}
                       </span>
-                      <span className="shrink-0 text-[11px] font-bold text-slate-900">
+                      <span className="shrink-0 text-[11px] font-bold text-[var(--text-primary)]">
                         {stage.dealCount}
                       </span>
                     </div>

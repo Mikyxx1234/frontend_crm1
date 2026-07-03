@@ -50,7 +50,7 @@ export function SidebarField({
   return (
     <div className={cn(row, className)}>
       <div className="flex min-w-0 shrink-0 items-center gap-1.5">
-        {Icon ? <Icon className="size-3 shrink-0 text-slate-400" aria-hidden /> : null}
+        {Icon ? <Icon className="size-3 shrink-0 text-[var(--text-muted)]" aria-hidden /> : null}
         <span className={dt.text.label}>{label}</span>
       </div>
       {children ? (
@@ -66,7 +66,7 @@ export function SidebarField({
       ) : editable ? (
         <span className={cn(dt.text.value, "cursor-pointer")}>
           {value || "—"}{" "}
-          <span className="text-[11px] text-slate-300">▾</span>
+          <span className="text-[11px] text-[var(--text-faint)]">▾</span>
         </span>
       ) : (
         <span className={cn(dt.text.value, !value && dt.text.muted, "truncate")}>{value || "—"}</span>

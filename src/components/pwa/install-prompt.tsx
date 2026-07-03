@@ -88,10 +88,10 @@ export function InstallPrompt() {
           <span className="text-lg font-bold">E</span>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[14px] font-extrabold tracking-tight text-slate-900">
+          <p className="font-display text-[14px] font-extrabold tracking-tight text-[var(--text-primary)]">
             Instale o EduIT
           </p>
-          <p className="mt-0.5 text-[12px] font-medium leading-tight text-slate-500">
+          <p className="mt-0.5 text-[12px] font-medium leading-tight text-[var(--text-muted)]">
             {isIOS
               ? "Toque em Compartilhar e depois em \"Adicionar a Tela de Início\" para abrir como app."
               : "Tenha acesso rápido às conversas direto da tela inicial, mesmo offline."}
@@ -113,7 +113,7 @@ export function InstallPrompt() {
           )}
 
           {isIOS && (
-            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-[var(--color-ink-soft)]">
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--glass-bg-base)] px-3 py-1.5 text-[11px] font-bold text-[var(--color-ink-soft)]">
               <Share className="size-3.5" strokeWidth={2.5} />
               Use o botão Compartilhar
             </div>

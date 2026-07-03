@@ -88,7 +88,7 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
       )}
 
       {step === "FAILED" && (
-        <span className="text-xs text-red-400" title={error ?? undefined}>
+        <span className="text-xs text-[var(--color-danger)]" title={error ?? undefined}>
           Falhou
         </span>
       )}

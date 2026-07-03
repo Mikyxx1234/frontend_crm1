@@ -95,7 +95,7 @@ export function TransferControl({
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-100 bg-white p-1.5 shadow-[0_20px_40px_-20px_rgba(15,23,42,0.25)]">
+          <div className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-[var(--glass-border-subtle)] bg-white p-1.5 shadow-[0_20px_40px_-20px_rgba(15,23,42,0.25)]">
             <p className="px-3 pb-2 pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
               Transferir para
             </p>
@@ -105,15 +105,15 @@ export function TransferControl({
                 onAssign(null);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-slate-500 transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900"
+              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13px] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900"
             >
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[var(--color-ink-muted)]">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--glass-bg-base)] text-[var(--color-ink-muted)]">
                 <UserMinus className="size-3.5" />
               </span>
               <span className="flex-1">Remover responsável</span>
             </button>
             {teamUsers.length > 0 && (
-              <div className="my-1 h-px bg-slate-100" aria-hidden />
+              <div className="my-1 h-px bg-[var(--glass-bg-base)]" aria-hidden />
             )}
             <div className="max-h-[280px] overflow-y-auto scrollbar-thin">
               {teamUsers.map((u) => {
@@ -138,7 +138,7 @@ export function TransferControl({
                       "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors",
                       isSelected
                         ? "bg-primary/10 text-primary"
-                        : "text-slate-800 hover:bg-[var(--color-bg-subtle)]",
+                        : "text-[var(--text-primary)] hover:bg-[var(--color-bg-subtle)]",
                     )}
                   >
                     <span
@@ -146,7 +146,7 @@ export function TransferControl({
                         "flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold uppercase",
                         isSelected
                           ? "bg-primary text-white"
-                          : "bg-slate-100 text-[var(--color-ink-soft)]",
+                          : "bg-[var(--glass-bg-base)] text-[var(--color-ink-soft)]",
                       )}
                     >
                       {initials}

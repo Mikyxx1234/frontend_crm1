@@ -82,7 +82,7 @@ function SelectGlass({
 
   return (
     <div ref={ref} className="relative">
-      <p className="mb-1.5 font-display text-[10.5px] font-bold uppercase tracking-widest text-slate-400">
+      <p className="mb-1.5 font-display text-[10.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
         {label}
       </p>
       <button
@@ -94,7 +94,7 @@ function SelectGlass({
         <IconChevronDown
           size={15}
           className={cn(
-            "shrink-0 text-slate-400 transition-transform",
+            "shrink-0 text-[var(--text-muted)] transition-transform",
             open && "rotate-180",
           )}
         />
@@ -119,7 +119,7 @@ function SelectGlass({
             >
               <span className="font-display text-[13px] font-semibold">{opt.label}</span>
               {opt.description && (
-                <span className="font-display text-[11px] text-slate-400">
+                <span className="font-display text-[11px] text-[var(--text-muted)]">
                   {opt.description}
                 </span>
               )}
@@ -154,7 +154,7 @@ function AutomationPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-display text-[10.5px] font-bold uppercase tracking-widest text-slate-400">
+      <p className="font-display text-[10.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
         Automação
       </p>
 
@@ -162,7 +162,7 @@ function AutomationPicker({
       <div className="relative">
         <IconSearch
           size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
         />
         <input
           type="text"
@@ -176,13 +176,13 @@ function AutomationPicker({
       {/* Lista */}
       <div className="max-h-[220px] overflow-y-auto rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-sm">
         {isLoading && (
-          <p className="px-3.5 py-3 font-display text-[12.5px] text-slate-400">
+          <p className="px-3.5 py-3 font-display text-[12.5px] text-[var(--text-muted)]">
             Carregando...
           </p>
         )}
 
         {!isLoading && items.length === 0 && (
-          <p className="px-3.5 py-3 font-display text-[12.5px] text-slate-400">
+          <p className="px-3.5 py-3 font-display text-[12.5px] text-[var(--text-muted)]">
             Nenhuma automação encontrada.
           </p>
         )}
@@ -195,7 +195,7 @@ function AutomationPicker({
               type="button"
               onClick={() => onSelect(item.id)}
               className={cn(
-                "flex w-full items-center gap-3 border-b border-slate-100 px-3.5 py-3 text-left last:border-0 transition-colors",
+                "flex w-full items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3.5 py-3 text-left last:border-0 transition-colors",
                 isSelected
                   ? "bg-[var(--brand-primary)]/6 text-[var(--brand-primary)]"
                   : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
@@ -206,17 +206,17 @@ function AutomationPicker({
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
                   isSelected
                     ? "bg-[var(--brand-primary)] text-white"
-                    : "bg-slate-100 text-[var(--brand-primary)]",
+                    : "bg-[var(--glass-bg-base)] text-[var(--brand-primary)]",
                 )}
               >
                 {isSelected ? <IconCheck size={14} /> : <IconBolt size={14} />}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-[13px] font-bold text-slate-800">
+                <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
                   {item.name}
                 </p>
                 {item.description && (
-                  <p className="truncate font-display text-[11.5px] text-slate-400">
+                  <p className="truncate font-display text-[11.5px] text-[var(--text-muted)]">
                     {item.description}
                   </p>
                 )}
@@ -225,8 +225,8 @@ function AutomationPicker({
                 className={cn(
                   "shrink-0 rounded-full px-2.5 py-0.5 font-display text-[10.5px] font-bold",
                   item.active
-                    ? "bg-emerald-50 text-emerald-600"
-                    : "bg-slate-100 text-slate-400",
+                    ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
+                    : "bg-[var(--glass-bg-base)] text-[var(--text-muted)]",
                 )}
               >
                 {item.active ? "Ativa" : "Pausada"}
@@ -240,7 +240,7 @@ function AutomationPicker({
       <button
         type="button"
         onClick={onCreateNew}
-        className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--glass-border)] py-2.5 font-display text-[12.5px] font-semibold text-slate-400 transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+        className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--glass-border)] py-2.5 font-display text-[12.5px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
       >
         <IconPlus size={14} />
         Criar nova automação
@@ -331,10 +331,10 @@ export function AddAutomationDrawer({
               <IconBolt size={18} className="text-[var(--brand-primary)]" />
             </div>
             <div>
-              <h2 className="font-display text-[15px] font-bold text-slate-800">
+              <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
                 {initialAutomationId ? "Editar automação" : "Adicionar automação"}
               </h2>
-              <p className="mt-0.5 font-display text-[12px] text-slate-500">
+              <p className="mt-0.5 font-display text-[12px] text-[var(--text-muted)]">
                 Estágio:{" "}
                 <span className="font-semibold text-[var(--brand-primary)]">{stageName}</span>
               </p>
@@ -344,21 +344,21 @@ export function AddAutomationDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-[var(--text-primary)]"
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--text-primary)]"
           >
             <IconX size={17} />
           </button>
         </div>
 
         {/* Divider */}
-        <div className="h-px w-full bg-slate-100" />
+        <div className="h-px w-full bg-[var(--glass-bg-base)]" />
 
         {/* Corpo com scroll */}
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
 
           {/* Condições */}
-          <div className="rounded-xl border border-[var(--glass-border)] bg-slate-50 p-4">
-            <p className="mb-2 font-display text-[10.5px] font-bold uppercase tracking-widest text-slate-400">
+          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-4">
+            <p className="mb-2 font-display text-[10.5px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
               Para todos os leads com:
             </p>
             <button
@@ -383,7 +383,7 @@ export function AddAutomationDrawer({
           />
 
           {/* Separador */}
-          <div className="h-px w-full bg-slate-100" />
+          <div className="h-px w-full bg-[var(--glass-bg-base)]" />
 
           {/* Seleção de automação */}
           <AutomationPicker
@@ -396,7 +396,7 @@ export function AddAutomationDrawer({
           />
 
           {/* Aplicar a leads existentes */}
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--glass-border)] bg-slate-50 px-4 py-3">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3">
             <div
               className={cn(
                 "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors",
@@ -417,7 +417,7 @@ export function AddAutomationDrawer({
               <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
                 Aplicar o gatilho a todos os leads já nesta etapa
               </p>
-              <p className="mt-0.5 font-display text-[11.5px] text-slate-400">
+              <p className="mt-0.5 font-display text-[11.5px] text-[var(--text-muted)]">
                 Executa imediatamente para leads existentes neste estágio.
               </p>
             </div>
@@ -425,7 +425,7 @@ export function AddAutomationDrawer({
         </div>
 
         {/* Rodapé fixo */}
-        <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/80 px-6 py-4">
+        <div className="flex items-center justify-end gap-2.5 border-t border-[var(--glass-border-subtle)] bg-slate-50/80 px-6 py-4">
           <button
             type="button"
             onClick={onClose}

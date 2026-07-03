@@ -368,7 +368,7 @@ function UserRolesEditor({
       </div>
 
       {error && (
-        <p className="text-[11px] text-red-600">{error}</p>
+        <p className="text-[11px] text-[var(--color-danger-text)]">{error}</p>
       )}
     </div>
   );
@@ -535,7 +535,7 @@ function UserScopeEditor({ userId }: { userId: string }) {
         )}
       </div>
 
-      {error && <p className="text-[11px] text-red-600">{error}</p>}
+      {error && <p className="text-[11px] text-[var(--color-danger-text)]">{error}</p>}
     </div>
   );
 }

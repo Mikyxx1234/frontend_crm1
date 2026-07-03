@@ -194,7 +194,7 @@ export function DealListTable({
                     {d.contactInitials}
                   </div>
                   {d.channel === "whatsapp" && (
-                    <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-[1.5px] border-[var(--glass-bg-base)] bg-[#25D366]">
+                    <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border-[1.5px] border-[var(--glass-bg-base)] bg-[var(--channel-whatsapp)]">
                       <IconBrandWhatsapp size={8} className="text-white" />
                     </span>
                   )}

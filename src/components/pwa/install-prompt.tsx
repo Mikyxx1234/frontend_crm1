@@ -104,7 +104,7 @@ export function InstallPrompt() {
               className={cn(
                 "mt-3 inline-flex h-9 items-center gap-1.5 rounded-full px-4",
                 "bg-primary text-[12px] font-bold text-white",
-                "shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6] active:scale-[0.97]",
+                "shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--brand-primary-hover)] active:scale-[0.97]",
               )}
             >
               <Download className="size-3.5" strokeWidth={2.5} />

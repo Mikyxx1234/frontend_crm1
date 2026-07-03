@@ -35,7 +35,7 @@ const TYPES: {
     description: "Mensagens e automações",
     icon: MessageCircle,
     cardClass:
-      "border-[#25D366]/30 bg-[#25D366]/[0.06] hover:border-[#25D366]/50",
+      "border-[var(--channel-whatsapp)]/30 bg-[var(--channel-whatsapp)]/[0.06] hover:border-[var(--channel-whatsapp)]/50",
   },
   {
     type: "INSTAGRAM",
@@ -373,7 +373,7 @@ export function CreateChannelDialog({
                     <Icon
                       className={cn(
                         "size-8",
-                        type === "WHATSAPP" && "text-[#25D366]"
+                        type === "WHATSAPP" && "text-[var(--channel-whatsapp)]"
                       )}
                     />
                     <span className="font-semibold text-[var(--text-primary)]">{label}</span>
@@ -414,13 +414,13 @@ export function CreateChannelDialog({
                   onClick={() => setProvider("BAILEYS_MD")}
                   className={cn(
                     "rounded-xl border-2 p-4 text-left transition-all",
-                    "border-[#25D366]/20 bg-[#25D366]/5 hover:border-[#25D366]/40",
+                    "border-[var(--channel-whatsapp)]/20 bg-[var(--channel-whatsapp)]/5 hover:border-[var(--channel-whatsapp)]/40",
                     provider === "BAILEYS_MD" &&
                       "ring-2 ring-[var(--brand-primary)] ring-offset-2"
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <QrCode className="size-5 text-[#25D366]" />
+                    <QrCode className="size-5 text-[var(--channel-whatsapp)]" />
                     <p className="font-semibold">WhatsApp QR Code</p>
                   </div>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -457,7 +457,7 @@ export function CreateChannelDialog({
                           </p>
                           <Button
                             type="button"
-                            className="mt-3 w-full gap-2 bg-[#1877F2] text-white hover:bg-[#166FE5]"
+                            className="mt-3 w-full gap-2 bg-[var(--channel-facebook)] text-white hover:bg-[var(--channel-facebook)]"
                             disabled={submitting || !name.trim()}
                             onClick={() => void handleEmbeddedSignup()}
                           >
@@ -573,7 +573,7 @@ export function CreateChannelDialog({
                 ) : null}
 
                 {effectiveProvider === "BAILEYS_MD" ? (
-                  <div className="rounded-lg border border-[#25D366]/20 bg-[#25D366]/5 p-3">
+                  <div className="rounded-lg border border-[var(--channel-whatsapp)]/20 bg-[var(--channel-whatsapp)]/5 p-3">
                     <p className="text-sm text-[var(--text-muted)]">
                       Após criar o canal, clique em <strong>Conectar</strong> e escaneie o QR code
                       com seu WhatsApp. O número será detectado automaticamente.

@@ -38,7 +38,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
       />
 
       {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[#1e3a8a] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
+        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[var(--brand-gradient-end)] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
           {data.stepIndex}
         </span>
       )}

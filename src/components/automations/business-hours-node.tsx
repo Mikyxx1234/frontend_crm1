@@ -22,7 +22,7 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
   return (
     <div className="group/node relative pr-6 pb-6">
       {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[#1e3a8a] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
+        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[var(--brand-gradient-end)] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
           {data.stepIndex}
         </span>
       )}

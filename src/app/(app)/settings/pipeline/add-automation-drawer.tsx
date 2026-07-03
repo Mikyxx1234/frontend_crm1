@@ -322,7 +322,7 @@ export function AddAutomationDrawer({
         )}
       >
         {/* Header com gradiente sutil */}
-        <div className="relative flex items-start justify-between bg-gradient-to-br from-[#5B6FF5]/8 via-white to-white px-6 pb-5 pt-6">
+        <div className="relative flex items-start justify-between bg-gradient-to-br from-[var(--brand-primary)]/8 via-white to-white px-6 pb-5 pt-6">
           {/* Barra lateral colorida */}
           <span className="absolute left-0 top-0 h-full w-[3px] rounded-r-full bg-[var(--brand-primary)]" />
 

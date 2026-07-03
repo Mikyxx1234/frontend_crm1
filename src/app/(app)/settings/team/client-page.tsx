@@ -1029,7 +1029,7 @@ function StatCard({
       ? "bg-[var(--color-enterprise-bg,rgba(91,111,245,0.15))] text-[var(--brand-primary)]"
       : tone === "violet"
         ? "bg-[rgba(167,139,250,0.18)] text-[var(--brand-secondary)]"
-        : "bg-[var(--color-success-bg,rgba(16,185,129,0.12))] text-[#0f7a5a]";
+        : "bg-[var(--color-success-bg,rgba(16,185,129,0.12))] text-[var(--color-success-dark)]";
   return (
     <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
       <span

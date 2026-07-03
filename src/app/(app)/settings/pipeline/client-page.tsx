@@ -223,7 +223,7 @@ function CopyToStageModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="relative flex items-start justify-between bg-gradient-to-br from-[#5B6FF5]/10 via-[var(--glass-bg-base)] to-[var(--glass-bg-base)] px-5 pb-4 pt-5">
+        <div className="relative flex items-start justify-between bg-gradient-to-br from-[var(--brand-primary)]/10 via-[var(--glass-bg-base)] to-[var(--glass-bg-base)] px-5 pb-4 pt-5">
           <span className="absolute left-0 top-0 h-full w-[3px] rounded-r-full bg-[var(--brand-primary)]" />
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">

@@ -95,9 +95,9 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
             <Trash2 className="size-4" />
           </button>
         </TooltipHost>
-        <div className="flex min-w-0 items-center gap-1.5 rounded-full bg-[#ef4444]/10 px-2.5 py-1">
-          <span className="size-2 shrink-0 rounded-full bg-[#ef4444]" style={{ animation: "pulse-dot 2s infinite" }} />
-          <span className="text-[12px] font-medium text-[#ef4444]" style={{ fontVariantNumeric: "tabular-nums" }}>
+        <div className="flex min-w-0 items-center gap-1.5 rounded-full bg-[var(--color-danger)]/10 px-2.5 py-1">
+          <span className="size-2 shrink-0 rounded-full bg-[var(--color-danger)]" style={{ animation: "pulse-dot 2s infinite" }} />
+          <span className="text-[12px] font-medium text-[var(--color-danger)]" style={{ fontVariantNumeric: "tabular-nums" }}>
             {formatTime(duration)}
           </span>
         </div>
@@ -106,7 +106,7 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
             type="button"
             onClick={stopRecording}
             aria-label="Parar gravação"
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#ef4444] text-white lumen-transition hover:scale-105"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)] text-white lumen-transition hover:scale-105"
             style={{ animation: "pulse-record 1s infinite" }}
           >
             <Check className="size-4" strokeWidth={2.5} />
@@ -121,7 +121,7 @@ export function AudioRecorder({ onSend, disabled, className }: AudioRecorderProp
       {audioUrl && <audio src={audioUrl} controls className="h-7 max-w-[160px]" />}
       <TooltipHost label="Descartar áudio" side="top" contentClassName="text-center">
         <button type="button" onClick={discard} aria-label="Descartar áudio"
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#ef4444] lumen-transition hover:bg-[#ef4444]/10 hover:scale-105">
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-danger)] lumen-transition hover:bg-[var(--color-danger)]/10 hover:scale-105">
           <Trash2 className="size-4" />
         </button>
       </TooltipHost>

@@ -18,9 +18,9 @@ const badgeVariants = cva(
         destructive:
           "border-destructive/25 bg-[var(--color-destructive-soft)] text-destructive",
         success:
-          "border-[var(--color-success)]/25 bg-[var(--color-success-soft)] text-[#065f46]",
+          "border-[var(--color-success)]/25 bg-[var(--color-success-soft)] text-[var(--color-success-text)]",
         warning:
-          "border-[var(--color-warning)]/25 bg-[var(--color-warning-soft)] text-[#92600a]",
+          "border-[var(--color-warning)]/25 bg-[var(--color-warning-soft)] text-[var(--color-warn-text)]",
         // Índigo suave — estado, etapa
         indigo:
           "border-primary/25 bg-[var(--color-primary-soft)] text-primary",
@@ -32,7 +32,7 @@ const badgeVariants = cva(
           "border-[var(--color-pink)]/25 bg-[var(--color-pink-soft)] text-[var(--color-pink)]",
         // Lead (laranja warm) — novo
         lead:
-          "border-[var(--color-warning)]/25 bg-[var(--color-warning-soft)] text-[#92600a]",
+          "border-[var(--color-warning)]/25 bg-[var(--color-warning-soft)] text-[var(--color-warn-text)]",
         // Glass — translúcida com blur
         glass:
           "border-white/55 bg-white/45 text-foreground backdrop-blur-sm shadow-[var(--glass-shadow-sm)]",
@@ -67,7 +67,7 @@ function AIBadge({
     <div
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold leading-none text-white shadow-[var(--shadow-lavender-glow)]",
-        "bg-gradient-to-r from-[#a78bfa] to-[#f472b6]",
+        "bg-gradient-to-r from-[var(--brand-secondary)] to-[var(--brand-accent)]",
         className
       )}
       {...props}

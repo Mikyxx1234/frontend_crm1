@@ -35,6 +35,8 @@
   --brand-primary:          #5b6ff5;
   --brand-primary-light:    #7b8df7;
   --brand-primary-dark:     #3d52e8;
+  --brand-primary-hover:    #4466d6;  /* hover state do botão primary */
+  --brand-gradient-end:     #1e3a8a;  /* tom escuro no final dos gradientes de nós */
   --brand-secondary:        #a78bfa;
   --brand-accent:           #f472b6;
 
@@ -49,6 +51,7 @@
   /* ── Variantes "warn" (âmbar escuro) + backgrounds semânticos usados
      pelos hubs de Modelos de mensagem (callouts, badges) ─────────── */
   --color-warn:             #d97706;
+  --color-warn-text:        #92600a;  /* texto sobre fundo âmbar claro (badge warning) */
   --color-warn-bg:          rgba(217, 119, 6, 0.08);
   --color-warn-border:      rgba(217, 119, 6, 0.30);
   --color-danger-bg:        rgba(239, 68, 68, 0.10);

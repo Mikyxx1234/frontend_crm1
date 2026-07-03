@@ -226,7 +226,7 @@ export function SidebarCustomizationCard() {
           type="button"
           onClick={handleSave}
           disabled={!dirty || saveMutation.isPending || isLoading || isError}
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6] disabled:opacity-50"
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
         >
           {saveMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />

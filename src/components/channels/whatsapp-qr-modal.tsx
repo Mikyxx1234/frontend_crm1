@@ -221,7 +221,7 @@ export function WhatsappQrModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         panelClassName={cn(
-          "max-w-md border-2 border-[#25D366]/20 bg-gradient-to-b from-[var(--glass-bg-overlay)] to-[#25D366]/[0.04] shadow-2xl sm:max-w-md"
+          "max-w-md border-2 border-[var(--channel-whatsapp)]/20 bg-gradient-to-b from-[var(--glass-bg-overlay)] to-[var(--channel-whatsapp)]/[0.04] shadow-2xl sm:max-w-md"
         )}
         bodyClassName="p-0 gap-0"
       >
@@ -240,30 +240,30 @@ export function WhatsappQrModal({
 
           <ol className="mx-auto mt-6 max-w-xs space-y-3 text-left text-sm text-[var(--text-muted)]">
             <li className="flex gap-3">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#25D366]/15 text-xs font-bold text-[#25D366]">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--channel-whatsapp)]/15 text-xs font-bold text-[var(--channel-whatsapp)]">
                 1
               </span>
               <span className="flex items-center gap-2 pt-0.5">
-                <Smartphone className="size-4 text-[#25D366]" />
+                <Smartphone className="size-4 text-[var(--channel-whatsapp)]" />
                 Abra o WhatsApp no telefone
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#25D366]/15 text-xs font-bold text-[#25D366]">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--channel-whatsapp)]/15 text-xs font-bold text-[var(--channel-whatsapp)]">
                 2
               </span>
               <span className="flex items-center gap-2 pt-0.5">
-                <Menu className="size-4 text-[#25D366]" />
+                <Menu className="size-4 text-[var(--channel-whatsapp)]" />
                 Toque em <strong className="text-[var(--text-primary)]">Mais opções</strong> ou{" "}
                 <strong className="text-[var(--text-primary)]">Configurações</strong>
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#25D366]/15 text-xs font-bold text-[#25D366]">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--channel-whatsapp)]/15 text-xs font-bold text-[var(--channel-whatsapp)]">
                 3
               </span>
               <span className="flex items-center gap-2 pt-0.5">
-                <Link2 className="size-4 text-[#25D366]" />
+                <Link2 className="size-4 text-[var(--channel-whatsapp)]" />
                 Dispositivos vinculados → Vincular um dispositivo
               </span>
             </li>
@@ -272,10 +272,10 @@ export function WhatsappQrModal({
           <div className="mx-auto mt-8 flex flex-col items-center">
             {success ? (
               <div className="flex flex-col items-center gap-4 py-4 animate-in zoom-in-95 duration-300">
-                <div className="flex size-[300px] items-center justify-center rounded-2xl border-2 border-[#22c55e]/40 bg-[#22c55e]/10">
-                  <CheckCircle2 className="size-24 text-[#22c55e] drop-shadow-sm" />
+                <div className="flex size-[300px] items-center justify-center rounded-2xl border-2 border-[var(--color-success)]/40 bg-[var(--color-success)]/10">
+                  <CheckCircle2 className="size-24 text-[var(--color-success)] drop-shadow-sm" />
                 </div>
-                <p className="text-center text-lg font-semibold text-[#22c55e]">
+                <p className="text-center text-lg font-semibold text-[var(--color-success)]">
                   WhatsApp conectado com sucesso!
                 </p>
                 <p className="text-center text-sm text-[var(--text-muted)]">
@@ -301,7 +301,7 @@ export function WhatsappQrModal({
                 <Button
                   type="button"
                   variant="outline"
-                  className="gap-2 border-[#25D366]/40"
+                  className="gap-2 border-[var(--channel-whatsapp)]/40"
                   onClick={() => void refetchQr()}
                 >
                   <RefreshCw className="size-4" />
@@ -315,7 +315,7 @@ export function WhatsappQrModal({
                 <div
                   className={cn(
                     "rounded-2xl border-4 border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3 shadow-xl",
-                    "ring-4 ring-[#25D366]/20"
+                    "ring-4 ring-[var(--channel-whatsapp)]/20"
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -344,7 +344,7 @@ export function WhatsappQrModal({
                 </p>
                 <Button
                   type="button"
-                  className="gap-2 bg-[#25D366] text-white hover:bg-[#25D366]/90"
+                  className="gap-2 bg-[var(--channel-whatsapp)] text-white hover:bg-[var(--channel-whatsapp)]/90"
                   onClick={() => void handleRegenerate()}
                   disabled={regenerating}
                 >
@@ -368,7 +368,7 @@ export function WhatsappQrModal({
               </p>
               <div className="mx-auto mt-2 h-1.5 max-w-[200px] overflow-hidden rounded-full bg-[var(--glass-bg-overlay)]">
                 <div
-                  className="h-full rounded-full bg-[#25D366] transition-all duration-1000 ease-linear"
+                  className="h-full rounded-full bg-[var(--channel-whatsapp)] transition-all duration-1000 ease-linear"
                   style={{
                     width: `${(secondsLeft / QR_TTL_SEC) * 100}%`,
                   }}

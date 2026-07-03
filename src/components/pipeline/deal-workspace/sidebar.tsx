@@ -1137,7 +1137,7 @@ function PresenceDot({
       className={cn(
         "absolute -bottom-0.5 -right-0.5 inline-flex rounded-full ring-white",
         size === "sm" ? "size-1.5 ring-[1.5px]" : "size-2.5 ring-2",
-        status === "ONLINE" && "bg-[#22c55e]",
+        status === "ONLINE" && "bg-[var(--color-success)]",
         status === "AWAY" && "bg-warning",
         status === "OFFLINE" && "bg-slate-400",
       )}

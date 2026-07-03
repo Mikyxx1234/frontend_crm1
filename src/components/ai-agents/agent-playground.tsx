@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, Send, Sparkles, Wrench } from "lucide-react";
+import { IconLoader2 as Loader2, IconSend as Send, IconSparkles as Sparkles, IconTool as Wrench } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";

@@ -2,25 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Bot,
-  ChevronRight,
-  ExternalLink,
-  Flag,
-  Link2,
-  Loader2,
-  MessageSquare,
-  Pencil,
-  Plus,
-  Power,
-  Send,
-  Tag,
-  Trash2,
-  Trophy,
-  UserCheck,
-  XCircle,
-  Zap,
-} from "lucide-react";
+import { IconRobot as Bot, IconChevronRight as ChevronRight, IconExternalLink as ExternalLink, IconFlag as Flag, IconLink as Link2, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPencil as Pencil, IconPlus as Plus, IconPower as Power, IconSend as Send, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserCheck as UserCheck, IconCircleX as XCircle, IconBolt as Zap } from "@tabler/icons-react";
 import NextLink from "next/link";
 import * as React from "react";
 

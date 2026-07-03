@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PanelRight, LayoutPanelTop, Columns2, Columns3, SlidersHorizontal } from "lucide-react";
+import { IconLayoutSidebarRight as PanelRight, IconLayoutTopbar as LayoutPanelTop, IconColumns2 as Columns2, IconColumns3 as Columns3, IconSlidersHorizontal as SlidersHorizontal } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";

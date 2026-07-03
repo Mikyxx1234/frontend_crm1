@@ -2,22 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  ArrowUpRight,
-  BarChart3,
-  Bot,
-  Calendar,
-  Check,
-  LayoutGrid,
-  Loader2,
-  Phone,
-  Plus,
-  Puzzle,
-  Route,
-  Trash2,
-  Webhook,
-  type LucideIcon,
-} from "lucide-react";
+import { IconArrowUpRight as ArrowUpRight, IconChartBar as BarChart3, IconRobot as Bot, IconCalendar as Calendar, IconCheck as Check, IconLayoutGrid as LayoutGrid, IconLoader2 as Loader2, IconPhone as Phone, IconPlus as Plus, IconPuzzle as Puzzle, IconRoute as Route, IconTrash as Trash2, IconWebhook as Webhook } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

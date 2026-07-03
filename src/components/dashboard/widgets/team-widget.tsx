@@ -3,7 +3,7 @@
 import { useTeamData } from "@/hooks/use-dashboard-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
-import { Trophy } from "lucide-react";
+import { IconTrophy as Trophy } from "@tabler/icons-react";
 
 export function TeamWidget() {
   const { data: team, isLoading } = useTeamData();

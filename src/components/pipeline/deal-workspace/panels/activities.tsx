@@ -3,19 +3,8 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Calendar,
-  CheckCircle2,
-  Circle,
-  Mail,
-  MessageCircle,
-  PhoneCall,
-  Plus,
-  Trash2,
-  Users,
-  Loader2,
-  type LucideIcon,
-} from "lucide-react";
+import { IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconMail as Mail, IconMessageCircle as MessageCircle, IconPhoneCall as PhoneCall, IconPlus as Plus, IconTrash as Trash2, IconUsers as Users, IconLoader2 as Loader2 } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

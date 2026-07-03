@@ -2,22 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import type { ChannelProvider, ChannelType } from "@/lib/prisma-enum-types";
-import {
-  AtSign,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  Copy,
-  ExternalLink,
-  Globe,
-  Loader2,
-  Mail,
-  MessageCircle,
-  QrCode,
-  Share2,
-  Sparkles,
-  Webhook,
-} from "lucide-react";
+import { IconAt as AtSign, IconCheck as Check, IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconCopy as Copy, IconExternalLink as ExternalLink, IconGlobe as Globe, IconLoader2 as Loader2, IconMail as Mail, IconMessageCircle as MessageCircle, IconQrcode as QrCode, IconShare2 as Share2, IconSparkles as Sparkles, IconWebhook as Webhook } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";

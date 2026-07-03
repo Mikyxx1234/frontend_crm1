@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Briefcase, Moon, WifiOff } from "lucide-react";
+import { IconBriefcase as Briefcase, IconMoon as Moon, IconWifiOff as WifiOff } from "@tabler/icons-react";
 
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { Skeleton } from "@/components/ui/skeleton";

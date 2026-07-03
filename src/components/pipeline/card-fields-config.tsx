@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { Settings2 } from "lucide-react";
+import { IconAdjustments as Settings2 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { TooltipHost } from "@/components/ui/tooltip";

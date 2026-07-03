@@ -3,18 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  Bot,
-  CircleAlert,
-  Loader2,
-  Pencil,
-  Play,
-  Plus,
-  Power,
-  Settings2,
-  Trash2,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconRobot as Bot, IconAlertCircle as CircleAlert, IconLoader2 as Loader2, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconPower as Power, IconAdjustments as Settings2, IconTrash as Trash2 } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

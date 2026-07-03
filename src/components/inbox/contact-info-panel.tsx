@@ -5,19 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  Building2,
-  ChevronDown,
-  ChevronRight,
-  Handshake,
-  Info,
-  Mail,
-  Phone,
-  Plus,
-  Tag,
-  User,
-  X,
-} from "lucide-react";
+import { IconBuilding as Building2, IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconHandshake as Handshake, IconInfoCircle as Info, IconMail as Mail, IconPhone as Phone, IconPlus as Plus, IconTag as Tag, IconUser as User, IconX as X } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Key, Plus, Trash2 } from "lucide-react";
+import { IconCopy as Copy, IconKey as Key, IconPlus as Plus, IconTrash as Trash2 } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";

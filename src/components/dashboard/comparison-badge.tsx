@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { IconTrendingDown as TrendingDown, IconTrendingUp as TrendingUp, IconMinus as Minus } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 type Props = {

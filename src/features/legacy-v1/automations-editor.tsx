@@ -2,17 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  ChevronDown,
-  ChevronRight,
-  Download,
-  Pencil,
-  Save,
-  Settings2,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconDownload as Download, IconPencil as Pencil, IconDeviceFloppy as Save, IconAdjustments as Settings2, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";

@@ -34,20 +34,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  ChevronDown,
-  ChevronRight,
-  History,
-  Info,
-  Loader2,
-  Mic,
-  Phone,
-  PhoneIncoming,
-  PhoneOff,
-  PhoneOutgoing,
-  Play,
-  RefreshCw,
-} from "lucide-react";
+import { IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconHistory as History, IconInfoCircle as Info, IconLoader2 as Loader2, IconMicrophone as Mic, IconPhone as Phone, IconPhoneIncoming as PhoneIncoming, IconPhoneOff as PhoneOff, IconPhoneOutgoing as PhoneOutgoing, IconPlayerPlay as Play, IconRefresh as RefreshCw } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import {

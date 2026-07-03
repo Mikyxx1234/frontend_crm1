@@ -1,20 +1,7 @@
 "use client";
 
 import type { ChannelProvider, ChannelStatus, ChannelType } from "@/lib/prisma-enum-types";
-import {
-  AtSign,
-  Clock,
-  Globe,
-  Loader2,
-  Mail,
-  MessageCircle,
-  Phone,
-  QrCode,
-  RefreshCw,
-  Settings,
-  Share2,
-  Trash2,
-} from "lucide-react";
+import { IconAt as AtSign, IconClock as Clock, IconGlobe as Globe, IconLoader2 as Loader2, IconMail as Mail, IconMessageCircle as MessageCircle, IconPhone as Phone, IconQrcode as QrCode, IconRefresh as RefreshCw, IconSettings as Settings, IconShare2 as Share2, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { Switch } from "@/components/ui/switch";
 import { cn, formatDateTime } from "@/lib/utils";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Phone } from "lucide-react";
+import { IconPhone as Phone } from "@tabler/icons-react";
 
 import { TabsGlass } from "@/components/crm/tabs-glass";
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";

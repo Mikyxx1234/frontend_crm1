@@ -5,15 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import * as React from "react";
-import {
-  ArrowRight,
-  CheckCircle2,
-  KanbanSquare,
-  Loader2,
-  MessageCircle,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { IconArrowRight as ArrowRight, IconCircleCheck as CheckCircle2, IconLayoutKanban as KanbanSquare, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconSparkles as Sparkles, IconUsers as Users } from "@tabler/icons-react";
 
 import { BlurText } from "@/components/ui/blur-text";
 import { Button } from "@/components/ui/button";

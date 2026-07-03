@@ -30,7 +30,7 @@
 import * as React from "react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Code2, Eye, Plus, Search, Trash2, Variable } from "lucide-react";
+import { IconChevronDown as ChevronDown, IconCode as Code2, IconEye as Eye, IconPlus as Plus, IconSearch as Search, IconTrash as Trash2, IconVariable as Variable } from "@tabler/icons-react";
 
 import { apiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";

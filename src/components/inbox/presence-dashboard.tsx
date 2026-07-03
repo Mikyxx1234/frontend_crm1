@@ -4,7 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Check, ChevronDown } from "lucide-react";
+import { IconCalendar as CalendarDays, IconCheck as Check, IconChevronDown as ChevronDown } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { ChatAvatar } from "@/components/inbox/chat-avatar";

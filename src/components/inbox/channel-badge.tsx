@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, Globe, Mail, MessageCircle } from "lucide-react";
+import { IconAt as AtSign, IconGlobe as Globe, IconMail as Mail, IconMessageCircle as MessageCircle } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

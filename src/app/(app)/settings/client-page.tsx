@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-import {
-  Settings2,
-  ChevronRight,
-  ChevronDown,
-  ChevronsDownUp,
-  ChevronsUpDown,
-} from "lucide-react";
+import { IconAdjustments as Settings2, IconChevronRight as ChevronRight, IconChevronDown as ChevronDown, IconChevronsDownUp as ChevronsDownUp, IconChevronsUpDown as ChevronsUpDown } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";

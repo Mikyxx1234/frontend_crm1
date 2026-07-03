@@ -20,7 +20,7 @@
  */
 
 import * as React from "react";
-import { ArrowLeftRight, Check, UserMinus } from "lucide-react";
+import { IconArrowsLeftRight as ArrowLeftRight, IconCheck as Check, IconUserMinus as UserMinus } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { TooltipHost } from "@/components/ui/tooltip";
 

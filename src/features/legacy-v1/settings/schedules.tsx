@@ -3,9 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Check, Clock, Loader2, Pencil,
-} from "lucide-react";
+import { IconCheck as Check, IconClock as Clock, IconLoader2 as Loader2, IconPencil as Pencil } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import {

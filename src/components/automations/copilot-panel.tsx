@@ -15,18 +15,7 @@ import { apiUrl } from "@/lib/api";
  * bar pra persistir.
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  AlertTriangle,
-  Check,
-  ChevronRight,
-  Info,
-  Loader2,
-  PanelRightClose,
-  Send,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconAlertTriangle as AlertTriangle, IconCheck as Check, IconChevronRight as ChevronRight, IconInfoCircle as Info, IconLoader2 as Loader2, IconLayoutSidebarRightCollapse as PanelRightClose, IconSend as Send, IconSparkles as Sparkles, IconX as X } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";

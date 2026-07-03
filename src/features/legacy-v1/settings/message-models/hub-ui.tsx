@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search } from "lucide-react";
+import { IconSearch as Search } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

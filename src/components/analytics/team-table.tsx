@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { IconArrowDown as ArrowDown, IconArrowUp as ArrowUp, IconArrowsUpDown as ArrowUpDown } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import {

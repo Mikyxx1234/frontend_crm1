@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Mail, Plus, Trash2, RefreshCw, X } from "lucide-react";
+import { IconMail as Mail, IconPlus as Plus, IconTrash as Trash2, IconRefresh as RefreshCw, IconX as X } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { TabsGlass } from "@/components/crm/tabs-glass";

@@ -2,16 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  Loader2,
-  Lock,
-  RotateCcw,
-  Save,
-  Smartphone,
-} from "lucide-react";
+import { IconArrowDown as ArrowDown, IconArrowUp as ArrowUp, IconCheck as Check, IconLoader2 as Loader2, IconLock as Lock, IconRotateCounterClockwise as RotateCcw, IconDeviceFloppy as Save, IconDeviceMobile as Smartphone } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";

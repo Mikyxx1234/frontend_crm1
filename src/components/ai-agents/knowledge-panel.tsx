@@ -2,15 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  CheckCircle2,
-  FileText,
-  Loader2,
-  Plus,
-  RefreshCcw,
-  Trash2,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconCircleCheck as CheckCircle2, IconFileText as FileText, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCcw, IconTrash as Trash2 } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";

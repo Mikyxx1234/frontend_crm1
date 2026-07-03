@@ -11,7 +11,7 @@
  */
 
 import * as React from "react";
-import { Menu, MoreHorizontal, PanelRightOpen, Search, X } from "lucide-react";
+import { IconMenu2 as Menu, IconDots as MoreHorizontal, IconLayoutSidebarRightExpand as PanelRightOpen, IconSearch as Search, IconX as X } from "@tabler/icons-react";
 import { RemindButton } from "@/components/inbox/remind-button";
 import { TagPopover } from "@/components/inbox/tag-popover";
 import {

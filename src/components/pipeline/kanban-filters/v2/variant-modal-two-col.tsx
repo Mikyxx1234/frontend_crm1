@@ -10,16 +10,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import {
-  Briefcase,
-  CalendarRange,
-  SlidersHorizontal,
-  Tag as TagIcon,
-  Users as UsersIcon,
-  Wand2,
-  Zap,
-  X,
-} from "lucide-react";
+import { IconBriefcase as Briefcase, IconCalendarRange as CalendarRange, IconSlidersHorizontal as SlidersHorizontal, IconTag as TagIcon, IconUsers as UsersIcon, IconWand as Wand2, IconBolt as Zap, IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

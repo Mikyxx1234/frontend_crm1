@@ -2,17 +2,8 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Briefcase,
-  Calendar,
-  CheckSquare,
-  FileText,
-  Mail,
-  MessageSquare,
-  Phone,
-  StickyNote,
-  type LucideIcon,
-} from "lucide-react";
+import { IconBriefcase as Briefcase, IconCalendar as Calendar, IconSquareCheck as CheckSquare, IconFileText as FileText, IconMail as Mail, IconMessage as MessageSquare, IconPhone as Phone, IconNote as StickyNote } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";

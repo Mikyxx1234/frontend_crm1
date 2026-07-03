@@ -16,7 +16,7 @@ import { apiUrl } from "@/lib/api";
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ExternalLink, RefreshCw, ShieldAlert, X } from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconExternalLink as ExternalLink, IconRefresh as RefreshCw, IconShieldExclamation as ShieldAlert, IconX as X } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import * as React from "react";
 

@@ -5,48 +5,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSSE } from "@/hooks/use-sse";
 import { useIsMobile } from "@/hooks/use-media-query";
-import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowRight,
-  Bot,
-  CheckCheck,
-  CheckCircle2,
-  CheckSquare,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Download,
-  FileText,
-  LayoutTemplate,
-  Loader2,
-  Lock,
-  Megaphone,
-  MoreHorizontal,
-  Paperclip,
-  Pause,
-  Pencil,
-  Phone,
-  PhoneIncoming,
-  PhoneOff,
-  PhoneOutgoing,
-  Pin,
-  Play,
-  Plus,
-  Reply,
-  RotateCcw,
-  Save,
-  Search,
-  Send,
-  Share2,
-  ShieldCheck,
-  Smile,
-  Smartphone,
-  Upload,
-  Volume2,
-  Wrench,
-  X,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconRobot as Bot, IconChecks as CheckCheck, IconCircleCheck as CheckCircle2, IconSquareCheck as CheckSquare, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconLayoutTemplate as LayoutTemplate, IconLoader2 as Loader2, IconLock as Lock, IconSpeakerphone as Megaphone, IconDots as MoreHorizontal, IconPaperclip as Paperclip, IconPlayerPause as Pause, IconPencil as Pencil, IconPhone as Phone, IconPhoneIncoming as PhoneIncoming, IconPhoneOff as PhoneOff, IconPhoneOutgoing as PhoneOutgoing, IconPin as Pin, IconPlayerPlay as Play, IconPlus as Plus, IconArrowBackUp as Reply, IconRotateCounterClockwise as RotateCcw, IconDeviceFloppy as Save, IconSearch as Search, IconSend as Send, IconShare2 as Share2, IconShieldCheck as ShieldCheck, IconMoodSmile as Smile, IconDeviceMobile as Smartphone, IconUpload as Upload, IconVolume as Volume2, IconTool as Wrench, IconX as X } from "@tabler/icons-react";
 import { AIDraftCard } from "@/components/inbox/ai-draft-card";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { useSession } from "next-auth/react";

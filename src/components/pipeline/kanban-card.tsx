@@ -11,7 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AlertCircle, Check, ChevronDown, Clock, GripVertical, MessageCircle, Plus, Tag as TagIcon, X } from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconCheck as Check, IconChevronDown as ChevronDown, IconClock as Clock, IconGripVertical as GripVertical, IconMessageCircle as MessageCircle, IconPlus as Plus, IconTag as TagIcon, IconX as X } from "@tabler/icons-react";
 
 import type { CardVisibleFields } from "@/components/pipeline/card-fields-config";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";

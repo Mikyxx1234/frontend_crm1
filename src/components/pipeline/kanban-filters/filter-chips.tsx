@@ -6,7 +6,7 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
+import { IconX as X } from "@tabler/icons-react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
 import { cn } from "@/lib/utils";

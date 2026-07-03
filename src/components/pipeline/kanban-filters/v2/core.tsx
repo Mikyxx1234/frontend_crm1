@@ -12,7 +12,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown, Search, Save, Trash2, Bookmark, Lock, Users as UsersIcon, X } from "lucide-react";
+import { IconCheck as Check, IconChevronDown as ChevronDown, IconSearch as Search, IconDeviceFloppy as Save, IconTrash as Trash2, IconBookmark as Bookmark, IconLock as Lock, IconUsers as UsersIcon, IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { ds } from "@/lib/design-system";

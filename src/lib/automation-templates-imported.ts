@@ -19,13 +19,7 @@
   • export-ede1b610-5efb-4a45-a21f-5   → Aguardando Resposta            [28 steps, 20 warn]
  */
 
-import {
-  HandCoins,
-  HeartHandshake,
-  Play,
-  RefreshCcw,
-  Sparkles,
-} from "lucide-react";
+import { IconCoins as HandCoins, IconHeartHandshake as HeartHandshake, IconPlayerPlay as Play, IconRefresh as RefreshCcw, IconSparkles as Sparkles } from "@tabler/icons-react";
 
 import type { AutomationTemplate } from "./automation-templates";
 

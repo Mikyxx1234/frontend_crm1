@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Share, X } from "lucide-react";
+import { IconDownload as Download, IconShare as Share, IconX as X } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { usePwaInstall } from "@/hooks/use-pwa-install";

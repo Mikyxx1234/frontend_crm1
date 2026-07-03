@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GripVertical, Plus, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
+import { IconGripVertical as GripVertical, IconPlus as Plus, IconToggleLeft as ToggleLeft, IconToggleRight as ToggleRight, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

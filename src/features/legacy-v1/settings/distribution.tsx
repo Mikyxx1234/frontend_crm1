@@ -1,16 +1,7 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";import {
-  GitBranch,
-  Hand,
-  Loader2,
-  Plus,
-  Power,
-  Shuffle,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";import { IconGitBranch as GitBranch, IconHandStop as Hand, IconLoader2 as Loader2, IconPlus as Plus, IconPower as Power, IconArrowsShuffle as Shuffle, IconTrash as Trash2, IconUsers as Users } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";

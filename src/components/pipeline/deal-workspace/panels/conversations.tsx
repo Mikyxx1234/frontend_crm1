@@ -5,7 +5,7 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Loader2, MessageSquare, Send } from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconLoader2 as Loader2, IconMessage as MessageSquare, IconSend as Send } from "@tabler/icons-react";
 
 import { ChannelBadge } from "@/components/inbox/channel-badge";
 import { ChatWindow } from "@/components/inbox/chat-window";

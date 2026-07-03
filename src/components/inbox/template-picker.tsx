@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Loader2, X } from "lucide-react";
+import { IconFileText as FileText, IconLoader2 as Loader2, IconX as X } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";

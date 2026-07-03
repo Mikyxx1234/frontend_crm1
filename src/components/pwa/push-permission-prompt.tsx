@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BellOff, X } from "lucide-react";
+import { IconBell as Bell, IconBellOff as BellOff, IconX as X } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { usePushSubscription } from "@/hooks/use-push-subscription";

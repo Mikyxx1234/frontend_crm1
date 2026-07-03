@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2 } from "@tabler/icons-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInboxMetrics } from "@/hooks/use-inbox-metrics";

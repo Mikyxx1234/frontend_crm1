@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, User } from "lucide-react";
+import { IconLoader2 as Loader2, IconUser as User } from "@tabler/icons-react";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { DealForm } from "@/components/pipeline/deal-form";

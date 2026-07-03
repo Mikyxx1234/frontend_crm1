@@ -27,7 +27,7 @@ import {
   subDays,
 } from "date-fns";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Calendar, ChartBar as BarChart3 } from "lucide-react";
+import { IconArrowUpRight as ArrowUpRight, IconCalendar as Calendar, IconChartBar as BarChart3 } from "@tabler/icons-react";
 
 import { PageHeader } from "@/components/ui/page-header";
 

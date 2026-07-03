@@ -11,7 +11,7 @@ import {
   IconUserPlus,
   IconUsers,
 } from "@tabler/icons-react";
-import { Eye, EyeOff, KeyRound, Loader2, Trash2 } from "lucide-react";
+import { IconEye as Eye, IconEyeOff as EyeOff, IconKey as KeyRound, IconLoader2 as Loader2, IconTrash as Trash2 } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import * as React from "react";
 import { toast } from "sonner";

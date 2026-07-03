@@ -2,15 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  BarChart3,
-  BriefcaseBusiness,
-  Check,
-  Headphones,
-  Search,
-  Users,
-  X,
-} from "lucide-react";
+import { IconChartBar as BarChart3, IconBriefcase2 as BriefcaseBusiness, IconCheck as Check, IconHeadphones as Headphones, IconSearch as Search, IconUsers as Users, IconX as X } from "@tabler/icons-react";
 
 import {
   ALL_WIDGETS,

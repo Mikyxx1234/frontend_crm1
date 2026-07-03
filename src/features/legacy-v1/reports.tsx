@@ -4,22 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  CalendarDays,
-  CheckCircle2,
-  DollarSign,
-  Download,
-  FileBarChart,
-  Loader2,
-  Megaphone,
-  MessageCircle,
-  RefreshCw,
-  Shield,
-  Wrench,
-  Workflow,
-} from "lucide-react";
+import { IconArrowDownRight as ArrowDownRight, IconArrowUpRight as ArrowUpRight, IconCalendar as CalendarDays, IconCircleCheck as CheckCircle2, IconCurrencyDollar as DollarSign, IconDownload as Download, IconFileChart as FileBarChart, IconLoader2 as Loader2, IconSpeakerphone as Megaphone, IconMessageCircle as MessageCircle, IconRefresh as RefreshCw, IconShield as Shield, IconTool as Wrench, IconWorkflow as Workflow } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -5,7 +5,7 @@ import * as React from "react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { Check, ChevronDown, Package, Pencil, Plus, X } from "lucide-react";
+import { IconCheck as Check, IconChevronDown as ChevronDown, IconPackage as Package, IconPencil as Pencil, IconPlus as Plus, IconX as X } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/hooks/use-confirm";

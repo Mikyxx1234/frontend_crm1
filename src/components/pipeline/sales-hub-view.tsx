@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { MessageSquareOff, Search, X } from "lucide-react";
+import { IconMessageOff as MessageSquareOff, IconSearch as Search, IconX as X } from "@tabler/icons-react";
 
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";

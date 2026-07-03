@@ -2,14 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  ArrowRight,
-  Clock,
-  DollarSign,
-  Hash,
-  Loader2,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconArrowRight as ArrowRight, IconClock as Clock, IconCurrencyDollar as DollarSign, IconHash as Hash, IconLoader2 as Loader2 } from "@tabler/icons-react";
 import * as React from "react";
 
 type Stats = {

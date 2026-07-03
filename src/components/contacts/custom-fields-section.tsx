@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Pencil, X } from "lucide-react";
+import { IconCheck as Check, IconPencil as Pencil, IconX as X } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";

@@ -11,16 +11,7 @@
 import * as React from "react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { createPortal } from "react-dom";
-import {
-  Copy,
-  Star,
-  StarOff,
-  Trash2,
-  Users as UsersIcon,
-  Lock,
-  Loader as Loader2,
-  Bookmark,
-} from "lucide-react";
+import { IconCopy as Copy, IconStar as Star, IconStarOff as StarOff, IconTrash as Trash2, IconUsers as UsersIcon, IconLock as Lock, IconLoader as Loader2, IconBookmark as Bookmark } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

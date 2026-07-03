@@ -2,22 +2,7 @@
 
 import type { ComponentType } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import {
-  Activity,
-  AlertTriangle,
-  ArrowRightLeft,
-  BotMessageSquare,
-  CheckCircle2,
-  Image,
-  Mail,
-  MessageSquare,
-  MousePointerClick,
-  Pencil,
-  Tag,
-  Trash2,
-  UserPlus,
-  Webhook,
-} from "lucide-react";
+import { IconActivity as Activity, IconAlertTriangle as AlertTriangle, IconArrowsLeftRight as ArrowRightLeft, IconMessageBot as BotMessageSquare, IconCircleCheck as CheckCircle2, IconPhoto as Image, IconMail as Mail, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPencil as Pencil, IconTag as Tag, IconTrash as Trash2, IconUserPlus as UserPlus, IconWebhook as Webhook } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";

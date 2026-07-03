@@ -2,17 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Key,
-  Loader2,
-  PlugZap,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconEye as Eye, IconEyeOff as EyeOff, IconKey as Key, IconLoader2 as Loader2, IconPlugConnected as PlugZap, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";

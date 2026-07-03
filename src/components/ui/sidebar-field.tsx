@@ -1,18 +1,5 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  Activity,
-  Building2,
-  Calendar,
-  Clock,
-  Heart,
-  Mail,
-  MapPin,
-  Monitor,
-  Phone,
-  ShoppingBag,
-  Tag,
-  User,
-} from "lucide-react";
+import type { Icon as LucideIcon } from "@tabler/icons-react";
+import { IconActivity as Activity, IconBuilding as Building2, IconCalendar as Calendar, IconClock as Clock, IconHeart as Heart, IconMail as Mail, IconMapPin as MapPin, IconDeviceDesktop as Monitor, IconPhone as Phone, IconShoppingBag as ShoppingBag, IconTag as Tag, IconUser as User } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";

@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Check, Copy, Loader2, Power, ShieldCheck, Trash2 } from "lucide-react";
+import { IconCheck as Check, IconCopy as Copy, IconLoader2 as Loader2, IconPower as Power, IconShieldCheck as ShieldCheck, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

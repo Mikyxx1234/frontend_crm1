@@ -14,7 +14,7 @@
 "use client";
 
 import * as React from "react";
-import { Save, Search, Trash2, Star, StarOff, Users as UsersIcon, Lock, Bookmark, Check, ChevronDown } from "lucide-react";
+import { IconDeviceFloppy as Save, IconSearch as Search, IconTrash as Trash2, IconStar as Star, IconStarOff as StarOff, IconUsers as UsersIcon, IconLock as Lock, IconBookmark as Bookmark, IconCheck as Check, IconChevronDown as ChevronDown } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { IconSearch as Search } from "@tabler/icons-react";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";

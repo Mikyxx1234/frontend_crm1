@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import { Filter, GitBranch, Trash2 } from "lucide-react";
+import { IconFilter as Filter, IconGitBranch as GitBranch, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import type { ConditionBranch } from "@/lib/automation-condition";

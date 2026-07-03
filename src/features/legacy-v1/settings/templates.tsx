@@ -2,18 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Copy,
-  FileText,
-  Layers,
-  Loader2,
-  MessageSquare,
-  Pencil,
-  Plus,
-  Trash2,
-  Variable,
-} from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconCopy as Copy, IconFileText as FileText, IconStack as Layers, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2, IconVariable as Variable } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";

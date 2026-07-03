@@ -13,17 +13,7 @@
 
 import * as React from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  ArrowLeft,
-  CheckCircle2,
-  Download,
-  FileSpreadsheet,
-  Loader2,
-  Save,
-  Upload,
-  XCircle,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconArrowLeft as ArrowLeft, IconCircleCheck as CheckCircle2, IconDownload as Download, IconFileSpreadsheet as FileSpreadsheet, IconLoader2 as Loader2, IconDeviceFloppy as Save, IconUpload as Upload, IconCircleX as XCircle } from "@tabler/icons-react";
 import {
   IconArrowLeft,
   IconCheck,

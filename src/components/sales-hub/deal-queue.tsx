@@ -20,27 +20,7 @@ import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Search,
-  Package,
-  Plus,
-  Loader2,
-  X,
-  ChevronDown,
-  Phone,
-  Check,
-  UserMinus,
-  ArrowUpDown,
-  Mic,
-  Image as ImageIcon,
-  FileText,
-  Paperclip,
-  Video,
-  ExternalLink,
-  Settings2,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { IconSearch as Search, IconPackage as Package, IconPlus as Plus, IconLoader2 as Loader2, IconX as X, IconChevronDown as ChevronDown, IconPhone as Phone, IconCheck as Check, IconUserMinus as UserMinus, IconArrowsUpDown as ArrowUpDown, IconMicrophone as Mic, IconPhoto as ImageIcon, IconFileText as FileText, IconPaperclip as Paperclip, IconVideo as Video, IconExternalLink as ExternalLink, IconAdjustments as Settings2, IconEye as Eye, IconEyeOff as EyeOff } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { cn, formatCurrency, tagPillStyle } from "@/lib/utils";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";

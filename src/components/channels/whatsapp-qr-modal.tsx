@@ -1,14 +1,7 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import {
-  CheckCircle2,
-  Loader2,
-  RefreshCw,
-  Smartphone,
-  Menu,
-  Link2,
-} from "lucide-react";
+import { IconCircleCheck as CheckCircle2, IconLoader2 as Loader2, IconRefresh as RefreshCw, IconDeviceMobile as Smartphone, IconMenu2 as Menu, IconLink as Link2 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 

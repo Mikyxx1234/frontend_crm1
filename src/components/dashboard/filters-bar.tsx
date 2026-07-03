@@ -3,13 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeftRight,
-  Calendar,
-  ChevronDown,
-  Filter,
-  RotateCcw,
-} from "lucide-react";
+import { IconArrowsLeftRight as ArrowLeftRight, IconCalendar as Calendar, IconChevronDown as ChevronDown, IconFilter as Filter, IconRotateCounterClockwise as RotateCcw } from "@tabler/icons-react";
 import {
   useDashboardStore,
   type ComparisonMode,

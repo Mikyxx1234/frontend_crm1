@@ -18,22 +18,7 @@ import { apiUrl } from "@/lib/api";
  */
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  Ban,
-  Bot,
-  CalendarClock,
-  CheckCheck,
-  Clock,
-  Eye,
-  Handshake,
-  Keyboard,
-  MessageCircle,
-  Plus,
-  Sparkles,
-  Trash2,
-  UserCheck,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconBan as Ban, IconRobot as Bot, IconCalendarClock as CalendarClock, IconChecks as CheckCheck, IconClock as Clock, IconEye as Eye, IconHandshake as Handshake, IconKeyboard as Keyboard, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSparkles as Sparkles, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";

@@ -3,18 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowRightLeft,
-  CheckCircle2,
-  ChevronDown,
-  Loader2,
-  Pencil,
-  Trash2,
-  Trophy,
-  UserCog,
-  X,
-  XCircle,
-} from "lucide-react";
+import { IconArrowsLeftRight as ArrowRightLeft, IconCircleCheck as CheckCircle2, IconChevronDown as ChevronDown, IconLoader2 as Loader2, IconPencil as Pencil, IconTrash as Trash2, IconTrophy as Trophy, IconUserCog as UserCog, IconX as X, IconCircleX as XCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import {

@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { AlertOctagon, CheckCircle2, ExternalLink, TriangleAlert } from "lucide-react";
+import { IconAlertOctagon as AlertOctagon, IconCircleCheck as CheckCircle2, IconExternalLink as ExternalLink, IconAlertTriangle as TriangleAlert } from "@tabler/icons-react";
 import Link from "next/link";
 
 import { Skeleton } from "@/components/ui/skeleton";

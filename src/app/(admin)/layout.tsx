@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Building2, CreditCard, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { IconBuilding as Building2, IconCreditCard as CreditCard, IconLayoutDashboard as LayoutDashboard, IconShieldCheck as ShieldCheck } from "@tabler/icons-react";
 
 import { auth } from "@/lib/auth-public";
 

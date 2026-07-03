@@ -10,7 +10,7 @@
  */
 
 import * as React from "react";
-import { History } from "lucide-react";
+import { IconHistory as History } from "@tabler/icons-react";
 
 import { TimelinePanel } from "@/components/pipeline/deal-detail/timeline-panel";
 import {

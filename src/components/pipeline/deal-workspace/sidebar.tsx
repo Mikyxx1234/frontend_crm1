@@ -4,16 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  Check,
-  ChevronDown,
-  Mail,
-  Package,
-  Pencil,
-  Phone,
-  Plus,
-  X,
-} from "lucide-react";
+import { IconCheck as Check, IconChevronDown as ChevronDown, IconMail as Mail, IconPackage as Package, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconX as X } from "@tabler/icons-react";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { useFieldLayout } from "@/hooks/use-field-layout";

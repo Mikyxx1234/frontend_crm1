@@ -4,16 +4,7 @@ import { apiUrl } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  ArrowLeft,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  FileText,
-  Loader2,
-  MessageSquare,
-  Plus,
-} from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconClock as Clock, IconFileText as FileText, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPlus as Plus } from "@tabler/icons-react";
 import * as React from "react";
 
 import { ChannelBadge } from "@/components/inbox/channel-badge";

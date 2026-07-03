@@ -3,15 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Clock,
-  Headphones,
-  Loader2,
-  MessageSquare,
-  MessagesSquare,
-  Timer,
-  Users,
-} from "lucide-react";
+import { IconClock as Clock, IconHeadphones as Headphones, IconLoader2 as Loader2, IconMessage as MessageSquare, IconMessages as MessagesSquare, IconClock as Timer, IconUsers as Users } from "@tabler/icons-react";
 import {
   Bar,
   BarChart,

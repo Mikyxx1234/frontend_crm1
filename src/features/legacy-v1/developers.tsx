@@ -1,6 +1,6 @@
 "use client";
 
-import { Book, ChevronRight, Copy, ExternalLink, Key } from "lucide-react";
+import { IconBook as Book, IconChevronRight as ChevronRight, IconCopy as Copy, IconExternalLink as ExternalLink, IconKey as Key } from "@tabler/icons-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 

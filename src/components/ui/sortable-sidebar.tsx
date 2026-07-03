@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, EyeOff, GripVertical, RotateCcw, Save, Settings2 } from "lucide-react";
+import { IconEye as Eye, IconEyeOff as EyeOff, IconGripVertical as GripVertical, IconRotateCounterClockwise as RotateCcw, IconDeviceFloppy as Save, IconAdjustments as Settings2 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import type { SectionConfig } from "@/lib/field-layout";

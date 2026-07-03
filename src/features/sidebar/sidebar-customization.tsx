@@ -1,16 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  GripVertical,
-  Loader2,
-  Lock,
-  RotateCcw,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCheck as Check, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconGripVertical as GripVertical, IconLoader2 as Loader2, IconLock as Lock, IconRotateCounterClockwise as RotateCcw } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Switch } from "@/components/ui/switch";

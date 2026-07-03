@@ -3,18 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  Building2,
-  Check,
-  ExternalLink,
-  Handshake,
-  Mail,
-  Pencil,
-  Phone,
-  Tag,
-  User,
-  X,
-} from "lucide-react";
+import { IconBuilding as Building2, IconCheck as Check, IconExternalLink as ExternalLink, IconHandshake as Handshake, IconMail as Mail, IconPencil as Pencil, IconPhone as Phone, IconTag as Tag, IconUser as User, IconX as X } from "@tabler/icons-react";
 import Link from "next/link";
 import * as React from "react";
 

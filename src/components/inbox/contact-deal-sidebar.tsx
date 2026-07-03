@@ -4,15 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Flame,
-  Snowflake,
-  Sun,
-  Tag,
-} from "lucide-react";
+import { IconChevronRight as ChevronRight, IconChevronsLeft as ChevronsLeft, IconChevronsRight as ChevronsRight, IconFlame as Flame, IconSnowflake as Snowflake, IconSun as Sun, IconTag as Tag } from "@tabler/icons-react";
 import { SortableSidebar } from "@/components/ui/sortable-sidebar";
 import { SidebarField } from "@/components/ui/sidebar-field";
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";

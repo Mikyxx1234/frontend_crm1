@@ -2,13 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Loader2,
-  Plus,
-  Search,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { IconLoader2 as Loader2, IconPlus as Plus, IconSearch as Search, IconTrash as Trash2, IconUsers as Users } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";

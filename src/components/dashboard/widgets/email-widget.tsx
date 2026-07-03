@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Mail, Plus, ArrowRight } from "lucide-react";
+import { IconMail as Mail, IconPlus as Plus, IconArrowRight as ArrowRight } from "@tabler/icons-react";
 
 import { apiUrl } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";

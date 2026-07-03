@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Pencil,
-  RotateCcw,
-  Trash2,
-  Trophy,
-  XCircle,
-} from "lucide-react";
+import { IconPencil as Pencil, IconRotateCounterClockwise as RotateCcw, IconTrash as Trash2, IconTrophy as Trophy, IconCircleX as XCircle } from "@tabler/icons-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

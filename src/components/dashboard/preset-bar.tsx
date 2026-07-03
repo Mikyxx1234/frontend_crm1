@@ -2,14 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import {
-  Activity,
-  BriefcaseBusiness,
-  Headphones,
-  LayoutDashboard,
-  Monitor,
-  Users,
-} from "lucide-react";
+import { IconActivity as Activity, IconBriefcase2 as BriefcaseBusiness, IconHeadphones as Headphones, IconLayoutDashboard as LayoutDashboard, IconDeviceDesktop as Monitor, IconUsers as Users } from "@tabler/icons-react";
 
 import {
   DASHBOARD_PRESETS,

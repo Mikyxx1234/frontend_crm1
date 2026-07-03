@@ -16,7 +16,7 @@ import { apiUrl } from "@/lib/api";
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Package, Sparkles, Info, Loader2 } from "lucide-react";
+import { IconPackage as Package, IconSparkles as Sparkles, IconInfoCircle as Info, IconLoader2 as Loader2 } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Label } from "@/components/ui/label";

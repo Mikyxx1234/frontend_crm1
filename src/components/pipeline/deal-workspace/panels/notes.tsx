@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Loader2, Send } from "lucide-react";
+import { IconFileText as FileText, IconLoader2 as Loader2, IconSend as Send } from "@tabler/icons-react";
 
 import { cn, formatDateTime } from "@/lib/utils";
 

@@ -7,7 +7,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, MoreVertical, Phone, Search, X } from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconDotsVertical as MoreVertical, IconPhone as Phone, IconSearch as Search, IconX as X } from "@tabler/icons-react";
 
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import {

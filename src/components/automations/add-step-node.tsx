@@ -2,38 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import {
-  ArrowRightLeft,
-  Bot,
-  BotMessageSquare,
-  Briefcase,
-  CalendarPlus,
-  CheckCircle2,
-  Clock,
-  CornerDownRight,
-  FileText,
-  GitBranch,
-  Globe,
-  Image,
-  Mail,
-  MessageCircleQuestion,
-  MessageSquare,
-  MousePointerClick,
-  PackageMinus,
-  Pause,
-  Pencil,
-  Plus,
-  Repeat,
-  Route,
-  ShoppingBag,
-  Square,
-  StopCircle,
-  Tag,
-  Timer,
-  TrendingUp,
-  UserPlus,
-  Variable,
-} from "lucide-react";
+import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconMessageBot as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageMinus as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconUserPlus as UserPlus, IconVariable as Variable } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 
 import { cn } from "@/lib/utils";

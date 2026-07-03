@@ -1,22 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Ban,
-  ChevronDown,
-  ChevronRight,
-  Eye,
-  Loader2,
-  MessageSquarePlus,
-  Plus,
-  Radio,
-  Send,
-  Settings,
-  Shield,
-  Users,
-  Workflow,
-  X,
-} from "lucide-react";
+import { IconBan as Ban, IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconEye as Eye, IconLoader2 as Loader2, IconMessagePlus as MessageSquarePlus, IconPlus as Plus, IconRadio as Radio, IconSend as Send, IconSettings as Settings, IconShield as Shield, IconUsers as Users, IconWorkflow as Workflow, IconX as X } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

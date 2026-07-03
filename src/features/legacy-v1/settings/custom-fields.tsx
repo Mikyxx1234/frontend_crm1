@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutList, Pencil, Plus, Trash2 } from "lucide-react";
+import { IconLayoutList as LayoutList, IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2 } from "@tabler/icons-react";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 

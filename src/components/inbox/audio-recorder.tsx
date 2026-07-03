@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Mic, Trash2, Send } from "lucide-react";
+import { IconCheck as Check, IconMicrophone as Mic, IconTrash as Trash2, IconSend as Send } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";

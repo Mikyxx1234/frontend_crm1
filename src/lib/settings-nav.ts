@@ -1,31 +1,4 @@
-import {
-  Bell,
-  Bot,
-  Boxes,
-  Clock,
-  Database,
-  Headphones,
-  Key,
-  Kanban,
-  LayoutList,
-  LifeBuoy,
-  Lock,
-  Mail,
-  MessageCircle,
-  MessageSquare,
-  Package,
-  Phone,
-  Plug,
-  Radio,
-  Settings2,
-  Shield,
-  Shuffle,
-  Smartphone,
-  Sparkles,
-  Tag,
-  ThumbsDown,
-  Users,
-} from "lucide-react";
+import { IconBell as Bell, IconRobot as Bot, IconBoxes as Boxes, IconClock as Clock, IconDatabase as Database, IconHeadphones as Headphones, IconKey as Key, IconLayoutKanban as Kanban, IconLayoutList as LayoutList, IconLifebuoy as LifeBuoy, IconLock as Lock, IconMail as Mail, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPackage as Package, IconPhone as Phone, IconPlug as Plug, IconRadio as Radio, IconAdjustments as Settings2, IconShield as Shield, IconArrowsShuffle as Shuffle, IconDeviceMobile as Smartphone, IconSparkles as Sparkles, IconTag as Tag, IconThumbDown as ThumbsDown, IconUsers as Users } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { UserRole } from "@/lib/prisma-enum-types";
 

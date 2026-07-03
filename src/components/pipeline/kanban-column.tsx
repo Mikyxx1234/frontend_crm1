@@ -14,7 +14,7 @@ import {
   type DroppableProvided,
   type DroppableStateSnapshot,
 } from "@hello-pangea/dnd";
-import { CheckSquare, MessageCircle, Plus, Square } from "lucide-react";
+import { IconSquareCheck as CheckSquare, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSquare as Square } from "@tabler/icons-react";
 
 import type { CardVisibleFields } from "@/components/pipeline/card-fields-config";
 import { KanbanCard } from "@/components/pipeline/kanban-card";

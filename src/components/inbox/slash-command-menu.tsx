@@ -28,7 +28,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Loader2, MessageSquareQuote } from "lucide-react";
+import { IconFileText as FileText, IconLoader2 as Loader2, IconMessageQuestion as MessageSquareQuote } from "@tabler/icons-react";
 
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";

@@ -1,7 +1,7 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import { Bell, BellPlus } from "lucide-react";
+import { IconBell as Bell, IconBellPlus as BellPlus } from "@tabler/icons-react";
 import * as React from "react";
 import { toast } from "sonner";
 

@@ -4,7 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Trophy } from "lucide-react";
+import { IconChevronRight as ChevronRight, IconTrophy as Trophy } from "@tabler/icons-react";
 
 import { SUBTLE_SPRING, formatBRL, formatCount } from "@/lib/dashboard-tokens";
 import { cn } from "@/lib/utils";

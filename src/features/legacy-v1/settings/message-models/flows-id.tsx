@@ -5,7 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Plus, RefreshCw, Save, Send, Trash2 } from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCw, IconDeviceFloppy as Save, IconSend as Send, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

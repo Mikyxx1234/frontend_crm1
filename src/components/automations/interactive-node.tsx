@@ -1,15 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  HelpCircle,
-  MessageCircleQuestion,
-  MousePointerClick,
-  Trash2,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconClock as Clock, IconHelpCircle as HelpCircle, IconMessageQuestion as MessageCircleQuestion, IconClick as MousePointerClick, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";

@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Inbox, MessageCircle, Send } from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconInbox as Inbox, IconMessageCircle as MessageCircle, IconSend as Send } from "@tabler/icons-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";

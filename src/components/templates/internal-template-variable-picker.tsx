@@ -12,7 +12,7 @@
  */
 
 import * as React from "react";
-import { ChevronDown, Variable, Search } from "lucide-react";
+import { IconChevronDown as ChevronDown, IconVariable as Variable, IconSearch as Search } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import {

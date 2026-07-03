@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Bell, MessageSquare, Sparkles, Zap } from "lucide-react";
+import { IconArrowRight as ArrowRight, IconBell as Bell, IconMessage as MessageSquare, IconSparkles as Sparkles, IconBolt as Zap } from "@tabler/icons-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";

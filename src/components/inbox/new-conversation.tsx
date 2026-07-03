@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, MessageSquarePlus, Send, Wifi, WifiOff } from "lucide-react";
+import { IconLoader2 as Loader2, IconMessagePlus as MessageSquarePlus, IconSend as Send, IconWifi as Wifi, IconWifiOff as WifiOff } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";

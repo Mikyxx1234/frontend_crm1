@@ -11,7 +11,7 @@ import {
 } from "@hello-pangea/dnd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { IconTrash as Trash2 } from "@tabler/icons-react";
 
 import type { CardVisibleFields } from "@/components/pipeline/card-fields-config";
 import { KanbanColumn } from "@/components/pipeline/kanban-column";

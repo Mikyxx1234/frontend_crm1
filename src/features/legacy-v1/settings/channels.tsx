@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 
 import { useConfirm } from "@/hooks/use-confirm";
-import { Plus, Radio } from "lucide-react";
+import { IconPlus as Plus, IconRadio as Radio } from "@tabler/icons-react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { Building2, ExternalLink, Mail, Phone, User } from "lucide-react";
+import { IconBuilding as Building2, IconExternalLink as ExternalLink, IconMail as Mail, IconPhone as Phone, IconUser as User } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

@@ -3,10 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowRightLeft, Bot, Calendar, CheckCircle2, Clock, FileText, Flame,
-  Loader2, Phone, Plus, Send, Sparkles, Target, Zap,
-} from "lucide-react";
+import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconClock as Clock, IconFileText as FileText, IconFlame as Flame, IconLoader2 as Loader2, IconPhone as Phone, IconPlus as Plus, IconSend as Send, IconSparkles as Sparkles, IconTarget as Target, IconBolt as Zap } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";

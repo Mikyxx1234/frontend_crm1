@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BellOff, Check, Loader2, Smartphone, X } from "lucide-react";
+import { IconBell as Bell, IconBellOff as BellOff, IconCheck as Check, IconLoader2 as Loader2, IconDeviceMobile as Smartphone, IconX as X } from "@tabler/icons-react";
 
 import { usePushSubscription } from "@/hooks/use-push-subscription";
 import { cn } from "@/lib/utils";

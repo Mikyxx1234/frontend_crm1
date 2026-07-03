@@ -1,15 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  ChevronRight,
-  Inbox,
-  Loader2,
-  Sparkles,
-  XCircle,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconCircleCheck as CheckCircle2, IconChevronRight as ChevronRight, IconInbox as Inbox, IconLoader2 as Loader2, IconSparkles as Sparkles, IconCircleX as XCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";

@@ -3,17 +3,8 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Bot,
-  GitBranch,
-  Globe,
-  MessageSquare,
-  Search,
-  Sparkles,
-  X,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { IconRobot as Bot, IconGitBranch as GitBranch, IconGlobe as Globe, IconMessage as MessageSquare, IconSearch as Search, IconSparkles as Sparkles, IconX as X, IconBolt as Zap } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import type { ActionStepType } from "@/lib/automation-workflow";
 import { stepTypeLabel } from "@/lib/automation-workflow";

@@ -16,7 +16,7 @@ import { apiUrl } from "@/lib/api";
  * escolhido (tools + prompt + modelo sugerido).
  */
 
-import { Loader2 } from "lucide-react";
+import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";

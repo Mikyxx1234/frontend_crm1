@@ -2,7 +2,7 @@
 
 import { apiUrl, getApiBaseUrl } from "@/lib/api";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
-import { Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, ShieldCheck, Webhook } from "lucide-react";
+import { IconCheck as Check, IconCopy as Copy, IconExternalLink as ExternalLink, IconEye as Eye, IconEyeOff as EyeOff, IconLoader2 as Loader2, IconRefresh as RefreshCw, IconShieldCheck as ShieldCheck, IconWebhook as Webhook } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 

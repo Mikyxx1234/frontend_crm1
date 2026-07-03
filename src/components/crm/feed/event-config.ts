@@ -10,35 +10,8 @@
  * Tipos nao mapeados caem em FALLBACK_CONFIG e geram descricao vazia.
  */
 
-import {
-  AlertTriangle,
-  ArrowRight,
-  Bot,
-  CalendarCheck,
-  CheckCircle2,
-  Clock,
-  Edit3,
-  MessageSquare,
-  MessageSquarePlus,
-  Package,
-  Phone,
-  PhoneMissed,
-  Send,
-  StickyNote,
-  Tag,
-  Trash2,
-  Trophy,
-  UserCheck,
-  UserCog,
-  UserMinus,
-  UserPlus,
-  Users,
-  Workflow,
-  XCircle,
-  RefreshCw,
-  RotateCcw,
-  type LucideIcon,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconRobot as Bot, IconCalendarCheck as CalendarCheck, IconCircleCheck as CheckCircle2, IconClock as Clock, IconEdit as Edit3, IconMessage as MessageSquare, IconMessagePlus as MessageSquarePlus, IconPackage as Package, IconPhone as Phone, IconPhoneMissed as PhoneMissed, IconSend as Send, IconNote as StickyNote, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserCheck as UserCheck, IconUserCog as UserCog, IconUserMinus as UserMinus, IconUserPlus as UserPlus, IconUsers as Users, IconWorkflow as Workflow, IconCircleX as XCircle, IconRefresh as RefreshCw, IconRotateCounterClockwise as RotateCcw } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { summarizeSendError } from "@/lib/meta-error-catalog";

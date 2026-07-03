@@ -3,24 +3,7 @@
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  Check,
-  Flag,
-  ImageIcon,
-  Kanban,
-  Link as LinkIcon,
-  Loader2,
-  LogOut,
-  Palette,
-  Radio,
-  SkipForward,
-  Trash2,
-  Upload,
-  Users,
-} from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconBuilding as Building2, IconCheck as Check, IconFlag as Flag, IconPhoto as ImageIcon, IconLayoutKanban as Kanban, IconLink as LinkIcon, IconLoader2 as Loader2, IconLogout as LogOut, IconPalette as Palette, IconRadio as Radio, IconPlayerSkipForward as SkipForward, IconTrash as Trash2, IconUpload as Upload, IconUsers as Users } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

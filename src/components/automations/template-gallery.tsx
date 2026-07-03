@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Clock, Flame, Plus, Sparkles } from "lucide-react";
+import { IconArrowRight as ArrowRight, IconClock as Clock, IconFlame as Flame, IconPlus as Plus, IconSparkles as Sparkles } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 
 import {

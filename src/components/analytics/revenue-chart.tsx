@@ -12,7 +12,7 @@ import { apiUrl } from "@/lib/api";
 
 import { useId, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MoreVertical } from "lucide-react";
+import { IconDotsVertical as MoreVertical } from "@tabler/icons-react";
 import {
   Area,
   AreaChart,

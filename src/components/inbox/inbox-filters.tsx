@@ -8,7 +8,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { IconX as X } from "@tabler/icons-react";
 
 export type InboxFilters = {
   ownerId?: string;

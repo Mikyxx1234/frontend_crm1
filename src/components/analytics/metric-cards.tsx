@@ -12,18 +12,8 @@
  */
 
 import { motion } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
-import {
-  ChartBar as BarChart3,
-  Briefcase,
-  Clock,
-  DollarSign,
-  MessageSquare,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+import type { Icon as LucideIcon } from "@tabler/icons-react";
+import { IconChartBar as BarChart3, IconBriefcase as Briefcase, IconClock as Clock, IconCurrencyDollar as DollarSign, IconMessage as MessageSquare, IconTarget as Target, IconTrendingDown as TrendingDown, IconTrendingUp as TrendingUp, IconUsers as Users } from "@tabler/icons-react";
 
 import {
   bentoAccentMap,

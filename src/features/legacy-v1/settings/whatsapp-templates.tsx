@@ -5,9 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertTriangle, ArrowLeft, BookOpen, Check, CheckCircle2, ClipboardCopy, Clock, Eye, Info, Layers, Loader2, MessageCircle, MessageSquare, Pencil, Phone, Plus, RefreshCw, Search, Trash2, UserCheck,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconArrowLeft as ArrowLeft, IconBookOpen as BookOpen, IconCheck as Check, IconCircleCheck as CheckCircle2, IconClipboard as ClipboardCopy, IconClock as Clock, IconEye as Eye, IconInfoCircle as Info, IconStack as Layers, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconRefresh as RefreshCw, IconSearch as Search, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/hooks/use-confirm";

@@ -27,7 +27,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, Trophy, XCircle } from "lucide-react";
+import { IconCheck as Check, IconChevronDown as ChevronDown, IconTrophy as Trophy, IconCircleX as XCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import type { BoardDeal } from "@/components/pipeline/kanban-types";

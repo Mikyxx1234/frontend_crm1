@@ -35,7 +35,7 @@ import {
 } from "@/lib/automation-condition";
 import { cn } from "@/lib/utils";
 import { useThemeV2 } from "@/hooks/use-theme-v2";
-import { Copy, Trash2 } from "lucide-react";
+import { IconCopy as Copy, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import type { ActionStepType } from "@/lib/automation-workflow";
 

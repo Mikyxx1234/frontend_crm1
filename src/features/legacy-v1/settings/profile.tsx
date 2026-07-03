@@ -26,19 +26,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  AlertTriangle,
-  Camera,
-  Check,
-  Copy,
-  Info,
-  Key,
-  Loader2,
-  Plus,
-  RefreshCw,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCamera as Camera, IconCheck as Check, IconCopy as Copy, IconInfoCircle as Info, IconKey as Key, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCw, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

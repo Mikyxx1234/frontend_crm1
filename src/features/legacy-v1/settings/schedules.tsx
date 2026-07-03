@@ -198,7 +198,7 @@ export default function SchedulesPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative">
-                          <div className="flex size-9 items-center justify-center rounded-[12px] lumen-ai-gradient text-xs font-semibold text-white">
+                          <div className="flex size-9 items-center justify-center rounded-xl lumen-ai-gradient text-xs font-semibold text-white">
                             {agent.name.charAt(0).toUpperCase()}
                           </div>
                           <span className={cn("absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white", STATUS_DOT[status])} />

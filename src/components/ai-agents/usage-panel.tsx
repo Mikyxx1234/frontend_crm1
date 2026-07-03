@@ -113,7 +113,7 @@ export function UsagePanel({ agentId }: { agentId: string }) {
                   className="group flex flex-1 flex-col items-center gap-1"
                 >
                   <div
-                    className="w-full rounded-t bg-indigo-400/70 transition-colors group-hover:bg-indigo-500"
+                    className="w-full rounded-t bg-[var(--color-brand-primary)]/70 transition-colors group-hover:bg-[var(--color-brand-primary)]"
                     style={{ height: `${pct}%` }}
                     title={`${new Date(d.day).toLocaleDateString("pt-BR")}: ${d.tokens.toLocaleString("pt-BR")} tokens, US$ ${d.cost.toFixed(4)}`}
                   />

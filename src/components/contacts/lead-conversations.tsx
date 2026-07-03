@@ -355,7 +355,7 @@ function NotesTab({ contactId, notes: initialNotes }: { contactId: string; notes
         <Button
           type="submit"
           size="icon"
-          className="size-11 shrink-0 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+          className="size-11 shrink-0 rounded-xl bg-[var(--color-brand-primary)] hover:bg-indigo-700"
           disabled={!draft.trim() || createMutation.isPending}
         >
           {createMutation.isPending ? (

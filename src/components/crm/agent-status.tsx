@@ -199,7 +199,7 @@ export function AgentStatusPopup({
         role="dialog"
         aria-modal="true"
         aria-label="Definir status"
-        className="w-90 rounded-[28px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-7 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+        className="w-90 rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-7 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
         style={{ animation: "scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}
       >
         <div className="mb-6 text-center">

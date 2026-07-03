@@ -145,7 +145,7 @@ export function PresenceDashboard({
             "group text-left transition-colors",
             compact
               ? "inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--glass-bg-subtle)] px-2 py-1 hover:bg-[var(--glass-bg-subtle)]"
-              : "relative flex w-full items-center gap-1.5 rounded-lg border border-border/70 bg-white px-2 py-1 shadow-sm hover:border-[var(--glass-border)]",
+              : "relative flex w-full items-center gap-1.5 rounded-lg border border-border/70 bg-[var(--color-bg-card)] px-2 py-1 shadow-sm hover:border-[var(--glass-border)]",
           )}
         >
           {compact ? (

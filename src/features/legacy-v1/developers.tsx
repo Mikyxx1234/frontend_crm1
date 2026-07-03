@@ -623,7 +623,7 @@ function ParamsTable({ params, title }: { params: Param[]; title: string }) {
                     {p.name}
                   </code>
                   {p.required && (
-                    <span className="ml-1 text-[10px] text-red-500">*</span>
+                    <span className="ml-1 text-[10px] text-[var(--color-danger)]">*</span>
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
@@ -651,7 +651,7 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
     ep.description;
 
   return (
-    <div className="rounded-lg border border-border bg-white transition-shadow hover:shadow-sm">
+    <div className="rounded-lg border border-border bg-[var(--color-bg-card)] transition-shadow hover:shadow-sm">
       <button
         type="button"
         onClick={() => hasDetails && setOpen(!open)}
@@ -849,7 +849,7 @@ export default function DevelopersPage() {
   return (
     <div className="-m-6 flex h-[calc(100dvh-0px)] overflow-hidden md:-m-8">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 overflow-y-auto border-r border-border bg-white p-4">
+      <aside className="w-64 shrink-0 overflow-y-auto border-r border-border bg-[var(--color-bg-card)] p-4">
         <div className="mb-6 flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
             <Book className="size-5 text-primary" />

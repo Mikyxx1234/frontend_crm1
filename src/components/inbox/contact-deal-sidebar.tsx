@@ -318,11 +318,11 @@ export function ContactDealSidebar(props: Props) {
         // pai, evitando o body gradient vazar embaixo quando o conteúdo
         // interno é curto (bug do refactor de width: `h-full` dependia
         // de altura explícita do pai, que não vinha do `lg:flex` puro).
-        "flex min-h-0 w-full flex-1 shrink-0 flex-col overflow-hidden bg-white dark:bg-foreground",
+        "flex min-h-0 w-full flex-1 shrink-0 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-foreground",
         side === "right" ? "border-l border-black/5 dark:border-[var(--glass-border)]" : "border-r border-black/5 dark:border-[var(--glass-border)]",
       )}
     >
-      <div className="relative flex h-8 shrink-0 items-center justify-between border-b border-black/5 dark:border-[var(--glass-border)] bg-white dark:bg-foreground px-3">
+      <div className="relative flex h-8 shrink-0 items-center justify-between border-b border-black/5 dark:border-[var(--glass-border)] bg-[var(--color-bg-card)] dark:bg-foreground px-3">
         <span className="text-[11px] font-medium text-ink-subtle dark:text-ink-muted">CRM</span>
         <div className="flex items-center gap-0.5">
           {onCollapse ? (
@@ -342,7 +342,7 @@ export function ContactDealSidebar(props: Props) {
         </div>
       </div>
 
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-white dark:bg-foreground">
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[var(--color-bg-card)] dark:bg-foreground">
         <div className="border-b border-black/5 dark:border-[var(--glass-border)] px-4 py-3">
           <p className="text-[14px] font-semibold text-foreground dark:text-white">{displayName}</p>
           {contact?.company?.name ? (

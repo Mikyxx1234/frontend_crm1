@@ -76,7 +76,7 @@ function SalesHubChatEmptyState({
   // Surface neutra usando tokens do tema — `bg-white` virava placa
   // branca destoante em dark mode. Agora segue o background do app.
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-white p-8 dark:bg-[var(--glass-bg-modal)]">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[var(--color-bg-card)] p-8 dark:bg-[var(--glass-bg-modal)]">
       <MessageSquareOff
         className="size-7 text-[var(--text-faint)] dark:text-[var(--text-secondary)]"
         strokeWidth={1.5}
@@ -548,7 +548,7 @@ export function SalesHubView({
     // Root usa `bg-white dark:bg-[var(--glass-bg-modal)]` em vez de `bg-white` cravado —
     // antes o Sales Hub continuava claro mesmo com tema dark ativo.
     // Estrutura "split view" preservada (sidebar | chat).
-    <div ref={rootRef} className="flex h-full flex-col bg-white dark:bg-[var(--glass-bg-modal)]" tabIndex={-1}>
+    <div ref={rootRef} className="flex h-full flex-col bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]" tabIndex={-1}>
       <StageRibbon
         stages={funnelStages}
         selectedStageId={selectedStageId}
@@ -573,7 +573,7 @@ export function SalesHubView({
             Mobile: idem em ambos os modos. */}
         <div
           className={cn(
-            "flex min-h-0 flex-col overflow-hidden bg-white dark:bg-[var(--glass-bg-modal)]",
+            "flex min-h-0 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
             activeDeal
               ? "hidden min-w-0 shrink-0 border-r border-border md:flex"
               : "w-full",
@@ -635,7 +635,7 @@ export function SalesHubView({
             o grid acima vira [fila estreita | chat]. */}
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[var(--glass-bg-modal)]",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
             !activeDeal && "hidden",
           )}
         >

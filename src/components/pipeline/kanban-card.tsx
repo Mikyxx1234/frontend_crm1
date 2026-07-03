@@ -230,7 +230,7 @@ export function KanbanCard({
         className={cn(
           // Surface: tokens de glass do tema — `bg-[var(--glass-bg-overlay)]` causava cartões
           // esbranquiçados em dark mode mesmo com o variant `.dark` ativo.
-          "group relative cursor-pointer rounded-[18px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] backdrop-blur-sm transition-all",
+          "group relative cursor-pointer rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] backdrop-blur-sm transition-all",
           dt.card.shadow,
           dt.card.kanbanHover,
           "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
@@ -290,7 +290,7 @@ export function KanbanCard({
               tabIndex={0}
               onClick={onClick}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick?.(); }}
-              className="min-w-0 flex-1 cursor-pointer rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+              className="min-w-0 flex-1 cursor-pointer rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]/40"
             >
               <div className="flex flex-col gap-2">
                 {/* HEADER do card — avatar 28 + nome + data (canto sup. direito).

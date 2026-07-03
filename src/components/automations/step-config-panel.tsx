@@ -297,7 +297,7 @@ function VariableShortcutTextarea({
         placeholder={placeholder}
       />
       {open && filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-border bg-white p-1 shadow-[var(--shadow-lg)]">
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-border bg-[var(--color-bg-card)] p-1 shadow-[var(--shadow-lg)]">
           {filtered.map((opt) => (
             <button
               key={`${opt.label}-${opt.token}`}
@@ -2603,7 +2603,7 @@ function ConditionStepConfig({
       {branches.map((branch, bIdx) => (
         <div
           key={branch.id}
-          className="space-y-3 rounded-lg border border-border bg-white p-3"
+          className="space-y-3 rounded-lg border border-border bg-[var(--color-bg-card)] p-3"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -3420,7 +3420,7 @@ function MediaStepConfig({
 
         <div className="relative">
           <div className="absolute inset-x-0 top-1/2 border-t border-border/60" />
-          <p className="relative mx-auto w-fit bg-white px-2 text-[10px] text-muted-foreground">
+          <p className="relative mx-auto w-fit bg-[var(--color-bg-card)] px-2 text-[10px] text-muted-foreground">
             ou cole uma URL
           </p>
         </div>

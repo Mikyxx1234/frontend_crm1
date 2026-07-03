@@ -62,7 +62,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
   return (
     <div
       className={cn(
-        "group/node relative min-w-[260px] max-w-[320px] rounded-lg border bg-white transition-all duration-200",
+        "group/node relative min-w-[260px] max-w-[320px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
           ? cn(accentBorder, "ring-2", accentRing, accentShadow.split(" ")[0])
           : cn(
@@ -127,7 +127,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
 
       {/* Button rows — cada um com seu handle */}
       {buttons.length > 0 && (
-        <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
+        <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-[var(--color-bg-subtle)] to-transparent">
           {buttons.map((btn, i) => (
             <div
               key={btn.id || i}

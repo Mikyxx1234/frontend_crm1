@@ -83,7 +83,7 @@ export function PushPermissionPrompt() {
     <div
       className={cn(
         "fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+4.25rem)] z-40",
-        "rounded-[20px] border border-border bg-white p-4 shadow-[var(--shadow-lg)]",
+        "rounded-2xl border border-border bg-[var(--color-bg-card)] p-4 shadow-[var(--shadow-lg)]",
         "md:hidden",
       )}
       role="dialog"

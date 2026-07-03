@@ -283,7 +283,7 @@ export default function ReportsClientPage() {
               label="Total de mensagens"
               value={summary.totalMessages.toLocaleString("pt-BR")}
               color="text-[var(--color-ink-soft)]"
-              bg="bg-slate-100"
+              bg="bg-[var(--color-bg-muted)]"
             />
             <KpiCard
               icon={DollarSign}
@@ -302,7 +302,7 @@ export default function ReportsClientPage() {
               label="Entrada (serviço)"
               value={summary.serviceInbound.toLocaleString("pt-BR")}
               subtitle={`Grátis (${FREE_SERVICE_QUOTA.toLocaleString("pt-BR")}/mês por WABA)`}
-              color="text-blue-600"
+              color="text-[var(--color-brand-primary)]"
               bg="bg-blue-100"
             />
             <KpiCard
@@ -310,7 +310,7 @@ export default function ReportsClientPage() {
               label="Saída (agente)"
               value={summary.serviceOutbound.toLocaleString("pt-BR")}
               subtitle="Grátis (sessão aberta pelo cliente)"
-              color="text-indigo-600"
+              color="text-[var(--color-brand-primary)]"
               bg="bg-indigo-100"
             />
           </div>
@@ -397,9 +397,9 @@ export default function ReportsClientPage() {
                       {daily.length <= 31 && (
                         <span className="mt-1 text-[9px] tabular-nums text-muted-foreground">{d.date.slice(8)}</span>
                       )}
-                      <div className="pointer-events-none absolute bottom-full z-20 mb-2 hidden w-max rounded-lg border border-border bg-white px-3 py-2 text-[11px] shadow-lg group-hover:block">
+                      <div className="pointer-events-none absolute bottom-full z-20 mb-2 hidden w-max rounded-lg border border-border bg-[var(--color-bg-card)] px-3 py-2 text-[11px] shadow-lg group-hover:block">
                         <p className="font-semibold text-foreground">{new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR")}</p>
-                        <p className="text-muted-foreground">Total: {total}</p>
+                        <p className="text-[var(--color-text-secondary)]">Total: {total}</p>
                         {d.inbound > 0 && <p>Entrada: {d.inbound}</p>}
                         {d.outbound > 0 && <p>Saída: {d.outbound}</p>}
                         {d.marketing > 0 && <p>Marketing: {d.marketing}</p>}

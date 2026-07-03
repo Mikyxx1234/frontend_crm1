@@ -220,7 +220,7 @@ export default function LossReasonsPage() {
             <Skeleton key={i} className="h-12 w-full rounded-lg" />
           ))
         ) : reasons.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 py-10 text-center">
+          <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] py-10 text-center">
             <p className="text-sm text-[var(--text-muted)]">Nenhum motivo cadastrado</p>
             <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
               Adicione motivos para padronizar a análise de negócios perdidos.
@@ -270,7 +270,7 @@ function ReasonRow({
         !reason.isActive && "opacity-50",
       )}
     >
-      <GripVertical className="size-4 shrink-0 cursor-grab text-slate-300" />
+      <GripVertical className="size-4 shrink-0 cursor-grab text-[var(--color-text-muted)]" />
 
       {editing ? (
         <Input

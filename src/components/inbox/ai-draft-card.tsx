@@ -137,7 +137,7 @@ export function AIDraftCard({
             size="sm"
             onClick={() => approveMut.mutate()}
             disabled={busy || !draft.trim()}
-            className="gap-1 bg-indigo-600 hover:bg-indigo-700"
+            className="gap-1 bg-[var(--color-brand-primary)] hover:bg-indigo-700"
           >
             {approveMut.isPending ? (
               <Loader2 className="size-3.5 animate-spin" />

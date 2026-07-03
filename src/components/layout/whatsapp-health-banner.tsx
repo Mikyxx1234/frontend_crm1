@@ -162,8 +162,8 @@ export function WhatsAppHealthBanner() {
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-semibold",
                 isCritical
-                  ? "border-red-300 bg-[var(--glass-bg-overlay)] text-red-900 hover:bg-white dark:border-red-800 dark:bg-red-950/40 dark:text-red-100"
-                  : "border-amber-300 bg-[var(--glass-bg-overlay)] text-[var(--color-warn-text)] hover:bg-white dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100",
+                  ? "border-red-300 bg-[var(--glass-bg-overlay)] text-red-900 hover:bg-[var(--color-bg-card)] dark:border-red-800 dark:bg-red-950/40 dark:text-red-100"
+                  : "border-amber-300 bg-[var(--glass-bg-overlay)] text-[var(--color-warn-text)] hover:bg-[var(--color-bg-card)] dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100",
                 isFetching && "opacity-60",
               )}
             >

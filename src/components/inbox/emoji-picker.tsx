@@ -70,7 +70,7 @@ export function EmojiPicker({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Buscar emoji…"
-        className="mb-2 h-8 w-full rounded-lg border border-border/60 bg-background px-2.5 text-xs outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-indigo-500/40"
+        className="mb-2 h-8 w-full rounded-lg border border-border/60 bg-background px-2.5 text-xs outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-[var(--color-brand-primary)]/40"
       />
 
       {!search.trim() && (
@@ -83,7 +83,7 @@ export function EmojiPicker({
               className={cn(
                 "shrink-0 rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
                 activeCategory === i
-                  ? "bg-indigo-500/15 text-[var(--brand-primary)] dark:text-indigo-300"
+                  ? "bg-[var(--color-brand-primary)]/15 text-[var(--brand-primary)] dark:text-indigo-300"
                   : "text-muted-foreground hover:bg-muted/60"
               )}
             >

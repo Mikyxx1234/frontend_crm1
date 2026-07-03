@@ -68,7 +68,7 @@ export function InstallPrompt() {
     <div
       className={cn(
         "fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] z-40",
-        "rounded-[20px] border border-border bg-white p-4 shadow-[var(--shadow-lg)]",
+        "rounded-2xl border border-border bg-[var(--color-bg-card)] p-4 shadow-[var(--shadow-lg)]",
         "md:hidden",
       )}
       role="dialog"

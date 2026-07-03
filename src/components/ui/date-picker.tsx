@@ -59,8 +59,8 @@ export function DatePicker({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "flex h-8 w-full items-center justify-between rounded-lg border border-border bg-white px-2.5 text-left text-[13px] text-foreground transition",
-          "hover:border-[var(--glass-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200",
+          "flex h-8 w-full items-center justify-between rounded-lg border border-border bg-[var(--color-bg-card)] px-2.5 text-left text-[13px] text-foreground transition",
+          "hover:border-[var(--glass-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border)]",
           disabled && "cursor-not-allowed opacity-60",
         )}
       >
@@ -71,7 +71,7 @@ export function DatePicker({
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[280px] rounded-2xl border border-border bg-white p-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[280px] rounded-2xl border border-border bg-[var(--color-bg-card)] p-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button
               type="button"

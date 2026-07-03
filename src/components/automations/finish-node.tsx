@@ -23,7 +23,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[200px] max-w-[260px] rounded-lg border bg-white transition-all duration-200",
+        "group/node relative min-w-[200px] max-w-[260px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
           ? "border-rose-400/60 ring-2 ring-rose-300/30 shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)]"
           : "border-[var(--glass-border)] shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[0_10px_30px_-10px_rgba(244,63,94,0.3)]"

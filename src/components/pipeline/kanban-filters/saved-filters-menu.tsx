@@ -113,7 +113,7 @@ export function SavedFiltersMenu({
         backgroundColor: isDark ? "#1a2238" : "#ffffff",
         isolation: "isolate",
       }}
-      className="rounded-[18px] border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-[var(--glass-border)]"
+      className="rounded-2xl border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-[var(--glass-border)]"
     >
       <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">
         <span className="font-display text-[12px] font-bold text-foreground">Filtros salvos</span>

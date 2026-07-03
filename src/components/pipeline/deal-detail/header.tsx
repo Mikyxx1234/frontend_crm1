@@ -44,7 +44,7 @@ export function DealHeader({
   return (
     <div className="shrink-0 border-b border-border/80 bg-[var(--color-bg-subtle)]/65">
       <div className="space-y-3 px-5 py-4">
-        <section className="overflow-hidden rounded-[28px] border border-border bg-white shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+        <section className="overflow-hidden rounded-3xl border border-border bg-[var(--color-bg-card)] shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
           <div
             className="h-1.5 w-full"
             style={{
@@ -68,7 +68,7 @@ export function DealHeader({
                       <div className="inline-flex items-center rounded-full border border-border bg-[var(--color-bg-subtle)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
                         {deal.stage.pipeline.name}
                       </div>
-                      <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--color-ink-soft)]">
+                      <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-ink-soft)]">
                         <span
                           className="size-2 rounded-full"
                           style={{ backgroundColor: stageColor }}
@@ -191,7 +191,7 @@ function HeaderActionCluster({
               type="button"
               size="sm"
               variant="ghost"
-              className="h-8 gap-1 rounded-xl px-3 text-[13px] text-[var(--color-ink-soft)] hover:bg-white hover:text-[var(--text-primary)]"
+              className="h-8 gap-1 rounded-xl px-3 text-[13px] text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-card)] hover:text-[var(--text-primary)]"
               disabled={statusBusy}
               onClick={onReopen}
             >
@@ -207,7 +207,7 @@ function HeaderActionCluster({
               type="button"
               size="sm"
               variant="ghost"
-              className="h-8 gap-1 rounded-xl px-3 text-[13px] text-[var(--color-ink-soft)] hover:bg-white hover:text-[var(--text-primary)]"
+              className="h-8 gap-1 rounded-xl px-3 text-[13px] text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-card)] hover:text-[var(--text-primary)]"
               disabled={statusBusy}
               onClick={onReopen}
             >
@@ -220,7 +220,7 @@ function HeaderActionCluster({
           type="button"
           size="sm"
           variant="ghost"
-          className="size-8 rounded-xl text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)]"
+          className="size-8 rounded-xl text-[var(--text-muted)] hover:bg-[var(--color-bg-card)] hover:text-[var(--text-primary)]"
           onClick={onEdit}
         >
           <Pencil className="size-3.5" />
@@ -229,7 +229,7 @@ function HeaderActionCluster({
           type="button"
           size="sm"
           variant="ghost"
-          className="size-8 rounded-xl text-[var(--text-muted)] hover:bg-white hover:text-[var(--text-primary)]"
+          className="size-8 rounded-xl text-[var(--text-muted)] hover:bg-[var(--color-bg-card)] hover:text-[var(--text-primary)]"
           onClick={onDelete}
         >
           <Trash2 className="size-3.5" />

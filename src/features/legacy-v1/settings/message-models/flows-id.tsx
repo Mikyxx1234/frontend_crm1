@@ -840,7 +840,7 @@ export default function FlowDefinitionEditorPage({
 
           {/* Mock WhatsApp — cores ISOLADAS em --wa-* (não tokens globais) */}
           <div
-            className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[26px] border-[6px] shadow-[var(--glass-shadow-lg)]"
+            className="mx-auto w-full max-w-[260px] overflow-hidden rounded-3xl border-[6px] shadow-[var(--glass-shadow-lg)]"
             style={{ borderColor: "var(--wa-frame)", background: "var(--wa-bg)" }}
           >
             <div
@@ -858,12 +858,12 @@ export default function FlowDefinitionEditorPage({
                   {s.fields.map((f) => (
                     <div
                       key={f.id}
-                      className="rounded-[10px] px-2 py-1.5"
+                      className="rounded-[var(--radius-input)] px-2 py-1.5"
                       style={{ background: "var(--wa-bubble)", border: "1px solid var(--wa-field-border)" }}
                     >
                       <span className="text-[10px]" style={{ color: "var(--wa-text-muted)" }}>{f.label}</span>
                       <div
-                        className="mt-0.5 h-6 rounded-[6px]"
+                        className="mt-0.5 h-6 rounded-md"
                         style={{ background: "var(--wa-field-bg)", border: "1px solid var(--wa-field-border)" }}
                       />
                     </div>

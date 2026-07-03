@@ -187,9 +187,9 @@ export function DealStageSelector({
         aria-haspopup="listbox"
         aria-expanded={stageOpen}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 text-left transition-all hover:border-[var(--glass-border)] dark:bg-[var(--glass-bg-base)]/50 dark:hover:border-slate-600",
+          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-[var(--color-bg-card)] px-3 py-2.5 text-left transition-all hover:border-[var(--glass-border)] dark:bg-[var(--glass-bg-base)]/50 dark:hover:border-slate-600",
           stageOpen &&
-            "border-blue-600 bg-white shadow-[0_0_0_3px_rgba(37,99,235,0.12)] dark:bg-[var(--glass-bg-base)]/80",
+            "border-[var(--color-brand-primary)] bg-[var(--color-bg-card)] shadow-[0_0_0_3px_rgba(37,99,235,0.12)] dark:bg-[var(--glass-bg-base)]/80",
           moveMutation.isPending && "cursor-wait opacity-60",
         )}
       >
@@ -233,7 +233,7 @@ export function DealStageSelector({
             // elemento abaixo. max-h calibrada pra caber ~7 etapas
             // sem precisar rolar; caso ultrapasse, o scroll custom
             // aparece só quando necessário.
-            className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)] dark:bg-[var(--glass-bg-base)] dark:shadow-[0_20px_48px_-16px_rgba(0,0,0,0.6)]"
+            className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-border bg-[var(--color-bg-card)] shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)] dark:bg-[var(--glass-bg-base)] dark:shadow-[0_20px_48px_-16px_rgba(0,0,0,0.6)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2 dark:border-[var(--glass-border)]">
@@ -380,7 +380,7 @@ export function DealStageBar({
         role="group"
         aria-label="Mover deal entre etapas"
       >
-        <div className="flex h-full w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+        <div className="flex h-full w-full overflow-hidden rounded-full bg-[var(--color-border)] dark:bg-slate-700">
           {stages.map((stage, idx) => {
             const isCurrent = stage.id === deal.stageId;
             const isPast = currentIdx >= 0 && idx < currentIdx;
@@ -423,7 +423,7 @@ export function DealStageBar({
                 }}
                 transition={{ duration: 0.15 }}
                 className={cn(
-                  "relative h-full flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500/50",
+                  "relative h-full flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-brand-primary)]/50",
                   !isCurrent &&
                     !moveMutation.isPending &&
                     "cursor-pointer",
@@ -448,7 +448,7 @@ export function DealStageBar({
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="absolute inset-x-0 bottom-0 h-[2px] bg-blue-600"
+                    className="absolute inset-x-0 bottom-0 h-[2px] bg-[var(--color-brand-primary)]"
                     aria-hidden
                   />
                 )}
@@ -505,7 +505,7 @@ export function DealStepper({
             key={s.id}
             layout
             transition={SUBTLE_SPRING}
-            className="h-1 flex-1 overflow-hidden rounded-full bg-slate-200/70"
+            className="h-1 flex-1 overflow-hidden rounded-full bg-[var(--color-border)]/70"
           >
             <motion.div
               layout

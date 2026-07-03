@@ -30,7 +30,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
   return (
     <div
       className={cn(
-        "group/node relative min-w-[244px] max-w-[300px] rounded-lg border bg-white transition-all duration-200",
+        "group/node relative min-w-[244px] max-w-[300px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
           ? "border-indigo-400/60 shadow-[0_10px_30px_-10px_rgba(99,102,241,0.4)] ring-2 ring-indigo-300/30"
           : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-indigo-400/60 hover:shadow-[0_10px_30px_-10px_rgba(99,102,241,0.3)]"
@@ -78,7 +78,7 @@ export function DistributionNode({ data, selected }: NodeProps<DistributionNodeD
       </div>
 
       {/* Saidas (IF Sim/Nao) — cada linha com handle proprio a direita */}
-      <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
+      <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-[var(--color-bg-subtle)] to-transparent">
         <div className="relative flex h-9 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5">
           <CircleCheckBig className="size-3.5 shrink-0 text-[var(--color-success)]" strokeWidth={2.4} />
           <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-success-text)]">

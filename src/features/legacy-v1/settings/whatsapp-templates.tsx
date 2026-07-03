@@ -762,7 +762,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                           disabled={row.status !== "APPROVED"}
                         >
                           <span className={cn(
-                            "pointer-events-none inline-block size-5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200",
+                            "pointer-events-none inline-block size-5 rounded-full bg-[var(--color-bg-card)] shadow-sm ring-0 transition-transform duration-200",
                             cfg?.agentEnabled ? "translate-x-5" : "translate-x-0",
                           )} />
                         </button>
@@ -1268,7 +1268,7 @@ function WhatsappTemplatePreview({
     <aside aria-label="Pré-visualização do WhatsApp" className="space-y-2">
       <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">Pré-visualização</p>
       <div
-        className="overflow-hidden rounded-[22px] border-[5px] shadow-[var(--glass-shadow)]"
+        className="overflow-hidden rounded-[var(--radius-card)] border-[5px] shadow-[var(--glass-shadow)]"
         style={{ borderColor: "var(--wa-frame)", background: "var(--wa-bg)" }}
       >
         <div className="flex items-center gap-2 px-3 py-1.5" style={{ background: "var(--wa-header)" }}>
@@ -1276,7 +1276,7 @@ function WhatsappTemplatePreview({
         </div>
         <div className="space-y-1.5 p-3">
           <div
-            className="rounded-[12px] rounded-tl-[4px] px-2.5 py-2 text-[12px] shadow-sm"
+            className="rounded-xl rounded-tl px-2.5 py-2 text-[12px] shadow-sm"
             style={{ background: "var(--wa-bubble)", color: "var(--wa-text)" }}
           >
             {headerFormat === "TEXT" && headerText.trim() ? (
@@ -1294,7 +1294,7 @@ function WhatsappTemplatePreview({
               {buttons.map((b, i) => (
                 <div
                   key={`${b.text}-${i}`}
-                  className="rounded-[10px] py-1.5 text-center text-[11px] font-bold"
+                  className="rounded-[var(--radius-input)] py-1.5 text-center text-[11px] font-bold"
                   style={{ background: "var(--wa-bubble)", color: "var(--wa-accent-strong)", border: "1px solid var(--wa-field-border)" }}
                 >
                   {b.text}

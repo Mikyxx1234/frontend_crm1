@@ -176,7 +176,7 @@ export function AgentPlayground({
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite a mensagem do cliente..."
               disabled={mutation.isPending}
-              className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]/40"
             />
             <Button
               type="submit"
@@ -224,7 +224,7 @@ function TurnRow({ turn }: { turn: Turn }) {
     <div
       className={
         isUser
-          ? "max-w-[80%] self-end rounded-2xl rounded-br-sm bg-indigo-500 px-3 py-2 text-sm text-white"
+          ? "max-w-[80%] self-end rounded-2xl rounded-br-sm bg-[var(--color-brand-primary)] px-3 py-2 text-sm text-white"
           : "max-w-[80%] self-start rounded-2xl rounded-bl-sm bg-background px-3 py-2 text-sm shadow-sm"
       }
     >

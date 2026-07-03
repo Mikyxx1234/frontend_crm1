@@ -182,13 +182,13 @@ export default function AnalyticsPage() {
           icon={<BarChart3 />}
           actions={
             <>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-bg-subtle)] px-3 py-1.5 text-[11px] font-bold text-slate-500">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-bg-subtle)] px-3 py-1.5 text-[11px] font-bold text-[var(--color-text-secondary)]">
                 <Calendar className="size-3.5" />
                 {activePresetLabel}
               </span>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-[13px] font-bold text-[var(--color-ink-soft)] transition-all hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-[var(--color-bg-card)] px-4 py-2 text-[13px] font-bold text-[var(--color-ink-soft)] transition-all hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
               >
                 Exportar Relatório <ArrowUpRight className="size-4" />
               </button>
@@ -202,7 +202,7 @@ export default function AnalyticsPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05, type: "spring", stiffness: 340, damping: 28 }}
-        className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm md:p-6"
+        className="rounded-3xl border border-slate-100 bg-[var(--color-bg-card)] p-5 shadow-sm md:p-6"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
@@ -292,7 +292,7 @@ export default function AnalyticsPage() {
             <TabsTrigger
               key={t.v}
               value={t.v}
-              className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--color-ink-soft)] transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+              className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--color-ink-soft)] transition-all data-[state=active]:bg-[var(--color-bg-card)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:shadow-sm"
             >
               {t.label}
             </TabsTrigger>

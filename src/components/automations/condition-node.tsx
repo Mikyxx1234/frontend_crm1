@@ -75,7 +75,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
 
       <div
         className={cn(
-          "relative w-[300px] overflow-hidden rounded-lg border bg-white transition-all duration-200",
+          "relative w-[300px] overflow-hidden rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
           selected
             ? "border-cyan-400 shadow-[var(--shadow-lavender-glow)] ring-2 ring-cyan-300/30"
             : "border-cyan-200/80 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-cyan-300 hover:shadow-[var(--shadow-lavender-glow)]"
@@ -83,7 +83,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
       >
         {/* Header */}
         <div className="flex items-center gap-2 border-b border-cyan-100/70 bg-cyan-50/50 px-3 py-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-white text-cyan-500 ring-1 ring-cyan-100">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[var(--color-bg-card)] text-cyan-500 ring-1 ring-cyan-100">
             <GitBranch className="size-3.5" strokeWidth={2.4} />
           </span>
           <div className="min-w-0 flex-1">

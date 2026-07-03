@@ -1188,7 +1188,7 @@ function ConversationItem({
           </TooltipHost>
         ) : (
           <TooltipHost label="Sem responsável atribuído" side="left">
-            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-white dark:bg-ink-soft text-ink-subtle dark:text-ink-soft">
+            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-[var(--color-bg-card)] dark:bg-ink-soft text-ink-subtle dark:text-ink-soft">
               <UserRound size={12} />
             </div>
           </TooltipHost>

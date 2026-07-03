@@ -244,7 +244,7 @@ export default function ApiTokensPage() {
                   </TooltipHost>
                 </div>
                 {copied && (
-                  <p className="text-xs text-green-600">Copiado!</p>
+                  <p className="text-xs text-[var(--color-success)]">Copiado!</p>
                 )}
                 <div className="rounded-md border border-[var(--color-warning)]/30 bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] p-3 text-xs text-[var(--color-warning)]">
                   Guarde esta chave em um local seguro. Ela será usada como

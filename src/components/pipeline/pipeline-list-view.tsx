@@ -201,7 +201,7 @@ export function PipelineListView({
   };
 
   return (
-    <div className="h-full overflow-auto bg-white dark:bg-[var(--glass-bg-modal)]">
+    <div className="h-full overflow-auto bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]">
       <table className="w-full min-w-[900px] text-left text-[13px]">
         <thead className="sticky top-0 z-10 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] backdrop-blur-sm dark:border-[var(--glass-border)] dark:bg-[var(--glass-bg-modal)]/95">
           <tr>
@@ -211,7 +211,7 @@ export function PipelineListView({
                 checked={allSelected}
                 ref={(el) => { if (el) el.indeterminate = !allSelected && someSelected; }}
                 onChange={toggleAll}
-                className="size-4 rounded border-[var(--glass-border)] text-[var(--color-info)] focus:ring-blue-500/30 dark:border-slate-600 dark:bg-[var(--glass-bg-base)]"
+                className="size-4 rounded border-[var(--glass-border)] text-[var(--color-info)] focus:ring-[var(--color-brand-primary)]/30 dark:border-slate-600 dark:bg-[var(--glass-bg-base)]"
               />
             </th>
             {([
@@ -260,7 +260,7 @@ export function PipelineListView({
                       type="checkbox"
                       checked={selectedDeals.has(deal.id)}
                       onChange={() => toggleOne(deal.id)}
-                      className="size-4 rounded border-[var(--glass-border)] text-[var(--color-info)] focus:ring-blue-500/30 dark:border-slate-600 dark:bg-[var(--glass-bg-base)]"
+                      className="size-4 rounded border-[var(--glass-border)] text-[var(--color-info)] focus:ring-[var(--color-brand-primary)]/30 dark:border-slate-600 dark:bg-[var(--glass-bg-base)]"
                     />
                   </td>
                   <td

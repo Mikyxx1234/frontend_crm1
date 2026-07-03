@@ -31,7 +31,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[230px] max-w-[290px] rounded-lg border bg-white transition-all duration-200",
+        "group/node relative min-w-[230px] max-w-[290px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
           ? "border-violet-400/60 ring-2 ring-violet-300/30 shadow-[0_10px_30px_-10px_rgba(139,92,246,0.4)]"
           : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-violet-300/50 hover:shadow-[0_10px_30px_-10px_rgba(139,92,246,0.3)]"
@@ -72,7 +72,7 @@ export function QuestionNode({ data, selected }: NodeProps<QuestionNodeData>) {
       </div>
 
       {buttons.length > 0 && (
-        <div className="flex flex-wrap gap-1 border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent px-3 py-2">
+        <div className="flex flex-wrap gap-1 border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-[var(--color-bg-subtle)] to-transparent px-3 py-2">
           {buttons.map((btn, i) => (
             <span
               key={i}

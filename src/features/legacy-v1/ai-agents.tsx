@@ -285,7 +285,7 @@ export default function AIAgentsPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-8 text-indigo-600 hover:text-indigo-700 dark:text-indigo-300"
+                      className="size-8 text-[var(--color-brand-primary)] hover:text-indigo-700 dark:text-indigo-300"
                       title={
                         aiDisabled
                           ? "IA desativada — configure a chave da OpenAI em Configurações → IA"
@@ -372,7 +372,7 @@ export default function AIAgentsPage() {
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="rounded-xl border border-dashed border-border/80 py-16 text-center">
-      <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+      <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-indigo-50 text-[var(--color-brand-primary)] dark:bg-indigo-950 dark:text-indigo-300">
         <Bot className="size-8" />
       </div>
       <h3 className="mt-4 text-base font-semibold">Nenhum agente IA ainda</h3>

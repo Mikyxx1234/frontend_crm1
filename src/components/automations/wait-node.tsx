@@ -30,7 +30,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[250px] max-w-[310px] rounded-lg border bg-white transition-all duration-200",
+        "group/node relative min-w-[250px] max-w-[310px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
           ? "border-orange-400/60 ring-2 ring-orange-300/30 shadow-[0_10px_30px_-10px_rgba(249,115,22,0.4)]"
           : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"
@@ -49,7 +49,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
 
       {/* Header */}
       <div className="flex items-start gap-3 px-3.5 py-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-500 ring-1 ring-orange-100">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[var(--color-warn-text)] ring-1 ring-orange-100">
           <Pause className="size-4" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
@@ -78,7 +78,7 @@ export function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
       </div>
 
       {/* Condition rows */}
-      <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-slate-50/40 to-transparent">
+      <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-[var(--color-bg-subtle)] to-transparent">
         <div className="relative flex h-8 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5">
           <MessageCircle className="size-3 shrink-0 text-[var(--color-success)]" strokeWidth={2.4} />
           <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-success-text)]">

@@ -80,7 +80,7 @@ export function TemplateGallery({ onApplyTemplate, onStartBlank }: TemplateGalle
                 "group inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors",
                 active
                   ? "border-slate-900 bg-[var(--glass-bg-modal)] text-white"
-                  : "border-black/6 bg-white text-[var(--color-ink-soft)] hover:border-black/10 hover:text-[var(--text-primary)]",
+                  : "border-black/6 bg-[var(--color-bg-card)] text-[var(--color-ink-soft)] hover:border-black/10 hover:text-[var(--text-primary)]",
               )}
             >
               {f.label}
@@ -168,7 +168,7 @@ function TemplateCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.03, 0.3), duration: 0.3 }}
-      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-black/6 bg-white p-4 text-left transition-all hover:border-black/10 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-black/6 bg-[var(--color-bg-card)] p-4 text-left transition-all hover:border-black/10 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
     >
       {template.popular && (
         <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[var(--color-warn-bg)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-warning)] ring-1 ring-[var(--color-warning)]/20">

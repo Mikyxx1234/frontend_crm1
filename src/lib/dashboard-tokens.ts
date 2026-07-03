@@ -70,7 +70,7 @@ export const kpiGridClass =
  * cresce no hover. Usado nos KPIs e painéis do dashboard refeitos.
  */
 export const bentoCardClass =
-  "rounded-[24px] border border-[var(--glass-border-subtle)] bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md";
+  "rounded-3xl border border-[var(--glass-border-subtle)] bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md";
 
 /** Variante 32px de radius para painéis grandes (gráficos principais). */
 export const bentoCardLargeClass =

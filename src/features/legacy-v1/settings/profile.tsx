@@ -173,7 +173,7 @@ function ChatThemeField({
               >
                 <div className="flex justify-end p-1.5">
                   <div
-                    className="rounded-[6px] rounded-br-[1px] px-2 py-1"
+                    className="rounded-md rounded-br-[1px] px-2 py-1"
                     style={{ background: theme.preview.bubbleBg }}
                   >
                     <p
@@ -185,7 +185,7 @@ function ChatThemeField({
                   </div>
                 </div>
                 <div className="flex justify-start p-1.5">
-                  <div className="rounded-[6px] rounded-bl-[1px] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 shadow-[var(--shadow-sm)]">
+                  <div className="rounded-md rounded-bl-[1px] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 shadow-[var(--shadow-sm)]">
                     <p className="text-[8px] font-medium text-[color:var(--chat-bubble-received-text)]">
                       Olá!
                     </p>
@@ -926,11 +926,11 @@ function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
           </button>
         </div>
         <Sparkles
-          className="absolute -right-6 top-0 size-3 text-slate-300"
+          className="absolute -right-6 top-0 size-3 text-[var(--color-text-muted)]"
           aria-hidden
         />
         <Sparkles
-          className="absolute -left-5 bottom-0 size-4 text-slate-300"
+          className="absolute -left-5 bottom-0 size-4 text-[var(--color-text-muted)]"
           aria-hidden
         />
       </div>

@@ -75,7 +75,7 @@ export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[230px] max-w-[290px] rounded-lg border bg-white transition-all duration-200",
+        "group/node relative min-w-[230px] max-w-[290px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
           ? "border-primary/50 shadow-[var(--shadow-indigo-glow)] ring-2 ring-primary/25"
           : data.incomplete

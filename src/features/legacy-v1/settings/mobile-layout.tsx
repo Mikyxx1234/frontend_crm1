@@ -419,10 +419,10 @@ function IPhoneMockup({ bottomNav }: { bottomNav: MobileModuleId[] }) {
         Pré-visualização ao vivo
       </p>
       <div
-        className="relative aspect-[9/19.5] w-full max-w-[320px] rounded-[44px] border-[10px] border-slate-900 bg-slate-900 shadow-[var(--glass-shadow)]"
+        className="relative aspect-[9/19.5] w-full max-w-[320px] rounded-full border-[10px] border-slate-900 bg-slate-900 shadow-[var(--glass-shadow)]"
       >
         {/* Tela */}
-        <div className="absolute inset-0 overflow-hidden rounded-[34px] bg-[#f4f7fa]">
+        <div className="absolute inset-0 overflow-hidden rounded-3xl bg-[#f4f7fa]">
           {/* Notch */}
           <div className="absolute left-1/2 top-0 z-20 h-6 w-32 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
           {/* Top bar (status bar imitada) */}

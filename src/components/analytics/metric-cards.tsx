@@ -3,7 +3,7 @@
 /**
  * MetricCards (Bento / Linear-Stripe)
  * ────────────────────────────────────
- * KPIs principais do Analytics no DNA Studioia: cards `rounded-[24px]` com
+ * KPIs principais do Analytics no DNA Studioia: cards `rounded-3xl` com
  * `bg-white`, borda `slate-100`, ícone em caixa colorida suave, label pequena
  * em caixa alta + valor grande em `font-bold tracking-tight`, trend pill ao
  * lado do ícone. Entrada animada com Framer Motion (fade-in + slide-up).

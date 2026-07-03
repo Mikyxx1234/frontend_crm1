@@ -22,7 +22,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
   return (
     <div
       className={cn(
-        "group/node relative min-w-[210px] max-w-[270px] rounded-lg border bg-white transition-all duration-200",
+        "group/node relative min-w-[210px] max-w-[270px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
           ? "border-orange-400/60 ring-2 ring-orange-300/30 shadow-[0_10px_30px_-10px_rgba(249,115,22,0.4)]"
           : "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px hover:border-orange-300/50 hover:shadow-[0_10px_30px_-10px_rgba(249,115,22,0.3)]"
@@ -39,7 +39,7 @@ export function DelayNode({ data, selected }: NodeProps<DelayNodeData>) {
         className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
       <div className="flex items-start gap-3 px-3.5 py-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-500 ring-1 ring-orange-100">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[var(--color-warn-text)] ring-1 ring-orange-100">
           <Timer className="size-4" strokeWidth={2.4} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">

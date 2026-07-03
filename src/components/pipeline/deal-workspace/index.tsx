@@ -567,7 +567,7 @@ export function DealWorkspace({
                   exit={{ y: 8, opacity: 0 }}
                   transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
-                    "w-full max-w-xl rounded-[28px] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-6 sm:p-8 backdrop-blur-xl",
+                    "w-full max-w-xl rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-6 sm:p-8 backdrop-blur-xl",
                     "shadow-[var(--glass-shadow-lg)]",
                   )}
                 >

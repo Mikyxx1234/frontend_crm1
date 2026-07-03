@@ -41,7 +41,7 @@ export function StageRibbon({
   return (
     <div
       className={cn(
-        "relative shrink-0 border-b border-border bg-white dark:bg-[var(--glass-bg-modal)]",
+        "relative shrink-0 border-b border-border bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
         compact ? "shadow-none" : "shadow-[0_1px_0_rgba(15,23,42,0.03)]",
       )}
     >
@@ -64,7 +64,7 @@ export function StageRibbon({
             compact ? "h-8 min-h-8" : "h-9 min-h-9",
             selectedStageId === null
               ? "bg-primary text-[var(--color-primary-foreground)]"
-              : "bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:bg-slate-200 dark:bg-[var(--glass-bg-base)] dark:text-[var(--text-faint)] dark:hover:bg-slate-700",
+              : "bg-[var(--glass-bg-base)] text-[var(--text-muted)] hover:bg-[var(--color-border)] dark:bg-[var(--glass-bg-base)] dark:text-[var(--text-faint)] dark:hover:bg-slate-700",
           )}
         >
           <span>Todos</span>

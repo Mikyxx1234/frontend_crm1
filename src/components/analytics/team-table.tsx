@@ -215,7 +215,7 @@ export function TeamTable({
                       key={row.userId}
                       className={cn(
                         "border-b border-border/60 transition-colors",
-                        isTop && "bg-indigo-500/5"
+                        isTop && "bg-[var(--color-brand-primary)]/5"
                       )}
                     >
                       <td className="px-4 py-3">
@@ -224,7 +224,7 @@ export function TeamTable({
                             className={cn(
                               "flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold shadow-sm",
                               isTop
-                                ? "bg-indigo-600 text-white"
+                                ? "bg-[var(--color-brand-primary)] text-white"
                                 : "bg-muted text-foreground"
                             )}
                           >
@@ -238,7 +238,7 @@ export function TeamTable({
                               {isTop ? (
                                 <Badge
                                   variant="secondary"
-                                  className="bg-indigo-500/15 text-[var(--brand-primary)] dark:text-indigo-300"
+                                  className="bg-[var(--color-brand-primary)]/15 text-[var(--brand-primary)] dark:text-indigo-300"
                                 >
                                   Destaque
                                 </Badge>

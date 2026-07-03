@@ -108,7 +108,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
         aria-label={current.title}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-[var(--shadow-lg)] ring-1 ring-slate-200 dark:bg-[var(--glass-bg-modal)] dark:ring-slate-800",
+          "relative w-full max-w-md overflow-hidden rounded-3xl bg-[var(--color-bg-card)] shadow-[var(--shadow-lg)] ring-1 ring-[var(--color-border)] dark:bg-[var(--glass-bg-modal)] dark:ring-slate-800",
           "animate-in fade-in slide-in-from-bottom-6 duration-300",
         )}
       >

@@ -161,7 +161,7 @@ export function RemindButton({
             className={cn(
               "z-50",
               // Mobile: sheet de baixo.
-              "fixed inset-x-3 bottom-3 rounded-3xl bg-white p-4 shadow-[var(--shadow-lg)] ring-1 ring-slate-100 dark:bg-[var(--glass-bg-modal)] dark:ring-slate-800",
+              "fixed inset-x-3 bottom-3 rounded-3xl bg-[var(--color-bg-card)] p-4 shadow-[var(--shadow-lg)] ring-1 ring-[var(--color-border)] dark:bg-[var(--glass-bg-modal)] dark:ring-slate-800",
               // Desktop: popover ancorado embaixo do botão.
               "md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-full md:mt-2 md:w-[300px] md:rounded-2xl md:p-3",
             )}

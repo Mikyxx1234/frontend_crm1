@@ -279,7 +279,7 @@ export function ContactInfoPanel({
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Badge variant="secondary" className="text-[10px] font-normal">Ciclo: {lifecycleLabel}</Badge>
                   {data.leadScore != null && (
-                    <Badge variant="outline" className="border-indigo-500/30 text-[10px] font-normal">Score: {data.leadScore}</Badge>
+                    <Badge variant="outline" className="border-[var(--color-brand-primary)]/30 text-[10px] font-normal">Score: {data.leadScore}</Badge>
                   )}
                 </div>
               </div>
@@ -290,7 +290,7 @@ export function ContactInfoPanel({
                 options={LIFECYCLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
                 value={lifecycleLocal}
                 onValueChange={(v) => setLifecycleLocal(v)}
-                triggerClassName="h-9 w-full border-indigo-500/20 text-xs"
+                triggerClassName="h-9 w-full border-[var(--color-brand-primary)]/20 text-xs"
               />
                 <Button type="button" size="sm" variant="glass" className="h-8 text-xs"
                   disabled={lifecycleMutation.isPending || lifecycleLocal === data.lifecycleStage}

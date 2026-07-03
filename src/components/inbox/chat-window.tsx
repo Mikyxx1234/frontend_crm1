@@ -264,7 +264,7 @@ function HighlightedText({
           <mark
             key={i}
             className={cn(
-              "rounded-[2px] px-px",
+              "rounded-sm px-px",
               isCurrentMatch
                 ? "bg-[var(--color-warning)] text-white"
                 : "bg-[var(--color-warn-bg)] text-[var(--color-warning)]",
@@ -1516,7 +1516,7 @@ export function ChatWindow({
         {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton
             key={i}
-            className={cn("h-14 rounded-[20px]", i % 2 ? "ml-16" : "mr-16")}
+            className={cn("h-14 rounded-2xl", i % 2 ? "ml-16" : "mr-16")}
           />
         ))}
       </div>
@@ -2131,7 +2131,7 @@ export function ChatWindow({
                       <div
                         data-reaction-picker
                         className={cn(
-                          "absolute bottom-full z-20 mb-1 flex items-center gap-0.5 rounded-[20px] border border-border bg-card px-1.5 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]",
+                          "absolute bottom-full z-20 mb-1 flex items-center gap-0.5 rounded-2xl border border-border bg-card px-1.5 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]",
                           out ? "right-0" : "left-0",
                         )}
                       >
@@ -3472,7 +3472,7 @@ export function ChatWindow({
                           { onSuccess: () => setPendingTemplate(null) },
                         );
                       }}
-                      className="flex items-center gap-2 rounded-[14px] lumen-ai-gradient px-5 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(123,97,255,0.25)] lumen-transition hover:scale-105 disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-xl lumen-ai-gradient px-5 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(123,97,255,0.25)] lumen-transition hover:scale-105 disabled:opacity-50"
                     >
                       {templateSendMutation.isPending ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -4174,7 +4174,7 @@ function SystemEventRow({
         transition={{ duration: 0.25 }}
         className="flex w-full justify-center py-2"
       >
-        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-[20px] border border-warning/30/60 bg-warning-soft/55 px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-2xl border border-warning/30/60 bg-warning-soft/55 px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
           <div className="flex items-center gap-2">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-warning-soft">
               <Smartphone

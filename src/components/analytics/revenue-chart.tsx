@@ -5,7 +5,7 @@ import { apiUrl } from "@/lib/api";
  * RevenueChart (Bento / Linear-Stripe)
  * ─────────────────────────────────────
  * Área da receita repaginada para o DNA Studioia: fundo branco, cartão
- * `rounded-[24px]/[32px]`, grid horizontal muito sutil (`#f1f5f9`), paleta
+ * `rounded-3xl`, grid horizontal muito sutil (`#f1f5f9`), paleta
  * `primary` com gradiente linear descendente para transparente. Tooltip
  * `rounded-2xl` com sombra suave e tipografia `slate-900`.
  */
@@ -77,7 +77,7 @@ function RevenueTooltip({
         ? String(label)
         : "";
   return (
-    <div className="rounded-2xl border border-[var(--glass-border-subtle)] bg-white px-3.5 py-2.5 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.2)]">
+    <div className="rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--color-bg-card)] px-3.5 py-2.5 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.2)]">
       <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-ink-muted)]">
         {labelStr}
       </p>
@@ -117,7 +117,7 @@ export function RevenueChart({
   const height = compact ? 220 : 320;
 
   return (
-    <div className={cn("bg-white p-6 md:p-8", className)}>
+    <div className={cn("bg-[var(--color-bg-card)] p-6 md:p-8", className)}>
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -144,7 +144,7 @@ export function RevenueChart({
                   className={cn(
                     "rounded-full px-3 py-1 text-[11px] font-bold transition-all",
                     active
-                      ? "bg-white text-[var(--text-primary)] shadow-sm"
+                      ? "bg-[var(--color-bg-card)] text-[var(--text-primary)] shadow-sm"
                       : "text-[var(--text-muted)] hover:text-foreground",
                   )}
                 >

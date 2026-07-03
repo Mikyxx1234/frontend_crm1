@@ -538,7 +538,7 @@ function ChatTab({
         )}
       </div>
 
-      <div className="flex shrink-0 items-end gap-2 rounded-xl border border-border bg-white p-2 shadow-sm">
+      <div className="flex shrink-0 items-end gap-2 rounded-xl border border-border bg-[var(--color-bg-card)] p-2 shadow-sm">
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -589,7 +589,7 @@ function ChatBubble({
           "max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed shadow-sm",
           isUser
             ? "bg-primary text-white"
-            : "bg-white text-[var(--text-primary)] ring-1 ring-[var(--glass-border-subtle)]",
+            : "bg-[var(--color-bg-card)] text-[var(--text-primary)] ring-1 ring-[var(--glass-border-subtle)]",
         )}
       >
         {msg.content}

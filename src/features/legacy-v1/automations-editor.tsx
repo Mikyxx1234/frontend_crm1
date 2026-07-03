@@ -167,7 +167,7 @@ function ActiveSwitch({
     >
       <span
         className={cn(
-          "pointer-events-none block size-5 translate-x-0.5 rounded-full bg-white shadow-sm transition-transform",
+          "pointer-events-none block size-5 translate-x-0.5 rounded-full bg-[var(--color-bg-card)] shadow-sm transition-transform",
           active && "translate-x-5"
         )}
       />
@@ -707,11 +707,11 @@ export default function AutomationDetailPage() {
           <ArrowLeft className="size-4 transition-transform group-hover/back:-translate-x-0.5" strokeWidth={2.4} />
           Automações
         </Link>
-        <ChevronRight className="size-3.5 text-slate-300" />
+        <ChevronRight className="size-3.5 text-[var(--color-text-muted)]" />
         <button
           type="button"
           onClick={openNameEdit}
-          className="group/name flex items-center gap-1.5 rounded-lg px-2 py-1 text-[14px] font-extrabold tracking-tighter text-slate-900 transition-colors hover:bg-[var(--color-bg-subtle)]"
+          className="group/name flex items-center gap-1.5 rounded-lg px-2 py-1 text-[14px] font-extrabold tracking-tighter text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-bg-subtle)]"
         >
           {name}
           <Pencil className="size-3 text-[var(--color-ink-muted)] transition-colors group-hover/name:text-primary" strokeWidth={2.4} />
@@ -756,7 +756,7 @@ export default function AutomationDetailPage() {
             <button
               type="button"
               onClick={() => setConfigOpen(true)}
-              className="flex size-9 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900"
+              className="flex size-9 items-center justify-center rounded-full text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-text-primary)]"
               aria-label="Configuração"
             >
               <Settings2 className="size-4" strokeWidth={2.2} />
@@ -788,7 +788,7 @@ export default function AutomationDetailPage() {
             <button
               type="button"
               onClick={handleAutoAlign}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
             >
               <Sparkles className="size-3.5" strokeWidth={2.4} />
               Auto alinhar
@@ -799,7 +799,7 @@ export default function AutomationDetailPage() {
             <button
               type="button"
               onClick={handleExportJson}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
             >
               <Download className="size-3.5" strokeWidth={2.4} />
               Exportar JSON
@@ -809,7 +809,7 @@ export default function AutomationDetailPage() {
           <button
             type="button"
             onClick={() => setLogsOpen(true)}
-            className="h-9 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-slate-300 hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
+            className="h-9 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
           >
             Logs
           </button>

@@ -148,7 +148,7 @@ function AnimatedEdgeImpl(props: EdgeProps<AnimatedEdgeData>) {
                 transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
                 pointerEvents: "all",
               }}
-              className="nodrag nopan flex size-5 items-center justify-center rounded-full border border-border bg-white text-[10px] font-bold text-[var(--color-ink-muted)] shadow-sm transition-all hover:border-rose-400 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] hover:shadow-[0_4px_12px_-4px_rgba(244,63,94,0.4)]"
+              className="nodrag nopan flex size-5 items-center justify-center rounded-full border border-border bg-[var(--color-bg-card)] text-[10px] font-bold text-[var(--color-ink-muted)] shadow-sm transition-all hover:border-rose-400 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] hover:shadow-[0_4px_12px_-4px_rgba(244,63,94,0.4)]"
             >
               {label}
             </div>

@@ -62,13 +62,13 @@ export const dt = {
   chat: {
     bubble: {
       /** Cores via `var(--chat-bubble-sent-*)` no wrapper; padding no bloco interno (`px-2 py-1`). */
-      sent: "rounded-[var(--radius-input)] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
+      sent: "rounded-[var(--radius-input)] rounded-br-sm shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
       /** Recebida — fundo via token de tema para suportar dark mode corretamente. */
       received:
-        "rounded-[var(--radius-input)] rounded-bl-[2px] border border-[var(--chat-bubble-received-border)] bg-[var(--chat-bubble-received-bg)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
+        "rounded-[var(--radius-input)] rounded-bl-sm border border-[var(--chat-bubble-received-border)] bg-[var(--chat-bubble-received-bg)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
       /** Nota interna — faixa compacta (menos altura que bolha de conversa). */
       note: "border-l-2 border-l-[var(--chat-bubble-note-border)] bg-[var(--chat-bubble-note-bg)]",
-      audio: "rounded-[var(--radius-input)] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
+      audio: "rounded-[var(--radius-input)] rounded-br-sm shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
     },
     text: {
       sent: "text-[13px] leading-[1.4]",

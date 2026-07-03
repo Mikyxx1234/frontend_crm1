@@ -20,7 +20,7 @@ import { STEP_GROUPS, stepColor, stepDescription, stepIcon } from "./add-step-no
 //
 // Visual:
 //  - backdrop fixed inset-0 z-(--z-modal) bg-[var(--glass-bg-modal)]/30 backdrop-blur-md
-//  - card central rounded-[28px] bg-[var(--glass-bg-modal)] backdrop-blur-xl shadow-[var(--shadow-lg)]
+//  - card central rounded-3xl bg-[var(--glass-bg-modal)] backdrop-blur-xl shadow-[var(--shadow-lg)]
 //  - header sticky com icone gradiente, titulo font-[900] tracking-tighter,
 //    subtitle, search input pill e botao X
 //  - secoes com eyebrow colorido (icone + label)

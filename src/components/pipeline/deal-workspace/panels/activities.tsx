@@ -116,7 +116,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                 "flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border",
                 "bg-[var(--color-bg-subtle)]/60 px-3.5 py-3 text-left text-[13px]",
                 "tracking-tight text-[var(--text-muted)] transition-colors",
-                "hover:border-[var(--color-primary)]/40 hover:bg-white hover:text-[var(--text-primary)]",
+                "hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-bg-card)] hover:text-[var(--text-primary)]",
               )}
             >
               <Plus className="size-4 text-primary" strokeWidth={2.4} />
@@ -300,7 +300,7 @@ function ActivityTimeline({
                     <p
                       className={cn(
                         "mt-1 text-[14px] font-bold tracking-tight text-[var(--text-primary)]",
-                        a.completed && "line-through decoration-slate-300",
+                        a.completed && "line-through decoration-[var(--color-border-strong)]",
                       )}
                     >
                       {a.title}

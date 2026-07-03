@@ -270,7 +270,7 @@ export function ConversationCard({
             {TypeIcon ? (
               <TypeIcon size={13} className="shrink-0 text-[var(--brand-primary)]" />
             ) : (
-              <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+              <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
                 <IconMessage size={9} />
               </span>
             )}

@@ -35,15 +35,15 @@ export const dt = {
 
   pill: {
     /** Tag padrão F — combinar com `tagStyle` / `tagPillStyle` em `utils.ts`. */
-    base: "inline-flex items-center px-2 py-0.5 text-[11px] font-semibold leading-tight rounded-[4px]",
-    sm: "inline-flex items-center px-2 py-0.5 text-[10px] font-semibold leading-tight rounded-[4px]",
+    base: "inline-flex items-center px-2 py-0.5 text-[11px] font-semibold leading-tight rounded",
+    sm: "inline-flex items-center px-2 py-0.5 text-[10px] font-semibold leading-tight rounded",
     expired:
-      "inline-flex items-center rounded-[4px] border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground",
+      "inline-flex items-center rounded border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground",
     neutral:
-      "inline-flex items-center rounded-[4px] border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground",
+      "inline-flex items-center rounded border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground",
     /** Chip de etapa de pipeline (não é etiqueta de contato). */
     stage:
-      "inline-flex items-center gap-1.5 rounded-[4px] border border-border bg-card px-2.5 py-1 text-[12px] font-medium text-primary shadow-[var(--shadow-sm)]",
+      "inline-flex items-center gap-1.5 rounded border border-border bg-card px-2.5 py-1 text-[12px] font-medium text-primary shadow-[var(--shadow-sm)]",
   },
 
   // TODO DS-004: add --workspace-leader-bg/border tokens to globals-v2.css
@@ -62,13 +62,13 @@ export const dt = {
   chat: {
     bubble: {
       /** Cores via `var(--chat-bubble-sent-*)` no wrapper; padding no bloco interno (`px-[9px] py-[5px]`). */
-      sent: "rounded-[10px] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
+      sent: "rounded-[var(--radius-input)] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
       /** Recebida — fundo via token de tema para suportar dark mode corretamente. */
       received:
-        "rounded-[10px] rounded-bl-[2px] border border-[var(--chat-bubble-received-border)] bg-[var(--chat-bubble-received-bg)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
+        "rounded-[var(--radius-input)] rounded-bl-[2px] border border-[var(--chat-bubble-received-border)] bg-[var(--chat-bubble-received-bg)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
       /** Nota interna — faixa compacta (menos altura que bolha de conversa). */
       note: "border-l-2 border-l-[var(--chat-bubble-note-border)] bg-[var(--chat-bubble-note-bg)]",
-      audio: "rounded-[10px] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
+      audio: "rounded-[var(--radius-input)] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
     },
     text: {
       sent: "text-[13px] leading-[1.4]",

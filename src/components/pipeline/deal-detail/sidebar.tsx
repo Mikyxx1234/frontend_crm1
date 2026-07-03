@@ -850,7 +850,7 @@ function TagPillSmall({
         type="button"
         onClick={onRemove}
         disabled={isPending}
-        className="rounded-[4px] p-0.5 opacity-70 transition hover:opacity-100 disabled:pointer-events-none"
+        className="rounded p-0.5 opacity-70 transition hover:opacity-100 disabled:pointer-events-none"
         aria-label={`Remover tag ${tag.name}`}
       >
         <X className="size-2.5" />

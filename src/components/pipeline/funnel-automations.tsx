@@ -885,7 +885,7 @@ export function FunnelAutomations({
         <div className="flex items-stretch gap-3" style={{ minWidth: "fit-content" }}>
           <FunnelColumn
             title="Entrada"
-            color="#3b82f6"
+            color="var(--color-info)"
             icon={<Flag className="size-3.5" />}
             automations={automationsForEvent("deal_created")}
             onAddRule={() => openAdd("deal_created")}
@@ -934,7 +934,7 @@ export function FunnelAutomations({
 
           <FunnelColumn
             title="Perdido"
-            color="#ef4444"
+            color="var(--color-danger)"
             icon={<XCircle className="size-3.5" />}
             automations={automationsForEvent("deal_lost")}
             onAddRule={() => openAdd("deal_lost")}

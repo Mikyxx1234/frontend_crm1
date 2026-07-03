@@ -120,7 +120,7 @@ function EngagementBadge({ value }: { value: string }) {
           ? "bg-primary-soft text-primary-dark"
           : "bg-muted dark:bg-ink-soft text-ink-soft dark:text-ink-subtle dark:text-ink-soft";
   return (
-    <span className={cn("inline-flex items-center rounded-[4px] px-2 py-0.5 text-[10px] font-semibold leading-tight", tone)}>
+    <span className={cn("inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold leading-tight", tone)}>
       {value}
     </span>
   );
@@ -209,7 +209,7 @@ export function ContactDealSidebar(props: Props) {
                 <div className="flex items-center justify-between border-b border-black/5 dark:border-slate-800 px-4 py-2">
                   <span className="text-[12px] text-ink-subtle dark:text-ink-muted">Estágio</span>
                   <span
-                    className="rounded-[4px] px-2 py-0.5 text-[11px] font-semibold"
+                    className="rounded px-2 py-0.5 text-[11px] font-semibold"
                     style={{
                       background: (activeDeal.stage?.color ?? "#2563eb") + "14",
                       color: activeDeal.stage?.color ?? "#2563eb",

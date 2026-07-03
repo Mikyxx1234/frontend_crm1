@@ -133,7 +133,7 @@ export function KanbanColumn({
       {/* Surface da coluna: tokens de glass do tema (substituem `bg-white/30`
           que ficava esbranquiçado em dark). Listras laterais suavizadas com
           borda única usando `--glass-border-subtle`. */}
-      <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[22px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
         <header className="relative shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2.5 backdrop-blur">
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">

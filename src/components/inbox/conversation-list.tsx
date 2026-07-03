@@ -247,11 +247,11 @@ export function InboxListHeader({
                       e.stopPropagation();
                       onTabChange("esperando");
                     }}
-                    className="relative inline-flex h-7 items-center justify-center rounded-[4px] px-2 text-[var(--color-destructive)] lumen-transition hover:bg-muted"
+                    className="relative inline-flex h-7 items-center justify-center rounded px-2 text-[var(--color-destructive)] lumen-transition hover:bg-muted"
                     aria-label={`Esperando: ${counts.esperando}`}
                   >
                     <Clock className="size-3.5" strokeWidth={2.5} />
-                    <span className="ml-1 inline-flex min-w-[16px] items-center justify-center rounded-[4px] bg-[var(--color-destructive)] px-1 py-0.5 text-[9px] font-bold leading-none text-white tabular-nums">
+                    <span className="ml-1 inline-flex min-w-[16px] items-center justify-center rounded bg-[var(--color-destructive)] px-1 py-0.5 text-[9px] font-bold leading-none text-white tabular-nums">
                       {counts.esperando > 99 ? "99+" : counts.esperando}
                     </span>
                   </button>
@@ -1102,7 +1102,7 @@ function ConversationItem({
                 side="left"
               >
                 <span
-                  className="inline-flex min-w-[16px] items-center justify-center rounded-[4px] bg-primary px-1 py-0.5 text-[9px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
+                  className="inline-flex min-w-[16px] items-center justify-center rounded bg-primary px-1 py-0.5 text-[9px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
                   aria-label={`${row.unreadCount} mensagens não lidas`}
                 >
                   {row.unreadCount! > 99 ? "99+" : row.unreadCount}
@@ -1175,7 +1175,7 @@ function ConversationItem({
               disabled={assigningId === row.id}
               aria-label="Atribuir para mim"
               className={cn(
-                "inline-flex items-center gap-1 rounded-[4px] border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary transition-all duration-200 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:opacity-60",
+                "inline-flex items-center gap-1 rounded border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary transition-all duration-200 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:opacity-60",
               )}
             >
               {assigningId === row.id ? (

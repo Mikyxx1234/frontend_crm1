@@ -15,8 +15,8 @@ function LoginShellFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-4">
-        <div className="mx-auto h-20 w-48 animate-pulse rounded-[22px] bg-white/30" />
-        <div className="h-64 w-full animate-pulse rounded-[22px] border border-white/40 bg-white/30 backdrop-blur" />
+        <div className="mx-auto h-20 w-48 animate-pulse rounded-[var(--radius-card)] bg-white/30" />
+        <div className="h-64 w-full animate-pulse rounded-[var(--radius-card)] border border-white/40 bg-white/30 backdrop-blur" />
       </div>
     </div>
   );

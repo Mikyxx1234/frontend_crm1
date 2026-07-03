@@ -546,7 +546,7 @@ const QUICK_FILTERS: {
   { label: "Leads ganhos",   filters: { statuses: ["WON"] } },
   {
     label: "Sem responsável",
-    dot: "#f59e0b",
+    dot: "var(--color-warning)",
     filters: { withoutOwner: true },
   },
 ];

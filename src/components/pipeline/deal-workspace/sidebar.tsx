@@ -619,7 +619,7 @@ export function WorkspaceSidebar({
             {contact.company ? (
               <span
                 className={cn(
-                  "mt-1 inline-flex items-center rounded-[4px] border border-border bg-[var(--color-bg-subtle)]",
+                  "mt-1 inline-flex items-center rounded border border-border bg-[var(--color-bg-subtle)]",
                   "px-2 py-0.5 text-[12px] font-bold tracking-tight text-[var(--color-ink-soft)]",
                 )}
               >

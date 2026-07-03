@@ -80,7 +80,7 @@ const TabsList = React.forwardRef<
     role="tablist"
     className={cn(
       // TabsList glass: fundo translúcido, radius pill, com sombra sutil
-      "inline-flex h-9 items-center justify-center rounded-[10px] border border-white/40 bg-white/35 p-1 text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
+      "inline-flex h-9 items-center justify-center rounded-[var(--radius-input)] border border-white/40 bg-white/35 p-1 text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
       className
     )}
     {...props}

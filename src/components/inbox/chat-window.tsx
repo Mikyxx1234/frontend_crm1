@@ -3671,7 +3671,7 @@ export function ChatWindow({
               onHover={slash.setActiveIndex}
               className="absolute bottom-full left-3 mb-2 sm:left-6"
             />
-            <div className="rounded-[22px] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-white/10 dark:bg-white/8">
+            <div className="rounded-[var(--radius-card)] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-white/10 dark:bg-white/8">
               <div className="flex items-center border-b border-white/40 px-5 py-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <TooltipHost

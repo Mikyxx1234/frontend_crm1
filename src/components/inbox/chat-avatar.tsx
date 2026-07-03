@@ -56,7 +56,7 @@ export interface ChatAvatarProps {
   className?: string;
 }
 
-const WHATSAPP_BADGE_COLOR = "#25d366";
+const WHATSAPP_BADGE_COLOR = "var(--channel-whatsapp)";
 const UNREAD_BADGE_COLOR = "#22c55e";
 
 function WhatsappIcon({ size }: { size: number }) {

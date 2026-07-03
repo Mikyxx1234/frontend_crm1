@@ -252,7 +252,7 @@ export function SaveFilterDialog({
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/30 p-4 backdrop-blur-md">
-      <div className="w-full max-w-sm rounded-[22px] border border-[var(--glass-border)] bg-[var(--color-popover)] p-5 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
+      <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-[var(--glass-border)] bg-[var(--color-popover)] p-5 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
         <h2 className="font-display text-base font-bold text-foreground">Salvar filtro</h2>
         <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
           Reutilize esse conjunto de critérios depois.

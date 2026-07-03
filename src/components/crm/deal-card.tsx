@@ -163,7 +163,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 text-[11.5px] italic leading-[1.35] text-[var(--text-secondary)]">
           {/* Ícone de conversa com borda azul — mesmo do card de
               conversa do inbox, para padronizar a leitura visual. */}
-          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
             <IconMessage size={9} />
           </span>
           <span className="line-clamp-2 flex-1 overflow-hidden">{deal.message.text}</span>

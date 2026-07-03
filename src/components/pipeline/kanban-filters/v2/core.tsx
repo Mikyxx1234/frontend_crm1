@@ -77,11 +77,11 @@ function operatorsForType(type: string): CustomFieldOperator[] {
 }
 
 export const QUICK_FILTERS: { label: string; dot?: string; filters: AdvancedDealFilters }[] = [
-  { label: "Leads ativos", dot: "#3b82f6", filters: { statuses: ["OPEN"] } },
+  { label: "Leads ativos", dot: "var(--color-info)", filters: { statuses: ["OPEN"] } },
   { label: "Meus leads", dot: "#6366f1", filters: { ownerIds: ["__me__"] } },
-  { label: "Leads ganhos", dot: "#10b981", filters: { statuses: ["WON"] } },
-  { label: "Leads perdidos", dot: "#ef4444", filters: { statuses: ["LOST"] } },
-  { label: "Sem responsável", dot: "#f59e0b", filters: { withoutOwner: true } },
+  { label: "Leads ganhos", dot: "var(--color-success)", filters: { statuses: ["WON"] } },
+  { label: "Leads perdidos", dot: "var(--color-danger)", filters: { statuses: ["LOST"] } },
+  { label: "Sem responsável", dot: "var(--color-warning)", filters: { withoutOwner: true } },
 ];
 
 // ─── Hook de estado (apply imediato, estilo Kommo) ──────────────────────────────

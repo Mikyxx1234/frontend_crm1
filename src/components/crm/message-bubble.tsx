@@ -289,7 +289,7 @@ function FormBubble({ message, className }: { message: Message; className?: stri
   return (
     <div className={cn("flex max-w-[72%] flex-col gap-1", className)}>
       <div
-        className="overflow-hidden rounded-[var(--radius-lg)] rounded-bl-[4px] border border-[var(--glass-border)] shadow-[0_2px_8px_rgba(100,130,180,0.08)]"
+        className="overflow-hidden rounded-[var(--radius-lg)] rounded-bl border border-[var(--glass-border)] shadow-[0_2px_8px_rgba(100,130,180,0.08)]"
         style={{ background: "var(--chat-bubble-received-bg)" }}
       >
         {/* Cabeçalho clicável — sempre visível */}
@@ -898,9 +898,9 @@ export function MessageBubble({
             "relative min-w-0 rounded-[var(--radius-lg)] px-[14px] py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
-                ? "rounded-br-[4px] bg-[var(--brand-gradient-end)] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
-                : "rounded-br-[4px] bg-[var(--brand-primary)] text-white shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
-              : "rounded-bl-[4px] text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
+                ? "rounded-br bg-[var(--brand-gradient-end)] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
+                : "rounded-br bg-[var(--brand-primary)] text-white shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
+              : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
           style={!isOutgoing ? { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" } : undefined}
         >

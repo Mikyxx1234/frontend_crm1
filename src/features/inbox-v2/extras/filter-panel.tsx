@@ -365,7 +365,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                             >
                               <span
                                 className={cn(
-                                  "flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border",
+                                  "flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
                                   selected
                                     ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
                                     : "border-[var(--glass-border)]",

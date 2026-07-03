@@ -1,3 +1,8 @@
+/**
+ * @deprecated DS-012 — componente legado (v1). O canônico é
+ * `components/crm/kanban-column.tsx` (usado pelo pipeline-v2).
+ * Não adicionar novos imports. Remoção física após aposentadoria do kanban v1.
+ */
 "use client";
 
 import * as React from "react";

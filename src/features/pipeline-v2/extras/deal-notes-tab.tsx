@@ -116,20 +116,20 @@ export function DealNotesTab({ dealId, pinnedNote }: DealNotesTabProps) {
       {pinnedNote && (
         <div className="px-[22px] pt-[22px]">
           <div
-            className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-warning/40 p-3"
+            className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-[var(--color-warning)]/40 p-3"
             style={{
-              background: "linear-gradient(135deg, rgba(251,191,36,0.10) 0%, rgba(245,158,11,0.07) 100%)",
+              background: "linear-gradient(135deg, color-mix(in srgb, var(--color-warning) 10%, transparent) 0%, color-mix(in srgb, var(--color-warning) 7%, transparent) 100%)",
             }}
           >
             <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5">
-                <IconPinFilled size={10} className="text-warning" />
-                <span className="font-display text-[9px] font-bold uppercase tracking-widest text-warning">
+              <span className="flex items-center gap-1 rounded-full bg-[var(--color-warning)]/15 px-2 py-0.5">
+                <IconPinFilled size={10} className="text-[var(--color-warning)]" />
+                <span className="font-display text-[9px] font-bold uppercase tracking-widest text-[var(--color-warning)]">
                   Nota fixada
                 </span>
               </span>
-              <IconLock size={11} className="text-warning/60" />
-              <span className="font-display text-[10px] text-warning/60">
+              <IconLock size={11} className="text-[var(--color-warning)]/60" />
+              <span className="font-display text-[10px] text-[var(--color-warning)]/60">
                 Nota interna da conversa
               </span>
             </div>
@@ -139,12 +139,12 @@ export function DealNotesTab({ dealId, pinnedNote }: DealNotesTabProps) {
             {(pinnedNote.senderName || pinnedNote.time) && (
               <div className="flex items-center gap-2 pt-0.5">
                 {pinnedNote.senderName && (
-                  <span className="font-display text-[11px] font-semibold text-warning/70">
+                  <span className="font-display text-[11px] font-semibold text-[var(--color-warning)]/70">
                     {pinnedNote.senderName}
                   </span>
                 )}
                 {pinnedNote.time && (
-                  <span className="font-body text-[10.5px] text-warning/50">
+                  <span className="font-body text-[10.5px] text-[var(--color-warning)]/50">
                     {pinnedNote.time}
                   </span>
                 )}

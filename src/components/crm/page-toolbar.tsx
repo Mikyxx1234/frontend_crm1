@@ -190,7 +190,7 @@ export function PageSegmentedControl({
             className={cn(
               "cursor-pointer rounded-full font-display font-bold transition-colors",
               compact
-                ? "px-3 py-1 text-[12px]"
+                ? "px-3 py-1 text-xs"
                 : "px-4 py-[7px] text-[13px]",
               active
                 ? "bg-[var(--glass-bg-modal)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]"

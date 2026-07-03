@@ -1,8 +1,3 @@
-/**
- * @deprecated DS-012 — componente legado (v1). O canônico é
- * `components/pipeline/kanban-card.tsx`. Não adicionar novos imports.
- * Remoção física após aposentadoria das rotas que ainda o usam.
- */
 "use client"
 
 import { cn } from "@/lib/utils"
@@ -80,7 +75,7 @@ interface DealCardProps {
 }
 
 const tagStyles: Record<TagType, string> = {
-  hot: "bg-[rgba(239,68,68,0.12)] text-[#991b1b] border-[rgba(239,68,68,0.20)]",
+  hot: "bg-[rgba(239,68,68,0.12)] text-[var(--color-danger-text)] border-[rgba(239,68,68,0.20)]",
   warm: "bg-[var(--color-lead-bg)] text-[var(--color-warning-text)] border-[rgba(245,158,11,0.25)]",
   cold: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)] border-[rgba(91,111,245,0.25)]",
   vip: "bg-[rgba(167,139,250,0.15)] text-[#6d28d9] border-[rgba(167,139,250,0.25)]",
@@ -189,14 +184,14 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           permite bater o olho e saber por que o negócio foi perdido. */}
       {deal.lostReason && (
         <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.08)] px-2.5 py-1 text-[11px] leading-[1.35]">
-          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[#dc2626]">
+          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[var(--color-danger-dark)]">
             <IconCircleX size={12} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="font-display text-[9.5px] font-bold uppercase tracking-wide text-[#dc2626]">
+            <span className="font-display text-[9.5px] font-bold uppercase tracking-wide text-[var(--color-danger-dark)]">
               Motivo da perda
             </span>
-            <span className="line-clamp-2 block text-[#991b1b]">{deal.lostReason}</span>
+            <span className="line-clamp-2 block text-[var(--color-danger-text)]">{deal.lostReason}</span>
           </span>
         </div>
       )}

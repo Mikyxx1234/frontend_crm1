@@ -203,7 +203,7 @@ export function DockButton({
             className={cn(
               "pointer-events-none z-(--z-popover) whitespace-nowrap rounded-[var(--radius-md)]",
               "border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] backdrop-blur-md",
-              "px-2.5 py-1 text-[12px] font-semibold text-[var(--text-primary)]",
+              "px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]",
               "shadow-[var(--glass-shadow)]",
             )}
           >

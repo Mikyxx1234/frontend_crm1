@@ -37,27 +37,27 @@ export const AGENT_STATUS_META: Record<AgentOnlineStatus, StatusMeta> = {
     label: "Online",
     description: "Disponível para receber leads",
     icon: IconWifi,
-    color: "#10b981",
-    dot: "bg-emerald-500",
-    hover: "hover:bg-emerald-500/10",
+    color: "var(--color-online)",
+    dot: "bg-[var(--color-online)]",
+    hover: "hover:bg-[var(--color-success-bg)]",
   },
   AWAY: {
     value: "AWAY",
     label: "Ausente",
     description: "Pausado — não recebe novos leads",
     icon: IconCoffee,
-    color: "#f59e0b",
-    dot: "bg-amber-500",
-    hover: "hover:bg-amber-500/10",
+    color: "var(--color-warning)",
+    dot: "bg-[var(--color-warning)]",
+    hover: "hover:bg-[var(--color-warn-bg)]",
   },
   OFFLINE: {
     value: "OFFLINE",
     label: "Offline",
     description: "Indisponível — fora do expediente",
     icon: IconWifiOff,
-    color: "#94a3b8",
-    dot: "bg-slate-400",
-    hover: "hover:bg-slate-400/10",
+    color: "var(--text-muted)",
+    dot: "bg-[var(--text-muted)]",
+    hover: "hover:bg-[var(--glass-bg-subtle)]",
   },
 };
 
@@ -199,7 +199,7 @@ export function AgentStatusPopup({
         role="dialog"
         aria-modal="true"
         aria-label="Definir status"
-        className="w-[360px] rounded-[28px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-7 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+        className="w-90 rounded-[28px] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-7 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
         style={{ animation: "scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}
       >
         <div className="mb-6 text-center">

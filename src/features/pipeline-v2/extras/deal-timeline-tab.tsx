@@ -104,7 +104,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
 
   if (isLoading) {
     return (
-      <div className="p-[22px] text-[12.5px] text-[var(--text-muted,#718096)]">
+      <div className="p-[22px] text-[12.5px] text-[var(--text-muted)]">
         Carregando timeline...
       </div>
     );
@@ -112,7 +112,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
 
   if (isError) {
     return (
-      <div className="p-[22px] text-[12.5px] text-[var(--color-danger,#ef4444)]">
+      <div className="p-[22px] text-[12.5px] text-[var(--color-danger)]">
         Erro ao carregar timeline.
       </div>
     );
@@ -120,7 +120,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
 
   if (events.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-[var(--text-muted,#718096)]">
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-[var(--text-muted)]">
         <IconClock size={36} className="opacity-40" />
         <div className="font-display text-[13px] font-semibold">
           Sem eventos ainda
@@ -165,20 +165,20 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-display text-[12.5px] font-semibold text-[var(--text-primary,#1a202c)]">
+                <span className="font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
                   {meta.label}
                 </span>
-                <span className="text-[10.5px] text-[var(--text-muted,#718096)]">
+                <span className="text-[10.5px] text-[var(--text-muted)]">
                   {fmtDate(ev.createdAt)}
                 </span>
               </div>
               {desc ? (
-                <div className="mt-0.5 text-[12px] text-[var(--text-secondary,#4a5568)]">
+                <div className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
                   {desc}
                 </div>
               ) : null}
               {ev.user?.name ? (
-                <div className="mt-0.5 text-[11px] text-[var(--text-muted,#718096)]">
+                <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
                   por {ev.user.name}
                 </div>
               ) : null}

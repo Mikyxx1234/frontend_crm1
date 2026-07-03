@@ -232,7 +232,7 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none transition-colors focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20",
+          "h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none transition-colors focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20",
           icon && "pl-8",
         )}
       />
@@ -264,14 +264,14 @@ function DateRangeField({ value, onChange }: { value?: DateRangeValue; onChange:
             type="date"
             value={value?.from ?? ""}
             onChange={(e) => onChange({ ...value, from: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-blue-500/20"
+            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
           <span className="shrink-0 text-[12px] text-ink-subtle">até</span>
           <input
             type="date"
             value={value?.to ?? ""}
             onChange={(e) => onChange({ ...value, to: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-blue-500/20"
+            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
         </div>
       )}
@@ -519,7 +519,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Mínimo"
           value={draft.valueFrom ?? ""}
           onChange={(e) => setDraftField("valueFrom", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
         <span className="shrink-0 text-[12px] text-ink-subtle">–</span>
         <input
@@ -527,7 +527,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Máximo"
           value={draft.valueTo ?? ""}
           onChange={(e) => setDraftField("valueTo", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
       </div>
     </FieldCard>
@@ -631,13 +631,13 @@ function CustomFieldRow({
                 type="date"
                 value={dateVal.from ?? ""}
                 onChange={(e) => onChange({ ...filter, value: { ...dateVal, from: e.target.value || null } })}
-                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               />
               <input
                 type="date"
                 value={dateVal.to ?? ""}
                 onChange={(e) => onChange({ ...filter, value: { ...dateVal, to: e.target.value || null } })}
-                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               />
             </div>
           ) : hasOptions ? (
@@ -669,7 +669,7 @@ function CustomFieldRow({
               value={typeof filter.value === "string" ? filter.value : ""}
               onChange={(e) => onChange({ ...filter, value: e.target.value })}
               placeholder="Valor"
-              className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
             />
           )
         ) : (

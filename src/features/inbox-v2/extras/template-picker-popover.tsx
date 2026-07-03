@@ -116,7 +116,7 @@ function TemplateItemWithConfirm({
 
   if (confirming && prior) {
     return (
-      <div className="rounded-[var(--radius-sm)] border border-amber-400/40 bg-amber-400/8 px-2.5 py-2.5">
+      <div className="rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_8%,transparent)] px-2.5 py-2.5">
         <div className="mb-2 flex items-start gap-1.5">
           <IconAlertTriangle size={14} className="mt-px shrink-0 text-amber-500" />
           <p className="text-[11.5px] leading-snug text-[var(--text-primary)]">
@@ -145,7 +145,7 @@ function TemplateItemWithConfirm({
               setConfirming(false);
               onSend();
             }}
-            className="rounded-full bg-amber-500 px-3 py-1 text-[11.5px] font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+            className="rounded-full bg-[var(--color-warning)] px-3 py-1 text-[11.5px] font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
           >
             Reenviar
           </button>
@@ -179,15 +179,15 @@ function TemplateItemWithConfirm({
       className="block w-full rounded-[var(--radius-sm)] px-2 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
     >
       <div className="flex items-center gap-1.5">
-        <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">
-          {tpl.name}
-        </span>
+          <span className="font-display text-xs font-bold text-[var(--text-primary)]">
+            {tpl.name}
+          </span>
         {prior && (
           <TooltipGlass
             label={`Enviado por ${prior.author} em ${fmtDate(prior.sentAt)}${prior.repliedAt ? " · Respondido" : ""}`}
             side="top"
           >
-            <span className="shrink-0 rounded-full bg-amber-400/20 px-1.5 py-px text-[9.5px] font-semibold text-amber-600">
+            <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] px-1.5 py-px text-[9.5px] font-semibold text-[var(--color-warning)]">
               {prior.repliedAt ? "respondido" : "enviado"}
             </span>
           </TooltipGlass>
@@ -286,7 +286,7 @@ export function InternalTemplatePickerList({
           <button
             type="button"
             onClick={onClose}
-            className="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
             Fechar
           </button>
@@ -294,11 +294,11 @@ export function InternalTemplatePickerList({
       </div>
 
       {isLoading ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Carregando...
         </div>
       ) : !data?.length ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Nenhum modelo interno cadastrado.
         </div>
       ) : (
@@ -325,7 +325,7 @@ export function InternalTemplatePickerList({
                   }}
                   className="block w-full rounded-[var(--radius-sm)] px-2 py-2 text-left hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
                 >
-                  <div className="text-[12px] font-semibold text-[var(--text-primary)]">
+                  <div className="text-xs font-semibold text-[var(--text-primary)]">
                     {tpl.name}
                   </div>
                   <div className="mt-0.5 line-clamp-2 text-[11.5px] text-[var(--text-muted)]">
@@ -415,25 +415,25 @@ export function TemplatePickerList({
           <button
             type="button"
             onClick={onClose}
-            className="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
             Fechar
           </button>
         ) : null}
       </div>
       {isLoading ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Carregando...
         </div>
       ) : isError ? (
-        <div className="px-2 py-3 text-center text-[12px] text-rose-600 dark:text-rose-400">
+        <div className="px-2 py-3 text-center text-xs text-[var(--color-danger)]">
           Falha ao carregar templates
           <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
             {(error as Error)?.message ?? "Tente novamente."}
           </div>
         </div>
       ) : !data?.length ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Nenhum template habilitado para este agente.
           <div className="mt-1 text-[11px] text-[var(--text-muted)]/70">
             Habilite em Configurações &gt; Templates do WhatsApp.

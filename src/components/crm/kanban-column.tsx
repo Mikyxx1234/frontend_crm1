@@ -1,8 +1,3 @@
-/**
- * @deprecated DS-012 — componente legado (v1). O canônico é
- * `components/pipeline/kanban-column.tsx`. Não adicionar novos imports.
- * Remoção física após aposentadoria das rotas que ainda o usam.
- */
 "use client"
 
 import { cn } from "@/lib/utils"
@@ -66,19 +61,19 @@ interface KanbanColumnProps {
 }
 
 const colorMap: Record<ColumnColor, string> = {
-  novo: "#5b6ff5",
-  quali: "#10b981",
-  proposta: "#f59e0b",
-  nego: "#a78bfa",
-  fecha: "#ef4444",
+  novo: "var(--col-novo)",
+  quali: "var(--col-quali)",
+  proposta: "var(--col-proposta)",
+  nego: "var(--col-nego)",
+  fecha: "var(--col-fecha)",
 }
 
 const colorBgMap: Record<ColumnColor, string> = {
-  novo:     "rgba(91, 111, 245, 0.10)",
-  quali:    "rgba(16, 185, 129, 0.10)",
-  proposta: "rgba(245, 158, 11,  0.10)",
-  nego:     "rgba(167, 139, 250, 0.10)",
-  fecha:    "rgba(239, 68,  68,  0.10)",
+  novo:     "color-mix(in srgb, var(--col-novo) 10%, transparent)",
+  quali:    "color-mix(in srgb, var(--col-quali) 10%, transparent)",
+  proposta: "color-mix(in srgb, var(--col-proposta) 10%, transparent)",
+  nego:     "color-mix(in srgb, var(--col-nego) 10%, transparent)",
+  fecha:    "color-mix(in srgb, var(--col-fecha) 10%, transparent)",
 }
 
 export function KanbanColumn({

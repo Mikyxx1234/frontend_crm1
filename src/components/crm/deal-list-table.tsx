@@ -180,7 +180,7 @@ export function DealListTable({
                   aria-label={`Selecionar ${d.dealTitle}`}
                 />
               </span>
-              <span className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+              <span className="truncate font-display text-sm font-bold text-[var(--text-primary)]">
                 {d.dealTitle}
               </span>
               <div className="flex min-w-0 items-center gap-2.5">

@@ -397,7 +397,7 @@ function ChatTabsBar({
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all",
               isActive
                 ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",

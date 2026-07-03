@@ -395,7 +395,7 @@ export function ConversationColumn({
           )
         })}
         {displayed.length === 0 && !isLoadingMore && (
-          <div className="px-2 py-6 text-center text-[12px] text-[var(--text-muted)]">
+          <div className="px-2 py-6 text-center text-xs text-[var(--text-muted)]">
             Nenhuma conversa encontrada.
           </div>
         )}

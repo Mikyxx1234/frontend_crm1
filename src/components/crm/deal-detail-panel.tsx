@@ -644,14 +644,14 @@ export function DealDetailPanel({
                   resposta direta ao "por que esse lead foi perdido?". */}
               {deal.status === "LOST" && deal.lostReason?.trim() ? (
                 <div className="mt-3 flex items-start gap-2 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.22)] bg-[rgba(239,68,68,0.08)] px-2.5 py-2">
-                  <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[#dc2626]">
+                  <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[var(--color-danger-dark)]">
                     <IconCircleX size={14} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="font-display text-[9.5px] font-bold uppercase tracking-[0.12em] text-[#dc2626]">
+                    <div className="font-display text-[9.5px] font-bold uppercase tracking-[0.12em] text-[var(--color-danger-dark)]">
                       Motivo da perda
                     </div>
-                    <div className="mt-px text-[12px] leading-snug text-[#991b1b]">
+                    <div className="mt-px text-[12px] leading-snug text-[var(--color-danger-text)]">
                       {deal.lostReason.trim()}
                     </div>
                   </div>

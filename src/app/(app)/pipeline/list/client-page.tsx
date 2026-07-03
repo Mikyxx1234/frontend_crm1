@@ -200,7 +200,7 @@ function ViewSwitcher({ current }: { current: "kanban" | "list" }) {
       <Link
         href="/pipeline"
         className={cn(
-          "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-[12px] font-bold transition-colors",
+          "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-xs font-bold transition-colors",
           current === "kanban"
             ? "bg-[var(--brand-primary)] text-white"
             : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
@@ -212,7 +212,7 @@ function ViewSwitcher({ current }: { current: "kanban" | "list" }) {
       <Link
         href="/pipeline/list"
         className={cn(
-          "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-[12px] font-bold transition-colors",
+          "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 font-display text-xs font-bold transition-colors",
           current === "list"
             ? "bg-[var(--brand-primary)] text-white"
             : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",

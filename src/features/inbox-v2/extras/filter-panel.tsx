@@ -240,7 +240,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">
-                <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">
+                <span className="font-display text-xs font-bold text-[var(--text-primary)]">
                   Filtros
                 </span>
                 <button
@@ -259,8 +259,8 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Atendentes</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full h-8 px-2.5 text-[12px]"
-                    itemClassName="text-[12px] py-1.5"
+                    triggerClassName="w-full h-8 px-2.5 text-xs"
+                    itemClassName="text-xs py-1.5"
                     value={draft.ownerId ?? ""}
                     onValueChange={(v) =>
                       setDraft((d) => ({ ...d, ownerId: v || undefined }))
@@ -276,8 +276,8 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Canal</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full h-8 px-2.5 text-[12px]"
-                    itemClassName="text-[12px] py-1.5"
+                    triggerClassName="w-full h-8 px-2.5 text-xs"
+                    itemClassName="text-xs py-1.5"
                     value={draft.channel ?? ""}
                     onValueChange={(v) =>
                       setDraft((d) => ({ ...d, channel: v || undefined }))
@@ -290,8 +290,8 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Negócio na etapa</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full h-8 px-2.5 text-[12px]"
-                    itemClassName="text-[12px] py-1.5"
+                    triggerClassName="w-full h-8 px-2.5 text-xs"
+                    itemClassName="text-xs py-1.5"
                     value={draft.stageId ?? ""}
                     onValueChange={(v) =>
                       setDraft((d) => ({ ...d, stageId: v || undefined }))
@@ -308,8 +308,8 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Janela de conversa</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full h-8 px-2.5 text-[12px]"
-                    itemClassName="text-[12px] py-1.5"
+                    triggerClassName="w-full h-8 px-2.5 text-xs"
+                    itemClassName="text-xs py-1.5"
                     value={draft.windowState ?? ""}
                     onValueChange={(v) =>
                       setDraft((d) => ({
@@ -381,7 +381,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                                 style={{ background: t.color ?? "var(--brand-primary)" }}
                               />
-                              <span className="truncate font-display text-[12px] text-[var(--text-primary)]">
+                              <span className="truncate font-display text-xs text-[var(--text-primary)]">
                                 {t.name}
                               </span>
                             </button>
@@ -396,8 +396,8 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                 <div>
                   <FieldLabel>Ordem</FieldLabel>
                   <DropdownGlass
-                    triggerClassName="w-full h-8 px-2.5 text-[12px]"
-                    itemClassName="text-[12px] py-1.5"
+                    triggerClassName="w-full h-8 px-2.5 text-xs"
+                    itemClassName="text-xs py-1.5"
                     value={sortIdFromFilters(draft)}
                     onValueChange={(v) => {
                       const opt = SORT_OPTIONS.find((o) => o.id === v);

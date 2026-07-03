@@ -295,7 +295,7 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <div
             className={cn(
-              "relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[12px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+              "relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
@@ -317,7 +317,7 @@ export function NavRailV2({ className }: { className?: string }) {
         >
           <div
             className={cn(
-              "relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-[12px] font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+              "relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",

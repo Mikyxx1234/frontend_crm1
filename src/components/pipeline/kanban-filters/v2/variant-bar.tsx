@@ -50,7 +50,7 @@ export function FilterBar({
   const activeCount = countActiveFilters(draft);
 
   return (
-    <div className="rounded-2xl border border-black/6 bg-white">
+    <div className="rounded-2xl border border-[var(--glass-border-subtle)] bg-white">
       {/* Barra */}
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">
         <button
@@ -59,8 +59,8 @@ export function FilterBar({
           className={cn(
             "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-medium transition-colors",
             open || activeCount > 0
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+              ? "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-dark)]"
+              : "bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-strong)]",
           )}
         >
           <SlidersHorizontal className="size-4" />
@@ -69,7 +69,7 @@ export function FilterBar({
             <span
               className={cn(
                 "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
-                open || activeCount > 0 ? "bg-white/25 text-white" : "bg-blue-600 text-white",
+                open || activeCount > 0 ? "bg-white/25 text-white" : "bg-[var(--brand-primary)] text-white",
               )}
             >
               {activeCount}
@@ -78,7 +78,7 @@ export function FilterBar({
           <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
         </button>
 
-        <div className="h-6 w-px bg-slate-200" />
+        <div className="h-6 w-px bg-[var(--glass-border-subtle)]" />
 
         <QuickFiltersList draft={draft} onApply={applyWhole} orientation="horizontal" />
 
@@ -89,7 +89,7 @@ export function FilterBar({
               reset();
               onClear();
             }}
-            className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
           >
             <X className="size-3.5" />
             Limpar ({activeCount})
@@ -99,7 +99,7 @@ export function FilterBar({
 
       {/* Mega-painel */}
       {open && (
-        <div className="border-t border-black/6 bg-slate-50/60 p-4">
+        <div className="border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)]/60 p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <div className="space-y-3">
               <SearchSection {...section} />
@@ -123,8 +123,8 @@ export function FilterBar({
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between border-t border-black/6 pt-3">
-            <span className="inline-flex items-center gap-2 text-[12px] text-slate-500">
+          <div className="mt-4 flex items-center justify-between border-t border-[var(--glass-border-subtle)] pt-3">
+            <span className="inline-flex items-center gap-2 text-[12px] text-[var(--text-muted)]">
               <ActiveCountBadge draft={draft} />
               {activeCount === 0 ? "Nenhum filtro ativo" : `${activeCount} ${activeCount === 1 ? "filtro ativo" : "filtros ativos"}`}
             </span>
@@ -133,7 +133,7 @@ export function FilterBar({
                 <button
                   type="button"
                   onClick={() => onRequestSave(draft)}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-200"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--glass-bg-overlay)] px-3 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
                 >
                   Salvar filtro
                 </button>
@@ -141,7 +141,7 @@ export function FilterBar({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-[13px] font-medium text-white transition-colors hover:bg-blue-700"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[var(--brand-primary-dark)]"
               >
                 Concluir
               </button>

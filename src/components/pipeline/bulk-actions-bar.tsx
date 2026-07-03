@@ -275,7 +275,7 @@ export function BulkActionsBar({
             `bg-transparent`/`text-primary` do variant outline do <Button>. */}
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/95 px-5 py-3 text-card-foreground shadow-2xl shadow-black/20 backdrop-blur-lg dark:!border-slate-700 dark:!bg-slate-900 dark:!text-slate-100 dark:shadow-black/60">
           <div className="mr-2 flex items-center gap-2 border-r border-border pr-4 dark:border-slate-700/70">
-            <CheckCircle2 className="size-4 text-cyan-600 dark:text-cyan-400" />
+            <CheckCircle2 className="size-4 text-[var(--brand-accent)] dark:text-cyan-400" />
             <span className="text-[13px] font-bold text-foreground dark:text-slate-100">
               {selectedCount} selecionado{selectedCount !== 1 ? "s" : ""}
             </span>
@@ -390,7 +390,7 @@ export function BulkActionsBar({
           <Button
             type="button"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-[12px] text-emerald-700 shadow-none hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
+            className="h-8 gap-1.5 rounded-xl border border-[var(--color-success)]/40 bg-[var(--color-success-bg)] text-[12px] text-[var(--color-success-text)] shadow-none hover:bg-[var(--color-success-bg)] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate({ dealIds, action: "mark_won" })}
           >
@@ -402,7 +402,7 @@ export function BulkActionsBar({
           <Button
             type="button"
             size="sm"
-            className="h-8 gap-1.5 rounded-xl border border-rose-200 bg-rose-50 text-[12px] text-rose-700 shadow-none hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+            className="h-8 gap-1.5 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger-bg)] text-[12px] text-[var(--color-danger-text)] shadow-none hover:bg-[var(--color-danger-bg)] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
             disabled={mutation.isPending}
             onClick={() => setLostOpen(true)}
           >
@@ -471,7 +471,7 @@ export function BulkActionsBar({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-[var(--color-danger)] text-white hover:bg-[var(--color-danger-dark)]"
               onClick={() => {
                 mutation.mutate({ dealIds, action: "delete" });
                 setDeleteOpen(false);
@@ -507,11 +507,11 @@ export function BulkActionsBar({
             "fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 text-[13px] font-semibold shadow-2xl shadow-black/20 backdrop-blur-lg transition-all animate-in slide-in-from-bottom-4 fade-in",
             isDark && "dark",
             progressDoneStatus === "COMPLETED"
-              ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
+              ? "border-[var(--color-success)]/50 bg-[var(--color-success-bg)] text-[var(--color-success-text)] dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
               : progressDoneStatus === "FAILED"
-                ? "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300"
+                ? "border-[var(--color-danger)]/50 bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300"
                 : progressDoneStatus === "PARTIAL"
-                  ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300"
+                  ? "border-[var(--color-warning)]/50 bg-[var(--color-warn-bg)] text-[var(--color-warning)] dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300"
                   : "border-border bg-card/95 text-card-foreground dark:!border-slate-700 dark:!bg-slate-900 dark:!text-slate-100",
           )}
         >

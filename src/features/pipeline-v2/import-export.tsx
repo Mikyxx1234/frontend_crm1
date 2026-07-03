@@ -1020,7 +1020,7 @@ function MappingStep({
             {" · "}
             <span className={cn(
               "font-semibold",
-              mappedCount === headers.length ? "text-emerald-600" : "text-[var(--brand-primary)]"
+              mappedCount === headers.length ? "text-[var(--color-success-text)]" : "text-[var(--brand-primary)]"
             )}>
               {mappedCount}/{headers.length} colunas mapeadas
             </span>
@@ -1053,7 +1053,7 @@ function MappingStep({
                 <button
                   type="button"
                   onClick={() => onDeleteModel(selectedModel)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)]/50 hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
                 >
                   <IconX size={15} />
                 </button>
@@ -1299,22 +1299,22 @@ function ResultStep({ result, onCloseResult, onBackToUpload }: ImportFlowProps) 
       <div className={cn(
         "flex items-center gap-4 rounded-[var(--radius-lg)] border px-5 py-4",
         isFullSuccess
-          ? "border-emerald-200/60 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20"
+          ? "border-[var(--color-success)]/30 bg-[var(--color-success-bg)]"
           : isAllFailed
-            ? "border-red-200/60 bg-red-50/40 dark:border-red-800/40 dark:bg-red-950/20"
-            : "border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20",
+            ? "border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)]"
+            : "border-[var(--color-warning)]/30 bg-[var(--color-warn-bg)]",
       )}>
         <div className={cn(
           "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
-          isFullSuccess ? "bg-emerald-100 dark:bg-emerald-900/40"
-            : isAllFailed ? "bg-red-100 dark:bg-red-900/40"
-            : "bg-amber-100 dark:bg-amber-900/40",
+          isFullSuccess ? "bg-[var(--color-success-bg)]"
+            : isAllFailed ? "bg-[var(--color-danger-bg)]"
+            : "bg-[var(--color-warn-bg)]",
         )}>
           {isFullSuccess
-            ? <IconCheck size={20} className="text-emerald-600 dark:text-emerald-400" />
+            ? <IconCheck size={20} className="text-[var(--color-success-text)]" />
             : isAllFailed
-              ? <AlertCircle size={20} className="text-red-600 dark:text-red-400" />
-              : <AlertCircle size={20} className="text-amber-600 dark:text-amber-400" />
+              ? <AlertCircle size={20} className="text-[var(--color-danger-text)]" />
+              : <AlertCircle size={20} className="text-[var(--color-warning)]" />
           }
         </div>
         <div>
@@ -1342,17 +1342,17 @@ function ResultStep({ result, onCloseResult, onBackToUpload }: ImportFlowProps) 
 
       {/* ── Lista de falhas ── */}
       {hasFailures && (
-        <div className="rounded-[var(--radius-lg)] border border-red-200/60 bg-red-50/30 dark:border-red-800/40 dark:bg-red-950/20">
-          <div className="flex items-center gap-2.5 border-b border-red-200/50 px-4 py-3 dark:border-red-800/30">
-            <AlertCircle size={15} className="shrink-0 text-red-600 dark:text-red-400" />
-            <span className="font-display text-[13px] font-semibold text-red-700 dark:text-red-300">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)]">
+          <div className="flex items-center gap-2.5 border-b border-[var(--color-danger)]/20 px-4 py-3">
+            <AlertCircle size={15} className="shrink-0 text-[var(--color-danger-text)]" />
+            <span className="font-display text-[13px] font-semibold text-[var(--color-danger-text)]">
               {failed.length} {failed.length === 1 ? "linha com falha" : "linhas com falha"}
             </span>
           </div>
-          <div className="max-h-52 divide-y divide-red-100/70 overflow-y-auto dark:divide-red-800/30">
+          <div className="max-h-52 divide-y divide-[var(--color-danger)]/10 overflow-y-auto">
             {failed.map((f, i) => (
               <div key={`${f.row}-${i}`} className="flex items-baseline gap-3 px-4 py-2.5">
-                <span className="shrink-0 rounded-full bg-red-100/80 px-2 py-0.5 font-display text-[11px] font-bold text-red-600 dark:bg-red-900/40 dark:text-red-400">
+                <span className="shrink-0 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
                   L{f.row}
                 </span>
                 <span className="font-body text-[13px] text-[var(--text-secondary)]">{f.message}</span>
@@ -1387,10 +1387,10 @@ function ResultStat({
   tone: "success" | "info" | "neutral" | "danger";
 }) {
   const styles: Record<typeof tone, { bg: string; text: string; dot: string }> = {
-    success: { bg: "border-emerald-200/50 bg-emerald-50/30 dark:border-emerald-800/30 dark:bg-emerald-950/20", text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
-    info:    { bg: "border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.03]",                          text: "text-[var(--brand-primary)]",                                dot: "bg-[var(--brand-primary)]" },
-    neutral: { bg: "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]",                                   text: "text-[var(--text-secondary)]",                               dot: "bg-[var(--text-muted)]" },
-    danger:  { bg: "border-red-200/50 bg-red-50/30 dark:border-red-800/30 dark:bg-red-950/20",                   text: "text-red-600 dark:text-red-400",                             dot: "bg-red-500" },
+    success: { bg: "border-[var(--color-success)]/30 bg-[var(--color-success-bg)]",      text: "text-[var(--color-success-text)]",  dot: "bg-[var(--color-success)]" },
+    info:    { bg: "border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.03]",  text: "text-[var(--brand-primary)]",       dot: "bg-[var(--brand-primary)]" },
+    neutral: { bg: "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]",           text: "text-[var(--text-secondary)]",      dot: "bg-[var(--text-muted)]" },
+    danger:  { bg: "border-[var(--color-danger)]/30 bg-[var(--color-danger-bg)]",        text: "text-[var(--color-danger-text)]",   dot: "bg-[var(--color-danger)]" },
   };
   const s = styles[tone];
   return (

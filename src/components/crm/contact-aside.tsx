@@ -369,7 +369,7 @@ function DealInline({
               <div
                 key={f.fieldId}
                 className={cn(
-                  "flex items-center justify-between gap-3 px-[14px] py-2.5 text-[12.5px]",
+                  "flex items-center justify-between gap-3 px-3.5 py-2.5 text-[12.5px]",
                   i < fields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
                 )}
               >
@@ -718,7 +718,7 @@ export function ContactAside({
                                       <div
                                         key={f.fieldId}
                                         className={cn(
-                                          "flex items-center justify-between gap-3 px-[14px] py-2 text-[13px]",
+                                          "flex items-center justify-between gap-3 px-3.5 py-2 text-[13px]",
                                           i < resolvedContactPanelFields.length - 1 &&
                                             "border-b border-[var(--glass-border-subtle)]",
                                         )}
@@ -831,7 +831,7 @@ export function ContactAside({
                                         <div
                                           key={f.fieldId}
                                           className={cn(
-                                            "flex items-center justify-between gap-3 px-[14px] py-2 text-[13px]",
+                                            "flex items-center justify-between gap-3 px-3.5 py-2 text-[13px]",
                                             i < resolvedDealPanelFields.length - 1 &&
                                               "border-b border-[var(--glass-border-subtle)]",
                                           )}

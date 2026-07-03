@@ -362,7 +362,7 @@ function IssueCard({
           )}
           <div className="mt-2 flex items-center gap-2">
             {badge && (
-              <span className="inline-flex items-center rounded-full bg-white/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ring-white/70">
+              <span className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ring-white/70">
                 {badge}
               </span>
             )}

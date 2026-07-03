@@ -79,7 +79,7 @@ export function TemplateGallery({ onApplyTemplate, onStartBlank }: TemplateGalle
               className={cn(
                 "group inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors",
                 active
-                  ? "border-slate-900 bg-slate-900 text-white"
+                  ? "border-slate-900 bg-[var(--glass-bg-modal)] text-white"
                   : "border-black/6 bg-white text-[var(--color-ink-soft)] hover:border-black/10 hover:text-[var(--text-primary)]",
               )}
             >
@@ -119,7 +119,7 @@ function HeroCard({ onStartBlank, total }: { onStartBlank: () => void; total: nu
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--glass-bg-subtle)] backdrop-blur">
             <Sparkles className="size-5 text-blue-200" />
           </div>
           <div>
@@ -138,7 +138,7 @@ function HeroCard({ onStartBlank, total }: { onStartBlank: () => void; total: nu
         <button
           type="button"
           onClick={onStartBlank}
-          className="group inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:border-white/20 hover:bg-white/10"
+          className="group inline-flex shrink-0 items-center gap-2 rounded-xl border border-[var(--glass-border-subtle)] bg-white/5 px-4 py-2.5 text-[13px] font-semibold text-white backdrop-blur transition-colors hover:border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-subtle)]"
         >
           <Plus className="size-4" />
           Começar do zero

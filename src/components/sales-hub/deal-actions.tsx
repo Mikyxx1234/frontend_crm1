@@ -187,9 +187,9 @@ export function DealStageSelector({
         aria-haspopup="listbox"
         aria-expanded={stageOpen}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 text-left transition-all hover:border-[var(--glass-border)] dark:bg-slate-800/50 dark:hover:border-slate-600",
+          "group flex w-full items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 text-left transition-all hover:border-[var(--glass-border)] dark:bg-[var(--glass-bg-base)]/50 dark:hover:border-slate-600",
           stageOpen &&
-            "border-blue-600 bg-white shadow-[0_0_0_3px_rgba(37,99,235,0.12)] dark:bg-slate-800/80",
+            "border-blue-600 bg-white shadow-[0_0_0_3px_rgba(37,99,235,0.12)] dark:bg-[var(--glass-bg-base)]/80",
           moveMutation.isPending && "cursor-wait opacity-60",
         )}
       >
@@ -233,10 +233,10 @@ export function DealStageSelector({
             // elemento abaixo. max-h calibrada pra caber ~7 etapas
             // sem precisar rolar; caso ultrapasse, o scroll custom
             // aparece só quando necessário.
-            className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)] dark:bg-slate-800 dark:shadow-[0_20px_48px_-16px_rgba(0,0,0,0.6)]"
+            className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-border bg-white shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)] dark:bg-[var(--glass-bg-base)] dark:shadow-[0_20px_48px_-16px_rgba(0,0,0,0.6)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2 dark:border-slate-700">
+            <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2 dark:border-[var(--glass-border)]">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                 Mover para
               </span>

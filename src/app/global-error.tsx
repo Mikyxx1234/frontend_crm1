@@ -28,7 +28,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={reset}
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[var(--glass-bg-modal)] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[var(--glass-bg-base)]"
           >
             Tentar novamente
           </button>

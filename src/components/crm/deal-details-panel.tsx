@@ -78,7 +78,7 @@ export function DealDetailsPanel({
         className,
       )}
     >
-      <header className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-[22px] pb-4 pt-[18px]">
+      <header className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-5.5 pb-4 pt-4.5">
         <div className="flex items-center gap-2">
           {onBack && (
             <TooltipGlass label="Voltar ao pipeline" side="bottom">
@@ -173,7 +173,7 @@ export function DealDetailsPanel({
         })}
       </nav>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-[22px] py-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5.5 py-4">
         {activeTab === "Principal" ? (
           <div className="flex flex-col gap-5">
             {record.groups.map((group, gi) => (

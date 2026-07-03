@@ -273,7 +273,7 @@ function ReasonRow({
       <GripVertical className="size-4 shrink-0 cursor-grab text-slate-300" />
 
       {editing ? (
-        <input
+        <Input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           onBlur={save}
@@ -284,7 +284,7 @@ function ReasonRow({
               setEditing(false);
             }
           }}
-          className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-sm outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30"
+          className="min-w-0 h-auto flex-1 rounded py-1 text-sm"
           autoFocus
         />
       ) : (

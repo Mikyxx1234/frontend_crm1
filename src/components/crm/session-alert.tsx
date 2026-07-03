@@ -35,7 +35,7 @@ export function SessionAlert({
       <button
         type="button"
         onClick={onUseTemplate}
-        className="cursor-pointer rounded-full border border-[var(--color-session-border)] bg-white px-[22px] py-[9px] font-display text-[13px] font-bold text-[var(--color-session-text)] transition-colors hover:bg-[var(--color-session-hover-bg)]"
+        className="cursor-pointer rounded-full border border-[var(--color-session-border)] bg-white px-5.5 py-2 font-display text-[13px] font-bold text-[var(--color-session-text)] transition-colors hover:bg-[var(--color-session-hover-bg)]"
       >
         {actionLabel}
       </button>

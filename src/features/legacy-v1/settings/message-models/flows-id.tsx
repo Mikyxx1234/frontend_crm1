@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FlowDefinitionUpsertInput } from "@/services/whatsapp-flow-definitions";
@@ -803,7 +804,7 @@ export default function FlowDefinitionEditorPage({
                         {fieldTypeNeedsOptions(f.fieldType) ? (
                           <div className="grid gap-1.5 sm:col-span-2">
                             <Label className="text-xs text-[var(--text-secondary)]">Opções (uma por linha)</Label>
-                            <textarea
+                            <Textarea
                               value={(f.options ?? []).join("\n")}
                               onChange={(e) => {
                                 const options = parseOptionsText(e.target.value);
@@ -819,7 +820,7 @@ export default function FlowDefinitionEditorPage({
                                 });
                               }}
                               rows={3}
-                              className="resize-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus-visible:border-[var(--input-border-focus)] focus-visible:ring-2 focus-visible:ring-[var(--input-ring-focus)]"
+                              className="resize-none rounded-[var(--radius-md)] text-xs placeholder:text-[var(--text-muted)]"
                               placeholder={"Opção 1\nOpção 2\nOpção 3"}
                             />
                           </div>

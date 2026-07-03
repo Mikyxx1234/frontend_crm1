@@ -363,7 +363,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
 
         {/* Tag de gatilho + menu contextual */}
         <div className="relative flex items-center justify-between" ref={menuRef}>
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 font-display text-[10px] font-bold text-white/90">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--glass-bg-subtle)] px-2.5 py-0.5 font-display text-[10px] font-bold text-white/90">
             <IconBolt size={10} />
             {automation.stageTrigger}
           </span>
@@ -372,7 +372,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-white/0 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-white/0 text-white/60 transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-white"
             >
               <IconDots size={14} />
             </button>
@@ -436,7 +436,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setCopyModalOpen(true); }}
-          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/20 py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-white/30"
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/20 py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-[var(--glass-bg-panel)]"
         >
           <IconCopy size={12} />
           Duplicar
@@ -918,9 +918,9 @@ function StageColumn({
             </TooltipGlass>
           ) : (
             <TooltipGlass label="Arrastar para reordenar" side="top">
-              <span className="flex cursor-grab flex-col gap-[3px] active:cursor-grabbing">
+              <span className="flex cursor-grab flex-col gap-1 active:cursor-grabbing">
                 {[0,1,2].map((i) => (
-                <span key={i} className="flex gap-[3px]">
+                <span key={i} className="flex gap-1">
                   <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
                   <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
                 </span>

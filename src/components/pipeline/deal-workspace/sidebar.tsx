@@ -278,7 +278,7 @@ export function WorkspaceSidebar({
       : undefined;
 
     const kommoRow =
-      "flex items-center justify-between border-b border-white/30 px-4 py-2.5 transition-colors hover:bg-white/30";
+      "flex items-center justify-between border-b border-white/30 px-4 py-2.5 transition-colors hover:bg-[var(--glass-bg-panel)]";
 
     const renderSection = (section: SectionConfig) => {
       switch (section.id) {

@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -1816,7 +1817,7 @@ export function ChatWindow({
       */}
       {isDraggingFile && (
         <div
-          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-white/40 p-6 backdrop-blur-sm"
+          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[var(--glass-bg-panel)] p-6 backdrop-blur-sm"
           aria-hidden
         >
           <div className="flex max-w-md flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-primary/60 bg-white/70 px-8 py-7 text-center shadow-2xl backdrop-blur-md">
@@ -2297,10 +2298,10 @@ export function ChatWindow({
                       <div
                         className={cn(
                           isAudioOnly
-                            ? "px-[9px] py-[5px]"
+                            ? "px-2 py-1"
                             : isNote
                               ? "px-3 py-1.5"
-                              : "px-[9px] py-[5px]",
+                              : "px-2 py-1",
                         )}
                       >
                         {isNote ? (
@@ -2678,7 +2679,7 @@ export function ChatWindow({
                                 >
                                   {textBody}
                                 </p>
-                                <span className="flex-shrink-0 -mb-[3px]">
+                                <span className="flex-shrink-0 -mb-1">
                                   {timeEl}
                                 </span>
                               </div>
@@ -3040,12 +3041,12 @@ export function ChatWindow({
                 </button>
               </div>
 
-              <textarea
+              <Textarea
                 value={scheduleContent}
                 onChange={(e) => setScheduleContent(e.target.value)}
                 placeholder="Digite a mensagem que será enviada no horário escolhido..."
                 rows={3}
-                className="mb-2 w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-[14px] outline-none focus:border-accent"
+                className="mb-2 w-full resize-none"
               />
 
               <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -3317,7 +3318,7 @@ export function ChatWindow({
                       })}
                     </div>
                   )}
-                  <div className="mt-3 space-y-2 rounded-[var(--radius-lg)] border border-border/40 bg-white/80 p-3">
+                  <div className="mt-3 space-y-2 rounded-[var(--radius-lg)] border border-border/40 bg-[var(--glass-bg-base)] p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Flow (opcional)
                     </p>
@@ -3356,7 +3357,7 @@ export function ChatWindow({
                       <span className="text-[11px] font-medium text-muted-foreground">
                         JSON inicial do Flow
                       </span>
-                      <textarea
+                      <Textarea
                         value={flowActionJson}
                         onChange={(e) => {
                           setFlowActionJson(e.target.value);
@@ -3364,7 +3365,7 @@ export function ChatWindow({
                         }}
                         placeholder='Ex.: {"screen":"NOME_DA_TELA","data":{"campo":"valor"}}'
                         rows={3}
-                        className="resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 font-mono text-[11px] outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-success/40"
+                        className="resize-y font-mono text-[11px]"
                       />
                     </label>
                     {flowJsonError ? (
@@ -3510,7 +3511,7 @@ export function ChatWindow({
 
         {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
         {compactChrome ? (
-          <footer className="relative shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+          <footer className="relative shrink-0 overflow-visible border-t border-[var(--glass-border)] bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
             <SlashCommandMenu
               state={slash.state}
               onSelectItem={slash.onSelectItem}
@@ -3521,7 +3522,7 @@ export function ChatWindow({
               <div
                 className={cn(
                   rowMax,
-                  "flex h-6 items-center gap-2 border-b border-white/40 bg-warning-soft/40 px-2 backdrop-blur",
+                  "flex h-6 items-center gap-2 border-b border-[var(--glass-border)] bg-warning-soft/40 px-2 backdrop-blur",
                 )}
               >
                 <Lock className="size-3 shrink-0 text-[var(--color-ink-soft)]" />
@@ -3574,7 +3575,7 @@ export function ChatWindow({
                 type="button"
                 onClick={() => togglePanel("emoji")}
                 className={cn(
-                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-transparent text-[var(--color-ink-soft)] transition-all hover:border-white/55 hover:bg-white/55 hover:text-foreground",
+                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-transparent text-[var(--color-ink-soft)] transition-all hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-overlay)] hover:text-foreground",
                   activePanel === "emoji" &&
                     "border-primary/30 bg-[var(--color-primary-soft)] text-primary",
                 )}
@@ -3657,22 +3658,22 @@ export function ChatWindow({
                   <AudioRecorder
                     onSend={sendAudio}
                     disabled={isBusy}
-                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border border-white/55 bg-white/55 !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-4"
+                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-4"
                   />
                 </div>
               </div>
             </div>
           </footer>
         ) : (
-          <footer className="relative border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-white/5">
+          <footer className="relative border-t border-[var(--glass-border)] bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
             <SlashCommandMenu
               state={slash.state}
               onSelectItem={slash.onSelectItem}
               onHover={slash.setActiveIndex}
               className="absolute bottom-full left-3 mb-2 sm:left-6"
             />
-            <div className="rounded-[var(--radius-card)] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-white/10 dark:bg-white/8">
-              <div className="flex items-center border-b border-white/40 px-5 py-3">
+            <div className="rounded-[var(--radius-card)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
+              <div className="flex items-center border-b border-[var(--glass-border)] px-5 py-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <TooltipHost
                     label={
@@ -3850,7 +3851,7 @@ export function ChatWindow({
                     <AudioRecorder
                       onSend={sendAudio}
                       disabled={isBusy}
-                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border border-white/55 bg-white/55 !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-5"
+                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-5"
                     />
                   </div>
                 </div>
@@ -4191,7 +4192,7 @@ function SystemEventRow({
             )}
           </div>
           <div className="flex items-center justify-center gap-2 px-1">
-            <span className="rounded-md bg-white/80 px-2 py-1 text-[12px] font-bold tabular-nums text-ink-muted line-through decoration-[var(--text-muted)]/60">
+            <span className="rounded-md bg-[var(--glass-bg-base)] px-2 py-1 text-[12px] font-bold tabular-nums text-ink-muted line-through decoration-[var(--text-muted)]/60">
               {oldPhone}
             </span>
             <ArrowRight
@@ -4602,7 +4603,7 @@ function UploadingOverlay({
         rounded,
       )}
     >
-      <div className="flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-[var(--shadow-lg)]">
+      <div className="flex items-center gap-2 rounded-full bg-[var(--glass-bg-modal)] px-3 py-1.5 shadow-[var(--shadow-lg)]">
         <Loader2 className="size-3.5 animate-spin text-primary" />
         <span className="text-[11px] font-semibold uppercase tracking-widest text-foreground">
           {label}

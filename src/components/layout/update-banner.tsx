@@ -81,7 +81,7 @@ const SECTION_ORDER = ["feat", "fix", "perf", "refactor", "docs", "chore"];
 function ReleaseCard({ release }: { release: Release }) {
   const ordered = SECTION_ORDER.filter((k) => release.sections[k]?.length);
   return (
-    <div className="rounded-xl border border-white/40 bg-white/60 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+    <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3 shadow-sm backdrop-blur dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <h4 className="text-sm font-semibold text-[var(--text-primary)] dark:text-slate-100">
           {release.version === "unreleased"
@@ -180,8 +180,8 @@ export function UpdateAvailableBanner() {
         <div
           className={cn(
             "max-h-[70vh] w-[min(420px,calc(100vw-2rem))] overflow-auto rounded-2xl border p-3 shadow-2xl",
-            "border-white/50 bg-white/80 backdrop-blur-xl",
-            "dark:border-white/10 dark:bg-[var(--glass-bg-strong)]/80",
+            "border-[var(--glass-border)] bg-[var(--glass-bg-base)] backdrop-blur-xl",
+            "dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-strong)]/80",
           )}
           style={{
             background: "var(--glass-bg-overlay, rgba(255,255,255,0.85))",
@@ -199,7 +199,7 @@ export function UpdateAvailableBanner() {
               type="button"
               onClick={() => setExpanded(false)}
               aria-label="Fechar"
-              className="rounded-md p-1 text-[var(--text-muted)] hover:bg-black/5 dark:text-[var(--text-faint)] dark:hover:bg-white/10"
+              className="rounded-md p-1 text-[var(--text-muted)] hover:bg-black/5 dark:text-[var(--text-faint)] dark:hover:bg-[var(--glass-bg-subtle)]"
             >
               <IconX size={16} />
             </button>
@@ -234,8 +234,8 @@ export function UpdateAvailableBanner() {
       <div
         className={cn(
           "group inline-flex items-stretch overflow-hidden rounded-full border shadow-lg backdrop-blur-md transition",
-          "border-white/50 bg-white/80 text-[var(--text-primary)] hover:bg-white",
-          "dark:border-white/10 dark:bg-[var(--glass-bg-strong)]/80 dark:text-slate-100 dark:hover:bg-[var(--glass-bg-strong)]",
+          "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-primary)] hover:bg-white",
+          "dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-strong)]/80 dark:text-slate-100 dark:hover:bg-[var(--glass-bg-strong)]",
         )}
       >
         <button
@@ -272,8 +272,8 @@ export function UpdateAvailableBanner() {
           title="Não mostrar mais esta versão"
           className={cn(
             "inline-flex items-center justify-center border-l px-2.5 text-[var(--text-muted)] transition-colors",
-            "border-white/40 hover:bg-black/5 hover:text-[var(--text-secondary)]",
-            "dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-slate-100",
+            "border-[var(--glass-border)] hover:bg-black/5 hover:text-[var(--text-secondary)]",
+            "dark:border-[var(--glass-border-subtle)] dark:hover:bg-[var(--glass-bg-subtle)] dark:hover:text-slate-100",
           )}
         >
           <IconX size={14} strokeWidth={2.2} />

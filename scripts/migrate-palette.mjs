@@ -39,22 +39,33 @@ const MAP = [
   // ── Neutros: background ───────────────────────────
   ["bg-slate-50",     "bg-[var(--glass-bg-subtle)]"],
   ["bg-slate-100",    "bg-[var(--glass-bg-base)]"],
+  ["bg-slate-300",    "bg-[var(--glass-border-subtle)]"],   // mid-gray ≈ subtle border bg
+  ["bg-slate-800",    "bg-[var(--glass-bg-base)]"],         // dark bg base
+  ["bg-slate-900",    "bg-[var(--glass-bg-modal)]"],        // dark bg ≈ glass-bg-modal dark
   ["bg-gray-50",      "bg-[var(--glass-bg-subtle)]"],
   ["bg-gray-100",     "bg-[var(--glass-bg-base)]"],
   // ── Neutros: border ───────────────────────────────
   ["border-slate-100","border-[var(--glass-border-subtle)]"],
   ["border-slate-200","border-[var(--glass-border)]"],
   ["border-slate-300","border-[var(--glass-border)]"],
+  ["border-slate-700","border-[var(--glass-border)]"],      // dark border
+  ["border-slate-800","border-[var(--glass-border)]"],      // dark border
   ["border-gray-100", "border-[var(--glass-border-subtle)]"],
   ["border-gray-200", "border-[var(--glass-border)]"],
   // ── Sucesso (emerald) ─────────────────────────────
+  ["text-emerald-900","text-[var(--color-success-text)]"],  // dark success
   ["text-emerald-700","text-[var(--color-success-text)]"],
   ["text-emerald-600","text-[var(--color-success-text)]"],
   ["text-emerald-500","text-[var(--color-success)]"],
+  ["text-emerald-400","text-[var(--color-success)]/80"],    // success leve
+  ["text-emerald-200","text-[var(--color-success)]/50"],    // success sutil
   ["bg-emerald-50",   "bg-[var(--color-success-bg)]"],
   // ── Alerta (amber) ────────────────────────────────
+  ["text-amber-900",  "text-[var(--color-warn-text)]"],     // amber-900 ≈ warn-text dark
   ["text-amber-700",  "text-[var(--color-warn)]"],
   ["text-amber-600",  "text-[var(--color-warn)]"],
+  ["text-amber-400",  "text-[var(--color-warning)]/80"],    // amber-400 ≈ warning leve
+  ["text-amber-200",  "text-[var(--color-warning)]/70"],    // amber-200 ≈ warning sutil
   ["bg-amber-50",     "bg-[var(--color-warn-bg)]"],
   // ── Perigo (rose/red) ─────────────────────────────
   ["text-rose-700",   "text-[var(--color-danger-text)]"],

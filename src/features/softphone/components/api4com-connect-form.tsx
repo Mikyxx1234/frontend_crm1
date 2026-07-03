@@ -43,13 +43,13 @@ function ConnectSuccessFeedback({
   const { api4com, webhook } = data;
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-emerald-400">
+      <p className="text-xs text-[var(--color-success)]/80">
         Conectado! Ramal: {api4com.ramal} ({api4com.domain}). O softphone
         está se registrando — acompanhe o chip no canto inferior direito.
       </p>
 
       {!webhook && (
-        <p className="inline-flex items-center gap-1.5 text-xs text-amber-400">
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-warning)]/80">
           <IconAlertTriangle size={12} />
           Webhook de chamadas não está configurado. Atualize o backend
           (commit 269af93+) e reconecte pra que ligações aparecem em /calls.
@@ -57,7 +57,7 @@ function ConnectSuccessFeedback({
       )}
 
       {webhook?.configured ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-success)]/80">
           <IconCheck size={12} stroke={2.5} />
           Webhook de chamadas configurado automaticamente — o histórico em
           /calls vai registrar cada ligação.
@@ -106,7 +106,7 @@ function WebhookFallback({
         <button
           type="button"
           onClick={() => onCopy(webhookUrl)}
-          className="inline-flex h-7 items-center gap-1 rounded bg-white/10 px-2 text-[11px] font-medium text-white transition hover:bg-white/20"
+          className="inline-flex h-7 items-center gap-1 rounded bg-[var(--glass-bg-subtle)] px-2 text-[11px] font-medium text-white transition hover:bg-[var(--glass-bg-subtle)]"
           title="Copiar URL"
         >
           {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
@@ -163,7 +163,7 @@ function ConnectedSummary({
               type="button"
               onClick={onReconnect}
               disabled={disconnecting}
-              className="inline-flex h-7 items-center gap-1 rounded bg-white/10 px-2 text-[11px] font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1 rounded bg-[var(--glass-bg-subtle)] px-2 text-[11px] font-medium text-white transition hover:bg-[var(--glass-bg-subtle)] disabled:opacity-50"
               title="Trocar de conta ou re-autenticar"
             >
               <IconPencil size={12} />
@@ -188,7 +188,7 @@ function ConnectedSummary({
       </div>
 
       {status.webhook.configured ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-success)]/80">
           <IconCheck size={12} stroke={2.5} />
           Webhook de chamadas configurado — histórico em /calls registra
           cada ligação.
@@ -201,7 +201,7 @@ function ConnectedSummary({
           onCopy={onCopy}
         />
       ) : (
-        <p className="inline-flex items-center gap-1.5 text-xs text-amber-400">
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-warning)]/80">
           <IconAlertTriangle size={12} />
           Webhook de chamadas não configurado. Clique em "Reconectar"
           para tentar a configuração automática novamente.

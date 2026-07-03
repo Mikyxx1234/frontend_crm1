@@ -138,7 +138,7 @@ function Panel({
 }) {
   return (
     <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
-      <div className="flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-[18px] py-3.5">
+      <div className="flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-4.5 py-3.5">
         <span className="text-[var(--brand-primary)]">{icon}</span>
         <h2 className="font-display text-[14.5px] font-bold text-[var(--text-primary)]">{title}</h2>
         {sub && <span className="text-[12px] text-[var(--text-muted)]">{sub}</span>}
@@ -150,7 +150,7 @@ function Panel({
 
 function LevelLegend() {
   return (
-    <div className="flex flex-wrap gap-3.5 border-b border-[var(--glass-border-subtle)] bg-black/[0.015] px-[18px] py-3">
+    <div className="flex flex-wrap gap-3.5 border-b border-[var(--glass-border-subtle)] bg-black/[0.015] px-4.5 py-3">
       {LEVELS.map((lvl) => (
         <div
           key={lvl.id}
@@ -236,7 +236,7 @@ export function RolePermissionsEditor({
               <LevelLegend />
               {groups.map((group) => (
                 <div key={group.id}>
-                  <div className="border-b border-[var(--glass-border-subtle)] bg-black/[0.01] px-[18px] py-2 font-display text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  <div className="border-b border-[var(--glass-border-subtle)] bg-black/[0.01] px-4.5 py-2 font-display text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     {group.label}
                   </div>
                   {group.resources.map((resource) => (
@@ -407,7 +407,7 @@ function LevelRow({
 
   return (
     <div className="border-b border-[var(--glass-border-subtle)] last:border-b-0">
-      <div className="flex flex-col gap-3 px-[18px] py-4 hover:bg-black/[0.015]">
+      <div className="flex flex-col gap-3 px-4.5 py-4 hover:bg-black/[0.015]">
         {/* Linha: ícone + label + contador + expandir */}
         <div className="flex items-center gap-2.5">
           <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
@@ -482,7 +482,7 @@ function LevelRow({
 
       {/* Checkboxes por action (linha expandida / personalizado) */}
       {expanded && (
-        <ul className="border-t border-[var(--glass-border-subtle)] bg-black/[0.015] px-[18px] py-2">
+        <ul className="border-t border-[var(--glass-border-subtle)] bg-black/[0.015] px-4.5 py-2">
           {resource.actions.map((action) => (
             <ActionCheckboxRow
               key={action.action}

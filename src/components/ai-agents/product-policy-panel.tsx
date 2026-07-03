@@ -20,6 +20,7 @@ import { IconPackage as Package, IconSparkles as Sparkles, IconInfoCircle as Inf
 import * as React from "react";
 
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
@@ -178,7 +179,7 @@ export function ProductPolicyPanel({
       </div>
 
       {!enabled && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-[var(--color-warn-bg)]/60 p-3 text-[12px] text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-[var(--color-warn-bg)]/60 p-3 text-[12px] text-[var(--color-warn-text)] dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-[var(--color-warning)]/70">
           <Info className="mt-0.5 size-4 shrink-0" />
           <p>
             A tool <strong>Consultar catálogo de produtos</strong> não está selecionada
@@ -275,7 +276,7 @@ export function ProductPolicyPanel({
         <Label htmlFor="product-policy" className="text-[12px] font-medium">
           Instruções ao agente
         </Label>
-        <textarea
+        <Textarea
           id="product-policy"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -285,7 +286,7 @@ export function ProductPolicyPanel({
 - Inclua modalidade e duração quando disponível.
 - Nunca prometa desconto.
 - Ao final, pergunte se o lead quer falar com um consultor.`}
-          className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="w-full resize-y"
         />
         <p className="text-[10px] text-muted-foreground">
           Máximo recomendado: ~800 caracteres. Quanto mais conciso, melhor o agente segue.

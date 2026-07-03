@@ -6,7 +6,7 @@ export function ProductivityTipCard() {
   return (
     <section
       aria-label="Dica de produtividade"
-      className="flex items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] border-l-4 border-l-[var(--brand-primary)] bg-[var(--glass-bg-base)] px-[18px] py-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
+      className="flex items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] border-l-4 border-l-[var(--brand-primary)] bg-[var(--glass-bg-base)] px-4.5 py-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
     >
       <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
         <IconBolt size={20} stroke={2.2} />

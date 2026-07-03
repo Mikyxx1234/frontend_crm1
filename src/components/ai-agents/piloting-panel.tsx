@@ -24,6 +24,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import type {
   BusinessHoursConfig,
@@ -248,17 +249,15 @@ function OpeningSection({
 
       <div className="grid gap-2">
         <Label htmlFor="pilot-opening">Texto da saudação</Label>
-        <textarea
+        <Textarea
           id="pilot-opening"
           rows={3}
           value={value.openingMessage}
           onChange={(e) => patch({ openingMessage: e.target.value })}
           placeholder="Ex.: Oi {{contact.firstName}}! Tudo bem? Sou o agente virtual. Como posso te ajudar hoje?"
           className={cn(
-            "resize-none rounded-xl border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2",
-            signals.length > 0
-              ? "border-[var(--color-warning)] focus-visible:ring-[var(--color-warning)]/40"
-              : "border-border focus-visible:ring-[var(--brand-primary)]/40",
+            "resize-none",
+            signals.length > 0 && "border-[var(--color-warning)] focus-visible:ring-[var(--color-warning)]/40",
           )}
         />
         <p className="text-[11px] text-muted-foreground">
@@ -614,7 +613,7 @@ function InactivitySection({
             <Label htmlFor="pilot-farewell">
               Mensagem de despedida (opcional)
             </Label>
-            <textarea
+            <Textarea
               id="pilot-farewell"
               rows={2}
               value={value.inactivityFarewellMessage}
@@ -622,7 +621,7 @@ function InactivitySection({
                 patch({ inactivityFarewellMessage: e.target.value })
               }
               placeholder="Ex.: Vou passar a conversa pra um consultor humano pra te dar continuidade, tá?"
-              className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
+              className="resize-none"
             />
             <p className="text-[11px] text-muted-foreground">
               Enviada antes do handoff. Aceita as mesmas variáveis da saudação.
@@ -1025,7 +1024,7 @@ function BusinessHoursSection({
             <Label htmlFor="pilot-offhours">
               Mensagem fora do horário (opcional)
             </Label>
-            <textarea
+            <Textarea
               id="pilot-offhours"
               rows={2}
               value={bh.offHoursMessage ?? ""}
@@ -1035,7 +1034,7 @@ function BusinessHoursSection({
                 })
               }
               placeholder="Ex.: Oi {{contact.firstName}}! Já recebemos sua mensagem. Nosso time responde de segunda a sexta, 9h às 18h."
-              className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
+              className="resize-none"
             />
           </div>
         </>

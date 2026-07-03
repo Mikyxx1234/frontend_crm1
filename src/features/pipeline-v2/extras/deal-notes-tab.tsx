@@ -19,6 +19,7 @@ import { IconPinFilled, IconLock, IconLoader2, IconSend, IconFileText } from "@t
 import { toast } from "sonner";
 
 import { apiUrl } from "@/lib/api";
+import { Textarea } from "@/components/ui/textarea";
 
 interface PinnedNote {
   id: string;
@@ -203,13 +204,12 @@ export function DealNotesTab({ dealId, pinnedNote }: DealNotesTabProps) {
         className="shrink-0 border-t border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3"
       >
         <div className="flex items-end gap-2">
-          <textarea
+          <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Escreva uma nota..."
             rows={2}
-            className="min-h-[44px] flex-1 resize-none rounded-[var(--radius-lg)] border bg-white px-3 py-2 text-[13.5px] leading-relaxed text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]"
-            style={{ borderColor: "var(--glass-border, rgba(0,0,0,0.08))" }}
+            className="min-h-[44px] flex-1 resize-none"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

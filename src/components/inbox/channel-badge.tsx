@@ -17,7 +17,7 @@ function normalize(ch: string): InboxChannel {
 }
 
 const styles: Record<string, string> = {
-  whatsapp: "border-emerald-500/40 bg-[var(--color-success)]/15 text-emerald-800 dark:text-emerald-200",
+  whatsapp: "border-emerald-500/40 bg-[var(--color-success)]/15 text-emerald-800 dark:text-[var(--color-success)]/50",
   instagram:
     "border-pink-500/40 bg-gradient-to-r from-purple-500/20 via-pink-500/15 to-amber-400/15 text-pink-950 dark:text-pink-100",
   email: "border-blue-500/40 bg-[var(--color-info)]/15 text-blue-900 dark:text-blue-100",

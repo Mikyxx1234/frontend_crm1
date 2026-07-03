@@ -64,7 +64,7 @@ export function ActivityCalendar({
               onChangeMonth(new Date(today.getFullYear(), today.getMonth(), 1))
               onSelectDate(today)
             }}
-            className="cursor-pointer rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-[11px] py-1 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+            className="cursor-pointer rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
           >
             Hoje
           </button>
@@ -79,7 +79,7 @@ export function ActivityCalendar({
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-[3px]">
+      <div className="grid grid-cols-7 gap-1">
         {WEEKDAYS_SHORT.map((w) => (
           <div
             key={w}

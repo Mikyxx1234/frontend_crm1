@@ -18,6 +18,7 @@ import {
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { InputGlass } from "@/components/crm/input-glass";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { MultiSelectPopover } from "@/features/dashboard-v2/components/multi-select-popover";
 
@@ -434,11 +435,11 @@ export default function NewCampaignClientPage() {
                   </>
                 ) : (
                   <Field label="Mensagem">
-                    <textarea
+                    <Textarea
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
                       placeholder="Digite a mensagem que será enviada..."
-                      className="min-h-[140px] w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3 font-body text-[13px] text-[var(--text-primary)]"
+                      className="min-h-[140px] w-full"
                     />
                   </Field>
                 )}

@@ -43,7 +43,7 @@ export const dashboardCardClassCompact =
 
 /** Classe-base de card premium no modo War Room (fundo dark). */
 export const dashboardCardClassDark =
-  "rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.6)] backdrop-blur-sm";
+  "rounded-2xl border border-[var(--glass-border-subtle)] bg-white/[0.03] p-5 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.6)] backdrop-blur-sm";
 
 /**
  * Tipografia de título de página do dashboard.

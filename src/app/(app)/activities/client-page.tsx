@@ -261,7 +261,7 @@ export default function V2ActivitiesClientPage() {
                   >
                     Todas
                   </span>
-                  <span className="min-w-[24px] rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[7px] py-px text-center font-mono text-[12.5px] font-semibold text-[var(--text-muted)]">
+                  <span className="min-w-[24px] rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px text-center font-mono text-[12.5px] font-semibold text-[var(--text-muted)]">
                     {monthTotal}
                   </span>
                 </button>
@@ -298,7 +298,7 @@ export default function V2ActivitiesClientPage() {
                       >
                         {meta.plural}
                       </span>
-                      <span className="min-w-[24px] rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-[7px] py-px text-center font-mono text-[12.5px] font-semibold text-[var(--text-muted)]">
+                      <span className="min-w-[24px] rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px text-center font-mono text-[12.5px] font-semibold text-[var(--text-muted)]">
                         {monthSummary[kind]}
                       </span>
                     </button>

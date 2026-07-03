@@ -93,7 +93,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
         <MiniFlow steps={steps} max={5} size="sm" connected={false} />
       </div>
 
-      <div className="relative z-10 hidden shrink-0 items-center gap-[26px] md:flex">
+      <div className="relative z-10 hidden shrink-0 items-center gap-6.5 md:flex">
         <RowMetric
           icon={<IconCircleCheck size={13} />}
           value={`${automation.successRate}%`}

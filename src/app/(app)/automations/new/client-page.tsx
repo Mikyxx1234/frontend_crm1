@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/crm/page-header";
 import { PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
+import { Textarea } from "@/components/ui/textarea";
 import { useCreateAutomation } from "@/features/automations-v2/hooks";
 import {
   AUTOMATION_TRIGGER_TYPES,
@@ -103,12 +104,12 @@ export default function NewAutomationClientPage() {
                 <span className="font-display text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
                   Descrição
                 </span>
-                <textarea
+                <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="O que esta automação faz?"
                   rows={3}
-                  className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none backdrop-blur-sm transition-all duration-150 focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                  className="w-full resize-none"
                 />
               </label>
             </div>

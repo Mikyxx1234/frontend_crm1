@@ -112,7 +112,7 @@ function CallRow({ call }: { call: CallRecord }) {
       <span
         className={cn(
           "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-          isMissed ? "bg-[var(--color-danger)]/10 text-[var(--color-danger)]" : "bg-[var(--color-success)]/10 text-emerald-400",
+          isMissed ? "bg-[var(--color-danger)]/10 text-[var(--color-danger)]" : "bg-[var(--color-success)]/10 text-[var(--color-success)]/80",
         )}
       >
         {isMissed ? (

@@ -355,7 +355,7 @@ export function ConversationCard({
           >
             <span
               className={cn(
-                "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-[1px] font-display text-[10px] font-bold",
+                "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px font-display text-[10px] font-bold",
                 conversation.sessionExpired
                   ? "border-[var(--color-danger)]/25 bg-[var(--color-danger)]/[0.10] text-[var(--color-danger-text)]"
                   : "border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-warning-text)]",

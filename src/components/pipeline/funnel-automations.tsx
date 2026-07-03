@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -485,12 +486,12 @@ function QuickRuleForm({
                 triggerClassName="h-7 w-full text-xs"
               />
             ) : action.type === "send_message" ? (
-              <textarea
+              <Textarea
                 value={action.value}
                 onChange={(e) => updateAction(idx, { value: e.target.value })}
                 placeholder={ACTION_PLACEHOLDERS[action.type]}
                 rows={2}
-                className="w-full resize-none rounded border border-border bg-white px-2 py-1 text-xs outline-none placeholder:text-[var(--color-ink-muted)] focus-visible:ring-1 focus-visible:ring-indigo-400"
+                className="w-full resize-none text-xs"
               />
             ) : (
               <Input

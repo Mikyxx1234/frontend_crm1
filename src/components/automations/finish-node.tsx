@@ -26,7 +26,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
         "group/node relative min-w-[200px] max-w-[260px] rounded-lg border bg-white transition-all duration-200",
         selected
           ? "border-rose-400/60 ring-2 ring-rose-300/30 shadow-[0_10px_30px_-10px_rgba(244,63,94,0.4)]"
-          : "border-white/60 shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[0_10px_30px_-10px_rgba(244,63,94,0.3)]"
+          : "border-[var(--glass-border)] shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[0_10px_30px_-10px_rgba(244,63,94,0.3)]"
       )}
     >
       <Handle
@@ -34,7 +34,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
         position={Position.Left}
         id="input"
         style={{ left: -6, top: "50%" }}
-        className="size-3! border-2! border-white! bg-slate-300!"
+        className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
 
       {data.stepIndex != null && (
@@ -47,7 +47,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
             fechar o fluxo visualmente */}
         <div className="relative overflow-hidden bg-linear-to-br from-rose-500 via-rose-500 to-rose-600 px-4 py-3 text-white">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/70 to-transparent" />
-          <div className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-white/15 blur-2xl" />
+          <div className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-[var(--glass-bg-subtle)] blur-2xl" />
 
           <div className="relative flex items-center gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
@@ -65,7 +65,7 @@ export function FinishNode({ data, selected }: NodeProps<FinishNodeData>) {
               <TooltipHost label="Remover passo" side="top">
                 <button
                   type="button"
-                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-white/70 opacity-0 transition-all hover:bg-white/15 hover:text-white group-hover/node:opacity-100"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-white/70 opacity-0 transition-all hover:bg-[var(--glass-bg-subtle)] hover:text-white group-hover/node:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     data.onDelete?.();

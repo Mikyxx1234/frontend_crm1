@@ -6,6 +6,7 @@ import { IconRobot as Bot, IconCheck as Check, IconLoader2 as Loader2, IconPenci
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * Balão de rascunho gerado por um agente de IA em modo DRAFT.
@@ -94,11 +95,11 @@ export function AIDraftCard({
         </div>
 
         {editing ? (
-          <textarea
+            <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={Math.min(8, Math.max(3, draft.split("\n").length))}
-            className="w-full resize-none rounded-lg border border-indigo-200 bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 dark:border-indigo-800"
+            className="w-full resize-none"
           />
         ) : (
           <p className="whitespace-pre-wrap text-foreground/90">{draft}</p>

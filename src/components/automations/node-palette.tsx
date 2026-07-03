@@ -82,7 +82,7 @@ export function NodePalette({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "scrollbar-thin flex flex-col gap-4 overflow-y-auto border-l border-[var(--glass-border-subtle)] bg-white/85 p-4 backdrop-blur-xl",
+        "scrollbar-thin flex flex-col gap-4 overflow-y-auto border-l border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] p-4 backdrop-blur-xl",
         className
       )}
     >

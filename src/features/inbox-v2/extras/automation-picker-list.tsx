@@ -179,7 +179,7 @@ export function AutomationPickerList({
                   </span>
                 </div>
                 {a.description ? (
-                  <div className="mt-0.5 line-clamp-2 pl-[18px] text-[11.5px] text-[var(--text-muted)]">
+                  <div className="mt-0.5 line-clamp-2 pl-4.5 text-[11.5px] text-[var(--text-muted)]">
                     {a.description}
                   </div>
                 ) : null}

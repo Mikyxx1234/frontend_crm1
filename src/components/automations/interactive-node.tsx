@@ -87,7 +87,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
       <Handle
         type="target"
         position={Position.Left}
-        className="size-3! border-2! border-white! bg-slate-300!"
+        className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
 
       {/* Header */}

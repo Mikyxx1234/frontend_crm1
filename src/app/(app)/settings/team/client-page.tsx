@@ -600,14 +600,14 @@ export default function TeamV2ClientPage() {
                         <button
                           type="button"
                           onClick={() => openPasswordDialog(u)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-[7px] font-display text-[12px] font-bold text-[var(--brand-primary-dark,#3d52e8)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)]"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 font-display text-[12px] font-bold text-[var(--brand-primary-dark,#3d52e8)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--glass-bg-strong)]"
                         >
                           <IconKey size={13} /> Senha
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(u)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-danger,#e11d48)] px-3 py-[7px] font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--color-danger,#e11d48)] px-3 py-2 font-display text-[12px] font-bold text-white transition-all hover:-translate-y-px"
                         >
                           <IconTrash size={13} /> Excluir
                         </button>

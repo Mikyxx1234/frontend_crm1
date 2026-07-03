@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { cn, formatDateTime } from "@/lib/utils";
 
 type ConversationRow = {
@@ -341,12 +342,12 @@ function NotesTab({ contactId, notes: initialNotes }: { contactId: string; notes
       <Separator />
 
       <form onSubmit={onSubmit} className="flex gap-2 p-3">
-        <textarea
+        <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Escreva uma nota…"
           rows={2}
-          className="min-h-[44px] flex-1 resize-none rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm shadow-inner outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="min-h-[44px] flex-1 resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(e); }
           }}

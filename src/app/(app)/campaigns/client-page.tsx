@@ -243,7 +243,7 @@ function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
       </div>
 
       <span
-        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-[11px] py-1 font-display text-[11.5px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current ${TONE_CLASSES[meta.tone]} ${
+        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 font-display text-[11.5px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current ${TONE_CLASSES[meta.tone]} ${
           isSending ? "before:animate-pulse" : ""
         }`}
       >

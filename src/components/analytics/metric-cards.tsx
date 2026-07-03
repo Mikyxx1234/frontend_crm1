@@ -142,7 +142,7 @@ function MetricSkeleton({ accent }: { accent: BentoAccent }) {
             tone.bg,
           )}
         >
-          <span className={cn("size-5 animate-pulse rounded bg-white/60", tone.text)} />
+          <span className={cn("size-5 animate-pulse rounded bg-[var(--glass-bg-overlay)]", tone.text)} />
         </span>
         <span className="h-5 w-14 animate-pulse rounded-full bg-[var(--glass-bg-base)]" />
       </div>

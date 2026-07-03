@@ -4,6 +4,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconFileText as FileText, IconLoader2 as Loader2, IconSend as Send } from "@tabler/icons-react";
 
+import { Textarea } from "@/components/ui/textarea";
 import { cn, formatDateTime } from "@/lib/utils";
 
 import type { DealDetailNote } from "../shared";
@@ -110,17 +111,12 @@ export function NotesPanel({ dealId, contactId, onCreated }: NotesPanelProps) {
         )}
       >
         <div className="flex items-end gap-2">
-          <textarea
+          <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Escreva uma nota..."
             rows={2}
-            className={cn(
-              "min-h-[44px] flex-1 resize-none rounded-2xl border border-border bg-white",
-              "px-3.5 py-2.5 text-[14px] tracking-tight text-[var(--text-primary)] outline-none",
-              "placeholder:text-[var(--color-ink-muted)]",
-              "focus-visible:border-[var(--color-primary)]/50 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20",
-            )}
+            className="min-h-[44px] flex-1 resize-none"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentPlayground } from "@/components/ai-agents/agent-playground";
@@ -580,16 +582,16 @@ function QuickEditDialog({
 
               <div className="grid gap-2">
                 <Label htmlFor="ed-model">Modelo</Label>
-                <select
+                <SelectNative
                   id="ed-model"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                  className="rounded-xl text-sm"
                 >
                   <option value="gpt-4o-mini">gpt-4o-mini</option>
                   <option value="gpt-4o">gpt-4o</option>
                   <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                </select>
+                </SelectNative>
               </div>
 
               <div className="grid gap-2">
@@ -707,13 +709,13 @@ function QuickEditDialog({
 
             <div className="grid gap-2">
               <Label htmlFor="ed-override">Instruções adicionais (opcional)</Label>
-              <textarea
+              <Textarea
                 id="ed-override"
                 value={override}
                 onChange={(e) => setOverride(e.target.value)}
                 rows={5}
                 placeholder="Regras específicas do seu negócio. Será somado ao prompt do arquétipo."
-                className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                className="resize-none rounded-xl text-sm"
               />
             </div>
 

@@ -228,7 +228,7 @@ export function KanbanCard({
     <>
       <div
         className={cn(
-          // Surface: tokens de glass do tema — `bg-white/55` causava cartões
+          // Surface: tokens de glass do tema — `bg-[var(--glass-bg-overlay)]` causava cartões
           // esbranquiçados em dark mode mesmo com o variant `.dark` ativo.
           "group relative cursor-pointer rounded-[18px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] backdrop-blur-sm transition-all",
           dt.card.shadow,

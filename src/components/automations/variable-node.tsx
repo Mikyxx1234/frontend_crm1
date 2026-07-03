@@ -35,7 +35,7 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
       <Handle
         type="target"
         position={Position.Left}
-        className="size-3! border-2! border-white! bg-slate-300!"
+        className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
       <div className="flex items-start gap-3 px-3.5 py-3">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-fuchsia-50 text-fuchsia-500 ring-1 ring-fuchsia-100">

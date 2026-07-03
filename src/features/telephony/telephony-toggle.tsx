@@ -81,7 +81,7 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
       </button>
 
       {isProvisioning && (
-        <span className="flex items-center gap-1 text-xs text-amber-400">
+        <span className="flex items-center gap-1 text-xs text-[var(--color-warning)]/80">
           <IconLoader2 size={11} className="animate-spin" />
           Provisionando…
         </span>
@@ -94,7 +94,7 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
       )}
 
       {step === "ACTIVE" && enabled && (
-        <span className="text-xs text-emerald-400">Ativo</span>
+        <span className="text-xs text-[var(--color-success)]/80">Ativo</span>
       )}
     </div>
   );

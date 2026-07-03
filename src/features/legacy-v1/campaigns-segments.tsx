@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -266,8 +267,8 @@ export default function SegmentsPage({
 
             <div className="space-y-2">
               <Label>Estágio de vida</Label>
-              <select
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              <SelectNative
+                className="h-10 w-full rounded-md text-sm"
                 value={filters.lifecycleStage ?? ""}
                 onChange={(e) =>
                   setFilters({ ...filters, lifecycleStage: e.target.value || undefined })
@@ -281,7 +282,7 @@ export default function SegmentsPage({
                 <option value="OPPORTUNITY">Opportunity</option>
                 <option value="CUSTOMER">Customer</option>
                 <option value="EVANGELIST">Evangelist</option>
-              </select>
+              </SelectNative>
             </div>
 
             <div className="space-y-2">

@@ -32,12 +32,12 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
         "group/trigger relative min-w-[230px] max-w-[280px] cursor-pointer overflow-hidden rounded-lg border bg-white transition-all duration-200",
         selected
           ? "border-primary/50 shadow-[var(--shadow-indigo-glow)] ring-2 ring-primary/30"
-          : "border-white/60 shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[var(--shadow-indigo-glow)]"
+          : "border-[var(--glass-border)] shadow-[var(--shadow-lg)] hover:-translate-y-px hover:shadow-[var(--shadow-indigo-glow)]"
       )}
     >
       {/* Pílula "Editar" — aparece no hover, indica que o nó é clicável.
           pointer-events-none pra não interceptar o click do canvas. */}
-      <span className="pointer-events-none absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold tracking-tight text-primary opacity-0 shadow-sm ring-1 ring-primary/20 backdrop-blur-sm transition-opacity duration-150 group-hover/trigger:opacity-100">
+      <span className="pointer-events-none absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg-modal)] px-2 py-0.5 text-[10px] font-bold tracking-tight text-primary opacity-0 shadow-sm ring-1 ring-primary/20 backdrop-blur-sm transition-opacity duration-150 group-hover/trigger:opacity-100">
         <Pencil className="size-3" strokeWidth={2.4} />
         Editar
       </span>
@@ -46,7 +46,7 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
         {/* Brilho neon sutil no topo */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/70 to-transparent" />
         {/* Halo radial decorativo no canto */}
-        <div className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-white/15 blur-2xl" />
+        <div className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full bg-[var(--glass-bg-subtle)] blur-2xl" />
 
         <div className="relative flex items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
@@ -61,7 +61,7 @@ export function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
             </p>
           </div>
           <span className="relative flex size-2.5 shrink-0">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/60 opacity-75" />
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--glass-bg-overlay)] opacity-75" />
             <span className="relative inline-flex size-2.5 rounded-full bg-white" />
           </span>
         </div>

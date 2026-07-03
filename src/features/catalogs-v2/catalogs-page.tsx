@@ -353,7 +353,7 @@ export function CatalogsManager() {
           <span className="font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
             Catálogos da organização
           </span>
-          <span className="rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-[1px] text-[11px] font-bold text-[var(--text-muted)]">
+          <span className="rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px text-[11px] font-bold text-[var(--text-muted)]">
             {filtered.length}
           </span>
           {query && (

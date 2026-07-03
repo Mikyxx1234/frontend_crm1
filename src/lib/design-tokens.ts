@@ -54,14 +54,14 @@ export const dt = {
     leaderLabel: "mb-1 text-[10px] font-medium text-white/45",
     leaderTitle: "mb-3 truncate text-[14px] font-semibold text-white",
     leaderValue: "text-[13px] font-bold text-white tabular-nums",
-    leaderBarTrack: "relative h-[3px] overflow-hidden rounded-full bg-white/10",
+    leaderBarTrack: "relative h-[3px] overflow-hidden rounded-full bg-[var(--glass-bg-subtle)]",
     leaderBarFill: "absolute inset-y-0 left-0 rounded-full bg-sky-400 transition-all",
     leaderMeta: "mt-1 text-[10px] text-white/35",
   },
 
   chat: {
     bubble: {
-      /** Cores via `var(--chat-bubble-sent-*)` no wrapper; padding no bloco interno (`px-[9px] py-[5px]`). */
+      /** Cores via `var(--chat-bubble-sent-*)` no wrapper; padding no bloco interno (`px-2 py-1`). */
       sent: "rounded-[var(--radius-input)] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
       /** Recebida — fundo via token de tema para suportar dark mode corretamente. */
       received:

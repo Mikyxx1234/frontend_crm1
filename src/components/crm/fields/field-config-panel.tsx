@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { useFieldLayout, type FieldLayoutContext } from "@/hooks/use-field-layout";
 import { type SectionConfig } from "@/lib/field-layout";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { Textarea } from "@/components/ui/textarea";
 import {
   type HighlightRule,
   type HighlightOp,
@@ -640,7 +641,7 @@ function FieldForm({
                 {tab === "formatacao" && <IconSparkles size={10} />}
                 {tab === "campos" ? "Campos" : "Formatação"}
                 {tab === "formatacao" && highlightRules.length > 0 && (
-                  <span className="ml-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/30 text-[8px] font-bold">
+                  <span className="ml-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--glass-bg-panel)] text-[8px] font-bold">
                     {highlightRules.length}
                   </span>
                 )}
@@ -690,12 +691,12 @@ function FieldForm({
               <span className="font-display text-[10.5px] font-semibold text-[var(--text-muted)]">
                 Opções (uma por linha)
               </span>
-              <textarea
+              <Textarea
                 value={optionsText}
                 onChange={(e) => setOptionsText(e.target.value)}
                 rows={3}
                 placeholder={"Opção 1\nOpção 2"}
-                className="rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2.5 py-2 font-display text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
+                className="resize-none text-[12px]"
               />
             </label>
           )}

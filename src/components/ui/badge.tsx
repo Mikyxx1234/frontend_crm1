@@ -12,9 +12,9 @@ const badgeVariants = cva(
         default:
           "border-primary/25 bg-[var(--color-primary-soft)] text-primary",
         secondary:
-          "border-white/40 bg-white/50 text-[var(--color-ink-soft)] backdrop-blur-sm",
+          "border-[var(--glass-border)] bg-white/50 text-[var(--color-ink-soft)] backdrop-blur-sm",
         outline:
-          "border-white/55 bg-transparent text-foreground",
+          "border-[var(--glass-border)] bg-transparent text-foreground",
         destructive:
           "border-destructive/25 bg-[var(--color-destructive-soft)] text-destructive",
         success:
@@ -35,10 +35,10 @@ const badgeVariants = cva(
           "border-[var(--color-warning)]/25 bg-[var(--color-warning-soft)] text-[var(--color-warn-text)]",
         // Glass — translúcida com blur
         glass:
-          "border-white/55 bg-white/45 text-foreground backdrop-blur-sm shadow-[var(--glass-shadow-sm)]",
+          "border-[var(--glass-border)] bg-white/45 text-foreground backdrop-blur-sm shadow-[var(--glass-shadow-sm)]",
         // Muted — chip neutro
         muted:
-          "border-white/40 bg-slate-400/15 text-[var(--color-ink-muted)]",
+          "border-[var(--glass-border)] bg-slate-400/15 text-[var(--color-ink-muted)]",
       },
     },
     defaultVariants: {

@@ -102,7 +102,7 @@ const TONE_BG: Record<ChipTone, string> = {
   amber: "bg-[var(--color-warn-bg)] text-[var(--color-warn)] ring-amber-200/70 hover:bg-[var(--color-warn-bg)] dark:bg-[var(--color-warning)]/10 dark:text-amber-300 dark:ring-amber-500/30",
   red: "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] ring-red-200/70 hover:bg-red-100 dark:bg-[var(--color-danger)]/10 dark:text-red-300 dark:ring-red-500/30",
   emerald: "bg-[var(--color-success-bg)] text-[var(--color-success-text)] ring-emerald-200/70 hover:bg-[var(--color-success-bg)] dark:bg-[var(--color-success)]/10 dark:text-emerald-300 dark:ring-emerald-500/30",
-  slate: "bg-[var(--color-bg-subtle)] text-[var(--color-ink-soft)] ring-slate-200/70 hover:bg-[var(--glass-bg-base)] dark:bg-slate-800/50 dark:text-[var(--color-ink-muted)] dark:ring-slate-700",
+  slate: "bg-[var(--color-bg-subtle)] text-[var(--color-ink-soft)] ring-slate-200/70 hover:bg-[var(--glass-bg-base)] dark:bg-[var(--glass-bg-base)]/50 dark:text-[var(--color-ink-muted)] dark:ring-slate-700",
 };
 
 function Chip({

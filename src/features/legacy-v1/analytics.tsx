@@ -29,7 +29,9 @@ import {
 import { motion } from "framer-motion";
 import { IconArrowUpRight as ArrowUpRight, IconCalendar as Calendar, IconChartBar as BarChart3 } from "@tabler/icons-react";
 
+import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { SelectNative } from "@/components/ui/select";
 
 import { ForecastChart } from "@/components/analytics/forecast-chart";
 import { FunnelChart } from "@/components/analytics/funnel-chart";
@@ -229,26 +231,23 @@ export default function AnalyticsPage() {
 
           <div className="flex w-full flex-col gap-2 sm:max-w-xs lg:w-72">
             <span className={bentoLabelClass}>Pipeline</span>
-            <div className="relative">
-              <select
-                id="pipeline-select"
-                value={pipelineId}
-                onChange={(e) => setPipelineId(e.target.value)}
-                disabled={!pipelines?.length}
-                className="w-full appearance-none rounded-xl border border-border bg-[var(--color-bg-subtle)] px-4 py-2.5 text-[13px] font-semibold text-foreground transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {!pipelines?.length ? (
-                  <option value="">Carregando…</option>
-                ) : (
-                  pipelines.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))
-                )}
-              </select>
-              <ArrowUpRight className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 rotate-90 text-[var(--color-ink-muted)]" />
-            </div>
+            <SelectNative
+              id="pipeline-select"
+              value={pipelineId}
+              onChange={(e) => setPipelineId(e.target.value)}
+              disabled={!pipelines?.length}
+              className="w-full rounded-xl text-[13px] font-semibold"
+            >
+              {!pipelines?.length ? (
+                <option value="">Carregando…</option>
+              ) : (
+                pipelines.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))
+              )}
+            </SelectNative>
           </div>
         </div>
 
@@ -256,22 +255,22 @@ export default function AnalyticsPage() {
           <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row">
             <div className="flex-1 space-y-2 sm:max-w-[220px]">
               <span className={bentoLabelClass}>De</span>
-              <input
+              <Input
                 id="from-date"
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl text-[13px] font-semibold"
               />
             </div>
             <div className="flex-1 space-y-2 sm:max-w-[220px]">
               <span className={bentoLabelClass}>Até</span>
-              <input
+              <Input
                 id="to-date"
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl text-[13px] font-semibold"
               />
             </div>
           </div>

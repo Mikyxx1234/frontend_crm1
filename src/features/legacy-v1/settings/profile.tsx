@@ -41,6 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { useConfirm } from "@/hooks/use-confirm";
 import type { ChatThemeKey } from "@/lib/chat-theme";
@@ -556,13 +557,13 @@ function ProfileCard({
                 id="closing-message"
                 label="Sua mensagem de encerramento"
               >
-                <textarea
+                <Textarea
                   id="closing-message"
                   value={closingMessage}
                   onChange={(e) => setClosingMessage(e.target.value)}
                   placeholder="Sua mensagem de encerramento"
                   rows={4}
-                  className="w-full resize-y rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--color-ink-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
+                  className="w-full resize-y rounded-xl text-sm placeholder:text-[var(--color-ink-muted)]"
                 />
               </Field>
             </>

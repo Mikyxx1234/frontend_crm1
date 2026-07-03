@@ -10,7 +10,7 @@ import { IconChecklist } from "@tabler/icons-react";
 
 export function DealActivitiesTab() {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 p-[22px] text-center text-[var(--text-muted,#718096)]">
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-5.5 text-center text-[var(--text-muted,#718096)]">
       <IconChecklist size={36} className="opacity-40" />
       <div className="font-display text-[13px] font-semibold">
         Atividades em breve

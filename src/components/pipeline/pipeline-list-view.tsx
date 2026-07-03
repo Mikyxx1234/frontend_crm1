@@ -201,9 +201,9 @@ export function PipelineListView({
   };
 
   return (
-    <div className="h-full overflow-auto bg-white dark:bg-slate-900">
+    <div className="h-full overflow-auto bg-white dark:bg-[var(--glass-bg-modal)]">
       <table className="w-full min-w-[900px] text-left text-[13px]">
-        <thead className="sticky top-0 z-10 border-b border-[var(--glass-border-subtle)] bg-white/95 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
+        <thead className="sticky top-0 z-10 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-modal)] backdrop-blur-sm dark:border-[var(--glass-border)] dark:bg-[var(--glass-bg-modal)]/95">
           <tr>
             <th className="w-10 px-4 py-3">
               <input
@@ -211,7 +211,7 @@ export function PipelineListView({
                 checked={allSelected}
                 ref={(el) => { if (el) el.indeterminate = !allSelected && someSelected; }}
                 onChange={toggleAll}
-                className="size-4 rounded border-[var(--glass-border)] text-[var(--color-info)] focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-800"
+                className="size-4 rounded border-[var(--glass-border)] text-[var(--color-info)] focus:ring-blue-500/30 dark:border-slate-600 dark:bg-[var(--glass-bg-base)]"
               />
             </th>
             {([
@@ -251,7 +251,7 @@ export function PipelineListView({
                 <tr
                   key={deal.id}
                   className={cn(
-                    "cursor-pointer border-b border-[var(--glass-border-subtle)] transition-colors hover:bg-[var(--color-bg-subtle)] dark:border-slate-800",
+                    "cursor-pointer border-b border-[var(--glass-border-subtle)] transition-colors hover:bg-[var(--color-bg-subtle)] dark:border-[var(--glass-border)]",
                     selectedDeals.has(deal.id) && "bg-blue-50/50 hover:bg-blue-50/70 dark:bg-[var(--color-info)]/10 dark:hover:bg-[var(--color-info)]/15",
                   )}
                 >
@@ -260,7 +260,7 @@ export function PipelineListView({
                       type="checkbox"
                       checked={selectedDeals.has(deal.id)}
                       onChange={() => toggleOne(deal.id)}
-                      className="size-4 rounded border-[var(--glass-border)] text-[var(--color-info)] focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-800"
+                      className="size-4 rounded border-[var(--glass-border)] text-[var(--color-info)] focus:ring-blue-500/30 dark:border-slate-600 dark:bg-[var(--glass-bg-base)]"
                     />
                   </td>
                   <td

@@ -67,7 +67,7 @@ export function ConversationActionsMenu({
               type="button"
               disabled={toggleResolve.isPending}
               onClick={handleToggleResolve}
-              className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2.5 py-2 text-left text-[13px] text-[var(--text-primary)] hover:bg-white/10 disabled:opacity-50"
+              className="flex w-full items-center justify-between rounded-[var(--radius-sm)] px-2.5 py-2 text-left text-[13px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)] disabled:opacity-50"
             >
               <span>
                 {isResolved ? "Reabrir conversa" : "Finalizar conversa"}

@@ -199,7 +199,7 @@ export function PresenceDashboard({
 
         <DropdownMenuContent
           align="end"
-          className="z-(--z-popover) min-w-[208px] rounded-xl border border-[var(--glass-border-subtle)] dark:border-slate-700 p-1 shadow-[0_12px_40px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
+          className="z-(--z-popover) min-w-[208px] rounded-xl border border-[var(--glass-border-subtle)] dark:border-[var(--glass-border)] p-1 shadow-[0_12px_40px_rgba(15,23,42,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-md"
           style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
         >
           <p className="px-2 pb-1 pt-0.5 font-sans text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)] dark:text-[var(--text-muted)]">

@@ -72,7 +72,7 @@ export function LandingClient() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 py-8">
+      <footer className="border-t border-[var(--glass-border-subtle)] py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-zinc-300 md:flex-row md:justify-between md:text-left">
           <span>© {new Date().getFullYear()} EduIT CRM. Todos os direitos reservados.</span>
           <span>

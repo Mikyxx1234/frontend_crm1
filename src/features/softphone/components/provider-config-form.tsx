@@ -72,7 +72,7 @@ export function ProviderConfigForm() {
             <span className="text-xs text-[var(--text-muted)] truncate">{c.webhookUrl}</span>
           </div>
           <span
-            className={`text-xs ${c.isActive ? "text-emerald-400" : "text-[var(--text-muted)]"}`}
+            className={`text-xs ${c.isActive ? "text-[var(--color-success)]/80" : "text-[var(--text-muted)]"}`}
           >
             {c.isActive ? "Ativo" : "Inativo"}
           </span>

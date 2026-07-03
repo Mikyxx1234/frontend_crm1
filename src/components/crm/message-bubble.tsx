@@ -348,7 +348,7 @@ function FormBubble({ message, className }: { message: Message; className?: stri
                   </p>
                   {/* No último campo, o timestamp flutua no canto inferior direito — padrão WhatsApp */}
                   <div className="relative">
-                    <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)] pr-[42px]">
+                    <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)] pr-11">
                       {f.value}
                     </p>
                     {isLast && (
@@ -464,11 +464,11 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   const timeColor    = isOutgoing ? "text-white/70"          : "text-[var(--text-muted)]"
   const micColor     = isOutgoing ? "text-white/50"          : "text-[var(--text-muted)]"
   const transcriptBg = isOutgoing
-    ? "bg-white/10 text-white/90 border-white/20"
+    ? "bg-[var(--glass-bg-subtle)] text-white/90 border-[var(--glass-border-subtle)]"
     : "bg-[var(--brand-primary)]/5 text-[var(--text-secondary)] border-[var(--glass-border-subtle)]"
   // Botão "Transcrever": pill com fundo sólido para garantir contraste em qualquer cor de bolha.
   const btnBase = isOutgoing
-    ? "bg-white/20 text-white hover:bg-white/30"
+    ? "bg-white/20 text-white hover:bg-[var(--glass-bg-panel)]"
     : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20"
 
   return (
@@ -498,7 +498,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-opacity",
-            isOutgoing ? "bg-white/20 hover:bg-white/30" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
+            isOutgoing ? "bg-white/20 hover:bg-[var(--glass-bg-panel)]" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
             !url && "opacity-40 cursor-not-allowed",
           )}
         >
@@ -543,7 +543,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           disabled={transcript.status === "loading"}
           onClick={handleTranscribe}
           className={cn(
-            "ml-[25px] flex items-center gap-1 self-start rounded-full px-2 py-0.5 transition-colors",
+            "ml-6 flex items-center gap-1 self-start rounded-full px-2 py-0.5 transition-colors",
             btnBase,
             transcript.status === "loading" && "cursor-wait",
           )}
@@ -652,7 +652,7 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
         download
         className={cn(
           "flex min-w-[200px] max-w-[280px] items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 transition-colors",
-          isOutgoing ? "bg-white/15 hover:bg-white/25" : "bg-[var(--glass-bg-strong)] hover:bg-[var(--glass-bg-overlay)]",
+          isOutgoing ? "bg-[var(--glass-bg-subtle)] hover:bg-white/25" : "bg-[var(--glass-bg-strong)] hover:bg-[var(--glass-bg-overlay)]",
         )}
       >
         <div className={cn(
@@ -895,7 +895,7 @@ export function MessageBubble({
         )}
         <div
           className={cn(
-            "relative min-w-0 rounded-[var(--radius-lg)] px-[14px] py-2 text-sm leading-[1.45]",
+            "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
                 ? "rounded-br bg-[var(--brand-gradient-end)] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
@@ -907,7 +907,7 @@ export function MessageBubble({
           {/* Badge AUTOMAÇÃO */}
           {isBot && (
             <div className="mb-1.5 flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white/90">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white/90">
                 <IconRobot size={10} />
                 {senderName || "Automação"}
               </span>

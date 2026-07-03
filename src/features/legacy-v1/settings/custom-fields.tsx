@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -468,11 +469,11 @@ function FieldFormDialog({
           {showOptions && (
             <div className="space-y-1.5">
               <Label className="text-xs">Opções (uma por linha)</Label>
-              <textarea
+              <Textarea
                 value={optionsText}
                 onChange={(e) => setOptionsText(e.target.value)}
                 rows={4}
-                className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                className="w-full rounded-lg text-sm"
                 placeholder={"Opção 1\nOpção 2\nOpção 3"}
               />
             </div>

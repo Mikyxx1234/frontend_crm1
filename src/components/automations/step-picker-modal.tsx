@@ -19,8 +19,8 @@ import { STEP_GROUPS, stepColor, stepDescription, stepIcon } from "./add-step-no
 // search + grid 2-col de cards, no padrao premium da referencia.
 //
 // Visual:
-//  - backdrop fixed inset-0 z-(--z-modal) bg-slate-900/30 backdrop-blur-md
-//  - card central rounded-[28px] bg-white/95 backdrop-blur-xl shadow-[var(--shadow-lg)]
+//  - backdrop fixed inset-0 z-(--z-modal) bg-[var(--glass-bg-modal)]/30 backdrop-blur-md
+//  - card central rounded-[28px] bg-[var(--glass-bg-modal)] backdrop-blur-xl shadow-[var(--shadow-lg)]
 //  - header sticky com icone gradiente, titulo font-[900] tracking-tighter,
 //    subtitle, search input pill e botao X
 //  - secoes com eyebrow colorido (icone + label)

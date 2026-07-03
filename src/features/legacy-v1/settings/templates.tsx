@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -384,7 +385,7 @@ function TemplateForm({
       </div>
       <div className="grid gap-2">
         <Label htmlFor="tpl-content">Mensagem</Label>
-        <textarea
+        <Textarea
           id="tpl-content"
           ref={contentRef}
           value={content}
@@ -392,7 +393,7 @@ function TemplateForm({
           placeholder="Olá {{contato.primeiroNome}}, tudo bem? Vi seu interesse no negócio {{negocio.titulo}}..."
           rows={6}
           required
-          className="resize-none rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
+          className="resize-none rounded-[var(--radius-lg)] text-sm placeholder:text-[var(--text-muted)]"
         />
         <p className="text-xs text-[var(--text-muted)]">
           Clique em uma variável abaixo para inseri-la na posição do cursor. Na hora de

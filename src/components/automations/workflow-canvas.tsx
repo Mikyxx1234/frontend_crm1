@@ -1459,10 +1459,10 @@ function WorkflowCanvasInner({
             color={isDark ? "#33405c" : "#cbd5e1"}
           />
           <Controls
-            className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/85! shadow-[var(--shadow-lg)]! backdrop-blur-xl! [&>button]:border-0! [&>button]:bg-transparent! [&>button]:text-[var(--color-ink-soft)]! [&>button:hover]:bg-primary/10! [&>button:hover]:text-primary!"
+            className="m-4! overflow-hidden rounded-2xl! border! border-[var(--glass-border)]! bg-[var(--glass-bg-base)]! shadow-[var(--shadow-lg)]! backdrop-blur-xl! [&>button]:border-0! [&>button]:bg-transparent! [&>button]:text-[var(--color-ink-soft)]! [&>button:hover]:bg-primary/10! [&>button:hover]:text-primary!"
           />
           <MiniMap
-            className="m-4! overflow-hidden rounded-2xl! border! border-white/60! bg-white/70! shadow-[var(--shadow-lg)]! backdrop-blur-xl!"
+            className="m-4! overflow-hidden rounded-2xl! border! border-[var(--glass-border)]! bg-white/70! shadow-[var(--shadow-lg)]! backdrop-blur-xl!"
             maskColor={isDark ? "rgba(0,0,0,0.30)" : "rgba(13,27,62,0.06)"}
             nodeColor={(n) => {
               if (isAddStepNodeId(n.id)) return "transparent";

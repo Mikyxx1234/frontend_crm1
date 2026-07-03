@@ -461,7 +461,7 @@ function KpiCard({
   tone: keyof typeof KPI_TONES
 }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-[18px] py-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+    <div className="flex items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4.5 py-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
       <span
         className={cn(
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]",

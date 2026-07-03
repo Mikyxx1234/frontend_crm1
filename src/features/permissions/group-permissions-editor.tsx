@@ -33,6 +33,7 @@ import {
 import { apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { Textarea } from "@/components/ui/textarea";
 
 import {
   useAddGroupMember,
@@ -378,12 +379,12 @@ export function GroupPermissionsEditor({
             />
           </Field>
           <Field label="Descrição">
-            <textarea
+            <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               placeholder="Para que serve este grupo"
-              className="w-full resize-y rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white px-3 py-2.5 text-[13.5px] text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--input-border-focus)] focus:ring-[3px] focus:ring-[var(--input-ring-focus)]"
+              className="w-full resize-y"
             />
           </Field>
 

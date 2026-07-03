@@ -18,7 +18,7 @@ export function StagePills({ stages, onStageClick, className }: StagePillsProps)
     <nav
       aria-label="Etapa atual do negócio"
       className={cn(
-        "flex gap-1.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-[22px] py-3.5",
+        "flex gap-1.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-5.5 py-3.5",
         className
       )}
     >

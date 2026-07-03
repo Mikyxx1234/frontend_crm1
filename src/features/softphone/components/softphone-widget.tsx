@@ -208,7 +208,7 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
   // + ramal e botão vermelho pra colapsar. Fiel ao mockup fornecido.
   if (isRegistered) {
     return (
-      <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--glass-border)] bg-white/90 p-2 shadow-lg backdrop-blur-md dark:border-white/10 dark:bg-[var(--glass-bg-panel)]">
+      <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--glass-border)] bg-white/90 p-2 shadow-lg backdrop-blur-md dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-panel)]">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-success-bg)] text-[var(--color-success-text)] dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]">
           <IconPhone size={18} stroke={2.2} />
         </span>
@@ -274,7 +274,7 @@ function StatusChip({ status, ramal, error, onReconnect, onHide }: StatusChipPro
               onClick={onReconnect}
               aria-label="Tentar reconectar"
               title="Tentar reconectar"
-              className="inline-flex items-center justify-center rounded-full p-1 hover:bg-black/10 dark:hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-full p-1 hover:bg-black/10 dark:hover:bg-[var(--glass-bg-subtle)]"
             >
               <IconRefresh size={11} />
             </button>
@@ -331,8 +331,8 @@ function CallPanel({
     <div
       className={cn(
         "w-[280px] rounded-2xl border p-4 shadow-2xl backdrop-blur-xl",
-        "border-white/50 bg-white/85 text-[var(--text-primary)]",
-        "dark:border-white/10 dark:bg-[var(--glass-bg-panel)]",
+        "border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--text-primary)]",
+        "dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-panel)]",
       )}
       style={{
         boxShadow: "var(--glass-shadow, 0 20px 60px rgba(0,0,0,0.18))",
@@ -412,7 +412,7 @@ function CallPanel({
                 "inline-flex h-10 w-10 items-center justify-center rounded-full border transition",
                 muted
                   ? "border-[var(--color-warning)] bg-[var(--color-warning)] text-white"
-                  : "border-[var(--glass-border)] bg-white/60 text-[var(--text-secondary)] hover:bg-[var(--glass-bg-subtle)] dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10",
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-subtle)] dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)] dark:hover:bg-[var(--glass-bg-subtle)]",
               )}
               title={muted ? "Reativar microfone" : "Silenciar microfone"}
             >
@@ -427,7 +427,7 @@ function CallPanel({
                 "inline-flex h-10 w-10 items-center justify-center rounded-full border transition",
                 held
                   ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                  : "border-[var(--glass-border)] bg-white/60 text-[var(--text-secondary)] hover:bg-[var(--glass-bg-subtle)] dark:border-white/15 dark:bg-white/5 dark:hover:bg-white/10",
+                  : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:bg-[var(--glass-bg-subtle)] dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)] dark:hover:bg-[var(--glass-bg-subtle)]",
               )}
               title={held ? "Retomar chamada" : "Colocar em espera"}
             >

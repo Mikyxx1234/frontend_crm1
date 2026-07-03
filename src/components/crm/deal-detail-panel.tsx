@@ -1250,7 +1250,7 @@ function TabsBar({
                       if (searchOpen) onSearchChange?.("")
                       setMenuOpen(false)
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-white/10"
+                    className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)]"
                   >
                     <IconSearch size={14} className="shrink-0 text-[var(--text-muted)]" />
                     {searchOpen ? "Fechar busca" : "Buscar na conversa"}
@@ -1269,7 +1269,7 @@ function TabsBar({
                           { onSuccess: () => setMenuOpen(false) },
                         )
                       }}
-                      className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-white/10 disabled:opacity-50"
+                      className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)] disabled:opacity-50"
                     >
                       {isResolved
                         ? <IconCircleDashed size={14} className="shrink-0 text-[var(--text-muted)]" />

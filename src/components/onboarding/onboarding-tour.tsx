@@ -108,7 +108,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
         aria-label={current.title}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-[var(--shadow-lg)] ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800",
+          "relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-[var(--shadow-lg)] ring-1 ring-slate-200 dark:bg-[var(--glass-bg-modal)] dark:ring-slate-800",
           "animate-in fade-in slide-in-from-bottom-6 duration-300",
         )}
       >
@@ -124,7 +124,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--color-bg-subtle)]/50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--color-bg-subtle)]/50 px-5 py-4 dark:border-[var(--glass-border)] dark:bg-[var(--glass-bg-modal)]/40">
           <div className="flex items-center gap-1.5">
             {STEPS.map((_, i) => (
               <span
@@ -135,7 +135,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
                     ? "w-6 bg-primary"
                     : i < step
                       ? "w-1.5 bg-primary/50"
-                      : "w-1.5 bg-slate-300 dark:bg-slate-700",
+                      : "w-1.5 bg-[var(--glass-border-subtle)] dark:bg-slate-700",
                 )}
               />
             ))}

@@ -37,7 +37,7 @@ function ActorBadge({
   type: "HUMAN" | "AI" | "AUTOMATION" | "INTEGRATION" | "SYSTEM";
 }) {
   const map = {
-    HUMAN: { Icon: UserIcon, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-slate-800 dark:text-slate-200" },
+    HUMAN: { Icon: UserIcon, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-[var(--glass-bg-base)] dark:text-slate-200" },
     AI: { Icon: Bot, cls: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/50 dark:text-fuchsia-300" },
     AUTOMATION: {
       Icon: Workflow,

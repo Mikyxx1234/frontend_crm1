@@ -15,8 +15,8 @@ function LoginShellFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-4">
-        <div className="mx-auto h-20 w-48 animate-pulse rounded-[var(--radius-card)] bg-white/30" />
-        <div className="h-64 w-full animate-pulse rounded-[var(--radius-card)] border border-white/40 bg-white/30 backdrop-blur" />
+        <div className="mx-auto h-20 w-48 animate-pulse rounded-[var(--radius-card)] bg-[var(--glass-bg-panel)]" />
+        <div className="h-64 w-full animate-pulse rounded-[var(--radius-card)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] backdrop-blur" />
       </div>
     </div>
   );
@@ -157,7 +157,7 @@ function LoginForm() {
             {[0, 1, 2].map((i) => (
               <motion.span
                 key={i}
-                className="absolute size-20 rounded-full border border-white/40"
+                className="absolute size-20 rounded-full border border-[var(--glass-border)]"
                 initial={{ scale: 0.7, opacity: 0.6 }}
                 animate={{ scale: [0.7, 1.7], opacity: [0.6, 0] }}
                 transition={{
@@ -171,7 +171,7 @@ function LoginForm() {
 
             {/* Halo de vidro com pop elástico */}
             <motion.div
-              className="relative flex size-24 items-center justify-center rounded-full bg-white/15 backdrop-blur-md"
+              className="relative flex size-24 items-center justify-center rounded-full bg-[var(--glass-bg-subtle)] backdrop-blur-md"
               initial={{ scale: 0, rotate: -25 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 220, damping: 14 }}
@@ -216,7 +216,7 @@ function LoginForm() {
           >
             Carregando o CRM…
           </motion.p>
-          <div className="mt-1 h-1 w-40 overflow-hidden rounded-full bg-white/15">
+          <div className="mt-1 h-1 w-40 overflow-hidden rounded-full bg-[var(--glass-bg-subtle)]">
             <motion.div
               className="h-full rounded-full bg-white"
               initial={{ width: "0%" }}
@@ -267,7 +267,7 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 w-full rounded-full border border-white/70 bg-white/80 pl-9 pr-4 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                className="h-11 w-full rounded-full border border-white/70 bg-[var(--glass-bg-base)] pl-9 pr-4 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
               />
             </div>
           </div>
@@ -292,7 +292,7 @@ function LoginForm() {
                 aria-invalid={!!error}
                 aria-describedby={error ? "login-error" : undefined}
                 className={cn(
-                  "h-11 w-full rounded-full border bg-white/80 pl-9 pr-11 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:outline-none focus:ring-2 disabled:opacity-50",
+                  "h-11 w-full rounded-full border bg-[var(--glass-bg-base)] pl-9 pr-11 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] backdrop-blur transition-all focus:outline-none focus:ring-2 disabled:opacity-50",
                   error
                     ? "border-[var(--color-danger)]/40 focus:border-[var(--color-danger)] focus:ring-[var(--color-danger)]/20"
                     : "border-white/70 focus:border-primary focus:ring-primary/20",

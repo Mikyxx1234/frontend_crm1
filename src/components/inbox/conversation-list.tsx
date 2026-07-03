@@ -221,7 +221,7 @@ export function InboxListHeader({
   agentCapacityLoading,
 }: InboxListHeaderProps) {
   return (
-    <div className="relative z-30 shrink-0 border-b border-white/40 bg-white/40 backdrop-blur dark:border-white/10 dark:bg-white/5">
+    <div className="relative z-30 shrink-0 border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)] backdrop-blur dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
       <div className="flex items-center justify-between px-3 pb-1.5 pt-3">
         <span className="font-display text-[15px] font-bold text-foreground">Conversas</span>
         <div className="flex min-w-0 max-w-[min(100%,11rem)] items-center gap-2">
@@ -279,7 +279,7 @@ export function InboxListHeader({
       )}
 
       <div className="flex items-center gap-1.5 px-3 pb-2">
-        <div className="flex h-9 flex-1 items-center gap-1.5 rounded-full border border-white/55 bg-white/55 px-3 backdrop-blur transition-all focus-within:border-primary focus-within:bg-white/75 focus-within:ring-[3px] focus-within:ring-primary/15">
+        <div className="flex h-9 flex-1 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 backdrop-blur transition-all focus-within:border-primary focus-within:bg-white/75 focus-within:ring-[3px] focus-within:ring-primary/15">
           <Search className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2} />
           <input
             value={search}
@@ -298,7 +298,7 @@ export function InboxListHeader({
             type="button"
             onClick={onToggleFilters}
             className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-full border border-white/55 bg-white/55 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/70 hover:text-foreground",
+              "flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/70 hover:text-foreground",
               showFilters && "border-primary/40 bg-primary/15 text-primary",
             )}
           >
@@ -434,7 +434,7 @@ function InboxCategorySelect({
 
         {selectOpen ? (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-(--z-popover) overflow-hidden rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-slate-700 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-(--z-popover) overflow-hidden rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-[var(--glass-border)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
             style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
             role="listbox"
             aria-label="Categoria da inbox"
@@ -1021,8 +1021,8 @@ function ConversationItem({
       {...staggerItem}
       layout
       className={cn(
-        "group relative flex w-full cursor-pointer gap-2 border-b border-white/30 px-3 py-2.5 transition-all duration-150 hover:bg-white/40 dark:border-white/5 dark:hover:bg-white/5",
-        active && "border-l-2 border-l-primary bg-white/60 shadow-[var(--glass-shadow-sm)] dark:bg-white/10",
+        "group relative flex w-full cursor-pointer gap-2 border-b border-white/30 px-3 py-2.5 transition-all duration-150 hover:bg-[var(--glass-bg-panel)] dark:border-white/5 dark:hover:bg-white/5",
+        active && "border-l-2 border-l-primary bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] dark:bg-[var(--glass-bg-subtle)]",
         !active && unread && "bg-primary/8 hover:bg-primary/12 dark:bg-primary/15 dark:hover:bg-primary/20",
         !active && !unread && "bg-transparent",
       )}

@@ -697,7 +697,7 @@ export function CreateChannelDialog({
           {webhookInfo ? (
             <div className="mt-2 space-y-5">
               {webhookInfo.warning ? (
-                <div className="rounded-md border border-amber-300 bg-[var(--color-warn-bg)] p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                <div className="rounded-md border border-amber-300 bg-[var(--color-warn-bg)] p-3 text-xs text-[var(--color-warn-text)] dark:border-amber-700 dark:bg-amber-950 dark:text-[var(--color-warning)]/70">
                   <strong>Atenção:</strong> {webhookInfo.warning} Confira se a
                   URL abaixo aponta pro domínio público do backend antes de
                   colar no painel Meta.

@@ -126,11 +126,11 @@ export function WidgetCard({
 
       {/* Recursos */}
       {widget.features.length > 0 && (
-        <ul className="flex flex-col gap-[9px] px-5 pt-3.5">
+        <ul className="flex flex-col gap-2 px-5 pt-3.5">
           {widget.features.map((feature) => (
             <li
               key={feature}
-              className="flex items-center gap-[9px] font-body text-[13px] text-[var(--text-secondary)]"
+              className="flex items-center gap-2 font-body text-[13px] text-[var(--text-secondary)]"
             >
               <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
                 <Check className="size-3" strokeWidth={3.2} />
@@ -219,7 +219,7 @@ function StatusBadge({
   disabled?: boolean;
 }) {
   const base =
-    "inline-flex shrink-0 items-center gap-[5px] rounded-full px-[11px] py-[5px] font-display text-[11px] font-bold tracking-[0.2px]";
+    "inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 font-display text-[11px] font-bold tracking-[0.2px]";
 
   if (disabled) {
     return (

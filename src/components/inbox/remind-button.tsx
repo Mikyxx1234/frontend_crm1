@@ -141,8 +141,8 @@ export function RemindButton({
           aria-label="Criar lembrete"
           aria-expanded={open}
           className={cn(
-            "flex size-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)] active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-slate-800 dark:hover:text-slate-100",
-            open && "bg-[var(--glass-bg-base)] text-[var(--text-primary)] dark:bg-slate-800 dark:text-slate-100",
+            "flex size-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)] active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-[var(--glass-bg-base)] dark:hover:text-slate-100",
+            open && "bg-[var(--glass-bg-base)] text-[var(--text-primary)] dark:bg-[var(--glass-bg-base)] dark:text-slate-100",
           )}
         >
           <BellPlus size={18} strokeWidth={2.2} />
@@ -161,7 +161,7 @@ export function RemindButton({
             className={cn(
               "z-50",
               // Mobile: sheet de baixo.
-              "fixed inset-x-3 bottom-3 rounded-3xl bg-white p-4 shadow-[var(--shadow-lg)] ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800",
+              "fixed inset-x-3 bottom-3 rounded-3xl bg-white p-4 shadow-[var(--shadow-lg)] ring-1 ring-slate-100 dark:bg-[var(--glass-bg-modal)] dark:ring-slate-800",
               // Desktop: popover ancorado embaixo do botão.
               "md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-full md:mt-2 md:w-[300px] md:rounded-2xl md:p-3",
             )}
@@ -186,7 +186,7 @@ export function RemindButton({
                     onClick={() => createReminder(p)}
                     className={cn(
                       "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                      "hover:bg-[var(--color-bg-subtle)] dark:hover:bg-slate-800/60",
+                      "hover:bg-[var(--color-bg-subtle)] dark:hover:bg-[var(--glass-bg-base)]/60",
                       "disabled:cursor-not-allowed disabled:opacity-50",
                     )}
                   >

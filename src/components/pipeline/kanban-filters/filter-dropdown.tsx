@@ -123,7 +123,7 @@ export function FilterDropdown({
         }}
         className={cn(
           "flex flex-col overflow-hidden",
-          "rounded-2xl border border-[var(--glass-border)] shadow-[0_24px_64px_rgba(15,20,40,0.22)] dark:border-slate-700",
+          "rounded-2xl border border-[var(--glass-border)] shadow-[0_24px_64px_rgba(15,20,40,0.22)] dark:border-[var(--glass-border)]",
           className,
         )}
       >

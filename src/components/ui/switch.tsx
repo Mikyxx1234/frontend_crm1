@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * `translate-x`.
  *
  * Paleta segue o EduIT Premium Core:
- *  - off: pista `bg-slate-300`
+ *  - off: pista `bg-[var(--glass-border-subtle)]`
  *  - on:  pista `bg-primary` (primary)
  *  - thumb: `bg-white` com sombra sutil.
  */
@@ -48,7 +48,7 @@ export function Switch({
       disabled={disabled}
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40",
-        checked ? "bg-primary" : "bg-slate-300",
+        checked ? "bg-primary" : "bg-[var(--glass-border-subtle)]",
         disabled && "cursor-not-allowed opacity-50",
         className,
       )}

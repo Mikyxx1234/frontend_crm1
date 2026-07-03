@@ -441,12 +441,12 @@ export function NotesPanel({ notes, contactId, dealId, onCreated }: NotesPanelPr
         }}
         className="flex gap-2 p-3"
       >
-        <textarea
+        <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Escreva uma nota…"
           rows={2}
-          className="min-h-[44px] flex-1 resize-none rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm shadow-inner outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
+          className="min-h-[44px] flex-1 resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();

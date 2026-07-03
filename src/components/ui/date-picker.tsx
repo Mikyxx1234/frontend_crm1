@@ -115,7 +115,7 @@ export function DatePicker({
                   }}
                   className={cn(
                     "flex h-8 items-center justify-center rounded-lg text-xs font-medium transition",
-                    isSelected && "bg-slate-900 text-white",
+                    isSelected && "bg-[var(--glass-bg-modal)] text-white",
                     !isSelected && inMonth && "text-foreground hover:bg-[var(--glass-bg-base)]",
                     !inMonth && "text-[var(--text-faint)] hover:bg-[var(--color-bg-subtle)]",
                   )}

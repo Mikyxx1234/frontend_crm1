@@ -53,7 +53,7 @@ export function ExtensionSettingsForm() {
       )}
 
       {mutation.isSuccess && (
-        <p className="text-xs text-emerald-400">Ramal salvo com sucesso!</p>
+        <p className="text-xs text-[var(--color-success)]/80">Ramal salvo com sucesso!</p>
       )}
 
       <button

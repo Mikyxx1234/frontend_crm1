@@ -130,7 +130,7 @@ export function KanbanColumn({
   );
   return (
     <div className="flex h-full min-h-0 w-[280px] shrink-0 flex-col self-stretch sm:w-[300px]">
-      {/* Surface da coluna: tokens de glass do tema (substituem `bg-white/30`
+      {/* Surface da coluna: tokens de glass do tema (substituem `bg-[var(--glass-bg-panel)]`
           que ficava esbranquiçado em dark). Listras laterais suavizadas com
           borda única usando `--glass-border-subtle`. */}
       <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
@@ -183,14 +183,14 @@ export function KanbanColumn({
             <div className="flex shrink-0 items-center gap-1">
               {attentionInColumn > 0 ? (
                 <TooltipHost label={`${attentionInColumn} negócio(s) precisam de atenção`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center rounded-full border border-amber-300/40 bg-[var(--color-warn-bg)]/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-amber-900 dark:border-amber-400/30 dark:bg-[var(--color-warning)]/15 dark:text-amber-200">
+                  <span className="flex min-w-5 items-center justify-center rounded-full border border-amber-300/40 bg-[var(--color-warn-bg)]/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-warn-text)] dark:border-amber-400/30 dark:bg-[var(--color-warning)]/15 dark:text-[var(--color-warning)]/70">
                     {attentionInColumn}
                   </span>
                 </TooltipHost>
               ) : null}
               {unreadInColumn > 0 ? (
                 <TooltipHost label={`${unreadInColumn} mensagem(ns) não lida(s) nesta etapa`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-[var(--color-success-bg)]/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-success-text)] dark:border-emerald-400/30 dark:bg-[var(--color-success)]/15 dark:text-emerald-200">
+                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-[var(--color-success-bg)]/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-success-text)] dark:border-emerald-400/30 dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]/50">
                     <MessageCircle className="size-3" />
                     {unreadInColumn}
                   </span>

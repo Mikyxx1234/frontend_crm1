@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { pageHeaderDescriptionClass, pageHeaderTitleClass } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
@@ -254,8 +255,8 @@ export function CampaignBuilderWizard() {
               {type === "TEXT" ? (
                 <div className="space-y-2">
                   <Label>Mensagem</Label>
-                  <textarea
-                    className="min-h-[120px] w-full rounded-md border bg-background p-3 text-sm"
+                  <Textarea
+                    className="min-h-[120px] w-full"
                     value={textContent}
                     onChange={(e) => setTextContent(e.target.value)}
                   />

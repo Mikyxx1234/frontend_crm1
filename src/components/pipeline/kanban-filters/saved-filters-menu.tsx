@@ -113,7 +113,7 @@ export function SavedFiltersMenu({
         backgroundColor: isDark ? "#1a2238" : "#ffffff",
         isolation: "isolate",
       }}
-      className="rounded-[18px] border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-slate-700"
+      className="rounded-[18px] border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-[var(--glass-border)]"
     >
       <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">
         <span className="font-display text-[12px] font-bold text-foreground">Filtros salvos</span>
@@ -169,7 +169,7 @@ export function SavedFiltersMenu({
                     type="button"
                     onClick={() => onToggleDefault(f)}
                     className={cn(
-                      "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-warn)] dark:hover:text-amber-400",
+                      "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-warn)] dark:hover:text-[var(--color-warning)]/80",
                       f.isDefault && "text-[var(--color-warn)]",
                     )}
                   >

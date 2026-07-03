@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type KnowledgeDoc = {
@@ -130,13 +131,13 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
             <Label htmlFor="kb-content" className="text-xs">
               Conteúdo (texto plano, markdown)
             </Label>
-            <textarea
+            <Textarea
               id="kb-content"
               rows={8}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Cole aqui o conteúdo do documento..."
-              className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="resize-none"
             />
             <div className="text-[11px] text-muted-foreground">
               {content.length.toLocaleString("pt-BR")} caracteres • limite 500k
@@ -237,7 +238,7 @@ function StatusBadge({ status }: { status: KnowledgeDoc["status"] }) {
       return (
         <Badge
           variant="secondary"
-          className="gap-1 bg-[var(--color-success-bg)] text-[var(--color-success-text)] hover:bg-[var(--color-success-bg)] dark:bg-emerald-950 dark:text-emerald-200"
+          className="gap-1 bg-[var(--color-success-bg)] text-[var(--color-success-text)] hover:bg-[var(--color-success-bg)] dark:bg-emerald-950 dark:text-[var(--color-success)]/50"
         >
           <CheckCircle2 className="size-3" /> Pronto
         </Badge>

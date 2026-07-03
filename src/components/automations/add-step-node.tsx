@@ -205,7 +205,7 @@ export function AddStepNode({ data }: NodeProps<AddStepNodeData>) {
           "flex cursor-grab items-center gap-2 rounded-full border-2 border-dashed px-4 py-2 text-[12px] font-bold tracking-tight transition-all duration-200 active:cursor-grabbing",
           open
             ? "border-primary bg-[#eef4ff] text-primary shadow-[var(--shadow-indigo-glow)]"
-            : "animate-pulse-soft border-primary/40 bg-white/80 text-[var(--text-muted)] backdrop-blur-sm hover:-translate-y-px hover:border-primary hover:bg-[#eef4ff] hover:text-primary hover:shadow-[var(--shadow-indigo-glow)]"
+            : "animate-pulse-soft border-primary/40 bg-[var(--glass-bg-base)] text-[var(--text-muted)] backdrop-blur-sm hover:-translate-y-px hover:border-primary hover:bg-[#eef4ff] hover:text-primary hover:shadow-[var(--shadow-indigo-glow)]"
         )}
       >
         <Plus className="size-3.5" strokeWidth={2.6} />

@@ -113,7 +113,7 @@ export function ConversationHeader({
 
   return (
     <div
-      className="flex shrink-0 items-stretch border-b border-white/40 bg-white/40 backdrop-blur-md"
+      className="flex shrink-0 items-stretch border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)] backdrop-blur-md"
       style={{ minHeight: 46 }}
     >
       <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-r border-border px-2 sm:px-3">

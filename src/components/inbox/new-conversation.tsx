@@ -8,6 +8,7 @@ import { IconLoader2 as Loader2, IconMessagePlus as MessageSquarePlus, IconSend 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type ChannelOption = {
@@ -195,16 +196,12 @@ export function NewConversationButton({
 
       <div className="space-y-1">
         <Label className="text-xs text-muted-foreground">Mensagem</Label>
-        <textarea
+        <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Escreva a primeira mensagem..."
           rows={3}
-          className={cn(
-            "w-full resize-none rounded-lg border border-border/80 bg-background px-3 py-2 text-sm",
-            "shadow-inner outline-none placeholder:text-muted-foreground",
-            "focus-visible:ring-2 focus-visible:ring-indigo-500/40"
-          )}
+          className="w-full resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && message.trim() && selectedChannel) {
               e.preventDefault();

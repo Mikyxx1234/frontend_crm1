@@ -168,7 +168,7 @@ export function ChannelCard({
       />
 
       {/* Topo: ícone + nome/sub + badge */}
-      <div className="flex items-start gap-[13px] px-5 pb-3.5 pt-4.5">
+      <div className="flex items-start gap-3 px-5 pb-3.5 pt-4.5">
         <span
           className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] text-white"
           style={{ background: iconColor }}
@@ -209,7 +209,7 @@ export function ChannelCard({
       {/* Detalhes */}
       <div className="flex flex-col px-5 pb-3.5">
         <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] py-2">
-          <span className="flex items-center gap-[7px] text-[12.5px] text-[var(--text-muted)]">
+          <span className="flex items-center gap-2 text-[12.5px] text-[var(--text-muted)]">
             <Phone className="size-[15px] opacity-70" />
             Telefone
           </span>
@@ -223,7 +223,7 @@ export function ChannelCard({
           </span>
         </div>
         <div className="flex items-center justify-between py-2">
-          <span className="flex items-center gap-[7px] text-[12.5px] text-[var(--text-muted)]">
+          <span className="flex items-center gap-2 text-[12.5px] text-[var(--text-muted)]">
             <Clock className="size-[15px] opacity-70" />
             Última conexão
           </span>
@@ -239,8 +239,8 @@ export function ChannelCard({
       </div>
 
       {/* Rodapé: toggle + ações */}
-      <div className="mt-auto flex items-center gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-5 py-[13px]">
-        <div className="flex items-center gap-[9px]">
+      <div className="mt-auto flex items-center gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-5 py-3">
+        <div className="flex items-center gap-2">
           <Switch
             checked={isActive}
             onCheckedChange={handleToggle}

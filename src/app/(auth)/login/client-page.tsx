@@ -249,7 +249,7 @@ function LoginForm() {
 
         <form
           onSubmit={handleSubmit}
-          className="glass-overlay w-full rounded-[32px] p-8"
+          className="glass-overlay w-full rounded-[var(--radius-2xl)] p-8"
         >
           <div className="mb-4">
             <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-[var(--text-secondary)]">

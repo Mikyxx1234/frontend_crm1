@@ -74,7 +74,7 @@ export const bentoCardClass =
 
 /** Variante 32px de radius para painéis grandes (gráficos principais). */
 export const bentoCardLargeClass =
-  "rounded-[32px] border border-[var(--glass-border-subtle)] bg-white p-8 shadow-sm";
+  "rounded-[var(--radius-2xl)] border border-[var(--glass-border-subtle)] bg-white p-8 shadow-sm";
 
 /** Label minúsculo em caixa alta, "ar" Linear/Stripe. */
 export const bentoLabelClass =

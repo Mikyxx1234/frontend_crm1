@@ -391,7 +391,7 @@ export function DealDetailPanel({
         }}
       >
         <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
-          <header className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-[22px] py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <header className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-5.5 py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
             <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)]">
               <IconX size={18} />
             </button>
@@ -462,7 +462,7 @@ export function DealDetailPanel({
     >
       <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
         {/* HEADER */}
-        <header className="flex items-center gap-[18px] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-[22px] py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <header className="flex items-center gap-4.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-5.5 py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
           <TooltipGlass label="Voltar" side="bottom">
             <button
               type="button"
@@ -540,7 +540,7 @@ export function DealDetailPanel({
             className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md"
           >
             {/* Cabeçalho fixo: identificador + funil de vendas segmentado */}
-            <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-[22px] pb-4 pt-[18px]">
+            <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-5.5 pb-4 pt-4.5">
               {/* Linha do título: nome do deal + tags inline + gear */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
@@ -706,7 +706,7 @@ export function DealDetailPanel({
             </div>
 
             {/* Conteúdo rolável: lista densa de campos */}
-            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-[22px] py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5.5 py-4">
               {configOpen && (resolvedContactConfig || resolvedDealConfig) ? (
                 <div className="flex min-w-0 flex-col gap-3">
                   {resolvedContactConfig}
@@ -1462,7 +1462,7 @@ function formatMoney(v: number | string | null | undefined): string | undefined 
 function FallbackComposer() {
   return (
     <div
-      className="mx-[22px] mb-[22px] flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-[18px] pr-2 opacity-60 shadow-[var(--glass-shadow-sm)]"
+      className="mx-5.5 mb-5.5 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-4.5 pr-2 opacity-60 shadow-[var(--glass-shadow-sm)]"
     >
       <TooltipGlass label="Anexar" side="top">
         <button

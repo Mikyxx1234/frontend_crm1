@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 import {
   IconAlertTriangle,
   IconBrandTelegram,
@@ -369,20 +370,18 @@ export function Api4ComConnectForm() {
           : "Informe suas credenciais Api4Com. O CRM detectará automaticamente o ramal vinculado ao seu e-mail."}
       </p>
 
-      <input
+      <Input
         type="email"
         placeholder="E-mail Api4Com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
       />
 
-      <input
+      <Input
         type="password"
         placeholder="Senha Api4Com"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
       />
 
       {mutation.isError && (

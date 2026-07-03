@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2, IconPlus, IconWebhook } from "@tabler/icons-react";
 import { SelectNative } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 const BASE = "/api";
 
@@ -120,12 +121,11 @@ export function ProviderConfigForm() {
 
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-[var(--text-muted)]">Webhook Secret</label>
-            <input
+            <Input
               type="text"
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
               placeholder="Token secreto para validar webhooks"
-              className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none"
             />
           </div>
 

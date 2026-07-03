@@ -98,7 +98,7 @@ const PATTERNS = {
   // Captura utilitários de layout com px literais: p-[16px], gap-[8px], etc.
   // Não inclui rounded (já coberto por rawRoundedPx) nem text (font-size teria
   // padrão próprio). Heurística regex; consulte DECISOES-PENDENTES para exceções.
-  arbitrarySpacingPx: /\b(?:p|px|py|pl|pr|pt|pb|m|mx|my|ml|mr|mt|mb|gap|space-x|space-y|w|h|min-w|min-h|max-w|max-h|size|top|right|bottom|left|inset)-\[\d+(?:\.\d+)?px\]/g,
+  arbitrarySpacingPx: /\b(?:p|px|py|pl|pr|pt|pb|m|mx|my|ml|mr|mt|mb|gap|gap-x|gap-y|space-x|space-y)-\[\d+(?:\.\d+)?px\]/g,
 };
 
 async function* walk(dir) {

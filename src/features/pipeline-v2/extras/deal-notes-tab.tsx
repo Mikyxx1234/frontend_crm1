@@ -114,7 +114,7 @@ export function DealNotesTab({ dealId, pinnedNote }: DealNotesTabProps) {
     <div className="flex h-full min-h-0 flex-col">
       {/* ── Nota fixada da conversa ── */}
       {pinnedNote && (
-        <div className="px-[22px] pt-[22px]">
+        <div className="px-5.5 pt-5.5">
           <div
             className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-[var(--color-warning)]/40 p-3"
             style={{
@@ -155,7 +155,7 @@ export function DealNotesTab({ dealId, pinnedNote }: DealNotesTabProps) {
       )}
 
       {/* ── Lista de notas do deal ── */}
-      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-[22px]">
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-5.5">
         {isLoading ? (
           <div className="flex items-center justify-center py-10">
             <IconLoader2 size={20} className="animate-spin text-[var(--text-muted)]" />

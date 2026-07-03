@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { Input } from "@/components/ui/input";
 
 import { apiUrl } from "@/lib/api";
 import { useCreateDeal, useTeamUsers } from "@/features/pipeline-v2/hooks";
@@ -43,8 +44,6 @@ interface DealFieldDef {
   required?: boolean;
 }
 
-const inputCls =
-  "w-full rounded-[var(--radius-md)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]";
 const labelCls =
   "mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]";
 
@@ -219,28 +218,26 @@ export function AddDealDialog({
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           <label className="block">
             <span className={labelCls}>Título *</span>
-            <input
+            <Input
               type="text"
               autoFocus
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex.: Proposta Empresa X"
-              className={inputCls}
             />
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className={labelCls}>Valor (R$)</span>
-              <input
+              <Input
                 type="number"
                 min="0"
                 step="0.01"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="0,00"
-                className={inputCls}
               />
             </label>
             <label className="block">
@@ -269,11 +266,10 @@ export function AddDealDialog({
             </label>
             <label className="block">
               <span className={labelCls}>Fechamento esperado</span>
-              <input
+              <Input
                 type="date"
                 value={expectedClose}
                 onChange={(e) => setExpectedClose(e.target.value)}
-                className={inputCls}
               />
             </label>
           </div>
@@ -321,12 +317,11 @@ export function AddDealDialog({
                   </div>
                 ) : (
                   <>
-                    <input
+                    <Input
                       type="text"
                       value={contactSearch}
                       onChange={(e) => setContactSearch(e.target.value)}
                       placeholder="Buscar por nome, e-mail…"
-                      className={inputCls}
                     />
                     <div className="mt-1 max-h-40 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)]">
                       {contactsLoading ? (
@@ -370,27 +365,24 @@ export function AddDealDialog({
 
             {contactMode === "new" ? (
               <div className="space-y-2">
-                <input
+                <Input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Nome do contato *"
-                  className={inputCls}
                 />
                 <div className="grid grid-cols-2 gap-2">
-                  <input
+                  <Input
                     type="tel"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
                     placeholder="Telefone"
-                    className={inputCls}
                   />
-                  <input
+                  <Input
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="E-mail"
-                    className={inputCls}
                   />
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)]">
@@ -423,25 +415,22 @@ export function AddDealDialog({
                         triggerClassName="w-full"
                       />
                     ) : type === "date" ? (
-                      <input
+                      <Input
                         type="date"
                         value={v}
                         onChange={(e) => onChange(e.target.value)}
-                        className={inputCls}
                       />
                     ) : type === "number" ? (
-                      <input
+                      <Input
                         type="number"
                         value={v}
                         onChange={(e) => onChange(e.target.value)}
-                        className={inputCls}
                       />
                     ) : (
-                      <input
+                      <Input
                         type="text"
                         value={v}
                         onChange={(e) => onChange(e.target.value)}
-                        className={inputCls}
                       />
                     )}
                   </label>

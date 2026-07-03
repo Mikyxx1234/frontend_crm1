@@ -314,7 +314,7 @@ export default function V2ActivitiesClientPage() {
               aria-label="Agenda do dia"
               className={cn(PANEL, "flex min-h-[520px] flex-1 flex-col overflow-hidden p-0")}
             >
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--glass-border-subtle)] px-[18px] py-4">
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--glass-border-subtle)] px-4.5 py-4">
                 <div className="min-w-0">
                   <h2 className="font-display text-[17px] font-extrabold capitalize tracking-tight text-[var(--text-primary)]">
                     {longDateLabel(selectedDate)}

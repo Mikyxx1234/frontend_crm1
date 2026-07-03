@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { IconMail as Mail, IconPlus as Plus, IconTrash as Trash2, IconRefresh as RefreshCw, IconX as X } from "@tabler/icons-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 import { TabsGlass } from "@/components/crm/tabs-glass";
@@ -428,12 +429,11 @@ function RuleForm({
         <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           Nome
         </span>
-        <input
+        <Input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Ex.: Boletos da Receita"
-          className="px-3 py-2 text-[13px] rounded-[var(--radius-md)] border border-[var(--glass-border)] focus:outline-none focus:border-[var(--brand-primary)]"
         />
       </label>
 
@@ -457,12 +457,11 @@ function RuleForm({
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Contém o texto
           </span>
-          <input
+          <Input
             type="text"
             value={conditionValue}
             onChange={(e) => setConditionValue(e.target.value)}
             placeholder="ex.: receita.gov.br"
-            className="px-3 py-2 text-[13px] rounded-[var(--radius-md)] border border-[var(--glass-border)] focus:outline-none focus:border-[var(--brand-primary)]"
           />
         </label>
       </div>

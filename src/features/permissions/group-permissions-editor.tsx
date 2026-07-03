@@ -447,7 +447,7 @@ export function GroupPermissionsEditor({
               return (
                 <div
                   key={res.resource}
-                  className="flex flex-col gap-3 border-b border-[var(--glass-border-subtle)] px-[18px] py-4 last:border-b-0 hover:bg-black/[0.015]"
+                  className="flex flex-col gap-3 border-b border-[var(--glass-border-subtle)] px-4.5 py-4 last:border-b-0 hover:bg-black/[0.015]"
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
@@ -527,7 +527,7 @@ export function GroupPermissionsEditor({
               checked={mediaAccess}
               onChange={setMediaAccess}
             />
-            <div className="flex items-start gap-3 px-[18px] py-4">
+            <div className="flex items-start gap-3 px-4.5 py-4">
               <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
                 <IconLayoutSidebar size={18} />
               </span>
@@ -582,7 +582,7 @@ function Panel({
 }) {
   return (
     <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
-      <div className="flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-[18px] py-3.5">
+      <div className="flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-4.5 py-3.5">
         <span className="text-[var(--brand-primary)]">{icon}</span>
         <h2 className="font-display text-[14.5px] font-bold text-[var(--text-primary)]">{title}</h2>
         {sub && <span className="text-[12px] text-[var(--text-muted)]">{sub}</span>}
@@ -603,7 +603,7 @@ function ProBadge() {
 
 function Legend() {
   return (
-    <div className="flex flex-wrap gap-3.5 border-b border-[var(--glass-border-subtle)] bg-black/[0.015] px-[18px] py-3">
+    <div className="flex flex-wrap gap-3.5 border-b border-[var(--glass-border-subtle)] bg-black/[0.015] px-4.5 py-3">
       {[
         { dot: "#cbd5e1", label: "Negado" },
         { dot: "var(--color-warn)", label: "Apenas responsável (próprios registros)" },
@@ -908,7 +908,7 @@ function StagePanel({
       sub="controle quais deals o grupo enxerga e edita"
     >
       {pipelines.length === 0 && (
-        <p className="px-[18px] py-4 text-[12px] text-[var(--text-muted)]">Nenhum funil encontrado.</p>
+        <p className="px-4.5 py-4 text-[12px] text-[var(--text-muted)]">Nenhum funil encontrado.</p>
       )}
       {pipelines.map((pl) =>
         pl.stages.map((st) => {
@@ -916,7 +916,7 @@ function StagePanel({
           return (
             <div
               key={st.id}
-              className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-[18px] py-2.5 last:border-b-0 hover:bg-black/[0.015]"
+              className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4.5 py-2.5 last:border-b-0 hover:bg-black/[0.015]"
             >
               <div className="min-w-0">
                 <span className="font-display text-[10px] font-bold uppercase tracking-[0.4px] text-[var(--text-muted)]">
@@ -973,7 +973,7 @@ function FieldPanel({
       badge={<ProBadge />}
     >
       {entries.length === 0 && !adding && (
-        <p className="px-[18px] py-4 text-[12px] text-[var(--text-muted)]">
+        <p className="px-4.5 py-4 text-[12px] text-[var(--text-muted)]">
           Nenhuma restrição de campo. Por padrão, o grupo vê e edita todos os campos permitidos.
         </p>
       )}
@@ -982,7 +982,7 @@ function FieldPanel({
         return (
           <div
             key={key}
-            className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-[18px] py-2.5 last:border-b-0 hover:bg-black/[0.015]"
+            className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4.5 py-2.5 last:border-b-0 hover:bg-black/[0.015]"
           >
             <div className="min-w-0">
               <span className="font-display text-[10px] font-bold uppercase tracking-[0.4px] text-[var(--text-muted)]">
@@ -1017,7 +1017,7 @@ function FieldPanel({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="flex items-center gap-2.5 px-[18px] py-3 font-display text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-black/[0.015]"
+          className="flex items-center gap-2.5 px-4.5 py-3 font-display text-[13px] font-bold text-[var(--brand-primary)] transition-colors hover:bg-black/[0.015]"
         >
           <span className="flex size-6 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--glass-border)]">
             <IconPlus size={14} />
@@ -1043,7 +1043,7 @@ function FieldPicker({
   const available = fields.filter((f) => !existing.has(`${entity}.${f.name}`));
 
   return (
-    <div className="flex flex-col gap-2 border-t border-[var(--glass-border-subtle)] bg-black/[0.015] px-[18px] py-3">
+    <div className="flex flex-col gap-2 border-t border-[var(--glass-border-subtle)] bg-black/[0.015] px-4.5 py-3">
       <div className="flex items-center gap-2">
         <DropdownGlass
           options={FIELD_ENTITIES.map((e) => ({ value: e, label: FIELD_ENTITY_LABEL[e] }))}
@@ -1131,7 +1131,7 @@ function ExtraToggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-start gap-3 border-b border-[var(--glass-border-subtle)] px-[18px] py-4 last:border-b-0">
+    <div className="flex items-start gap-3 border-b border-[var(--glass-border-subtle)] px-4.5 py-4 last:border-b-0">
       <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
         {icon}
       </span>
@@ -1222,7 +1222,7 @@ function GroupChannelScope({ groupId }: { groupId: string }) {
       title="Acesso a canais"
       sub="Aplicado a todos os membros do grupo (eixo aditivo)"
     >
-      <div className="flex flex-col gap-3 px-[18px] py-4">
+      <div className="flex flex-col gap-3 px-4.5 py-4">
         <ScopeMultiSelect
           label="Canais — ver mensagens"
           icon={<IconEye size={12} className="text-[var(--text-muted)]" />}

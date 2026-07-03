@@ -37,7 +37,7 @@ function ToggleRow({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-[14px] rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-[14px] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:bg-[var(--glass-bg-base)]">
+    <div className="flex items-start gap-3.5 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] p-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all hover:bg-[var(--glass-bg-base)]">
       <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)]">
         {icon}
       </div>
@@ -104,8 +104,8 @@ export function ConversationsSettingsClientPage() {
     >
       <div className="flex flex-col gap-4">
         {/* ── Assinatura ──────────────────────────────────────────────── */}
-        <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-[18px] shadow-[var(--glass-shadow)] backdrop-blur-md">
-          <p className="mb-[14px] font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+        <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <p className="mb-3.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             Assinatura do agente
           </p>
           <div className="flex flex-col gap-2.5">
@@ -135,7 +135,7 @@ export function ConversationsSettingsClientPage() {
         {/* ── Atalho para Permissões ──────────────────────────────────── */}
         <Link
           href="/settings/permissions?tab=roles"
-          className="group flex items-center gap-[14px] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-[18px] shadow-[var(--glass-shadow)] backdrop-blur-md transition-all hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--shadow-brand)]"
+          className="group flex items-center gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4.5 shadow-[var(--glass-shadow)] backdrop-blur-md transition-all hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--shadow-brand)]"
         >
           <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
             <IconShieldCheck size={22} />

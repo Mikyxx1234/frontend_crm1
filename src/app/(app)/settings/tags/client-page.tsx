@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   IconBriefcase,
@@ -190,11 +191,11 @@ function TagsPage() {
           </div>
 
           {/* Name input */}
-          <input
+          <Input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nome da tag…"
-            className="h-9 flex-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-display text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
+            className="flex-1"
             onKeyDown={(e) => {
               if (e.key === "Enter" && newName.trim()) {
                 e.preventDefault();
@@ -411,7 +412,7 @@ function TagRowItem({
 
       {/* Name (editable) */}
       {editing ? (
-        <input
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={save}
@@ -419,7 +420,7 @@ function TagRowItem({
             if (e.key === "Enter") save();
             if (e.key === "Escape") { setName(tag.name); setEditing(false); }
           }}
-          className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--brand-primary)]/30 bg-[var(--glass-bg-overlay)] px-2 py-1 font-display text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          className="min-w-0 flex-1"
           autoFocus
         />
       ) : (

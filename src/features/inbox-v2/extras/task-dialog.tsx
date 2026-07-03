@@ -8,6 +8,7 @@ import { IconX, IconCheckbox } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { Input } from "@/components/ui/input";
 import { createActivity, type ActivityPayload } from "@/features/inbox-v2/api";
 
 const TYPE_OPTIONS: { value: ActivityPayload["type"]; label: string }[] = [
@@ -16,9 +17,6 @@ const TYPE_OPTIONS: { value: ActivityPayload["type"]; label: string }[] = [
   { value: "MEETING", label: "Reuniao" },
   { value: "OTHER",   label: "Outro" },
 ];
-
-const inputClass =
-  "h-[var(--input-height)] w-full rounded-[var(--input-radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 font-body text-[13px] text-[var(--input-text)] outline-none placeholder:text-[var(--input-placeholder)] backdrop-blur-sm transition-[border-color,box-shadow] duration-150 focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-ring-focus)]";
 
 const labelClass = "mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]";
 
@@ -102,13 +100,12 @@ export function TaskDialog({
         {/* Titulo */}
         <div className="mb-4">
           <label className={labelClass}>Titulo</label>
-          <input
+          <Input
             autoFocus
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Ex.: Ligar para o cliente"
-            className={inputClass}
           />
         </div>
 
@@ -131,11 +128,10 @@ export function TaskDialog({
               (opcional)
             </span>
           </label>
-          <input
+          <Input
             type="datetime-local"
             value={scheduledAt}
             onChange={(e) => setScheduledAt(e.target.value)}
-            className={inputClass}
           />
         </div>
 

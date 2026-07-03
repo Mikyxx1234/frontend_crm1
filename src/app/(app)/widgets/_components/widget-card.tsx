@@ -149,7 +149,7 @@ export function WidgetCard({
           </div>
         )}
 
-        <div className="flex items-center gap-[10px]">
+        <div className="flex items-center gap-2.5">
           {comingSoon ? (
             <button
               type="button"

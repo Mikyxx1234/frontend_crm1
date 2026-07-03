@@ -168,7 +168,7 @@ export function ChannelCard({
       />
 
       {/* Topo: ícone + nome/sub + badge */}
-      <div className="flex items-start gap-[13px] px-5 pb-[14px] pt-[18px]">
+      <div className="flex items-start gap-[13px] px-5 pb-3.5 pt-4.5">
         <span
           className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] text-white"
           style={{ background: iconColor }}
@@ -207,7 +207,7 @@ export function ChannelCard({
       </div>
 
       {/* Detalhes */}
-      <div className="flex flex-col px-5 pb-[14px]">
+      <div className="flex flex-col px-5 pb-3.5">
         <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] py-2">
           <span className="flex items-center gap-[7px] text-[12.5px] text-[var(--text-muted)]">
             <Phone className="size-[15px] opacity-70" />

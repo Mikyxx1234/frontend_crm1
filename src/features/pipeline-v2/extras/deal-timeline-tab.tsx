@@ -104,7 +104,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
 
   if (isLoading) {
     return (
-      <div className="p-[22px] text-[12.5px] text-[var(--text-muted)]">
+      <div className="p-5.5 text-[12.5px] text-[var(--text-muted)]">
         Carregando timeline...
       </div>
     );
@@ -112,7 +112,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
 
   if (isError) {
     return (
-      <div className="p-[22px] text-[12.5px] text-[var(--color-danger)]">
+      <div className="p-5.5 text-[12.5px] text-[var(--color-danger)]">
         Erro ao carregar timeline.
       </div>
     );
@@ -133,7 +133,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
   }
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto p-[22px]">
+    <div className="flex h-full flex-col gap-3 overflow-y-auto p-5.5">
       {events.map((ev) => {
         const meta = TYPE_META[ev.type] ?? {
           // Fallback: tipos não mapeados localmente ainda recebem o rótulo

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { IconLoader2, IconDeviceFloppy } from "@tabler/icons-react";
 import { createExtension } from "../api/extensions";
+import { Input } from "@/components/ui/input";
 
 export function ExtensionSettingsForm() {
   const [label, setLabel] = useState("");
@@ -36,12 +37,11 @@ export function ExtensionSettingsForm() {
       {fields.map((f) => (
         <div key={f.label} className="flex flex-col gap-1">
           <label className="text-xs font-medium text-[var(--text-muted)]">{f.label}</label>
-          <input
+          <Input
             type={f.type ?? "text"}
             value={f.value}
             onChange={(e) => f.set(e.target.value)}
             placeholder={f.placeholder}
-            className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
           />
         </div>
       ))}

@@ -1,3 +1,8 @@
+/**
+ * @deprecated DS-012 — componente legado (v1). O canônico é
+ * `components/ui/page-header.tsx`. Não adicionar novos imports.
+ * Remoção física após aposentadoria das rotas que ainda o usam.
+ */
 import Link from "next/link"
 import { IconChevronLeft } from "@tabler/icons-react"
 

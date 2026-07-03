@@ -51,7 +51,15 @@ import { PresenceDashboard } from "@/components/inbox/presence-dashboard";
 import { SwipeRow } from "@/components/inbox/swipe-row";
 import { dt } from "@/lib/design-tokens";
 import { cn, tagPillStyle } from "@/lib/utils";
-import type { InboxFilters } from "@/components/inbox/inbox-filters";
+// InboxFilters type moved here (inbox-filters.tsx é código morto — DS-010/DS-012)
+export type InboxFilters = {
+  ownerId?: string;
+  channel?: string;
+  stageId?: string;
+  tagIds?: string[];
+  sortBy?: string;
+  sortOrder?: string;
+};
 import type { InboxTab } from "@/services/conversations";
 
 export type { InboxTab };

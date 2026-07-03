@@ -1,3 +1,9 @@
+/**
+ * @deprecated DS-010/DS-012 — arquivo morto. Nenhuma rota renderiza InboxFilterBar;
+ * o Inbox v2 usa features/inbox-v2/extras/filter-panel.tsx.
+ * O type InboxFilters foi movido para components/inbox/conversation-list.tsx.
+ * Este arquivo será removido em onda futura.
+ */
 "use client";
 
 import * as React from "react";

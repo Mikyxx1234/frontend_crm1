@@ -1,3 +1,9 @@
+/**
+ * @deprecated DS-012 — componente legado (v1). O canônico é
+ * `components/crm/nav-rail-v2.tsx`. Não adicionar novos imports
+ * fora de `features/legacy-v1/*` e das rotas legadas.
+ * Remoção física após aposentadoria das rotas que ainda o usam.
+ */
 "use client"
 
 import { cn } from "@/lib/utils"

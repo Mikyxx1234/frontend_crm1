@@ -183,7 +183,7 @@ export function KanbanColumn({
             <div className="flex shrink-0 items-center gap-1">
               {attentionInColumn > 0 ? (
                 <TooltipHost label={`${attentionInColumn} negócio(s) precisam de atenção`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center rounded-full border border-amber-300/40 bg-[var(--color-warn-bg)]/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-warn-text)] dark:border-amber-400/30 dark:bg-[var(--color-warning)]/15 dark:text-[var(--color-warning)]/70">
+                  <span className="flex min-w-5 items-center justify-center rounded-full border border-[var(--color-warning)]/40 bg-[var(--color-warn-bg)]/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-warn-text)] dark:border-[var(--color-warning)]/30 dark:bg-[var(--color-warning)]/15 dark:text-[var(--color-warning)]/70">
                     {attentionInColumn}
                   </span>
                 </TooltipHost>

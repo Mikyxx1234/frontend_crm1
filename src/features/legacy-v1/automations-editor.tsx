@@ -375,7 +375,7 @@ function LogsTableView({
                       {row.metaWebhookEvent.signatureValid ? (
                         <span className="text-[9px] font-medium normal-case text-[var(--color-success)]">assinatura ok</span>
                       ) : (
-                        <span className="text-[9px] font-medium normal-case text-amber-600">assinatura não verificada</span>
+                        <span className="text-[9px] font-medium normal-case text-[var(--color-warning)]">assinatura não verificada</span>
                       )}
                     </div>
                     <div className="mb-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground sm:grid-cols-4">
@@ -733,7 +733,7 @@ export default function AutomationDetailPage() {
             className={cn(
               "flex items-center gap-2 rounded-full px-3 py-1 ring-1 transition-colors",
               active
-                ? "bg-emerald-50 ring-[var(--color-success-subtle)]"
+                ? "bg-[var(--color-success-subtle)] ring-[var(--color-success-subtle)]"
                 : "bg-[var(--color-bg-subtle)] ring-[var(--color-border-soft)]"
             )}
           >
@@ -841,7 +841,7 @@ export default function AutomationDetailPage() {
       </div>
 
       {saveMutation.isError && (
-        <div className="shrink-0 border-b border-[var(--color-danger-subtle)]/60 bg-rose-50/70 px-4 py-2 text-[12px] font-bold text-rose-700 backdrop-blur-sm">
+        <div className="shrink-0 border-b border-[var(--color-danger-subtle)]/60 bg-[var(--color-rose-soft)]/70 px-4 py-2 text-[12px] font-bold text-rose-700 backdrop-blur-sm">
           {(saveMutation.error as Error).message}
         </div>
       )}

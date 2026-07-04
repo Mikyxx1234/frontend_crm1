@@ -9,7 +9,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 
 const STAGE_COLORS = [
   "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7",
-  "#d946ef", "#ec4899", "#f43f5e", "#f97316",
+  "var(--color-fuchsia)", "#ec4899", "var(--color-rose)", "var(--color-orange)",
 ];
 
 export function FunnelWidget() {

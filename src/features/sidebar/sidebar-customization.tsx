@@ -114,7 +114,7 @@ export function SidebarCustomizationCard() {
             <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
           </div>
         ) : isError ? (
-          <div className="flex items-start gap-2 rounded-2xl border border-red-100 bg-[var(--color-danger-bg)]/60 px-4 py-3 text-sm text-[var(--color-danger-text)]">
+          <div className="flex items-start gap-2 rounded-2xl border border-[var(--color-danger-subtle)] bg-[var(--color-danger-bg)]/60 px-4 py-3 text-sm text-[var(--color-danger-text)]">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>
               {error instanceof Error

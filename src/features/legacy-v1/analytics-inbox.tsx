@@ -327,10 +327,10 @@ export default function InboxAnalyticsPage() {
                         className={cn(
                           "text-center tabular-nums font-medium",
                           agent.avgResponseMinutes <= 5
-                            ? "text-[var(--color-success)] dark:text-emerald-400"
-                            : agent.avgResponseMinutes <= 30
-                              ? "text-[var(--color-warning)] dark:text-amber-400"
-                              : "text-[var(--color-destructive)] dark:text-red-400"
+            ? "text-[var(--color-success)] dark:text-[var(--color-success)]"
+            : agent.avgResponseMinutes <= 30
+              ? "text-[var(--color-warning)] dark:text-[var(--color-warning)]"
+              : "text-[var(--color-destructive)] dark:text-[var(--color-destructive)]"
                         )}
                       >
                         {formatMinutes(agent.avgResponseMinutes)}
@@ -340,7 +340,7 @@ export default function InboxAnalyticsPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <Users className="mb-2 size-8 text-gray-200 dark:text-gray-700" />
+                  <Users className="mb-2 size-8 text-[var(--color-text-muted)] dark:text-[var(--color-text-primary)]" />
                   <p className="text-xs text-[var(--color-text-secondary)]">
                     Nenhum agente com atendimento no periodo
                   </p>
@@ -413,13 +413,13 @@ function MetricCard({
   isText?: boolean;
 }) {
   const colors = {
-    blue: "from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/20 text-[var(--color-brand-primary)] dark:text-blue-400",
+    blue: "from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/20 text-[var(--color-brand-primary)] dark:text-[var(--color-brand-primary)]",
     emerald:
-      "from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-emerald-900/20 text-[var(--color-success)] dark:text-emerald-400",
+      "from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-emerald-900/20 text-[var(--color-success)] dark:text-[var(--color-success)]",
     amber:
-      "from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-amber-900/20 text-[var(--color-warning)] dark:text-amber-400",
+      "from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-amber-900/20 text-[var(--color-warning)] dark:text-[var(--color-warning)]",
     purple:
-      "from-purple-50 to-purple-100/50 dark:from-purple-950/40 dark:to-purple-900/20 text-[var(--color-lavender)] dark:text-purple-400",
+      "from-purple-50 to-purple-100/50 dark:from-purple-950/40 dark:to-purple-900/20 text-[var(--color-lavender)] dark:text-[var(--color-lavender)]",
   };
 
   return (

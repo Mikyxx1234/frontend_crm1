@@ -543,7 +543,7 @@ const METHOD_COLORS: Record<HttpMethod, string> = {
   POST: "bg-[var(--color-indigo-soft)] text-blue-700 border-[var(--color-primary-soft)]",
   PUT: "bg-[var(--color-amber-soft)] text-[var(--color-amber-text)] border-[var(--color-amber-soft)]",
   DELETE: "bg-[var(--color-danger-subtle)] text-red-700 border-[var(--color-danger-subtle)]",
-  PATCH: "bg-[var(--color-lavender-soft)] text-purple-700 border-[var(--color-lavender-soft)]",
+  PATCH: "bg-[var(--color-lavender-soft)] text-[var(--color-purple-text)] border-[var(--color-lavender-soft)]",
 };
 
 function MethodBadge({ method }: { method: HttpMethod }) {
@@ -575,7 +575,7 @@ function CopyButton({ text }: { text: string }) {
       aria-label="Copiar"
     >
       {copied ? (
-        <span className="text-xs text-green-400">Copiado!</span>
+        <span className="text-xs text-[var(--color-success)]">Copiado!</span>
       ) : (
         <Copy className="size-3.5" />
       )}

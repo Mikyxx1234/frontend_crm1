@@ -38,7 +38,7 @@ export function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
         className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
       <div className="flex items-start gap-3 px-3.5 py-3">
-        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-fuchsia-50 text-[var(--color-fuchsia)] ring-1 ring-fuchsia-100">
+        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-fuchsia-soft)] text-[var(--color-fuchsia)] ring-1 ring-[var(--color-fuchsia-soft)]">
           <Variable className="size-4" strokeWidth={2.4} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">

@@ -254,7 +254,7 @@ export function ContactInfoPanel({
             <div className="py-3">
               <Link
                 href={`/contacts/${data.id}`}
-                className="text-base font-semibold text-[var(--brand-primary)] underline-offset-2 hover:underline dark:text-indigo-400"
+                className="text-base font-semibold text-[var(--brand-primary)] underline-offset-2 hover:underline dark:text-[var(--color-brand-primary)]"
               >
                 Ver perfil completo →
               </Link>

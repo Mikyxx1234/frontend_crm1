@@ -160,7 +160,7 @@ export default function AIAgentsPage() {
       />
 
       {aiDisabled ? (
-        <div className="rounded-xl border border-amber-300/70 bg-[var(--color-amber-soft)]/60 p-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="rounded-xl border border-[var(--color-warning)]/70 bg-[var(--color-amber-soft)]/60 p-4 text-sm text-[var(--color-amber-text)] dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-[var(--color-amber-muted)]">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" />
             <div className="min-w-0 flex-1">
@@ -182,7 +182,7 @@ export default function AIAgentsPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-amber-300/60 bg-[var(--color-amber-soft)]/40 p-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="rounded-xl border border-dashed border-[var(--color-warning)]/60 bg-[var(--color-amber-soft)]/40 p-4 text-sm text-[var(--color-amber-text)] dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-[var(--color-amber-muted)]">
           <div className="flex items-start gap-2">
             <CircleAlert className="mt-0.5 size-4 shrink-0" />
             <div>
@@ -221,7 +221,7 @@ export default function AIAgentsPage() {
                 <div className="flex items-start gap-3">
                   <Avatar className="size-11">
                     <AvatarImage src={a.avatarUrl ?? undefined} />
-                    <AvatarFallback className="bg-[var(--color-indigo-soft)] text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">
+                    <AvatarFallback className="bg-[var(--color-indigo-soft)] text-[var(--color-purple-text)] dark:bg-indigo-950 dark:text-indigo-200">
                       {getInitials(a.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -285,7 +285,7 @@ export default function AIAgentsPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-8 text-[var(--color-brand-primary)] hover:text-indigo-700 dark:text-indigo-300"
+                      className="size-8 text-[var(--color-brand-primary)] hover:text-[var(--color-purple-text)] dark:text-[var(--color-brand-primary)]"
                       title={
                         aiDisabled
                           ? "IA desativada — configure a chave da OpenAI em Configurações → IA"
@@ -372,7 +372,7 @@ export default function AIAgentsPage() {
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="rounded-xl border border-dashed border-border/80 py-16 text-center">
-        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-[var(--color-indigo-soft)] text-[var(--color-brand-primary)] dark:bg-indigo-950 dark:text-indigo-300">
+        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-[var(--color-indigo-soft)] text-[var(--color-brand-primary)] dark:bg-indigo-950 dark:text-[var(--color-brand-primary)]">
         <Bot className="size-8" />
       </div>
       <h3 className="mt-4 text-base font-semibold">Nenhum agente IA ainda</h3>
@@ -641,7 +641,7 @@ function QuickEditDialog({
                   className={cn(
                     "rounded-xl border p-3 text-left text-sm transition-colors",
                     autonomyMode === "DRAFT"
-                      ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+                      ? "border-indigo-500 bg-[var(--color-indigo-soft)] dark:border-indigo-400 dark:bg-indigo-950/30"
                       : "border-border hover:bg-muted/40",
                   )}
                 >
@@ -656,7 +656,7 @@ function QuickEditDialog({
                   className={cn(
                     "rounded-xl border p-3 text-left text-sm transition-colors",
                     autonomyMode === "AUTONOMOUS"
-                      ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+                      ? "border-indigo-500 bg-[var(--color-indigo-soft)] dark:border-indigo-400 dark:bg-indigo-950/30"
                       : "border-border hover:bg-muted/40",
                   )}
                 >
@@ -681,7 +681,7 @@ function QuickEditDialog({
                       className={cn(
                         "flex items-start gap-2 rounded-lg border p-2 text-left text-[13px] transition-colors",
                         active
-                          ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+                          ? "border-indigo-500 bg-[var(--color-indigo-soft)] dark:border-indigo-400 dark:bg-indigo-950/30"
                           : "border-border hover:bg-muted/40",
                       )}
                     >

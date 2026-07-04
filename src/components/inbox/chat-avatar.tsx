@@ -18,7 +18,7 @@ const FALLBACK_COLORS = [
 
 function getAvatarColor(seed: string): string {
   const normalized = seed.toLowerCase();
-  if (normalized === "luz" || normalized.includes("luz")) return "#f59e0b";
+  if (normalized === "luz" || normalized.includes("luz")) return "var(--color-warning)";
 
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {

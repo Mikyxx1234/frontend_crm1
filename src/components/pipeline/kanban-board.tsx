@@ -562,7 +562,7 @@ export function KanbanBoard({
                   "flex w-full max-w-xl items-center justify-center gap-3 rounded-2xl border px-5 py-4 text-[13px] font-semibold transition-all sm:text-[14px]",
                   snapshot.isDraggingOver
                     ? "scale-105 border-[var(--color-danger)] bg-[var(--color-danger)] text-white shadow-[0_8px_24px_-8px_rgba(244,63,94,0.6)]"
-                    : "border-[var(--color-danger)]/30 bg-[var(--glass-bg-overlay)] text-[var(--color-danger-text)] shadow-[0_4px_16px_-4px_rgba(15,23,42,0.18)] backdrop-blur-sm dark:border-rose-500/40 dark:text-rose-300",
+                    : "border-[var(--color-danger)]/30 bg-[var(--glass-bg-overlay)] text-[var(--color-danger-text)] shadow-[0_4px_16px_-4px_rgba(15,23,42,0.18)] backdrop-blur-sm dark:border-rose-500/40 dark:text-[var(--color-rose-muted)]",
                 )}
                 aria-label="Solte aqui para excluir o negócio"
               >

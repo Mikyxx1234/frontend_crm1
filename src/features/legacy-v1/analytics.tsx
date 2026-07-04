@@ -202,7 +202,7 @@ export default function AnalyticsPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05, type: "spring", stiffness: 340, damping: 28 }}
-        className="rounded-3xl border border-slate-100 bg-[var(--color-bg-card)] p-5 shadow-sm md:p-6"
+        className="rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-bg-card)] p-5 shadow-sm md:p-6"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
@@ -252,7 +252,7 @@ export default function AnalyticsPage() {
         </div>
 
         {preset === "custom" && (
-          <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row">
+          <div className="mt-5 flex flex-col gap-3 border-t border-[var(--color-border-soft)] pt-4 sm:flex-row">
             <div className="flex-1 space-y-2 sm:max-w-[220px]">
               <span className={bentoLabelClass}>De</span>
               <Input

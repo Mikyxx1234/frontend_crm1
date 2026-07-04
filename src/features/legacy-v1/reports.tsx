@@ -244,7 +244,7 @@ export default function ReportsClientPage() {
       {summary && (
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
           {hasMetaData ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-success-subtle)] bg-[var(--color-success-subtle)] px-3 py-1 font-medium text-emerald-700">
               <CheckCircle2 className="size-3" />
               Última sincronização Meta:{" "}
               {metaSection?.lastSyncAt
@@ -344,8 +344,8 @@ export default function ReportsClientPage() {
               count={summary.templateAuth}
               cost={summary.templateAuth * COST_PER_MSG.templateAuth.usd}
               unitCost={COST_PER_MSG.templateAuth.usd}
-              color="text-violet-700"
-              bg="bg-violet-50"
+              color="text-[var(--color-purple-text)]"
+              bg="bg-[var(--color-lavender-soft)]"
               border="border-[var(--color-lavender-soft)]"
             />
             <TypeCard
@@ -417,7 +417,7 @@ export default function ReportsClientPage() {
 
           {/* Meta official breakdown — só aparece quando ja sincronizou */}
           {hasMetaData && metaSection && (
-            <div className="rounded-xl border border-[var(--color-success-subtle)] bg-emerald-50/40">
+            <div className="rounded-xl border border-[var(--color-success-subtle)] bg-[var(--color-success-subtle)]/40">
               <div className="border-b border-[var(--color-success-subtle)]/70 px-5 py-3">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
                   <CheckCircle2 className="size-4 text-[var(--color-success)]" />

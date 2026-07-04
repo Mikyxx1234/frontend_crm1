@@ -95,7 +95,7 @@ export const stepColor: Record<string, string> = {
   send_whatsapp_interactive: "text-[var(--color-lavender)]",
   send_product: "text-[var(--color-success-text)]",
   webhook: "text-[var(--text-muted)]",
-  delay: "text-orange-400",
+  delay: "text-[var(--color-orange)]",
   condition: "text-[var(--color-cyan)]",
   update_lead_score: "text-[var(--color-pink)]",
   question: "text-[var(--color-info)]",

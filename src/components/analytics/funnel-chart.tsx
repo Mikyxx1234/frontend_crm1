@@ -64,10 +64,10 @@ async function fetchFunnel(pipelineId: string): Promise<FunnelStage[]> {
 const STAGE_COLORS = [
   "#3370FF", // primary / indigo Lumen (topo)
   "#818cf8", // indigo
-  "#a78bfa", // violet
-  "#f472b6", // pink
+  "var(--color-lavender)", // violet
+  "var(--color-pink)", // pink
   "#fbbf24", // amber
-  "#10b981", // emerald (fechamento)
+  "var(--color-success)", // emerald (fechamento)
 ];
 
 function FunnelTooltip({

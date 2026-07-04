@@ -75,17 +75,17 @@ export function AIDraftCard({
 
   return (
     <div className="flex w-full justify-end px-2">
-      <div className="w-full max-w-[92%] rounded-xl border border-indigo-300/60 bg-[var(--color-info-bg)]/60 p-3 text-sm shadow-sm dark:border-indigo-700/60 dark:bg-indigo-950/30 md:max-w-[85%]">
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-[var(--brand-primary)] dark:text-indigo-300">
+      <div className="w-full max-w-[92%] rounded-xl border border-[var(--color-brand-primary)]/60 bg-[var(--color-info-bg)]/60 p-3 text-sm shadow-sm dark:border-indigo-700/60 dark:bg-indigo-950/30 md:max-w-[85%]">
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-[var(--brand-primary)] dark:text-[var(--color-brand-primary)]">
           <Bot className="size-3.5" />
           Rascunho do agente IA
           {senderName && (
-            <span className="text-[var(--brand-primary)]/80 dark:text-indigo-400/70 normal-case">
+            <span className="text-[var(--brand-primary)]/80 dark:text-[var(--color-brand-primary)]/70 normal-case">
               • {senderName}
             </span>
           )}
           {createdAt && (
-            <span className="ml-auto font-normal text-[var(--brand-primary)]/70 dark:text-indigo-400/70 normal-case">
+            <span className="ml-auto font-normal text-[var(--brand-primary)]/70 dark:text-[var(--color-brand-primary)]/70 normal-case">
               {new Date(createdAt).toLocaleTimeString("pt-BR", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -137,7 +137,7 @@ export function AIDraftCard({
             size="sm"
             onClick={() => approveMut.mutate()}
             disabled={busy || !draft.trim()}
-            className="gap-1 bg-[var(--color-brand-primary)] hover:bg-indigo-700"
+            className="gap-1 bg-[var(--color-brand-primary)] hover:bg-[var(--color-purple-text)]"
           >
             {approveMut.isPending ? (
               <Loader2 className="size-3.5 animate-spin" />

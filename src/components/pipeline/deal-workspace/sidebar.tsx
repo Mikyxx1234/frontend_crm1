@@ -126,7 +126,7 @@ export function WorkspaceCompactDealLeader({
             isPending={stagePending}
             petroleumHeader
             chevronClassName="text-[var(--color-sky)]/60"
-            className="text-[12px] font-semibold text-sky-300 transition-colors hover:text-sky-200"
+            className="text-[12px] font-semibold text-[var(--color-sky-muted)] transition-colors hover:text-[var(--color-sky-muted)]"
           />
           {numVal > 0 ? (
             <span className={dt.workspace.leaderValue}>{formatCurrency(numVal)}</span>

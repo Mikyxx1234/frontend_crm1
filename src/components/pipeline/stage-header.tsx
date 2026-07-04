@@ -41,7 +41,7 @@ export function StageHeader({
       </div>
 
       <div className="flex items-center gap-1.5 text-[13px] text-[var(--color-ink-muted)]">
-        <span className="font-bold text-blue-700 dark:text-blue-300" style={{ fontVariantNumeric: "tabular-nums" }}>
+        <span className="font-bold text-blue-700 dark:text-[var(--color-brand-primary)]" style={{ fontVariantNumeric: "tabular-nums" }}>
           {formatCurrency(totalValue)}
         </span>
       </div>

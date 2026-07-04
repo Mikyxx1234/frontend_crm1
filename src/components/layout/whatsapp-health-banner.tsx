@@ -128,7 +128,7 @@ export function WhatsAppHealthBanner() {
           : "border-[var(--color-warn)]/60 bg-[var(--color-warn-bg)] text-[var(--color-warn-text)] dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100",
       )}
     >
-      <Icon className={cn("mt-0.5 size-5 shrink-0", isCritical ? "text-[var(--color-danger-text)] dark:text-red-300" : "text-[var(--color-warn)] dark:text-amber-300")} />
+      <Icon className={cn("mt-0.5 size-5 shrink-0", isCritical ? "text-[var(--color-danger-text)] dark:text-red-300" : "text-[var(--color-warn)] dark:text-[var(--color-amber-muted)]")} />
       <div className="min-w-0 flex-1">
         <p className="font-semibold leading-tight">
           {isCritical ? "WhatsApp com problema crítico" : "WhatsApp com aviso"}

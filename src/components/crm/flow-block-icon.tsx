@@ -64,7 +64,7 @@ export const blockPalette: Record<BlockColor, { fg: string; bg: string }> = {
   amber: { fg: "#d97706", bg: "rgba(217,119,6,0.14)" },
   violet: { fg: "#7c3aed", bg: "rgba(124,58,237,0.12)" },
   pink: { fg: "#db2777", bg: "rgba(219,39,119,0.12)" },
-  orange: { fg: "#f97316", bg: "rgba(249,115,22,0.13)" },
+  orange: { fg: "var(--color-orange)", bg: "rgba(249,115,22,0.13)" },
   slate: { fg: "#475569", bg: "rgba(71,85,105,0.12)" },
 }
 

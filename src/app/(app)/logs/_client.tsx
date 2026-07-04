@@ -88,15 +88,15 @@ const ACTOR_BADGE: Record<
   },
   AI: {
     label: "IA",
-    className: "bg-fuchsia-500/10 text-[var(--color-fuchsia)] dark:text-fuchsia-400",
+    className: "bg-fuchsia-500/10 text-[var(--color-fuchsia)] dark:text-[var(--color-fuchsia)]",
   },
   AUTOMATION: {
     label: "Automação",
-    className: "bg-purple-500/10 text-[var(--color-lavender)] dark:text-purple-400",
+    className: "bg-purple-500/10 text-[var(--color-lavender)] dark:text-[var(--color-lavender)]",
   },
   INTEGRATION: {
     label: "Integração",
-    className: "bg-sky-500/10 text-[var(--color-sky)] dark:text-sky-400",
+    className: "bg-sky-500/10 text-[var(--color-sky)] dark:text-[var(--color-sky)]",
   },
   SYSTEM: {
     label: "Sistema",

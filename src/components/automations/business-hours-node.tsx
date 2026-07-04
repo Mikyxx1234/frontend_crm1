@@ -35,12 +35,12 @@ export function BusinessHoursNode({ data, selected }: NodeProps<BusinessHoursNod
         className={cn(
           "relative mx-auto flex h-[120px] w-[120px] rotate-45 items-center justify-center rounded-lg border-2 bg-[var(--color-bg-card)] transition-all duration-200",
           selected
-            ? "border-amber-400 shadow-[0_0_24px_-4px_rgba(245,158,11,0.5)] ring-2 ring-amber-300/30"
-            : "border-amber-300/60 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-amber-400"
+            ? "border-[var(--color-warning)] shadow-[0_0_24px_-4px_rgba(245,158,11,0.5)] ring-2 ring-[var(--color-warning)]/30"
+            : "border-[var(--color-warning)]/60 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:border-[var(--color-warning)]"
         )}
       >
         <div className="-rotate-45 px-2 text-center">
-          <span className="mx-auto mb-1 inline-flex size-7 items-center justify-center rounded-lg bg-[var(--color-warn-bg)] text-[var(--color-warn)] ring-1 ring-amber-100">
+          <span className="mx-auto mb-1 inline-flex size-7 items-center justify-center rounded-lg bg-[var(--color-warn-bg)] text-[var(--color-warn)] ring-1 ring-[var(--color-amber-soft)]">
             <Clock className="size-3.5" strokeWidth={2.4} />
           </span>
           <p className="text-[12px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">

@@ -278,7 +278,7 @@ export function MobileLayoutClientPage() {
                           type="button"
                           onClick={() => toggleBottomNav(d.id)}
                           aria-label={`Remover ${desc.label} da barra inferior`}
-                          className="touch-target rounded-full text-[11px] font-bold uppercase tracking-wider text-rose-500 hover:bg-rose-50"
+                          className="touch-target rounded-full text-[11px] font-bold uppercase tracking-wider text-[var(--color-rose)] hover:bg-[var(--color-rose-soft)]"
                         >
                           Tirar
                         </button>
@@ -334,7 +334,7 @@ export function MobileLayoutClientPage() {
                           desc.required
                             ? "cursor-not-allowed bg-[var(--glass-bg-subtle)] text-[var(--color-ink-muted)]"
                             : d.enabled
-                              ? "bg-[var(--color-success-subtle)] text-emerald-700 hover:bg-emerald-200"
+                              ? "bg-[var(--color-success-subtle)] text-emerald-700 hover:bg-[var(--color-success-subtle)]"
                               : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)] hover:bg-slate-300",
                         )}
                       >

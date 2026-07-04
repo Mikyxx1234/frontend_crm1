@@ -188,7 +188,7 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
               key={d.id}
               className="flex items-start gap-3 rounded-xl border bg-card p-3"
             >
-              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-info-bg)] text-[var(--brand-primary)] dark:bg-indigo-950 dark:text-indigo-300">
+              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-info-bg)] text-[var(--brand-primary)] dark:bg-indigo-950 dark:text-[var(--color-brand-primary)]">
                 <FileText className="size-4" />
               </div>
               <div className="min-w-0 flex-1">

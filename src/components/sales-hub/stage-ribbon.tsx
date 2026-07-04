@@ -97,7 +97,7 @@ export function StageRibbon({
               className={cn(
                 "relative flex shrink-0 flex-col items-center justify-center px-5 text-[11.5px] font-medium whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2",
                 compact ? "h-8 min-h-8" : "h-9 min-h-9",
-                isActive ? "text-white" : "text-[var(--text-muted)] hover:opacity-90 dark:text-slate-200",
+                isActive ? "text-white" : "text-[var(--text-muted)] hover:opacity-90 dark:text-[var(--color-text-muted)]",
               )}
             >
               <span className="max-w-[160px] truncate">{stage.name}</span>

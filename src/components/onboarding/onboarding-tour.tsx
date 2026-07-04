@@ -145,7 +145,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
               <button
                 type="button"
                 onClick={dismiss}
-                className="text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-foreground dark:text-[var(--color-ink-muted)] dark:hover:text-slate-200"
+                className="text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-foreground dark:text-[var(--color-ink-muted)] dark:hover:text-[var(--color-text-muted)]"
               >
                 Pular
               </button>

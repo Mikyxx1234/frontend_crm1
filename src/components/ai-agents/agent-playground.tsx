@@ -204,12 +204,12 @@ export function AgentPlayground({
 function TurnRow({ turn }: { turn: Turn }) {
   if (turn.role === "tool") {
     return (
-      <div className="rounded-lg border border-amber-300/50 bg-[var(--color-warn-bg)]/50 p-2 text-[11px] dark:border-amber-700/50 dark:bg-amber-950/20">
+      <div className="rounded-lg border border-[var(--color-warning)]/50 bg-[var(--color-warn-bg)]/50 p-2 text-[11px] dark:border-amber-700/50 dark:bg-amber-950/20">
         <div className="flex items-center gap-1 font-medium text-[var(--color-warn-text)] dark:text-[var(--color-warning)]/70">
           <Wrench className="size-3" /> tool: {turn.name}
         </div>
         <details className="mt-1">
-          <summary className="cursor-pointer text-[10px] text-[var(--color-amber-text)]/80 dark:text-amber-300/70">
+          <summary className="cursor-pointer text-[10px] text-[var(--color-amber-text)]/80 dark:text-[var(--color-amber-muted)]/70">
             args / result
           </summary>
           <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/70 p-2 text-[10px] leading-tight">

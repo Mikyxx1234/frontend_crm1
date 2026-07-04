@@ -99,7 +99,7 @@ function ReleaseCard({ release }: { release: Release }) {
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] dark:text-[var(--text-muted)]">
             {SECTION_LABEL[key] ?? key}
           </p>
-          <ul className="mt-1 list-disc space-y-1 pl-4 text-[12.5px] leading-snug text-[var(--text-secondary)] dark:text-slate-200">
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-[12.5px] leading-snug text-[var(--text-secondary)] dark:text-[var(--color-text-muted)]">
             {release.sections[key]!.slice(0, 5).map((item, i) => (
               <li key={i}>{item}</li>
             ))}

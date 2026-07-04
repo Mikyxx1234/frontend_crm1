@@ -86,7 +86,7 @@ function WebhookFallback({
   onCopy: (url: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-amber-400/40 bg-[var(--color-warning)]/10 p-3 text-amber-100">
+    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 p-3 text-amber-100">
       <div className="inline-flex items-start gap-1.5 text-xs">
         <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
         <span>

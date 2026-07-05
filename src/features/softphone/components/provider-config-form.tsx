@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2, IconPlus, IconWebhook } from "@tabler/icons-react";
 import { SelectNative } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 const BASE = "/api";
 
@@ -80,23 +82,24 @@ export function ProviderConfigForm() {
       ))}
 
       {!showForm ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => setShowForm(true)}
-          className="flex h-9 items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-dashed border-[var(--glass-border)] text-sm text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="w-full border border-dashed border-[var(--glass-border)]"
         >
           <IconPlus size={14} /> Adicionar Provedor
-        </button>
+        </Button>
       ) : (
         <form
           onSubmit={(e) => {
             e.preventDefault();
             mutation.mutate();
           }}
-          className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[var(--glass-border)] p-3"
+          className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4"
         >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">Provedor</label>
+          <div className="flex flex-col gap-1.5">
+            <Label>Provedor</Label>
             <SelectNative
               value={providerKey}
               onChange={(e) => setProviderKey(e.target.value)}
@@ -107,8 +110,8 @@ export function ProviderConfigForm() {
             </SelectNative>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">Auth Mode</label>
+          <div className="flex flex-col gap-1.5">
+            <Label>Auth Mode</Label>
             <SelectNative
               value={authMode}
               onChange={(e) => setAuthMode(e.target.value)}
@@ -119,8 +122,8 @@ export function ProviderConfigForm() {
             </SelectNative>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">Webhook Secret</label>
+          <div className="flex flex-col gap-1.5">
+            <Label>Webhook Secret</Label>
             <Input
               type="text"
               value={webhookSecret}
@@ -129,8 +132,8 @@ export function ProviderConfigForm() {
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">Recording Delivery</label>
+          <div className="flex flex-col gap-1.5">
+            <Label>Recording Delivery</Label>
             <SelectNative
               value={recordingDelivery}
               onChange={(e) => setRecordingDelivery(e.target.value)}
@@ -147,21 +150,22 @@ export function ProviderConfigForm() {
           )}
 
           <div className="flex gap-2">
-            <button
+            <Button
               type="submit"
+              size="sm"
               disabled={!webhookSecret || mutation.isPending}
-              className="flex h-8 items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 text-xs font-medium text-white disabled:opacity-50"
             >
               {mutation.isPending && <IconLoader2 size={12} className="animate-spin" />}
               Salvar
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="glass"
+              size="sm"
               onClick={() => setShowForm(false)}
-              className="h-8 rounded-[var(--radius-sm)] px-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             >
               Cancelar
-            </button>
+            </Button>
           </div>
         </form>
       )}

@@ -32,7 +32,7 @@ export default function SoftphoneSettingsClientPage() {
       }
     >
       {activeTab === 0 && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           <TabsGlass
             tabs={[...RAMAL_TABS]}
             activeTab={ramalMode}
@@ -40,29 +40,33 @@ export default function SoftphoneSettingsClientPage() {
             className="max-w-lg"
           />
 
-          {ramalMode === 0 && <Api4ComConnectForm />}
+          <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+            {ramalMode === 0 && <Api4ComConnectForm />}
 
-          {ramalMode === 1 && (
-            <div className="flex flex-col gap-4">
-              <p className="font-body text-[13px] text-[var(--text-muted)]">
-                Para qualquer PBX com WebSocket SIP (Asterisk, FreePBX, etc.).
-                Informe manualmente wss://, ramal e senha SIP.
-              </p>
-              <ExtensionSettingsForm />
-            </div>
-          )}
+            {ramalMode === 1 && (
+              <div className="flex flex-col gap-4">
+                <p className="font-body text-[13px] text-[var(--text-muted)]">
+                  Para qualquer PBX com WebSocket SIP (Asterisk, FreePBX, etc.).
+                  Informe manualmente wss://, ramal e senha SIP.
+                </p>
+                <ExtensionSettingsForm />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {activeTab === 1 && (
         <div className="flex flex-col gap-4">
-          <p className="font-body text-[13px] text-[var(--text-muted)]">
-            Configure o webhook para o histórico de chamadas. Para Api4Com,
-            escolha o provedor <strong>Api4Com</strong> e cole a URL gerada no
-            painel de integrações da Api4Com (webhook{" "}
-            <code className="text-[11px]">channel-hangup</code>).
-          </p>
-          <ProviderConfigForm />
+          <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+            <p className="mb-4 font-body text-[13px] text-[var(--text-muted)]">
+              Configure o webhook para o histórico de chamadas. Para Api4Com,
+              escolha o provedor <strong>Api4Com</strong> e cole a URL gerada no
+              painel de integrações da Api4Com (webhook{" "}
+              <code className="text-[11px]">channel-hangup</code>).
+            </p>
+            <ProviderConfigForm />
+          </div>
         </div>
       )}
     </SettingsV2Shell>

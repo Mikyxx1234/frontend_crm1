@@ -5,6 +5,8 @@ import { useMutation } from "@tanstack/react-query";
 import { IconLoader2, IconDeviceFloppy } from "@tabler/icons-react";
 import { createExtension } from "../api/extensions";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export function ExtensionSettingsForm() {
   const [label, setLabel] = useState("");
@@ -35,8 +37,8 @@ export function ExtensionSettingsForm() {
       className="flex flex-col gap-3"
     >
       {fields.map((f) => (
-        <div key={f.label} className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-[var(--text-muted)]">{f.label}</label>
+        <div key={f.label} className="flex flex-col gap-1.5">
+          <Label>{f.label}</Label>
           <Input
             type={f.type ?? "text"}
             value={f.value}
@@ -56,10 +58,9 @@ export function ExtensionSettingsForm() {
         <p className="text-xs text-[var(--color-success)]/80">Ramal salvo com sucesso!</p>
       )}
 
-      <button
+      <Button
         type="submit"
         disabled={!label || !sipUri || !authUser || !authPassword || !wsServer || mutation.isPending}
-        className="flex h-9 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
       >
         {mutation.isPending ? (
           <IconLoader2 size={14} className="animate-spin" />
@@ -67,7 +68,7 @@ export function ExtensionSettingsForm() {
           <IconDeviceFloppy size={14} />
         )}
         Salvar Ramal
-      </button>
+      </Button>
     </form>
   );
 }

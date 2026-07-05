@@ -23,6 +23,7 @@ import {
 } from "../api/extensions";
 import { useSoftphone } from "../hooks/use-softphone";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Button } from "@/components/ui/button";
 
 /**
  * Bloco de feedback pós-conexão — extraído pra que o discriminated
@@ -395,10 +396,10 @@ export function Api4ComConnectForm() {
       )}
 
       <div className="flex items-center gap-2">
-        <button
+        <Button
           type="submit"
           disabled={!email || !password || mutation.isPending}
-          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-4 text-sm font-medium text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1"
         >
           {mutation.isPending ? (
             <IconLoader2 size={14} className="animate-spin" />
@@ -406,20 +407,20 @@ export function Api4ComConnectForm() {
             <IconBrandTelegram size={14} />
           )}
           {status?.connected ? "Reconectar" : "Conectar Api4Com"}
-        </button>
+        </Button>
 
         {status?.connected && showForm && (
-          <button
+          <Button
             type="button"
+            variant="glass"
             onClick={() => {
               setShowForm(false);
               setPassword("");
               mutation.reset();
             }}
-            className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] px-3 text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)]"
           >
             Cancelar
-          </button>
+          </Button>
         )}
       </div>
     </form>

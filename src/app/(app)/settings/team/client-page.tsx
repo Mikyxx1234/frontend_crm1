@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
@@ -497,15 +498,15 @@ export default function TeamV2ClientPage() {
 
       {/* LIST — mesma estrutura glass-grid de /contacts */}
       {isLoading && users.length === 0 ? (
-        <div className="h-[400px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]" />
+        <GlassCard variant="panel" className="h-[400px] animate-pulse">{null}</GlassCard>
       ) : pageItems.length === 0 ? (
-        <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-6 py-12 text-center font-body text-[13px] text-[var(--text-muted)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+        <GlassCard variant="panel" className="px-6 py-12 text-center font-body text-[13px] text-[var(--text-muted)]">
           {term
             ? `Nenhum usuário encontrado para "${search.trim()}".`
             : "Nenhum usuário cadastrado ainda."}
-        </div>
+        </GlassCard>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 backdrop-blur-md shadow-[var(--glass-shadow)]">
+        <GlassCard variant="panel" className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
           <div className={listTableHeadRowClass("mb-2.5 grid-cols-[42px_2.6fr_1.1fr_1.3fr]")}>
             <span>
               <CheckboxGlass
@@ -622,7 +623,7 @@ export default function TeamV2ClientPage() {
               );
             })}
           </div>
-        </div>
+        </GlassCard>
       )}
 
       <PaginationGlass
@@ -714,7 +715,7 @@ export default function TeamV2ClientPage() {
                 são as roles criadas em Permissões.
               </p>
             </div>
-            <div className="grid gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3">
+            <GlassCard variant="overlay" className="grid gap-2 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Permissões iniciais</span>
                 {inviteIsAdmin ? (
@@ -758,7 +759,7 @@ export default function TeamV2ClientPage() {
                   );
                 })}
               </div>
-            </div>
+            </GlassCard>
           </div>
           {invite.isError && invite.error instanceof Error ? (
             <p className="text-sm text-[var(--color-danger,#e11d48)]">

@@ -30,6 +30,7 @@ import { IconAlertTriangle as AlertTriangle, IconCamera as Camera, IconCheck as 
 import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import {
   Dialog,
   DialogContent,
@@ -285,8 +286,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="w-full space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
+    <div className="w-full space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <ProfileCard profile={profile} queryClient={queryClient} update={update} />
         <TokensCard />
       </div>
@@ -396,7 +397,7 @@ function ProfileCard({
   });
 
   return (
-    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+    <GlassCard variant="overlay" className="p-8">
       <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
         Dados do seu perfil
       </h2>
@@ -591,7 +592,7 @@ function ProfileCard({
         onCancel={() => setPendingFile(null)}
         onApply={(cropped) => uploadAvatar(cropped)}
       />
-    </section>
+    </GlassCard>
   );
 }
 
@@ -714,7 +715,7 @@ function TokensCard() {
   const hasTokens = tokens.length > 0;
 
   return (
-    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+    <GlassCard variant="overlay" className="p-8">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
@@ -898,7 +899,7 @@ function TokensCard() {
           )}
         </DialogContent>
       </Dialog>
-    </section>
+    </GlassCard>
   );
 }
 

@@ -9,6 +9,7 @@ import { IconArrowLeft as ArrowLeft, IconLoader2 as Loader2, IconPlus as Plus, I
 import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { Label } from "@/components/ui/label";
@@ -415,7 +416,7 @@ export default function FlowDefinitionEditorPage({
 
   if (isLoading || !draft) {
     return (
-      <div className="w-full space-y-4">
+      <div className="w-full space-y-6">
         <Skeleton className="h-8 w-48 rounded-[var(--radius-lg)]" />
         <Skeleton className="h-64 w-full rounded-[var(--radius-xl)]" />
       </div>
@@ -426,7 +427,7 @@ export default function FlowDefinitionEditorPage({
 
   if (isImportedFromMeta) {
     return (
-      <div className="w-full space-y-4">
+      <div className="w-full space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
           {!hideBackLink ? <BackToFlows /> : null}
           <div className="flex flex-wrap gap-2">
@@ -469,9 +470,10 @@ export default function FlowDefinitionEditorPage({
 
         <div className="space-y-4">
           {draft.screens.map((screen, si) => (
-            <div
+            <GlassCard
               key={screen.id}
-              className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
+              variant="panel"
+              className="p-4"
             >
               <p className="mb-3 text-sm font-bold text-[var(--text-primary)]">{screen.title || `Tela ${si + 1}`}</p>
               {screen.fields.length === 0 ? (
@@ -508,7 +510,7 @@ export default function FlowDefinitionEditorPage({
                   ))}
                 </div>
               )}
-            </div>
+            </GlassCard>
           ))}
         </div>
       </div>
@@ -517,7 +519,7 @@ export default function FlowDefinitionEditorPage({
 
   if (draft.status !== "DRAFT") {
     return (
-      <div className="w-full space-y-4">
+      <div className="w-full space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
           {!hideBackLink ? <BackToFlows /> : null}
         </header>
@@ -531,7 +533,7 @@ export default function FlowDefinitionEditorPage({
   const canPublish = draft.screens.some((s) => s.fields.length > 0);
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-6">
       {/* Top bar glass: voltar + Guardar rascunho + Publicar na Meta */}
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
         <div className="flex min-w-0 items-center gap-3">
@@ -571,7 +573,7 @@ export default function FlowDefinitionEditorPage({
         </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
+      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
         {/* Coluna 1 — TELAS */}
         <nav
           aria-label="Telas do flow"
@@ -641,7 +643,7 @@ export default function FlowDefinitionEditorPage({
         </nav>
 
         {/* Coluna 2 — Formulário + CAMPOS */}
-        <div className="space-y-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <GlassCard variant="panel" className="space-y-4 p-4">
           <div className="grid gap-2">
             <Label htmlFor="flow-name" className="text-[var(--text-secondary)]">Título do flow</Label>
             <InputGlass
@@ -833,10 +835,10 @@ export default function FlowDefinitionEditorPage({
               </div>
             </>
           ) : null}
-        </div>
+        </GlassCard>
 
         {/* Coluna 3 — Pré-visualização do telefone + Mapeamento CRM */}
-        <div className="space-y-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <GlassCard variant="panel" className="space-y-3 p-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">Pré-visualização</p>
 
           {/* Mock WhatsApp — cores ISOLADAS em --wa-* (não tokens globais) */}
@@ -910,7 +912,7 @@ export default function FlowDefinitionEditorPage({
               ))}
             </div>
           ) : null}
-        </div>
+        </GlassCard>
       </div>
     </div>
   );

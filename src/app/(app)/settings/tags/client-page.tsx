@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -164,7 +165,7 @@ function TagsPage() {
   ];
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+    <GlassCard variant="panel" className="overflow-hidden">
       {/* ── Criar nova tag ── */}
       <div className="border-b border-[var(--glass-border-subtle)] p-4">
         <p className="mb-3 font-display text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
@@ -332,7 +333,7 @@ function TagsPage() {
           isPending={deleteMutation.isPending}
         />
       )}
-    </div>
+    </GlassCard>
   );
 }
 
@@ -510,7 +511,7 @@ function DeleteConfirmDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-6 shadow-[var(--glass-shadow)] backdrop-blur-md">
+      <GlassCard variant="panel" className="w-full max-w-sm p-6">
         <div className="mb-1 flex items-center gap-2">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)]/12">
             <IconTrash size={18} className="text-[var(--color-danger)]" />
@@ -554,7 +555,7 @@ function DeleteConfirmDialog({
         >
           <IconX size={16} />
         </button>
-      </div>
+      </GlassCard>
     </div>
   );
 }

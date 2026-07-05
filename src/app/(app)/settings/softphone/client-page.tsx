@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { IconPhone as Phone } from "@tabler/icons-react";
 
+import { GlassCard } from "@/components/crm/glass-card";
 import { TabsGlass } from "@/components/crm/tabs-glass";
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 import { Api4ComConnectForm } from "@/features/softphone/components/api4com-connect-form";
@@ -32,7 +33,7 @@ export default function SoftphoneSettingsClientPage() {
       }
     >
       {activeTab === 0 && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           <TabsGlass
             tabs={[...RAMAL_TABS]}
             activeTab={ramalMode}
@@ -40,7 +41,7 @@ export default function SoftphoneSettingsClientPage() {
             className="max-w-lg"
           />
 
-          <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <GlassCard variant="panel" className="p-5">
             {ramalMode === 0 && <Api4ComConnectForm />}
 
             {ramalMode === 1 && (
@@ -52,13 +53,13 @@ export default function SoftphoneSettingsClientPage() {
                 <ExtensionSettingsForm />
               </div>
             )}
-          </div>
+          </GlassCard>
         </div>
       )}
 
       {activeTab === 1 && (
-        <div className="flex flex-col gap-4">
-          <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <div className="flex flex-col gap-6">
+          <GlassCard variant="panel" className="p-5">
             <p className="mb-4 font-body text-[13px] text-[var(--text-muted)]">
               Configure o webhook para o histórico de chamadas. Para Api4Com,
               escolha o provedor <strong>Api4Com</strong> e cole a URL gerada no
@@ -66,7 +67,7 @@ export default function SoftphoneSettingsClientPage() {
               <code className="text-[11px]">channel-hangup</code>).
             </p>
             <ProviderConfigForm />
-          </div>
+          </GlassCard>
         </div>
       )}
     </SettingsV2Shell>

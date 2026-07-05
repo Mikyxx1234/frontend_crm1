@@ -18,6 +18,7 @@ import {
   type ConversationFeatures,
 } from "@/features/inbox-v2/hooks";
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
+import { GlassCard } from "@/components/crm/glass-card";
 
 // ─── Toggle row (DS v2 — card glass + ícone-quadrado) ───────────────────────
 
@@ -102,9 +103,9 @@ export function ConversationsSettingsClientPage() {
       description="Funcionalidades das janelas de conversa"
       icon={<IconMessageCircle size={22} />}
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
         {/* ── Assinatura ──────────────────────────────────────────────── */}
-        <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+        <GlassCard variant="panel" className="p-4.5">
           <p className="mb-3.5 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             Assinatura do agente
           </p>
@@ -130,7 +131,7 @@ export function ConversationsSettingsClientPage() {
               }
             />
           </div>
-        </section>
+        </GlassCard>
 
         {/* ── Atalho para Permissões ──────────────────────────────────── */}
         <Link

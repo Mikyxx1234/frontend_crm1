@@ -3,6 +3,7 @@
 import * as React from "react";
 import { IconSearch as Search } from "@tabler/icons-react";
 
+import { GlassCard } from "@/components/crm/glass-card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -215,14 +216,9 @@ export function HubChip({
 /** Painel glass (lista/tabela) — base das abas. */
 export function HubPanel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md",
-        className,
-      )}
-    >
+    <GlassCard variant="panel" className={cn("overflow-hidden", className)}>
       {children}
-    </div>
+    </GlassCard>
   );
 }
 
@@ -241,7 +237,7 @@ export function HubSubHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-wrap items-start gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-5 py-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+    <GlassCard variant="base" className="flex flex-wrap items-start gap-3.5 px-5 py-4 shadow-[var(--glass-shadow-sm)]">
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)]",
@@ -259,6 +255,6 @@ export function HubSubHeader({
         ) : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2.5">{actions}</div> : null}
-    </section>
+    </GlassCard>
   );
 }

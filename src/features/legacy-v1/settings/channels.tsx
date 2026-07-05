@@ -14,6 +14,7 @@ import { MetaConfigPanel } from "@/components/channels/meta-config-panel";
 import type { ApiChannel } from "@/components/channels/types";
 import { WhatsappQrModal } from "@/components/channels/whatsapp-qr-modal";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import {
   Dialog,
   DialogClose,
@@ -193,7 +194,7 @@ export default function SettingsChannelsPage({
     : channels;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-6">
       {!hideToolbar ? (
         <div className="flex justify-end">
           <ButtonGlass
@@ -224,7 +225,7 @@ export default function SettingsChannelsPage({
           ))}
         </div>
       ) : channels.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-6 py-16 text-center">
+        <GlassCard variant="subtle" className="flex flex-col items-center justify-center border-dashed px-6 py-16 text-center">
           <Radio className="mb-3 size-10 text-[var(--text-muted)]" />
           <p className="font-medium text-[var(--text-primary)]">Nenhum canal ainda</p>
           <p className="mt-1 max-w-sm text-sm text-[var(--text-muted)]">
@@ -239,15 +240,15 @@ export default function SettingsChannelsPage({
             <Plus className="size-4" />
             Novo Canal
           </ButtonGlass>
-        </div>
+        </GlassCard>
       ) : filteredChannels.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-6 py-16 text-center">
+        <GlassCard variant="subtle" className="flex flex-col items-center justify-center border-dashed px-6 py-16 text-center">
           <Radio className="mb-3 size-10 text-[var(--text-muted)]" />
           <p className="font-medium text-[var(--text-primary)]">Nenhum canal encontrado</p>
           <p className="mt-1 max-w-sm text-sm text-[var(--text-muted)]">
             Nenhum canal corresponde à busca atual.
           </p>
-        </div>
+        </GlassCard>
       ) : (
         <div
           className="grid gap-4"

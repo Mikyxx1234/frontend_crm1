@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { TabsGlass } from "@/components/crm/tabs-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 import { ConnectEmailModal } from "@/features/email-v2";
@@ -136,7 +137,7 @@ function AccountsList({
 
   if (accounts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-16 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]">
+      <GlassCard variant="overlay" className="flex flex-col items-center justify-center gap-3 py-16 border-dashed">
         <Mail size={32} className="text-[var(--text-muted)] opacity-40" />
         <p className="text-[14px] text-[var(--text-muted)]">Nenhuma conta de e-mail conectada ainda.</p>
         <button
@@ -145,7 +146,7 @@ function AccountsList({
         >
           <Plus size={15} /> Conectar primeira conta
         </button>
-      </div>
+      </GlassCard>
     );
   }
 
@@ -205,12 +206,12 @@ function RulesPanel({ accounts, confirm }: { accounts: EmailAccount[]; confirm: 
 
   if (accounts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 py-12 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]">
+      <GlassCard variant="overlay" className="flex flex-col items-center justify-center gap-2 py-12 border-dashed">
         <Mail size={28} className="text-[var(--text-muted)] opacity-40" />
         <p className="text-[13px] text-[var(--text-muted)]">
           Conecte uma conta antes de criar regras.
         </p>
-      </div>
+      </GlassCard>
     );
   }
 

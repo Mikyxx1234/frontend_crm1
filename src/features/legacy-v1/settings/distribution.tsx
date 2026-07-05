@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";im
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog,
   DialogClose,
@@ -15,7 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { Label } from "@/components/ui/label";
 import { pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
@@ -161,10 +162,10 @@ export default function DistributionSettingsPage() {
   return (
     <div className="w-full space-y-4">
       <div className="flex justify-end">
-        <Button type="button" className={`gap-2 ${pageHeaderPrimaryCtaClass}`} onClick={openCreate}>
+        <ButtonGlass type="button" variant="primary" className={`gap-2 ${pageHeaderPrimaryCtaClass}`} onClick={openCreate}>
           <Plus className="size-4" />
           Nova regra
-        </Button>
+        </ButtonGlass>
       </div>
 
       {rulesError ? (
@@ -183,10 +184,10 @@ export default function DistributionSettingsPage() {
         <div className="rounded-xl border border-dashed border-border/80 py-16 text-center">
           <Users className="mx-auto mb-3 size-10 text-muted-foreground/30" />
           <p className="text-sm text-muted-foreground">Nenhuma regra de distribuição.</p>
-          <Button type="button" variant="outline" className="mt-4 gap-2" onClick={openCreate}>
+          <ButtonGlass type="button" variant="glass" className="mt-4 gap-2" onClick={openCreate}>
             <Plus className="size-4" />
             Criar primeira regra
-          </Button>
+          </ButtonGlass>
         </div>
       ) : (
         <div className="space-y-2">
@@ -225,11 +226,10 @@ export default function DistributionSettingsPage() {
                 </div>
               </div>
               <div className="flex shrink-0 gap-1 self-end sm:self-start">
-                <Button
+                <ButtonGlass
                   type="button"
-                  variant="ghost"
+                  variant="icon"
                   size="icon"
-                  className="size-9"
                   title={rule.isActive ? "Desativar" : "Ativar"}
                   disabled={toggleMutation.isPending}
                   onClick={() =>
@@ -241,17 +241,17 @@ export default function DistributionSettingsPage() {
                       rule.isActive ? "size-4 text-[var(--color-success)]" : "size-4 text-muted-foreground"
                     }
                   />
-                </Button>
-                <Button
+                </ButtonGlass>
+                <ButtonGlass
                   type="button"
-                  variant="ghost"
+                  variant="icon"
                   size="icon"
-                  className="size-9 text-destructive/70 hover:text-destructive"
+                  className="text-destructive/70 hover:text-destructive"
                   disabled={deleteMutation.isPending}
                   onClick={() => deleteMutation.mutate(rule.id)}
                 >
                   <Trash2 className="size-4" />
-                </Button>
+                </ButtonGlass>
               </div>
             </div>
             );
@@ -285,7 +285,7 @@ export default function DistributionSettingsPage() {
             >
               <div className="space-y-2">
                 <Label htmlFor="dist-name">Nome</Label>
-                <Input
+                <InputGlass
                   id="dist-name"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
@@ -328,9 +328,7 @@ export default function DistributionSettingsPage() {
                         key={u.id}
                         className="flex cursor-pointer items-center gap-2 text-sm"
                       >
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded border-input"
+                        <CheckboxGlass
                           checked={selectedMembers.has(u.id)}
                           onChange={() => toggleMember(u.id)}
                         />
@@ -353,15 +351,15 @@ export default function DistributionSettingsPage() {
                 </p>
               ) : null}
               <DialogFooter className="gap-2">
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                <ButtonGlass type="button" variant="glass" onClick={() => setCreateOpen(false)}>
                   Cancelar
-                </Button>
-                <Button type="submit" disabled={!canSubmitCreate} className="gap-2">
+                </ButtonGlass>
+                <ButtonGlass type="submit" variant="primary" disabled={!canSubmitCreate} className="gap-2">
                   {createMutation.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : null}
                   Criar
-                </Button>
+                </ButtonGlass>
               </DialogFooter>
             </form>
           )}

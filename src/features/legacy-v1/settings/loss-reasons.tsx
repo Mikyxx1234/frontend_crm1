@@ -6,8 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconGripVertical as GripVertical, IconPlus as Plus, IconToggleLeft as ToggleLeft, IconToggleRight as ToggleRight, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -190,7 +190,7 @@ export default function LossReasonsPage() {
 
       {/* Add new */}
       <div className="flex items-center gap-2">
-        <Input
+        <InputGlass
           value={newLabel}
           onChange={(e) => setNewLabel(e.target.value)}
           placeholder="Novo motivo de perda…"
@@ -202,7 +202,8 @@ export default function LossReasonsPage() {
             }
           }}
         />
-        <Button
+        <ButtonGlass
+          variant="primary"
           size="sm"
           onClick={() => newLabel.trim() && createMutation.mutate(newLabel.trim())}
           disabled={!newLabel.trim() || createMutation.isPending}
@@ -210,7 +211,7 @@ export default function LossReasonsPage() {
         >
           <Plus className="size-4" />
           Adicionar
-        </Button>
+        </ButtonGlass>
       </div>
 
       {/* List */}
@@ -273,7 +274,7 @@ function ReasonRow({
       <GripVertical className="size-4 shrink-0 cursor-grab text-[var(--color-text-muted)]" />
 
       {editing ? (
-        <Input
+        <InputGlass
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           onBlur={save}

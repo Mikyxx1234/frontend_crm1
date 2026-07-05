@@ -2,6 +2,8 @@
 
 import { IconBell as Bell, IconBellOff as BellOff, IconCheck as Check, IconLoader2 as Loader2, IconDeviceMobile as Smartphone, IconX as X } from "@tabler/icons-react";
 
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import { usePushSubscription } from "@/hooks/use-push-subscription";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +42,7 @@ export default function NotificationsSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+      <GlassCard variant="overlay" className="p-8">
         <div className="flex items-start gap-4">
           <div
             className={cn(
@@ -91,18 +93,12 @@ export default function NotificationsSettingsPage() {
             )}
 
             <div className="mt-5 flex items-center gap-3">
-              <button
+              <ButtonGlass
                 type="button"
                 onClick={handleToggle}
                 disabled={!canToggle}
-                className={cn(
-                  "inline-flex h-11 items-center gap-2 rounded-full px-5",
-                  "text-sm font-bold transition-colors active:scale-[0.97]",
-                  isSubscribed
-                    ? "bg-slate-900 text-white hover:bg-slate-800"
-                    : "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[var(--brand-primary-hover)]",
-                  "disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
-                )}
+                variant={isSubscribed ? "glass" : "primary"}
+                className="h-11 px-5 text-sm font-bold"
               >
                 {isLoading ? (
                   <Loader2 className="size-4 animate-spin" strokeWidth={2.4} />
@@ -116,7 +112,7 @@ export default function NotificationsSettingsPage() {
                   : isSubscribed
                     ? "Desativar notificações"
                     : "Ativar notificações"}
-              </button>
+              </ButtonGlass>
 
               <StatusChip
                 label={isSubscribed ? "Ativo" : "Inativo"}
@@ -125,9 +121,9 @@ export default function NotificationsSettingsPage() {
             </div>
           </div>
         </div>
-      </section>
+      </GlassCard>
 
-      <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+      <GlassCard variant="overlay" className="p-8">
         <h2 className="font-display text-lg font-extrabold tracking-tight text-[var(--text-primary)]">
           Sobre o aplicativo
         </h2>
@@ -161,7 +157,7 @@ export default function NotificationsSettingsPage() {
             </ul>
           </div>
         </div>
-      </section>
+      </GlassCard>
     </div>
   );
 }

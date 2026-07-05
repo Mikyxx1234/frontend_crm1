@@ -8,8 +8,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconArrowLeft as ArrowLeft, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCw, IconDeviceFloppy as Save, IconSend as Send, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
@@ -429,10 +430,10 @@ export default function FlowDefinitionEditorPage({
         <header className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow)] backdrop-blur-md">
           {!hideBackLink ? <BackToFlows /> : null}
           <div className="flex flex-wrap gap-2">
-            <Button
+            <ButtonGlass
               type="button"
               size="sm"
-              variant="outline"
+              variant="glass"
               disabled={syncFromMetaMutation.isPending || saveMutation.isPending}
               onClick={() => syncFromMetaMutation.mutate()}
             >
@@ -442,16 +443,17 @@ export default function FlowDefinitionEditorPage({
                 <RefreshCw className="size-4" />
               )}
               <span className="ml-2">Atualizar perguntas da Meta</span>
-            </Button>
-            <Button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="primary"
               size="sm"
               disabled={saveMutation.isPending || syncFromMetaMutation.isPending}
               onClick={() => saveMutation.mutate(toUpsertInput(draft))}
             >
               {saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               <span className="ml-2">Guardar mapeamento</span>
-            </Button>
+            </ButtonGlass>
           </div>
         </header>
 
@@ -539,18 +541,19 @@ export default function FlowDefinitionEditorPage({
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
+          <ButtonGlass
             type="button"
-            variant="outline"
+            variant="glass"
             size="sm"
             disabled={saveMutation.isPending || publishMutation.isPending}
             onClick={() => saveMutation.mutate(toUpsertInput(draft))}
           >
             {saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
             <span className="ml-2">Guardar rascunho</span>
-          </Button>
-          <Button
+          </ButtonGlass>
+          <ButtonGlass
             type="button"
+            variant="primary"
             size="sm"
             disabled={publishMutation.isPending || saveMutation.isPending || !canPublish}
             onClick={async () => {
@@ -564,7 +567,7 @@ export default function FlowDefinitionEditorPage({
           >
             {publishMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
             <span className="ml-2">Publicar na Meta</span>
-          </Button>
+          </ButtonGlass>
         </div>
       </header>
 
@@ -641,7 +644,7 @@ export default function FlowDefinitionEditorPage({
         <div className="space-y-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md">
           <div className="grid gap-2">
             <Label htmlFor="flow-name" className="text-[var(--text-secondary)]">Título do flow</Label>
-            <Input
+            <InputGlass
               id="flow-name"
               value={draft.name}
               onChange={(e) => updateDraft((d) => ({ ...d, name: e.target.value }))}
@@ -660,7 +663,7 @@ export default function FlowDefinitionEditorPage({
             <>
               <div className="grid gap-2">
                 <Label className="text-[var(--text-secondary)]">Título da tela (CRM)</Label>
-                <Input
+                <InputGlass
                   value={activeScreen.title}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -675,9 +678,9 @@ export default function FlowDefinitionEditorPage({
               </div>
               <div className="flex items-center justify-between border-t border-[var(--glass-border-subtle)] pt-3">
                 <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">Campos</p>
-                <Button
+                <ButtonGlass
                   type="button"
-                  variant="outline"
+                  variant="glass"
                   size="sm"
                   onClick={() => {
                     updateDraft((d) => {
@@ -690,7 +693,7 @@ export default function FlowDefinitionEditorPage({
                   }}
                 >
                   <Plus className="size-3.5" /> Campo
-                </Button>
+                </ButtonGlass>
               </div>
               <div className="space-y-3">
                 {activeScreen.fields.length === 0 ? (
@@ -723,7 +726,7 @@ export default function FlowDefinitionEditorPage({
                       <div className="grid gap-2.5 sm:grid-cols-2">
                         <div className="grid gap-1.5">
                           <Label className="text-xs text-[var(--text-secondary)]">Chave (slug)</Label>
-                          <Input
+                          <InputGlass
                             value={f.fieldKey}
                             onChange={(e) => {
                               const v = e.target.value.replace(/[^a-zA-Z0-9_]/g, "_");
@@ -741,7 +744,7 @@ export default function FlowDefinitionEditorPage({
                         </div>
                         <div className="grid gap-1.5">
                           <Label className="text-xs text-[var(--text-secondary)]">Rótulo</Label>
-                          <Input
+                          <InputGlass
                             value={f.label}
                             onChange={(e) => {
                               const v = e.target.value;
@@ -780,13 +783,10 @@ export default function FlowDefinitionEditorPage({
                             triggerClassName="w-full"
                           />
                         </div>
-                        <label className="flex items-center gap-2 self-end pb-2 text-xs font-semibold text-[var(--text-secondary)]">
-                          <input
-                            type="checkbox"
-                            className="size-4 accent-[var(--brand-primary)]"
+                        <label className="flex items-center gap-2 self-end pb-2 text-xs font-semibold text-[var(--text-secondary)] cursor-pointer">
+                          <CheckboxGlass
                             checked={f.required}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
+                            onChange={(checked) => {
                               updateDraft((d) => {
                                 const screens = d.screens.map((s, i) => {
                                   if (i !== selectedScreenIdx) return s;
@@ -798,6 +798,7 @@ export default function FlowDefinitionEditorPage({
                                 return { ...d, screens };
                               });
                             }}
+                            aria-label="Obrigatório"
                           />
                           Obrigatório
                         </label>

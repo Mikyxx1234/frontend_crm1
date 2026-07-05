@@ -29,7 +29,7 @@ import { useSession } from "next-auth/react";
 import { IconAlertTriangle as AlertTriangle, IconCamera as Camera, IconCheck as Check, IconCopy as Copy, IconInfoCircle as Info, IconKey as Key, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCw, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog,
   DialogContent,
@@ -38,9 +38,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -428,12 +428,13 @@ function ProfileCard({
             side="right"
             className="absolute -bottom-1 -right-1"
           >
-            <button
+            <ButtonGlass
+              variant="icon"
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-md transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]",
+                "size-8 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-md hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]",
                 uploading && "cursor-wait opacity-80",
               )}
               aria-label="Alterar foto de perfil"
@@ -443,7 +444,7 @@ function ProfileCard({
               ) : (
                 <Camera className="size-3.5" />
               )}
-            </button>
+            </ButtonGlass>
           </TooltipHost>
           <input
             ref={fileInputRef}
@@ -481,13 +482,12 @@ function ProfileCard({
         }}
       >
         <Field id="name" label="Nome" required>
-          <Input
+          <InputGlass
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             autoComplete="name"
-            className="h-11 rounded-xl border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-sm focus-visible:ring-[var(--color-primary)]/30"
           />
         </Field>
 
@@ -496,12 +496,11 @@ function ProfileCard({
           label="Assinatura"
           hint="Aparece no final das suas mensagens. Vazio = usa seu nome."
         >
-          <Input
+          <InputGlass
             id="signature"
             value={signature}
             onChange={(e) => setSignature(e.target.value)}
             placeholder="Ex.: Marcelo · EduIT"
-            className="h-11 rounded-xl border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-sm focus-visible:ring-[var(--color-primary)]/30"
           />
         </Field>
 
@@ -513,7 +512,7 @@ function ProfileCard({
             >
               <span className="text-sm leading-none">🇧🇷</span>
             </span>
-            <Input
+            <InputGlass
               id="phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -528,20 +527,16 @@ function ProfileCard({
 
         {/* ── Toggle de mensagem de finalização ── */}
         <div className="space-y-3 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <Switch
-              id="closing-toggle"
+          <label className="flex cursor-pointer items-center gap-3">
+            <SwitchGlass
               checked={closingEnabled}
-              onCheckedChange={setClosingEnabled}
+              onChange={setClosingEnabled}
               aria-label="Mensagem de finalização de conversa"
             />
-            <Label
-              htmlFor="closing-toggle"
-              className="cursor-pointer text-sm font-medium text-[var(--text-primary)]"
-            >
+            <span className="text-sm font-medium text-[var(--text-primary)]">
               Mensagem de finalização de conversa
-            </Label>
-          </div>
+            </span>
+          </label>
 
           {closingEnabled && (
             <>
@@ -570,12 +565,11 @@ function ProfileCard({
           )}
         </div>
 
-        <button
+        <ButtonGlass
           type="submit"
+          variant="primary"
           disabled={saveMutation.isPending}
-          className={cn(
-            "mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors duration-150 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60",
-          )}
+          className="mt-4 h-11 w-full text-sm disabled:opacity-60"
         >
           {saveMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />
@@ -583,7 +577,7 @@ function ProfileCard({
             <Check className="size-4" />
           )}
           Salvar
-        </button>
+        </ButtonGlass>
       </form>
 
       {/*
@@ -732,17 +726,19 @@ function TokensCard() {
           </p>
         </div>
         {hasTokens && (
-          <button
+          <ButtonGlass
             type="button"
+            variant="primary"
+            size="sm"
             onClick={() => {
               setJustCreated(null);
               setCreateOpen(true);
             }}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--brand-primary-hover)]"
+            className="shrink-0"
           >
             <Plus className="size-3.5" />
             Novo token
-          </button>
+          </ButtonGlass>
         )}
       </div>
 
@@ -772,15 +768,17 @@ function TokensCard() {
                 </p>
               </div>
               <TooltipHost label="Revogar" side="left">
-                <button
+                <ButtonGlass
+                  variant="icon"
                   type="button"
                   onClick={() => handleRevoke(t)}
                   disabled={revokeMutation.isPending}
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                  tooltipSide="left"
+                  className="size-8 rounded-lg text-[var(--color-ink-muted)] hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)] disabled:opacity-50"
                   aria-label={`Revogar token ${t.name}`}
                 >
                   <Trash2 className="size-4" />
-                </button>
+                </ButtonGlass>
               </TooltipHost>
             </li>
           ))}
@@ -815,14 +813,15 @@ function TokensCard() {
                   <code className="flex-1 truncate font-mono text-xs text-[var(--text-secondary)]">
                     {justCreated.token}
                   </code>
-                  <button
+                  <ButtonGlass
+                    variant="icon"
                     type="button"
                     onClick={() => copyToken(justCreated.token)}
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+                    className="size-8 rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
                     aria-label="Copiar token"
                   >
                     <Copy className="size-4" />
-                  </button>
+                  </ButtonGlass>
                 </div>
                 <div className="flex items-start gap-2 rounded-xl bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-[12px] leading-snug text-[var(--color-warning)]">
                   <Info className="mt-0.5 size-3.5 shrink-0" />
@@ -834,7 +833,7 @@ function TokensCard() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={() => setCreateOpen(false)}>Concluído</Button>
+                <ButtonGlass variant="primary" onClick={() => setCreateOpen(false)}>Concluído</ButtonGlass>
               </DialogFooter>
             </>
           ) : (
@@ -857,44 +856,42 @@ function TokensCard() {
                   <Label htmlFor="token-name" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Nome
                   </Label>
-                  <Input
+                  <InputGlass
                     id="token-name"
                     value={newTokenName}
                     onChange={(e) => setNewTokenName(e.target.value)}
                     placeholder="Ex.: Integração N8N"
                     required
                     autoFocus
-                    className="h-11 rounded-xl"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="token-expires" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Expira em (opcional)
                   </Label>
-                  <Input
+                  <InputGlass
                     id="token-expires"
                     type="date"
                     value={newTokenExpires}
                     onChange={(e) => setNewTokenExpires(e.target.value)}
-                    className="h-11 rounded-xl"
                   />
                 </div>
                 <DialogFooter>
-                  <Button
+                  <ButtonGlass
                     type="button"
-                    variant="outline"
+                    variant="glass"
                     onClick={() => setCreateOpen(false)}
                   >
                     Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending || !newTokenName.trim()}>
+                  </ButtonGlass>
+                  <ButtonGlass type="submit" variant="primary" disabled={createMutation.isPending || !newTokenName.trim()}>
                     {createMutation.isPending ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <Plus className="size-4" />
                     )}
                     Gerar token
-                  </Button>
+                  </ButtonGlass>
                 </DialogFooter>
               </form>
             </>

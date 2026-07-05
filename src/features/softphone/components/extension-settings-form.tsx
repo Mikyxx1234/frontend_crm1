@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { IconLoader2, IconDeviceFloppy } from "@tabler/icons-react";
 import { createExtension } from "../api/extensions";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 
 export function ExtensionSettingsForm() {
   const [label, setLabel] = useState("");
@@ -39,7 +39,7 @@ export function ExtensionSettingsForm() {
       {fields.map((f) => (
         <div key={f.label} className="flex flex-col gap-1.5">
           <Label>{f.label}</Label>
-          <Input
+          <InputGlass
             type={f.type ?? "text"}
             value={f.value}
             onChange={(e) => f.set(e.target.value)}
@@ -58,8 +58,9 @@ export function ExtensionSettingsForm() {
         <p className="text-xs text-[var(--color-success)]/80">Ramal salvo com sucesso!</p>
       )}
 
-      <Button
+      <ButtonGlass
         type="submit"
+        variant="primary"
         disabled={!label || !sipUri || !authUser || !authPassword || !wsServer || mutation.isPending}
       >
         {mutation.isPending ? (
@@ -68,7 +69,7 @@ export function ExtensionSettingsForm() {
           <IconDeviceFloppy size={14} />
         )}
         Salvar Ramal
-      </Button>
+      </ButtonGlass>
     </form>
   );
 }

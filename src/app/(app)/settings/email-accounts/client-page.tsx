@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { IconMail as Mail, IconPlus as Plus, IconTrash as Trash2, IconRefresh as RefreshCw, IconX as X } from "@tabler/icons-react";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { toast } from "sonner";
 
 import { TabsGlass } from "@/components/crm/tabs-glass";
-import { SelectNative } from "@/components/ui/select";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
 import { ConnectEmailModal } from "@/features/email-v2";
@@ -429,7 +429,7 @@ function RuleForm({
         <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           Nome
         </span>
-        <Input
+        <InputGlass
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -442,22 +442,22 @@ function RuleForm({
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Campo
           </span>
-          <SelectNative
+          <DropdownGlass
             value={conditionField}
-            onChange={(e) => setConditionField(e.target.value as EmailRuleField)}
-            className="text-[13px]"
-          >
-            <option value="FROM">Enviado de</option>
-            <option value="TO">Enviado para</option>
-            <option value="SUBJECT">Assunto</option>
-          </SelectNative>
+            onValueChange={(v) => setConditionField(v as EmailRuleField)}
+            options={[
+              { value: "FROM", label: "Enviado de" },
+              { value: "TO", label: "Enviado para" },
+              { value: "SUBJECT", label: "Assunto" },
+            ]}
+          />
         </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Contém o texto
           </span>
-          <Input
+          <InputGlass
             type="text"
             value={conditionValue}
             onChange={(e) => setConditionValue(e.target.value)}
@@ -471,14 +471,14 @@ function RuleForm({
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Ação
           </span>
-          <SelectNative
+          <DropdownGlass
             value={action}
-            onChange={(e) => setAction(e.target.value as EmailRuleAction)}
-            className="text-[13px]"
-          >
-            <option value="MOVE">Mover para pasta</option>
-            <option value="TRASH">Excluir (mover para lixeira)</option>
-          </SelectNative>
+            onValueChange={(v) => setAction(v as EmailRuleAction)}
+            options={[
+              { value: "MOVE", label: "Mover para pasta" },
+              { value: "TRASH", label: "Excluir (mover para lixeira)" },
+            ]}
+          />
         </label>
 
         {action === "MOVE" && (
@@ -486,18 +486,17 @@ function RuleForm({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Pasta de destino
             </span>
-            <SelectNative
+            <DropdownGlass
               value={targetFolderId}
-              onChange={(e) => setTargetFolderId(e.target.value)}
+              onValueChange={setTargetFolderId}
               disabled={folders.length === 0}
-              className="text-[13px]"
-            >
-              {folders.length === 0 ? (
-                <option value="">Nenhuma pasta — crie no Inbox</option>
-              ) : (
-                folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)
-              )}
-            </SelectNative>
+              placeholder="Nenhuma pasta — crie no Inbox"
+              options={
+                folders.length === 0
+                  ? [{ value: "", label: "Nenhuma pasta — crie no Inbox", disabled: true }]
+                  : folders.map((f) => ({ value: f.id, label: f.name }))
+              }
+            />
           </label>
         )}
       </div>

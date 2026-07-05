@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2, IconPlus, IconWebhook } from "@tabler/icons-react";
-import { SelectNative } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 
 const BASE = "/api";
 
@@ -37,6 +37,22 @@ async function createConfig(body: Record<string, unknown>) {
   }
   return res.json();
 }
+
+const PROVIDER_OPTIONS = [
+  { value: "api4com", label: "Api4Com" },
+  { value: "generic_sip", label: "PBX Genérico" },
+];
+
+const AUTH_MODE_OPTIONS = [
+  { value: "TOKEN", label: "Token" },
+  { value: "HMAC", label: "HMAC" },
+];
+
+const RECORDING_OPTIONS = [
+  { value: "URL", label: "URL (mp3)" },
+  { value: "INLINE", label: "Inline" },
+  { value: "FETCH_LATER", label: "Buscar depois" },
+];
 
 export function ProviderConfigForm() {
   const queryClient = useQueryClient();
@@ -82,14 +98,14 @@ export function ProviderConfigForm() {
       ))}
 
       {!showForm ? (
-        <Button
+        <ButtonGlass
           type="button"
-          variant="ghost"
+          variant="glass"
           onClick={() => setShowForm(true)}
-          className="w-full border border-dashed border-[var(--glass-border)]"
+          className="w-full border-dashed"
         >
           <IconPlus size={14} /> Adicionar Provedor
-        </Button>
+        </ButtonGlass>
       ) : (
         <form
           onSubmit={(e) => {
@@ -100,31 +116,25 @@ export function ProviderConfigForm() {
         >
           <div className="flex flex-col gap-1.5">
             <Label>Provedor</Label>
-            <SelectNative
+            <DropdownGlass
+              options={PROVIDER_OPTIONS}
               value={providerKey}
-              onChange={(e) => setProviderKey(e.target.value)}
-              className="h-8 text-sm"
-            >
-              <option value="api4com">Api4Com</option>
-              <option value="generic_sip">PBX Genérico</option>
-            </SelectNative>
+              onValueChange={setProviderKey}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label>Auth Mode</Label>
-            <SelectNative
+            <DropdownGlass
+              options={AUTH_MODE_OPTIONS}
               value={authMode}
-              onChange={(e) => setAuthMode(e.target.value)}
-              className="h-8 text-sm"
-            >
-              <option value="TOKEN">Token</option>
-              <option value="HMAC">HMAC</option>
-            </SelectNative>
+              onValueChange={setAuthMode}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label>Webhook Secret</Label>
-            <Input
+            <InputGlass
               type="text"
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
@@ -134,15 +144,11 @@ export function ProviderConfigForm() {
 
           <div className="flex flex-col gap-1.5">
             <Label>Recording Delivery</Label>
-            <SelectNative
+            <DropdownGlass
+              options={RECORDING_OPTIONS}
               value={recordingDelivery}
-              onChange={(e) => setRecordingDelivery(e.target.value)}
-              className="h-8 text-sm"
-            >
-              <option value="URL">URL (mp3)</option>
-              <option value="INLINE">Inline</option>
-              <option value="FETCH_LATER">Buscar depois</option>
-            </SelectNative>
+              onValueChange={setRecordingDelivery}
+            />
           </div>
 
           {mutation.isError && (
@@ -150,22 +156,23 @@ export function ProviderConfigForm() {
           )}
 
           <div className="flex gap-2">
-            <Button
+            <ButtonGlass
               type="submit"
+              variant="primary"
               size="sm"
               disabled={!webhookSecret || mutation.isPending}
             >
               {mutation.isPending && <IconLoader2 size={12} className="animate-spin" />}
               Salvar
-            </Button>
-            <Button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
               variant="glass"
               size="sm"
               onClick={() => setShowForm(false)}
             >
               Cancelar
-            </Button>
+            </ButtonGlass>
           </div>
         </form>
       )}

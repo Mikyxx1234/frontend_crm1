@@ -24,7 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import {
@@ -653,7 +655,7 @@ export default function TeamV2ClientPage() {
               <label htmlFor="invite-name" className="text-sm font-medium">
                 Nome
               </label>
-              <Input
+              <InputGlass
                 id="invite-name"
                 value={inviteName}
                 onChange={(e) => setInviteName(e.target.value)}
@@ -665,7 +667,7 @@ export default function TeamV2ClientPage() {
               <label htmlFor="invite-email" className="text-sm font-medium">
                 E-mail
               </label>
-              <Input
+              <InputGlass
                 id="invite-email"
                 type="email"
                 value={inviteEmail}
@@ -678,7 +680,7 @@ export default function TeamV2ClientPage() {
               <label htmlFor="invite-password" className="text-sm font-medium">
                 Senha inicial
               </label>
-              <Input
+              <InputGlass
                 id="invite-password"
                 type="password"
                 value={invitePassword}
@@ -691,7 +693,7 @@ export default function TeamV2ClientPage() {
                   "text-[11px]",
                   invitePassword.length > 0 && invitePassword.length < 6
                     ? "text-[var(--color-danger,#e11d48)]"
-                    : "text-muted-foreground",
+                    : "text-[var(--text-muted)]",
                 )}
               >
                 Mínimo de 6 caracteres.
@@ -707,12 +709,12 @@ export default function TeamV2ClientPage() {
                 matchTriggerWidth
                 triggerClassName="w-full"
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-[var(--text-muted)]">
                 Apenas <strong>Administrador</strong> é preset. As demais funções
                 são as roles criadas em Permissões.
               </p>
             </div>
-            <div className="grid gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+            <div className="grid gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Permissões iniciais</span>
                 {inviteIsAdmin ? (
@@ -720,7 +722,7 @@ export default function TeamV2ClientPage() {
                     Admin · tudo liberado
                   </span>
                 ) : (
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-[11px] text-[var(--text-muted)]">
                     Editáveis depois em Configurações → Permissões
                   </span>
                 )}
@@ -733,37 +735,25 @@ export default function TeamV2ClientPage() {
                     <label
                       key={action}
                       className={cn(
-                        "flex items-center justify-between gap-3 rounded-lg border border-transparent bg-background/60 px-3 py-2 text-sm transition-colors",
-                        !inviteIsAdmin && "hover:border-border",
+                        "flex items-center justify-between gap-3 rounded-lg border border-transparent bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm transition-colors",
+                        !inviteIsAdmin && "hover:border-[var(--glass-border)]",
                       )}
                     >
                       <span className="min-w-0 truncate text-[var(--text-primary)]">
                         {CRM_ACTION_LABELS[action]}
                       </span>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={checked}
+                      <SwitchGlass
+                        size="sm"
+                        checked={checked}
                         disabled={inviteIsAdmin}
-                        onClick={() =>
+                        onChange={() =>
                           setInvitePermissions((prev) => ({
                             ...prev,
                             [action]: !prev[action],
                           }))
                         }
-                        className={cn(
-                          "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
-                          checked ? "bg-primary" : "bg-muted-foreground/30",
-                          inviteIsAdmin && "cursor-not-allowed opacity-70",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "inline-block size-4 rounded-full bg-[var(--glass-bg-overlay)] shadow-sm transition-transform",
-                            checked ? "translate-x-4" : "translate-x-0.5",
-                          )}
-                        />
-                      </button>
+                        aria-label={CRM_ACTION_LABELS[action]}
+                      />
                     </label>
                   );
                 })}
@@ -776,15 +766,16 @@ export default function TeamV2ClientPage() {
             </p>
           ) : null}
           <DialogFooter className="gap-2 sm:gap-0">
-            <button
+            <ButtonGlass
               type="button"
+              variant="glass"
               onClick={() => setInviteOpen(false)}
-              className="rounded-full border border-[var(--glass-border)] px-4 py-2 font-display text-[13px] font-semibold text-[var(--text-secondary)] hover:bg-black/5"
             >
               Cancelar
-            </button>
-            <button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="primary"
               disabled={
                 invite.isPending ||
                 !inviteName.trim() ||
@@ -792,7 +783,6 @@ export default function TeamV2ClientPage() {
                 invitePassword.length < 6
               }
               onClick={() => invite.mutate()}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:translate-y-0 disabled:opacity-60"
             >
               {invite.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -800,7 +790,7 @@ export default function TeamV2ClientPage() {
                 <IconPlus size={16} />
               )}
               Criar usuário
-            </button>
+            </ButtonGlass>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -825,7 +815,7 @@ export default function TeamV2ClientPage() {
                   <span className="font-medium text-[var(--text-primary)]">
                     {passwordTarget.name}
                   </span>{" "}
-                  <span className="text-muted-foreground">
+                  <span className="text-[var(--text-muted)]">
                     ({passwordTarget.email})
                   </span>
                   . O próximo login usará esta senha.
@@ -839,7 +829,7 @@ export default function TeamV2ClientPage() {
                 Nova senha
               </label>
               <div className="relative">
-                <Input
+                <InputGlass
                   id="new-password"
                   type={showPassword ? "text" : "password"}
                   value={newPassword}
@@ -852,19 +842,19 @@ export default function TeamV2ClientPage() {
                   type="button"
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-[var(--text-primary)]"
+                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              <p className="text-[11px] text-muted-foreground">Mínimo de 6 caracteres.</p>
+              <p className="text-[11px] text-[var(--text-muted)]">Mínimo de 6 caracteres.</p>
             </div>
             <div className="grid gap-1.5">
               <label htmlFor="confirm-password" className="text-sm font-medium">
                 Confirmar nova senha
               </label>
-              <Input
+              <InputGlass
                 id="confirm-password"
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
@@ -880,16 +870,17 @@ export default function TeamV2ClientPage() {
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <button
+            <ButtonGlass
               type="button"
+              variant="glass"
               onClick={closePasswordDialog}
               disabled={updatePassword.isPending}
-              className="rounded-full border border-[var(--glass-border)] px-4 py-2 font-display text-[13px] font-semibold text-[var(--text-secondary)] hover:bg-black/5 disabled:opacity-60"
             >
               Cancelar
-            </button>
-            <button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="primary"
               disabled={!canSubmitPassword}
               onClick={() => {
                 if (!passwordTarget) return;
@@ -898,7 +889,6 @@ export default function TeamV2ClientPage() {
                   password: newPassword,
                 });
               }}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)] disabled:translate-y-0 disabled:opacity-60"
             >
               {updatePassword.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -906,7 +896,7 @@ export default function TeamV2ClientPage() {
                 <KeyRound className="size-4" />
               )}
               Salvar nova senha
-            </button>
+            </ButtonGlass>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -931,28 +921,28 @@ export default function TeamV2ClientPage() {
                   <span className="font-medium text-[var(--text-primary)]">
                     {deleteTarget.name}
                   </span>{" "}
-                  (<span className="text-muted-foreground">{deleteTarget.email}</span>).
+                  (<span className="text-[var(--text-muted)]">{deleteTarget.email}</span>).
                 </>
               ) : null}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <button
+            <ButtonGlass
               type="button"
+              variant="glass"
               onClick={() => setDeleteTarget(null)}
               disabled={deleteUser.isPending}
-              className="rounded-full border border-[var(--glass-border)] px-4 py-2 font-display text-[13px] font-semibold text-[var(--text-secondary)] hover:bg-black/5 disabled:opacity-60"
             >
               Cancelar
-            </button>
-            <button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="danger"
               disabled={deleteUser.isPending || !deleteTarget}
               onClick={() => {
                 if (!deleteTarget) return;
                 deleteUser.mutate(deleteTarget.id);
               }}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-danger,#e11d48)] px-4 py-2 font-display text-[13px] font-bold text-white transition-all hover:-translate-y-px disabled:translate-y-0 disabled:opacity-60"
             >
               {deleteUser.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -960,7 +950,7 @@ export default function TeamV2ClientPage() {
                 <Trash2 className="size-4" />
               )}
               Confirmar exclusão
-            </button>
+            </ButtonGlass>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -985,19 +975,19 @@ export default function TeamV2ClientPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <button
+            <ButtonGlass
               type="button"
+              variant="glass"
               onClick={() => setBulkDeleteOpen(false)}
               disabled={bulkDeleting}
-              className="rounded-full border border-[var(--glass-border)] px-4 py-2 font-display text-[13px] font-semibold text-[var(--text-secondary)] hover:bg-black/5 disabled:opacity-60"
             >
               Cancelar
-            </button>
-            <button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="danger"
               disabled={bulkDeleting}
               onClick={handleBulkDelete}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-danger,#e11d48)] px-4 py-2 font-display text-[13px] font-bold text-white transition-all hover:-translate-y-px disabled:translate-y-0 disabled:opacity-60"
             >
               {bulkDeleting ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -1005,7 +995,7 @@ export default function TeamV2ClientPage() {
                 <Trash2 className="size-4" />
               )}
               Confirmar exclusão
-            </button>
+            </ButtonGlass>
           </DialogFooter>
         </DialogContent>
       </Dialog>

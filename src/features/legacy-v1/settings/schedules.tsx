@@ -5,12 +5,12 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconCheck as Check, IconClock as Clock, IconLoader2 as Loader2, IconPencil as Pencil } from "@tabler/icons-react";
 
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog, DialogClose, DialogContent, DialogDescription,
   DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
@@ -264,9 +264,9 @@ export default function SchedulesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <TooltipHost label="Editar horário" side="left">
-                        <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(agent)} aria-label="Editar horário">
+                        <ButtonGlass variant="icon" className="size-8" onClick={() => openEdit(agent)} aria-label="Editar horário">
                           <Pencil className="size-3.5" />
-                        </Button>
+                        </ButtonGlass>
                       </TooltipHost>
                     </td>
                   </tr>
@@ -293,22 +293,22 @@ export default function SchedulesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="sch-start">Início expediente</Label>
-                <Input id="sch-start" type="time" value={editSchedule.startTime}
+                <InputGlass id="sch-start" type="time" value={editSchedule.startTime}
                   onChange={(e) => setEditSchedule((s) => ({ ...s, startTime: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="sch-end">Fim expediente</Label>
-                <Input id="sch-end" type="time" value={editSchedule.endTime}
+                <InputGlass id="sch-end" type="time" value={editSchedule.endTime}
                   onChange={(e) => setEditSchedule((s) => ({ ...s, endTime: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="sch-lunch-start">Início almoço</Label>
-                <Input id="sch-lunch-start" type="time" value={editSchedule.lunchStart}
+                <InputGlass id="sch-lunch-start" type="time" value={editSchedule.lunchStart}
                   onChange={(e) => setEditSchedule((s) => ({ ...s, lunchStart: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="sch-lunch-end">Fim almoço</Label>
-                <Input id="sch-lunch-end" type="time" value={editSchedule.lunchEnd}
+                <InputGlass id="sch-lunch-end" type="time" value={editSchedule.lunchEnd}
                   onChange={(e) => setEditSchedule((s) => ({ ...s, lunchEnd: e.target.value }))} />
               </div>
             </div>
@@ -341,11 +341,11 @@ export default function SchedulesPage() {
             )}
 
             <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={() => setEditAgent(null)}>Cancelar</Button>
-              <Button type="submit" disabled={scheduleMutation.isPending} className="gap-2">
+              <ButtonGlass type="button" variant="glass" onClick={() => setEditAgent(null)}>Cancelar</ButtonGlass>
+              <ButtonGlass type="submit" variant="primary" disabled={scheduleMutation.isPending} className="gap-2">
                 {scheduleMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 Salvar
-              </Button>
+              </ButtonGlass>
             </DialogFooter>
           </form>
         </DialogContent>

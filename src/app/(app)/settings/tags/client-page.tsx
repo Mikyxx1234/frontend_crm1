@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { toast } from "sonner";
 import {
   IconBriefcase,
@@ -191,7 +191,7 @@ function TagsPage() {
           </div>
 
           {/* Name input */}
-          <Input
+          <InputGlass
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nome da tag…"
@@ -412,7 +412,7 @@ function TagRowItem({
 
       {/* Name (editable) */}
       {editing ? (
-        <Input
+        <InputGlass
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={save}

@@ -8,9 +8,12 @@ import * as React from "react";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { TabsGlass } from "@/components/crm/tabs-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import {
   Dialog,
   DialogClose,
@@ -20,12 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 type CustomFieldItem = {
   id: string;
@@ -144,38 +145,29 @@ export default function CustomFieldsPage() {
   const dealCount = fields.filter((f) => f.entity === "deal").length;
   const productCount = fields.filter((f) => f.entity === "product").length;
 
+  const filterOptions = [
+    { val: "all" as const, label: "Todos", count: fields.length },
+    { val: "contact" as const, label: "Contatos", count: contactCount },
+    { val: "deal" as const, label: "Negócios", count: dealCount },
+    { val: "product" as const, label: "Produtos", count: productCount },
+  ];
+  const activeTabIndex = filterOptions.findIndex((o) => o.val === entityFilter);
+
   return (
     <div className="w-full">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 rounded-lg border border-border/60 bg-muted/20 p-0.5">
-          {([
-            { val: "all" as const, label: `Todos (${fields.length})` },
-            { val: "contact" as const, label: `Contatos (${contactCount})` },
-            { val: "deal" as const, label: `Negócios (${dealCount})` },
-            { val: "product" as const, label: `Produtos (${productCount})` },
-          ]).map((opt) => (
-            <button
-              key={opt.val}
-              type="button"
-              onClick={() => setEntityFilter(opt.val)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                entityFilter === opt.val
-                  ? "bg-background text-[var(--text-primary)] shadow-sm"
-                  : "text-muted-foreground hover:text-[var(--text-primary)]"
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <TabsGlass
+          tabs={filterOptions.map((o) => ({ label: o.label, count: o.count }))}
+          activeTab={activeTabIndex === -1 ? 0 : activeTabIndex}
+          onChange={(i) => setEntityFilter(filterOptions[i].val)}
+        />
 
         <div className="flex-1" />
 
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+        <ButtonGlass variant="primary" onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" />
           Novo campo
-        </Button>
+        </ButtonGlass>
       </div>
 
       {isLoading ? (
@@ -191,9 +183,9 @@ export default function CustomFieldsPage() {
                 ? "Nenhum campo personalizado criado ainda."
                 : "Nenhum campo nesta categoria."}
             </p>
-            <Button variant="outline" className="mt-4 gap-2" onClick={() => setCreateOpen(true)}>
+            <ButtonGlass variant="glass" className="mt-4" onClick={() => setCreateOpen(true)}>
               <Plus className="size-4" /> Criar campo
-            </Button>
+            </ButtonGlass>
           </div>
         </GlassCard>
       ) : (
@@ -207,14 +199,14 @@ export default function CustomFieldsPage() {
                     <p className="mt-0.5 font-mono text-xs text-[var(--text-muted)]">{f.name}</p>
                   </div>
                   <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button
-                      variant="ghost" size="icon" className="size-7"
+                    <ButtonGlass
+                      variant="icon" size="icon" className="size-7"
                       onClick={() => setEditItem(f)}
                     >
                       <Pencil className="size-3" />
-                    </Button>
-                    <Button
-                      variant="ghost" size="icon" className="size-7 text-destructive hover:bg-destructive/10"
+                    </ButtonGlass>
+                    <ButtonGlass
+                      variant="icon" size="icon" className="size-7 text-[var(--color-destructive)] hover:bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] hover:text-[var(--color-destructive)]"
                       onClick={async () => {
                         const ok = await confirm({
                           title: "Excluir campo",
@@ -226,7 +218,7 @@ export default function CustomFieldsPage() {
                       }}
                     >
                       <Trash2 className="size-3" />
-                    </Button>
+                    </ButtonGlass>
                   </div>
                 </div>
               </div>
@@ -432,7 +424,7 @@ function FieldFormDialog({
 
           <div className="space-y-1.5">
             <Label className="text-xs">Identificador (slug) — opcional</Label>
-            <Input
+            <InputGlass
               value={name}
               onChange={(e) => {
                 const cleaned = e.target.value
@@ -446,7 +438,7 @@ function FieldFormDialog({
               }}
               placeholder="vazio = gerar automático pelo label"
               disabled={mode === "edit"}
-              className="h-9 font-mono text-sm"
+              className="font-mono"
             />
             {mode === "create" ? (
               <p className="text-[11px] text-muted-foreground">
@@ -458,11 +450,10 @@ function FieldFormDialog({
 
           <div className="space-y-1.5">
             <Label className="text-xs">Label (exibição)</Label>
-            <Input
+            <InputGlass
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="ex: Fonte do Lead"
-              className="h-9"
             />
           </div>
 
@@ -479,18 +470,14 @@ function FieldFormDialog({
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="cf-required"
+          <label className="flex items-center gap-2 cursor-pointer">
+            <CheckboxGlass
               checked={required}
-              onChange={(e) => setRequired(e.target.checked)}
-              className="size-4 rounded border-border"
+              onChange={(v) => setRequired(v)}
+              aria-label="Campo obrigatório"
             />
-            <Label htmlFor="cf-required" className="text-sm cursor-pointer">
-              Campo obrigatório
-            </Label>
-          </div>
+            <span className="text-sm">Campo obrigatório</span>
+          </label>
 
           {supportsInboxPanel && (
             <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-3">
@@ -501,27 +488,22 @@ function FieldFormDialog({
                 {entity === "deal" && <> Ex.: origem do lead, segmento, plano.</>}
                 {" "}Use tipo <strong>Sim/Não</strong> para situações de destaque.
               </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="cf-inbox-panel"
+              <label className="flex items-center gap-2 cursor-pointer">
+                <CheckboxGlass
                   checked={showInInboxLeadPanel}
-                  onChange={(e) => setShowInInboxLeadPanel(e.target.checked)}
-                  className="size-4 rounded border-border"
+                  onChange={(v) => setShowInInboxLeadPanel(v)}
+                  aria-label="Exibir no painel lateral (Inbox)"
                 />
-                <Label htmlFor="cf-inbox-panel" className="text-sm cursor-pointer">
-                  Exibir no painel lateral (Inbox)
-                </Label>
-              </div>
+                <span className="text-sm">Exibir no painel lateral (Inbox)</span>
+              </label>
               <div className="space-y-1.5">
                 <Label className="text-xs">Ordem no painel (opcional)</Label>
-                <Input
+                <InputGlass
                   type="number"
                   inputMode="numeric"
                   value={inboxOrder}
                   onChange={(e) => setInboxOrder(e.target.value)}
                   placeholder="0 = primeiro; vazio = após os numerados"
-                  className="h-9"
                 />
               </div>
             </div>
@@ -530,11 +512,12 @@ function FieldFormDialog({
           <Separator />
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <ButtonGlass type="button" variant="glass" onClick={() => onOpenChange(false)}>
               Cancelar
-            </Button>
-            <Button
+            </ButtonGlass>
+            <ButtonGlass
               type="submit"
+              variant="primary"
               disabled={
                 mutation.isPending || !label.trim()
               }
@@ -544,11 +527,11 @@ function FieldFormDialog({
                 : mode === "create"
                   ? "Criar campo"
                   : "Salvar"}
-            </Button>
+            </ButtonGlass>
           </DialogFooter>
 
           {mutation.isError && (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-[var(--color-destructive)]">
               {mutation.error instanceof Error ? mutation.error.message : "Erro"}
             </p>
           )}

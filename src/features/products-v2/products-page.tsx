@@ -14,9 +14,10 @@ import {
   IconSearch,
 } from "@tabler/icons-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { Chip } from "@/components/crm/chip";
+import { StatusPill } from "@/components/crm/status-pill";
 import { apiUrl } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -83,7 +84,7 @@ export function ProductsV2Page() {
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
           />
-          <Input
+          <InputGlass
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nome ou SKU…"
@@ -114,9 +115,9 @@ export function ProductsV2Page() {
               </button>
             ))}
         </div>
-        <Button onClick={openCreate}>
+        <ButtonGlass variant="primary" onClick={openCreate}>
           <IconPlus size={16} /> Novo produto
-        </Button>
+        </ButtonGlass>
       </div>
 
       {isLoading ? (
@@ -127,9 +128,9 @@ export function ProductsV2Page() {
         <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] py-16">
           <IconPackage size={40} className="text-[var(--text-secondary)] opacity-40" />
           <p className="text-sm text-[var(--text-secondary)]">Nenhum produto encontrado.</p>
-          <Button variant="outline" size="sm" onClick={openCreate}>
+          <ButtonGlass variant="glass" size="sm" onClick={openCreate}>
             <IconPlus size={14} /> Criar primeiro
-          </Button>
+          </ButtonGlass>
         </div>
       ) : (
         <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
@@ -162,9 +163,9 @@ export function ProductsV2Page() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant="outline" className="gap-1 text-[10px]">
+                    <Chip variant="ghost">
                       {KIND_ICON[p.kind]} {KIND_LABEL[p.kind]}
-                    </Badge>
+                    </Chip>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-[var(--text-secondary)]">
                     {p.sku || "—"}
@@ -173,19 +174,20 @@ export function ProductsV2Page() {
                     {formatCurrency(Number(p.price))}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <Badge variant={p.isActive ? "default" : "secondary"} className="text-[10px]">
-                      {p.isActive ? "Ativo" : "Inativo"}
-                    </Badge>
+                    {p.isActive ? (
+                      <StatusPill variant="success">Ativo</StatusPill>
+                    ) : (
+                      <Chip variant="ghost">Inativo</Chip>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
+                    <ButtonGlass
+                      variant="icon"
                       size="icon"
-                      className="size-7"
                       onClick={() => openEdit(p.id)}
                     >
                       <IconPencil size={14} />
-                    </Button>
+                    </ButtonGlass>
                   </td>
                 </tr>
               ))}

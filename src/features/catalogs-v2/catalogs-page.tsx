@@ -15,7 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog,
   DialogContent,
@@ -298,9 +298,9 @@ export function CatalogsManager() {
       </label>,
     );
     slots.setActions(
-      <Button onClick={() => setWizardOpen(true)}>
+      <ButtonGlass variant="primary" onClick={() => setWizardOpen(true)}>
         <IconPlus size={16} /> Novo catálogo
-      </Button>,
+      </ButtonGlass>,
     );
     return () => {
       slots.setCenter(null);

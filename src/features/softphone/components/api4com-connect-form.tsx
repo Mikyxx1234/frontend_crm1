@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import {
   IconAlertTriangle,
   IconBrandTelegram,
@@ -23,7 +23,7 @@ import {
 } from "../api/extensions";
 import { useSoftphone } from "../hooks/use-softphone";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 
 /**
  * Bloco de feedback pós-conexão — extraído pra que o discriminated
@@ -371,14 +371,14 @@ export function Api4ComConnectForm() {
           : "Informe suas credenciais Api4Com. O CRM detectará automaticamente o ramal vinculado ao seu e-mail."}
       </p>
 
-      <Input
+      <InputGlass
         type="email"
         placeholder="E-mail Api4Com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
 
-      <Input
+      <InputGlass
         type="password"
         placeholder="Senha Api4Com"
         value={password}
@@ -396,8 +396,9 @@ export function Api4ComConnectForm() {
       )}
 
       <div className="flex items-center gap-2">
-        <Button
+        <ButtonGlass
           type="submit"
+          variant="primary"
           disabled={!email || !password || mutation.isPending}
           className="flex-1"
         >
@@ -407,10 +408,10 @@ export function Api4ComConnectForm() {
             <IconBrandTelegram size={14} />
           )}
           {status?.connected ? "Reconectar" : "Conectar Api4Com"}
-        </Button>
+        </ButtonGlass>
 
         {status?.connected && showForm && (
-          <Button
+          <ButtonGlass
             type="button"
             variant="glass"
             onClick={() => {
@@ -420,7 +421,7 @@ export function Api4ComConnectForm() {
             }}
           >
             Cancelar
-          </Button>
+          </ButtonGlass>
         )}
       </div>
     </form>

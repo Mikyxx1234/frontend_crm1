@@ -6,9 +6,9 @@ import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, Ic
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -172,7 +172,7 @@ export default function AiSettingsPage() {
             </Label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Input
+                <InputGlass
                   id="openai-key"
                   type={showKey ? "text" : "password"}
                   value={apiKey}
@@ -195,7 +195,8 @@ export default function AiSettingsPage() {
                   )}
                 </button>
               </div>
-              <Button
+              <ButtonGlass
+                variant="primary"
                 type="button"
                 onClick={() => saveMutation.mutate(apiKey.trim())}
                 disabled={!apiKey.trim() || saveMutation.isPending}
@@ -204,7 +205,7 @@ export default function AiSettingsPage() {
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : null}
                 Salvar
-              </Button>
+              </ButtonGlass>
             </div>
             <p className="text-[12px] text-muted-foreground">
               Obtenha em{" "}
@@ -225,9 +226,9 @@ export default function AiSettingsPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 py-3">
-          <Button
+          <ButtonGlass
             type="button"
-            variant="outline"
+            variant="glass"
             size="sm"
             onClick={() => testMutation.mutate()}
             disabled={!status?.configured || testMutation.isPending}
@@ -238,11 +239,11 @@ export default function AiSettingsPage() {
               <PlugZap className="mr-2 size-4" />
             )}
             Testar conexão
-          </Button>
+          </ButtonGlass>
           {status?.source === "database" && (
-            <Button
+            <ButtonGlass
               type="button"
-              variant="ghost"
+              variant="glass"
               size="sm"
               className="text-destructive/80 hover:text-destructive"
               onClick={async () => {
@@ -263,7 +264,7 @@ export default function AiSettingsPage() {
                 <Trash2 className="mr-2 size-4" />
               )}
               Remover
-            </Button>
+            </ButtonGlass>
           )}
         </div>
       </GlassCard>

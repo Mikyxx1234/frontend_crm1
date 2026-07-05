@@ -13,7 +13,7 @@ import { CreateChannelDialog } from "@/components/channels/create-channel-dialog
 import { MetaConfigPanel } from "@/components/channels/meta-config-panel";
 import type { ApiChannel } from "@/components/channels/types";
 import { WhatsappQrModal } from "@/components/channels/whatsapp-qr-modal";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog,
   DialogClose,
@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -196,14 +196,15 @@ export default function SettingsChannelsPage({
     <div className="w-full space-y-4">
       {!hideToolbar ? (
         <div className="flex justify-end">
-          <Button
+          <ButtonGlass
             type="button"
-            className="shrink-0 gap-2"
+            variant="primary"
+            className="shrink-0"
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" />
             Novo Canal
-          </Button>
+          </ButtonGlass>
         </div>
       ) : null}
 
@@ -229,14 +230,15 @@ export default function SettingsChannelsPage({
           <p className="mt-1 max-w-sm text-sm text-[var(--text-muted)]">
             Crie um canal para começar a receber conversas no CRM.
           </p>
-          <Button
+          <ButtonGlass
             type="button"
-            className="mt-6 gap-2"
+            variant="primary"
+            className="mt-6"
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" />
             Novo Canal
-          </Button>
+          </ButtonGlass>
         </div>
       ) : filteredChannels.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-6 py-16 text-center">
@@ -348,7 +350,7 @@ export default function SettingsChannelsPage({
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="simp-name">Nome</Label>
-              <Input
+              <InputGlass
                 id="simp-name"
                 value={simpleName}
                 onChange={(e) => setSimpleName(e.target.value)}
@@ -356,7 +358,7 @@ export default function SettingsChannelsPage({
             </div>
             <div className="space-y-2">
               <Label htmlFor="simp-phone">Telefone (opcional)</Label>
-              <Input
+              <InputGlass
                 id="simp-phone"
                 value={simplePhone}
                 onChange={(e) => setSimplePhone(e.target.value)}
@@ -369,20 +371,21 @@ export default function SettingsChannelsPage({
             />
           </div>
           <DialogFooter>
-            <Button
+            <ButtonGlass
               type="button"
-              variant="outline"
+              variant="glass"
               onClick={() => setSimpleChannel(null)}
             >
               Cancelar
-            </Button>
-            <Button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="primary"
               disabled={saveSimpleMutation.isPending || !simpleName.trim()}
               onClick={() => saveSimpleMutation.mutate()}
             >
               Salvar
-            </Button>
+            </ButtonGlass>
           </DialogFooter>
           <DialogClose />
         </DialogContent>

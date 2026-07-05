@@ -8,7 +8,7 @@ import { IconCircleCheck as CheckCircle2, IconChevronRight as ChevronRight, Icon
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog,
   DialogContent,
@@ -363,10 +363,10 @@ export default function MessageModelsHubPage() {
   const actionNode = React.useMemo(
     () =>
       safeTab === "overview" ? (
-        <Button type="button" size="sm" onClick={() => setNewOpen(true)}>
+        <ButtonGlass type="button" variant="primary" size="sm" onClick={() => setNewOpen(true)}>
           <Plus className="size-4" />
           <span className="ml-2">Novo modelo</span>
-        </Button>
+        </ButtonGlass>
       ) : null,
     [safeTab],
   );
@@ -533,10 +533,10 @@ export default function MessageModelsHubPage() {
             title="Flows interativos"
             actions={
               <>
-                <Button
+                <ButtonGlass
                   type="button"
                   size="sm"
-                  variant="outline"
+                  variant="glass"
                   onClick={() => {
                     setImportOpen(true);
                     void refetchMetaFlows();
@@ -544,9 +544,10 @@ export default function MessageModelsHubPage() {
                 >
                   <Download className="size-4" />
                   <span className="ml-2">Importar da Meta</span>
-                </Button>
-                <Button
+                </ButtonGlass>
+                <ButtonGlass
                   type="button"
+                  variant="primary"
                   size="sm"
                   disabled={createFlowMutation.isPending}
                   onClick={() => createFlowMutation.mutate()}
@@ -557,7 +558,7 @@ export default function MessageModelsHubPage() {
                     <Workflow className="size-4" />
                   )}
                   <span className="ml-2">Novo flow</span>
-                </Button>
+                </ButtonGlass>
               </>
             }
           >
@@ -774,10 +775,10 @@ export default function MessageModelsHubPage() {
                     </p>
                   </div>
                   {mf.alreadyImported ? (
-                    <Button
+                    <ButtonGlass
                       type="button"
                       size="sm"
-                      variant="outline"
+                      variant="glass"
                       onClick={() => {
                         if (mf.crmFlowDefinitionId) {
                           setImportOpen(false);
@@ -786,10 +787,11 @@ export default function MessageModelsHubPage() {
                       }}
                     >
                       Abrir no CRM
-                    </Button>
+                    </ButtonGlass>
                   ) : (
-                    <Button
+                    <ButtonGlass
                       type="button"
+                      variant="primary"
                       size="sm"
                       disabled={importFlowMutation.isPending}
                       onClick={() => importFlowMutation.mutate(mf.id)}
@@ -799,7 +801,7 @@ export default function MessageModelsHubPage() {
                       ) : (
                         "Importar"
                       )}
-                    </Button>
+                    </ButtonGlass>
                   )}
                 </li>
               ))}

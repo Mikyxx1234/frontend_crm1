@@ -86,34 +86,34 @@ function WebhookFallback({
   onCopy: (url: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 p-3 text-amber-100">
-      <div className="inline-flex items-start gap-1.5 text-xs">
-        <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-warning)]/40 bg-[var(--color-warning-soft)] p-3">
+      <div className="inline-flex items-start gap-1.5 text-xs text-[var(--text-primary)]">
+        <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0 text-[var(--color-warning)]" />
         <span>
           <strong>Setup manual do webhook necessário.</strong> Não
           conseguimos configurar automaticamente: {reason}
         </span>
       </div>
-      <p className="text-xs">
+      <p className="text-xs text-[var(--text-secondary)]">
         Cole esta URL no portal Api4Com →{" "}
         <em>Integrações → Webhook</em> (eventos:{" "}
         <code>channel-answer</code>, <code>channel-hangup</code>):
       </p>
       <div className="flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-black/30 px-2 py-1 font-mono text-[11px]">
+        <code className="flex-1 truncate rounded border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-1 font-mono text-[11px] text-[var(--text-primary)]">
           {webhookUrl}
         </code>
         <button
           type="button"
           onClick={() => onCopy(webhookUrl)}
-          className="inline-flex h-7 items-center gap-1 rounded bg-[var(--glass-bg-subtle)] px-2 text-[11px] font-medium text-white transition hover:bg-[var(--glass-bg-subtle)]"
+          className="inline-flex h-7 items-center gap-1 rounded border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
           title="Copiar URL"
         >
           {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
           {copied ? "Copiado" : "Copiar"}
         </button>
       </div>
-      <p className="text-[11px] opacity-80">
+      <p className="text-[11px] text-[var(--text-muted)]">
         Sem isso, as chamadas funcionam mas não aparecem na lista
         /calls. Após colar a URL, próximas ligações serão registradas.
       </p>
@@ -144,15 +144,15 @@ function ConnectedSummary({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-emerald-400/30 bg-[var(--color-success)]/10 p-3 text-emerald-100">
+      <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2">
-            <IconPhoneCheck size={16} className="mt-0.5 flex-shrink-0 text-emerald-300" />
+            <IconPhoneCheck size={16} className="mt-0.5 flex-shrink-0 text-[var(--color-success)]" />
             <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-medium text-emerald-50">
+              <p className="text-sm font-medium text-[var(--text-primary)]">
                 Conectado{status.email ? ` como ${status.email}` : ""}
               </p>
-              <p className="text-xs opacity-80">
+              <p className="text-xs text-[var(--text-secondary)]">
                 Ramal <strong>{status.ramal ?? "—"}</strong>
                 {status.domain ? ` (${status.domain})` : ""}
               </p>
@@ -163,7 +163,7 @@ function ConnectedSummary({
               type="button"
               onClick={onReconnect}
               disabled={disconnecting}
-              className="inline-flex h-7 items-center gap-1 rounded bg-[var(--glass-bg-subtle)] px-2 text-[11px] font-medium text-white transition hover:bg-[var(--glass-bg-subtle)] disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1 rounded border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] disabled:opacity-50"
               title="Trocar de conta ou re-autenticar"
             >
               <IconPencil size={12} />
@@ -173,7 +173,7 @@ function ConnectedSummary({
               type="button"
               onClick={onDisconnect}
               disabled={disconnecting}
-              className="inline-flex h-7 items-center gap-1 rounded border border-red-300/30 bg-[var(--color-danger)]/10 px-2 text-[11px] font-medium text-red-100 transition hover:bg-[var(--color-danger)]/20 disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1 rounded border border-[var(--color-destructive)]/30 bg-[var(--color-danger)]/10 px-2 text-[11px] font-medium text-[var(--color-destructive)] transition hover:bg-[var(--color-danger)]/20 disabled:opacity-50"
               title="Apaga o ramal salvo. Você poderá reconectar depois com outra conta."
             >
               {disconnecting ? (

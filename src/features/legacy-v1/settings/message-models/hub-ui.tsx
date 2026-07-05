@@ -192,7 +192,7 @@ export function HubChip({
       className={cn(
         "inline-flex items-center gap-2 rounded-[var(--radius-full)] border px-3.5 py-2 text-[12.5px] font-bold transition-colors",
         active
-          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+          ? "border-[var(--brand-primary)] bg-[var(--glass-bg-modal)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]"
           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:border-[var(--input-border-focus)] hover:text-[var(--brand-primary)]",
       )}
     >
@@ -202,7 +202,7 @@ export function HubChip({
         <span
           className={cn(
             "rounded-[var(--radius-full)] px-1.5 text-[11px]",
-            active ? "bg-[var(--glass-bg)]" : "bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)]",
+            active ? "bg-[color-mix(in_srgb,var(--brand-primary)_15%,transparent)]" : "bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)]",
           )}
         >
           {count}

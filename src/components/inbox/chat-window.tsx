@@ -1325,39 +1325,126 @@ export function ChatWindow({
    */
   const onPaste = React.useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const items = e.clipboardData?.items;
-      if (!items || items.length === 0) return;
-      for (let i = 0; i < items.length; i += 1) {
-        const it = items[i];
-        if (it.kind !== "file" || !it.type.startsWith("image/")) continue;
-        const blob = it.getAsFile();
-        if (!blob) continue;
-        if (blob.size > 16 * 1024 * 1024) {
-          toast.warning("A imagem colada excede o limite de 16 MB.");
-          e.preventDefault();
-          return;
+      const cd = e.clipboardData;
+      if (!cd) return;
+
+      // 1) Tenta clipboardData.files primeiro — populado pelo Chromium/Edge
+      //    para Print Screen e "copiar imagem" do menu do navegador. Mais
+      //    confiável que clipboardData.items em cenários modernos.
+      const filesList: File[] = [];
+      if (cd.files && cd.files.length > 0) {
+        for (let i = 0; i < cd.files.length; i += 1) {
+          const f = cd.files.item(i);
+          if (f && f.type.startsWith("image/")) filesList.push(f);
         }
-        const ext = (blob.type.split("/")[1] || "png")
-          .split("+")[0]
-          .toLowerCase();
-        const stamp = new Date()
-          .toISOString()
-          .replace(/[-:.TZ]/g, "")
-          .slice(0, 14);
-        const fileName =
-          (blob as File).name && (blob as File).name !== "image.png"
-            ? (blob as File).name
-            : `screenshot-${stamp}.${ext}`;
-        const file = new File([blob], fileName, { type: blob.type });
-        e.preventDefault();
-        if (acceptIncomingFile(file)) {
-          toast.success("Imagem colada — digite a legenda e envie");
+      }
+
+      // 2) Fallback: clipboardData.items — necessário no Firefox e em
+      //    alguns cenários do Chromium (colar de outros apps). O `kind`
+      //    pode vir como "file" OU (raro) o item vem como string com
+      //    type image/*, então checamos ambos.
+      if (filesList.length === 0 && cd.items && cd.items.length > 0) {
+        for (let i = 0; i < cd.items.length; i += 1) {
+          const it = cd.items[i];
+          if (!it) continue;
+          if (!it.type.startsWith("image/")) continue;
+          const f = it.getAsFile();
+          if (f) filesList.push(f);
         }
+      }
+
+      if (filesList.length === 0) return;
+
+      const blob = filesList[0];
+      if (!blob) return;
+      e.preventDefault();
+
+      if (blob.size > 16 * 1024 * 1024) {
+        toast.warning("A imagem colada excede o limite de 16 MB.");
         return;
+      }
+
+      const ext = (blob.type.split("/")[1] || "png")
+        .split("+")[0]
+        .toLowerCase();
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[-:.TZ]/g, "")
+        .slice(0, 14);
+      const originalName = blob.name;
+      const fileName =
+        originalName && originalName !== "image.png"
+          ? originalName
+          : `screenshot-${stamp}.${ext}`;
+      const file = new File([blob], fileName, { type: blob.type });
+      if (acceptIncomingFile(file)) {
+        toast.success("Imagem colada — digite a legenda e envie");
       }
     },
     [acceptIncomingFile],
   );
+
+  /**
+   * Safety net: escuta paste no nível de `document` enquanto a janela de
+   * conversa está montada. Cobre casos em que o operador dá Ctrl+V sem
+   * o textarea estar focado (ex.: clicou numa bolha, ficou na sidebar
+   * de detalhes, ou o navegador desfocou o input após uma ação).
+   *
+   * Só age quando há imagem no clipboard e nenhum input editável está
+   * focado (input, textarea ou contenteditable), pra não conflitar com
+   * pastes de texto em outros campos da tela.
+   */
+  React.useEffect(() => {
+    if (!conversationId) return;
+    const handler = (e: ClipboardEvent) => {
+      const cd = e.clipboardData;
+      if (!cd) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isEditable =
+        tag === "input" ||
+        tag === "textarea" ||
+        target?.getAttribute("contenteditable") === "true";
+      // Se um input editável está focado, deixa o handler local do textarea agir
+      // (React tratou via onPaste do JSX). Só ajuda quando NADA editável focado.
+      if (isEditable) return;
+
+      const files: File[] = [];
+      if (cd.files && cd.files.length > 0) {
+        for (let i = 0; i < cd.files.length; i += 1) {
+          const f = cd.files.item(i);
+          if (f && f.type.startsWith("image/")) files.push(f);
+        }
+      }
+      if (files.length === 0 && cd.items && cd.items.length > 0) {
+        for (let i = 0; i < cd.items.length; i += 1) {
+          const it = cd.items[i];
+          if (!it || !it.type.startsWith("image/")) continue;
+          const f = it.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length === 0) return;
+      const blob = files[0]!;
+      e.preventDefault();
+      if (blob.size > 16 * 1024 * 1024) {
+        toast.warning("A imagem colada excede o limite de 16 MB.");
+        return;
+      }
+      const ext = (blob.type.split("/")[1] || "png").split("+")[0].toLowerCase();
+      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+      const fileName =
+        blob.name && blob.name !== "image.png"
+          ? blob.name
+          : `screenshot-${stamp}.${ext}`;
+      const file = new File([blob], fileName, { type: blob.type });
+      if (acceptIncomingFile(file)) {
+        toast.success("Imagem colada — digite a legenda e envie");
+      }
+    };
+    document.addEventListener("paste", handler);
+    return () => document.removeEventListener("paste", handler);
+  }, [conversationId, acceptIncomingFile]);
 
   /**
    * Drag-and-drop de arquivos diretamente sobre a janela de conversa.

@@ -1323,14 +1323,85 @@ export function ChatWindow({
    * `preventDefault` só é chamado quando encontramos imagem, para não
    * quebrar o paste de texto em cenários normais.
    */
+  /**
+   * Converte um Blob de imagem em File e anexa via acceptIncomingFile.
+   * Retorna true se anexou com sucesso.
+   */
+  const attachImageBlob = React.useCallback(
+    (blob: Blob): boolean => {
+      if (blob.size > 16 * 1024 * 1024) {
+        toast.warning("A imagem colada excede o limite de 16 MB.");
+        return false;
+      }
+      const type = blob.type || "image/png";
+      const ext = (type.split("/")[1] || "png").split("+")[0].toLowerCase();
+      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+      const originalName = (blob as File).name;
+      const fileName =
+        originalName && originalName !== "image.png"
+          ? originalName
+          : `screenshot-${stamp}.${ext}`;
+      const file = new File([blob], fileName, { type });
+      if (acceptIncomingFile(file)) {
+        toast.success("Imagem colada — digite a legenda e envie");
+        return true;
+      }
+      return false;
+    },
+    [acceptIncomingFile],
+  );
+
+  /**
+   * Tenta ler imagem da Clipboard API moderna (navigator.clipboard.read).
+   * Mais confiável que clipboardData para imagens colocadas por apps nativos
+   * do Windows (Snipping Tool, Print Screen) que usam formatos como CF_BITMAP
+   * que nem sempre chegam ao clipboardData do evento paste.
+   *
+   * Requer permissão de clipboard-read (concedida por padrão em Chromium
+   * quando o usuário inicia a ação — Ctrl+V ou clique).
+   */
+  const tryModernClipboardRead = React.useCallback(async (): Promise<boolean> => {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.read) {
+      return false;
+    }
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith("image/"));
+        if (!imageType) continue;
+        const blob = await item.getType(imageType);
+        return attachImageBlob(blob);
+      }
+    } catch (err) {
+      // Permissão negada ou clipboard vazio — silencioso; o handler síncrono
+      // já rodou antes e mostrou toast se tivesse encontrado algo.
+      console.debug("[chat-paste] navigator.clipboard.read falhou:", err);
+    }
+    return false;
+  }, [attachImageBlob]);
+
   const onPaste = React.useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       const cd = e.clipboardData;
-      if (!cd) return;
+      if (!cd) {
+        void tryModernClipboardRead();
+        return;
+      }
 
-      // 1) Tenta clipboardData.files primeiro — populado pelo Chromium/Edge
-      //    para Print Screen e "copiar imagem" do menu do navegador. Mais
-      //    confiável que clipboardData.items em cenários modernos.
+      // Debug: expõe o que veio no clipboard pra F12 diagnosticar
+      // quando o paste não pega imagem.
+      if (typeof window !== "undefined") {
+        const typesList = cd.types ? Array.from(cd.types) : [];
+        const itemsInfo = cd.items
+          ? Array.from(cd.items).map((it) => ({ kind: it.kind, type: it.type }))
+          : [];
+        const filesInfo = cd.files
+          ? Array.from(cd.files).map((f) => ({ name: f.name, type: f.type, size: f.size }))
+          : [];
+        console.debug("[chat-paste] onPaste", { types: typesList, items: itemsInfo, files: filesInfo });
+      }
+
+      // 1) clipboardData.files — Chromium/Edge para Print Screen, "copiar imagem".
       const filesList: File[] = [];
       if (cd.files && cd.files.length > 0) {
         for (let i = 0; i < cd.files.length; i += 1) {
@@ -1339,10 +1410,7 @@ export function ChatWindow({
         }
       }
 
-      // 2) Fallback: clipboardData.items — necessário no Firefox e em
-      //    alguns cenários do Chromium (colar de outros apps). O `kind`
-      //    pode vir como "file" OU (raro) o item vem como string com
-      //    type image/*, então checamos ambos.
+      // 2) clipboardData.items — Firefox + fallback Chromium.
       if (filesList.length === 0 && cd.items && cd.items.length > 0) {
         for (let i = 0; i < cd.items.length; i += 1) {
           const it = cd.items[i];
@@ -1353,35 +1421,21 @@ export function ChatWindow({
         }
       }
 
-      if (filesList.length === 0) return;
+      // 3) Se nada foi encontrado nos dados síncronos, tenta a Clipboard API
+      //    moderna (assíncrona). Não faz preventDefault aqui porque o texto
+      //    (se houver) já foi tratado pelo browser; queremos APENAS pegar a
+      //    imagem que não veio no clipboardData.
+      if (filesList.length === 0) {
+        void tryModernClipboardRead();
+        return;
+      }
 
       const blob = filesList[0];
       if (!blob) return;
       e.preventDefault();
-
-      if (blob.size > 16 * 1024 * 1024) {
-        toast.warning("A imagem colada excede o limite de 16 MB.");
-        return;
-      }
-
-      const ext = (blob.type.split("/")[1] || "png")
-        .split("+")[0]
-        .toLowerCase();
-      const stamp = new Date()
-        .toISOString()
-        .replace(/[-:.TZ]/g, "")
-        .slice(0, 14);
-      const originalName = blob.name;
-      const fileName =
-        originalName && originalName !== "image.png"
-          ? originalName
-          : `screenshot-${stamp}.${ext}`;
-      const file = new File([blob], fileName, { type: blob.type });
-      if (acceptIncomingFile(file)) {
-        toast.success("Imagem colada — digite a legenda e envie");
-      }
+      attachImageBlob(blob);
     },
-    [acceptIncomingFile],
+    [attachImageBlob, tryModernClipboardRead],
   );
 
   /**
@@ -1398,7 +1452,6 @@ export function ChatWindow({
     if (!conversationId) return;
     const handler = (e: ClipboardEvent) => {
       const cd = e.clipboardData;
-      if (!cd) return;
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
       const isEditable =
@@ -1408,6 +1461,11 @@ export function ChatWindow({
       // Se um input editável está focado, deixa o handler local do textarea agir
       // (React tratou via onPaste do JSX). Só ajuda quando NADA editável focado.
       if (isEditable) return;
+
+      if (!cd) {
+        void tryModernClipboardRead();
+        return;
+      }
 
       const files: File[] = [];
       if (cd.files && cd.files.length > 0) {
@@ -1424,27 +1482,16 @@ export function ChatWindow({
           if (f) files.push(f);
         }
       }
-      if (files.length === 0) return;
-      const blob = files[0]!;
-      e.preventDefault();
-      if (blob.size > 16 * 1024 * 1024) {
-        toast.warning("A imagem colada excede o limite de 16 MB.");
+      if (files.length === 0) {
+        void tryModernClipboardRead();
         return;
       }
-      const ext = (blob.type.split("/")[1] || "png").split("+")[0].toLowerCase();
-      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-      const fileName =
-        blob.name && blob.name !== "image.png"
-          ? blob.name
-          : `screenshot-${stamp}.${ext}`;
-      const file = new File([blob], fileName, { type: blob.type });
-      if (acceptIncomingFile(file)) {
-        toast.success("Imagem colada — digite a legenda e envie");
-      }
+      e.preventDefault();
+      attachImageBlob(files[0]!);
     };
     document.addEventListener("paste", handler);
     return () => document.removeEventListener("paste", handler);
-  }, [conversationId, acceptIncomingFile]);
+  }, [conversationId, attachImageBlob, tryModernClipboardRead]);
 
   /**
    * Drag-and-drop de arquivos diretamente sobre a janela de conversa.

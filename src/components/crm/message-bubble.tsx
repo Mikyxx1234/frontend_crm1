@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
+import { ImageLightbox } from "@/components/crm/image-lightbox"
 import {
   Tooltip,
   TooltipContent,
@@ -610,20 +611,7 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
 
   // ── Imagem / sticker ───────────────────────────────────────────
   if (kind === "image" && url) {
-    return (
-      <div className="flex flex-col gap-1.5">
-        <a href={url} target="_blank" rel="noopener noreferrer" className="group block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={url}
-            alt={caption || "Imagem recebida"}
-            className="max-h-[320px] w-auto max-w-full rounded-[var(--radius-md)] object-cover transition-opacity group-hover:opacity-[0.97]"
-            loading="lazy"
-          />
-        </a>
-        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
-      </div>
-    )
+    return <ImageMedia url={url} caption={caption} isOutgoing={isOutgoing} />
   }
 
   // ── Vídeo ──────────────────────────────────────────────────────
@@ -699,6 +687,44 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
         className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
       />
     </span>
+  )
+}
+
+/**
+ * Renderiza imagem do chat com clique-para-abrir-lightbox (em vez de abrir
+ * em nova aba do navegador — tira o operador do CRM).
+ */
+function ImageMedia({
+  url,
+  caption,
+  isOutgoing,
+}: {
+  url: string
+  caption: string
+  isOutgoing: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <div className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="group block cursor-zoom-in overflow-hidden rounded-[var(--radius-md)] text-left"
+          aria-label="Ampliar imagem"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt={caption || "Imagem recebida"}
+            className="max-h-[320px] w-auto max-w-full rounded-[var(--radius-md)] object-cover transition-opacity group-hover:opacity-[0.97]"
+            loading="lazy"
+          />
+        </button>
+        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
+      </div>
+      <ImageLightbox src={url} alt={caption} open={open} onOpenChange={setOpen} />
+    </>
   )
 }
 

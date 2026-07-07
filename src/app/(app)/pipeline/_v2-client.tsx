@@ -1499,6 +1499,7 @@ function DroppableColumn({
         <KanbanColumn
           title={column.title}
           color={column.color}
+          stageColor={column.stageColor}
           count={column.count}
           total={column.total}
           deals={column.deals}
@@ -1574,9 +1575,9 @@ function DroppableColumn({
                                 <span
                                   className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide max-w-[110px] truncate"
                                   style={{
-                                    background: `${t.color || "#5b6ff5"}22`,
+                                    background: `${t.color || "#5b6ff5"}33`,
                                     color: t.color || "var(--brand-primary)",
-                                    border: `1px solid ${t.color || "#5b6ff5"}44`,
+                                    border: `1px solid ${t.color || "#5b6ff5"}66`,
                                   }}
                                 >
                                   {t.name}
@@ -1616,16 +1617,26 @@ function DroppableColumn({
                           statusFilter={statusFilter}
                           trigger={
                             raw?.owner?.name ? (
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="font-display text-[9.5px] font-bold text-[var(--text-muted)]">
-                                  Responsável
-                                </span>
-                                <Chip
-                                  variant="brand"
-                                  className="max-w-full cursor-pointer truncate whitespace-nowrap transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                              // Owner: mini-avatar colorido (paleta av-* por hash do
+                              // nome) + nome. Devolve identidade que o antigo Chip
+                              // monocromático indigo tinha suprimido; o círculo
+                              // colorido diferencia responsáveis "de relance".
+                              <span
+                                className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
+                                title={raw.owner.name}
+                              >
+                                <span
+                                  className={cn(
+                                    `av-${deal.owner.avatarColor}`,
+                                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full font-display text-[8px] font-bold text-white",
+                                  )}
+                                  aria-hidden
                                 >
+                                  {deal.owner.initials}
+                                </span>
+                                <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
                                   {raw.owner.name}
-                                </Chip>
+                                </span>
                               </span>
                             ) : (
                               <Chip

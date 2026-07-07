@@ -97,6 +97,20 @@
   --col-nego:      #f59e0b;    /* amber */
   --col-fecha:     #10b981;    /* emerald — fechamento/sucesso */
 
+  /* ── NavRail (dedicada, opaca, alto contraste) ────────────────────
+     Trilho lateral escuro que devolve identidade visual perdida
+     quando a rail virou glass sobre mesh lavanda. Ficando fora da
+     família --glass-* pra permitir escurecer sem afetar cards. */
+  --nav-bg:               rgba(15, 23, 42, 0.92);       /* slate-900 @ 92% */
+  --nav-border:           rgba(255, 255, 255, 0.08);
+  --nav-text-muted:       rgba(226, 232, 240, 0.60);    /* ícone inativo */
+  --nav-text-hover-bg:    rgba(255, 255, 255, 0.08);    /* hover leve */
+  --nav-text-hover:       #ffffff;
+
+  /* ── Warning text (referenciado por chip/badge/status-pill/deal-card,
+     estava ausente → texto âmbar não resolvia) ──────────────────── */
+  --color-warning-text:    #b45309;
+
   /* ── Glass — superfícies, bordas e sombras ────────────────────── */
   --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de negócio/conversa — legíveis */
   --glass-bg-overlay:       rgba(255, 255, 255, 0.58);   /* inputs, popovers */
@@ -199,6 +213,23 @@
   --text-primary:        #0f172a;
   --text-secondary:      #374151;
   --text-muted:          #4b5563;
+
+  /* Warning text (âmbar escuro sobre lead-bg) — token faltante */
+  --color-warning-text:  #b45309;
+
+  /* Colunas do Kanban — espelho do @theme para inline styles */
+  --col-novo:      #94a3b8;
+  --col-quali:     #5b6ff5;
+  --col-proposta:  #a78bfa;
+  --col-nego:      #f59e0b;
+  --col-fecha:     #10b981;
+
+  /* NavRail dedicada (slate-900 translúcido) */
+  --nav-bg:               rgba(15, 23, 42, 0.92);
+  --nav-border:           rgba(255, 255, 255, 0.08);
+  --nav-text-muted:       rgba(226, 232, 240, 0.60);
+  --nav-text-hover-bg:    rgba(255, 255, 255, 0.08);
+  --nav-text-hover:       #ffffff;
 
   /* Glass — superfícies, bordas e sombras */
   --glass-bg-base:          rgba(255, 255, 255, 0.82);

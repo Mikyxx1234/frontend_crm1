@@ -36,6 +36,13 @@ export interface KanbanColumnSelection {
 interface KanbanColumnProps {
   title: string
   color: ColumnColor
+  /**
+   * Cor hex opcional (ex.: `#ec4899`) do backend `stage.color`.
+   * Quando fornecida, sobrepõe o preset de `color` na strip do topo
+   * e no badge de contagem — devolve identidade por estágio em vez
+   * de forçar a paleta fixa de 5 slugs.
+   */
+  stageColor?: string
   count: number
   total: string
   deals: Deal[]
@@ -79,6 +86,7 @@ const colorBgMap: Record<ColumnColor, string> = {
 export function KanbanColumn({
   title,
   color,
+  stageColor,
   count,
   total,
   deals,
@@ -96,6 +104,15 @@ export function KanbanColumn({
     selection.totalInColumn > 0 &&
     selection.enabled !== false
 
+  // Cor efetiva do estágio: hex do backend > preset. Badge usa
+  // color-mix inline para gerar background 15% da cor do estágio
+  // (opacidade um pouco maior que o preset 10% p/ melhorar contraste
+  // sobre lavanda do mesh).
+  const effectiveColor = stageColor ?? colorMap[color]
+  const effectiveBg = stageColor
+    ? `color-mix(in srgb, ${stageColor} 15%, transparent)`
+    : colorBgMap[color]
+
   return (
     <section
       aria-label={`Coluna ${title}`}
@@ -104,7 +121,7 @@ export function KanbanColumn({
       {/* Barra de acento colorida no topo da coluna */}
       <div
         className="h-[3px] w-full shrink-0 rounded-t-[var(--radius-xl)]"
-        style={{ background: colorMap[color] }}
+        style={{ background: effectiveColor }}
       />
 
       {/* Header */}
@@ -160,8 +177,8 @@ export function KanbanColumn({
           <span
             className="rounded-full px-2 py-0.5 font-display text-[11px] font-bold"
             style={{
-              background: colorBgMap[color],
-              color: colorMap[color],
+              background: effectiveBg,
+              color: effectiveColor,
             }}
           >
             {count}
@@ -175,13 +192,13 @@ export function KanbanColumn({
             className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] transition-colors hover:text-white"
             style={
               {
-                "--hover-bg": colorMap[color],
+                "--hover-bg": effectiveColor,
               } as React.CSSProperties
             }
             onMouseEnter={(e) => {
               const btn = e.currentTarget
-              btn.style.background = colorMap[color]
-              btn.style.borderColor = colorMap[color]
+              btn.style.background = effectiveColor
+              btn.style.borderColor = effectiveColor
               btn.style.color = "#fff"
             }}
             onMouseLeave={(e) => {

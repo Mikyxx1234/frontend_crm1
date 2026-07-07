@@ -154,10 +154,19 @@ export interface KanbanColumnView {
   stageId: string;
   title: string;
   color: ColumnColor;
+  /**
+   * Cor hex vinda do backend (`BoardStageDto.color`). Quando presente,
+   * sobrepõe o preset de `color` na strip do topo + badge de contagem
+   * da coluna. Preserva a identidade visual configurada por estágio,
+   * em vez de cair no fallback slate para todo estágio "custom".
+   */
+  stageColor?: string;
   count: number;
   total: string;
   deals: Deal[];
 }
+
+const HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /** BoardStageDto → props do `<KanbanColumn>`. */
 export function toKanbanColumn(stage: BoardStageDto): KanbanColumnView {
@@ -172,10 +181,18 @@ export function toKanbanColumn(stage: BoardStageDto): KanbanColumnView {
     : stage.isLost
       ? "fecha"
       : stageColorFromName(stage.name);
+  // stageColor: hex do backend em estágios NÃO terminais. Terminais
+  // (won/lost) mantêm o preset — o significado semântico ali é fixo.
+  const rawColor = stage.color?.trim() ?? "";
+  const stageColor =
+    !stage.isWon && !stage.isLost && HEX_COLOR.test(rawColor)
+      ? rawColor
+      : undefined;
   return {
     stageId: stage.id,
     title: stage.name,
     color,
+    stageColor,
     count: stage.totalCount ?? stage.deals.length,
     total: formatCurrencyBR(totalValue),
     deals: stage.deals.map(toDealCard),

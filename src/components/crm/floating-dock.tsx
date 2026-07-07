@@ -148,13 +148,15 @@ export function DockButton({
   // dos vizinhos (que ele passa a sobrepor ao crescer via transform).
   const zIndex = useTransform(scale, (s) => Math.round(s * 20));
 
-  // Só o efeito de magnificação (scale). Sem mudança de cor/fundo no hover —
-  // o estado ativo (item selecionado) continua destacado.
+  // Magnificação (scale) + hover leve pra devolver feedback nos inativos.
+  // Como a NavRail é escura (--nav-bg slate-900), usamos --nav-text-muted
+  // no idle e --nav-text-hover-bg/--nav-text-hover no hover — contraste
+  // adequado sobre fundo escuro. Estado ativo mantém o brand-primary.
   const innerClasses = cn(
-    "flex h-full w-full items-center justify-center rounded-[var(--radius-md)]",
+    "flex h-full w-full items-center justify-center rounded-[var(--radius-md)] transition-colors",
     active
       ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-      : "bg-transparent text-[var(--text-muted)]",
+      : "bg-transparent text-[var(--nav-text-muted)] hover:bg-[var(--nav-text-hover-bg)] hover:text-[var(--nav-text-hover)]",
     className,
   );
 

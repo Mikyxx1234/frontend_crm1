@@ -203,7 +203,12 @@ export function NavRailV2({ className }: { className?: string }) {
     <DockProvider
       aria-label="Navegação principal"
       className={cn(
-        "flex h-full flex-col items-center gap-2 bg-[var(--glass-bg-panel)] backdrop-blur-[16px] border border-[var(--glass-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)]",
+        // NavRail dedicada: fundo slate-900 translúcido (--nav-bg)
+        // para devolver a âncora vertical escura que foi perdida
+        // quando o trilho virou glass sobre mesh lavanda. Não usa
+        // tokens --glass-* — a rail é intencionalmente mais opaca
+        // e escura que qualquer superfície de conteúdo.
+        "flex h-full flex-col items-center gap-2 bg-[var(--nav-bg)] backdrop-blur-[16px] border border-[var(--nav-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)]",
         className,
       )}
     >

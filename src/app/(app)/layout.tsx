@@ -25,13 +25,7 @@ export default function AppLayout({
 }) {
   return (
     <TooltipProvider delay={300}>
-      <div
-        className="v2-root v2-min-screen bg-[var(--bg-base)]"
-        style={{
-          backgroundImage:
-            "radial-gradient(at 20% 10%, var(--bg-mesh-1, #b8cfec) 0px, transparent 50%)",
-        }}
-      >
+      <div className="v2-root v2-min-screen">
         {children}
         <UpdateAvailableBanner />
         <SoftphoneWidget />

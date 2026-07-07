@@ -16,7 +16,7 @@
   --bg-base:                #c5d8ef;
   --bg-mesh-1:              #8faedb;
   --bg-mesh-2:              #d8b3e6;
-  --bg-mesh:                linear-gradient(135deg, #c5d8ef 0%, #8faedb 40%, #d8b3e6 70%, #c5d8ef 100%);
+  --bg-mesh:                url("/bg-gradient.png") center/cover no-repeat;
 
   /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
   --color-online:           #10b981;
@@ -165,7 +165,7 @@
   --bg-base: #c5d8ef;
   --bg-mesh-1: #8faedb;
   --bg-mesh-2: #d8b3e6;
-  --bg-mesh: linear-gradient(135deg, #c5d8ef 0%, #8faedb 40%, #d8b3e6 70%, #c5d8ef 100%);
+  --bg-mesh: url("/bg-gradient.png") center/cover no-repeat;
 
   /* Marca — duplicado em :root para garantir que inline styles
      resolvam mesmo quando o resolver do Tailwind v4 falha. */

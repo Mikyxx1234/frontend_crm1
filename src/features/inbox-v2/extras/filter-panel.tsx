@@ -5,7 +5,7 @@
  * que abre um painel (portal) para organizar/filtrar a lista.
  *
  * Filtros que vão ao backend (GET /api/conversations): ownerId, channel,
- * stageId, tagIds. Já a ORDEM e a JANELA de 24h são aplicadas CLIENT-SIDE
+ * stageId, tagIds, sources. Já a ORDEM e a JANELA de 24h são aplicadas CLIENT-SIDE
  * no client-page (ver `InboxFilters`), por isso o painel apenas as expõe
  * no mesmo objeto de filtros.
  *
@@ -34,6 +34,8 @@ import {
   computePopoverPosition,
   usePortalPopover,
 } from "@/features/pipeline-v2/extras/use-portal-popover";
+import { SOURCE_NONE } from "@/components/pipeline/kanban-filters/types";
+import { useContactSources } from "@/hooks/use-contact-sources";
 
 interface InboxFilterButtonProps {
   value: InboxFilters;
@@ -87,6 +89,7 @@ function countActive(f: InboxFilters): number {
   if (f.channel) n += 1;
   if (f.stageId) n += 1;
   if (f.tagIds && f.tagIds.length > 0) n += 1;
+  if (f.sources && f.sources.length > 0) n += 1;
   if (f.windowState) n += 1;
   if (sortIdFromFilters(f) !== DEFAULT_SORT_ID) n += 1;
   return n;
@@ -107,6 +110,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
     usePortalPopover();
   const [draft, setDraft] = useState<InboxFilters>(value);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   // Sincroniza o draft com o valor externo sempre que (re)abrir o painel.
   useEffect(() => {
@@ -141,6 +145,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
     enabled: open && Boolean(defaultPipelineId),
     staleTime: 5 * 60_000,
   });
+  const { data: contactSources = [] } = useContactSources(open);
 
   // channelGrants do usuário (Permissions v2) — [] = sem restrição.
   const { data: myPerms } = useMyPermissions();
@@ -174,6 +179,16 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
         ? tags.find((t) => t.id === selectedTagIds[0])?.name ?? "1 selecionada"
         : `${selectedTagIds.length} selecionadas`;
 
+  const selectedSources = draft.sources ?? [];
+  const selectedSourcesLabel =
+    selectedSources.length === 0
+      ? "Todas"
+      : selectedSources.length === 1
+        ? selectedSources[0] === SOURCE_NONE
+          ? "Sem origem"
+          : selectedSources[0]
+        : `${selectedSources.length} selecionadas`;
+
   const activeCount = countActive(value);
   const pos = computePopoverPosition(rect, 540, 280);
 
@@ -187,6 +202,16 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
     });
   }
 
+  function toggleSource(source: string) {
+    setDraft((d) => {
+      const current = d.sources ?? [];
+      const next = current.includes(source)
+        ? current.filter((s) => s !== source)
+        : [...current, source];
+      return { ...d, sources: next.length > 0 ? next : undefined };
+    });
+  }
+
   function apply() {
     onChange(draft);
     close();
@@ -195,6 +220,7 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
   function clear() {
     setDraft({});
     setTagsOpen(false);
+    setSourcesOpen(false);
   }
 
   return (
@@ -383,6 +409,96 @@ export function InboxFilterButton({ value, onChange }: InboxFilterButtonProps) {
                               />
                               <span className="truncate font-display text-xs text-[var(--text-primary)]">
                                 {t.name}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Origem — dropdown com checklist multi-seleção */}
+                <div>
+                  <FieldLabel>Origem</FieldLabel>
+                  <button
+                    type="button"
+                    onClick={() => setSourcesOpen((v) => !v)}
+                    aria-expanded={sourcesOpen}
+                    className="group inline-flex h-8 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 font-display text-[12px] font-semibold shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-colors hover:bg-[var(--glass-bg-strong)] data-[state=open]:ring-2 data-[state=open]:ring-[var(--brand-primary)]/40"
+                  >
+                    <span
+                      className={cn(
+                        "truncate",
+                        selectedSources.length === 0 && "text-[var(--text-muted)]",
+                      )}
+                    >
+                      {selectedSourcesLabel}
+                    </span>
+                    <IconChevronDown
+                      size={15}
+                      className={cn(
+                        "shrink-0 text-[var(--text-muted)] transition-transform",
+                        sourcesOpen && "rotate-180",
+                      )}
+                    />
+                  </button>
+
+                  {sourcesOpen && (
+                    <div className="mt-1 max-h-44 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-white p-1 v2-dark:bg-[var(--glass-bg-modal)]">
+                      <button
+                        type="button"
+                        onClick={() => toggleSource(SOURCE_NONE)}
+                        className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]"
+                      >
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
+                            selectedSources.includes(SOURCE_NONE)
+                              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                              : "border-[var(--glass-border)]",
+                          )}
+                        >
+                          {selectedSources.includes(SOURCE_NONE) && (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M20 6 9 17l-5-5" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="truncate font-display text-xs text-[var(--text-primary)]">
+                          Sem origem
+                        </span>
+                      </button>
+                      {contactSources.length === 0 ? (
+                        <p className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
+                          Nenhuma origem cadastrada.
+                        </p>
+                      ) : (
+                        contactSources.map((source) => {
+                          const selected = selectedSources.includes(source);
+                          return (
+                            <button
+                              key={source}
+                              type="button"
+                              onClick={() => toggleSource(source)}
+                              className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]"
+                            >
+                              <span
+                                className={cn(
+                                  "flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
+                                  selected
+                                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                                    : "border-[var(--glass-border)]",
+                                )}
+                              >
+                                {selected && (
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                    <path d="M20 6 9 17l-5-5" />
+                                  </svg>
+                                )}
+                              </span>
+                              <span className="truncate font-display text-xs text-[var(--text-primary)]">
+                                {source}
                               </span>
                             </button>
                           );

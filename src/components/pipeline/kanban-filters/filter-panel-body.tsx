@@ -39,7 +39,7 @@ import type {
   SavedFilter,
   TagMode,
 } from "./types";
-import { isEmptyFilters } from "./types";
+import { isEmptyFilters, SOURCE_NONE } from "./types";
 import { fetchSavedFilters } from "./api";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -324,6 +324,84 @@ function StagesDropdown({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Multi-select de origens com busca */
+function SourcesMultiPick({
+  sources,
+  selected,
+  withoutSource,
+  onChange,
+}: {
+  sources: string[];
+  selected: string[];
+  withoutSource?: boolean;
+  onChange: (ids: string[], withoutSource: boolean) => void;
+}) {
+  const [search, setSearch] = React.useState("");
+  const filtered = search
+    ? sources.filter((s) => s.toLowerCase().includes(search.toLowerCase()))
+    : sources;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[var(--text-muted)]" />
+        <input
+          type="text"
+          placeholder="Buscar origem..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-7 w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-6 pr-2 text-[11px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
+        />
+      </div>
+      <div className="max-h-28 space-y-0.5 overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => onChange([], !withoutSource)}
+          className={cn(
+            "flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] transition-colors",
+            withoutSource
+              ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+              : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+          )}
+        >
+          {withoutSource && <Check className="size-3" />}
+          Sem origem
+        </button>
+        {filtered.map((source) => {
+          const active = selected.includes(source);
+          return (
+            <button
+              key={source}
+              type="button"
+              onClick={() => {
+                const next = active ? selected.filter((x) => x !== source) : [...selected, source];
+                onChange(next, false);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] transition-colors",
+                active
+                  ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
+              )}
+            >
+              <span className="flex-1 truncate text-left">{source}</span>
+              {active && <Check className="size-3 shrink-0" />}
+            </button>
+          );
+        })}
+        {filtered.length === 0 && search && (
+          <p className="px-2 py-2 text-center text-[11px] text-[var(--text-muted)]">Nenhuma origem encontrada.</p>
+        )}
+        {sources.length === 0 && !search && (
+          <p className="px-2 py-2 text-[11px] text-[var(--text-muted)]">
+            Nenhuma origem cadastrada ainda.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -768,16 +846,20 @@ function PropertiesColumn({
       </PropertyRow>
 
       {/* Origem */}
-      {options?.sources && options.sources.length > 0 && (
-        <PropertyRow label="Lead fonte" active={!!draft.sources?.length}>
-          <MultiPickButtons
-            items={(options.sources ?? []).map((s) => ({ id: s, name: s }))}
-            selected={draft.sources ?? []}
-            onToggle={(id) => setDraftField("sources", toggleArray(draft.sources, id))}
-            emptyLabel="Nenhuma origem."
-          />
-        </PropertyRow>
-      )}
+      <PropertyRow
+        label="Origem"
+        active={!!((draft.sources ?? []).filter((s) => s !== SOURCE_NONE).length || draft.withoutSource)}
+      >
+        <SourcesMultiPick
+          sources={options?.sources ?? []}
+          selected={(draft.sources ?? []).filter((s) => s !== SOURCE_NONE)}
+          withoutSource={draft.withoutSource}
+          onChange={(ids, withoutSource) => {
+            setDraftField("sources", ids.length ? ids : undefined);
+            setDraftField("withoutSource", withoutSource || undefined);
+          }}
+        />
+      </PropertyRow>
 
       {/* Responsável */}
       <PropertyRow label="Usuários" active={!!(draft.ownerIds?.length || draft.withoutOwner)}>

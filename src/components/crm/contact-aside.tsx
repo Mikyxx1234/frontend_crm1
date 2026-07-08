@@ -28,6 +28,7 @@ import {
 import { resolveHighlight, SEVERITY_COLORS, type HighlightSeverity } from "@/lib/highlight"
 import { InlineFieldEditor } from "@/components/crm/fields/inline-field-editor"
 import { InlineNativeEditor } from "@/components/crm/fields/inline-native-editor"
+import { useContactSources } from "@/hooks/use-contact-sources"
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
@@ -430,6 +431,7 @@ export function ContactAside({
     ["contact-sidebar", contact.contactId],
     ["inbox-conversations"],
   ]
+  const { data: contactSources = [] } = useContactSources(!!contact.contactId)
 
   // Estados de modo edição
   const [contactEditMode, setContactEditMode] = useState(false)
@@ -681,6 +683,27 @@ export function ContactAside({
                                     invalidateKeys={contactInvalidateKeys}
                                     onSaved={(v) => setNativeValues((p) => ({ ...p, email: v }))}
                                     textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)]"
+                                  />
+                                </Row>
+                                <Row label="Origem">
+                                  <InlineNativeEditor
+                                    value={
+                                      native(
+                                        "source",
+                                        contact.origin && contact.origin !== "—"
+                                          ? contact.origin
+                                          : undefined,
+                                      )
+                                    }
+                                    entityType="contact"
+                                    entityId={contact.contactId}
+                                    fieldKey="source"
+                                    placeholder="Sem origem"
+                                    suggestions={contactSources}
+                                    editMode={contactEditMode}
+                                    invalidateKeys={contactInvalidateKeys}
+                                    onSaved={(v) => setNativeValues((p) => ({ ...p, source: v }))}
+                                    textClassName="font-display text-[12px] font-bold text-[var(--text-primary)]"
                                   />
                                 </Row>
                                 {contact.connection && (

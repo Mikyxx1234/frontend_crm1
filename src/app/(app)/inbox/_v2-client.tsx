@@ -50,6 +50,7 @@ import {
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
+import { hasInboxServerFilters } from "@/features/inbox-v2/api/types";
 import {
   useBoard,
   useDealDetail,
@@ -325,6 +326,9 @@ export default function InboxV2ClientPage({
   // Com header de página, busca no centro do header e filtro nas actions.
   const searchInHeader = !!pageHeader;
 
+  const useFilteredTabCount =
+    hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
+
   const conversationColumnNode = (
     <ConversationColumn
       conversations={conversationCards}
@@ -341,7 +345,10 @@ export default function InboxV2ClientPage({
       filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
-        count: tabCounts?.[t.id] ?? undefined,
+        count:
+          useFilteredTabCount && t.id === tab
+            ? listData?.total
+            : tabCounts?.[t.id] ?? undefined,
       }))}
       activeTabIndex={TABS.findIndex((t) => t.id === tab)}
       onTabChange={(idx) => {

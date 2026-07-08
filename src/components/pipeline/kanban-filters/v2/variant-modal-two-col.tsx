@@ -54,7 +54,7 @@ function groupCount(id: GroupId, f: AdvancedDealFilters): number {
       if (f.search?.trim()) n++;
       if (f.statuses?.length) n++;
       if (f.stageIds?.length) n++;
-      if (f.sources?.length) n++;
+      if (f.sources?.length || f.withoutSource) n++;
       if (f.valueFrom != null || f.valueTo != null) n++;
       break;
     case "dates":

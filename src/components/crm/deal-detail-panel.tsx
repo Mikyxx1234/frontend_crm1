@@ -43,6 +43,7 @@ import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
+import { useContactSources } from "@/hooks/use-contact-sources"
 import { BadgeGlass } from "./badge-glass"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
@@ -247,6 +248,7 @@ export function DealDetailPanel({
   const resolvedDealConfig = dealFieldConfigSlot ?? null;
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
   const [configOpen, setConfigOpen] = useState(false)
+  const { data: contactSources = [] } = useContactSources(isOpen)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
@@ -691,6 +693,7 @@ export function DealDetailPanel({
                     entityId={deal.contactId}
                     fieldKey="source"
                     placeholder="Adicionar origem"
+                    suggestions={contactSources}
                     invalidateKeys={[
                       ["contact-sidebar", deal.contactId],
                       ["deal-detail-v2", deal.id],

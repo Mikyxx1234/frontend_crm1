@@ -691,7 +691,7 @@ export function toContactAside(
     financialStatus: financial.status,
     financialLabel: financial.label,
     product: firstDeal?.productName ?? FALLBACK_FIELD,
-    origin: FALLBACK_FIELD,
+    origin: contact?.source?.trim() || FALLBACK_FIELD,
     formation: FALLBACK_FIELD,
     entry: FALLBACK_FIELD,
     phone: contact?.phone ?? row.contact?.phone ?? FALLBACK_FIELD,

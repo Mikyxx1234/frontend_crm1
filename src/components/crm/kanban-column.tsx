@@ -116,7 +116,7 @@ export function KanbanColumn({
   return (
     <section
       aria-label={`Coluna ${title}`}
-      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-2 backdrop-blur-md shadow-[var(--glass-shadow)]"
+      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-2 shadow-[var(--glass-shadow)]"
     >
       {/* Barra de acento colorida no topo da coluna */}
       <div

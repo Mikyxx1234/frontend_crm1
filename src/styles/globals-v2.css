@@ -13,16 +13,18 @@
 
 @theme {
   /* ── Background do mesh (DealDetailPanel fullscreen + v2 layout) ── */
-  --bg-base:                #c5d8ef;
-  --bg-mesh-1:              #8faedb;
-  --bg-mesh-2:              #d8b3e6;
-  --bg-mesh:                url("/bg-gradient.png") center/cover no-repeat;
+  --bg-base:                #eef2f7;
+  --bg-mesh-1:              #e8edf5;
+  --bg-mesh-2:              #f0eef8;
+  --bg-mesh:                linear-gradient(145deg, #eef2f7 0%, #e8edf5 50%, #f0eef8 100%);
 
   /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
+  /* Opacidade aumentada para chips/badges terem contraste sobre fundo
+     quasi-branco — mínimo 18% para ser legível em superfície clara */
   --color-online:           #10b981;
-  --color-enterprise-bg:    rgba(91, 111, 245, 0.15);
+  --color-enterprise-bg:    rgba(91, 111, 245, 0.12);
   --color-lead:             #f59e0b;
-  --color-lead-bg:          rgba(245, 158, 11, 0.15);
+  --color-lead-bg:          rgba(245, 158, 11, 0.14);
   --color-success-bg:       rgba(16, 185, 129, 0.12);
 
   /* ── Marca: primária / secundária ──────────────────────────────
@@ -112,17 +114,21 @@
   --color-warning-text:    #b45309;
 
   /* ── Glass — superfícies, bordas e sombras ────────────────────── */
-  --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de negócio/conversa — legíveis */
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);   /* inputs, popovers */
-  --glass-bg-panel:         rgba(255, 255, 255, 0.32);   /* nav-rail, colunas — translúcido real */
-  --glass-bg-strong:        rgba(255, 255, 255, 0.32);   /* kanban columns — mesmo nível do panel */
-  --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais/dialogs — opaco */
-  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);   /* hovers sutis — realce leve */
-  --glass-border:           rgba(140, 165, 210, 0.70);   /* borda padrão (amp) */
-  --glass-border-subtle:    rgba(140, 165, 210, 0.40);   /* borda sutil (amp) */
-  --glass-shadow-sm:        0 2px 10px rgba(91, 111, 245, 0.14);
-  --glass-shadow:           0 12px 40px rgba(91, 111, 245, 0.22), 0 4px 12px rgba(91, 111, 245, 0.10);
-  --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+  /* Retunado para reproduzir identidade visual original:
+     superfícies quase sólidas + sombras neutras suaves (não indigo).
+     Backdrop-blur mantido para glass-cards de destaque e modais. */
+  --glass-bg-base:          rgba(255, 255, 255, 0.96);   /* cards kanban/conversa — quase sólido */
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.90);   /* inputs, popovers */
+  --glass-bg-panel:         rgba(255, 255, 255, 0.80);   /* painéis secundários */
+  --glass-bg-strong:        rgba(248, 250, 252, 0.97);   /* colunas kanban — slate-50 quase sólido */
+  --glass-bg-modal:         rgba(255, 255, 255, 0.99);   /* modais/dialogs — totalmente opaco */
+  --glass-bg-subtle:        rgba(248, 250, 252, 0.60);   /* hovers sutis */
+  --glass-border:           rgba(203, 213, 225, 0.80);   /* slate-300 suave */
+  --glass-border-subtle:    rgba(226, 232, 240, 0.70);   /* slate-200 sutil */
+  /* Sombras neutras (cinza) — sem tint indigo para não "colorir" cards */
+  --glass-shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --glass-shadow:           0 4px 16px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --glass-shadow-lg:        0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
   --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
   --shadow-success:         0 4px 14px rgba(16, 185, 129, 0.35);
   --shadow-danger:          0 4px 14px rgba(239, 68, 68, 0.35);
@@ -175,11 +181,11 @@
    Declarar aqui DE NOVO garante a presença literal no documento.
    ────────────────────────────────────────────────────────────────── */
 :root {
-  /* Background mesh */
-  --bg-base: #c5d8ef;
-  --bg-mesh-1: #8faedb;
-  --bg-mesh-2: #d8b3e6;
-  --bg-mesh: url("/bg-gradient.png") center/cover no-repeat;
+  /* Background mesh — gradiente neutro frio, quase branco */
+  --bg-base: #eef2f7;
+  --bg-mesh-1: #e8edf5;
+  --bg-mesh-2: #f0eef8;
+  --bg-mesh: linear-gradient(145deg, #eef2f7 0%, #e8edf5 50%, #f0eef8 100%);
 
   /* Marca — duplicado em :root para garantir que inline styles
      resolvam mesmo quando o resolver do Tailwind v4 falha. */
@@ -231,18 +237,18 @@
   --nav-text-hover-bg:    rgba(255, 255, 255, 0.08);
   --nav-text-hover:       #ffffff;
 
-  /* Glass — superfícies, bordas e sombras */
-  --glass-bg-base:          rgba(255, 255, 255, 0.82);
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);
-  --glass-bg-panel:         rgba(255, 255, 255, 0.32);
-  --glass-bg-strong:        rgba(255, 255, 255, 0.32);
-  --glass-bg-modal:         rgba(255, 255, 255, 0.97);
-  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);
-  --glass-border:           rgba(140, 165, 210, 0.70);
-  --glass-border-subtle:    rgba(140, 165, 210, 0.40);
-  --glass-shadow-sm:        0 2px 10px rgba(91, 111, 245, 0.14);
-  --glass-shadow:           0 12px 40px rgba(91, 111, 245, 0.22), 0 4px 12px rgba(91, 111, 245, 0.10);
-  --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+  /* Glass — superfícies, bordas e sombras (espelho do @theme) */
+  --glass-bg-base:          rgba(255, 255, 255, 0.96);
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.90);
+  --glass-bg-panel:         rgba(255, 255, 255, 0.80);
+  --glass-bg-strong:        rgba(248, 250, 252, 0.97);
+  --glass-bg-modal:         rgba(255, 255, 255, 0.99);
+  --glass-bg-subtle:        rgba(248, 250, 252, 0.60);
+  --glass-border:           rgba(203, 213, 225, 0.80);
+  --glass-border-subtle:    rgba(226, 232, 240, 0.70);
+  --glass-shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --glass-shadow:           0 4px 16px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --glass-shadow-lg:        0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
   --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
   --shadow-success:         0 4px 14px rgba(16, 185, 129, 0.35);
   --shadow-danger:          0 4px 14px rgba(239, 68, 68, 0.35);

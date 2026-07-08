@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   IconPhone,
   IconPhoneIncoming,
-  IconPhoneMissed,
+  IconPhoneX,
   IconPhoneOff,
   IconPlayerPlay,
 } from "@tabler/icons-react";
@@ -171,7 +171,7 @@ function CallTableRow({ call }: { call: CallRecord }) {
         )}
       >
         {isMissed ? (
-          <IconPhoneMissed size={13} />
+          <IconPhoneX size={13} />
         ) : isInbound ? (
           <IconPhoneIncoming size={13} />
         ) : (

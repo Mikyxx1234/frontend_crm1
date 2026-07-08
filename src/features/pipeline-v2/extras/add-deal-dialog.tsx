@@ -19,6 +19,7 @@ import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Input } from "@/components/ui/input";
 
 import { apiUrl } from "@/lib/api";
+import { normalizePhone } from "@/lib/phone";
 import { useCreateDeal, useTeamUsers } from "@/features/pipeline-v2/hooks";
 import type { StatusFilter } from "@/features/pipeline-v2/api";
 import { useContacts, useCreateContact } from "@/features/directory-v2/hooks";
@@ -157,9 +158,13 @@ export function AddDealDialog({
       if (contactMode === "search" && selectedContact) {
         contactId = selectedContact.id;
       } else if (contactMode === "new" && newName.trim()) {
+        const rawPhone = newPhone.trim();
+        const phoneToSend = rawPhone
+          ? normalizePhone(rawPhone) ?? rawPhone
+          : null;
         const created = await createContact.mutateAsync({
           name: newName.trim(),
-          phone: newPhone.trim() || null,
+          phone: phoneToSend,
           email: newEmail.trim() || null,
         });
         contactId = created.id;
@@ -376,7 +381,13 @@ export function AddDealDialog({
                     type="tel"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
-                    placeholder="Telefone"
+                    onBlur={(e) => {
+                      const raw = e.target.value.trim();
+                      if (!raw) return;
+                      const normalized = normalizePhone(raw);
+                      if (normalized && normalized !== raw) setNewPhone(normalized);
+                    }}
+                    placeholder="Telefone (ex.: 11987654321)"
                   />
                   <Input
                     type="email"

@@ -237,7 +237,7 @@
   --glass-blur-subtle: blur(8px);
 
   /* Mesh gradient base — usado em <body> */
-  --bg-gradient: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
+  --bg-gradient: #dde8f5;
 }
 
 /* ══════════════════════════════════════════════════════════════════

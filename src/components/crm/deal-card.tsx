@@ -93,7 +93,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
     <article
       onClick={onClick}
       className={cn(
-        "group relative cursor-pointer rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-all",
+        "group relative cursor-pointer rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-all",
         "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
         isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",

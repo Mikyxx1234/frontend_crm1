@@ -14,9 +14,9 @@
 @theme {
   /* ── Background do mesh (DealDetailPanel fullscreen + v2 layout) ── */
   --bg-base:                #dde8f5;
-  --bg-mesh-1:              #b8cfec;
-  --bg-mesh-2:              #e8d5f0;
-  --bg-mesh:                linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
+  --bg-mesh-1:              #dde8f5;
+  --bg-mesh-2:              #dde8f5;
+  --bg-mesh:                #dde8f5;
 
   /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
   /* Opacidade aumentada para chips/badges terem contraste sobre fundo
@@ -177,11 +177,11 @@
    Declarar aqui DE NOVO garante a presença literal no documento.
    ────────────────────────────────────────────────────────────────── */
 :root {
-  /* Background — azul-lavanda original (base do efeito glass) */
+  /* Background — lavanda sólido (sem gradiente) */
   --bg-base: #dde8f5;
-  --bg-mesh-1: #b8cfec;
-  --bg-mesh-2: #e8d5f0;
-  --bg-mesh: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
+  --bg-mesh-1: #dde8f5;
+  --bg-mesh-2: #dde8f5;
+  --bg-mesh: #dde8f5;
 
   /* Marca — duplicado em :root para garantir que inline styles
      resolvam mesmo quando o resolver do Tailwind v4 falha. */

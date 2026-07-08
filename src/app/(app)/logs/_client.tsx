@@ -103,7 +103,7 @@ const ACTOR_BADGE: Record<
   },
 };
 
-// 6 colunas: Evento | Detalhe | Entidade | Origem | Ator | Data.
+// 6 colunas: Evento | Detalhe | Entidade | Origem | Responsável | Data.
 // "Detalhe" encolhe para abrir espaço para "Origem" (pill + nome).
 const FEED_GRID = "grid-cols-[1.4fr_1.7fr_1.6fr_1.6fr_0.9fr_0.6fr]";
 
@@ -353,7 +353,7 @@ export default function LogsClientPage() {
                 options={ACTOR_OPTIONS}
                 value={actor}
                 onValueChange={(v) => setActor(v)}
-                menuLabel="Ator"
+                menuLabel="Responsável"
                 triggerClassName={PAGE_FILTER_DROPDOWN_CLASS}
               />
               <DateRangePicker value={range} onChange={setRange} />
@@ -423,7 +423,7 @@ export default function LogsClientPage() {
                     onSort={() => toggleSort("origem")}
                   />
                   <SortableHeader
-                    label="Ator"
+                    label="Responsável"
                     sort={sort.column === "ator" ? sort.dir : null}
                     onSort={() => toggleSort("ator")}
                   />
@@ -662,7 +662,7 @@ function EventCard({ event }: { event: FeedEvent }) {
         )}
       </div>
 
-      {/* Coluna: Ator */}
+      {/* Coluna: Responsável */}
       <div>
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-1 font-display text-[12px] font-semibold ${badge.className}`}

@@ -282,6 +282,8 @@ export default function V2ContactsClientPage() {
 
 // ── Tabela ──────────────────────────────────────────────────────────────────
 
+const TABELA_COLS = "grid-cols-[36px_minmax(180px,2fr)_140px_minmax(120px,1.2fr)_minmax(140px,1.4fr)_100px]";
+
 function TabelaView({
   items, selected, allChecked, someChecked, onToggleAll, onToggleOne, onEdit,
 }: {
@@ -295,7 +297,7 @@ function TabelaView({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
-      <div className={listTableHeadRowClass("grid-cols-[36px_2.4fr_1.3fr_1.1fr_1fr_0.9fr_38px] gap-3 px-3 py-2")}>
+      <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
         <span>
           <CheckboxGlass checked={allChecked} indeterminate={!allChecked && someChecked} onChange={onToggleAll} aria-label="Selecionar todos" />
         </span>
@@ -304,13 +306,12 @@ function TabelaView({
         <ListColumnLabel>Empresa</ListColumnLabel>
         <ListColumnLabel>Tags</ListColumnLabel>
         <ListColumnLabel>Criado em</ListColumnLabel>
-        <ListColumnLabel align="right">Ações</ListColumnLabel>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {items.map((c) => (
           <div
             key={c.id}
-            className={`grid grid-cols-[36px_2.4fr_1.3fr_1.1fr_1fr_0.9fr_38px] items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
+            className={`grid ${TABELA_COLS} items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)] ${selected.has(c.id) ? "bg-[var(--color-primary-soft)]" : ""}`}
           >
             <span>
               <CheckboxGlass checked={selected.has(c.id)} onChange={() => onToggleOne(c.id)} aria-label={`Selecionar ${c.name}`} />
@@ -338,11 +339,6 @@ function TabelaView({
               )}
             </div>
             <div className="font-display text-[13px] text-[var(--text-muted)]">{fmtDateBR(c.createdAt)}</div>
-            <div className="flex justify-end">
-              <ButtonGlass variant="icon" size="icon" type="button" onClick={() => onEdit(c)} aria-label={`Editar ${c.name}`} className="h-8 w-8">
-                <IconPencil size={16} />
-              </ButtonGlass>
-            </div>
           </div>
         ))}
       </div>
@@ -425,75 +421,67 @@ function CartaoView({ items, onEdit }: { items: ContactListItemDto[]; onEdit: (c
 
 function ListaView({ items, onEdit }: { items: ContactListItemDto[]; onEdit: (c: ContactListItemDto) => void }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] backdrop-blur-md shadow-[var(--glass-shadow)]">
-      <div className="flex min-h-0 flex-col overflow-y-auto">
-        {items.map((c) => (
-          <div
-            key={c.id}
-            className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]"
-          >
-            {/* Avatar */}
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
-              {initials(c.name)}
-            </span>
+    <div className="flex flex-col gap-2 overflow-y-auto pb-1">
+      {items.map((c) => (
+        <div
+          key={c.id}
+          className="flex items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-shadow hover:shadow-[var(--glass-shadow)]"
+        >
+          {/* Avatar */}
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white" style={{ background: avatarColor(c.id) }}>
+            {initials(c.name)}
+          </span>
 
-            {/* Nome + email */}
-            <div className="min-w-0 flex-1 leading-tight">
-              <Link href={`/contacts/${c.id}`} className="font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
-                <span className="truncate">{c.name}</span>
-              </Link>
-              <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
-            </div>
-
-            {/* Telefone */}
-            <div className="hidden min-w-[120px] truncate font-display text-[13px] text-[var(--text-secondary)] md:block">
-              {c.phone ?? "—"}
-            </div>
-
-            {/* Empresa */}
-            <div className="hidden min-w-[130px] truncate font-display text-[13px] text-[var(--text-secondary)] lg:block">
-              {c.company?.name ?? "—"}
-            </div>
-
-            {/* Tags */}
-            <div className="hidden flex-wrap gap-1 xl:flex">
-              {(c.tags ?? []).slice(0, 2).map((t) => (
-                <Chip key={t.id} variant="ghost" color={t.color ?? undefined}>{t.name}</Chip>
-              ))}
-              {(c.tags?.length ?? 0) > 2 && (
-                <span className="font-display text-[11px] text-[var(--text-muted)]">+{(c.tags?.length ?? 0) - 2}</span>
-              )}
-            </div>
-
-            {/* Data */}
-            <div className="hidden w-[80px] shrink-0 text-right font-display text-[12px] text-[var(--text-muted)] sm:block">
-              {fmtDateBR(c.createdAt)}
-            </div>
-
-            {/* Ações rápidas */}
-            <div className="flex shrink-0 items-center gap-1">
-              {c.phone && (
-                <a href={`tel:${c.phone}`} aria-label="Ligar" className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--color-success)]">
-                  <IconPhone size={15} />
-                </a>
-              )}
-              {c.email && (
-                <a href={`mailto:${c.email}`} aria-label="Enviar e-mail" className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]">
-                  <IconMail size={15} />
-                </a>
-              )}
-              <button
-                type="button"
-                onClick={() => onEdit(c)}
-                aria-label={`Editar ${c.name}`}
-                className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
-              >
-                <IconPencil size={15} />
-              </button>
-            </div>
+          {/* Nome + email */}
+          <div className="min-w-0 flex-1 leading-tight">
+            <Link href={`/contacts/${c.id}`} className="block truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]">
+              {c.name}
+            </Link>
+            <div className="truncate font-body text-[12px] text-[var(--text-muted)]">{c.email ?? "—"}</div>
           </div>
-        ))}
-      </div>
+
+          {/* Telefone com ícone */}
+          {c.phone && (
+            <div className="hidden shrink-0 items-center gap-1.5 font-display text-[13px] text-[var(--text-muted)] sm:flex">
+              <IconPhone size={14} className="shrink-0" />
+              <span>{c.phone}</span>
+            </div>
+          )}
+
+          {/* Data */}
+          <div className="hidden w-[80px] shrink-0 text-right font-display text-[12px] text-[var(--text-muted)] md:block">
+            {fmtDateBR(c.createdAt)}
+          </div>
+
+          {/* Ações rápidas */}
+          <div className="flex shrink-0 items-center gap-0.5">
+            <a
+              href={c.phone ? `tel:${c.phone}` : undefined}
+              aria-label="Ligar"
+              aria-disabled={!c.phone}
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+            >
+              <IconPhone size={16} />
+            </a>
+            <a
+              href={c.email ? `mailto:${c.email}` : undefined}
+              aria-label="Enviar e-mail"
+              aria-disabled={!c.email}
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+            >
+              <IconMail size={16} />
+            </a>
+            <button
+              type="button"
+              onClick={() => onEdit(c)}
+              aria-label={`Editar ${c.name}`}
+              className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+            >
+              <IconPencil size={16} />
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

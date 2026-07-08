@@ -52,8 +52,14 @@ export class ApiError extends Error {
  *
  * Regras:
  *  - 401 → "Sua sessão expirou. Faça login novamente." (code AUTH_REQUIRED)
- *  - 502/503/504 ou corpo não-JSON → "Servidor temporariamente indisponível…"
- *  - demais erros → usa `message` do payload, senão `fallbackMessage`.
+ *  - Corpo não-JSON (proxy retornou HTML) → "Servidor temporariamente indisponível…"
+ *  - Corpo JSON com `message` → usa a mensagem do backend (mesmo em 502/503/504,
+ *    porque o handler retornou JSON acionável — ex.: template route responde
+ *    503 com "Canal sem credenciais Meta" e 502 com o erro real da Meta Cloud
+ *    API. Mascarar isso deixava operadores sem pista da causa real).
+ *  - Corpo JSON sem `message` em 502/503/504 → cai no genérico
+ *    "Servidor temporariamente indisponível…" (defesa em profundidade).
+ *  - Demais erros → usa `message` do payload, senão `fallbackMessage`.
  */
 export async function parseApiResponse<T>(
   res: Response,
@@ -81,7 +87,14 @@ export async function parseApiResponse<T>(
     );
   }
 
-  if (res.status === 502 || res.status === 503 || res.status === 504 || !isJson) {
+  const isGatewayStatus =
+    res.status === 502 || res.status === 503 || res.status === 504;
+
+  // Corpo não-JSON = página HTML do proxy (EasyPanel/Traefik) OU 5xx de
+  // gateway sem payload legível → único caso em que a máscara genérica se
+  // aplica. Se o backend respondeu JSON (mesmo em 502/503/504), o `message`
+  // é acionável e deve chegar ao operador.
+  if (!isJson || (isGatewayStatus && !payloadMessage)) {
     throw new ApiError(
       "Servidor temporariamente indisponível. Tente novamente em instantes.",
       res.status,

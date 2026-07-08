@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageFilterBar } from "@/components/crm/page-toolbar";
+import { PageFilterBar, PageSearchBar } from "@/components/crm/page-toolbar";
 import { CallHistoryFilters } from "@/features/softphone/components/call-history-filters";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
@@ -43,8 +43,17 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
   const callsWidget = useCallsWidget(isAuthenticated);
 
   const [filters, setFilters] = useState<ListCallsFilters>(DEFAULT_FILTERS);
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const autoSyncedRef = useRef(false);
+
+  // Debounce search → filters
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilters((f) => ({ ...f, search: search.trim() || undefined, page: 1 }));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const syncMutation = useMutation({
     mutationFn: syncCalls,
@@ -83,6 +92,15 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
           icon={<IconPhone size={22} stroke={2.2} />}
           title="Chamadas"
           description="Histórico de chamadas recebidas, realizadas e perdidas."
+          center={
+            <PageSearchBar
+              variant="compact"
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar por contato ou telefone..."
+              aria-label="Buscar chamadas"
+            />
+          }
           actions={
             <div className="flex items-center gap-2">
               <button

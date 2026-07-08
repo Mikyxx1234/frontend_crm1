@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   IconPhone,
   IconPhoneIncoming,
   IconPhoneX,
-  IconPhoneOff,
-  IconPlayerPlay,
+  IconPlayerPauseFilled,
+  IconPlayerPlayFilled,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/crm/empty-state";
@@ -16,7 +17,7 @@ import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortabl
 import { listCalls } from "../api/extensions";
 import type { CallRecord, ListCallsFilters } from "../api/types";
 
-const COLS = "grid-cols-[36px_2.2fr_1fr_0.9fr_0.8fr_1.1fr_40px]";
+const COLS = "grid-cols-[36px_2.2fr_1fr_0.9fr_0.8fr_1.1fr_44px]";
 
 function formatDuration(sec: number | null) {
   if (!sec) return "—";
@@ -38,9 +39,8 @@ function formatDate(iso: string) {
 function statusLabel(status: string): { label: string; color: string } {
   switch (status) {
     case "COMPLETED":
-      return { label: "Completada", color: "text-[var(--color-success-text)] bg-[var(--color-success-bg)]" };
     case "ANSWERED":
-      return { label: "Atendida", color: "text-[var(--color-success-text)] bg-[var(--color-success-bg)]" };
+      return { label: status === "COMPLETED" ? "Completada" : "Atendida", color: "text-[var(--color-success-text)] bg-[var(--color-success-bg)]" };
     case "MISSED":
       return { label: "Perdida", color: "text-[var(--color-danger-text)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)]" };
     case "BUSY":
@@ -68,6 +68,7 @@ export function CallHistoryList({
   embedded,
 }: CallHistoryListProps) {
   const filters = externalFilters ?? { page: 1, perPage: 25, contactId };
+  const [playingId, setPlayingId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["calls", filters],
@@ -123,7 +124,12 @@ export function CallHistoryList({
         {/* Linhas */}
         <div className="flex min-h-0 flex-col overflow-y-auto">
           {calls.map((call) => (
-            <CallTableRow key={call.id} call={call} />
+            <CallTableRow
+              key={call.id}
+              call={call}
+              isPlaying={playingId === call.id}
+              onPlay={() => setPlayingId(playingId === call.id ? null : call.id)}
+            />
           ))}
         </div>
       </div>
@@ -134,120 +140,223 @@ export function CallHistoryList({
           label={`${total.toLocaleString("pt-BR")} chamada${total !== 1 ? "s" : ""} — página ${page} de ${lastPage}`}
           canPrev={page > 1}
           canNext={page < lastPage}
-          onPrev={() => {
-            const f = { ...filters, page: Math.max(1, page - 1) };
-            onFiltersChange?.(f);
-          }}
-          onNext={() => {
-            const f = { ...filters, page: Math.min(lastPage, page + 1) };
-            onFiltersChange?.(f);
-          }}
+          onPrev={() => onFiltersChange?.({ ...filters, page: Math.max(1, page - 1) })}
+          onNext={() => onFiltersChange?.({ ...filters, page: Math.min(lastPage, page + 1) })}
           perPage={perPage}
-          onPerPageChange={(value) => {
-            onFiltersChange?.({ ...filters, perPage: value, page: 1 });
-          }}
+          onPerPageChange={(value) => onFiltersChange?.({ ...filters, perPage: value, page: 1 })}
         />
       )}
     </div>
   );
 }
 
-function CallTableRow({ call }: { call: CallRecord }) {
+// ── Linha da tabela ─────────────────────────────────────────────────────────
+
+interface CallTableRowProps {
+  call: CallRecord;
+  isPlaying: boolean;
+  onPlay: () => void;
+}
+
+function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
   const isMissed = call.status === "MISSED" || call.status === "FAILED";
   const isInbound = call.direction === "INBOUND";
   const { label: sLabel, color: sColor } = statusLabel(call.status);
 
   return (
-    <div
-      className={`grid ${COLS} items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]`}
-    >
-      {/* Ícone de direção/status */}
-      <span
-        className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-          isMissed
-            ? "bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] text-[var(--color-danger)]"
-            : "bg-[color-mix(in_srgb,var(--color-success)_10%,transparent)] text-[var(--color-success)]",
-        )}
-      >
-        {isMissed ? (
-          <IconPhoneX size={13} />
-        ) : isInbound ? (
-          <IconPhoneIncoming size={13} />
-        ) : (
-          <IconPhoneOff size={13} style={{ transform: "scaleX(-1)" }} />
-        )}
-      </span>
+    <div className="flex flex-col border-b border-[var(--glass-border-subtle)] last:border-b-0">
+      <div className={`grid ${COLS} items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[var(--glass-bg-overlay)]`}>
+        {/* Ícone de direção/status */}
+        <span
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+            isMissed
+              ? "bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] text-[var(--color-danger)]"
+              : "bg-[color-mix(in_srgb,var(--color-success)_10%,transparent)] text-[var(--color-success)]",
+          )}
+        >
+          {isMissed ? (
+            <IconPhoneX size={13} />
+          ) : isInbound ? (
+            <IconPhoneIncoming size={13} />
+          ) : (
+            <IconPhone size={13} />
+          )}
+        </span>
 
-      {/* Contato / Telefone */}
-      <div className="min-w-0 leading-tight">
-        {call.contact ? (
-          <Link
-            href={`/contacts/${call.contact.id}`}
-            className="truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
-          >
-            {call.contact.name ?? call.phone}
-          </Link>
-        ) : (
-          <span className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
-            {call.phone}
-          </span>
-        )}
-        {call.contact?.phone && call.contact.phone !== call.phone && (
-          <div className="truncate font-body text-[12px] text-[var(--text-muted)]">
-            {call.phone}
-          </div>
-        )}
+        {/* Contato / Telefone */}
+        <div className="min-w-0 leading-tight">
+          {call.contact ? (
+            <Link
+              href={`/contacts/${call.contact.id}`}
+              className="truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+            >
+              {call.contact.name ?? call.phone}
+            </Link>
+          ) : (
+            <span className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+              {call.phone}
+            </span>
+          )}
+          {call.contact?.phone && call.contact.phone !== call.phone && (
+            <div className="truncate font-body text-[12px] text-[var(--text-muted)]">
+              {call.phone}
+            </div>
+          )}
+        </div>
+
+        {/* Direção */}
+        <span
+          className={cn(
+            "inline-flex w-fit items-center rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+            isInbound
+              ? "bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)] text-[var(--brand-primary)]"
+              : "bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
+          )}
+        >
+          {isInbound ? "Recebida" : "Realizada"}
+        </span>
+
+        {/* Status */}
+        <span className={cn("inline-flex w-fit items-center rounded-full px-2 py-0.5 font-display text-[11px] font-semibold", sColor)}>
+          {sLabel}
+        </span>
+
+        {/* Duração */}
+        <span className="font-display text-[13px] tabular-nums text-[var(--text-muted)]">
+          {formatDuration(call.durationSeconds)}
+        </span>
+
+        {/* Data e hora */}
+        <span className="font-display text-[13px] tabular-nums text-[var(--text-secondary)]">
+          {formatDate(call.startedAt)}
+        </span>
+
+        {/* Botão de gravação */}
+        <div className="flex justify-end">
+          {call.recordUrl ? (
+            <button
+              type="button"
+              onClick={onPlay}
+              title={isPlaying ? "Pausar gravação" : "Ouvir gravação"}
+              className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
+                isPlaying
+                  ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+                  : "bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] text-[var(--brand-primary)] hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_12px_rgba(91,111,245,0.35)]",
+              )}
+            >
+              {isPlaying ? <IconPlayerPauseFilled size={14} /> : <IconPlayerPlayFilled size={14} />}
+            </button>
+          ) : (
+            <span className="h-8 w-8" />
+          )}
+        </div>
       </div>
 
-      {/* Direção */}
-      <span
-        className={cn(
-          "inline-flex w-fit items-center rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
-          isInbound
-            ? "bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)] text-[var(--brand-primary)]"
-            : "bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
-        )}
+      {/* Mini player inline — expande abaixo da linha quando ativo */}
+      {isPlaying && call.recordUrl && (
+        <AudioPlayer src={call.recordUrl} onEnded={onPlay} />
+      )}
+    </div>
+  );
+}
+
+// ── Mini player de áudio ────────────────────────────────────────────────────
+
+function AudioPlayer({ src, onEnded }: { src: string; onEnded: () => void }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [playing, setPlaying] = useState(true);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.play().catch(() => setPlaying(false));
+    return () => { audio.pause(); };
+  }, [src]);
+
+  function handleTimeUpdate() {
+    const audio = audioRef.current;
+    if (!audio || !audio.duration) return;
+    setCurrentTime(audio.currentTime);
+    setDuration(audio.duration);
+    setProgress((audio.currentTime / audio.duration) * 100);
+  }
+
+  function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const t = (Number(e.target.value) / 100) * audio.duration;
+    audio.currentTime = t;
+    setProgress(Number(e.target.value));
+  }
+
+  function togglePlay() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) { audio.play(); setPlaying(true); }
+    else { audio.pause(); setPlaying(false); }
+  }
+
+  function fmtTime(s: number) {
+    if (!s || Number.isNaN(s)) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${String(sec).padStart(2, "0")}`;
+  }
+
+  return (
+    <div className="flex items-center gap-3 border-t border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_5%,transparent)] px-4 py-2.5">
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleTimeUpdate}
+        onEnded={onEnded}
+        preload="auto"
+      />
+
+      {/* Play/Pause */}
+      <button
+        type="button"
+        onClick={togglePlay}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)] transition-transform hover:scale-105"
       >
-        {isInbound ? "Recebida" : "Realizada"}
+        {playing ? <IconPlayerPauseFilled size={12} /> : <IconPlayerPlayFilled size={12} />}
+      </button>
+
+      {/* Tempo atual */}
+      <span className="w-9 shrink-0 text-right font-display text-[11px] tabular-nums text-[var(--text-muted)]">
+        {fmtTime(currentTime)}
       </span>
 
-      {/* Status */}
-      <span
-        className={cn(
-          "inline-flex w-fit items-center rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
-          sColor,
-        )}
-      >
-        {sLabel}
-      </span>
-
-      {/* Duração */}
-      <span className="font-display text-[13px] tabular-nums text-[var(--text-muted)]">
-        {formatDuration(call.durationSeconds)}
-      </span>
-
-      {/* Data e hora */}
-      <span className="font-display text-[13px] tabular-nums text-[var(--text-secondary)]">
-        {formatDate(call.startedAt)}
-      </span>
-
-      {/* Gravação */}
-      <div className="flex justify-end">
-        {call.recordUrl ? (
-          <a
-            href={call.recordUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Ouvir gravação"
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-          >
-            <IconPlayerPlay size={13} />
-          </a>
-        ) : (
-          <span className="h-7 w-7" />
-        )}
+      {/* Barra de progresso */}
+      <div className="relative flex-1">
+        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--glass-border)]">
+          <div
+            className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={0.1}
+          value={progress}
+          onChange={handleSeek}
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          aria-label="Posição da gravação"
+        />
       </div>
+
+      {/* Duração total */}
+      <span className="w-9 shrink-0 font-display text-[11px] tabular-nums text-[var(--text-muted)]">
+        {fmtTime(duration)}
+      </span>
     </div>
   );
 }

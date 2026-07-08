@@ -116,6 +116,8 @@ export async function listCalls(filters: ListCallsFilters = {}): Promise<ListCal
   if (filters.contactId) params.set("contactId", filters.contactId);
   if (filters.status) params.set("status", filters.status);
   if (filters.search) params.set("search", filters.search);
+  if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) params.set("dateTo", filters.dateTo);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.perPage) params.set("perPage", String(filters.perPage));
 

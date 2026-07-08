@@ -13,10 +13,10 @@
 
 @theme {
   /* ── Background do mesh (DealDetailPanel fullscreen + v2 layout) ── */
-  --bg-base:                #e8ecf5;
-  --bg-mesh-1:              #dde4f0;
-  --bg-mesh-2:              #e8e4f4;
-  --bg-mesh:                linear-gradient(145deg, #e8ecf5 0%, #dde4f0 50%, #e8e4f4 100%);
+  --bg-base:                #dde8f5;
+  --bg-mesh-1:              #b8cfec;
+  --bg-mesh-2:              #e8d5f0;
+  --bg-mesh:                linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
 
   /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
   /* Opacidade aumentada para chips/badges terem contraste sobre fundo
@@ -113,22 +113,18 @@
      estava ausente → texto âmbar não resolvia) ──────────────────── */
   --color-warning-text:    #b45309;
 
-  /* ── Glass — superfícies, bordas e sombras ────────────────────── */
-  /* Retunado para reproduzir identidade visual original:
-     superfícies quase sólidas + sombras neutras suaves (não indigo).
-     Backdrop-blur mantido para glass-cards de destaque e modais. */
-  --glass-bg-base:          rgba(255, 255, 255, 0.96);   /* cards kanban/conversa — quase sólido */
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.90);   /* inputs, popovers */
-  --glass-bg-panel:         rgba(255, 255, 255, 0.80);   /* painéis secundários */
-  --glass-bg-strong:        rgba(248, 250, 252, 0.97);   /* colunas kanban — slate-50 quase sólido */
-  --glass-bg-modal:         rgba(255, 255, 255, 0.99);   /* modais/dialogs — totalmente opaco */
-  --glass-bg-subtle:        rgba(248, 250, 252, 0.60);   /* hovers sutis */
-  --glass-border:           rgba(203, 213, 225, 0.80);   /* slate-300 suave */
-  --glass-border-subtle:    rgba(226, 232, 240, 0.70);   /* slate-200 sutil */
-  /* Sombras neutras (cinza) — sem tint indigo para não "colorir" cards */
-  --glass-shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --glass-shadow:           0 4px 16px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
-  --glass-shadow-lg:        0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
+  /* ── Glass — superfícies semitransparentes sobre fundo azul-lavanda ── */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.60);
+  --glass-bg-panel:         rgba(255, 255, 255, 0.40);
+  --glass-bg-strong:        rgba(255, 255, 255, 0.50);
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.18);
+  --glass-border:           rgba(255, 255, 255, 0.55);
+  --glass-border-subtle:    rgba(255, 255, 255, 0.35);
+  --glass-shadow-sm:        0 4px 16px rgba(100, 130, 180, 0.12);
+  --glass-shadow:           0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:        0 16px 48px rgba(100, 130, 180, 0.24);
   --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
   --shadow-success:         0 4px 14px rgba(16, 185, 129, 0.35);
   --shadow-danger:          0 4px 14px rgba(239, 68, 68, 0.35);
@@ -181,11 +177,11 @@
    Declarar aqui DE NOVO garante a presença literal no documento.
    ────────────────────────────────────────────────────────────────── */
 :root {
-  /* Background — lavanda muito sutil, tom do visual original */
-  --bg-base: #e8ecf5;
-  --bg-mesh-1: #dde4f0;
-  --bg-mesh-2: #e8e4f4;
-  --bg-mesh: linear-gradient(145deg, #e8ecf5 0%, #dde4f0 50%, #e8e4f4 100%);
+  /* Background — azul-lavanda original (base do efeito glass) */
+  --bg-base: #dde8f5;
+  --bg-mesh-1: #b8cfec;
+  --bg-mesh-2: #e8d5f0;
+  --bg-mesh: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
 
   /* Marca — duplicado em :root para garantir que inline styles
      resolvam mesmo quando o resolver do Tailwind v4 falha. */
@@ -237,18 +233,20 @@
   --nav-text-hover-bg:    rgba(255, 255, 255, 0.10);
   --nav-text-hover:       #ffffff;
 
-  /* Glass — superfícies, bordas e sombras (espelho do @theme) */
-  --glass-bg-base:          rgba(255, 255, 255, 0.96);
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.90);
-  --glass-bg-panel:         rgba(255, 255, 255, 0.80);
-  --glass-bg-strong:        rgba(248, 250, 252, 0.97);
-  --glass-bg-modal:         rgba(255, 255, 255, 0.99);
-  --glass-bg-subtle:        rgba(248, 250, 252, 0.60);
-  --glass-border:           rgba(203, 213, 225, 0.80);
-  --glass-border-subtle:    rgba(226, 232, 240, 0.70);
-  --glass-shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --glass-shadow:           0 4px 16px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
-  --glass-shadow-lg:        0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
+  /* Glass — superfícies semitransparentes sobre fundo azul-lavanda
+     (o efeito visual original vinha da transparência, não da opacidade).
+     Valores calibrados para reproduzir o look da versão pré-DS-v2. */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de conversa/deal */
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.60);   /* inputs, popovers */
+  --glass-bg-panel:         rgba(255, 255, 255, 0.40);   /* colunas kanban */
+  --glass-bg-strong:        rgba(255, 255, 255, 0.50);   /* header de coluna */
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais */
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.18);   /* hovers sutis */
+  --glass-border:           rgba(255, 255, 255, 0.55);   /* borda principal */
+  --glass-border-subtle:    rgba(255, 255, 255, 0.35);   /* borda sutil */
+  --glass-shadow-sm:        0 4px 16px rgba(100, 130, 180, 0.12);
+  --glass-shadow:           0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:        0 16px 48px rgba(100, 130, 180, 0.24);
   --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
   --shadow-success:         0 4px 14px rgba(16, 185, 129, 0.35);
   --shadow-danger:          0 4px 14px rgba(239, 68, 68, 0.35);

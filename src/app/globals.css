@@ -211,20 +211,20 @@
    ficam disponíveis via var() pra uso pontual)
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  /* Glass backgrounds — superfícies quase sólidas */
-  --glass-bg:         rgba(255, 255, 255, 0.90);
-  --glass-bg-strong:  rgba(248, 250, 252, 0.97);
-  --glass-bg-subtle:  rgba(248, 250, 252, 0.60);
-  --glass-bg-overlay: rgba(255, 255, 255, 0.90);
+  /* Glass backgrounds — semitransparentes (efeito original) */
+  --glass-bg:         rgba(255, 255, 255, 0.25);
+  --glass-bg-strong:  rgba(255, 255, 255, 0.40);
+  --glass-bg-subtle:  rgba(255, 255, 255, 0.12);
+  --glass-bg-overlay: rgba(255, 255, 255, 0.60);
 
-  /* Glass borders — slate neutro */
-  --glass-border:        rgba(203, 213, 225, 0.80);
-  --glass-border-subtle: rgba(226, 232, 240, 0.70);
+  /* Glass borders */
+  --glass-border:        rgba(255, 255, 255, 0.55);
+  --glass-border-subtle: rgba(255, 255, 255, 0.35);
 
   /* Glass shadows */
-  --glass-shadow:     0 4px 16px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
-  --glass-shadow-lg:  0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
-  --glass-shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --glass-shadow:     0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:  0 16px 48px rgba(100, 130, 180, 0.24);
+  --glass-shadow-sm:  0 4px 16px rgba(100, 130, 180, 0.12);
 
   /* Hover dos cards do dashboard (claro = bem sutil). */
   --card-hover-filter:
@@ -237,7 +237,7 @@
   --glass-blur-subtle: blur(8px);
 
   /* Mesh gradient base — usado em <body> */
-  --bg-gradient: linear-gradient(145deg, #e8ecf5 0%, #dde4f0 50%, #e8e4f4 100%);
+  --bg-gradient: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
 }
 
 /* ══════════════════════════════════════════════════════════════════

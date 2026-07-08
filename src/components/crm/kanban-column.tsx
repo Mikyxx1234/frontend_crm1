@@ -116,13 +116,12 @@ export function KanbanColumn({
   return (
     <section
       aria-label={`Coluna ${title}`}
-      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] bg-white/60 pb-2"
+      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
     >
-
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 pb-1 pt-2">
-        <div className="flex items-center gap-2">
-          {/* Checkbox "selecionar todos desta etapa" */}
+      {/* Header — reproduz a estrutura do kanban legado (surface forte + border-b) */}
+      <header className="relative shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2.5 backdrop-blur">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
           {showSelectAll && selection ? (
             <TooltipGlass
               label={
@@ -175,43 +174,41 @@ export function KanbanColumn({
           >
             {count}
           </span>
+          </div>
+
+          <TooltipGlass label="Adicionar negócio" side="top">
+            <button
+              type="button"
+              onClick={onAddDeal}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:text-white"
+              onMouseEnter={(e) => {
+                const btn = e.currentTarget
+                btn.style.background = effectiveColor
+                btn.style.color = "#fff"
+              }}
+              onMouseLeave={(e) => {
+                const btn = e.currentTarget
+                btn.style.background = ""
+                btn.style.color = ""
+              }}
+            >
+              <IconPlus size={15} />
+            </button>
+          </TooltipGlass>
         </div>
 
-        <TooltipGlass label="Adicionar negócio" side="top">
-          <button
-            type="button"
-            onClick={onAddDeal}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] transition-colors hover:text-white"
-            style={
-              {
-                "--hover-bg": effectiveColor,
-              } as React.CSSProperties
-            }
-            onMouseEnter={(e) => {
-              const btn = e.currentTarget
-              btn.style.background = effectiveColor
-              btn.style.borderColor = effectiveColor
-              btn.style.color = "#fff"
-            }}
-            onMouseLeave={(e) => {
-              const btn = e.currentTarget
-              btn.style.background = ""
-              btn.style.borderColor = ""
-              btn.style.color = ""
-            }}
-          >
-            <IconPlus size={15} />
-          </button>
-        </TooltipGlass>
-      </div>
+        {/* Faixa de cor — abaixo do título (igual ao legado) */}
+        {effectiveColor ? (
+          <div
+            className="mt-1.5 h-[2px] w-full rounded-full opacity-90"
+            style={{ backgroundColor: effectiveColor }}
+            aria-hidden
+          />
+        ) : null}
 
-      {/* Total */}
-      <div className="mb-1.5 px-3 pb-1 font-display text-[11px] font-medium text-[var(--text-muted)]">
-        {total}
-      </div>
-
-      {/* Padding lateral dos deals */}
-      <div className="flex min-h-0 flex-1 flex-col px-2">
+        {/* Total */}
+        <p className="mt-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">{total}</p>
+      </header>
 
       {/* Deals — container respeita Droppable (ref + props do react-dnd).
           min-h-0 e' OBRIGATORIO: este e' o no onde o scroll-Y precisa
@@ -221,7 +218,7 @@ export function KanbanColumn({
       <div
         ref={dealsContainerRef}
         {...dealsContainerProps}
-        className="kanban-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1"
+        className="kanban-scroll flex min-h-[120px] flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden p-2"
       >
         {/* Formulário inline de criação — renderizado no TOPO da fase,
             acima dos cards. Disparado pelo "+" no header da coluna. */}
@@ -236,7 +233,6 @@ export function KanbanColumn({
         )}
         {placeholderSlot}
       </div>
-      </div>{/* fim do padding lateral */}
     </section>
   )
 }

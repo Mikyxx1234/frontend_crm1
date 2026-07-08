@@ -93,8 +93,8 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
     <article
       onClick={onClick}
       className={cn(
-        "group relative cursor-pointer rounded-[12px] bg-white py-1.5 shadow-sm transition-all ring-1 ring-black/[0.06]",
-        "hover:-translate-y-px hover:shadow-md",
+        "group relative cursor-pointer rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-all",
+        "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
         isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",
         // Em modo seleção o conteúdo desloca para a direita para abrir

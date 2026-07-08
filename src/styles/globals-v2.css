@@ -103,10 +103,10 @@
      Trilho lateral escuro que devolve identidade visual perdida
      quando a rail virou glass sobre mesh lavanda. Ficando fora da
      família --glass-* pra permitir escurecer sem afetar cards. */
-  --nav-bg:               rgba(15, 23, 42, 0.92);       /* slate-900 @ 92% */
-  --nav-border:           rgba(255, 255, 255, 0.08);
-  --nav-text-muted:       rgba(226, 232, 240, 0.60);    /* ícone inativo */
-  --nav-text-hover-bg:    rgba(255, 255, 255, 0.08);    /* hover leve */
+  --nav-bg:               rgba(30, 41, 99, 0.97);        /* indigo-900 quase sólido — tom do original */
+  --nav-border:           rgba(255, 255, 255, 0.06);
+  --nav-text-muted:       rgba(199, 210, 254, 0.65);    /* indigo-200 — ícone inativo */
+  --nav-text-hover-bg:    rgba(255, 255, 255, 0.10);    /* hover leve */
   --nav-text-hover:       #ffffff;
 
   /* ── Warning text (referenciado por chip/badge/status-pill/deal-card,
@@ -230,11 +230,11 @@
   --col-nego:      #f59e0b;
   --col-fecha:     #10b981;
 
-  /* NavRail dedicada (slate-900 translúcido) */
-  --nav-bg:               rgba(15, 23, 42, 0.92);
-  --nav-border:           rgba(255, 255, 255, 0.08);
-  --nav-text-muted:       rgba(226, 232, 240, 0.60);
-  --nav-text-hover-bg:    rgba(255, 255, 255, 0.08);
+  /* NavRail dedicada (indigo-900 — tom do visual original) */
+  --nav-bg:               rgba(30, 41, 99, 0.97);
+  --nav-border:           rgba(255, 255, 255, 0.06);
+  --nav-text-muted:       rgba(199, 210, 254, 0.65);
+  --nav-text-hover-bg:    rgba(255, 255, 255, 0.10);
   --nav-text-hover:       #ffffff;
 
   /* Glass — superfícies, bordas e sombras (espelho do @theme) */

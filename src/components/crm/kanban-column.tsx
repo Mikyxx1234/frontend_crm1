@@ -116,13 +116,8 @@ export function KanbanColumn({
   return (
     <section
       aria-label={`Coluna ${title}`}
-      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-2 shadow-[var(--glass-shadow)]"
+      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] bg-[var(--glass-bg-strong)] pb-2 shadow-[var(--glass-shadow-sm)]"
     >
-      {/* Barra de acento colorida no topo da coluna */}
-      <div
-        className="h-[3px] w-full shrink-0 rounded-t-[var(--radius-xl)]"
-        style={{ background: effectiveColor }}
-      />
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 pb-1.5 pt-2.5">
@@ -173,13 +168,10 @@ export function KanbanColumn({
             {title}
           </h3>
 
-          {/* Badge de contagem com cor da etapa */}
+          {/* Badge de contagem — círculo colorido simples, sem background */}
           <span
-            className="rounded-full px-2 py-0.5 font-display text-[11px] font-bold"
-            style={{
-              background: effectiveBg,
-              color: effectiveColor,
-            }}
+            className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 font-display text-[11px] font-bold text-white"
+            style={{ background: effectiveColor }}
           >
             {count}
           </span>

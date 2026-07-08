@@ -6,7 +6,7 @@ import {
   IconClipboardList,
   IconCopy,
 } from "@tabler/icons-react";
-import { format, parseISO } from "date-fns";
+import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
@@ -17,7 +17,6 @@ import { PageHeader } from "@/components/crm/page-header";
 import {
   PAGE_FILTER_DROPDOWN_CLASS,
   PageFilterBar,
-  PageGhostButton,
   PageSearchBar,
   PageSegmentedControl,
 } from "@/components/crm/page-toolbar";
@@ -336,11 +335,6 @@ export default function LogsClientPage() {
                 value={String(activeTab)}
                 onChange={(v) => setActiveTab(Number(v))}
               />
-              {isFeed ? (
-                <PageGhostButton active={isDemo} onClick={() => setDemo((v) => !v)}>
-                  {isDemo ? "Demonstração" : "Ver exemplo"}
-                </PageGhostButton>
-              ) : null}
             </div>
           }
         />
@@ -679,11 +673,21 @@ function EventCard({ event }: { event: FeedEvent }) {
 
       {/* Coluna: Data */}
       <div className="text-right">
-        <span className="font-display tabular-nums text-[13px] text-[var(--text-muted)]">
-          {format(parseISO(event.occurredAt), "HH:mm", { locale: ptBR })}
-        </span>
+        <EventDate iso={event.occurredAt} />
       </div>
     </div>
+  );
+}
+
+function EventDate({ iso }: { iso: string }) {
+  const d = parseISO(iso);
+  const isToday = isSameDay(d, new Date());
+  return (
+    <span className="font-display tabular-nums text-[13px] text-[var(--text-muted)]">
+      {isToday
+        ? format(d, "HH:mm", { locale: ptBR })
+        : format(d, "dd MMM", { locale: ptBR })}
+    </span>
   );
 }
 

@@ -237,7 +237,7 @@ export function DateRangePicker({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 flex overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
+        <div className="absolute left-0 top-[calc(100%+8px)] z-50 flex overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
           {/* Presets */}
           <div className="flex w-[150px] flex-col gap-0.5 border-r border-[var(--glass-border-subtle)] p-2">
             {PRESETS.map((preset) => (

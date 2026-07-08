@@ -13,10 +13,10 @@
 
 @theme {
   /* ── Background do mesh (DealDetailPanel fullscreen + v2 layout) ── */
-  --bg-base:                #eef2f7;
-  --bg-mesh-1:              #e8edf5;
-  --bg-mesh-2:              #f0eef8;
-  --bg-mesh:                linear-gradient(145deg, #eef2f7 0%, #e8edf5 50%, #f0eef8 100%);
+  --bg-base:                #e8ecf5;
+  --bg-mesh-1:              #dde4f0;
+  --bg-mesh-2:              #e8e4f4;
+  --bg-mesh:                linear-gradient(145deg, #e8ecf5 0%, #dde4f0 50%, #e8e4f4 100%);
 
   /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
   /* Opacidade aumentada para chips/badges terem contraste sobre fundo
@@ -181,11 +181,11 @@
    Declarar aqui DE NOVO garante a presença literal no documento.
    ────────────────────────────────────────────────────────────────── */
 :root {
-  /* Background mesh — gradiente neutro frio, quase branco */
-  --bg-base: #eef2f7;
-  --bg-mesh-1: #e8edf5;
-  --bg-mesh-2: #f0eef8;
-  --bg-mesh: linear-gradient(145deg, #eef2f7 0%, #e8edf5 50%, #f0eef8 100%);
+  /* Background — lavanda muito sutil, tom do visual original */
+  --bg-base: #e8ecf5;
+  --bg-mesh-1: #dde4f0;
+  --bg-mesh-2: #e8e4f4;
+  --bg-mesh: linear-gradient(145deg, #e8ecf5 0%, #dde4f0 50%, #e8e4f4 100%);
 
   /* Marca — duplicado em :root para garantir que inline styles
      resolvam mesmo quando o resolver do Tailwind v4 falha. */
@@ -330,7 +330,7 @@
    denso). Nao mexa em px/font-size dos componentes individuais.
    ────────────────────────────────────────────────────────────────── */
 .v2-root {
-  --v2-scale: 0.88;
+  --v2-scale: 0.93;
   /* Recíproco da escala — usado para NEUTRALIZAR o zoom em subtrees que
      precisam de coordenadas reais da viewport (ex.: canvas do React Flow,
      que não compensa CSS `zoom` ao mapear cursor→fluxo). calc() num custom

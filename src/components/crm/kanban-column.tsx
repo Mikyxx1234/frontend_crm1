@@ -116,11 +116,11 @@ export function KanbanColumn({
   return (
     <section
       aria-label={`Coluna ${title}`}
-      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] bg-[var(--glass-bg-strong)] pb-2 shadow-[var(--glass-shadow-sm)]"
+      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] bg-white/60 pb-2"
     >
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pb-1.5 pt-2.5">
+      <div className="flex items-center justify-between px-3 pb-1 pt-2">
         <div className="flex items-center gap-2">
           {/* Checkbox "selecionar todos desta etapa" */}
           {showSelectAll && selection ? (
@@ -206,12 +206,12 @@ export function KanbanColumn({
       </div>
 
       {/* Total */}
-      <div className="mb-2 border-b border-[var(--glass-border-subtle)] px-4 pb-1.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">
+      <div className="mb-1.5 px-3 pb-1 font-display text-[11px] font-medium text-[var(--text-muted)]">
         {total}
       </div>
 
       {/* Padding lateral dos deals */}
-      <div className="flex min-h-0 flex-1 flex-col px-2.5">
+      <div className="flex min-h-0 flex-1 flex-col px-2">
 
       {/* Deals — container respeita Droppable (ref + props do react-dnd).
           min-h-0 e' OBRIGATORIO: este e' o no onde o scroll-Y precisa

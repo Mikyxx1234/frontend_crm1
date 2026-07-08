@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageFilterBar, PageSearchBar } from "@/components/crm/page-toolbar";
+import { PageFilterBar, PageGhostButton, PageSearchBar, pageGhostButtonClass } from "@/components/crm/page-toolbar";
 import { CallHistoryFilters } from "@/features/softphone/components/call-history-filters";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
@@ -103,25 +103,23 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
           }
           actions={
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <PageGhostButton
                 onClick={() => syncMutation.mutate()}
                 disabled={syncMutation.isPending}
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-2 font-display text-[13px] font-medium text-[var(--text-primary)] transition-all hover:-translate-y-px hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
                 title="Sincronizar chamadas com a Api4com"
               >
                 <IconRefresh
-                  size={16}
+                  size={15}
                   className={syncMutation.isPending ? "animate-spin" : undefined}
                 />
                 {syncMutation.isPending ? "Sincronizando…" : "Sincronizar"}
-              </button>
+              </PageGhostButton>
               <Link
                 href="/settings/softphone"
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-2 font-display text-[13px] font-medium text-[var(--text-primary)] transition-all hover:-translate-y-px hover:bg-[var(--glass-bg-strong)]"
-                title="Abrir configurações do softphone (provedor, ramal, webhook)"
+                className={pageGhostButtonClass()}
+                title="Configurações do softphone"
               >
-                <IconSettings size={16} />
+                <IconSettings size={15} />
                 Configurações
               </Link>
             </div>

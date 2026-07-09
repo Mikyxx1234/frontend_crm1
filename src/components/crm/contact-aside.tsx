@@ -11,8 +11,11 @@ import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconBriefcase,
+  IconChevronDown,
   IconGripVertical,
+  IconPackage,
   IconPencil,
+  IconSparkles,
   IconTag,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
@@ -169,10 +172,16 @@ function SectionHeader({
   children,
   dragHandleProps,
   actions,
+  icon,
+  open = true,
+  onToggle,
 }: {
   children: React.ReactNode
   dragHandleProps?: React.HTMLAttributes<HTMLElement>
   actions?: React.ReactNode
+  icon?: React.ReactNode
+  open?: boolean
+  onToggle?: () => void
 }) {
   return (
     <div className="mb-1.5 mt-3 flex items-center gap-1">
@@ -183,9 +192,24 @@ function SectionHeader({
       >
         <IconGripVertical size={12} />
       </span>
-      <span className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={!onToggle}
+        className={cn(
+          "flex items-center gap-1.5 rounded font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]",
+          onToggle && "cursor-pointer hover:text-[var(--text-primary)]",
+        )}
+      >
+        {icon}
         {children}
-      </span>
+        {onToggle && (
+          <IconChevronDown
+            size={12}
+            className={cn("transition-transform", !open && "-rotate-90")}
+          />
+        )}
+      </button>
       {actions && <div className="ml-auto flex items-center gap-1">{actions}</div>}
     </div>
   )
@@ -290,59 +314,86 @@ function DealInline({
   const isWon = status === "WON"
   const lostReason = isLost ? (deal.lostReason ?? "").trim() : ""
 
+  // Progresso do funil: usa currentSegIdx (0-based) + total de segmentos.
+  const totalStages = sortedSegments?.length ?? 0
+  const currentStage = currentSegIdx >= 0 ? currentSegIdx + 1 : 0
+  const progress = totalStages > 0 ? Math.round((currentStage / totalStages) * 100) : 0
+
   return (
-    <div>
-      <div className="flex items-start gap-3 px-5 pb-2 pt-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)]">
-          <IconBriefcase size={16} className="text-[var(--brand-primary)]" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-display text-[14px] font-bold leading-snug text-[var(--text-primary)]">
-              {deal.title}
-            </p>
+    <div className="px-3 pt-3">
+      {/* ── Hero header (variante Vívida): fundo brand + anel de progresso ── */}
+      <header className="relative overflow-hidden rounded-[var(--radius-card)] bg-[var(--brand-primary)] p-4 text-white">
+        {/* Bolhas decorativas */}
+        <div className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
+
+        <div className="relative flex items-start justify-between gap-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
+            <IconBriefcase size={13} stroke={2.2} />
+            Negócio
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
             {(isLost || isWon) && (
               <span
-                className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide"
+                className="rounded-full px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide"
                 style={
                   isLost
-                    ? {
-                        background: "color-mix(in srgb, var(--color-danger, #dc2626) 12%, transparent)",
-                        color: "var(--color-danger, #dc2626)",
-                      }
-                    : {
-                        background: "color-mix(in srgb, var(--color-success, #059669) 12%, transparent)",
-                        color: "var(--color-success, #059669)",
-                      }
+                    ? { background: "rgba(255,255,255,0.9)", color: "var(--color-danger, #dc2626)" }
+                    : { background: "rgba(255,255,255,0.9)", color: "var(--color-success, #059669)" }
                 }
               >
                 {isLost ? "Perdido" : "Ganho"}
               </span>
             )}
-          </div>
-          <div className="relative mt-1">
-            {deal.stageDropdownSlot ?? (
-              <span className="font-display text-[11px] text-[var(--text-muted)]">
+            {deal.stageDropdownSlot ? (
+              <div className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm">
+                {deal.stageDropdownSlot}
+              </div>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
                 {stageLabel}
               </span>
             )}
           </div>
         </div>
-      </div>
 
-      {isLost && lostReason && (
-        <div className="mx-5 mb-3 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-danger,#dc2626)_24%,transparent)] bg-[color-mix(in_srgb,var(--color-danger,#dc2626)_6%,transparent)] px-4 py-2.5">
-          <p className="mb-0.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-danger,#dc2626)]">
-            Motivo da perda
-          </p>
-          <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
-            {lostReason}
-          </p>
+        <h2 className="relative mt-3 text-balance font-display text-[17px] font-bold leading-tight">
+          {deal.title}
+        </h2>
+
+        <div className="relative mt-3 flex items-center gap-3">
+          {/* Anel de progresso */}
+          <div
+            className="grid size-11 shrink-0 place-items-center rounded-full"
+            style={{
+              background: `conic-gradient(#f59e0b ${progress}%, rgba(255,255,255,0.25) 0)`,
+            }}
+          >
+            <div className="grid size-8 place-items-center rounded-full bg-[var(--brand-primary)]">
+              <span className="font-display text-[10px] font-bold text-white">
+                {totalStages > 0 ? `${currentStage}/${totalStages}` : "—"}
+              </span>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 text-[11px] text-white/80">
+            <p className="font-medium text-white">Funil de vendas</p>
+            <p className="truncate">
+              {totalStages > 0
+                ? `Etapa ${currentStage} de ${totalStages}`
+                : stageLabel}
+            </p>
+          </div>
+          {deal.assigneeSlot && (
+            <div className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm">
+              {deal.assigneeSlot}
+            </div>
+          )}
         </div>
-      )}
+      </header>
 
+      {/* Barra de funil segmentada (real) — mantém cores/tooltips por etapa */}
       {sortedSegments && sortedSegments.length > 0 && (
-        <div className="flex gap-1 px-5 pb-2">
+        <div className="mt-2 flex gap-1 px-1">
           {sortedSegments.map((seg, i) => (
             <TooltipGlass key={seg.id} label={seg.name} side="top">
               <span
@@ -357,31 +408,36 @@ function DealInline({
         </div>
       )}
 
-      {/* Responsável + Origem — abaixo do funil */}
-      {(deal.assigneeSlot || deal.origin) && (
-        <div className="mx-5 mb-2 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
-          {deal.assigneeSlot && (
-            <div className={cn(
-              "flex items-center gap-3 px-3.5 py-2 text-[12.5px]",
-              deal.origin && "border-b border-[var(--glass-border-subtle)]",
-            )}>
-              <span className="shrink-0 font-medium text-[var(--text-muted)]">Responsável</span>
-              <div className="ml-auto flex items-center">{deal.assigneeSlot}</div>
-            </div>
-          )}
-          {deal.origin && (
-            <div className="flex items-center gap-3 px-3.5 py-2 text-[12.5px]">
-              <span className="shrink-0 font-medium text-[var(--text-muted)]">Origem</span>
-              <span className="ml-auto truncate text-right font-display font-bold text-[var(--text-primary)]">{deal.origin}</span>
-            </div>
-          )}
+      {isLost && lostReason && (
+        <div className="mt-3 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-danger,#dc2626)_24%,transparent)] bg-[color-mix(in_srgb,var(--color-danger,#dc2626)_6%,transparent)] px-4 py-2.5">
+          <p className="mb-0.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--color-danger,#dc2626)]">
+            Motivo da perda
+          </p>
+          <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+            {lostReason}
+          </p>
         </div>
       )}
 
-      {/* Tags do negócio */}
+      {/* Origem (read-only) — campo de sistema do negócio */}
+      {deal.origin && (
+        <div className="mt-3 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 text-[12.5px]">
+          <span className="shrink-0 font-medium text-[var(--text-muted)]">Origem</span>
+          <span className="ml-auto truncate text-right font-display font-bold text-[var(--text-primary)]">
+            {deal.origin}
+          </span>
+        </div>
+      )}
+
+      {/* Tags do negócio — chips + botão adicionar */}
       {deal.dealTagsNode !== undefined && (
-        <div className="mx-5 mb-2">
-          {deal.dealTagsNode}
+        <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
+              Tags
+            </span>
+            {deal.dealTagsNode}
+          </div>
         </div>
       )}
 
@@ -394,21 +450,21 @@ function DealInline({
           /api/deals/:id/products. */}
 
       {fields.length > 0 && (
-        <div className="px-5 pb-3">
-          <div className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <div className="mt-3">
+          <div className="mb-1.5 flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <IconSparkles size={12} />
             Campos do negócio
           </div>
-          <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
-            {fields.map((f, i) => (
+          <div className="grid grid-cols-2 gap-2">
+            {fields.map((f) => (
               <div
                 key={f.fieldId}
-                className={cn(
-                  "flex items-center justify-between gap-3 px-3.5 py-2.5 text-[12.5px]",
-                  i < fields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
-                )}
+                className="flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5"
               >
-                <span className="shrink-0 font-medium text-[var(--text-muted)]">{f.label}</span>
-                <span className="min-w-0 truncate text-right font-display font-bold text-[var(--text-primary)]">
+                <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                  {f.label}
+                </span>
+                <span className="min-w-0 truncate font-display text-[12px] font-bold text-[var(--text-primary)]">
                   {f.value ?? PLACEHOLDER}
                 </span>
               </div>
@@ -417,9 +473,16 @@ function DealInline({
         </div>
       )}
 
-      {/* Produtos do negócio (line items) — adicionar/editar/remover. */}
-      <div className="px-5 pb-3">
-        <DealProductsSection dealId={deal.id} compact />
+      {/* Produtos do negócio — wrapper visual (variante Vívida) + CRUD real. */}
+      <div className="mt-3 mb-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+        <div className="flex items-center gap-3">
+          <div className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+            <IconPackage size={17} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <DealProductsSection dealId={deal.id} compact />
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -473,6 +536,10 @@ export function ContactAside({
   // Estados de configuração abertos
   const [contactConfigOpen, setContactConfigOpen] = useState(false)
   const [dealConfigOpen, setDealConfigOpen] = useState(false)
+
+  // Estados de colapso de seção (variante Vívida)
+  const [contactSectionOpen, setContactSectionOpen] = useState(true)
+  const [dealFieldsSectionOpen, setDealFieldsSectionOpen] = useState(true)
 
   const resolvedContactPanelFields = contactPanelFields.map((f) => ({
     ...f,
@@ -622,9 +689,11 @@ export function ContactAside({
 
                           {/* ── Detalhes de Contato (campos nativos + personalizados) ── */}
                           {sectionId === "contato" && (
-                            <div className="border-b border-[var(--glass-border-subtle)] px-5 pb-3">
+                            <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-3">
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
+                                open={contactSectionOpen}
+                                onToggle={() => setContactSectionOpen((v) => !v)}
                                 actions={
                                   <>
                                     <HeaderBtn
@@ -649,20 +718,22 @@ export function ContactAside({
                                 Detalhes de Contato
                               </SectionHeader>
 
+                              {contactSectionOpen && (
+                              <>
                               {contactConfigOpen && resolvedContactConfig && (
                                 <div className="mb-4 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-primary)_4%,transparent)] p-3">
                                   {resolvedContactConfig}
                                 </div>
                               )}
 
-                              {/* Tags do CONTATO (Contact.tags).
+                              {/* Tags do CONTATO (Contact.tags) — chips + "Nova".
                                   Conversas não possuem tags — apenas
                                   Negócios, Contatos e Empresas. */}
                               {contactTagsNode && (
-                                <div className="mb-2">
-                                  <p className="mb-1 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                                  <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
                                     Tags
-                                  </p>
+                                  </span>
                                   {contactTagsNode}
                                 </div>
                               )}
@@ -807,15 +878,20 @@ export function ContactAside({
                                   })}
                                 </div>
                               )}
+                              </>
+                              )}
                             </div>
                           )}
 
                           {/* ── Campos de Negócio (personalizados) ── */}
                           {sectionId === "campos-negocio" &&
                             (resolvedDealPanelFields.length > 0 || resolvedDealConfig) && (
-                              <div className="px-5 pb-3">
+                              <div className="px-3 pb-3">
                                 <SectionHeader
                                   dragHandleProps={provided.dragHandleProps ?? undefined}
+                                  icon={<IconSparkles size={12} />}
+                                  open={dealFieldsSectionOpen}
+                                  onToggle={() => setDealFieldsSectionOpen((v) => !v)}
                                   actions={
                                   <>
                                     <HeaderBtn
@@ -840,6 +916,8 @@ export function ContactAside({
                                   Campos de Negócio
                                 </SectionHeader>
 
+                                {dealFieldsSectionOpen && (
+                                <>
                                 {dealConfigOpen && resolvedDealConfig && (
                                   <div className="mb-4 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-primary)_4%,transparent)] p-3">
                                     {resolvedDealConfig}
@@ -847,24 +925,20 @@ export function ContactAside({
                                 )}
 
                                 {resolvedDealPanelFields.length > 0 && (
-                                  <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
-                                    {resolvedDealPanelFields.map((f, i) => {
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {resolvedDealPanelFields.map((f) => {
                                       const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                       const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
                                       const canEdit = !!f.entityType && !!f.entityId
                                       return (
                                         <div
                                           key={f.fieldId}
-                                          className={cn(
-                                            "flex items-center justify-between gap-3 px-3.5 py-2 text-[13px]",
-                                            i < resolvedDealPanelFields.length - 1 &&
-                                              "border-b border-[var(--glass-border-subtle)]",
-                                          )}
+                                          className="flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5"
                                         >
-                                          <span className="shrink-0 font-medium text-[var(--text-muted)]">
+                                          <span className="text-[11px] font-medium text-[var(--text-muted)]">
                                             {f.label}
                                           </span>
-                                          <div className="min-w-0 flex-1 flex justify-end">
+                                          <div className="min-w-0 w-full">
                                             {/* Modo edição ativo: sempre mostra editor, ignorando badge */}
                                             {dealFieldsEditMode && canEdit ? (
                                               <InlineFieldEditor
@@ -919,6 +993,8 @@ export function ContactAside({
                                       )
                                     })}
                                   </div>
+                                )}
+                                </>
                                 )}
                               </div>
                             )}

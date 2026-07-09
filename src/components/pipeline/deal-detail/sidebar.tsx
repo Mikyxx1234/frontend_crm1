@@ -393,9 +393,11 @@ export function DealProductsSection({
         // duplicar. Nos demais casos (populated ou nao-compact), mantemos.
         compact && items.length === 0 ? undefined : (
           <div className="flex items-center gap-2">
-            {items.length > 0 && (
+            {/* Contador só quando ha >1 item — com 1 item o "1 item" e ruido
+                visual (pedido do operador). */}
+            {items.length > 1 && (
               <span className="font-display text-[11px] font-semibold tabular-nums text-[var(--color-ink-soft)]">
-                {items.length} {items.length === 1 ? "item" : "itens"}
+                {items.length} itens
               </span>
             )}
             <Button
@@ -535,11 +537,14 @@ export function DealProductsSection({
                 <div className="flex items-center gap-2">
                   <Package className="size-3.5 shrink-0 text-primary-dark" />
                   <div className="min-w-0 flex-1">
-                    {/* Nome pode quebrar em 2 linhas se longo; libera mais
-                        espaço horizontal pra ele. Badges (Serviço,
-                        Availability) vao pra linha 2 pra nao roubar espaço. */}
+                    {/* Em compact (ContactAside) o nome fica em 1 linha (truncate)
+                        pra alinhar com o valor na MESMA linha — pedido do
+                        operador. Fora do compact mantem ate 2 linhas. */}
                     <div
-                      className="line-clamp-2 text-sm font-medium leading-tight text-foreground"
+                      className={cn(
+                        "text-sm font-medium leading-tight text-foreground",
+                        compact ? "truncate" : "line-clamp-2",
+                      )}
                       title={item.productName}
                     >
                       {item.productName}

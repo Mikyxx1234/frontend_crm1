@@ -789,7 +789,8 @@ export function MessageBubble({
     )
   }
 
-  // Nota interna: barra horizontal full-width com gradiente âmbar.
+  // Nota interna: card neutro (cinza claro) com acento indigo no rótulo
+  // "NOTA" — modelo alinhado ao screenshot (antes era gradiente âmbar).
   // Layout: [🔒 NOTA] [texto flex-1] [ações hover] [agente] [hora]
   if (isNote) {
     const hasNoteActions = !!(onPinNote || onAddToLog)
@@ -798,16 +799,16 @@ export function MessageBubble({
         className={cn(
           "group relative flex w-full items-center gap-2.5 rounded-[var(--radius-lg)] border px-3.5 py-2 text-sm leading-[1.45] transition-colors",
           isPinned
-            ? "border-warning/60 bg-[linear-gradient(135deg,rgba(251,191,36,0.14)_0%,rgba(245,158,11,0.10)_100%)]"
-            : "border-warning/30 bg-[linear-gradient(135deg,rgba(251,191,36,0.08)_0%,rgba(245,158,11,0.06)_100%)]",
+            ? "border-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)]"
+            : "border-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] bg-[color-mix(in_srgb,var(--text-muted)_7%,white)]",
           className,
         )}
       >
         {/* Indicador de nota fixada */}
         {isPinned && (
-          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-warning/15 px-1.5 py-0.5">
-            <IconPinFilled size={9} className="text-warning" />
-            <span className="font-display text-[8px] font-bold uppercase tracking-wider text-warning">
+          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_15%,white)] px-1.5 py-0.5">
+            <IconPinFilled size={9} className="text-[var(--brand-primary)]" />
+            <span className="font-display text-[8px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
               fixada
             </span>
           </span>
@@ -815,14 +816,14 @@ export function MessageBubble({
 
         {/* Ícone + badge "NOTA" */}
         <span className="flex shrink-0 items-center gap-1.5">
-          <IconLock size={13} className="text-warning" />
-          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-warning">
+          <IconLock size={13} className="text-[var(--brand-primary)]" />
+          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-[var(--brand-primary)]">
             Nota
           </span>
         </span>
 
         {/* Separador */}
-        <span className="h-3.5 w-px shrink-0 bg-warning/30" />
+        <span className="h-3.5 w-px shrink-0 bg-[color-mix(in_srgb,var(--text-muted)_25%,transparent)]" />
 
         {/* Conteúdo da mensagem */}
         <span className="min-w-0 flex-1 text-[var(--text-primary)]">
@@ -840,7 +841,7 @@ export function MessageBubble({
                     onClick={() =>
                       isPinned ? onPinNote(null) : onPinNote(message.id)
                     }
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-warning/60 transition-colors hover:bg-warning/15 hover:text-warning"
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] hover:text-[var(--brand-primary)]"
                     aria-label={isPinned ? "Desafixar nota" : "Fixar nota"}
                   >
                     {isPinned ? (
@@ -861,7 +862,7 @@ export function MessageBubble({
                   <button
                     type="button"
                     onClick={() => onAddToLog(message.content)}
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-warning/60 transition-colors hover:bg-warning/15 hover:text-warning"
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] hover:text-[var(--brand-primary)]"
                     aria-label="Adicionar ao log do negócio"
                   >
                     <IconListCheck size={13} />
@@ -878,11 +879,11 @@ export function MessageBubble({
         {/* Agente + hora */}
         <span className="ml-auto flex shrink-0 items-center gap-2">
           {senderName && (
-            <span className="font-display text-[11px] font-semibold text-warning/70">
+            <span className="font-display text-[11px] font-semibold text-[var(--text-secondary)]">
               {senderName}
             </span>
           )}
-          <span className="font-body text-[10.5px] text-warning/50">
+          <span className="font-body text-[10.5px] text-[var(--text-muted)]">
             {message.time}
           </span>
         </span>

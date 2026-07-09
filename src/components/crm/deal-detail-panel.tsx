@@ -11,12 +11,10 @@ import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconArrowLeft,
-  IconChevronDown,
   IconCircleX,
   IconDotsVertical,
   IconGripVertical,
   IconSearch,
-  IconPlus,
   IconPencil,
   IconMessageCircle,
   IconChecklist,
@@ -56,8 +54,11 @@ import { BadgeGlass } from "./badge-glass"
 //     ContactAside).
 // A chave foi bumpada pra v3 pra invalidar a ordem antiga.
 type SidebarSection = "principal" | "contato" | "campos" | "produtos"
-const SIDEBAR_DEFAULT_ORDER: SidebarSection[] = ["contato", "produtos", "campos"]
-const SIDEBAR_STORAGE_KEY = "crm:deal-detail:sidebar-order:v3"
+// Ordem alinhada ao mockup (hero → Origem/Tags → Produtos → Campos de
+// Negócio → Detalhes de Contato). Bump v4 pra invalidar a ordem antiga
+// persistida em localStorage.
+const SIDEBAR_DEFAULT_ORDER: SidebarSection[] = ["produtos", "campos", "contato"]
+const SIDEBAR_STORAGE_KEY = "crm:deal-detail:sidebar-order:v4"
 import { ChatArea } from "./chat-area"
 import { type Message } from "./message-bubble"
 import { resolveHighlight, SEVERITY_COLORS } from "@/lib/highlight"
@@ -202,14 +203,9 @@ interface DealDetailPanelProps {
   connection?: ConnectionRef | null
 }
 
-const STAGES = ["Lead", "Novo", "Qualificado", "Proposta", "Negociação", "Fechamento"]
-
-// Paleta do funil segmentado (estilo Kommo) — uma cor por etapa.
-const FUNNEL_PALETTE = ["#94a3b8", "var(--color-primary)", "var(--color-lavender)", "var(--color-warning)", "#ec4899", "var(--color-success)"]
-
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: number }>; count?: number }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
-  { id: "atividades", label: "Atividades", icon: IconChecklist, count: 3 },
+  { id: "atividades", label: "Tarefas", icon: IconChecklist, count: 3 },
   { id: "notas", label: "Notas", icon: IconNote },
   { id: "timeline", label: "Timeline", icon: IconClock },
   { id: "chamadas", label: "Chamadas", icon: IconPhone },
@@ -424,8 +420,20 @@ export function DealDetailPanel({
     );
   }
 
-  const currentStageIndex = deal.stage ? STAGES.indexOf(deal.stage) : 2
   const avatarClass = `av-${deal.avatarColor}`
+
+  // Funil (hero): deriva o índice da etapa atual casando o NOME da etapa
+  // (deal.stage) com os segmentos reais. Alimenta o anel de progresso e a
+  // barra segmentada — mesma fonte usada pelo contact-aside do inbox.
+  const sortedFunnel =
+    funnelSegments && funnelSegments.length > 0
+      ? [...funnelSegments].sort((a, b) => a.position - b.position)
+      : null
+  const currentSegIdx = sortedFunnel
+    ? sortedFunnel.findIndex((s) => s.name === deal.stage)
+    : -1
+  const funnelTotal = sortedFunnel?.length ?? 0
+  const funnelCurrent = currentSegIdx >= 0 ? currentSegIdx + 1 : 0
 
   // Mensagens default (mock alinhado ao DS) — usadas quando nao ha messagesSlot.
   const fallbackMessages: Message[] = [
@@ -541,109 +549,128 @@ export function DealDetailPanel({
             aria-label="Detalhes do negócio"
             className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md"
           >
-            {/* Cabeçalho fixo: identificador + funil de vendas segmentado */}
-            <div className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-5.5 pb-4 pt-4.5">
-              {/* Linha do título: nome do deal + tags inline + gear */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                  <h2 className="shrink-0 font-display text-[16px] font-bold tracking-tight text-[var(--text-primary)]">
-                    Lead #{deal.number ?? deal.id.slice(-6).toUpperCase()}
-                  </h2>
-                  {/* Tags inline com o título */}
-                  {tagsSlot ?? (
-                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[var(--glass-border)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
-                      <IconPlus size={10} />
-                      Tags
+            {/* Cabeçalho fixo: hero do negócio — paridade visual com o
+                contact-aside do inbox (fundo brand + anel de progresso).
+                Pill "Negócio" removida (redundante, pedido do operador). */}
+            <div className="shrink-0 p-3">
+              <header className="relative isolate rounded-[var(--radius-card)] bg-[var(--brand-primary)] p-4 text-white">
+                {/* Bolhas decorativas — clipadas num wrapper próprio pra não
+                    cortar o dropdown de fases */}
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[var(--radius-card)]">
+                  <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10" />
+                  <div className="absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
+                </div>
+
+                {/* Linha topo: ações (kebab + engrenagem) + dropdown de fase */}
+                <div className="relative flex items-center justify-end gap-1.5">
+                  {moreActionsSlot && (
+                    <div className="[&_button]:!text-white [&_button:hover]:!bg-white/15 [&_button]:!rounded-[var(--radius-sm)]">
+                      {moreActionsSlot}
+                    </div>
+                  )}
+                  {(resolvedContactConfig || resolvedDealConfig) && (
+                    <TooltipGlass
+                      label={configOpen ? "Voltar aos campos" : "Configurar campos"}
+                      side="left"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setConfigOpen((v) => !v)}
+                        aria-label={configOpen ? "Voltar aos campos" : "Configurar campos"}
+                        className={cn(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+                          configOpen
+                            ? "bg-white text-[var(--brand-primary)]"
+                            : "text-white/80 hover:bg-white/15 hover:text-white",
+                        )}
+                      >
+                        {configOpen ? <IconX size={13} /> : <IconSettings size={13} />}
+                      </button>
+                    </TooltipGlass>
+                  )}
+                  {stageDropdownSlot ? (
+                    <div className="relative z-30 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
+                      {stageDropdownSlot}
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
+                      {deal.stage ?? "Em processo"}
                     </span>
                   )}
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
-                {/* Botão "Ligar" movido pro header da TabsBar (canto direito,
-                    ao lado do kebab da conversa). Mantemos aqui somente o
-                    kebab de acoes do deal + engrenagem. */}
-                {/* Kebab (ações do deal) */}
-                {moreActionsSlot}
-                {/* Gear (configuração de campos) */}
-                {(resolvedContactConfig || resolvedDealConfig) && (
-                  <TooltipGlass
-                    label={configOpen ? "Voltar aos campos" : "Configurar campos"}
-                    side="left"
+
+                {/* Nome + #id do negócio */}
+                <h2 className="relative mt-3 flex items-baseline gap-2 text-balance font-display text-[17px] font-bold leading-tight">
+                  <span className="min-w-0">{deal.name}</span>
+                  <span className="shrink-0 font-mono text-[11px] font-semibold text-white/70">
+                    #{deal.number ?? deal.id.slice(-6).toUpperCase()}
+                  </span>
+                </h2>
+
+                {/* Anel de progresso + funil + responsável */}
+                <div className="relative mt-3 flex items-center gap-3">
+                  <div
+                    className="grid size-11 shrink-0 place-items-center rounded-full"
+                    style={{
+                      background:
+                        sortedFunnel && sortedFunnel.length > 0
+                          ? (() => {
+                              const stepPct = 100 / sortedFunnel.length
+                              const stops = sortedFunnel
+                                .map((seg, i) => {
+                                  const color = seg.color || "var(--brand-primary)"
+                                  const active = i <= currentSegIdx
+                                  const c = active
+                                    ? color
+                                    : `color-mix(in srgb, ${color} 22%, rgba(255,255,255,0.35))`
+                                  return `${c} ${i * stepPct}% ${(i + 1) * stepPct}%`
+                                })
+                                .join(", ")
+                              return `conic-gradient(${stops})`
+                            })()
+                          : "conic-gradient(rgba(255,255,255,0.25) 0% 100%)",
+                    }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setConfigOpen((v) => !v)}
-                      aria-label={configOpen ? "Voltar aos campos" : "Configurar campos"}
-                      className={cn(
-                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
-                        configOpen
-                          ? "bg-[var(--brand-primary)] text-white"
-                          : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
-                      )}
-                    >
-                      {configOpen ? <IconX size={14} /> : <IconSettings size={14} />}
-                    </button>
-                  </TooltipGlass>
-                )}
-                </div>{/* fim flex shrink-0 (kebab + gear) */}
-              </div>{/* fim justify-between */}
-
-              <div className="mt-3.5">
-                <div className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  Funil de vendas
+                    <div className="grid size-8 place-items-center rounded-full bg-[var(--brand-primary)]">
+                      <span className="font-display text-[10px] font-bold text-white">
+                        {funnelTotal > 0 ? `${funnelCurrent}/${funnelTotal}` : "—"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1 text-[11px] text-white/80">
+                    <p className="font-medium text-white">Funil de vendas</p>
+                    <p className="truncate">
+                      {funnelTotal > 0
+                        ? `Etapa ${funnelCurrent} de ${funnelTotal}`
+                        : (deal.stage ?? "Em processo")}
+                    </p>
+                  </div>
+                  {ownerSlot && (
+                    <div className="shrink-0 [&_button]:!border-transparent [&_button]:!bg-white [&_button]:!text-[var(--brand-primary)] [&_button]:shadow-sm [&_span]:!border-transparent [&_span]:!bg-white [&_span]:!text-[var(--brand-primary)] [&_span]:shadow-sm">
+                      {ownerSlot}
+                    </div>
+                  )}
                 </div>
+              </header>
 
-                {/* Dropdown de fase (slot externo) ou label estático */}
-                {stageDropdownSlot ? (
-                  <div className="mt-1">{stageDropdownSlot}</div>
-                ) : (
-                  <div className="mt-1 font-display text-[15px] font-bold text-[var(--text-primary)]">
-                    {deal.stage ?? "Em processo"}
-                  </div>
-                )}
-
-                {/* Barra de progresso — segmentos reais ou fallback hardcoded */}
-                {funnelSegments && funnelSegments.length > 0 ? (
-                  <div className="mt-2.5 flex gap-1">
-                    {[...funnelSegments]
-                      .sort((a, b) => a.position - b.position)
-                      .map((seg) => {
-                        const segIdx = funnelSegments
-                          .sort((a, b) => a.position - b.position)
-                          .findIndex((s) => s.id === seg.id)
-                        const reached = segIdx <= currentStageIndex
-                        return (
-                          <TooltipGlass key={seg.id} label={seg.name} side="top">
-                            <span
-                              className="h-[6px] flex-1 rounded-full transition-opacity"
-                              style={{
-                                background: seg.color || "var(--brand-primary)",
-                                opacity: reached ? 1 : 0.18,
-                              }}
-                            />
-                          </TooltipGlass>
-                        )
-                      })}
-                  </div>
-                ) : (
-                  <div className="mt-2.5 flex gap-1">
-                    {STAGES.map((s, i) => (
+              {/* Barra de funil segmentada (real) — cores/tooltips por etapa */}
+              {sortedFunnel && sortedFunnel.length > 0 && (
+                <div className="mt-2 flex gap-1 px-1">
+                  {sortedFunnel.map((seg, i) => (
+                    <TooltipGlass key={seg.id} label={seg.name} side="top">
                       <span
-                        key={s}
-                        className="h-[6px] flex-1 rounded-full transition-opacity"
+                        className="h-[4px] flex-1 rounded-full transition-opacity"
                         style={{
-                          background: FUNNEL_PALETTE[i % FUNNEL_PALETTE.length],
-                          opacity: i <= currentStageIndex ? 1 : 0.18,
+                          background: seg.color || "var(--brand-primary)",
+                          opacity: i <= currentSegIdx ? 1 : 0.18,
                         }}
                       />
-                    ))}
-                  </div>
-                )}
-              </div>
+                    </TooltipGlass>
+                  ))}
+                </div>
+              )}
 
-              {/* Motivo da perda — destaque vermelho quando deal está LOST.
-                  Mostrado entre a barra de progresso do funil e o bloco do
-                  responsável pra ficar imediatamente visível ao abrir o card,
-                  resposta direta ao "por que esse lead foi perdido?". */}
+              {/* Motivo da perda — destaque vermelho quando deal está LOST. */}
               {deal.status === "LOST" && deal.lostReason?.trim() ? (
                 <div className="mt-3 flex items-start gap-2 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.22)] bg-[rgba(239,68,68,0.08)] px-2.5 py-2">
                   <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[var(--color-danger-dark)]">
@@ -659,53 +686,6 @@ export function DealDetailPanel({
                   </div>
                 </div>
               ) : null}
-
-              {/* Responsável — clicável para alterar */}
-              <div className="mt-3.5 flex items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-3">
-                <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                  Responsável
-                </span>
-                {ownerSlot ?? (
-                  <button
-                    type="button"
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1 font-display text-[12px] font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-                  >
-                    {deal.owner?.name || "Sem responsável"}
-                    <IconChevronDown size={11} />
-                  </button>
-                )}
-              </div>
-
-              {/* Origem (Contact.source nativo) — DD5 do questionario.
-                  Antes era um bloco "principal" arrastavel renderizando
-                  sourceSlot que tentava persistir Deal.source (campo
-                  inexistente no schema). Movido pro cabecalho fixo, ao
-                  lado dos demais metadados do deal, e ligado ao campo
-                  nativo do contato. */}
-              <div className="mt-2 flex items-center gap-2 border-t border-[var(--glass-border-subtle)] pt-3">
-                <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                  Origem
-                </span>
-                {deal.contactId ? (
-                  <InlineNativeEditor
-                    value={deal.contactSource ?? undefined}
-                    entityType="contact"
-                    entityId={deal.contactId}
-                    fieldKey="source"
-                    placeholder="Adicionar origem"
-                    suggestions={contactSources}
-                    invalidateKeys={[
-                      ["contact-sidebar", deal.contactId],
-                      ["deal-detail-v2", deal.id],
-                    ]}
-                    textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]"
-                  />
-                ) : (
-                  <span className="font-display text-[12px] italic text-[var(--text-muted)]">
-                    Vincule um contato para definir origem
-                  </span>
-                )}
-              </div>
             </div>
 
             {/* Conteúdo rolável: lista densa de campos */}
@@ -716,6 +696,47 @@ export function DealDetailPanel({
                   {resolvedDealConfig}
                 </div>
               ) : (
+                <div className="flex min-w-0 flex-col gap-5">
+                  {/* ── Origem (campo de sistema do negócio) ── */}
+                  <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 text-[12.5px]">
+                    <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                      Origem
+                    </span>
+                    <div className="ml-auto flex min-w-0 justify-end text-right">
+                      {deal.contactId ? (
+                        <InlineNativeEditor
+                          value={deal.contactSource ?? undefined}
+                          entityType="contact"
+                          entityId={deal.contactId}
+                          fieldKey="source"
+                          placeholder="Adicionar origem"
+                          suggestions={contactSources}
+                          invalidateKeys={[
+                            ["contact-sidebar", deal.contactId],
+                            ["deal-detail-v2", deal.id],
+                          ]}
+                          textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)]"
+                        />
+                      ) : (
+                        <span className="font-display text-[12px] italic text-[var(--text-muted)]">
+                          Vincule um contato
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Tags do negócio ── */}
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
+                        Tags
+                      </span>
+                      {tagsSlot ?? (
+                        <span className="text-[12px] text-[var(--text-muted)]">Nenhuma tag</span>
+                      )}
+                    </div>
+                  </div>
+
                 <DragDropContext onDragEnd={handleSidebarDragEnd}>
                   <Droppable droppableId="sidebar-sections">
                     {(droppableProvided) => (
@@ -752,7 +773,7 @@ export function DealDetailPanel({
 
                                   {sectionId === "contato" && (
                                     <FieldCard
-                                      title="Dados de Contato"
+                                      title="Detalhes de Contato"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                     >
                                       <FieldRow
@@ -889,7 +910,7 @@ export function DealDetailPanel({
 
                                   {sectionId === "campos" && customFieldsSlot && customFieldsSlot.length > 0 && (
                                     <FieldCard
-                                      title="Campos do negócio"
+                                      title="Campos de Negócio"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                       titleActions={
                                         <button
@@ -969,6 +990,7 @@ export function DealDetailPanel({
                     )}
                   </Droppable>
                 </DragDropContext>
+                </div>
               )}
 
               {/* productsSlot agora vive dentro do DragDropContext acima

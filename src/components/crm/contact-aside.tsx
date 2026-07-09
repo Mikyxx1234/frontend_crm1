@@ -10,7 +10,6 @@ import {
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
-  IconBriefcase,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -343,11 +342,9 @@ function DealInline({
           <div className="absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
         </div>
 
-        <div className="relative flex items-start justify-between gap-2">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
-            <IconBriefcase size={13} stroke={2.2} />
-            Negócio
-          </div>
+        {/* Pill "Negócio" removida (redundante, pedido do operador) — o
+            dropdown de fase fica alinhado à direita sozinho. */}
+        <div className="relative flex items-start justify-end gap-2">
           <div className="flex shrink-0 items-center gap-1.5">
             {/* Pill "Perdido"/"Ganho" removida: o próprio dropdown de estágio
                 já mostra a etapa terminal (Perdido/Ganho) — mantê-la aqui

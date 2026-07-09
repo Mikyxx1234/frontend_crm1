@@ -83,6 +83,8 @@ export interface ContactDetails {
     stageDropdownSlot?: React.ReactNode
     /** Slot para renderizar o seletor de responsável abaixo das info do deal. */
     assigneeSlot?: React.ReactNode
+    /** Slot para renderizar as tags do negócio (add/remove). */
+    dealTagsNode?: React.ReactNode
     customFields?: { fieldId: string; label: string; value: string | null }[]
   }[]
   financialStatus?: "success" | "lead" | "enterprise"
@@ -173,7 +175,7 @@ function SectionHeader({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="mb-2 mt-5 flex items-center gap-1">
+    <div className="mb-1.5 mt-3 flex items-center gap-1">
       <span
         {...dragHandleProps}
         className="flex cursor-grab items-center rounded p-0.5 text-[var(--text-muted)] opacity-0 transition-opacity group-hover/section:opacity-60 hover:opacity-100 active:cursor-grabbing"
@@ -242,7 +244,7 @@ function Row({
   return (
     <div
       className={cn(
-        "flex items-center justify-between py-2.5 text-[13px]",
+        "flex items-center justify-between py-1.5 text-[13px]",
         !isLast && "border-b border-[var(--glass-border-subtle)]",
         className,
       )}
@@ -290,7 +292,7 @@ function DealInline({
 
   return (
     <div>
-      <div className="flex items-start gap-3 px-5 pb-3 pt-4">
+      <div className="flex items-start gap-3 px-5 pb-2 pt-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)]">
           <IconBriefcase size={16} className="text-[var(--brand-primary)]" />
         </div>
@@ -340,7 +342,7 @@ function DealInline({
       )}
 
       {sortedSegments && sortedSegments.length > 0 && (
-        <div className="flex gap-1 px-5 pb-3">
+        <div className="flex gap-1 px-5 pb-2">
           {sortedSegments.map((seg, i) => (
             <TooltipGlass key={seg.id} label={seg.name} side="top">
               <span
@@ -355,21 +357,31 @@ function DealInline({
         </div>
       )}
 
-      {/* Responsável da conversa/deal + Origem — abaixo do funil */}
+      {/* Responsável + Origem — abaixo do funil */}
       {(deal.assigneeSlot || deal.origin) && (
-        <div className="mx-5 mb-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
+        <div className="mx-5 mb-2 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
           {deal.assigneeSlot && (
-            <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-[12.5px] border-b border-[var(--glass-border-subtle)] last:border-b-0">
+            <div className={cn(
+              "flex items-center gap-3 px-3.5 py-2 text-[12.5px]",
+              deal.origin && "border-b border-[var(--glass-border-subtle)]",
+            )}>
               <span className="shrink-0 font-medium text-[var(--text-muted)]">Responsável</span>
-              <div className="flex justify-end">{deal.assigneeSlot}</div>
+              <div className="ml-auto flex items-center">{deal.assigneeSlot}</div>
             </div>
           )}
           {deal.origin && (
-            <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-[12.5px]">
+            <div className="flex items-center gap-3 px-3.5 py-2 text-[12.5px]">
               <span className="shrink-0 font-medium text-[var(--text-muted)]">Origem</span>
-              <span className="truncate text-right font-display font-bold text-[var(--text-primary)]">{deal.origin}</span>
+              <span className="ml-auto truncate text-right font-display font-bold text-[var(--text-primary)]">{deal.origin}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tags do negócio */}
+      {deal.dealTagsNode !== undefined && (
+        <div className="mx-5 mb-2">
+          {deal.dealTagsNode}
         </div>
       )}
 
@@ -382,8 +394,8 @@ function DealInline({
           /api/deals/:id/products. */}
 
       {fields.length > 0 && (
-        <div className="px-5 pb-4">
-          <div className="mb-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <div className="px-5 pb-3">
+          <div className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
             Campos do negócio
           </div>
           <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
@@ -406,7 +418,7 @@ function DealInline({
       )}
 
       {/* Produtos do negócio (line items) — adicionar/editar/remover. */}
-      <div className="px-5 pb-4">
+      <div className="px-5 pb-3">
         <DealProductsSection dealId={deal.id} compact />
       </div>
     </div>
@@ -610,7 +622,7 @@ export function ContactAside({
 
                           {/* ── Detalhes de Contato (campos nativos + personalizados) ── */}
                           {sectionId === "contato" && (
-                            <div className="border-b border-[var(--glass-border-subtle)] px-5 pb-5">
+                            <div className="border-b border-[var(--glass-border-subtle)] px-5 pb-3">
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
                                 actions={
@@ -647,8 +659,8 @@ export function ContactAside({
                                   Conversas não possuem tags — apenas
                                   Negócios, Contatos e Empresas. */}
                               {contactTagsNode && (
-                                <div className="mb-3">
-                                  <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
+                                <div className="mb-2">
+                                  <p className="mb-1 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                                     Tags
                                   </p>
                                   {contactTagsNode}
@@ -694,27 +706,6 @@ export function ContactAside({
                                     invalidateKeys={contactInvalidateKeys}
                                     onSaved={(v) => setNativeValues((p) => ({ ...p, email: v }))}
                                     textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)]"
-                                  />
-                                </Row>
-                                <Row label="Origem">
-                                  <InlineNativeEditor
-                                    value={
-                                      native(
-                                        "source",
-                                        contact.origin && contact.origin !== "—"
-                                          ? contact.origin
-                                          : undefined,
-                                      )
-                                    }
-                                    entityType="contact"
-                                    entityId={contact.contactId}
-                                    fieldKey="source"
-                                    placeholder="Sem origem"
-                                    suggestions={contactSources}
-                                    editMode={contactEditMode}
-                                    invalidateKeys={contactInvalidateKeys}
-                                    onSaved={(v) => setNativeValues((p) => ({ ...p, source: v }))}
-                                    textClassName="font-display text-[12px] font-bold text-[var(--text-primary)]"
                                   />
                                 </Row>
                                 {contact.connection && (
@@ -822,7 +813,7 @@ export function ContactAside({
                           {/* ── Campos de Negócio (personalizados) ── */}
                           {sectionId === "campos-negocio" &&
                             (resolvedDealPanelFields.length > 0 || resolvedDealConfig) && (
-                              <div className="px-5 pb-5">
+                              <div className="px-5 pb-3">
                                 <SectionHeader
                                   dragHandleProps={provided.dragHandleProps ?? undefined}
                                   actions={

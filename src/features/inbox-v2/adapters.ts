@@ -617,6 +617,20 @@ export function toContactAside(
           : undefined,
   }));
 
+  // Deriva origem do negócio a partir do canal da conversa (campo de sistema,
+  // não editável). Só exibe quando o canal é reconhecido.
+  function deriveOriginLabel(channel: ConversationListRow["channel"] | null | undefined): string | null {
+    switch (channel) {
+      case "whatsapp": return "WhatsApp";
+      case "instagram":
+      case "meta": return "Facebook / Instagram";
+      case "email": return "E-mail";
+      case "webchat": return "Chat Web";
+      default: return null;
+    }
+  }
+  const dealOrigin = deriveOriginLabel(row.channel);
+
   // Mapeia todos os deals vinculados ao contato com campos customizados.
   // stageCount/stageIndex NÃO são derivados aqui — são falsos.
   // O client do inbox usa useDealDetail + useBoard para obter segmentos reais.
@@ -630,6 +644,7 @@ export function toContactAside(
     productName: d.productName ?? null,
     status: (d as { status?: string | null }).status ?? null,
     lostReason: (d as { lostReason?: string | null }).lostReason ?? null,
+    origin: dealOrigin,
     customFields: (d as { customFields?: { fieldId: string; label: string; value: string | null }[] }).customFields ?? [],
   }));
 

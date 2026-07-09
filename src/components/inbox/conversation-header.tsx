@@ -154,16 +154,16 @@ export function ConversationHeader({
           size={34}
         />
 
-        <div className="min-w-0 max-w-[min(200px,40vw)] sm:max-w-[min(260px,32vw)]">
+        <div className="min-w-0 max-w-[180px] overflow-hidden sm:max-w-[220px]">
           {contactHref ? (
             <Link
               href={contactHref}
-              className="block truncate text-[13px] font-semibold text-foreground transition-colors hover:text-primary"
+              className="block truncate whitespace-nowrap text-[13px] font-semibold text-foreground transition-colors hover:text-primary"
             >
               {contactName}
             </Link>
           ) : (
-            <p className="truncate text-[13px] font-semibold text-foreground">{contactName}</p>
+            <p className="truncate whitespace-nowrap text-[13px] font-semibold text-foreground">{contactName}</p>
           )}
           {contactPhone ? (
             <p className="truncate font-mono text-[10px] text-[var(--color-ink-muted)] tabular-nums">

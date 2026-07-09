@@ -56,6 +56,7 @@ import {
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import { DealTagsPopover } from "@/features/pipeline-v2/extras/deal-tags-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
@@ -65,6 +66,35 @@ import {
   DealTimelineTab,
 } from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
+
+// ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover ──
+function DealTagsTray({
+  dealId,
+  currentTags,
+}: {
+  dealId: string;
+  currentTags: { id: string; name: string; color: string | null }[];
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {currentTags.map((t) => (
+        <span
+          key={t.id}
+          className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold"
+          style={{
+            background: t.color
+              ? `color-mix(in srgb, ${t.color} 15%, transparent)`
+              : "color-mix(in srgb, var(--brand-primary) 12%, transparent)",
+            color: t.color ?? "var(--brand-primary)",
+          }}
+        >
+          {t.name}
+        </span>
+      ))}
+      <DealTagsPopover dealId={dealId} currentTags={currentTags} />
+    </div>
+  );
+}
 
 const DEFAULT_FILTERS: InboxFilters = {};
 
@@ -507,6 +537,13 @@ export default function InboxV2ClientPage({
           />
         </RequirePermission>
       ) : undefined,
+      // Tags do negócio — chips existentes + popover para adicionar/remover.
+      dealTagsNode: (
+        <DealTagsTray
+          dealId={d.id}
+          currentTags={(firstDealDetail as { tags?: { id: string; name: string; color: string | null }[] } | undefined)?.tags ?? []}
+        />
+      ),
     };
   });
 

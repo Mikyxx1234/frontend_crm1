@@ -372,13 +372,12 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
   };
 
   return (
-    // Sem `title`/`description`: o wrapper externo (FieldCard "Produtos" no
-    // deal-detail-panel) ja provê o rótulo da seção. Aqui ficam só o botão
-    // "+" (add) e a contagem inline no ancoramento visual. Antes tínhamos
-    // "PRODUTOS" duplicado (FieldCard + SidebarSection) + subtitle "Itens
-    // vinculados ao negócio." — puramente decorativo, roubando ~40px de
-    // altura útil.
+    // compact=true (ContactAside): exibe título "Produtos" inline com botão +
+    // para evitar o + solto no canto superior direito sem contexto visual.
+    // compact=false (DealDetailPanel): sem título (o FieldCard já provê label).
     <SidebarSection
+      title={compact ? "Produtos" : undefined}
+      className={compact ? "border-b-0 pb-0" : undefined}
       action={
         <div className="flex items-center gap-2">
           {items.length > 0 && (

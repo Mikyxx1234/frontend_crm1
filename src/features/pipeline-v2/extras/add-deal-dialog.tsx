@@ -141,10 +141,12 @@ export function AddDealDialog({
   const pending = saving || createDeal.isPending || createContact.isPending;
 
   const canSubmit = useMemo(() => {
-    if (!title.trim() || !stageId) return false;
+    // Título é opcional: negócio sem nome é batizado como "Negócio - #<id>"
+    // no backend. Só o estágio (e o contato, quando modo "novo") são exigidos.
+    if (!stageId) return false;
     if (contactMode === "new" && !newName.trim()) return false;
     return true;
-  }, [title, stageId, contactMode, newName]);
+  }, [stageId, contactMode, newName]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -172,7 +174,8 @@ export function AddDealDialog({
 
       const num = value.trim() ? Number(value.replace(",", ".")) : undefined;
       const { deal } = await createDeal.mutateAsync({
-        title: title.trim(),
+        // Sem título → não envia; backend gera "Negócio - #<number>".
+        title: title.trim() || undefined,
         stageId,
         value: Number.isFinite(num) ? (num as number) : undefined,
         ownerId: ownerId || undefined,
@@ -222,14 +225,13 @@ export function AddDealDialog({
 
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           <label className="block">
-            <span className={labelCls}>Título *</span>
+            <span className={labelCls}>Título</span>
             <Input
               type="text"
               autoFocus
-              required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex.: Proposta Empresa X"
+              placeholder="Opcional — vira “Negócio - #id” se vazio"
             />
           </label>
 

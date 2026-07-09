@@ -116,7 +116,8 @@ export async function updateDeal(
  * aceita opcionalmente.
  */
 export interface CreateDealPayload {
-  title: string;
+  /** Opcional: sem título o backend gera "Negócio - #<number>". */
+  title?: string;
   stageId: string;
   value?: number;
   ownerId?: string | null;

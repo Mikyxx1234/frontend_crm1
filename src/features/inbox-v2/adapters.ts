@@ -557,6 +557,8 @@ export interface ContactAsideView {
   panelFields: PanelField[];
   deals: {
     id: string;
+    /** N\u00famero sequencial do neg\u00f3cio por organiza\u00e7\u00e3o (1, 2, 3...). */
+    number: number | null;
     title: string;
     value: number | null;
     stageName: string | null;
@@ -636,6 +638,7 @@ export function toContactAside(
   // O client do inbox usa useDealDetail + useBoard para obter segmentos reais.
   const deals = (contact?.deals ?? []).map((d) => ({
     id: d.id,
+    number: (d as { number?: number | null }).number ?? null,
     title: d.title,
     value: d.value,
     stageName: d.stageName ?? null,

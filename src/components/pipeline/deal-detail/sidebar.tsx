@@ -256,7 +256,16 @@ export function DealSidebar({
   );
 }
 
-export function DealProductsSection({ dealId, compact = false }: { dealId: string; compact?: boolean }) {
+export function DealProductsSection({
+  dealId,
+  compact = false,
+  hideTitle = false,
+}: {
+  dealId: string;
+  compact?: boolean;
+  /** Esconde o titulo interno "Produtos" (quando o wrapper externo ja provee). */
+  hideTitle?: boolean;
+}) {
   const queryClient = useQueryClient();
   const confirmDialog = useConfirm();
   const [showAdd, setShowAdd] = React.useState(false);
@@ -376,7 +385,7 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
     // para evitar o + solto no canto superior direito sem contexto visual.
     // compact=false (DealDetailPanel): sem título (o FieldCard já provê label).
     <SidebarSection
-      title={compact ? "Produtos" : undefined}
+      title={compact && !hideTitle ? "Produtos" : undefined}
       className={compact ? "border-b-0 pb-0" : undefined}
       action={
         <div className="flex items-center gap-2">
@@ -447,7 +456,7 @@ export function DealProductsSection({ dealId, compact = false }: { dealId: strin
               key={item.id}
               className={cn(
                 "group rounded-xl border border-primary/20 bg-linear-to-br from-[var(--brand-primary)]/5 to-transparent px-3 py-2 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
-                compact && "py-1.5",
+                compact && "px-2.5 py-1",
               )}
             >
               {editingItem === item.id && item.productType !== "SERVICE" ? (

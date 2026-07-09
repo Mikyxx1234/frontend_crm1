@@ -13,7 +13,6 @@ import {
   IconBriefcase,
   IconChevronDown,
   IconGripVertical,
-  IconPackage,
   IconPencil,
   IconSparkles,
   IconTag,
@@ -73,6 +72,8 @@ export interface ContactDetails {
   note?: string
   deals?: {
     id: string
+    /** N\u00famero sequencial do neg\u00f3cio por organiza\u00e7\u00e3o (1, 2, 3...). */
+    number?: number | null
     title: string
     value: number | null
     stageName?: string | null
@@ -322,10 +323,12 @@ function DealInline({
   return (
     <div className="px-3 pt-3">
       {/* ── Hero header (variante Vívida): fundo brand + anel de progresso ── */}
-      <header className="relative overflow-hidden rounded-[var(--radius-card)] bg-[var(--brand-primary)] p-4 text-white">
-        {/* Bolhas decorativas */}
-        <div className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
+      <header className="relative isolate rounded-[var(--radius-card)] bg-[var(--brand-primary)] p-4 text-white">
+        {/* Bolhas decorativas — clipadas num wrapper próprio pra não cortar o dropdown de fases */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[var(--radius-card)]">
+          <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10" />
+          <div className="absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
+        </div>
 
         <div className="relative flex items-start justify-between gap-2">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
@@ -346,7 +349,7 @@ function DealInline({
               </span>
             )}
             {deal.stageDropdownSlot ? (
-              <div className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm">
+              <div className="relative z-30 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
                 {deal.stageDropdownSlot}
               </div>
             ) : (
@@ -357,8 +360,13 @@ function DealInline({
           </div>
         </div>
 
-        <h2 className="relative mt-3 text-balance font-display text-[17px] font-bold leading-tight">
-          {deal.title}
+        <h2 className="relative mt-3 flex items-baseline gap-2 text-balance font-display text-[17px] font-bold leading-tight">
+          <span className="min-w-0">{deal.title}</span>
+          {deal.number != null && (
+            <span className="shrink-0 font-mono text-[11px] font-semibold text-white/70">
+              #{deal.number}
+            </span>
+          )}
         </h2>
 
         <div className="relative mt-3 flex items-center gap-3">
@@ -384,7 +392,7 @@ function DealInline({
             </p>
           </div>
           {deal.assigneeSlot && (
-            <div className="shrink-0 rounded-full bg-white/20 px-1 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+            <div className="shrink-0 [&_span]:!border-transparent [&_span]:!bg-white [&_span]:!text-[var(--brand-primary)] [&_span]:shadow-sm">
               {deal.assigneeSlot}
             </div>
           )}
@@ -455,7 +463,10 @@ function DealInline({
             <IconSparkles size={12} />
             Campos do negócio
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          {/* Layout tipo masonry: 2 colunas via `columns-2` — cards de valor longo
+              ocupam mais altura na sua coluna e nao empurram vizinho; cards curtos
+              empilham naturalmente. `break-inside-avoid` impede corte no meio. */}
+          <div className="columns-2 gap-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
             {fields.map((f) => {
               const isEmpty = !f.value || f.value === PLACEHOLDER
               return (
@@ -471,7 +482,7 @@ function DealInline({
                       + Adicionar
                     </span>
                   ) : (
-                    <span className="min-w-0 truncate font-display text-[12px] font-bold text-[var(--text-primary)]">
+                    <span className="min-w-0 break-words font-display text-[12px] font-bold text-[var(--text-primary)]">
                       {f.value}
                     </span>
                   )}
@@ -482,8 +493,10 @@ function DealInline({
         </div>
       )}
 
-      {/* Produtos do negócio — wrapper visual + CRUD real (line items, total). */}
-      <div className="mt-3 mb-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+      {/* Produtos do negócio — wrapper visual (variante Vívida) + CRUD real.
+          `DealProductsSection` compact ja renderiza titulo "Produtos" + count + `+`
+          num header inline; items em full width abaixo (nao trunca nome). */}
+      <div className="mt-3 mb-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
         <DealProductsSection dealId={deal.id} compact />
       </div>
     </div>
@@ -618,22 +631,22 @@ export function ContactAside({
             ao lado do botao de colapso pra paridade com o deal detail (que
             ja tinha o botao no header da sidebar). Mantemos absolute pra
             nao deslocar o topo das secoes existentes. */}
-        {(headerActionsNode || onToggleCollapse) && (
+        {headerActionsNode && (
           <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
             {headerActionsNode}
-            {onToggleCollapse && (
-              <TooltipGlass label="Recolher painel de contato" side="left">
-                <button
-                  type="button"
-                  onClick={onToggleCollapse}
-                  className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-                  aria-label="Recolher painel de contato"
-                >
-                  <IconLayoutSidebarRightCollapse size={17} />
-                </button>
-              </TooltipGlass>
-            )}
           </div>
+        )}
+        {onToggleCollapse && (
+          <TooltipGlass label="Recolher painel de contato" side="left">
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="absolute -left-3 top-4 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
+              aria-label="Recolher painel de contato"
+            >
+              <IconLayoutSidebarRightCollapse size={15} />
+            </button>
+          </TooltipGlass>
         )}
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -927,7 +940,7 @@ export function ContactAside({
                                 )}
 
                                 {resolvedDealPanelFields.length > 0 && (
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className="columns-2 gap-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
                                     {resolvedDealPanelFields.map((f) => {
                                       const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                       const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null

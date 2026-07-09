@@ -67,7 +67,8 @@ import {
 } from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
-// ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover ──
+// ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
+// Mostra ate 2 tags mais recentes; excedente vira `+N` com tooltip listando o resto.
 function DealTagsTray({
   dealId,
   currentTags,
@@ -75,25 +76,84 @@ function DealTagsTray({
   dealId: string;
   currentTags: { id: string; name: string; color: string | null }[];
 }) {
+  const MAX_VISIBLE = 2;
+  const visible = currentTags.slice(0, MAX_VISIBLE);
+  const overflow = currentTags.slice(MAX_VISIBLE);
+
+  function chip(t: { id: string; name: string; color: string | null }) {
+    const color = t.color ?? "#5b6ff5";
+    return (
+      <span
+        key={t.id}
+        className="inline-flex h-5 max-w-[110px] items-center truncate rounded-full px-2 text-[11px] font-semibold"
+        style={{
+          background: `color-mix(in srgb, ${color} 18%, white)`,
+          color: `color-mix(in srgb, ${color} 75%, black)`,
+          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+        }}
+        title={t.name}
+      >
+        {t.name}
+      </span>
+    );
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-1">
-      {currentTags.map((t) => {
-        const color = t.color ?? "#5b6ff5";
-        return (
-          <span
-            key={t.id}
-            className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold"
-            style={{
-              background: `color-mix(in srgb, ${color} 18%, white)`,
-              color: `color-mix(in srgb, ${color} 75%, black)`,
-              border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-            }}
-          >
-            {t.name}
+      {visible.map(chip)}
+      {overflow.length > 0 && (
+        <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
+          <span className="inline-flex h-5 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+            +{overflow.length}
           </span>
-        );
-      })}
+        </TooltipGlass>
+      )}
       <DealTagsPopover dealId={dealId} currentTags={currentTags} />
+    </div>
+  );
+}
+
+// ── ContactTagsTray — mesmo padrao de DealTagsTray, so troca o popover ──
+function ContactTagsTray({
+  contactId,
+  currentTags,
+}: {
+  contactId: string;
+  currentTags: { id: string; name: string; color: string | null }[];
+}) {
+  const MAX_VISIBLE = 2;
+  const visible = currentTags.slice(0, MAX_VISIBLE);
+  const overflow = currentTags.slice(MAX_VISIBLE);
+
+  function chip(t: { id: string; name: string; color: string | null }) {
+    const color = t.color ?? "#5b6ff5";
+    return (
+      <span
+        key={t.id}
+        className="inline-flex h-5 max-w-[110px] items-center truncate rounded-full px-2 text-[11px] font-semibold"
+        style={{
+          background: `color-mix(in srgb, ${color} 18%, white)`,
+          color: `color-mix(in srgb, ${color} 75%, black)`,
+          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+        }}
+        title={t.name}
+      >
+        {t.name}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {visible.map(chip)}
+      {overflow.length > 0 && (
+        <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
+          <span className="inline-flex h-5 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+            +{overflow.length}
+          </span>
+        </TooltipGlass>
+      )}
+      <ContactTagsPopover contactId={contactId} currentTags={currentTags} triggerVariant="icon" />
     </div>
   );
 }
@@ -649,33 +709,14 @@ export default function InboxV2ClientPage({
         headerActionsNode={undefined}
         tagsNode={tagsNode}
         contactTagsNode={
-          // IB7: tags do CONTATO (separadas das tags da conversa). Lista
-          // os chips ja aplicados + popover pra adicionar/remover.
-          // `contactDetail.tags` ja vem flatten do backend.
+          // IB7: tags do CONTATO (mesmo padrao das tags de negocio) —
+          // mostra 2 mais recentes + `+N` com tooltip pro resto + popover
+          // pra adicionar/remover.
           activeContactId ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(contactDetail?.tags ?? []).map((t) => {
-                const color = t.color ?? "#5b6ff5";
-                return (
-                  <span
-                    key={t.id}
-                    className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[11px] font-semibold"
-                    style={{
-                      background: `color-mix(in srgb, ${color} 18%, white)`,
-                      color: `color-mix(in srgb, ${color} 75%, black)`,
-                      border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-                    }}
-                  >
-                    {t.name}
-                  </span>
-                );
-              })}
-              <ContactTagsPopover
-                contactId={activeContactId}
-                currentTags={contactDetail?.tags ?? []}
-                triggerVariant="icon"
-              />
-            </div>
+            <ContactTagsTray
+              contactId={activeContactId}
+              currentTags={contactDetail?.tags ?? []}
+            />
           ) : null
         }
         collapsed={asideCollapsed}

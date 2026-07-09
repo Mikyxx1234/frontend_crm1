@@ -189,10 +189,12 @@ export function ConversationCard({
         // Borda trocada para `--glass-border-subtle` (0.30 alpha vs 0.55):
         // alinha com a referência v0 que tem cards "flutuando" sem
         // contorno explícito.
-        "cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all duration-200",
+        "relative cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all duration-200",
         "hover:bg-[var(--glass-bg-base)]",
+        // Card selecionado: acento lateral esquerdo + border/shadow do brand + fundo brand suave
+        // (deixa evidente com qual conversa o operador esta trabalhando).
         conversation.active &&
-          "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]",
+          "border-[var(--brand-primary)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,var(--glass-bg-base))] shadow-[0_8px_24px_rgba(91,111,245,0.28)] ring-1 ring-[var(--brand-primary)]/30 before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-[var(--brand-primary)]",
         conversation.inactive && "opacity-70",
       )}
     >

@@ -182,24 +182,31 @@ export function ChatArea({
         className,
       )}
     >
-      {/* HEADER — minimalista (nome + abas inline + acoes) */}
-      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-3.5">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2.5">
-            <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
-              {contact.name}
-            </h2>
-            {contact.badge && (
-              <BadgeGlass variant={contact.badge}>
-                {contact.badgeLabel ??
-                  (contact.badge === "enterprise"
-                    ? "ENTERPRISE"
-                    : contact.badge === "lead"
-                      ? "LEAD"
-                      : "CLIENTE")}
-              </BadgeGlass>
-            )}
-          </div>
+      {/* HEADER — minimalista (avatar + badge + abas inline + acoes).
+          Substituimos o nome longo do contato por um avatar pra garantir
+          que tudo caiba em uma linha, mesmo com nomes compostos. Nome
+          completo continua no ContactAside e via tooltip do avatar. */}
+      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-5 py-3">
+        <div className="flex items-center gap-2.5">
+          <TooltipGlass label={contact.name} side="bottom">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white"
+              style={{ background: contact.avatarColor || "var(--brand-primary)" }}
+              aria-label={contact.name}
+            >
+              {contact.initials || contact.name.slice(0, 2).toUpperCase()}
+            </span>
+          </TooltipGlass>
+          {contact.badge && (
+            <BadgeGlass variant={contact.badge}>
+              {contact.badgeLabel ??
+                (contact.badge === "enterprise"
+                  ? "ENTERPRISE"
+                  : contact.badge === "lead"
+                    ? "LEAD"
+                    : "CLIENTE")}
+            </BadgeGlass>
+          )}
           {/* Chip de canal removido daqui: a informação já fica visível no
               ContactAside (row "Canal" em Detalhes de Contato) tanto no inbox
               quanto no deal detail (ver DD3 em `deal-detail-panel.tsx`). A
@@ -207,7 +214,6 @@ export function ChatArea({
               do operador. A prop `connection` segue sendo recebida e ignorada
               aqui para manter compat com chamadores existentes. */}
         </div>
-
         {tabsEnabled && (
           <ChatTabsBar
             activeTab={activeTab}

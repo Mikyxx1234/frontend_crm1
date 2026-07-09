@@ -271,36 +271,40 @@ export function NavRailV2({ className }: { className?: string }) {
         // quando o trilho virou glass sobre mesh lavanda. Não usa
         // tokens --glass-* — a rail é intencionalmente mais opaca
         // e escura que qualquer superfície de conteúdo.
-        // Quando expandida, cresce e vira overlay absoluto — evita que o
-        // parent grid precise mudar de largura pra caber a legenda.
-        "relative flex h-full flex-col items-center gap-2 bg-[var(--nav-bg)] backdrop-blur-[16px] border border-[var(--nav-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)] transition-[width] duration-200",
-        expanded ? "absolute left-0 top-0 z-40 w-[210px] items-stretch" : "w-full items-center",
+        // Quando expandida, vira overlay `fixed` (fora do fluxo do grid
+        // parent): o slot de 72px do grid segue reservado e o conteudo
+        // continua renderizando; a rail flutua por cima ao expandir.
+        "flex h-full flex-col gap-2 bg-[var(--nav-bg)] backdrop-blur-[16px] border border-[var(--nav-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)] transition-[width] duration-200",
+        expanded
+          ? "fixed left-4 top-4 bottom-4 z-40 w-[220px] items-stretch"
+          : "relative w-full items-center",
         className,
       )}
     >
-      {/* Botao expand/collapse — canto superior direito do trilho,
-          discreto mas descobrivel. Icone de chevron muda com o estado. */}
+      {/* Botao expand/collapse — pill maior com border-brand e contraste
+          maior no hover pra ficar bem visivel sobre a rail escura. */}
       <button
         type="button"
         onClick={toggleExpanded}
         aria-label={expanded ? "Recolher navegação" : "Expandir navegação"}
         className={cn(
-          "absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--nav-border)] bg-[var(--nav-bg)] text-[var(--nav-text-muted)] shadow-md transition-colors hover:bg-[var(--nav-text-hover-bg)] hover:text-[var(--nav-text-hover)]",
+          "absolute -right-3 top-6 z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.25)] transition-all hover:scale-110 hover:bg-[var(--brand-primary)] hover:text-white",
         )}
       >
-        {expanded ? <IconChevronsLeft size={14} /> : <IconChevronsRight size={14} />}
+        {expanded ? <IconChevronsLeft size={14} strokeWidth={2.5} /> : <IconChevronsRight size={14} strokeWidth={2.5} />}
       </button>
 
+      {/* Avatar da empresa (EL): sempre 44x44, centralizado — igual ao
+          avatar do usuario no rodape. Nao ganha label mesmo quando expandido. */}
       <Link
         href="/dashboard"
         aria-label="Início"
         className={cn(
-          "mb-2 flex h-11 shrink-0 items-center gap-3 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
-          expanded ? "mx-3 justify-start px-3 text-[13px]" : "w-11 justify-center text-base",
+          "mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
+          expanded ? "mx-auto" : "",
         )}
       >
-        <span className={expanded ? "text-sm" : ""}>EL</span>
-        {expanded && <span className="truncate">Início</span>}
+        EL
       </Link>
 
       {/* Miolo rolavel — quando ha overflow, chevrons piscantes indicam scroll.

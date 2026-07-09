@@ -78,8 +78,11 @@ export interface ContactDetails {
     productName?: string | null
     status?: string | null
     lostReason?: string | null
+    origin?: string | null
     funnelSegments?: { id: string; name: string; color: string; position: number }[]
     stageDropdownSlot?: React.ReactNode
+    /** Slot para renderizar o seletor de responsável abaixo das info do deal. */
+    assigneeSlot?: React.ReactNode
     customFields?: { fieldId: string; label: string; value: string | null }[]
   }[]
   financialStatus?: "success" | "lead" | "enterprise"
@@ -352,6 +355,24 @@ function DealInline({
         </div>
       )}
 
+      {/* Responsável da conversa/deal + Origem — abaixo do funil */}
+      {(deal.assigneeSlot || deal.origin) && (
+        <div className="mx-5 mb-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
+          {deal.assigneeSlot && (
+            <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-[12.5px] border-b border-[var(--glass-border-subtle)] last:border-b-0">
+              <span className="shrink-0 font-medium text-[var(--text-muted)]">Responsável</span>
+              <div className="flex justify-end">{deal.assigneeSlot}</div>
+            </div>
+          )}
+          {deal.origin && (
+            <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-[12.5px]">
+              <span className="shrink-0 font-medium text-[var(--text-muted)]">Origem</span>
+              <span className="truncate text-right font-display font-bold text-[var(--text-primary)]">{deal.origin}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* IB5 do questionario: card legado "Produto" (`deal.productName`)
           removido. Antes existia em paralelo com a `DealProductsSection`
           (abaixo) e ao adicionar um produto novo, este card legado nao
@@ -613,14 +634,7 @@ export function ContactAside({
                                   </>
                                 }
                               >
-                                <span className="flex items-baseline gap-1.5">
-                                  Detalhes de Contato
-                                  {contact.contactNumber != null && (
-                                    <span className="font-mono text-[10px] font-semibold text-[var(--text-muted)]">
-                                      #{contact.contactNumber}
-                                    </span>
-                                  )}
-                                </span>
+                                Detalhes de Contato
                               </SectionHeader>
 
                               {contactConfigOpen && resolvedContactConfig && (
@@ -629,23 +643,13 @@ export function ContactAside({
                                 </div>
                               )}
 
-                              {/* Tags da CONVERSA (Conversation.tags).
-                                  Label antigo era "Tags" (generico), causava
-                                  confusao com Contact.tags. IB7: agora
-                                  separado abaixo. */}
-                              {tagsNode && (
-                                <div className="mb-3">
-                                  <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                                    Tags da conversa
-                                  </p>
-                                  {tagsNode}
-                                </div>
-                              )}
-                              {/* Tags do CONTATO (Contact.tags) — DD9/IB7. */}
+                              {/* Tags do CONTATO (Contact.tags).
+                                  Conversas não possuem tags — apenas
+                                  Negócios, Contatos e Empresas. */}
                               {contactTagsNode && (
                                 <div className="mb-3">
                                   <p className="mb-1.5 font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-                                    Tags do contato
+                                    Tags
                                   </p>
                                   {contactTagsNode}
                                 </div>
@@ -654,16 +658,23 @@ export function ContactAside({
                               {/* Campos nativos */}
                               <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-4.5 py-1">
                                 <Row label="Nome">
-                                  <InlineNativeEditor
-                                    value={native("name", contact.name)}
-                                    entityType="contact"
-                                    entityId={contact.contactId}
-                                    fieldKey="name"
-                                    editMode={contactEditMode}
-                                    invalidateKeys={contactInvalidateKeys}
-                                    onSaved={(v) => setNativeValues((p) => ({ ...p, name: v }))}
-                                    textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                  />
+                                  <div className="flex items-center gap-1.5">
+                                    <InlineNativeEditor
+                                      value={native("name", contact.name)}
+                                      entityType="contact"
+                                      entityId={contact.contactId}
+                                      fieldKey="name"
+                                      editMode={contactEditMode}
+                                      invalidateKeys={contactInvalidateKeys}
+                                      onSaved={(v) => setNativeValues((p) => ({ ...p, name: v }))}
+                                      textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                    />
+                                    {contact.contactNumber != null && (
+                                      <span className="shrink-0 font-mono text-[10px] font-semibold text-[var(--text-muted)]">
+                                        #{contact.contactNumber}
+                                      </span>
+                                    )}
+                                  </div>
                                 </Row>
                                 {/* Row "Telefone" movida daqui pro header
                                     do ChatArea (proximo ao kebab). Reduz

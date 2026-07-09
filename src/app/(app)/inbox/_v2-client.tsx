@@ -462,7 +462,7 @@ export default function InboxV2ClientPage({
     firstDeal?.stageName ??
     null;
 
-  // Injeta funnelSegments + stageDropdownSlot apenas no primeiro deal.
+  // Injeta funnelSegments + stageDropdownSlot + assigneeSlot apenas no primeiro deal.
   const dealsWithSlots = (contactAsideView?.deals ?? []).map((d, idx) => {
     if (idx !== 0 || !boardStages?.length) return d;
     return {
@@ -485,6 +485,27 @@ export default function InboxV2ClientPage({
             />
           )}
         </StagePicker>
+      ) : undefined,
+      // Responsável da conversa — injetado aqui para aparecer abaixo
+      // das informações do deal, não no header flutuante do aside.
+      assigneeSlot: activeRow ? (
+        <RequirePermission
+          permission="conversation:reassign"
+          fallback={
+            <AssigneePopover
+              conversationId={activeId}
+              currentAssigneeName={activeRow.assignedTo?.name}
+              currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              disabled
+            />
+          }
+        >
+          <AssigneePopover
+            conversationId={activeId}
+            currentAssigneeName={activeRow.assignedTo?.name}
+            currentAssigneeId={activeRow.assignedTo?.id ?? null}
+          />
+        </RequirePermission>
       ) : undefined,
     };
   });
@@ -586,21 +607,7 @@ export default function InboxV2ClientPage({
     contactAsideViewWithSlots && activeRow ? (
       <ContactAside
         contact={contactAsideViewWithSlots}
-        headerActionsNode={
-          <>
-            {/* DealCallButton devolvido pro header do chat (ao lado do
-                chip de telefone). Aqui no aside ficam so acoes de
-                atribuicao / colapso pra evitar duplicidade do "Ligar
-                para <numero>" que ja aparece no header do inbox. */}
-            <RequirePermission permission="conversation:reassign">
-              <AssigneePopover
-                conversationId={activeId}
-                currentAssigneeName={activeRow.assignedTo?.name}
-                currentAssigneeId={activeRow.assignedTo?.id ?? null}
-              />
-            </RequirePermission>
-          </>
-        }
+        headerActionsNode={undefined}
         tagsNode={tagsNode}
         contactTagsNode={
           // IB7: tags do CONTATO (separadas das tags da conversa). Lista

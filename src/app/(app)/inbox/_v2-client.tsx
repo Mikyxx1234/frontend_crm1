@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
@@ -447,7 +448,14 @@ export default function InboxV2ClientPage({
         const next = TABS[idx]?.id;
         if (next) setTab(next);
       }}
-      resizerSlot={<ColumnResizer value={convWidth} onChange={setConvWidth} />}
+      resizerSlot={
+        <ColumnResizer
+          value={convWidth}
+          onChange={setConvWidth}
+          min={280}
+          max={440}
+        />
+      }
       onLoadMore={() => {
         if (hasNextPage && !isFetchingNextPage) fetchNextPage();
       }}
@@ -795,7 +803,7 @@ export default function InboxV2ClientPage({
                 value={asideWidth}
                 onChange={setAsideWidth}
                 min={280}
-                max={560}
+                max={440}
               />
               {asideNode}
             </div>
@@ -824,7 +832,7 @@ export default function InboxV2ClientPage({
           value={asideWidth}
           onChange={setAsideWidth}
           min={280}
-          max={560}
+          max={440}
         />
         {asideNode}
       </div>
@@ -890,20 +898,43 @@ function InboxStageDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const current = stages.find((s) => s.id === currentStageId);
 
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      // Fecha ao clicar fora — o menu esta portado no body entao precisa
+      // checar tambem se o clique caiu dentro do menu.
+      const menu = document.getElementById("inbox-stage-dropdown-menu");
+      if (menu?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
+  // Calcula posicao do trigger em coord de viewport (position:fixed) para o
+  // portal — evita clip pelo overflow do aside e garante que o menu apareca
+  // sempre por cima, sem "vazar" para fora quando encosta na borda direita.
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const b = triggerRef.current.getBoundingClientRect();
+    const menuWidth = 200;
+    // Se caber a partir de left, mantem alinhamento a esquerda; se vazar
+    // pela direita da viewport, ancora pela direita do trigger.
+    const wouldOverflow = b.left + menuWidth > window.innerWidth - 8;
+    const left = wouldOverflow ? Math.max(8, b.right - menuWidth) : b.left;
+    setPos({ top: b.bottom + 4, left, width: menuWidth });
+  }, [open]);
+
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         disabled={isPending}
         onClick={() => setOpen((v) => !v)}
@@ -922,43 +953,47 @@ function InboxStageDropdown({
         />
       </button>
 
-      {open && (
-        // DD2: opaco real (sem backdrop-blur) — o token `--glass-bg-modal`
-        // tem 0.97 alpha e o blur dava sensacao de transparencia sobre
-        // o card. Cor fixa de superficie de menu cobre light/dark.
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
-          {[...stages]
-            .sort((a, b) => a.position - b.position)
-            .map((s) => {
-              const isActive = s.id === currentStageId;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => { onSelect(s.id); setOpen(false); }}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 font-display text-[12px] font-semibold transition-colors",
-                    isActive
-                      ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
-                  )}
-                >
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: s.color ?? "var(--brand-primary)" }}
-                  />
-                  {s.name}
-                  {isActive && (
-                    <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                      Atual
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-        </div>
-      )}
+      {open && pos && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            id="inbox-stage-dropdown-menu"
+            style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
+            className="z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_12px_32px_rgba(15,20,40,0.18)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+          >
+            {[...stages]
+              .sort((a, b) => a.position - b.position)
+              .map((s) => {
+                const isActive = s.id === currentStageId;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => { onSelect(s.id); setOpen(false); }}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-3 py-2 font-display text-[12px] font-semibold transition-colors",
+                      isActive
+                        ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                        : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                    )}
+                  >
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ background: s.color ?? "var(--brand-primary)" }}
+                    />
+                    {s.name}
+                    {isActive && (
+                      <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                        Atual
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>,
+          document.body,
+        )
+      }
     </div>
   );
 }

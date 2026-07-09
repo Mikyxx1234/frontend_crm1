@@ -12,12 +12,12 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconBriefcase,
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
   IconGripVertical,
   IconPencil,
   IconSparkles,
   IconTag,
-  IconLayoutSidebarRightCollapse,
-  IconLayoutSidebarRightExpand,
   IconSettings,
   IconX,
   IconAffiliate,
@@ -463,16 +463,20 @@ function DealInline({
             <IconSparkles size={12} />
             Campos do negócio
           </div>
-          {/* Layout tipo masonry: 2 colunas via `columns-2` — cards de valor longo
-              ocupam mais altura na sua coluna e nao empurram vizinho; cards curtos
-              empilham naturalmente. `break-inside-avoid` impede corte no meio. */}
-          <div className="columns-2 gap-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
+          {/* Layout responsivo: grid 2-col; valores muito longos (>18 chars ou com espaco)
+              ganham col-span-2 (ocupam linha inteira sozinhos) — layout compacto sem
+              truncar e sem espaco vazio esquisito. */}
+          <div className="grid grid-cols-2 gap-2">
             {fields.map((f) => {
               const isEmpty = !f.value || f.value === PLACEHOLDER
+              const isLong = !isEmpty && (f.value!.length > 18 || f.value!.includes("@"))
               return (
                 <div
                   key={f.fieldId}
-                  className="flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5"
+                  className={cn(
+                    "flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5",
+                    isLong && "col-span-2",
+                  )}
                 >
                   <span className="text-[11px] font-medium text-[var(--text-muted)]">
                     {f.label}
@@ -496,7 +500,7 @@ function DealInline({
       {/* Produtos do negócio — wrapper visual (variante Vívida) + CRUD real.
           `DealProductsSection` compact ja renderiza titulo "Produtos" + count + `+`
           num header inline; items em full width abaixo (nao trunca nome). */}
-      <div className="mt-3 mb-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+      <div className="mt-3 mb-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
         <DealProductsSection dealId={deal.id} compact />
       </div>
     </div>
@@ -611,7 +615,7 @@ export function ContactAside({
             className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
             aria-label="Expandir painel de contato"
           >
-            <IconLayoutSidebarRightExpand size={18} />
+            <IconChevronLeft size={18} strokeWidth={2.5} />
           </button>
         </TooltipGlass>
       </aside>
@@ -621,9 +625,25 @@ export function ContactAside({
   return (
     <aside
       aria-label="Detalhes do contato"
-      className={cn("flex h-full flex-col overflow-y-auto pr-0.5", className)}
+      className={cn("relative flex h-full flex-col pr-0.5", className)}
     >
-      <div className="relative flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
+      {/* Botao recolher — chevron minimalista tipo '>' na faixa entre aside
+          e chat. Fica FORA do container interno (que tem overflow) para nao
+          ser cortado; posicionado no outer aside com left:0 e translate-x
+          negativo pra ficar centrado sobre a borda esquerda. */}
+      {onToggleCollapse && (
+        <TooltipGlass label="Recolher painel de contato" side="left">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-14 w-6 items-center justify-center rounded-full bg-white/70 text-[var(--text-muted)] shadow-[0_2px_6px_rgba(15,23,42,0.10)] backdrop-blur-sm transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            aria-label="Recolher painel de contato"
+          >
+            <IconChevronRight size={14} strokeWidth={2.5} />
+          </button>
+        </TooltipGlass>
+      )}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]">
 
         {/* Header de acoes do contato (IB4 do questionario):
             DealCallButton entra aqui via `headerActionsNode`. Antes ficava
@@ -635,18 +655,6 @@ export function ContactAside({
           <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
             {headerActionsNode}
           </div>
-        )}
-        {onToggleCollapse && (
-          <TooltipGlass label="Recolher painel de contato" side="left">
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="absolute -left-3 top-4 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white text-[var(--text-muted)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--brand-primary)] hover:text-white"
-              aria-label="Recolher painel de contato"
-            >
-              <IconLayoutSidebarRightCollapse size={15} />
-            </button>
-          </TooltipGlass>
         )}
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -738,18 +746,6 @@ export function ContactAside({
                               {contactConfigOpen && resolvedContactConfig && (
                                 <div className="mb-4 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[color-mix(in_srgb,var(--brand-primary)_4%,transparent)] p-3">
                                   {resolvedContactConfig}
-                                </div>
-                              )}
-
-                              {/* Tags do CONTATO (Contact.tags) — chips + "Nova".
-                                  Conversas não possuem tags — apenas
-                                  Negócios, Contatos e Empresas. */}
-                              {contactTagsNode && (
-                                <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                                  <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
-                                    Tags
-                                  </span>
-                                  {contactTagsNode}
                                 </div>
                               )}
 
@@ -893,6 +889,22 @@ export function ContactAside({
                                   })}
                                 </div>
                               )}
+
+                              {/* Tags do CONTATO — mesmo padrao visual das tags de
+                                  negocio: wrapper card + label chip + tray com
+                                  chips coloridos + popover pra add/remove. Move
+                                  do topo pra depois dos campos, mantendo o
+                                  agrupamento visual proximo ao restante. */}
+                              {contactTagsNode && (
+                                <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
+                                      Tags
+                                    </span>
+                                    {contactTagsNode}
+                                  </div>
+                                </div>
+                              )}
                               </>
                               )}
                             </div>
@@ -940,15 +952,21 @@ export function ContactAside({
                                 )}
 
                                 {resolvedDealPanelFields.length > 0 && (
-                                  <div className="columns-2 gap-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
+                                  <div className="grid grid-cols-2 gap-2">
                                     {resolvedDealPanelFields.map((f) => {
                                       const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                       const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
                                       const canEdit = !!f.entityType && !!f.entityId
+                                      const isEmptyDeal = !f.value || f.value === PLACEHOLDER
+                                      const isLongDeal =
+                                        !isEmptyDeal && ((f.value ?? "").length > 18 || (f.value ?? "").includes("@"))
                                       return (
                                         <div
                                           key={f.fieldId}
-                                          className="flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5"
+                                          className={cn(
+                                            "flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5",
+                                            isLongDeal && "col-span-2",
+                                          )}
                                         >
                                           <span className="text-[11px] font-medium text-[var(--text-muted)]">
                                             {f.label}

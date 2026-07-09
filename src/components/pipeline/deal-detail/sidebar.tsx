@@ -385,26 +385,31 @@ export function DealProductsSection({
     // para evitar o + solto no canto superior direito sem contexto visual.
     // compact=false (DealDetailPanel): sem título (o FieldCard já provê label).
     <SidebarSection
-      title={compact && !hideTitle ? "Produtos" : undefined}
+      title={compact && !hideTitle && items.length > 0 ? "Produtos" : undefined}
       className={compact ? "border-b-0 pb-0" : undefined}
       action={
-        <div className="flex items-center gap-2">
-          {items.length > 0 && (
-            <span className="font-display text-[11px] font-semibold tabular-nums text-[var(--color-ink-soft)]">
-              {items.length} {items.length === 1 ? "item" : "itens"}
-            </span>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7 rounded-lg"
-            onClick={() => setShowAdd((v) => !v)}
-            aria-label={showAdd ? "Fechar busca de produto" : "Adicionar produto"}
-          >
-            <Plus className="size-3" />
-          </Button>
-        </div>
+        // Em compact + empty state, o proprio empty state hero ja tem o botao "+"
+        // e o label "Produtos" — omitimos o header do SidebarSection pra nao
+        // duplicar. Nos demais casos (populated ou nao-compact), mantemos.
+        compact && items.length === 0 ? undefined : (
+          <div className="flex items-center gap-2">
+            {items.length > 0 && (
+              <span className="font-display text-[11px] font-semibold tabular-nums text-[var(--color-ink-soft)]">
+                {items.length} {items.length === 1 ? "item" : "itens"}
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7 rounded-lg"
+              onClick={() => setShowAdd((v) => !v)}
+              aria-label={showAdd ? "Fechar busca de produto" : "Adicionar produto"}
+            >
+              <Plus className="size-3" />
+            </Button>
+          </div>
+        )
       }
     >
       {showAdd && (
@@ -446,9 +451,32 @@ export function DealProductsSection({
       )}
 
       {items.length === 0 ? (
-        <div className="px-0 py-1 text-xs text-muted-foreground/70">
-          Nenhum produto vinculado
-        </div>
+        // Empty state — em compact (ContactAside) usamos layout hero com
+        // icone + label + subtitle + botao azul solido, casando com o
+        // mockup pedido. Fora do compact, so o texto discreto.
+        compact ? (
+          <div className="flex items-center gap-3">
+            <div className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+              <Package className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-display text-[13px] font-bold text-[var(--text-primary)]">Produtos</div>
+              <div className="text-[11.5px] text-[var(--text-muted)]">Nenhum produto vinculado</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAdd((v) => !v)}
+              aria-label="Adicionar produto"
+              className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_10px_rgba(91,111,245,0.35)] transition-all hover:brightness-110 hover:shadow-[0_6px_14px_rgba(91,111,245,0.45)]"
+            >
+              <Plus className="size-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="px-0 py-1 text-xs text-muted-foreground/70">
+            Nenhum produto vinculado
+          </div>
+        )
       ) : (
         <div className={cn("space-y-1.5", compact && "space-y-1")}>
           {items.map((item) => (
@@ -579,10 +607,16 @@ export function DealProductsSection({
               )}
             </div>
           ))}
-          <div className="flex items-center justify-between pt-2 text-sm">
-            <span className="font-medium text-ink-muted">Total</span>
-            <span className="font-semibold tabular-nums text-foreground">{formatCurrency(totalValue)}</span>
-          </div>
+          {/* Total so faz sentido quando ha somatoria real: mais de um item
+              OU algum item com desconto/quantidade nao trivial. Com 1 item
+              qty=1 desc=0, o Total repete o valor do item — ruido visual. */}
+          {(items.length > 1 ||
+            items.some((i) => i.quantity !== 1 || i.discount > 0)) && (
+            <div className="flex items-center justify-between pt-2 text-sm">
+              <span className="font-medium text-ink-muted">Total</span>
+              <span className="font-semibold tabular-nums text-foreground">{formatCurrency(totalValue)}</span>
+            </div>
+          )}
         </div>
       )}
     </SidebarSection>

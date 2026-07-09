@@ -77,20 +77,22 @@ function DealTagsTray({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1">
-      {currentTags.map((t) => (
-        <span
-          key={t.id}
-          className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold"
-          style={{
-            background: t.color
-              ? `color-mix(in srgb, ${t.color} 15%, transparent)`
-              : "color-mix(in srgb, var(--brand-primary) 12%, transparent)",
-            color: t.color ?? "var(--brand-primary)",
-          }}
-        >
-          {t.name}
-        </span>
-      ))}
+      {currentTags.map((t) => {
+        const color = t.color ?? "#5b6ff5";
+        return (
+          <span
+            key={t.id}
+            className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold"
+            style={{
+              background: `color-mix(in srgb, ${color} 18%, white)`,
+              color: `color-mix(in srgb, ${color} 75%, black)`,
+              border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+            }}
+          >
+            {t.name}
+          </span>
+        );
+      })}
       <DealTagsPopover dealId={dealId} currentTags={currentTags} />
     </div>
   );
@@ -652,19 +654,22 @@ export default function InboxV2ClientPage({
           // `contactDetail.tags` ja vem flatten do backend.
           activeContactId ? (
             <div className="flex flex-wrap items-center gap-1.5">
-              {(contactDetail?.tags ?? []).map((t) => (
-                <span
-                  key={t.id}
-                  className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
-                  style={{
-                    background: `${t.color ?? "#5b6ff5"}22`,
-                    color: t.color ?? "var(--brand-primary)",
-                    border: `1px solid ${t.color ?? "#5b6ff5"}44`,
-                  }}
-                >
-                  {t.name}
-                </span>
-              ))}
+              {(contactDetail?.tags ?? []).map((t) => {
+                const color = t.color ?? "#5b6ff5";
+                return (
+                  <span
+                    key={t.id}
+                    className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[11px] font-semibold"
+                    style={{
+                      background: `color-mix(in srgb, ${color} 18%, white)`,
+                      color: `color-mix(in srgb, ${color} 75%, black)`,
+                      border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+                    }}
+                  >
+                    {t.name}
+                  </span>
+                );
+              })}
               <ContactTagsPopover
                 contactId={activeContactId}
                 currentTags={contactDetail?.tags ?? []}

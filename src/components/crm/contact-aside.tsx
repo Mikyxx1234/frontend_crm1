@@ -268,7 +268,7 @@ function Row({
   return (
     <div
       className={cn(
-        "flex items-center justify-between py-1.5 text-[13px]",
+        "flex items-center justify-between gap-3 py-2 text-[13px]",
         !isLast && "border-b border-[var(--glass-border-subtle)]",
         className,
       )}
@@ -384,7 +384,7 @@ function DealInline({
             </p>
           </div>
           {deal.assigneeSlot && (
-            <div className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm">
+            <div className="shrink-0 rounded-full bg-white/20 px-1 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
               {deal.assigneeSlot}
             </div>
           )}
@@ -456,33 +456,35 @@ function DealInline({
             Campos do negócio
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {fields.map((f) => (
-              <div
-                key={f.fieldId}
-                className="flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5"
-              >
-                <span className="text-[11px] font-medium text-[var(--text-muted)]">
-                  {f.label}
-                </span>
-                <span className="min-w-0 truncate font-display text-[12px] font-bold text-[var(--text-primary)]">
-                  {f.value ?? PLACEHOLDER}
-                </span>
-              </div>
-            ))}
+            {fields.map((f) => {
+              const isEmpty = !f.value || f.value === PLACEHOLDER
+              return (
+                <div
+                  key={f.fieldId}
+                  className="flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5"
+                >
+                  <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                    {f.label}
+                  </span>
+                  {isEmpty ? (
+                    <span className="italic text-[12px] text-[var(--text-muted)]/70">
+                      + Adicionar
+                    </span>
+                  ) : (
+                    <span className="min-w-0 truncate font-display text-[12px] font-bold text-[var(--text-primary)]">
+                      {f.value}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* Produtos do negócio — wrapper visual (variante Vívida) + CRUD real. */}
-      <div className="mt-3 mb-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
-        <div className="flex items-center gap-3">
-          <div className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-            <IconPackage size={17} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <DealProductsSection dealId={deal.id} compact />
-          </div>
-        </div>
+      {/* Produtos do negócio — wrapper visual + CRUD real (line items, total). */}
+      <div className="mt-3 mb-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+        <DealProductsSection dealId={deal.id} compact />
       </div>
     </div>
   )
@@ -739,7 +741,7 @@ export function ContactAside({
                               )}
 
                               {/* Campos nativos */}
-                              <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-4.5 py-1">
+                              <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-1">
                                 <Row label="Nome">
                                   <div className="flex items-center gap-1.5">
                                     <InlineNativeEditor
@@ -838,7 +840,7 @@ export function ContactAside({
                                                 setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
                                               }
                                               textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                              placeholder="— Adicionar"
+                                              placeholder="+ Adicionar"
                                             />
                                           ) : hl && colors ? (
                                             <span
@@ -865,7 +867,7 @@ export function ContactAside({
                                                 setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
                                               }
                                               textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                              placeholder="— Adicionar"
+                                              placeholder="+ Adicionar"
                                             />
                                           ) : (
                                             <span className="font-display font-bold text-[var(--text-primary)]">
@@ -954,7 +956,7 @@ export function ContactAside({
                                                   setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
                                                 }
                                                 textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                                placeholder="— Adicionar"
+                                                placeholder="+ Adicionar"
                                               />
                                             ) : hl && colors ? (
                                               <span
@@ -981,7 +983,7 @@ export function ContactAside({
                                                   setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
                                                 }
                                                 textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                                placeholder="— Adicionar"
+                                                placeholder="+ Adicionar"
                                               />
                                             ) : (
                                               <span className="font-display font-bold text-[var(--text-primary)]">

@@ -55,10 +55,12 @@
   --color-warn:             #d97706;
   --color-warn-text:        #92600a;  /* texto sobre fundo âmbar claro (badge warning) */
 
-  /* session alert (vermelho — indica sessão expirada / atenção) */
-  --color-session-border:   #fca5a5;   /* red-300 */
-  --color-session-bg:       #fee2e2;   /* red-100 */
-  --color-session-hover-bg: #fecaca;   /* red-200 */
+  /* session alert (vermelho — indica sessão expirada / atenção)
+     Intensificado: fundo red-200 (antes red-100 quase branco) + borda
+     red-400 pra o alerta ficar visivelmente vermelho, nao lavado. */
+  --color-session-border:   #f87171;   /* red-400 */
+  --color-session-bg:       #fecaca;   /* red-200 */
+  --color-session-hover-bg: #fca5a5;   /* red-300 */
   --color-session-text:     #991b1b;   /* red-800 */
   --color-session-subtext:  #b91c1c;   /* red-700 */
 

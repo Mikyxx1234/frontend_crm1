@@ -723,7 +723,16 @@ export default function InboxV2ClientPage({
           activeContactId ? (
             <ContactTagsTray
               contactId={activeContactId}
-              currentTags={contactDetail?.tags ?? []}
+              /* Backend (getContactById) devolve tags como TagOnContact[]
+                 = { contactId, tagId, tag: { id, name, color } }[]. Já a
+                 rota de list (getContacts) achata pra { id, name, color }[].
+                 Como ContactTagsTray/Popover esperam o shape achatado,
+                 normalizamos aqui — assim as pills ganham cor e label
+                 corretos (antes ficavam vazias). */
+              currentTags={(contactDetail?.tags ?? []).map((t) =>
+                (t as unknown as { tag?: { id: string; name: string; color: string | null } }).tag
+                  ?? (t as unknown as { id: string; name: string; color: string | null })
+              )}
             />
           ) : null
         }

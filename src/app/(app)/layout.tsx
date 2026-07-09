@@ -17,6 +17,7 @@ import "@/styles/globals-v2.css";
 import { TooltipProvider } from "@/components/crm/tooltip-glass";
 import { UpdateAvailableBanner } from "@/components/layout/update-banner";
 import { SoftphoneWidget } from "@/features/softphone/components";
+import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
 
 export default function AppLayout({
   children,
@@ -25,6 +26,7 @@ export default function AppLayout({
 }) {
   return (
     <TooltipProvider delay={300}>
+      <ChatThemeApplier />
       <div className="v2-root v2-min-screen">
         {children}
         <UpdateAvailableBanner />

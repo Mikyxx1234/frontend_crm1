@@ -925,10 +925,19 @@ export function MessageBubble({
             isOutgoing
               ? isBot
                 ? "rounded-br bg-[var(--brand-gradient-end)] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
-                : "rounded-br bg-[var(--brand-primary)] text-white shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
+                : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
               : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
-          style={!isOutgoing ? { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" } : undefined}
+          style={
+            isOutgoing
+              ? isBot
+                ? undefined
+                : {
+                    background: "var(--chat-bubble-sent-bg)",
+                    color: "var(--chat-bubble-sent-text)",
+                  }
+              : { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" }
+          }
         >
           {/* Badge AUTOMAÇÃO — pill petróleo/slate escuro pra ficar
               legível tanto sobre bolha outgoing (dark navy) quanto
@@ -952,8 +961,15 @@ export function MessageBubble({
           <span
             className={cn(
               "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
-              isOutgoing ? "text-white/80" : "text-[var(--text-muted)]",
+              isOutgoing ? "" : "text-[var(--text-muted)]",
             )}
+            style={
+              isOutgoing && !isBot
+                ? { color: "var(--chat-bubble-sent-time)" }
+                : isOutgoing
+                  ? { color: "rgba(255,255,255,0.8)" }
+                  : undefined
+            }
           >
             {message.time}
             {isOutgoing && message.status && (

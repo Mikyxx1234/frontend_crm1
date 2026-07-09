@@ -15,10 +15,12 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconGripVertical,
+  IconPackage,
   IconPencil,
   IconSparkles,
   IconTag,
   IconSettings,
+  IconUser,
   IconX,
   IconAffiliate,
 } from "@tabler/icons-react"
@@ -148,13 +150,18 @@ interface ContactAsideProps {
 // Section ordering
 // ─────────────────────────────────────────────────────────────────
 
-type AsideSection = "negocios" | "contato" | "campos-negocio"
+type AsideSection = "negocios" | "contato" | "produtos" | "campos-negocio"
 const ASIDE_DEFAULT_ORDER: AsideSection[] = [
   "negocios",
   "contato",
+  "produtos",
   "campos-negocio",
 ]
-const ASIDE_STORAGE_KEY = "crm:contact-aside:section-order-v3"
+// Bump da versao pra `v4` porque adicionamos a secao `produtos` na
+// ordem default. Sem novo storage key, usuarios antigos ficariam com
+// [negocios, contato, campos-negocio] persistido em localStorage e
+// a nova secao nunca apareceria (`useSectionOrder` mantem o valor salvo).
+const ASIDE_STORAGE_KEY = "crm:contact-aside:section-order-v4"
 
 // ─────────────────────────────────────────────────────────────────
 // Constants / helpers
@@ -185,7 +192,7 @@ function SectionHeader({
   onToggle?: () => void
 }) {
   return (
-    <div className="mb-1.5 mt-3 flex items-center gap-1">
+    <div className="mb-1 mt-2 flex items-center gap-1">
       <span
         {...dragHandleProps}
         className="flex cursor-grab items-center rounded p-0.5 text-[var(--text-muted)] opacity-0 transition-opacity group-hover/section:opacity-60 hover:opacity-100 active:cursor-grabbing"
@@ -198,6 +205,10 @@ function SectionHeader({
         onClick={onToggle}
         disabled={!onToggle}
         className={cn(
+          // Tipografia padronizada — mesma usada em "Campos de Negocio":
+          // font-display 10px bold uppercase, tracking 0.12em, muted.
+          // Aplica a TODOS os cabeçalhos (Detalhes de Contato, Produtos,
+          // Campos de Negocio) pra evitar variação visual entre secoes.
           "flex items-center gap-1.5 rounded font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]",
           onToggle && "cursor-pointer hover:text-[var(--text-primary)]",
         )}
@@ -269,7 +280,9 @@ function Row({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-3 py-2 text-[13px]",
+        // py reduzido pra 1.5 (antes 2) — reduz altura das linhas de campo
+        // nativo, ajuda a caber mais informacao sem scroll.
+        "flex items-center justify-between gap-3 py-1.5 text-[13px]",
         !isLast && "border-b border-[var(--glass-border-subtle)]",
         className,
       )}
@@ -440,7 +453,7 @@ function DealInline({
 
       {/* Origem (read-only) — campo de sistema do negócio */}
       {deal.origin && (
-        <div className="mt-3 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 text-[12.5px]">
+        <div className="mt-2 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 text-[12.5px]">
           <span className="shrink-0 font-medium text-[var(--text-muted)]">Origem</span>
           <span className="ml-auto truncate text-right font-display font-bold text-[var(--text-primary)]">
             {deal.origin}
@@ -450,7 +463,7 @@ function DealInline({
 
       {/* Tags do negócio — chips + botão adicionar */}
       {deal.dealTagsNode !== undefined && (
-        <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+        <div className="mt-2 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
               Tags
@@ -469,15 +482,15 @@ function DealInline({
           /api/deals/:id/products. */}
 
       {fields.length > 0 && (
-        <div className="mt-3">
-          <div className="mb-1.5 flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <div className="mt-2 mb-2">
+          <div className="mb-1 flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
             <IconSparkles size={12} />
             Campos do negócio
           </div>
           {/* Layout responsivo: grid 2-col; valores muito longos (>18 chars ou com espaco)
               ganham col-span-2 (ocupam linha inteira sozinhos) — layout compacto sem
               truncar e sem espaco vazio esquisito. */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {fields.map((f) => {
               const isEmpty = !f.value || f.value === PLACEHOLDER
               const isLong = !isEmpty && (f.value!.length > 18 || f.value!.includes("@"))
@@ -485,7 +498,7 @@ function DealInline({
                 <div
                   key={f.fieldId}
                   className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2.5",
+                    "flex flex-col items-start gap-0.5 rounded-[var(--radius-lg)] bg-[var(--glass-bg-overlay)] p-2",
                     isLong && "col-span-2",
                   )}
                 >
@@ -508,12 +521,11 @@ function DealInline({
         </div>
       )}
 
-      {/* Produtos do negócio — wrapper visual (variante Vívida) + CRUD real.
-          `DealProductsSection` compact ja renderiza titulo "Produtos" + count + `+`
-          num header inline; items em full width abaixo (nao trunca nome). */}
-      <div className="mt-3 mb-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
-        <DealProductsSection dealId={deal.id} compact />
-      </div>
+      {/* Produtos removido daqui — vira secao independente arrastavel
+          (`produtos`) renderizada no loop de secoes da ContactAside.
+          Assim o operador pode mover Produtos pra antes/depois dos
+          outros blocos, ganhando o mesmo padrao de header (icone +
+          titulo + chevron + acoes) das demais secoes. */}
     </div>
   )
 }
@@ -570,6 +582,7 @@ export function ContactAside({
   // Estados de colapso de seção (variante Vívida)
   const [contactSectionOpen, setContactSectionOpen] = useState(true)
   const [dealFieldsSectionOpen, setDealFieldsSectionOpen] = useState(true)
+  const [productsSectionOpen, setProductsSectionOpen] = useState(true)
 
   const resolvedContactPanelFields = contactPanelFields.map((f) => ({
     ...f,
@@ -686,6 +699,9 @@ export function ContactAside({
                     resolvedDealPanelFields.length === 0 &&
                     !resolvedDealConfig
                   ) return null
+                  // Produtos so faz sentido se houver ao menos um negocio
+                  // vinculado (o CRUD e por dealId).
+                  if (sectionId === "produtos" && deals.length === 0) return null
                   // IB6: bloco ocultado via FieldConfigPanel admin.
                   if (sectionHiddenMap[sectionId]) return null
 
@@ -726,9 +742,10 @@ export function ContactAside({
 
                           {/* ── Detalhes de Contato (campos nativos + personalizados) ── */}
                           {sectionId === "contato" && (
-                            <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-3">
+                            <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
                               <SectionHeader
                                 dragHandleProps={provided.dragHandleProps ?? undefined}
+                                icon={<IconUser size={12} />}
                                 open={contactSectionOpen}
                                 onToggle={() => setContactSectionOpen((v) => !v)}
                                 actions={
@@ -920,6 +937,35 @@ export function ContactAside({
                                 </div>
                               )}
                               </>
+                              )}
+                            </div>
+                          )}
+
+                          {/* ── Produtos (secao independente, arrastavel) ──
+                              Antes ficava fixo dentro do bloco Negocios; agora
+                              e uma secao autonoma com header padronizado (icone
+                              + titulo + chevron), permitindo drag-and-drop e
+                              colapso. Usa o 1o negocio do contato (`deals[0]`)
+                              como target — cenario dominante no inbox e um
+                              contato com um deal ativo por vez. */}
+                          {sectionId === "produtos" && deals[0] && (
+                            <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
+                              <SectionHeader
+                                dragHandleProps={provided.dragHandleProps ?? undefined}
+                                icon={<IconPackage size={12} />}
+                                open={productsSectionOpen}
+                                onToggle={() => setProductsSectionOpen((v) => !v)}
+                              >
+                                Produtos
+                              </SectionHeader>
+                              {productsSectionOpen && (
+                                <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
+                                  {/* `hideTitle` evita duplicar o rotulo "Produtos"
+                                      — quem provee o cabecalho e o SectionHeader
+                                      acima; DealProductsSection so renderiza os
+                                      items + botao adicionar + count. */}
+                                  <DealProductsSection dealId={deals[0].id} compact hideTitle />
+                                </div>
                               )}
                             </div>
                           )}

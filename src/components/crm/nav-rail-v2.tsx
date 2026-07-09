@@ -4,6 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
+  IconChevronDown,
+  IconChevronsLeft,
+  IconChevronsRight,
   IconLogout,
   IconMoon,
   IconSettings,
@@ -12,7 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   DropdownMenu,
@@ -49,6 +52,7 @@ import { useMyPermissions } from "@/hooks/use-my-permissions";
  * assim que o componente monta (sincrono), antes da resposta da API.
  */
 const SIDEBAR_PREFS_CACHE = "crm:sidebar-prefs-items";
+const SIDEBAR_EXPANDED_CACHE = "crm:sidebar-expanded";
 
 function readCachedSidebarItems(): SidebarItemPreference[] | undefined {
   if (typeof window === "undefined") return undefined;
@@ -153,6 +157,57 @@ export function NavRailV2({ className }: { className?: string }) {
     setMounted(true);
   }, []);
 
+  // Expand/collapse: quando expandido, o rail cresce (via `w-*` interno) e
+  // mostra a legenda ao lado de cada icone. Preferencia persiste em
+  // localStorage entre sessoes. Como o parent usa grid-cols com largura fixa
+  // do trilho, quando expandimos usamos posicionamento absoluto por cima do
+  // conteudo (nao altera o layout do grid — evita re-flow do miolo).
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    try {
+      setExpanded(window.localStorage.getItem(SIDEBAR_EXPANDED_CACHE) === "1");
+    } catch {
+      /* localStorage indisponivel — ignora */
+    }
+  }, []);
+  function toggleExpanded() {
+    setExpanded((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem(SIDEBAR_EXPANDED_CACHE, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
+  // Scroll indicator: quando ha itens abaixo/acima do miolo rolavel, mostramos
+  // um chevron piscante como pista visual de que existe mais conteudo.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollState, setScrollState] = useState<{ top: boolean; bottom: boolean }>({
+    top: false,
+    bottom: false,
+  });
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function update() {
+      if (!el) return;
+      const canScrollUp = el.scrollTop > 4;
+      const canScrollDown = el.scrollTop + el.clientHeight < el.scrollHeight - 4;
+      setScrollState({ top: canScrollUp, bottom: canScrollDown });
+    }
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, [mounted, expanded]);
+
   // Persiste a preferencia assim que a API responde, para o proximo F5 ja
   // abrir com a ordem certa sem esperar a rede.
   useEffect(() => {
@@ -199,6 +254,14 @@ export function NavRailV2({ className }: { className?: string }) {
 
   const isProfileActive = pathname.startsWith("/settings/profile");
 
+  // Classes reutilizadas: item da lista quando expandido — icone + label lado a lado.
+  const expandedItemBase =
+    "group flex h-11 w-full shrink-0 items-center gap-3 rounded-[var(--radius-md)] px-3 text-[13px] font-medium transition-colors";
+  const expandedItemIdle =
+    "text-[var(--nav-text-muted)] hover:bg-[var(--nav-text-hover-bg)] hover:text-[var(--nav-text-hover)]";
+  const expandedItemActive =
+    "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]";
+
   return (
     <DockProvider
       aria-label="Navegação principal"
@@ -208,25 +271,54 @@ export function NavRailV2({ className }: { className?: string }) {
         // quando o trilho virou glass sobre mesh lavanda. Não usa
         // tokens --glass-* — a rail é intencionalmente mais opaca
         // e escura que qualquer superfície de conteúdo.
-        "flex h-full flex-col items-center gap-2 bg-[var(--nav-bg)] backdrop-blur-[16px] border border-[var(--nav-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)]",
+        // Quando expandida, cresce e vira overlay absoluto — evita que o
+        // parent grid precise mudar de largura pra caber a legenda.
+        "relative flex h-full flex-col items-center gap-2 bg-[var(--nav-bg)] backdrop-blur-[16px] border border-[var(--nav-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)] transition-[width] duration-200",
+        expanded ? "absolute left-0 top-0 z-40 w-[210px] items-stretch" : "w-full items-center",
         className,
       )}
     >
+      {/* Botao expand/collapse — canto superior direito do trilho,
+          discreto mas descobrivel. Icone de chevron muda com o estado. */}
+      <button
+        type="button"
+        onClick={toggleExpanded}
+        aria-label={expanded ? "Recolher navegação" : "Expandir navegação"}
+        className={cn(
+          "absolute -right-3 top-6 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--nav-border)] bg-[var(--nav-bg)] text-[var(--nav-text-muted)] shadow-md transition-colors hover:bg-[var(--nav-text-hover-bg)] hover:text-[var(--nav-text-hover)]",
+        )}
+      >
+        {expanded ? <IconChevronsLeft size={14} /> : <IconChevronsRight size={14} />}
+      </button>
+
       <Link
         href="/dashboard"
         aria-label="Início"
-        className="mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-base font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]"
+        className={cn(
+          "mb-2 flex h-11 shrink-0 items-center gap-3 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display font-bold text-white shadow-[0_6px_16px_rgba(91,111,245,0.4)]",
+          expanded ? "mx-3 justify-start px-3 text-[13px]" : "w-11 justify-center text-base",
+        )}
       >
-        EL
+        <span className={expanded ? "text-sm" : ""}>EL</span>
+        {expanded && <span className="truncate">Início</span>}
       </Link>
 
-      {/* Área rolável dos itens de navegação. Com zoom alto a rail não cabe
-          inteira na viewport; em vez de transbordar e cortar os ícones de
-          baixo + avatar (parent .v2-screen tem overflow-hidden), o miolo
-          rola. `overflow-x-clip` permite o scroll vertical sem forçar
-          overflow-x:auto (que cortaria a magnificação) — os DockButton aqui
-          usam `disablePop` para a escala caber dentro do padding. */}
-      <div className="flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto overflow-x-clip px-3 [scrollbar-width:none] [scrollbar-gutter:stable_both-edges] [&::-webkit-scrollbar]:hidden">
+      {/* Miolo rolavel — quando ha overflow, chevrons piscantes indicam scroll.
+          `overflow-x-clip` permite scroll vertical sem forçar scroll horizontal. */}
+      <div className="relative flex w-full min-h-0 flex-1 flex-col">
+        {/* Chevron superior — aparece so quando ha conteudo acima */}
+        {scrollState.top && (
+          <div className="pointer-events-none absolute left-0 right-0 top-0 z-10 flex justify-center pb-1 pt-0.5">
+            <IconChevronDown size={12} className="rotate-180 animate-pulse text-[var(--nav-text-muted)]" />
+          </div>
+        )}
+        <div
+          ref={scrollRef}
+          className={cn(
+            "flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-clip px-3 [scrollbar-width:none] [scrollbar-gutter:stable_both-edges] [&::-webkit-scrollbar]:hidden",
+            expanded ? "items-stretch" : "items-center",
+          )}
+        >
         {(() => {
           const activeHrefs = computeActiveHrefs(
             pathname,
@@ -234,12 +326,26 @@ export function NavRailV2({ className }: { className?: string }) {
           );
           return navItems.map((item) => {
             const Icon = item.icon;
+            const isActive = activeHrefs.has(item.href);
+            if (expanded) {
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  aria-label={item.title}
+                  className={cn(expandedItemBase, isActive ? expandedItemActive : expandedItemIdle)}
+                >
+                  <Icon size={20} className="shrink-0" />
+                  <span className="truncate">{item.title}</span>
+                </Link>
+              );
+            }
             return (
               <DockButton
                 key={item.key}
                 href={item.href}
                 title={item.title}
-                active={activeHrefs.has(item.href)}
+                active={isActive}
                 disablePop
               >
                 <Icon size={20} />
@@ -247,46 +353,74 @@ export function NavRailV2({ className }: { className?: string }) {
             );
           });
         })()}
+        </div>
+        {/* Chevron inferior — pista visual de que ha mais itens abaixo */}
+        {scrollState.bottom && (
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex justify-center pb-0.5 pt-1">
+            <IconChevronDown size={12} className="animate-pulse text-[var(--nav-text-muted)]" />
+          </div>
+        )}
       </div>
 
-      {/* Ícones inferiores usam `disablePop` como os itens de navegação:
-          magnificação no lugar, sem saltar para fora do trilho. O wrapper
-          replica a régua horizontal do miolo (w-full + px-3) para os dois
-          grupos ficarem alinhados mesmo quando o scrollbar ocupa espaço. */}
-      <div className="flex w-full shrink-0 flex-col items-center gap-2 px-3">
-      {/* Status do agente (Online / Ausente / Offline) — define a distribuição */}
-      <DockButton
-        title={`Status: ${statusMeta.label}`}
-        onClick={() => setStatusPopupOpen(true)}
-        disablePop
-      >
-        <span className="relative inline-flex">
-          <StatusIcon size={20} style={{ color: statusMeta.color }} />
-          <span
-            className="absolute -bottom-0.5 -right-0.5 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-panel)]"
-            style={{ backgroundColor: statusMeta.color }}
-          />
-        </span>
-      </DockButton>
+      {/* Ícones inferiores: status + settings + avatar.
+          Dark/light mode migrou pro dropdown do perfil (reduz ruido). */}
+      <div className={cn("flex w-full shrink-0 flex-col gap-2 px-3", expanded ? "items-stretch" : "items-center")}>
+      {/* Status do agente (Online / Ausente / Offline) */}
+      {expanded ? (
+        <button
+          type="button"
+          onClick={() => setStatusPopupOpen(true)}
+          aria-label={`Status: ${statusMeta.label}`}
+          className={cn(expandedItemBase, expandedItemIdle)}
+        >
+          <span className="relative inline-flex shrink-0">
+            <StatusIcon size={20} style={{ color: statusMeta.color }} />
+            <span
+              className="absolute -bottom-0.5 -right-0.5 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-panel)]"
+              style={{ backgroundColor: statusMeta.color }}
+            />
+          </span>
+          <span className="truncate">Status: {statusMeta.label}</span>
+        </button>
+      ) : (
+        <DockButton
+          title={`Status: ${statusMeta.label}`}
+          onClick={() => setStatusPopupOpen(true)}
+          disablePop
+        >
+          <span className="relative inline-flex">
+            <StatusIcon size={20} style={{ color: statusMeta.color }} />
+            <span
+              className="absolute -bottom-0.5 -right-0.5 h-[9px] w-[9px] rounded-full border-[1.5px] border-[var(--glass-bg-panel)]"
+              style={{ backgroundColor: statusMeta.color }}
+            />
+          </span>
+        </DockButton>
+      )}
 
-      {/* Tema: lua / sol */}
-      <DockButton
-        title={theme === "light" ? "Modo escuro" : "Modo claro"}
-        onClick={toggle}
-        disablePop
-      >
-        {theme === "light" ? <IconMoon size={20} /> : <IconSun size={20} />}
-      </DockButton>
-
-      {/* Configurações — último ícone antes do avatar do usuário. */}
-      <DockButton
-        href="/settings"
-        title="Configurações"
-        active={pathname.startsWith("/settings") && !isProfileActive}
-        disablePop
-      >
-        <IconSettings size={20} />
-      </DockButton>
+      {/* Configurações */}
+      {expanded ? (
+        <Link
+          href="/settings"
+          aria-label="Configurações"
+          className={cn(
+            expandedItemBase,
+            pathname.startsWith("/settings") && !isProfileActive ? expandedItemActive : expandedItemIdle,
+          )}
+        >
+          <IconSettings size={20} className="shrink-0" />
+          <span className="truncate">Configurações</span>
+        </Link>
+      ) : (
+        <DockButton
+          href="/settings"
+          title="Configurações"
+          active={pathname.startsWith("/settings") && !isProfileActive}
+          disablePop
+        >
+          <IconSettings size={20} />
+        </DockButton>
+      )}
 
       {/* Avatar — abre menu da conta (Meu perfil / Sair).
           No SSR/primeiro render renderizamos um botão estático equivalente
@@ -296,11 +430,15 @@ export function NavRailV2({ className }: { className?: string }) {
           type="button"
           title="Minha conta"
           aria-label="Abrir menu da conta"
-          className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
+          className={cn(
+            "relative rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25",
+            expanded ? "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-2 py-1 hover:bg-[var(--nav-text-hover-bg)]" : "block",
+          )}
         >
           <div
             className={cn(
-              "relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+              "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
+              !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
@@ -312,17 +450,26 @@ export function NavRailV2({ className }: { className?: string }) {
               style={{ backgroundColor: statusMeta.color }}
             />
           </div>
+          {expanded && (
+            <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold text-[var(--nav-text-hover)]">
+              {displayName}
+            </span>
+          )}
         </button>
       ) : (
       <DropdownMenu>
         <DropdownMenuTrigger
           title="Minha conta"
           aria-label="Abrir menu da conta"
-          className="relative block rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25"
+          className={cn(
+            "relative rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--brand-primary)]/25",
+            expanded ? "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-2 py-1 text-left hover:bg-[var(--nav-text-hover-bg)]" : "block",
+          )}
         >
           <div
             className={cn(
-              "relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all hover:ring-4 hover:ring-[var(--brand-primary)]/25",
+              "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)] font-display text-xs font-bold text-white transition-all",
+              !expanded && "hover:ring-4 hover:ring-[var(--brand-primary)]/25",
               isProfileActive
                 ? "border-[var(--brand-primary)] ring-4 ring-[var(--brand-primary)]/25"
                 : "border-[var(--glass-bg-strong)]",
@@ -334,6 +481,14 @@ export function NavRailV2({ className }: { className?: string }) {
               style={{ backgroundColor: statusMeta.color }}
             />
           </div>
+          {expanded && (
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p className="truncate text-[13px] font-semibold text-[var(--nav-text-hover)]">{displayName}</p>
+              {email && (
+                <p className="truncate text-[10.5px] text-[var(--nav-text-muted)]">{email}</p>
+              )}
+            </div>
+          )}
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="start" className="w-60">
@@ -369,6 +524,20 @@ export function NavRailV2({ className }: { className?: string }) {
           <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
             <IconUserCircle size={16} className="text-muted-foreground" />
             <span className="font-medium">Meu perfil</span>
+          </DropdownMenuItem>
+
+          {/* Toggle de tema migrado do trilho pro dropdown de perfil —
+              reduz a quantidade de icones visíveis na NavRail sem esconder
+              a funcionalidade. */}
+          <DropdownMenuItem onClick={toggle}>
+            {theme === "light" ? (
+              <IconMoon size={16} className="text-muted-foreground" />
+            ) : (
+              <IconSun size={16} className="text-muted-foreground" />
+            )}
+            <span className="font-medium">
+              {theme === "light" ? "Modo escuro" : "Modo claro"}
+            </span>
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />

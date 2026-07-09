@@ -454,6 +454,10 @@ export interface ChatContactView {
   badge?: ConversationBadge;
   phone: string;
   contactId: string;
+  /** Canal da conversa — usado pra renderizar o badge do canal
+      (whatsapp/instagram/...) no avatar do header do chat, idêntico
+      ao card da lista de conversas. */
+  channel?: string | null;
 }
 
 export function toChatContact(row: ConversationListRow): ChatContactView {
@@ -466,6 +470,7 @@ export function toChatContact(row: ConversationListRow): ChatContactView {
     badge: deriveBadge(row),
     phone: row.contact?.phone ?? "",
     contactId: row.contact?.id ?? row.id,
+    channel: row.channel ?? null,
   };
 }
 

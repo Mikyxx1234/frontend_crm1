@@ -86,7 +86,7 @@ function DealTagsTray({
     return (
       <span
         key={t.id}
-        className="inline-flex h-5 max-w-[110px] items-center truncate rounded-full px-2 text-[11px] font-semibold"
+        className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold whitespace-nowrap"
         style={{
           background: `color-mix(in srgb, ${color} 18%, white)`,
           color: `color-mix(in srgb, ${color} 75%, black)`,
@@ -131,7 +131,7 @@ function ContactTagsTray({
     return (
       <span
         key={t.id}
-        className="inline-flex h-5 max-w-[110px] items-center truncate rounded-full px-2 text-[11px] font-semibold"
+        className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold whitespace-nowrap"
         style={{
           background: `color-mix(in srgb, ${color} 18%, white)`,
           color: `color-mix(in srgb, ${color} 75%, black)`,
@@ -507,10 +507,10 @@ export default function InboxV2ClientPage({
         return (
           <TooltipGlass key={t.id} label={t.name} side="top">
             <span
-              className="inline-flex max-w-[100px] shrink-0 items-center truncate rounded-full border px-2 py-px font-display text-[10.5px] font-semibold"
+              className="inline-flex shrink-0 items-center rounded-full border px-2 py-px font-display text-[10.5px] font-semibold whitespace-nowrap"
               style={{ background: bg, color: fg, borderColor: border }}
             >
-              <span className="truncate">{t.name}</span>
+              {t.name}
             </span>
           </TooltipGlass>
         );

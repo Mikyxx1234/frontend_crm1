@@ -7,6 +7,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
 import { BadgeGlass } from "./badge-glass"
+import { avatarGradients, channelBadge } from "./conversation-card"
 import { MessageBubble, DaySeparator, ConnectionDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
@@ -50,10 +51,19 @@ interface ChatContact {
   badge?: "enterprise" | "lead" | "success"
   badgeLabel?: string
   initials?: string
+  /** Chave do gradiente (sunset/forest/ocean/dusk/blue/teal/orange/purple/pink/coral)
+      OU string CSS raw (compat com chamadores legados). Quando bater
+      com uma chave do `avatarGradients`, renderiza o mesmo gradiente
+      da conversation-card — mantendo identidade visual entre a lista
+      de conversas e o header do chat. */
   avatarColor?: string
   status?: string
   phone?: string
   contactId?: string
+  /** Canal (whatsapp/instagram/facebook/email/…) — quando presente,
+      renderiza o badge do canal no canto inferior direito do avatar,
+      idêntico ao card da lista de conversas. */
+  channel?: string | null
 }
 
 interface ChatAreaProps {
@@ -189,13 +199,38 @@ export function ChatArea({
       <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-5 py-3">
         <div className="flex items-center gap-2.5">
           <TooltipGlass label={contact.name} side="bottom">
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white"
-              style={{ background: contact.avatarColor || "var(--brand-primary)" }}
-              aria-label={contact.name}
-            >
-              {contact.initials || contact.name.slice(0, 2).toUpperCase()}
-            </span>
+            {(() => {
+              // Reaproveita o gradiente da conversation-card quando
+              // `avatarColor` bater com uma chave conhecida; caso contrário,
+              // usa o valor CSS raw (compat). Assim o avatar do header do
+              // chat fica visualmente idêntico ao do card da lista.
+              const bg =
+                (contact.avatarColor && avatarGradients[contact.avatarColor]) ||
+                contact.avatarColor ||
+                "var(--brand-primary)"
+              const ch =
+                (contact.channel ?? connection?.type ?? null) as string | null
+              const badge = channelBadge(ch)
+              return (
+                <span
+                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white shadow-[0_2px_8px_rgba(15,20,40,0.18)]"
+                  style={{ background: bg }}
+                  aria-label={contact.name}
+                >
+                  {contact.initials || contact.name.slice(0, 2).toUpperCase()}
+                  {badge && (
+                    <span
+                      title={badge.title}
+                      aria-label={badge.title}
+                      className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full ring-2 ring-[var(--glass-bg-overlay)]"
+                      style={{ background: badge.bg, color: badge.fg }}
+                    >
+                      <badge.Icon size={9} stroke={2.5} />
+                    </span>
+                  )}
+                </span>
+              )
+            })()}
           </TooltipGlass>
           {contact.badge && (
             <BadgeGlass variant={contact.badge}>

@@ -92,7 +92,7 @@ interface ConversationCardProps {
   assigneeSlot?: React.ReactNode
 }
 
-const avatarGradients: Record<string, string> = {
+export const avatarGradients: Record<string, string> = {
   sunset: "linear-gradient(135deg, #FFD580 0%, #FF8FA3 50%, #FF6B9D 100%)",
   forest: "linear-gradient(135deg, #5CC7A9 0%, #2C8A6B 60%, #1F5D49 100%)",
   ocean: "linear-gradient(135deg, #6FA8DC 0%, #3D5A80 60%, #293f5d 100%)",
@@ -137,7 +137,7 @@ const typeLabelMap: Record<LastMessageType, string | null> = {
  * marca (mantidas em alta saturação porque o badge é minúsculo).
  * Retorna `null` para canais desconhecidos — caller cai no status dot.
  */
-function channelBadge(channel: string | null | undefined): {
+export function channelBadge(channel: string | null | undefined): {
   Icon: React.ComponentType<{ size?: number; stroke?: number; className?: string }>;
   bg: string;
   fg: string;

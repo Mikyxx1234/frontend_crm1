@@ -29,6 +29,9 @@ import {
   useDeleteContact,
   useUpdateContact,
 } from "@/features/directory-v2/hooks";
+import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { removeContactTag } from "@/features/directory-v2/api";
 import { useConfirm } from "@/hooks/use-confirm";
 
 /**
@@ -258,33 +261,16 @@ export default function ContactDetailClientPage({ id }: { id: string }) {
                 </div>
               </GlassCard>
 
-              {/* Tags */}
+              {/* Tags — edição inline via ContactTagsPopover (mesma
+                  fonte de dados usada no inbox/aside, garantindo que
+                  qualquer alteração aqui reflita em todas as telas
+                  do sistema que consultam Contact.tags). */}
               <GlassCard className="p-5">
                 <SectionTitle>Tags</SectionTitle>
-                {query.data.tags.length === 0 ? (
-                  <p className="text-[12px] text-[var(--text-muted)]">
-                    Nenhuma tag. Adicione tags pela página de contatos em{" "}
-                    <Link href={`/contacts/${id}`} className="underline">
-                      /contacts/{id}
-                    </Link>
-                    .
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {query.data.tags.map(({ tag }) => (
-                      <span
-                        key={tag.id}
-                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-display text-[11px] font-semibold"
-                        style={{
-                          backgroundColor: (tag.color ?? "#5b6ff5") + "22",
-                          color: tag.color ?? "#5b6ff5",
-                        }}
-                      >
-                        {tag.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <ContactTagsRow
+                  contactId={id}
+                  tags={query.data.tags.map(({ tag }) => tag)}
+                />
               </GlassCard>
 
               {/* Notas */}
@@ -382,6 +368,66 @@ export default function ContactDetailClientPage({ id }: { id: string }) {
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+function ContactTagsRow({
+  contactId,
+  tags,
+}: {
+  contactId: string;
+  tags: { id: string; name: string; color: string | null }[];
+}) {
+  const qc = useQueryClient();
+  const removeMut = useMutation({
+    mutationFn: (tagId: string) => removeContactTag(contactId, tagId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contact-detail"] });
+      qc.invalidateQueries({ queryKey: ["contact-sidebar"] });
+      qc.invalidateQueries({ queryKey: ["directory-v2-contacts"] });
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : "Erro ao remover tag"),
+  });
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {tags.length === 0 && (
+        <span className="text-[12px] text-[var(--text-muted)]">
+          Nenhuma tag ainda.
+        </span>
+      )}
+      {tags.map((t) => {
+        const color = t.color ?? "#5b6ff5";
+        return (
+          <span
+            key={t.id}
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold whitespace-nowrap"
+            style={{
+              background: `color-mix(in srgb, ${color} 18%, white)`,
+              color: `color-mix(in srgb, ${color} 75%, black)`,
+              border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+            }}
+            title={t.name}
+          >
+            {t.name}
+            <button
+              type="button"
+              aria-label={`Remover tag ${t.name}`}
+              onClick={() => removeMut.mutate(t.id)}
+              disabled={removeMut.isPending}
+              className="ml-0.5 rounded-full text-inherit opacity-60 hover:opacity-100 disabled:opacity-30"
+            >
+              <IconX size={11} stroke={2.4} />
+            </button>
+          </span>
+        );
+      })}
+      <ContactTagsPopover
+        contactId={contactId}
+        currentTags={tags}
+        triggerVariant="icon"
+      />
     </div>
   );
 }

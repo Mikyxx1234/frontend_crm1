@@ -336,18 +336,10 @@ function DealInline({
             Negócio
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            {(isLost || isWon) && (
-              <span
-                className="rounded-full px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide"
-                style={
-                  isLost
-                    ? { background: "rgba(255,255,255,0.9)", color: "var(--color-danger, #dc2626)" }
-                    : { background: "rgba(255,255,255,0.9)", color: "var(--color-success, #059669)" }
-                }
-              >
-                {isLost ? "Perdido" : "Ganho"}
-              </span>
-            )}
+            {/* Pill "Perdido"/"Ganho" removida: o próprio dropdown de estágio
+                já mostra a etapa terminal (Perdido/Ganho) — mantê-la aqui
+                duplicava a informação no header. O motivo da perda continua
+                exibido abaixo (bloco `lostReason`). */}
             {deal.stageDropdownSlot ? (
               <div className="relative z-30 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
                 {deal.stageDropdownSlot}
@@ -370,11 +362,30 @@ function DealInline({
         </h2>
 
         <div className="relative mt-3 flex items-center gap-3">
-          {/* Anel de progresso */}
+          {/* Anel de progresso — cada segmento herda a cor da etapa
+              correspondente (mesma fonte usada na barra de funil abaixo).
+              Etapas percorridas ficam opacas; futuras ficam esmaecidas.
+              Fallback (sem funil): usa brand-primary sólido. */}
           <div
             className="grid size-11 shrink-0 place-items-center rounded-full"
             style={{
-              background: `conic-gradient(#f59e0b ${progress}%, rgba(255,255,255,0.25) 0)`,
+              background:
+                sortedSegments && sortedSegments.length > 0
+                  ? (() => {
+                      const step = 100 / sortedSegments.length
+                      const stops = sortedSegments
+                        .map((seg, i) => {
+                          const color = seg.color || "var(--brand-primary)"
+                          const active = i <= currentSegIdx
+                          const c = active
+                            ? color
+                            : `color-mix(in srgb, ${color} 22%, rgba(255,255,255,0.35))`
+                          return `${c} ${i * step}% ${(i + 1) * step}%`
+                        })
+                        .join(", ")
+                      return `conic-gradient(${stops})`
+                    })()
+                  : `conic-gradient(var(--brand-primary) ${progress}%, rgba(255,255,255,0.25) 0)`,
             }}
           >
             <div className="grid size-8 place-items-center rounded-full bg-[var(--brand-primary)]">
@@ -604,18 +615,21 @@ export function ContactAside({
       <aside
         aria-label="Detalhes do contato (recolhido)"
         className={cn(
-          "flex h-full flex-col items-center justify-start rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pt-3 backdrop-blur-md shadow-[var(--glass-shadow)]",
+          "relative flex h-full flex-col items-center justify-start rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pt-3 backdrop-blur-md shadow-[var(--glass-shadow)]",
           className,
         )}
       >
+        {/* Mesma pill do estado expandido, só com o chevron invertido
+            (`<`) — padroniza o elemento de recolher/expandir. Fica na
+            faixa entre o chat e o aside recolhido. */}
         <TooltipGlass label="Expandir painel de contato" side="left">
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-14 w-6 items-center justify-center rounded-full bg-white/70 text-[var(--text-muted)] shadow-[0_2px_6px_rgba(15,23,42,0.10)] backdrop-blur-sm transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
             aria-label="Expandir painel de contato"
           >
-            <IconChevronLeft size={18} strokeWidth={2.5} />
+            <IconChevronLeft size={14} strokeWidth={2.5} />
           </button>
         </TooltipGlass>
       </aside>

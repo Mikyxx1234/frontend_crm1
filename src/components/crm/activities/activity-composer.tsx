@@ -81,7 +81,7 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
           <div className="mb-4 flex items-start justify-between">
             <div>
               <Dialog.Title className="font-display text-[17px] font-bold text-[var(--text-primary)]">
-                Nova atividade
+                Nova tarefa
               </Dialog.Title>
               <Dialog.Description className="font-body text-[12px] text-[var(--text-muted)]">
                 Agende uma tarefa, reunião, ligação ou evento.
@@ -226,7 +226,7 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
               <ButtonGlass variant="glass">Cancelar</ButtonGlass>
             </Dialog.Close>
             <ButtonGlass variant="primary" onClick={submit} disabled={!title.trim()}>
-              Agendar atividade
+              Agendar tarefa
             </ButtonGlass>
           </div>
         </Dialog.Content>

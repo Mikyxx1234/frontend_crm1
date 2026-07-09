@@ -13,7 +13,7 @@ export function DealActivitiesTab() {
     <div className="flex h-full flex-col items-center justify-center gap-2 p-5.5 text-center text-[var(--text-muted,#718096)]">
       <IconChecklist size={36} className="opacity-40" />
       <div className="font-display text-[13px] font-semibold">
-        Atividades em breve
+        Tarefas em breve
       </div>
       <p className="max-w-xs text-[12px]">
         Agendamentos, ligacoes e tarefas vinculadas a este negocio

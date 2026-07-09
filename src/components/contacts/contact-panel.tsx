@@ -191,7 +191,7 @@ export function ContactPanel({ contactId, open, onOpenChange }: ContactPanelProp
                         )}
                       </TabsTrigger>
                       <TabsTrigger value="activities" className="gap-1.5 data-[state=active]:shadow-none">
-                        <Calendar className="size-3.5" /> Atividades
+                        <Calendar className="size-3.5" /> Tarefas
                       </TabsTrigger>
                       <TabsTrigger value="notes" className="gap-1.5 data-[state=active]:shadow-none">
                         <FileText className="size-3.5" /> Notas
@@ -633,15 +633,15 @@ function ActivitiesPanel({
               <Input type="datetime-local" value={scheduled} onChange={(e) => setScheduled(e.target.value)} className="h-8 text-sm" />
             </div>
           </div>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da atividade…" className="h-8 text-sm" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da tarefa…" className="h-8 text-sm" />
           <Textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (opcional)" className="text-sm" />
           <Button type="button" size="sm" disabled={!title.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? "Salvando…" : "Adicionar atividade"}
+            {mutation.isPending ? "Salvando…" : "Adicionar tarefa"}
           </Button>
         </div>
 
         {activities.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nenhuma atividade registrada.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhuma tarefa registrada.</p>
         ) : (
           <div className="relative space-y-0">
             {activities.map((a, idx) => (
@@ -665,13 +665,13 @@ function ActivitiesPanel({
                     ) : (
                       <Circle className="size-3.5 text-[var(--text-faint)]" />
                     )}
-                    <TooltipGlass label="Excluir atividade" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
+                    <TooltipGlass label="Excluir tarefa" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
                       <button
                         type="button"
                         onClick={() => deleteMut.mutate(a.id)}
                         disabled={deleteMut.isPending}
                         className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
-                        aria-label="Excluir atividade"
+                        aria-label="Excluir tarefa"
                       >
                         <Trash2 className="size-3" />
                       </button>

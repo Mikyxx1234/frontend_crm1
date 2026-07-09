@@ -31,7 +31,7 @@ type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
 
 const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle },
-  { id: "atividades", label: "Atividades", icon: IconChecklist },
+  { id: "atividades", label: "Tarefas", icon: IconChecklist },
   { id: "notas", label: "Notas", icon: IconNote },
   { id: "timeline", label: "Timeline", icon: IconClock },
   // IB8: nova aba "Chamadas" no topo do inbox, espelhando a aba

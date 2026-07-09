@@ -120,7 +120,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
               )}
             >
               <Plus className="size-4 text-primary" strokeWidth={2.4} />
-              <span className="font-semibold">Nova atividade</span>
+              <span className="font-semibold">Nova tarefa</span>
             </button>
           ) : (
             <div className="space-y-2.5">
@@ -154,7 +154,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titulo da atividade..."
+                placeholder="Titulo da tarefa..."
                 className="h-9 rounded-xl border-border text-sm"
                 autoFocus
               />
@@ -196,7 +196,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
           </div>
         ) : activities.length === 0 ? (
           <p className="py-12 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
-            Nenhuma atividade registrada.
+            Nenhuma tarefa registrada.
           </p>
         ) : (
           <ActivityTimeline

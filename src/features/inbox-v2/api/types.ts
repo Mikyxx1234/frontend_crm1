@@ -174,6 +174,14 @@ export interface InboxMessageDto {
    * automation-executor: bot grava `senderName === "Automação"`.
    */
   senderName?: string | null;
+  /**
+   * Autoria explícita da mensagem (`human` | `bot` | `system`). Setado
+   * pelos serviços que criam mensagens outbound (automation-executor, AI
+   * handler, whatsapp-flow-response). Preferido sobre a heurística de
+   * `senderName === "Automação"` — permite que o backend grave o NOME
+   * real da automação em `senderName` sem quebrar a detecção do bot na UI.
+   */
+  authorType?: "human" | "bot" | "system";
   /** Status bruto de envio (string livre do backend: sent/delivered/read/failed). */
   sendStatus?: string | null;
   /**

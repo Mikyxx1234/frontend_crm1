@@ -930,10 +930,18 @@ export function MessageBubble({
           )}
           style={!isOutgoing ? { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" } : undefined}
         >
-          {/* Badge AUTOMAÇÃO */}
+          {/* Badge AUTOMAÇÃO — pill petróleo/slate escuro pra ficar
+              legível tanto sobre bolha outgoing (dark navy) quanto
+              sobre bolha inbound (clara). Exibe o nome da automação
+              (senderName) quando o backend envia; caso contrário cai
+              no rótulo genérico "Automação". */}
           {isBot && (
             <div className="mb-1.5 flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white/90">
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white"
+                style={{ background: "#334155" /* slate-700 / petróleo */ }}
+                title={senderName || "Automação"}
+              >
                 <IconRobot size={10} />
                 {senderName || "Automação"}
               </span>

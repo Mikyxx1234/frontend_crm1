@@ -55,12 +55,12 @@
   --color-warn:             #d97706;
   --color-warn-text:        #92600a;  /* texto sobre fundo âmbar claro (badge warning) */
 
-  /* session alert (coral) */
-  --color-session-border:   #F5C2B0;
-  --color-session-bg:       #FDE8E2;
-  --color-session-hover-bg: #FDF5F2;
-  --color-session-text:     #6B2118;
-  --color-session-subtext:  #8A4034;
+  /* session alert (vermelho — indica sessão expirada / atenção) */
+  --color-session-border:   #fca5a5;   /* red-300 */
+  --color-session-bg:       #fee2e2;   /* red-100 */
+  --color-session-hover-bg: #fecaca;   /* red-200 */
+  --color-session-text:     #991b1b;   /* red-800 */
+  --color-session-subtext:  #b91c1c;   /* red-700 */
 
   /* WhatsApp message status ticks */
   --wa-tick-read:    #7fd4ff;   /* ticks azuis = lido */

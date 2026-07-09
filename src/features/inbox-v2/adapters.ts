@@ -367,12 +367,15 @@ export function toMessageBubble(
   // ou SSE futuro mude o casing — nunca regredir o lado dos balões).
   const dir = String(dto.direction ?? "").toLowerCase();
   const isInbound = dir === "in" || dir === "inbound";
-  // O backend não envia `sender.kind`; a única chave de autoria serializada
-  // hoje é `senderName`. Automação grava `senderName === "Automação"` (mesma
-  // convenção da v1 e de lib/message-author.ts). Mantemos `sender.kind` como
-  // fallback forward-compatible caso o DTO passe a expor o objeto sender.
+  // Preferência: campo explícito `authorType` (novo — permite o backend
+  // gravar o nome real da automação em `senderName` sem quebrar a detecção
+  // do bot). Fallbacks: `sender.kind === "BOT"` (forward-compat) e o antigo
+  // `senderName === "Automação"` (mensagens legadas gravadas antes do
+  // `authorType` explícito no automation-executor).
   const isBot =
-    dto.sender?.kind === "BOT" || (!isInbound && dto.senderName === "Automação");
+    dto.authorType === "bot" ||
+    dto.sender?.kind === "BOT" ||
+    (!isInbound && dto.senderName === "Automação");
 
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;

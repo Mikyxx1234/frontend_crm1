@@ -770,7 +770,7 @@ export default function InboxV2ClientPage({
     return (
       <div
         className="v2-screen grid gap-4 p-4"
-        style={{ gridTemplateColumns: "72px minmax(0, 1fr)" }}
+        style={{ gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)" }}
       >
         {navRailNode}
         <div className="flex min-w-0 flex-col gap-4 overflow-hidden">
@@ -820,7 +820,7 @@ export default function InboxV2ClientPage({
       className="v2-screen grid gap-4 p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
-        gridTemplateColumns: `72px ${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}`,
+        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}`,
       }}
     >
       {navRailNode}

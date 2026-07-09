@@ -30,7 +30,7 @@ import OldAutomationEditor from "@/features/legacy-v1/automations-editor";
  */
 export default function V2AutomationDetailClientPage() {
   return (
-    <div className="v2-screen grid h-[100dvh] grid-cols-[72px_1fr] overflow-hidden">
+    <div className="v2-screen grid h-[100dvh] grid-cols-[var(--nav-rail-w,72px)_1fr] overflow-hidden">
       <div className="py-4 pl-4">
         <NavRailV2 />
       </div>

@@ -693,7 +693,7 @@ export function EmailPage() {
 
   return (
 
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
 
       <NavRailV2 />
 

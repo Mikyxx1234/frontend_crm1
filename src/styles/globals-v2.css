@@ -327,6 +327,18 @@
    escala diferente (ex.: 0.9 para mais conservador, 0.85 para mais
    denso). Nao mexa em px/font-size dos componentes individuais.
    ────────────────────────────────────────────────────────────────── */
+/* ── Largura da NavRail v2 ──────────────────────────────────────────
+   Publicada em `<html>` pelo `NavRailV2` (via effect em `dataset`).
+   Todas as page shells v2 usam `grid-cols-[var(--nav-rail-w,72px)_...]`
+   pra que a coluna do trilho expanda automaticamente quando o usuário
+   clica o botão `»`, sem quebrar o layout do grid. */
+:root {
+  --nav-rail-w: 72px;
+}
+html[data-nav-expanded="true"] {
+  --nav-rail-w: 220px;
+}
+
 .v2-root {
   --v2-scale: 0.93;
   /* Recíproco da escala — usado para NEUTRALIZAR o zoom em subtrees que

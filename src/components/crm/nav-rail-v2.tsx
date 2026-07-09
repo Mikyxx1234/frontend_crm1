@@ -159,17 +159,32 @@ export function NavRailV2({ className }: { className?: string }) {
 
   // Expand/collapse: quando expandido, o rail cresce (via `w-*` interno) e
   // mostra a legenda ao lado de cada icone. Preferencia persiste em
-  // localStorage entre sessoes. Como o parent usa grid-cols com largura fixa
-  // do trilho, quando expandimos usamos posicionamento absoluto por cima do
-  // conteudo (nao altera o layout do grid — evita re-flow do miolo).
+  // localStorage entre sessoes.
+  //
+  // Estratégia de layout: as páginas usam `grid-cols-[var(--nav-rail-w,72px)_...]`.
+  // Aqui publicamos `--nav-rail-w` em `document.documentElement` (220px quando
+  // expandido, 72px quando recolhido). Isso faz o GRID PARENT expandir a
+  // coluna do trilho automaticamente — sem `position: fixed` (que quebrava
+  // o layout, deixando o main "flutuando" fora da viewport) e sem precisar
+  // tocar em cada page shell.
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
     try {
-      setExpanded(window.localStorage.getItem(SIDEBAR_EXPANDED_CACHE) === "1");
+      const next = window.localStorage.getItem(SIDEBAR_EXPANDED_CACHE) === "1";
+      setExpanded(next);
     } catch {
       /* localStorage indisponivel — ignora */
     }
   }, []);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.dataset.navExpanded = expanded ? "true" : "false";
+    return () => {
+      // Ao desmontar (ex.: signout / mudança de layout), remove o flag
+      // pra o próximo layout que não usa NavRail voltar ao default 72px.
+      delete document.documentElement.dataset.navExpanded;
+    };
+  }, [expanded]);
   function toggleExpanded() {
     setExpanded((v) => {
       const next = !v;
@@ -271,13 +286,13 @@ export function NavRailV2({ className }: { className?: string }) {
         // quando o trilho virou glass sobre mesh lavanda. Não usa
         // tokens --glass-* — a rail é intencionalmente mais opaca
         // e escura que qualquer superfície de conteúdo.
-        // Quando expandida, vira overlay `fixed` (fora do fluxo do grid
-        // parent): o slot de 72px do grid segue reservado e o conteudo
-        // continua renderizando; a rail flutua por cima ao expandir.
-        "flex h-full flex-col gap-2 bg-[var(--nav-bg)] backdrop-blur-[16px] border border-[var(--nav-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)] transition-[width] duration-200",
-        expanded
-          ? "fixed left-4 top-4 bottom-4 z-40 w-[220px] items-stretch"
-          : "relative w-full items-center",
+        // Sempre `relative w-full h-full` — a largura da coluna do grid
+        // parent é controlada por `--nav-rail-w` (72px/220px) publicado
+        // no `<html>` pelo effect acima. Assim o layout continua no fluxo
+        // e o main renderiza normalmente (evita o bug do `fixed` que
+        // deixava o miolo aparentemente "sumido").
+        "relative flex h-full w-full flex-col gap-2 bg-[var(--nav-bg)] backdrop-blur-[16px] border border-[var(--nav-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)] transition-[width] duration-200",
+        expanded ? "items-stretch" : "items-center",
         className,
       )}
     >

@@ -676,7 +676,7 @@ export default function KanbanV2ClientPage({
   }
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4" style={{ gridTemplateRows: "1fr" }}>
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 p-4" style={{ gridTemplateRows: "1fr" }}>
       {navRail ?? <NavRailV2 />}
       <div
         ref={boardWrapperRef}

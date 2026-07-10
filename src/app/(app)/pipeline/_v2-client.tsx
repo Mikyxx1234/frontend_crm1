@@ -951,26 +951,7 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        ownerSlot={
-          activeDealId ? (
-            <AssigneePopover
-              dealId={activeDealId}
-              currentOwnerId={dealDetail?.owner?.id ?? null}
-              currentOwnerName={dealDetail?.owner?.name ?? null}
-              pipelineId={pipelineId}
-              statusFilter={status}
-              trigger={
-                <Chip
-                  variant="brand"
-                  className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]"
-                >
-                  {dealDetail?.owner?.name ?? "Sem responsável"}
-                  <IconChevronDown size={10} />
-                </Chip>
-              }
-            />
-          ) : undefined
-        }
+        ownerSlot={undefined}
         // sourceSlot removido (DD5): antes tentava persistir Deal.source,
         // mas esse campo nao existe no schema (backend silenciosamente
         // ignorava o PUT). A row "Origem" foi movida pro cabecalho fixo

@@ -241,12 +241,21 @@ export function KanbanColumn({
                       ref={dragProvided.innerRef}
                       {...dragProvided.draggableProps}
                       className={cn(
-                        "transition-all duration-150",
-                        dragSnapshot.isDragging && "opacity-95",
+                        // Nunca usar transition-all aqui: o @hello-pangea/dnd
+                        // aplica transform frame-a-frame via style inline —
+                        // qualquer transition interceptaria cada atualização
+                        // causando o efeito "lag pixelizado". Só transição de
+                        // opacidade é segura (não compete com transform).
+                        dragSnapshot.isDragging
+                          ? "opacity-[0.97]"
+                          : "transition-opacity duration-150",
                       )}
                       style={{
                         ...dragProvided.draggableProps.style,
-                        ...(dragSnapshot.isDragging ? { willChange: "transform" } : {}),
+                        // Pre-promover todos os cards para camada GPU desde
+                        // o início evita o "jank" do primeiro frame de drag
+                        // (onde o browser precisa compositar o layer).
+                        willChange: "transform",
                       }}
                     >
                       <KanbanCard

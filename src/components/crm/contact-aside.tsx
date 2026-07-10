@@ -81,6 +81,7 @@ export interface ContactDetails {
     stageName?: string | null
     stageId?: string | null
     pipelineId?: string | null
+    pipelineName?: string | null
     productName?: string | null
     status?: string | null
     lostReason?: string | null
@@ -438,7 +439,7 @@ function DealInline({
             </div>
           </div>
           <div className="min-w-0 flex-1 text-[11px] text-white/80">
-            <p className="font-medium text-white">Funil de vendas</p>
+            <p className="font-medium text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
             <p className="truncate">
               {totalStages > 0
                 ? `Etapa ${currentStage} de ${totalStages}`

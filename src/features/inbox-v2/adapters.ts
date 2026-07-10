@@ -574,6 +574,7 @@ export interface ContactAsideView {
     stageName: string | null;
     stageId: string | null;
     pipelineId: string | null;
+    pipelineName: string | null;
     productName: string | null;
     /** Status do negocio: OPEN | WON | LOST. */
     status: string | null;
@@ -654,6 +655,7 @@ export function toContactAside(
     stageName: d.stageName ?? null,
     stageId: d.stageId ?? null,
     pipelineId: (d as { pipelineId?: string }).pipelineId ?? null,
+    pipelineName: (d as { pipelineName?: string | null }).pipelineName ?? null,
     productName: d.productName ?? null,
     status: (d as { status?: string | null }).status ?? null,
     lostReason: (d as { lostReason?: string | null }).lostReason ?? null,

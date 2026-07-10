@@ -539,10 +539,11 @@ export default function InboxV2ClientPage({
   // aside mostrava "Sem estágio" sem dropdown de troca de fase.
   const dealStage = (
     firstDealDetail as
-      | { stage?: { id?: string; pipeline?: { id?: string } } }
+      | { stage?: { id?: string; pipeline?: { id?: string; name?: string } } }
       | undefined
   )?.stage;
   const firstDealPipelineId = dealStage?.pipeline?.id ?? firstDeal?.pipelineId ?? null;
+  const firstDealPipelineName = dealStage?.pipeline?.name ?? null;
   const { data: boardStages } = useBoard({
     pipelineId: firstDealPipelineId,
     enabled: !!firstDealPipelineId,
@@ -569,6 +570,7 @@ export default function InboxV2ClientPage({
       ...d,
       stageId: firstDealStageId ?? d.stageId,
       stageName: firstDealStageName ?? d.stageName,
+      pipelineName: firstDealPipelineName ?? d.pipelineName,
       funnelSegments: firstDealFunnelSegments,
       stageDropdownSlot: firstDealId && firstDealStageId ? (
         <StagePicker

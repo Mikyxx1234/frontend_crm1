@@ -599,6 +599,8 @@ export default function KanbanV2ClientPage({
       value: dealDetail.value ?? null,
       online: undefined,
       stage: activeDealStageName,
+      pipelineName:
+        (dealDetail as { stage?: { pipeline?: { name?: string } } }).stage?.pipeline?.name ?? null,
       owner: {
         initials: avatarInitials(ownerName),
         name: ownerName,

@@ -179,6 +179,7 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
         dealNumber != null ? `Lead #${dealNumber}` : `Lead #${deal.id.slice(0, 6)}`,
       tag: deal.title || "Sem título",
       funnelStage: stageObj?.name ?? "—",
+      pipelineName: (stageObj as { pipeline?: { name?: string } } | null)?.pipeline?.name ?? null,
       segments: segments.length
         ? segments
         : [

@@ -7,6 +7,7 @@ export interface Department {
   id: string;
   name: string;
   color: string;
+  icon: string;
   createdAt: string;
 }
 
@@ -31,12 +32,12 @@ export function useDepartments() {
 export function useCreateDepartment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ name, color }: { name: string; color: string }) => {
+    mutationFn: async ({ name, color, icon }: { name: string; color: string; icon: string }) => {
       const res = await fetch(apiUrl("/api/settings/departments"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color }),
+        body: JSON.stringify({ name, color, icon }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));

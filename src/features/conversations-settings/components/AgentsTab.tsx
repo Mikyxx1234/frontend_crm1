@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { IconInfoCircle, IconUser } from "@tabler/icons-react";
+import { IconChevronDown, IconInfoCircle, IconLink, IconLayoutGrid, IconUser } from "@tabler/icons-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 import { GlassCard } from "@/components/crm/glass-card";
@@ -15,6 +16,71 @@ import {
   type AgentWithPermissions,
   type AgentPermissions,
 } from "../hooks/use-agent-permissions";
+import { useDepartments, type Department } from "../hooks/use-departments";
+
+// ─── Channels hook (local) ────────────────────────────────────────────────────
+
+type Channel = { id: string; name: string; type: string; provider: string };
+
+function useChannels() {
+  return useQuery<Channel[]>({
+    queryKey: ["settings", "channels"],
+    queryFn: async () => {
+      const res = await fetch("/api/channels", { credentials: "include" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data.channels) ? data.channels : [];
+    },
+    staleTime: 60_000,
+  });
+}
+
+// ─── Collapsible section ──────────────────────────────────────────────────────
+
+function CollapsibleSection({
+  title,
+  subtitle,
+  icon: Icon,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  subtitle?: string;
+  icon?: React.ElementType;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = React.useState(defaultOpen);
+  return (
+    <div className="rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2.5 px-3.5 py-3 hover:bg-[var(--glass-bg-overlay)] transition-colors text-left"
+      >
+        {Icon && <Icon size={15} className="shrink-0 text-[var(--text-muted)]" />}
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">{title}</p>
+          {subtitle && (
+            <p className="font-body text-[11px] text-[var(--text-muted)]">{subtitle}</p>
+          )}
+        </div>
+        <IconChevronDown
+          size={15}
+          className={cn(
+            "shrink-0 text-[var(--text-muted)] transition-transform",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+      {open && (
+        <div className="border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -76,6 +142,58 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── Channel icon by type ─────────────────────────────────────────────────────
+
+function ChannelTypeIcon({ type }: { type: string }) {
+  const map: Record<string, string> = {
+    WHATSAPP: "💬",
+    INSTAGRAM: "📷",
+    FACEBOOK: "📘",
+    EMAIL: "✉️",
+    WEBCHAT: "🌐",
+  };
+  return <span className="text-[13px]">{map[type] ?? "🔗"}</span>;
+}
+
+// ─── Checklist item ───────────────────────────────────────────────────────────
+
+function ChecklistItem({
+  label,
+  sublabel,
+  icon,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  sublabel?: string;
+  icon?: React.ReactNode;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-[var(--radius-sm)] py-1.5">
+      {icon && <span className="shrink-0">{icon}</span>}
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
+          {label}
+        </p>
+        {sublabel && (
+          <p className="truncate font-body text-[11px] text-[var(--text-muted)]">{sublabel}</p>
+        )}
+      </div>
+      <SwitchGlass
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+        size="sm"
+        aria-label={label}
+      />
+    </div>
+  );
+}
+
 // ─── Right panel: permissions editor ─────────────────────────────────────────
 
 function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
@@ -83,33 +201,69 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
   const saved = agent.permissions ?? DEFAULT_PERMISSIONS;
 
   const [draft, setDraft] = React.useState<AgentPermissions>({ ...DEFAULT_PERMISSIONS, ...saved });
-  const [isDirty, setIsDirty] = React.useState(false);
+
+  const { data: channels = [] } = useChannels();
+  const { data: departments = [] } = useDepartments();
 
   // Reset draft when agent changes
   React.useEffect(() => {
-    const base = { ...DEFAULT_PERMISSIONS, ...saved };
-    setDraft(base);
-    setIsDirty(false);
+    setDraft({ ...DEFAULT_PERMISSIONS, ...saved });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agent.id, agent.permissions]);
 
+  const isDirty = React.useMemo(() => {
+    const base = { ...DEFAULT_PERMISSIONS, ...saved };
+    return JSON.stringify(draft) !== JSON.stringify(base);
+  }, [draft, saved]);
+
   const saveMutation = useSaveAgentPermissions(agent.id);
 
+  // ── Boolean toggle ──
   function toggle(key: keyof AgentPermissions) {
+    setDraft((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  // ── Connection scope helpers ──
+  const limitConnections = draft.allowedConnectionIds.length > 0;
+
+  function toggleLimitConnections() {
+    if (limitConnections) {
+      setDraft((prev) => ({ ...prev, allowedConnectionIds: [] }));
+    } else {
+      setDraft((prev) => ({ ...prev, allowedConnectionIds: channels.map((c) => c.id) }));
+    }
+  }
+
+  function toggleConnectionId(id: string) {
     setDraft((prev) => {
-      const updated = { ...prev, [key]: !prev[key] };
-      const baseResolved = { ...DEFAULT_PERMISSIONS, ...saved };
-      const dirty = (Object.keys(updated) as (keyof AgentPermissions)[]).some(
-        (k) => JSON.stringify(updated[k]) !== JSON.stringify(baseResolved[k]),
-      );
-      setIsDirty(dirty);
-      return updated;
+      const ids = prev.allowedConnectionIds;
+      const next = ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
+      return { ...prev, allowedConnectionIds: next };
+    });
+  }
+
+  // ── Department scope helpers ──
+  const limitDepartments = draft.allowedDepartmentIds.length > 0;
+
+  function toggleLimitDepartments() {
+    if (limitDepartments) {
+      setDraft((prev) => ({ ...prev, allowedDepartmentIds: [] }));
+    } else {
+      setDraft((prev) => ({ ...prev, allowedDepartmentIds: departments.map((d: Department) => d.id) }));
+    }
+  }
+
+  function toggleDepartmentId(id: string) {
+    setDraft((prev) => {
+      const ids = prev.allowedDepartmentIds;
+      const next = ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
+      return { ...prev, allowedDepartmentIds: next };
     });
   }
 
   function handleSave() {
     saveMutation.mutate(draft, {
-      onSuccess: () => setIsDirty(false),
+      onSuccess: () => { /* isDirty auto-updates via useEffect */ },
     });
   }
 
@@ -153,16 +307,18 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
 
         {/* Visualização */}
         <div className="mb-4">
-          <SectionHeader>Visualização</SectionHeader>
+          <SectionHeader>Visualização do atendente</SectionHeader>
           <div className="divide-y divide-[var(--glass-border-subtle)]">
             <PermissionRow
               label="Ver conversas de outros atendentes"
+              description="Permite visualizar conversas atribuídas a outros"
               checked={draft.canViewOtherAgentsConversations}
               onChange={() => toggle("canViewOtherAgentsConversations")}
               disabled={isAdmin}
             />
             <PermissionRow
               label="Ocultar conversas sem atendente"
+              description="Não permite ver conversas que não possuem atendente"
               checked={draft.disableConversationsWithoutAgent}
               onChange={() => toggle("disableConversationsWithoutAgent")}
               disabled={isAdmin}
@@ -171,7 +327,7 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
         </div>
 
         {/* Ações permitidas */}
-        <div>
+        <div className="mb-4">
           <SectionHeader>Ações permitidas</SectionHeader>
           <div className="divide-y divide-[var(--glass-border-subtle)]">
             <PermissionRow
@@ -199,6 +355,94 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
               disabled={isAdmin}
             />
           </div>
+        </div>
+
+        {/* Conexões */}
+        <div className="mb-4">
+          <SectionHeader>Conexões</SectionHeader>
+          <CollapsibleSection
+            title="Veja as permissões por conexão"
+            subtitle={limitConnections ? `${draft.allowedConnectionIds.length} de ${channels.length} ativas` : "Acesso a todas as conexões"}
+            icon={IconLink}
+            defaultOpen={limitConnections}
+          >
+            <div className="mb-3">
+              <ChecklistItem
+                label="Limitar acesso por conexões específicas"
+                sublabel="O atendente terá acesso apenas às conexões habilitadas"
+                checked={limitConnections}
+                onChange={toggleLimitConnections}
+                disabled={isAdmin}
+              />
+            </div>
+            {limitConnections && channels.length > 0 && (
+              <div className="divide-y divide-[var(--glass-border-subtle)]">
+                {channels.map((ch) => (
+                  <ChecklistItem
+                    key={ch.id}
+                    label={ch.name}
+                    sublabel={ch.type}
+                    icon={<ChannelTypeIcon type={ch.type} />}
+                    checked={draft.allowedConnectionIds.includes(ch.id)}
+                    onChange={() => toggleConnectionId(ch.id)}
+                    disabled={isAdmin}
+                  />
+                ))}
+              </div>
+            )}
+            {limitConnections && channels.length === 0 && (
+              <p className="pt-1 font-body text-[12px] text-[var(--text-muted)]">
+                Nenhuma conexão disponível.
+              </p>
+            )}
+          </CollapsibleSection>
+        </div>
+
+        {/* Departamentos */}
+        <div>
+          <SectionHeader>Departamentos</SectionHeader>
+          <CollapsibleSection
+            title="Veja os departamentos que o atendente tem acesso"
+            subtitle={limitDepartments ? `${draft.allowedDepartmentIds.length} de ${departments.length} ativos` : "Acesso a todos os departamentos"}
+            icon={IconLayoutGrid}
+            defaultOpen={limitDepartments}
+          >
+            <div className="mb-3">
+              <ChecklistItem
+                label="Limitar acesso por departamentos específicos"
+                sublabel="O atendente terá acesso apenas aos departamentos habilitados"
+                checked={limitDepartments}
+                onChange={toggleLimitDepartments}
+                disabled={isAdmin}
+              />
+            </div>
+            {limitDepartments && departments.length > 0 && (
+              <div className="divide-y divide-[var(--glass-border-subtle)]">
+                {departments.map((dept: Department) => (
+                  <ChecklistItem
+                    key={dept.id}
+                    label={dept.name}
+                    icon={
+                      <span
+                        className="flex h-5 w-5 items-center justify-center rounded-[var(--radius-sm)] text-[11px]"
+                        style={{ backgroundColor: dept.color + "33" }}
+                      >
+                        {dept.icon ?? "🏢"}
+                      </span>
+                    }
+                    checked={draft.allowedDepartmentIds.includes(dept.id)}
+                    onChange={() => toggleDepartmentId(dept.id)}
+                    disabled={isAdmin}
+                  />
+                ))}
+              </div>
+            )}
+            {limitDepartments && departments.length === 0 && (
+              <p className="pt-1 font-body text-[12px] text-[var(--text-muted)]">
+                Nenhum departamento cadastrado.
+              </p>
+            )}
+          </CollapsibleSection>
         </div>
       </div>
 

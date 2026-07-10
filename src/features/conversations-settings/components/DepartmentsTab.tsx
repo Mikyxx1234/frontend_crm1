@@ -18,9 +18,18 @@ import {
 // ─── Color presets ──────────────────────────────────────────────────────────────
 
 const DEPT_COLORS = [
-  "#2563eb", "#7c3aed", "#db2777", "#dc2626", "#ea580c",
-  "#ca8a04", "#16a34a", "#0d9488", "#0891b2", "#4f46e5",
+  "#6366f1", "#2563eb", "#7c3aed", "#db2777", "#dc2626",
+  "#ea580c", "#ca8a04", "#16a34a", "#0d9488", "#0891b2",
   "#6b7280", "#334155",
+];
+
+// ─── Emoji presets ──────────────────────────────────────────────────────────────
+
+const DEPT_ICONS = [
+  "🏢", "📋", "💼", "🎯", "📞", "💡", "🔧", "🛠️",
+  "🚀", "⭐", "🤝", "📣", "🧩", "🎓", "🏥", "🛒",
+  "💻", "📱", "🎨", "🔍", "📦", "✉️", "🔔", "💬",
+  "🏷️", "🌐", "📌", "✅", "📊", "🛡️", "🤖", "💎",
 ];
 
 // ─── Create department modal ─────────────────────────────────────────────────────
@@ -34,13 +43,14 @@ function CreateDepartmentModal({
 }) {
   const [name, setName] = React.useState("");
   const [color, setColor] = React.useState(DEPT_COLORS[0]);
+  const [icon, setIcon] = React.useState(DEPT_ICONS[0]);
   const createMutation = useCreateDepartment();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     createMutation.mutate(
-      { name: name.trim(), color },
+      { name: name.trim(), color, icon },
       {
         onSuccess: () => {
           toast.success("Departamento criado");
@@ -54,93 +64,131 @@ function CreateDepartmentModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <GlassCard variant="panel" className="w-full max-w-sm p-6">
+      <GlassCard variant="modal" className="w-full max-w-[420px] overflow-hidden p-0 shadow-2xl">
         {/* Header */}
-        <div className="mb-4 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12">
-            <IconBuilding size={18} className="text-[var(--brand-primary)]" />
+        <div className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-5 py-4">
+          {/* Preview badge */}
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[18px] shadow-sm"
+            style={{ backgroundColor: color + "22" }}
+          >
+            {icon}
           </div>
-          <h3 className="font-display text-[16px] font-bold text-[var(--text-primary)]">
-            Novo departamento
-          </h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+              Novo departamento
+            </h3>
+            {name.trim() && (
+              <p className="truncate font-body text-[12px] text-[var(--text-muted)]">
+                {name.trim()}
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
           >
             <IconX size={15} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Name */}
-          <div>
-            <label className="mb-1.5 block font-display text-[12px] font-semibold text-[var(--text-secondary)]">
-              Nome
-            </label>
-            <InputGlass
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex.: Suporte, Vendas…"
-              autoFocus
-            />
-          </div>
-
-          {/* Color picker */}
-          <div>
-            <label className="mb-1.5 block font-display text-[12px] font-semibold text-[var(--text-secondary)]">
-              Cor
-            </label>
-            <div className="flex flex-wrap gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2.5">
-              {DEPT_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={cn(
-                    "size-6 rounded-full transition-all hover:scale-110",
-                    color === c && "scale-110 ring-2 ring-offset-1 ring-[var(--glass-border)]",
-                  )}
-                  style={{ backgroundColor: c }}
-                  aria-label={c}
-                />
-              ))}
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-5 px-5 py-5">
+            {/* Name */}
+            <div>
+              <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Nome
+              </label>
+              <InputGlass
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex.: Suporte, Vendas, Financeiro…"
+                autoFocus
+              />
             </div>
-            {/* Preview */}
-            {name.trim() && (
-              <div className="mt-2 flex items-center gap-2">
-                <span
-                  className="inline-block size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
-                  {name.trim()}
-                </span>
+
+            {/* Icon picker */}
+            <div>
+              <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Ícone
+              </label>
+              <div className="grid grid-cols-8 gap-1.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2.5">
+                {DEPT_ICONS.map((em) => (
+                  <button
+                    key={em}
+                    type="button"
+                    onClick={() => setIcon(em)}
+                    className={cn(
+                      "flex h-9 w-full items-center justify-center rounded-[var(--radius-sm)] text-[16px] transition-all",
+                      icon === em
+                        ? "bg-[var(--brand-primary)]/15 ring-1 ring-[var(--brand-primary)]/50 scale-110"
+                        : "hover:bg-[var(--glass-bg-strong)]",
+                    )}
+                    aria-label={em}
+                  >
+                    {em}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+
+            {/* Color picker */}
+            <div>
+              <label className="mb-1.5 block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Cor
+              </label>
+              <div className="flex flex-wrap gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2.5">
+                {DEPT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setColor(c)}
+                    className={cn(
+                      "size-7 rounded-full transition-all hover:scale-110",
+                      color === c && "scale-110 ring-2 ring-offset-2 ring-[var(--glass-border)]",
+                    )}
+                    style={{ backgroundColor: c }}
+                    aria-label={c}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-2 font-display text-sm font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
-            >
-              Cancelar
-            </button>
-            <ButtonGlass
-              type="submit"
-              variant="primary"
-              disabled={!name.trim() || createMutation.isPending}
-            >
-              {createMutation.isPending ? "Criando…" : "Criar"}
-            </ButtonGlass>
+          {/* Footer actions */}
+          <div className="flex items-center justify-between border-t border-[var(--glass-border-subtle)] px-5 py-4">
+            {/* Preview */}
+            <div className="flex items-center gap-2">
+              <div
+                className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[13px]"
+                style={{ backgroundColor: color + "22" }}
+              >
+                {icon}
+              </div>
+              <span className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                {name.trim() || "Nome do departamento"}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-2 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+              >
+                Cancelar
+              </button>
+              <ButtonGlass
+                type="submit"
+                variant="primary"
+                disabled={!name.trim() || createMutation.isPending}
+              >
+                {createMutation.isPending ? "Criando…" : "Criar"}
+              </ButtonGlass>
+            </div>
           </div>
         </form>
       </GlassCard>
@@ -370,9 +418,11 @@ export function DepartmentsTab() {
                   <td className="py-3 pr-4">
                     <span className="flex items-center gap-2.5">
                       <span
-                        className="inline-block size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: dept.color }}
-                      />
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[13px]"
+                        style={{ backgroundColor: dept.color + "22" }}
+                      >
+                        {dept.icon ?? "🏢"}
+                      </span>
                       <span className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
                         {dept.name}
                       </span>

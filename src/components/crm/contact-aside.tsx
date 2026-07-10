@@ -15,6 +15,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconGripVertical,
+  IconLayoutList,
   IconPackage,
   IconPencil,
   IconSparkles,
@@ -24,6 +25,7 @@ import {
   IconX,
   IconAffiliate,
 } from "@tabler/icons-react"
+import { useAsideViewMode, type AsideViewMode } from "@/hooks/use-aside-view-mode"
 import {
   channelTypeLabel,
   formatConnectionShort,
@@ -331,6 +333,46 @@ function Row({
 }
 
 // ─────────────────────────────────────────────────────────────────
+// ViewModeToggle — alterna entre visão foco (premium) e compacta
+// ─────────────────────────────────────────────────────────────────
+function ViewModeToggle({ mode, onChange }: { mode: AsideViewMode; onChange: (m: AsideViewMode) => void }) {
+  return (
+    <div className="flex shrink-0 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+      <TooltipGlass label="Visão foco" side="top">
+        <button
+          type="button"
+          onClick={() => onChange("focus")}
+          className={cn(
+            "flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+            mode === "focus"
+              ? "bg-[var(--brand-primary)] text-white shadow-sm"
+              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+          )}
+          aria-label="Visão foco"
+        >
+          <IconSparkles size={12} />
+        </button>
+      </TooltipGlass>
+      <TooltipGlass label="Visão compacta" side="top">
+        <button
+          type="button"
+          onClick={() => onChange("compact")}
+          className={cn(
+            "flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+            mode === "compact"
+              ? "bg-[var(--brand-primary)] text-white shadow-sm"
+              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+          )}
+          aria-label="Visão compacta"
+        >
+          <IconLayoutList size={12} />
+        </button>
+      </TooltipGlass>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
 // DealInline
 // ─────────────────────────────────────────────────────────────────
 
@@ -632,6 +674,9 @@ export function ContactAside({
   // Aba ativa (Perfil por padrão — é o conteúdo primário do operador).
   const [activeTab, setActiveTab] = useState<AsideTab>("perfil")
 
+  // Toggle foco ↔ compacto (persiste em localStorage, compartilhado com deal-detail).
+  const [viewMode, setViewMode] = useAsideViewMode()
+
   // IB6 do questionario: respeitar visibilidade configurada no
   // FieldConfigPanel admin (context=inbox_lead_v2). Antes o toggle do
   // "olho" no painel de config nao tinha efeito porque ContactAside
@@ -764,16 +809,17 @@ export function ContactAside({
           </div>
         )}
 
-        {/* ── Pills: Perfil / Produto ── */}
-        <div className="px-3 pt-3">
+        {/* ── Pills: Perfil / Produto + toggle de visão ── */}
+        <div className="flex items-center gap-2 px-3 pt-3">
           <PageSegmentedControl
             items={ASIDE_TAB_ITEMS}
             value={activeTab}
             onChange={(v) => setActiveTab(v as AsideTab)}
             aria-label="Alternar entre Perfil e Produto"
             size="compact"
-            className="w-full [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
+            className="flex-1 [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
           />
+          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -838,7 +884,12 @@ export function ContactAside({
                               )}
 
                               {/* Campos nativos */}
-                              <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-1">
+                              <div className={cn(
+                                "rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)]",
+                                viewMode === "compact"
+                                  ? "bg-transparent overflow-hidden px-3"
+                                  : "bg-[var(--glass-bg-overlay)] px-3.5 py-1"
+                              )}>
                                 <Row label="Nome">
                                   <div className="flex items-center gap-1.5">
                                     <InlineNativeEditor
@@ -904,7 +955,7 @@ export function ContactAside({
 
                               {/* Campos personalizados de contato */}
                               {resolvedContactPanelFields.length > 0 && (
-                                <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)]">
+                                <div className={cn("mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)]", viewMode === "compact" ? "bg-transparent" : "bg-[var(--glass-bg-overlay)]")}>
                                   {resolvedContactPanelFields.map((f, i) => {
                                     const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                     const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
@@ -1069,6 +1120,39 @@ export function ContactAside({
                                 )}
 
                                 {resolvedDealPanelFields.length > 0 && (
+                                  viewMode === "compact" ? (
+                                    /* ── Compact: flat rows ── */
+                                    <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] overflow-hidden">
+                                      {resolvedDealPanelFields.map((f, idx) => {
+                                        const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
+                                        const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
+                                        const canEdit = !!f.entityType && !!f.entityId
+                                        return (
+                                          <div
+                                            key={f.fieldId}
+                                            className={cn(
+                                              "flex items-center gap-2 px-3 py-1.5 text-[12px]",
+                                              idx < resolvedDealPanelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
+                                            )}
+                                          >
+                                            <span className="w-[45%] shrink-0 text-[11px] text-[var(--text-muted)] leading-tight">{f.label}</span>
+                                            <div className="min-w-0 flex-1 text-right">
+                                              {dealFieldsEditMode && canEdit ? (
+                                                <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
+                                              ) : hl && colors ? (
+                                                <span style={{ backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }} className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold">{hl.label}</span>
+                                              ) : canEdit ? (
+                                                <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
+                                              ) : (
+                                                <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">{f.value || PLACEHOLDER}</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  ) : (
+                                  /* ── Focus (padrão): grid de cards ── */
                                   <div className="grid grid-cols-2 gap-2">
                                     {resolvedDealPanelFields.map((f) => {
                                       const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
@@ -1089,7 +1173,6 @@ export function ContactAside({
                                             {f.label}
                                           </span>
                                           <div className="min-w-0 w-full">
-                                            {/* Modo edição ativo: sempre mostra editor, ignorando badge */}
                                             {dealFieldsEditMode && canEdit ? (
                                               <InlineFieldEditor
                                                 fieldId={f.fieldId}
@@ -1143,6 +1226,7 @@ export function ContactAside({
                                       )
                                     })}
                                   </div>
+                                  )
                                 )}
                                 </>
                                 )}

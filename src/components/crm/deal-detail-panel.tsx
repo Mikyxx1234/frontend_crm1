@@ -15,6 +15,7 @@ import {
   IconCircleX,
   IconDotsVertical,
   IconGripVertical,
+  IconLayoutList,
   IconSearch,
   IconPencil,
   IconMessageCircle,
@@ -27,6 +28,7 @@ import {
   IconMicrophone,
   IconSend,
   IconSettings,
+  IconSparkles,
   IconX,
   IconCircleCheck,
   IconCircleDashed,
@@ -34,6 +36,7 @@ import {
   IconPackage,
   IconUser,
 } from "@tabler/icons-react"
+import { useAsideViewMode, type AsideViewMode } from "@/hooks/use-aside-view-mode"
 import {
   channelTypeLabel,
   formatConnectionLabel,
@@ -246,6 +249,32 @@ const TABS: { id: TabId; label: string; icon: React.ComponentType<{ size?: numbe
   { id: "chamadas", label: "Chamadas", icon: IconPhone },
 ]
 
+// ─────────────────────────────────────────────────────────────────
+// ViewModeToggle — alterna entre visão foco (premium) e compacta
+// ─────────────────────────────────────────────────────────────────
+function ViewModeToggle({ mode, onChange }: { mode: AsideViewMode; onChange: (m: AsideViewMode) => void }) {
+  return (
+    <div className="flex shrink-0 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+      <TooltipGlass label="Visão foco" side="top">
+        <button type="button" onClick={() => onChange("focus")} aria-label="Visão foco"
+          className={cn("flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+            mode === "focus" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          )}>
+          <IconSparkles size={12} />
+        </button>
+      </TooltipGlass>
+      <TooltipGlass label="Visão compacta" side="top">
+        <button type="button" onClick={() => onChange("compact")} aria-label="Visão compacta"
+          className={cn("flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
+            mode === "compact" ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          )}>
+          <IconLayoutList size={12} />
+        </button>
+      </TooltipGlass>
+    </div>
+  )
+}
+
 export function DealDetailPanel({
   isOpen,
   onClose,
@@ -294,6 +323,9 @@ export function DealDetailPanel({
 
   // Aba ativa da sidebar (Perfil por padrão — conteúdo primário do operador).
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>("perfil")
+
+  // Toggle foco ↔ compacto (compartilhado com contact-aside via localStorage).
+  const [viewMode, setViewMode] = useAsideViewMode()
 
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
   // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
@@ -764,15 +796,18 @@ export function DealDetailPanel({
                     </div>
                   </div>
 
-                  {/* ── Pills: Perfil / Produto ── */}
-                  <PageSegmentedControl
-                    items={SIDEBAR_TAB_ITEMS}
-                    value={activeSidebarTab}
-                    onChange={(v) => setActiveSidebarTab(v as SidebarTab)}
-                    aria-label="Alternar entre Perfil e Produto"
-                    size="compact"
-                    className="w-full [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
-                  />
+                  {/* ── Pills: Perfil / Produto + toggle de visão ── */}
+                  <div className="flex items-center gap-2">
+                    <PageSegmentedControl
+                      items={SIDEBAR_TAB_ITEMS}
+                      value={activeSidebarTab}
+                      onChange={(v) => setActiveSidebarTab(v as SidebarTab)}
+                      aria-label="Alternar entre Perfil e Produto"
+                      size="compact"
+                      className="flex-1 [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
+                    />
+                    <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+                  </div>
 
                 <DragDropContext onDragEnd={handleSidebarDragEnd}>
                   <Droppable droppableId="sidebar-sections">
@@ -808,8 +843,13 @@ export function DealDetailPanel({
                                       title="Informações do Contato"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                     >
-                                      {/* Grid 2 colunas — mesmo padrão do contact-aside (inbox) */}
-                                      <div className="grid grid-cols-2 gap-1.5 py-2">
+                                      {/* Grid 2 colunas (focus) / coluna única (compact) */}
+                                      <div className={cn(
+                                        "py-2",
+                                        viewMode === "compact"
+                                          ? "flex flex-col gap-1 [&>div]:col-span-2"
+                                          : "grid grid-cols-2 gap-1.5"
+                                      )}>
                                         {/* Telefone */}
                                         <div className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
                                           <span className="text-[10px] font-medium text-[var(--text-muted)]">Telefone</span>
@@ -956,68 +996,95 @@ export function DealDetailPanel({
                                         </button>
                                       }
                                     >
-                                      {/* Grid 2-col igual ao aside do inbox */}
-                                      <div className="grid grid-cols-2 gap-1.5 py-2">
-                                        {customFieldsSlot.map((field) => {
-                                          const currentValue = fieldValues[field.fieldId] ?? field.value
-                                          const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
-                                          const canEdit = !!field.entityType && !!field.entityId
-                                          const isLong = (currentValue ?? "").toString().length > 18 || (currentValue ?? "").toString().includes("@")
-                                          return (
-                                            <div
-                                              key={field.fieldId}
-                                              className={cn(
-                                                "flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2",
-                                                isLong && "col-span-2",
-                                              )}
-                                            >
-                                              <span className="text-[10px] font-medium text-[var(--text-muted)]">
-                                                {field.label}
-                                              </span>
-                                              <div className="min-w-0 w-full">
-                                                {dealCustomEditMode && canEdit ? (
-                                                  <InlineFieldEditor
-                                                    fieldId={field.fieldId}
-                                                    fieldType={(field as { type?: string }).type ?? "TEXT"}
-                                                    fieldOptions={field.options ?? []}
-                                                    value={currentValue ?? null}
-                                                    entityType={field.entityType!}
-                                                    entityId={field.entityId!}
-                                                    editMode={dealCustomEditMode}
-                                                    invalidateKeys={[["deal-detail-v2", deal.id]]}
-                                                    onSaved={(v) =>
-                                                      setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
-                                                    }
-                                                    textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
-                                                    placeholder="+ Adicionar"
-                                                  />
-                                                ) : hl ? (
-                                                  <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
-                                                ) : canEdit ? (
-                                                  <InlineFieldEditor
-                                                    fieldId={field.fieldId}
-                                                    fieldType={(field as { type?: string }).type ?? "TEXT"}
-                                                    fieldOptions={field.options ?? []}
-                                                    value={currentValue ?? null}
-                                                    entityType={field.entityType!}
-                                                    entityId={field.entityId!}
-                                                    invalidateKeys={[["deal-detail-v2", deal.id]]}
-                                                    onSaved={(v) =>
-                                                      setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
-                                                    }
-                                                    textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
-                                                    placeholder="+ Adicionar"
-                                                  />
-                                                ) : (
-                                                  <span className="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all">
-                                                    {currentValue || <span className="italic text-[var(--text-muted)]">—</span>}
-                                                  </span>
-                                                )}
+                                      {viewMode === "compact" ? (
+                                        /* ── Compact: flat rows ── */
+                                        <div className="divide-y divide-[var(--glass-border-subtle)] py-1">
+                                          {customFieldsSlot.map((field) => {
+                                            const currentValue = fieldValues[field.fieldId] ?? field.value
+                                            const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                            const canEdit = !!field.entityType && !!field.entityId
+                                            return (
+                                              <div key={field.fieldId} className="flex items-center gap-2 px-1 py-1.5">
+                                                <span className="w-[45%] shrink-0 text-[11px] text-[var(--text-muted)] leading-tight">{field.label}</span>
+                                                <div className="min-w-0 flex-1 text-right">
+                                                  {dealCustomEditMode && canEdit ? (
+                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
+                                                  ) : hl ? (
+                                                    <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                                  ) : canEdit ? (
+                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
+                                                  ) : (
+                                                    <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">{currentValue || <span className="italic text-[var(--text-muted)]">—</span>}</span>
+                                                  )}
+                                                </div>
                                               </div>
-                                            </div>
-                                          )
-                                        })}
-                                      </div>
+                                            )
+                                          })}
+                                        </div>
+                                      ) : (
+                                        /* ── Focus (padrão): grid de cards ── */
+                                        <div className="grid grid-cols-2 gap-1.5 py-2">
+                                          {customFieldsSlot.map((field) => {
+                                            const currentValue = fieldValues[field.fieldId] ?? field.value
+                                            const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                            const canEdit = !!field.entityType && !!field.entityId
+                                            const isLong = (currentValue ?? "").toString().length > 18 || (currentValue ?? "").toString().includes("@")
+                                            return (
+                                              <div
+                                                key={field.fieldId}
+                                                className={cn(
+                                                  "flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2",
+                                                  isLong && "col-span-2",
+                                                )}
+                                              >
+                                                <span className="text-[10px] font-medium text-[var(--text-muted)]">
+                                                  {field.label}
+                                                </span>
+                                                <div className="min-w-0 w-full">
+                                                  {dealCustomEditMode && canEdit ? (
+                                                    <InlineFieldEditor
+                                                      fieldId={field.fieldId}
+                                                      fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                      fieldOptions={field.options ?? []}
+                                                      value={currentValue ?? null}
+                                                      entityType={field.entityType!}
+                                                      entityId={field.entityId!}
+                                                      editMode={dealCustomEditMode}
+                                                      invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                      onSaved={(v) =>
+                                                        setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                      }
+                                                      textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
+                                                      placeholder="+ Adicionar"
+                                                    />
+                                                  ) : hl ? (
+                                                    <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                                  ) : canEdit ? (
+                                                    <InlineFieldEditor
+                                                      fieldId={field.fieldId}
+                                                      fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                      fieldOptions={field.options ?? []}
+                                                      value={currentValue ?? null}
+                                                      entityType={field.entityType!}
+                                                      entityId={field.entityId!}
+                                                      invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                      onSaved={(v) =>
+                                                        setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                      }
+                                                      textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
+                                                      placeholder="+ Adicionar"
+                                                    />
+                                                  ) : (
+                                                    <span className="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all">
+                                                      {currentValue || <span className="italic text-[var(--text-muted)]">—</span>}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      )}
                                     </FieldCard>
                                   )}
                                 </div>

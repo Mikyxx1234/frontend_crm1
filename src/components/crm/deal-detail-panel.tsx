@@ -555,9 +555,9 @@ export function DealDetailPanel({
                   <div className="absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
                 </div>
 
-                {/* Linha topo: voltar (esq) + ações (kebab + engrenagem) +
-                    dropdown de fase (dir). O "voltar" migrou da barra de topo
-                    removida — fecha o painel (ESC também funciona). */}
+                {/* Linha topo: voltar (esq) + dropdown de fase (centro-dir) +
+                    kebab + engrenagem (canto direito).
+                    Ordem: ← back | spacer | stage-pill | kebab | gear */}
                 <div className="relative flex items-center gap-1.5">
                   <TooltipGlass label="Voltar" side="bottom">
                     <button
@@ -570,6 +570,15 @@ export function DealDetailPanel({
                     </button>
                   </TooltipGlass>
                   <div className="flex-1" />
+                  {stageDropdownSlot ? (
+                    <div className="relative z-30 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[11px] [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
+                      {stageDropdownSlot}
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
+                      {deal.stage ?? "Em processo"}
+                    </span>
+                  )}
                   {moreActionsSlot && (
                     <div className="[&_button]:!text-white [&_button:hover]:!bg-white/15 [&_button]:!rounded-[var(--radius-sm)]">
                       {moreActionsSlot}
@@ -594,15 +603,6 @@ export function DealDetailPanel({
                         {configOpen ? <IconX size={13} /> : <IconSettings size={13} />}
                       </button>
                     </TooltipGlass>
-                  )}
-                  {stageDropdownSlot ? (
-                    <div className="relative z-30 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
-                      {stageDropdownSlot}
-                    </div>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
-                      {deal.stage ?? "Em processo"}
-                    </span>
                   )}
                 </div>
 
@@ -673,7 +673,7 @@ export function DealDetailPanel({
                     </p>
                   </div>
                   {ownerSlot && (
-                    <div className="shrink-0 [&_button]:!border-transparent [&_button]:!bg-white [&_button]:!text-[var(--brand-primary)] [&_button]:shadow-sm [&_span]:!border-transparent [&_span]:!bg-white [&_span]:!text-[var(--brand-primary)] [&_span]:shadow-sm">
+                    <div className="shrink-0 [&_button]:!rounded-full [&_button]:!border-transparent [&_button]:!bg-white [&_button]:!text-[var(--brand-primary)] [&_button]:shadow-sm [&_span]:!rounded-full [&_span]:!border-transparent [&_span]:!bg-white [&_span]:!text-[var(--brand-primary)] [&_span]:shadow-sm">
                       {ownerSlot}
                     </div>
                   )}

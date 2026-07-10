@@ -323,6 +323,20 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
   const qc = useQueryClient();
   const queryKey = ["field-config-fields", entity];
 
+  /**
+   * Invalida a lista de config E as queries que alimentam as asides
+   * (inbox ContactAside + pipeline DealDetailPanel). Sem isso, alterar
+   * visibilidade/ordem/formatação condicional de um campo não refletia
+   * no deal detail (que lê de `contact-sidebar`): só o inbox atualizava,
+   * por acaso, via refetch do `use-realtime`. Agora ambos atualizam na
+   * hora. `deal-detail-v2` cobre os campos nativos do negócio.
+   */
+  const invalidatePanels = () => {
+    qc.invalidateQueries({ queryKey });
+    qc.invalidateQueries({ queryKey: ["contact-sidebar"] });
+    qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+  };
+
   const { data: rawFields = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: () => fetchFields(entity),
@@ -356,7 +370,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
   const deleteMutation = useMutation({
     mutationFn: deleteField,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey });
+      invalidatePanels();
       toast.success("Campo excluído");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -370,7 +384,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
         visible.map((f, idx) => updateField(f.id, { inboxLeadPanelOrder: idx })),
       );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey }),
+    onSuccess: () => invalidatePanels(),
     onError: (e: Error) => {
       toast.error(e.message);
       setLocalOrder(null);
@@ -384,7 +398,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
         inboxLeadPanelOrder: visible ? maxOrder : null,
       });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey }),
+    onSuccess: () => invalidatePanels(),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -564,7 +578,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
           initial={editItem}
           onCancel={closeForm}
           onSaved={() => {
-            qc.invalidateQueries({ queryKey });
+            invalidatePanels();
             closeForm();
             toast.success(editItem ? "Campo atualizado" : "Campo criado");
           }}

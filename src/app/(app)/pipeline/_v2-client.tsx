@@ -40,6 +40,7 @@ import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
+import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
@@ -86,7 +87,6 @@ import {
   AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
-  DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
   InlineEditText,
@@ -1030,7 +1030,11 @@ export default function KanbanV2ClientPage({
                   />
                 ),
                 timeline: <DealTimelineTab dealId={activeDealId} />,
-                atividades: <DealActivitiesTab />,
+                atividades: (
+                  <div className="flex-1 overflow-auto">
+                    <ActivitiesPanel dealId={activeDealId} />
+                  </div>
+                ),
                 chamadas: (
                   <div className="flex-1 overflow-auto p-4">
                     <CallHistoryList

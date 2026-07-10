@@ -9,6 +9,7 @@ import {
 } from "@hello-pangea/dnd"
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
+import { PageSegmentedControl } from "@/components/crm/page-toolbar"
 import {
   IconArrowLeft,
   IconCircleX,
@@ -30,6 +31,8 @@ import {
   IconCircleCheck,
   IconCircleDashed,
   IconAffiliate,
+  IconPackage,
+  IconUser,
 } from "@tabler/icons-react"
 import {
   channelTypeLabel,
@@ -58,6 +61,37 @@ type SidebarSection = "principal" | "contato" | "campos" | "produtos"
 // persistida em localStorage.
 const SIDEBAR_DEFAULT_ORDER: SidebarSection[] = ["produtos", "campos", "contato"]
 const SIDEBAR_STORAGE_KEY = "crm:deal-detail:sidebar-order:v4"
+
+// ── Abas Perfil / Produto ─────────────────────────────────────────
+// Origem + Tags continuam FIXOS acima das pills. As seções vão para
+// duas abas: "Perfil" (contato + campos de negócio) e "Produto"
+// (produtos). `principal` não pertence a nenhuma aba (render null).
+type SidebarTab = "perfil" | "produto"
+const SIDEBAR_SECTION_TAB: Partial<Record<SidebarSection, SidebarTab>> = {
+  contato: "perfil",
+  campos: "perfil",
+  produtos: "produto",
+}
+const SIDEBAR_TAB_ITEMS = [
+  {
+    value: "perfil",
+    label: (
+      <span className="inline-flex items-center gap-1.5">
+        <IconUser size={13} />
+        Perfil
+      </span>
+    ),
+  },
+  {
+    value: "produto",
+    label: (
+      <span className="inline-flex items-center gap-1.5">
+        <IconPackage size={13} />
+        Produto
+      </span>
+    ),
+  },
+] as const
 import { ChatArea } from "./chat-area"
 import { type Message } from "./message-bubble"
 import { resolveHighlight, SEVERITY_COLORS } from "@/lib/highlight"
@@ -256,6 +290,9 @@ export function DealDetailPanel({
     SIDEBAR_DEFAULT_ORDER,
   )
 
+  // Aba ativa (Perfil por padrão — conteúdo primário do operador).
+  const [activeTab, setActiveTab] = useState<SidebarTab>("perfil")
+
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
   // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
   // Antes o painel era estatico e ignorava qualquer toggle de "olho" feito
@@ -341,9 +378,27 @@ export function DealDetailPanel({
     [sidebarWidth, onResizeMove, onResizeEnd],
   )
 
+  // Seções visíveis na aba ativa (Origem/Tags são fixos, fora daqui).
+  const tabbedSections = useMemo(
+    () =>
+      sectionOrder.filter((s) => {
+        if (SIDEBAR_SECTION_TAB[s] !== activeTab) return false
+        if (sectionHiddenMap[s]) return false
+        if (s === "campos" && (!customFieldsSlot || customFieldsSlot.length === 0))
+          return false
+        if (s === "produtos" && !productsSlot) return false
+        return true
+      }),
+    [sectionOrder, activeTab, sectionHiddenMap, customFieldsSlot, productsSlot],
+  )
+
   function handleSidebarDragEnd(result: DropResult) {
     if (!result.destination) return
-    reorderSections(result.source.index, result.destination.index)
+    // Índices relativos à aba atual → traduz p/ posição absoluta.
+    const from = tabbedSections[result.source.index]
+    const to = tabbedSections[result.destination.index]
+    if (!from || !to) return
+    reorderSections(sectionOrder.indexOf(from), sectionOrder.indexOf(to))
   }
 
   // ESC fecha o painel quando esta aberto. Ignora se algum input/
@@ -707,6 +762,16 @@ export function DealDetailPanel({
                     </div>
                   </div>
 
+                  {/* ── Pills: Perfil / Produto ── */}
+                  <PageSegmentedControl
+                    items={SIDEBAR_TAB_ITEMS}
+                    value={activeTab}
+                    onChange={(v) => setActiveTab(v as SidebarTab)}
+                    aria-label="Alternar entre Perfil e Produto"
+                    size="compact"
+                    className="w-full [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
+                  />
+
                 <DragDropContext onDragEnd={handleSidebarDragEnd}>
                   <Droppable droppableId="sidebar-sections">
                     {(droppableProvided) => (
@@ -715,12 +780,7 @@ export function DealDetailPanel({
                         {...droppableProvided.droppableProps}
                         className="flex min-w-0 flex-col gap-5"
                       >
-                        {sectionOrder.map((sectionId, index) => {
-                          if (sectionId === "campos" && (!customFieldsSlot || customFieldsSlot.length === 0)) return null
-                          // DD8: bloco ocultado pelo admin via FieldConfigPanel
-                          // nao deve renderizar. `principal` ja retorna null
-                          // mais abaixo, entao nao precisa entrar aqui.
-                          if (sectionHiddenMap[sectionId]) return null
+                        {tabbedSections.map((sectionId, index) => {
                           return (
                             <Draggable key={sectionId} draggableId={sectionId} index={index}>
                               {(provided, snapshot) => (
@@ -743,7 +803,7 @@ export function DealDetailPanel({
 
                                   {sectionId === "contato" && (
                                     <FieldCard
-                                      title="Detalhes de Contato"
+                                      title="Informações do Contato"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                     >
                                       <FieldRow
@@ -880,7 +940,7 @@ export function DealDetailPanel({
 
                                   {sectionId === "campos" && customFieldsSlot && customFieldsSlot.length > 0 && (
                                     <FieldCard
-                                      title="Campos de Negócio"
+                                      title="Informações do Negócio"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                       titleActions={
                                         <button
@@ -960,6 +1020,17 @@ export function DealDetailPanel({
                     )}
                   </Droppable>
                 </DragDropContext>
+
+                {/* Estado vazio da aba (ex.: Produto sem itens) */}
+                {tabbedSections.length === 0 && (
+                  <div className="px-3 py-6 text-center">
+                    <p className="font-display text-[12px] text-[var(--text-muted)]">
+                      {activeTab === "produto"
+                        ? "Nenhum produto adicionado a este negócio."
+                        : "Nenhum dado de perfil disponível."}
+                    </p>
+                  </div>
+                )}
                 </div>
               )}
 

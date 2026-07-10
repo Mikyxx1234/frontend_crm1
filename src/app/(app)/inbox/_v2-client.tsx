@@ -61,8 +61,8 @@ import { DealTagsPopover } from "@/features/pipeline-v2/extras/deal-tags-popover
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
+import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import {
-  DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
 } from "@/features/pipeline-v2/extras";
@@ -622,9 +622,9 @@ export default function InboxV2ClientPage({
     : null;
 
   // ── Slots das abas do card da conversa ──────────────────────────
-  // Notas/Timeline sao escopados ao 1o negocio do contato (mesmo
-  // padrao do DealDetailPanel). Sem negocio vinculado, mostra um
-  // placeholder amigavel. Atividades ainda e' placeholder global.
+  // Notas/Timeline/Tarefas sao escopados ao 1o negocio do contato
+  // (mesmo padrao do DealDetailPanel). Sem negocio vinculado, mostra
+  // um placeholder amigavel.
   const dealNotes =
     (firstDealDetail as { notes?: string | null } | undefined)?.notes ?? null;
   const notesSlot = firstDealId ? (
@@ -641,7 +641,13 @@ export default function InboxV2ClientPage({
   ) : (
     <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
   );
-  const activitiesSlot = <DealActivitiesTab />;
+  const activitiesSlot = firstDealId ? (
+    <div className="flex-1 overflow-auto">
+      <ActivitiesPanel dealId={firstDealId} />
+    </div>
+  ) : (
+    <NoDealTab message="Vincule um negocio a este contato para registrar tarefas." />
+  );
   // IB8: aba "Chamadas" no topo do inbox, igual ao DealDetailPanel. Lista
   // os logs de telefonia do contato ativo. Usamos `activeContactId` (nao
   // o dealId) porque o historico de chamadas e' por contato.
@@ -802,7 +808,7 @@ export default function InboxV2ClientPage({
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
-            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}` }}
+            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "28px" : `${asideWidth}px`}` }}
           >
             {conversationColumnNode}
             {chatNode}
@@ -829,7 +835,7 @@ export default function InboxV2ClientPage({
       className="v2-screen grid gap-4 p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
-        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}`,
+        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "28px" : `${asideWidth}px`}`,
       }}
     >
       {navRailNode}

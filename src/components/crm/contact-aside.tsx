@@ -9,6 +9,7 @@ import {
 } from "@hello-pangea/dnd"
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
+import { PageSegmentedControl } from "@/components/crm/page-toolbar"
 import {
   IconChevronDown,
   IconChevronLeft,
@@ -161,6 +162,38 @@ const ASIDE_DEFAULT_ORDER: AsideSection[] = [
 // [negocios, contato, campos-negocio] persistido em localStorage e
 // a nova secao nunca apareceria (`useSectionOrder` mantem o valor salvo).
 const ASIDE_STORAGE_KEY = "crm:contact-aside:section-order-v4"
+
+// ── Abas Perfil / Produto ─────────────────────────────────────────
+// O hero do negócio (secao `negocios`) fica FIXO no topo. As demais
+// secoes sao distribuidas em duas abas: "Perfil" (dados de contato +
+// campos de negocio) e "Produto" (produtos). O drag-and-drop continua
+// funcionando DENTRO de cada aba (ex.: reordenar contato/campos).
+type AsideTab = "perfil" | "produto"
+const SECTION_TAB: Partial<Record<AsideSection, AsideTab>> = {
+  contato: "perfil",
+  "campos-negocio": "perfil",
+  produtos: "produto",
+}
+const ASIDE_TAB_ITEMS = [
+  {
+    value: "perfil",
+    label: (
+      <span className="inline-flex items-center gap-1.5">
+        <IconUser size={13} />
+        Perfil
+      </span>
+    ),
+  },
+  {
+    value: "produto",
+    label: (
+      <span className="inline-flex items-center gap-1.5">
+        <IconPackage size={13} />
+        Produto
+      </span>
+    ),
+  },
+] as const
 
 // ─────────────────────────────────────────────────────────────────
 // Constants / helpers
@@ -482,7 +515,7 @@ function DealInline({
         <div className="mt-2 mb-2">
           <div className="mb-1 flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
             <IconSparkles size={12} />
-            Campos do negócio
+            Informações do Negócio
           </div>
           {/* Layout responsivo: grid 2-col; valores muito longos (>18 chars ou com espaco)
               ganham col-span-2 (ocupam linha inteira sozinhos) — layout compacto sem
@@ -595,6 +628,9 @@ export function ContactAside({
     ASIDE_DEFAULT_ORDER,
   )
 
+  // Aba ativa (Perfil por padrão — é o conteúdo primário do operador).
+  const [activeTab, setActiveTab] = useState<AsideTab>("perfil")
+
   // IB6 do questionario: respeitar visibilidade configurada no
   // FieldConfigPanel admin (context=inbox_lead_v2). Antes o toggle do
   // "olho" no painel de config nao tinha efeito porque ContactAside
@@ -614,9 +650,41 @@ export function ContactAside({
     return hidden
   }, [fieldLayoutSections])
 
+  // Seções visíveis na aba ativa (o hero `negocios` fica fora — é fixo).
+  // Aplica os mesmos guards de dados que antes viviam no loop de render.
+  const tabbedSections = useMemo(
+    () =>
+      sectionOrder.filter((s) => {
+        if (s === "negocios") return false
+        if (SECTION_TAB[s] !== activeTab) return false
+        if (sectionHiddenMap[s]) return false
+        if (s === "produtos" && deals.length === 0) return false
+        if (
+          s === "campos-negocio" &&
+          resolvedDealPanelFields.length === 0 &&
+          !resolvedDealConfig
+        )
+          return false
+        return true
+      }),
+    [
+      sectionOrder,
+      activeTab,
+      sectionHiddenMap,
+      deals.length,
+      resolvedDealPanelFields.length,
+      resolvedDealConfig,
+    ],
+  )
+
   function handleDragEnd(result: DropResult) {
     if (!result.destination) return
-    reorder(result.source.index, result.destination.index)
+    // Os índices do resultado são relativos à lista da aba atual;
+    // traduz de volta para a posição absoluta em `sectionOrder`.
+    const from = tabbedSections[result.source.index]
+    const to = tabbedSections[result.destination.index]
+    if (!from || !to) return
+    reorder(sectionOrder.indexOf(from), sectionOrder.indexOf(to))
   }
 
   /* ── Estado recolhido ── */
@@ -681,6 +749,32 @@ export function ContactAside({
           </div>
         )}
 
+        {/* ── Hero do negócio (FIXO no topo, fora das abas) ── */}
+        {deals.length > 0 && !sectionHiddenMap["negocios"] && (
+          <div className="border-b border-[var(--glass-border-subtle)]">
+            <div className="flex justify-center pb-0 pt-1.5">
+              <span className="flex items-center gap-0.5 rounded px-2 py-0.5 text-[var(--text-muted)] opacity-0">
+                <IconGripVertical size={13} />
+              </span>
+            </div>
+            {deals.map((deal) => (
+              <DealInline key={deal.id} deal={deal} course={course} contact={contact} />
+            ))}
+          </div>
+        )}
+
+        {/* ── Pills: Perfil / Produto ── */}
+        <div className="px-3 pt-3">
+          <PageSegmentedControl
+            items={ASIDE_TAB_ITEMS}
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as AsideTab)}
+            aria-label="Alternar entre Perfil e Produto"
+            size="compact"
+            className="w-full [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
+          />
+        </div>
+
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="aside-sections">
             {(droppableProvided) => (
@@ -689,19 +783,7 @@ export function ContactAside({
                 {...droppableProvided.droppableProps}
                 className="flex flex-col"
               >
-                {sectionOrder.map((sectionId, index) => {
-                  if (sectionId === "negocios" && deals.length === 0) return null
-                  if (
-                    sectionId === "campos-negocio" &&
-                    resolvedDealPanelFields.length === 0 &&
-                    !resolvedDealConfig
-                  ) return null
-                  // Produtos so faz sentido se houver ao menos um negocio
-                  // vinculado (o CRUD e por dealId).
-                  if (sectionId === "produtos" && deals.length === 0) return null
-                  // IB6: bloco ocultado via FieldConfigPanel admin.
-                  if (sectionHiddenMap[sectionId]) return null
-
+                {tabbedSections.map((sectionId, index) => {
                   return (
                     <Draggable key={sectionId} draggableId={sectionId} index={index}>
                       {(provided, snapshot) => (
@@ -714,29 +796,6 @@ export function ContactAside({
                               "z-50 rounded-[var(--radius-xl)] opacity-90 shadow-2xl ring-2 ring-[var(--brand-primary)]/30",
                           )}
                         >
-                          {/* ── Negócios ── */}
-                          {sectionId === "negocios" && (
-                            <div className="border-b border-[var(--glass-border-subtle)]">
-                              <div className="flex justify-center pb-0 pt-1.5">
-                                <span
-                                  {...provided.dragHandleProps}
-                                  className="flex cursor-grab items-center gap-0.5 rounded px-2 py-0.5 text-[var(--text-muted)] opacity-0 transition-opacity group-hover/section:opacity-50 hover:opacity-100 active:cursor-grabbing"
-                                  aria-label="Arrastar bloco Negócios"
-                                >
-                                  <IconGripVertical size={13} />
-                                </span>
-                              </div>
-                              {deals.map((deal) => (
-                                <DealInline
-                                  key={deal.id}
-                                  deal={deal}
-                                  course={course}
-                                  contact={contact}
-                                />
-                              ))}
-                            </div>
-                          )}
-
                           {/* ── Detalhes de Contato (campos nativos + personalizados) ── */}
                           {sectionId === "contato" && (
                             <div className="border-b border-[var(--glass-border-subtle)] px-3 pb-2">
@@ -766,7 +825,7 @@ export function ContactAside({
                                   </>
                                 }
                               >
-                                Detalhes de Contato
+                                Informações do Contato
                               </SectionHeader>
 
                               {contactSectionOpen && (
@@ -997,7 +1056,7 @@ export function ContactAside({
                                     </>
                                   }
                                 >
-                                  Campos de Negócio
+                                  Informações do Negócio
                                 </SectionHeader>
 
                                 {dealFieldsSectionOpen && (
@@ -1098,6 +1157,17 @@ export function ContactAside({
             )}
           </Droppable>
         </DragDropContext>
+
+        {/* Estado vazio da aba (ex.: Produto sem negócio vinculado) */}
+        {tabbedSections.length === 0 && (
+          <div className="px-3 py-6 text-center">
+            <p className="font-display text-[12px] text-[var(--text-muted)]">
+              {activeTab === "produto"
+                ? "Nenhum produto — vincule um negócio para adicionar."
+                : "Nenhum dado de perfil disponível."}
+            </p>
+          </div>
+        )}
       </div>
     </aside>
   )

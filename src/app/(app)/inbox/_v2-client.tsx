@@ -720,7 +720,21 @@ export default function InboxV2ClientPage({
     contactAsideViewWithSlots && activeRow ? (
       <ContactAside
         contact={contactAsideViewWithSlots}
-        headerActionsNode={undefined}
+        headerActionsNode={
+          <>
+            {/* DealCallButton devolvido pro header do chat (ao lado do
+                chip de telefone). Aqui no aside ficam so acoes de
+                atribuicao / colapso pra evitar duplicidade do "Ligar
+                para <numero>" que ja aparece no header do inbox. */}
+            <RequirePermission permission="conversation:reassign">
+              <AssigneePopover
+                conversationId={activeId}
+                currentAssigneeName={activeRow.assignedTo?.name}
+                currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              />
+            </RequirePermission>
+          </>
+        }
         tagsNode={tagsNode}
         contactTagsNode={
           // IB7: tags do CONTATO (mesmo padrao das tags de negocio) —

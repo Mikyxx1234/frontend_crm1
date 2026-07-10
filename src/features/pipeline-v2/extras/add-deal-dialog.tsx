@@ -390,6 +390,7 @@ export function AddDealDialog({
                       if (normalized && normalized !== raw) setNewPhone(normalized);
                     }}
                     placeholder="Telefone (ex.: 11987654321)"
+                    className={inputCls}
                   />
                   <Input
                     type="email"

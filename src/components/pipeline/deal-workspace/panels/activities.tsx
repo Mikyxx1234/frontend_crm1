@@ -7,6 +7,7 @@ import { IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle a
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { SelectNative } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,8 +44,16 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
   const [type, setType] = React.useState("TASK");
   const [title, setTitle] = React.useState("");
   const [desc, setDesc] = React.useState("");
-  const [scheduled, setScheduled] = React.useState("");
+  const [scheduledDate, setScheduledDate] = React.useState(""); // "yyyy-MM-dd"
+  const [scheduledTime, setScheduledTime] = React.useState(""); // "HH:mm"
   const [open, setOpen] = React.useState(false);
+
+  // Combina data + hora em ISO string (ou vazia)
+  const scheduledISO = React.useMemo(() => {
+    if (!scheduledDate) return "";
+    const time = scheduledTime || "00:00";
+    return `${scheduledDate}T${time}`;
+  }, [scheduledDate, scheduledTime]);
 
   const { data: activities = [], isLoading } = useQuery<DealDetailActivity[]>({
     queryKey: activitiesKey(dealId),
@@ -67,7 +76,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
     mutationFn: async () => {
       const body: Record<string, unknown> = { type, title: title.trim(), dealId };
       if (desc.trim()) body.description = desc.trim();
-      if (scheduled.trim()) body.scheduledAt = new Date(scheduled).toISOString();
+      if (scheduledISO) body.scheduledAt = new Date(scheduledISO).toISOString();
       const res = await fetch(apiUrl("/api/activities"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,7 +86,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
       return res.json();
     },
     onSuccess: () => {
-      setTitle(""); setDesc(""); setScheduled(""); setOpen(false);
+      setTitle(""); setDesc(""); setScheduledDate(""); setScheduledTime(""); setOpen(false);
       invalidate();
     },
   });
@@ -143,12 +152,25 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                     Agendar
                   </label>
-                  <Input
-                    type="datetime-local"
-                    value={scheduled}
-                    onChange={(e) => setScheduled(e.target.value)}
-                    className="h-9 rounded-xl border-border text-sm"
-                  />
+                  <div className="flex gap-1.5">
+                    <DatePicker
+                      value={scheduledDate || null}
+                      onChange={(v) => setScheduledDate(v)}
+                      placeholder="Data"
+                      className="min-w-0 flex-1"
+                    />
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      disabled={!scheduledDate}
+                      className={cn(
+                        "h-8 w-[90px] shrink-0 rounded-lg border border-border bg-[var(--color-bg-card)] px-2 text-[13px] text-foreground transition",
+                        "focus:outline-none focus:ring-2 focus:ring-[var(--color-border)]",
+                        "disabled:cursor-not-allowed disabled:opacity-40",
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
               <Input
@@ -171,7 +193,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   variant="ghost"
                   size="sm"
                   className="rounded-full px-4 text-[12px] font-bold text-[var(--text-muted)]"
-                  onClick={() => { setOpen(false); setTitle(""); setDesc(""); setScheduled(""); }}
+                  onClick={() => { setOpen(false); setTitle(""); setDesc(""); setScheduledDate(""); setScheduledTime(""); }}
                 >
                   Cancelar
                 </Button>

@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconMail as Mail, IconMessageCircle as MessageCircle, IconPhoneCall as PhoneCall, IconPlus as Plus, IconTrash as Trash2, IconUsers as Users, IconLoader2 as Loader2 } from "@tabler/icons-react"
+import { IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconClock, IconMail as Mail, IconMessageCircle as MessageCircle, IconPhoneCall as PhoneCall, IconPlus as Plus, IconTrash as Trash2, IconUsers as Users, IconLoader2 as Loader2 } from "@tabler/icons-react"
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,64 @@ import { cn, formatDateTime } from "@/lib/utils";
 
 import type { DealDetailActivity } from "../shared";
 import { ACTIVITY_TYPES } from "../shared";
+
+// ── TimePicker DS v2 ──────────────────────────────────────────────
+// Substituição do <input type="time"> nativo (exibe scroll-wheel do browser).
+// Dois selects compactos para hora e minuto, estilizados com tokens do DS.
+function TimePickerInline({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;         // "HH:mm" ou ""
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const [hh, mm] = value ? value.split(":") : ["", ""];
+
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
+  function handleHour(h: string) {
+    onChange(`${h}:${mm || "00"}`);
+  }
+  function handleMinute(m: string) {
+    onChange(`${hh || "00"}:${m}`);
+  }
+
+  const selectCls = cn(
+    "h-8 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 text-[13px] text-foreground transition appearance-none cursor-pointer",
+    "focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]/40",
+    "disabled:cursor-not-allowed disabled:opacity-40",
+  );
+
+  return (
+    <div className={cn("flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 transition", disabled && "opacity-40 pointer-events-none")}>
+      <IconClock size={12} className="shrink-0 text-[var(--color-ink-muted)]" />
+      <select
+        disabled={disabled}
+        value={hh || ""}
+        onChange={(e) => handleHour(e.target.value)}
+        className={cn(selectCls, "w-[38px] border-0 bg-transparent focus:ring-0 px-0.5")}
+        aria-label="Hora"
+      >
+        <option value="">--</option>
+        {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+      </select>
+      <span className="text-[11px] font-bold text-[var(--color-ink-muted)]">:</span>
+      <select
+        disabled={disabled}
+        value={mm || ""}
+        onChange={(e) => handleMinute(e.target.value)}
+        className={cn(selectCls, "w-[38px] border-0 bg-transparent focus:ring-0 px-0.5")}
+        aria-label="Minuto"
+      >
+        <option value="">--</option>
+        {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+    </div>
+  );
+}
 
 // Mapa de tipo -> visual (icone + cor accent + bg pilula)
 const TYPE_VISUAL: Record<
@@ -152,23 +210,17 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                     Agendar
                   </label>
-                  <div className="flex gap-1.5">
+                    <div className="flex gap-1.5">
                     <DatePicker
                       value={scheduledDate || null}
                       onChange={(v) => setScheduledDate(v)}
                       placeholder="Data"
                       className="min-w-0 flex-1"
                     />
-                    <input
-                      type="time"
+                    <TimePickerInline
                       value={scheduledTime}
-                      onChange={(e) => setScheduledTime(e.target.value)}
+                      onChange={setScheduledTime}
                       disabled={!scheduledDate}
-                      className={cn(
-                        "h-8 w-[90px] shrink-0 rounded-lg border border-border bg-[var(--color-bg-card)] px-2 text-[13px] text-foreground transition",
-                        "focus:outline-none focus:ring-2 focus:ring-[var(--color-border)]",
-                        "disabled:cursor-not-allowed disabled:opacity-40",
-                      )}
                     />
                   </div>
                 </div>

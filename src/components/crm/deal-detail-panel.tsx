@@ -806,20 +806,22 @@ export function DealDetailPanel({
                                       title="Informações do Contato"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                     >
-                                      <FieldRow
-                                        label="Telefone"
-                                        valueNode={
-                                          deal.contactId ? (
+                                      {/* Grid 2 colunas — mesmo padrão do contact-aside (inbox) */}
+                                      <div className="grid grid-cols-2 gap-1.5 py-2">
+                                        {/* Telefone */}
+                                        <div className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
+                                          <span className="text-[10px] font-medium text-[var(--text-muted)]">Telefone</span>
+                                          {deal.contactId ? (
                                             <InlineNativeEditor
                                               value={dealNative["phone"] ?? deal.phone}
                                               entityType="contact"
                                               entityId={deal.contactId}
                                               fieldKey="phone"
                                               inputType="tel"
-                                              placeholder="Adicionar telefone"
+                                              placeholder="+ Adicionar"
                                               invalidateKeys={[["contact-sidebar", deal.contactId]]}
                                               onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))}
-                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                              textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all"
                                             />
                                           ) : onCreateContactForField ? (
                                             <InlineNativeEditor
@@ -828,35 +830,38 @@ export function DealDetailPanel({
                                               entityId={deal.id}
                                               fieldKey="phone"
                                               inputType="tel"
-                                              placeholder="Adicionar telefone"
+                                              placeholder="+ Adicionar"
                                               customSave={(v) => onCreateContactForField("phone", v)}
                                               onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))}
-                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                              textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all"
                                             />
                                           ) : (
                                             <a
                                               href={deal.phone ? `tel:${deal.phone}` : undefined}
-                                              className="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                              className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all"
                                             >
-                                              {deal.phone || "—"}
+                                              {deal.phone || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}
                                             </a>
-                                          )
-                                        }
-                                      />
-                                      <FieldRow
-                                        label="Email"
-                                        valueNode={
-                                          deal.contactId ? (
+                                          )}
+                                        </div>
+
+                                        {/* Email — ocupa linha inteira se for longo */}
+                                        <div className={cn(
+                                          "flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2",
+                                          (dealNative["email"] ?? deal.email ?? "").length > 20 ? "col-span-2" : "",
+                                        )}>
+                                          <span className="text-[10px] font-medium text-[var(--text-muted)]">Email</span>
+                                          {deal.contactId ? (
                                             <InlineNativeEditor
                                               value={dealNative["email"] ?? (deal.email ?? undefined)}
                                               entityType="contact"
                                               entityId={deal.contactId}
                                               fieldKey="email"
                                               inputType="email"
-                                              placeholder="Adicionar e-mail"
+                                              placeholder="+ Adicionar"
                                               invalidateKeys={[["contact-sidebar", deal.contactId]]}
                                               onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))}
-                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                              textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all"
                                             />
                                           ) : onCreateContactForField ? (
                                             <InlineNativeEditor
@@ -865,77 +870,68 @@ export function DealDetailPanel({
                                               entityId={deal.id}
                                               fieldKey="email"
                                               inputType="email"
-                                              placeholder="Adicionar e-mail"
+                                              placeholder="+ Adicionar"
                                               customSave={(v) => onCreateContactForField("email", v)}
                                               onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))}
-                                              textClassName="font-display text-[13px] font-bold text-[var(--brand-primary)]"
+                                              textClassName="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all"
                                             />
                                           ) : (
-                                            <span className="font-display text-[13px] font-bold text-[var(--brand-primary)]">
-                                              {deal.email || "—"}
+                                            <span className="font-display text-[12.5px] font-bold text-[var(--brand-primary)] break-all">
+                                              {deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}
                                             </span>
-                                          )
-                                        }
-                                      />
-                                      {/* Canal: mostra a conexão atual da conversa
-                                          (ex.: "WhatsApp · Adm Dna Work · +55 (11) ...").
-                                          Padrão casado com `contact-aside.tsx` (inbox);
-                                          deal panel passou a expor a mesma info que o
-                                          aside compartilhado já mostrava — evita o
-                                          operador ter que abrir o inbox só pra ver
-                                          qual número está conversando. */}
-                                      {connection ? (
-                                        <FieldRow
-                                          label="Canal"
-                                          isLast={!contactTagsSlot}
-                                          valueNode={
+                                          )}
+                                        </div>
+
+                                        {/* Canal — ocupa linha inteira */}
+                                        <div className="col-span-2 flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
+                                          <span className="text-[10px] font-medium text-[var(--text-muted)]">Canal</span>
+                                          {connection ? (
                                             <TooltipGlass
                                               label={`Conversando por ${formatConnectionLabel(connection)}`}
                                               side="left"
                                             >
-                                              <span className="inline-flex items-center gap-1.5 font-display text-[13px] font-bold text-[var(--text-primary)]">
-                                                <IconAffiliate size={13} className="text-[var(--brand-primary)]" />
-                                                {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
+                                              <span className="inline-flex items-center gap-1 font-display text-[12.5px] font-bold text-[var(--text-primary)]">
+                                                <IconAffiliate size={12} className="shrink-0 text-[var(--brand-primary)]" />
+                                                <span className="break-all">{channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}</span>
                                               </span>
                                             </TooltipGlass>
-                                          }
-                                        />
-                                      ) : (
-                                        <FieldRow
-                                          label="Canal"
-                                          isLast={!contactTagsSlot}
-                                          valueNode={
-                                            <span className="font-display text-[13px] font-bold text-[var(--text-muted)]">
-                                              —
-                                            </span>
-                                          }
-                                        />
-                                      )}
-                                      {/* DD9: tags de Contato (Contact.tags),
-                                          distinto das tags do Deal (que estao
-                                          no header da sidebar via tagsSlot). */}
-                                      {contactTagsSlot && (
-                                        <FieldRow
-                                          label="Tags"
-                                          isLast
-                                          valueNode={contactTagsSlot}
-                                        />
-                                      )}
+                                          ) : (
+                                            <span className="font-display text-[12.5px] italic text-[var(--text-muted)]">—</span>
+                                          )}
+                                        </div>
+
+                                        {/* DD9: tags de Contato (Contact.tags) */}
+                                        {contactTagsSlot && (
+                                          <div className="col-span-2 flex flex-col gap-1 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
+                                            <span className="text-[10px] font-medium text-[var(--text-muted)]">Tags</span>
+                                            <div className="flex flex-wrap items-center gap-1">
+                                              {contactTagsSlot}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
                                     </FieldCard>
                                   )}
 
-                                  {/* DD4: Produtos agora dentro do flow DnD.
-                                      O productsSlot ja vem renderizado pelo
-                                      caller (DealProductsSection); aqui so
-                                      embrulhamos num FieldCard com handle de
-                                      arrasto pra manter o visual consistente. */}
+                                  {/* DD4: Produtos — sem FieldCard extra (o
+                                      próprio DealProductsSection já provê o
+                                      card branco com header "Produtos"). Aqui
+                                      só expomos a alça de arrasto acima. */}
                                   {sectionId === "produtos" && productsSlot && (
-                                    <FieldCard
-                                      title="Produtos"
-                                      dragHandleProps={provided.dragHandleProps ?? undefined}
-                                    >
+                                    <section className="group/section">
+                                      {provided.dragHandleProps && (
+                                        <div className="mb-1.5 flex items-center gap-1">
+                                          <span
+                                            {...provided.dragHandleProps}
+                                            className="flex cursor-grab items-center rounded p-0.5 text-[var(--text-muted)] opacity-0 transition-opacity group-hover/section:opacity-50 hover:opacity-100 active:cursor-grabbing"
+                                            aria-label="Arrastar bloco Produtos"
+                                          >
+                                            <IconGripVertical size={12} />
+                                          </span>
+                                        </div>
+                                      )}
                                       {productsSlot}
-                                    </FieldCard>
+                                    </section>
                                   )}
 
                                   {sectionId === "campos" && customFieldsSlot && customFieldsSlot.length > 0 && (
@@ -958,56 +954,68 @@ export function DealDetailPanel({
                                         </button>
                                       }
                                     >
-                                      {customFieldsSlot.map((field, i) => {
-                                        const currentValue = fieldValues[field.fieldId] ?? field.value
-                                        const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
-                                        const canEdit = !!field.entityType && !!field.entityId
-                                        return (
-                                          <FieldRow
-                                            key={field.fieldId}
-                                            label={field.label}
-                                            value={(!hl && !canEdit && !dealCustomEditMode) ? (currentValue ?? undefined) : undefined}
-                                            valueNode={
-                                              /* Modo edição: sempre mostra editor, ignorando badge */
-                                              dealCustomEditMode && canEdit ? (
-                                                <InlineFieldEditor
-                                                  fieldId={field.fieldId}
-                                                  fieldType={(field as { type?: string }).type ?? "TEXT"}
-                                                  fieldOptions={field.options ?? []}
-                                                  value={currentValue ?? null}
-                                                  entityType={field.entityType!}
-                                                  entityId={field.entityId!}
-                                                  editMode={dealCustomEditMode}
-                                                  invalidateKeys={[["deal-detail-v2", deal.id]]}
-                                                  onSaved={(v) =>
-                                                    setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
-                                                  }
-                                                  textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                                  placeholder="— Adicionar"
-                                                />
-                                              ) : hl ? (
-                                                <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
-                                              ) : canEdit ? (
-                                                <InlineFieldEditor
-                                                  fieldId={field.fieldId}
-                                                  fieldType={(field as { type?: string }).type ?? "TEXT"}
-                                                  fieldOptions={field.options ?? []}
-                                                  value={currentValue ?? null}
-                                                  entityType={field.entityType!}
-                                                  entityId={field.entityId!}
-                                                  invalidateKeys={[["deal-detail-v2", deal.id]]}
-                                                  onSaved={(v) =>
-                                                    setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
-                                                  }
-                                                  textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
-                                                  placeholder="— Adicionar"
-                                                />
-                                              ) : undefined
-                                            }
-                                            isLast={i === customFieldsSlot.length - 1}
-                                          />
-                                        )
-                                      })}
+                                      {/* Grid 2-col igual ao aside do inbox */}
+                                      <div className="grid grid-cols-2 gap-1.5 py-2">
+                                        {customFieldsSlot.map((field) => {
+                                          const currentValue = fieldValues[field.fieldId] ?? field.value
+                                          const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
+                                          const canEdit = !!field.entityType && !!field.entityId
+                                          const isLong = (currentValue ?? "").toString().length > 18 || (currentValue ?? "").toString().includes("@")
+                                          return (
+                                            <div
+                                              key={field.fieldId}
+                                              className={cn(
+                                                "flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2",
+                                                isLong && "col-span-2",
+                                              )}
+                                            >
+                                              <span className="text-[10px] font-medium text-[var(--text-muted)]">
+                                                {field.label}
+                                              </span>
+                                              <div className="min-w-0 w-full">
+                                                {dealCustomEditMode && canEdit ? (
+                                                  <InlineFieldEditor
+                                                    fieldId={field.fieldId}
+                                                    fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                    fieldOptions={field.options ?? []}
+                                                    value={currentValue ?? null}
+                                                    entityType={field.entityType!}
+                                                    entityId={field.entityId!}
+                                                    editMode={dealCustomEditMode}
+                                                    invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                    onSaved={(v) =>
+                                                      setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                    }
+                                                    textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
+                                                    placeholder="+ Adicionar"
+                                                  />
+                                                ) : hl ? (
+                                                  <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
+                                                ) : canEdit ? (
+                                                  <InlineFieldEditor
+                                                    fieldId={field.fieldId}
+                                                    fieldType={(field as { type?: string }).type ?? "TEXT"}
+                                                    fieldOptions={field.options ?? []}
+                                                    value={currentValue ?? null}
+                                                    entityType={field.entityType!}
+                                                    entityId={field.entityId!}
+                                                    invalidateKeys={[["deal-detail-v2", deal.id]]}
+                                                    onSaved={(v) =>
+                                                      setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))
+                                                    }
+                                                    textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all"
+                                                    placeholder="+ Adicionar"
+                                                  />
+                                                ) : (
+                                                  <span className="font-display text-[12.5px] font-bold text-[var(--text-primary)] break-all">
+                                                    {currentValue || <span className="italic text-[var(--text-muted)]">—</span>}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
                                     </FieldCard>
                                   )}
                                 </div>

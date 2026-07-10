@@ -942,7 +942,7 @@ export default function KanbanV2ClientPage({
               trigger={
                 <TooltipGlass label="Mais opções" side="left">
                   <span
-                    className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                    className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-white/70 transition-colors hover:bg-white/15 hover:text-white"
                   >
                     <IconDotsVertical size={14} />
                   </span>
@@ -951,7 +951,28 @@ export default function KanbanV2ClientPage({
             />
           ) : undefined
         }
-        ownerSlot={undefined}
+        ownerSlot={
+          activeDealId ? (
+            <AssigneePopover
+              dealId={activeDealId}
+              currentOwnerId={dealDetail?.owner?.id ?? null}
+              currentOwnerName={dealDetail?.owner?.name ?? null}
+              pipelineId={pipelineId}
+              statusFilter={status}
+              trigger={
+                dealDetail?.owner?.name ? (
+                  <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11px] font-semibold transition-opacity hover:opacity-75">
+                    {dealDetail.owner.name}
+                  </span>
+                ) : (
+                  <span className="inline-flex cursor-pointer items-center rounded-full px-2.5 py-1 font-display text-[11px] font-semibold transition-opacity hover:opacity-75">
+                    + Responsável
+                  </span>
+                )
+              }
+            />
+          ) : undefined
+        }
         // sourceSlot removido (DD5): antes tentava persistir Deal.source,
         // mas esse campo nao existe no schema (backend silenciosamente
         // ignorava o PUT). A row "Origem" foi movida pro cabecalho fixo

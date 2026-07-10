@@ -104,8 +104,7 @@ const ACTOR_BADGE: Record<
 };
 
 // 6 colunas: Evento | Detalhe | Entidade | Origem | Responsável | Data.
-// "Detalhe" encolhe para abrir espaço para "Origem" (pill + nome).
-const FEED_GRID = "grid-cols-[1.4fr_1.7fr_1.6fr_1.6fr_0.9fr_0.6fr]";
+const FEED_GRID = "grid-cols-[1.4fr_1.7fr_1.5fr_1.5fr_0.9fr_0.7fr]";
 
 type SortColumn = "evento" | "detalhe" | "entidade" | "origem" | "ator" | "data";
 
@@ -133,15 +132,27 @@ async function copyId(id: string) {
 }
 
 interface OriginInfo {
-  pill: "client" | "agent" | null;
+  pill: "client" | "agent" | "channel" | null;
   primary: string | null;
   secondary: string | null;
 }
 
+const CHANNEL_LABEL: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  manual: "Manual",
+  webhook: "Webhook",
+  api: "API",
+  automation: "Automação",
+};
+
+function resolveChannelLabel(raw: string): string {
+  return CHANNEL_LABEL[raw.toLowerCase()] ?? raw;
+}
+
 function resolveOrigin(ev: FeedEvent): OriginInfo {
-  if (ev.entityType !== "MESSAGE") {
-    return { pill: null, primary: null, secondary: null };
-  }
+  // Mensagens: direção (cliente enviou / agente enviou)
   if (ev.type === "MESSAGE_RECEIVED") {
     const name = ev.contactName ?? ev.entityLabel ?? null;
     return { pill: "client", primary: name, secondary: null };
@@ -162,6 +173,12 @@ function resolveOrigin(ev: FeedEvent): OriginInfo {
       primary: agent,
       secondary: client ? `Cliente: ${client}` : null,
     };
+  }
+  // Todos os outros eventos: mostrar canal se disponível no meta
+  const rawChannel =
+    typeof ev.meta?.channel === "string" ? ev.meta.channel : null;
+  if (rawChannel) {
+    return { pill: "channel", primary: resolveChannelLabel(rawChannel), secondary: null };
   }
   return { pill: null, primary: null, secondary: null };
 }
@@ -582,19 +599,19 @@ function EventCard({ event }: { event: FeedEvent }) {
       className={`grid ${FEED_GRID} items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-3.5 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]`}
     >
       {/* Coluna: Evento */}
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex min-w-0 items-center gap-2">
         <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ${cfg.ring} ${cfg.bg}`}
         >
-          <Icon size={16} />
+          <Icon size={14} />
         </span>
-        <span className="truncate font-display text-[14px] font-semibold text-[var(--text-primary)]">
+        <span className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
           {cfg.label}
         </span>
       </div>
 
       {/* Coluna: Detalhe */}
-      <span className="block truncate font-body text-[13px] text-[var(--text-secondary)]">
+      <span className="block truncate font-display text-[12.5px] text-[var(--text-secondary)]">
         {detail || "—"}
       </span>
 
@@ -602,14 +619,15 @@ function EventCard({ event }: { event: FeedEvent }) {
       <div className="min-w-0">
         {entityLabelText || event.entityType ? (
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="flex items-center gap-1.5 whitespace-nowrap">
+            {/* Tipo (pill) + nome (truncável) na mesma linha */}
+            <span className="flex min-w-0 items-center gap-1.5">
               {event.entityType && (
-                <span className="shrink-0 font-display text-[12px] font-bold uppercase tracking-[0.03em] text-[var(--text-muted)]">
+                <span className="shrink-0 rounded px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-[0.05em] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]">
                   {ENTITY_LABEL[event.entityType] ?? event.entityType}
                 </span>
               )}
               {entityLabelText && (
-                <span className="truncate font-body text-[13px] text-[var(--text-secondary)]">
+                <span className="min-w-0 truncate font-display text-[12.5px] text-[var(--text-secondary)]">
                   {entityLabelText}
                 </span>
               )}
@@ -619,15 +637,15 @@ function EventCard({ event }: { event: FeedEvent }) {
                 type="button"
                 onClick={() => void copyId(entityId)}
                 title={`Copiar ID: ${entityId}`}
-                className="inline-flex w-fit items-center gap-1 rounded-[var(--radius-sm)] px-1 py-0.5 font-mono text-[11px] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]"
+                className="inline-flex w-fit items-center gap-1 rounded px-1 py-0.5 font-mono text-[10px] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]"
               >
                 <span>{truncateId(entityId)}</span>
-                <IconCopy size={11} />
+                <IconCopy size={10} />
               </button>
             )}
           </div>
         ) : (
-          <span className="text-[13px] text-[var(--text-muted)]">—</span>
+          <span className="font-display text-[12.5px] text-[var(--text-muted)]">—</span>
         )}
       </div>
 
@@ -635,37 +653,44 @@ function EventCard({ event }: { event: FeedEvent }) {
       <div className="min-w-0">
         {origin.pill ? (
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="flex items-center gap-1.5">
+            <span className="flex min-w-0 items-center gap-1.5">
               <span
-                className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-display text-[11px] font-bold ${
+                className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${
                   origin.pill === "client"
                     ? "bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] text-[var(--color-info)]"
-                    : "bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]"
+                    : origin.pill === "agent"
+                    ? "bg-[color-mix(in_srgb,var(--color-success)_14%,transparent)] text-[var(--color-success)]"
+                    : "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]"
                 }`}
               >
-                {origin.pill === "client" ? "Cliente" : "Agente"}
+                {origin.pill === "client"
+                  ? "Cliente"
+                  : origin.pill === "agent"
+                  ? "Agente"
+                  : origin.primary ?? "Canal"}
               </span>
-              {origin.primary && (
-                <span className="truncate font-body text-[13px] text-[var(--text-secondary)]">
+              {/* Para client/agent: mostrar o nome ao lado da pill */}
+              {origin.pill !== "channel" && origin.primary && (
+                <span className="min-w-0 truncate font-display text-[12.5px] text-[var(--text-secondary)]">
                   {origin.primary}
                 </span>
               )}
             </span>
             {origin.secondary && (
-              <span className="truncate font-body text-[12px] text-[var(--text-muted)]">
+              <span className="truncate font-display text-[11px] text-[var(--text-muted)]">
                 {origin.secondary}
               </span>
             )}
           </div>
         ) : (
-          <span className="text-[13px] text-[var(--text-muted)]">—</span>
+          <span className="font-display text-[12.5px] text-[var(--text-muted)]">—</span>
         )}
       </div>
 
       {/* Coluna: Responsável */}
       <div>
         <span
-          className={`inline-flex items-center rounded-full px-2.5 py-1 font-display text-[12px] font-semibold ${badge.className}`}
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold ${badge.className}`}
         >
           {actor.label}
         </span>
@@ -682,11 +707,21 @@ function EventCard({ event }: { event: FeedEvent }) {
 function EventDate({ iso }: { iso: string }) {
   const d = parseISO(iso);
   const isToday = isSameDay(d, new Date());
+  if (isToday) {
+    return (
+      <span className="font-display tabular-nums text-[12.5px] text-[var(--text-muted)]">
+        {format(d, "HH:mm", { locale: ptBR })}
+      </span>
+    );
+  }
   return (
-    <span className="font-display tabular-nums text-[13px] text-[var(--text-muted)]">
-      {isToday
-        ? format(d, "HH:mm", { locale: ptBR })
-        : format(d, "dd MMM", { locale: ptBR })}
+    <span className="flex flex-col items-end gap-0">
+      <span className="font-display tabular-nums text-[12.5px] text-[var(--text-secondary)]">
+        {format(d, "dd MMM", { locale: ptBR })}
+      </span>
+      <span className="font-display tabular-nums text-[11px] text-[var(--text-muted)]">
+        {format(d, "HH:mm", { locale: ptBR })}
+      </span>
     </span>
   );
 }

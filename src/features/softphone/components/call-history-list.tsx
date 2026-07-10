@@ -17,7 +17,8 @@ import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortabl
 import { listCalls } from "../api/extensions";
 import type { CallRecord, ListCallsFilters } from "../api/types";
 
-const COLS = "grid-cols-[36px_2.2fr_1fr_0.9fr_0.8fr_1.1fr_44px]";
+const COLS = "grid-cols-[36px_2fr_0.9fr_0.9fr_0.7fr_1.1fr_80px]";
+// largura final aumentada de 44px → 80px para acomodar "Gravação" no header
 
 function formatDuration(sec: number | null) {
   if (!sec) return "—";
@@ -118,7 +119,7 @@ export function CallHistoryList({
           <ListColumnLabel>Status</ListColumnLabel>
           <ListColumnLabel>Duração</ListColumnLabel>
           <ListColumnLabel>Data e hora</ListColumnLabel>
-          <ListColumnLabel align="right">Rec.</ListColumnLabel>
+          <ListColumnLabel align="right">Gravação</ListColumnLabel>
         </div>
 
         {/* Linhas */}
@@ -189,17 +190,17 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
           {call.contact ? (
             <Link
               href={`/contacts/${call.contact.id}`}
-              className="truncate font-display text-[14px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+              className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
             >
               {call.contact.name ?? call.phone}
             </Link>
           ) : (
-            <span className="truncate font-display text-[14px] font-bold text-[var(--text-primary)]">
+            <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">
               {call.phone}
             </span>
           )}
           {call.contact?.phone && call.contact.phone !== call.phone && (
-            <div className="truncate font-body text-[12px] text-[var(--text-muted)]">
+            <div className="truncate font-display text-[11.5px] text-[var(--text-muted)]">
               {call.phone}
             </div>
           )}
@@ -263,6 +264,10 @@ function CallTableRow({ call, isPlaying, onPlay }: CallTableRowProps) {
 }
 
 // ── Mini player de áudio ────────────────────────────────────────────────────
+// Layout alinhado à grid da tabela:
+//   • padding-left offset = 36px (col ícone) + 0.75rem (gap-3) pula o ícone
+//     e inicia no mesmo ponto da coluna "Contato/Telefone"
+//   • padding-right = px-3 (mesmo das linhas da tabela)
 
 function AudioPlayer({ src, onEnded }: { src: string; onEnded: () => void }) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -309,7 +314,11 @@ function AudioPlayer({ src, onEnded }: { src: string; onEnded: () => void }) {
   }
 
   return (
-    <div className="flex items-center gap-3 border-t border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_5%,transparent)] px-4 py-2.5">
+    <div
+      className="flex items-center gap-2 border-t border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_4%,transparent)] py-1.5 pr-3"
+      style={{ paddingLeft: "calc(36px + 0.75rem + 0.75rem)" }}
+    >
+      {/* audio element oculto — sem controls, só API */}
       <audio
         ref={audioRef}
         src={src}
@@ -317,25 +326,26 @@ function AudioPlayer({ src, onEnded }: { src: string; onEnded: () => void }) {
         onLoadedMetadata={handleTimeUpdate}
         onEnded={onEnded}
         preload="auto"
+        className="hidden"
       />
 
       {/* Play/Pause */}
       <button
         type="button"
         onClick={togglePlay}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)] transition-transform hover:scale-105"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_6px_rgba(91,111,245,0.3)] transition-transform hover:scale-105"
       >
-        {playing ? <IconPlayerPauseFilled size={12} /> : <IconPlayerPlayFilled size={12} />}
+        {playing ? <IconPlayerPauseFilled size={11} /> : <IconPlayerPlayFilled size={11} />}
       </button>
 
       {/* Tempo atual */}
-      <span className="w-9 shrink-0 text-right font-display text-[11px] tabular-nums text-[var(--text-muted)]">
+      <span className="w-8 shrink-0 text-right font-display text-[10.5px] tabular-nums text-[var(--text-muted)]">
         {fmtTime(currentTime)}
       </span>
 
       {/* Barra de progresso */}
       <div className="relative flex-1">
-        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--glass-border)]">
+        <div className="h-1 overflow-hidden rounded-full bg-[var(--glass-border)]">
           <div
             className="h-full rounded-full bg-[var(--brand-primary)] transition-all"
             style={{ width: `${progress}%` }}
@@ -354,7 +364,7 @@ function AudioPlayer({ src, onEnded }: { src: string; onEnded: () => void }) {
       </div>
 
       {/* Duração total */}
-      <span className="w-9 shrink-0 font-display text-[11px] tabular-nums text-[var(--text-muted)]">
+      <span className="w-8 shrink-0 font-display text-[10.5px] tabular-nums text-[var(--text-muted)]">
         {fmtTime(duration)}
       </span>
     </div>

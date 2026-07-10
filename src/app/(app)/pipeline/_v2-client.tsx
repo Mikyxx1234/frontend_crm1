@@ -1060,7 +1060,7 @@ export default function KanbanV2ClientPage({
                   // o slot e empurravam o resto do cabeçalho.
                   <TooltipGlass key={t.id} label={t.name} side="top">
                     <span
-                      className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
                       style={{
                         background: `${t.color ?? "#5b6ff5"}22`,
                         color: t.color ?? "var(--brand-primary)",
@@ -1117,7 +1117,7 @@ export default function KanbanV2ClientPage({
               {(dealDetail?.contact?.tags ?? []).map((t) => (
                 <span
                   key={t.id}
-                  className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
+                  className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
                   style={{
                     background: `${t.color ?? "#5b6ff5"}22`,
                     color: t.color ?? "var(--brand-primary)",
@@ -1586,7 +1586,7 @@ function DroppableColumn({
                               // usado no inbox v2 (`inbox/_v2-client.tsx`).
                               <TooltipGlass key={t.id} label={t.name} side="top">
                                 <span
-                                  className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide max-w-[110px] truncate"
+                                  className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide whitespace-nowrap"
                                   style={{
                                     background: `${t.color || "#5b6ff5"}33`,
                                     color: t.color || "var(--brand-primary)",

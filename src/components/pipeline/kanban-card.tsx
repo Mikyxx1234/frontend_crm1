@@ -431,7 +431,7 @@ export function KanbanCard({
 
                     {primaryTags.map((tag) => (
                       <TooltipHost key={tag.id} label={tag.name} side="top">
-                        <span className={cn("max-w-full truncate", dt.pill.sm)} style={tagPillStyle(tag.name, tag.color)}>
+                        <span className={cn("whitespace-nowrap", dt.pill.sm)} style={tagPillStyle(tag.name, tag.color)}>
                           {tag.name}
                         </span>
                       </TooltipHost>

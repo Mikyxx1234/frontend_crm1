@@ -7,8 +7,8 @@ import { SearchInput } from "@/components/crm/search-input"
 import {
   PageGhostButton,
   PagePrimaryButton,
+  PageSegmentedControl,
 } from "@/components/crm/page-toolbar"
-import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import {
   IconFilter,
   IconBookmark,
@@ -23,6 +23,31 @@ import {
 
 type TabId = "abertos" | "ganhos" | "perdidos" | "todos"
 type ViewType = "kanban" | "list"
+
+/**
+ * Itens do seletor de visão — mesmo padrão do /contacts
+ * (`PageSegmentedControl size="compact"` com ícone + rótulo).
+ */
+const VIEW_ITEMS = [
+  {
+    value: "kanban",
+    label: (
+      <span className="flex items-center gap-1.5">
+        <IconLayoutKanban size={14} />
+        Kanban
+      </span>
+    ),
+  },
+  {
+    value: "list",
+    label: (
+      <span className="flex items-center gap-1.5">
+        <IconList size={14} />
+        Lista
+      </span>
+    ),
+  },
+] as const
 
 interface PipelineHeaderProps {
   activeTab?: TabId
@@ -144,29 +169,13 @@ export function PipelineHeader({
                 <IconBookmark size={15} /> Salvos
               </PageGhostButton>
 
-              <div className="flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
-                {(
-                  [
-                    { id: "kanban", icon: <IconLayoutKanban size={15} />, title: "Visualização kanban" },
-                    { id: "list", icon: <IconList size={15} />, title: "Visualização em lista" },
-                  ] as const
-                ).map((v) => (
-                  <TooltipGlass key={v.id} label={v.title} side="bottom">
-                    <button
-                      type="button"
-                      onClick={() => handleViewChange(v.id as ViewType)}
-                      className={cn(
-                        "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-all",
-                        view === v.id
-                          ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
-                          : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                      )}
-                    >
-                      {v.icon}
-                    </button>
-                  </TooltipGlass>
-                ))}
-              </div>
+              <PageSegmentedControl
+                items={VIEW_ITEMS}
+                value={view}
+                onChange={(v) => handleViewChange(v as ViewType)}
+                aria-label="Modo de visualização"
+                size="compact"
+              />
 
               <PagePrimaryButton type="button" onClick={onNewDeal} disabled={!onNewDeal}>
                 <IconPlus size={15} stroke={2.4} /> Novo

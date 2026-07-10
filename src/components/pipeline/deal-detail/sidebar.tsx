@@ -892,7 +892,7 @@ function TagPillSmall({
       className={cn(dt.pill.base, "max-w-full gap-1")}
       style={tagPillStyle(tag.name, tag.color)}
     >
-      <span className="max-w-[120px] truncate">{tag.name}</span>
+      <span className="whitespace-nowrap">{tag.name}</span>
       <button
         type="button"
         onClick={onRemove}

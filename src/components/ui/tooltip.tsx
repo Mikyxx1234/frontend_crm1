@@ -4,6 +4,10 @@ import * as React from "react";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
 
 import { cn } from "@/lib/utils";
+import {
+  tooltipMotionClass,
+  tooltipSurfaceClass,
+} from "@/components/crm/tooltip-glass";
 
 /**
  * Tooltip via Radix + Portal — conteúdo no `body`, posicionamento acessível.
@@ -100,15 +104,8 @@ export const TooltipContent = React.forwardRef<
         sideOffset={sideOffset}
         className={cn(
           "z-(--z-popover) w-max max-w-xs",
-          "rounded-lg border border-border bg-popover px-2.5 py-1.5",
-          "text-[11px] font-semibold text-popover-foreground",
-          "shadow-[var(--shadow-lg)]",
-          "animate-in fade-in-0 zoom-in-95",
-          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-          "data-[side=bottom]:slide-in-from-top-1",
-          "data-[side=top]:slide-in-from-bottom-1",
-          "data-[side=left]:slide-in-from-right-1",
-          "data-[side=right]:slide-in-from-left-1",
+          tooltipSurfaceClass,
+          tooltipMotionClass,
           className,
         )}
         {...props}
@@ -116,9 +113,9 @@ export const TooltipContent = React.forwardRef<
         {children}
         {arrow && (
           <RadixTooltip.Arrow
-            className="fill-popover drop-shadow-[0_1px_0_var(--color-border)]"
-            width={10}
-            height={5}
+            className="fill-(--tooltip-bg)"
+            width={11}
+            height={6}
           />
         )}
       </RadixTooltip.Content>

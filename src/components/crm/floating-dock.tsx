@@ -12,6 +12,7 @@ import {
 } from "framer-motion";
 
 import { cn } from "@/lib/utils";
+import { tooltipSurfaceClass } from "@/components/crm/tooltip-glass";
 
 /**
  * Efeito "FloatingDock" (estilo Aceternity / macOS dock) adaptado para a
@@ -199,14 +200,16 @@ export function DockButton({
             style={{
               position: "fixed",
               top: labelPos.top,
-              left: labelPos.left + 12,
+              left: labelPos.left + 14,
               transform: "translateY(-50%)",
             }}
             className={cn(
-              "pointer-events-none z-(--z-popover) whitespace-nowrap rounded-[var(--radius-md)]",
-              "border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] backdrop-blur-md",
-              "px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]",
-              "shadow-[var(--glass-shadow)]",
+              // Estilo canônico do tooltip do DS (mesma superfície glass
+              // escura de TooltipGlass / TooltipContent) — padroniza o
+              // rótulo da NavRail com o resto do sistema.
+              "pointer-events-none z-(--z-popover) whitespace-nowrap",
+              tooltipSurfaceClass,
+              "animate-in fade-in-0 zoom-in-95 slide-in-from-left-1",
             )}
           >
             {title}

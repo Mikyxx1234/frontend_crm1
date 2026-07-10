@@ -334,7 +334,13 @@ export function NavRailV2({ className }: { className?: string }) {
         <div
           ref={scrollRef}
           className={cn(
-            "flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-clip px-3 [scrollbar-width:none] [scrollbar-gutter:stable_both-edges] [&::-webkit-scrollbar]:hidden",
+            // `py-3` cria uma "zona segura" vertical: como o container é um
+            // scroll container (overflow-y-auto), ele CORTA no padding-box.
+            // A lupa (scale 1.55) cresce ~12px pra cada lado; o padding dá
+            // espaço para o 1º/último ícone ampliarem sem serem cortados.
+            // (overflow-clip-margin não resolve — o Chromium o ignora em
+            // scroll containers.)
+            "flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-clip px-3 py-3 [scrollbar-width:none] [scrollbar-gutter:stable_both-edges] [&::-webkit-scrollbar]:hidden",
             expanded ? "items-stretch" : "items-center",
           )}
         >

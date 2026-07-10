@@ -1175,7 +1175,7 @@ function TagPill({
       )}
       style={tagPillStyle(tag.name, tag.color)}
     >
-      <span className="max-w-[120px] truncate">{tag.name}</span>
+      <span className="whitespace-nowrap">{tag.name}</span>
       <button
         type="button"
         onClick={onRemove}

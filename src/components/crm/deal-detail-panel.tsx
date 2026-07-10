@@ -42,7 +42,6 @@ import { RequirePermission } from "@/components/auth/require-permission"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
 import { useContactSources } from "@/hooks/use-contact-sources"
-import { BadgeGlass } from "./badge-glass"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
 // Mudancas (DD4 + DD5 do questionario):
@@ -420,8 +419,6 @@ export function DealDetailPanel({
     );
   }
 
-  const avatarClass = `av-${deal.avatarColor}`
-
   // Funil (hero): deriva o índice da etapa atual casando o NOME da etapa
   // (deal.stage) com os segmentos reais. Alimenta o anel de progresso e a
   // barra segmentada — mesma fonte usada pelo contact-aside do inbox.
@@ -471,70 +468,10 @@ export function DealDetailPanel({
       }}
     >
       <div className="flex h-full flex-col gap-3.5 overflow-hidden p-4">
-        {/* HEADER */}
-        <header className="flex items-center gap-4.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-5.5 py-3.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          <TooltipGlass label="Voltar" side="bottom">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/30 hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-            >
-              <IconArrowLeft size={18} />
-            </button>
-          </TooltipGlass>
-
-          {/* Contact */}
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                avatarClass,
-                "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[var(--glass-bg-overlay)] font-display text-[15px] font-bold text-white",
-              )}
-            >
-              {deal.initials}
-              {deal.online && (
-                <span className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-[var(--glass-bg-strong)] bg-[var(--color-online)]" />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 font-display text-[18px] font-bold text-[var(--text-primary)]">
-                {deal.name}
-                <BadgeGlass variant="enterprise">ENTERPRISE</BadgeGlass>
-                {contactEditSlot}
-              </div>
-              <div className="mt-px flex items-center gap-2 font-display text-xs text-[var(--text-muted)]">
-                {/* ID do negocio: deal.number (sequencial por org, ex.: #1234)
-                    e o identificador que o operador reconhece. Antes mostravamos
-                    deal.contactNumber primeiro (numero do CONTATO), o que
-                    confundia: dois deals do mesmo cliente exibiam o mesmo "#X".
-                    O cuid (`deal.id.slice(-6)`) so aparece em ultimo caso
-                    quando o backend nao serializou deal.number ainda. */}
-                <span>
-                  {deal.number != null
-                    ? `#${deal.number}`
-                    : deal.contactNumber != null
-                      ? `#${deal.contactNumber}`
-                      : `#${deal.id.slice(-6).toUpperCase()}`}
-                  {deal.phone ? ` · ${deal.phone}` : ""}
-                </span>
-                {connection && (
-                  <TooltipGlass
-                    label={`Conversando por ${formatConnectionLabel(connection)}`}
-                    side="bottom"
-                  >
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-0.5 text-[10.5px] font-semibold text-[var(--text-secondary)]">
-                      <IconAffiliate size={11} className="text-[var(--brand-primary)]" />
-                      {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
-                    </span>
-                  </TooltipGlass>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Espaço flex-1 para empurrar actions para a direita */}
-          <div className="flex-1" />
-        </header>
+        {/* Barra de topo REMOVIDA (jul/26): duplicava nome/#id/telefone que já
+            aparecem no hero roxo e em "Detalhes de contato", além de um badge
+            "ENTERPRISE" hardcoded (dado falso). Os controles essenciais (voltar,
+            editar contato, chip de conexão) foram realocados para o hero. */}
 
         {/* 2 COLS: SIDEBAR + CONTENT — largura da sidebar é dinâmica
             (drag horizontal na handle entre as colunas). Min/max bounds
@@ -561,8 +498,21 @@ export function DealDetailPanel({
                   <div className="absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
                 </div>
 
-                {/* Linha topo: ações (kebab + engrenagem) + dropdown de fase */}
-                <div className="relative flex items-center justify-end gap-1.5">
+                {/* Linha topo: voltar (esq) + ações (kebab + engrenagem) +
+                    dropdown de fase (dir). O "voltar" migrou da barra de topo
+                    removida — fecha o painel (ESC também funciona). */}
+                <div className="relative flex items-center gap-1.5">
+                  <TooltipGlass label="Voltar" side="bottom">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      aria-label="Voltar"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+                    >
+                      <IconArrowLeft size={15} />
+                    </button>
+                  </TooltipGlass>
+                  <div className="flex-1" />
                   {moreActionsSlot && (
                     <div className="[&_button]:!text-white [&_button:hover]:!bg-white/15 [&_button]:!rounded-[var(--radius-sm)]">
                       {moreActionsSlot}
@@ -599,13 +549,33 @@ export function DealDetailPanel({
                   )}
                 </div>
 
-                {/* Nome + #id do negócio */}
+                {/* Nome + #id do negócio + editar contato */}
                 <h2 className="relative mt-3 flex items-baseline gap-2 text-balance font-display text-[17px] font-bold leading-tight">
                   <span className="min-w-0">{deal.name}</span>
                   <span className="shrink-0 font-mono text-[11px] font-semibold text-white/70">
                     #{deal.number ?? deal.id.slice(-6).toUpperCase()}
                   </span>
+                  {contactEditSlot && (
+                    <span className="shrink-0 self-center [&_button]:!text-white/70 [&_button:hover]:!text-white">
+                      {contactEditSlot}
+                    </span>
+                  )}
                 </h2>
+
+                {/* Chip de conexão (canal ativo) — migrado da barra de topo. */}
+                {connection && (
+                  <div className="relative mt-1.5">
+                    <TooltipGlass
+                      label={`Conversando por ${formatConnectionLabel(connection)}`}
+                      side="bottom"
+                    >
+                      <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[10.5px] font-semibold text-white backdrop-blur-sm">
+                        <IconAffiliate size={11} />
+                        {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
+                      </span>
+                    </TooltipGlass>
+                  </div>
+                )}
 
                 {/* Anel de progresso + funil + responsável */}
                 <div className="relative mt-3 flex items-center gap-3">

@@ -14,24 +14,26 @@
  */
 
 import "@/styles/globals-v2.css";
-import { TooltipProvider } from "@/components/crm/tooltip-glass";
 import { UpdateAvailableBanner } from "@/components/layout/update-banner";
 import { SoftphoneWidget } from "@/features/softphone/components";
 import { ChatThemeApplier } from "@/components/providers/chat-theme-applier";
 
+// O TooltipProvider (Radix) é provido uma única vez na raiz (app/providers.tsx),
+// cobrindo tanto os TooltipGlass quanto os TooltipContent/TooltipHost. Não é
+// necessário aninhar outro provider aqui.
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <TooltipProvider delay={300}>
+    <>
       <ChatThemeApplier />
       <div className="v2-root v2-min-screen">
         {children}
         <UpdateAvailableBanner />
         <SoftphoneWidget />
       </div>
-    </TooltipProvider>
+    </>
   );
 }

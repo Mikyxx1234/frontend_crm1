@@ -310,7 +310,7 @@ export function ConversationCard({
             return (
               <span
                 key={t.id}
-                className="inline-flex max-w-[90px] truncate rounded-full border px-2 py-px font-display text-[10px] font-semibold"
+                className="inline-flex whitespace-nowrap rounded-full border px-2 py-px font-display text-[10px] font-semibold"
                 style={{ background: bg, color: fg, borderColor: border }}
                 title={t.name}
               >

@@ -705,10 +705,10 @@ export function ContactAside({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-14 w-6 items-center justify-center rounded-full bg-white/70 text-[var(--text-muted)] shadow-[0_2px_6px_rgba(15,23,42,0.10)] backdrop-blur-sm transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-10 w-5 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_14px_rgba(91,111,245,0.40)] hover:scale-110"
             aria-label="Expandir painel de contato"
           >
-            <IconChevronLeft size={14} strokeWidth={2.5} />
+            <IconChevronLeft size={13} strokeWidth={3} />
           </button>
         </TooltipGlass>
       </aside>
@@ -729,10 +729,10 @@ export function ContactAside({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-14 w-6 items-center justify-center rounded-full bg-white/70 text-[var(--text-muted)] shadow-[0_2px_6px_rgba(15,23,42,0.10)] backdrop-blur-sm transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
+            className="group absolute left-0 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 flex h-10 w-5 items-center justify-center rounded-full border border-[var(--glass-border)] bg-white text-[var(--brand-primary)] shadow-[0_2px_8px_rgba(15,23,42,0.18)] transition-all hover:bg-[var(--brand-primary)] hover:text-white hover:shadow-[0_4px_14px_rgba(91,111,245,0.40)] hover:scale-110"
             aria-label="Recolher painel de contato"
           >
-            <IconChevronRight size={14} strokeWidth={2.5} />
+            <IconChevronRight size={13} strokeWidth={3} />
           </button>
         </TooltipGlass>
       )}

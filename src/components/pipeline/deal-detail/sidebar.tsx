@@ -258,12 +258,13 @@ export function DealSidebar({
 
 export function DealProductsSection({
   dealId,
-  compact = false,
-  hideTitle = false,
+  compact: _compact = false,
+  hideTitle: _hideTitle = false,
 }: {
   dealId: string;
+  /** @deprecated sem efeito — layout unificado. */
   compact?: boolean;
-  /** Esconde o titulo interno "Produtos" (quando o wrapper externo ja provee). */
+  /** @deprecated sem efeito — layout unificado. */
   hideTitle?: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -273,6 +274,20 @@ export function DealProductsSection({
   const [editingItem, setEditingItem] = React.useState<string | null>(null);
   const [editQty, setEditQty] = React.useState("");
   const [editDiscount, setEditDiscount] = React.useState("");
+  const [openMenu, setOpenMenu] = React.useState<string | null>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Fecha menu ao clicar fora
+  React.useEffect(() => {
+    if (!openMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openMenu]);
 
   const itemsKey = ["deal-products", dealId] as const;
 
@@ -305,18 +320,12 @@ export function DealProductsSection({
     queryClient.invalidateQueries({ queryKey: ["pipeline-board"] });
   };
 
-  // Extrai a mensagem de erro retornada pelo backend (`{ message: string }`)
-  // para que `onError` consiga mostrar um toast informativo em vez do
-  // genérico "Erro" — antes desta mudança o erro era engolido em silêncio
-  // (sintoma: usuário clicava "Remover", nada acontecia visualmente).
   async function readErrorMessage(res: Response, fallback: string): Promise<string> {
     try {
       const data = await res.json();
       const msg = (data as { message?: unknown })?.message;
       if (typeof msg === "string" && msg.trim()) return msg;
-    } catch {
-      /* ignore parse error */
-    }
+    } catch { /* ignore */ }
     return fallback;
   }
 
@@ -329,11 +338,7 @@ export function DealProductsSection({
       });
       if (!res.ok) throw new Error(await readErrorMessage(res, "Falha ao adicionar produto."));
     },
-    onSuccess: () => {
-      invalidate();
-      setShowAdd(false);
-      setSearch("");
-    },
+    onSuccess: () => { invalidate(); setShowAdd(false); setSearch(""); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -346,10 +351,7 @@ export function DealProductsSection({
       });
       if (!res.ok) throw new Error(await readErrorMessage(res, "Falha ao atualizar item."));
     },
-    onSuccess: () => {
-      invalidate();
-      setEditingItem(null);
-    },
+    onSuccess: () => { invalidate(); setEditingItem(null); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -358,19 +360,19 @@ export function DealProductsSection({
       const res = await fetch(apiUrl(`/api/deals/${dealId}/products/${itemId}`), { method: "DELETE" });
       if (!res.ok) throw new Error(await readErrorMessage(res, "Falha ao remover produto."));
     },
-    onSuccess: () => {
-      invalidate();
-      toast.success("Produto removido.");
-    },
+    onSuccess: () => { invalidate(); toast.success("Produto removido."); },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const totalValue = items.reduce((s, i) => s + i.total, 0);
+  const showTotal =
+    items.length > 1 || items.some((i) => i.quantity !== 1 || i.discount > 0);
 
   const startEdit = (item: DealProductItem) => {
     setEditingItem(item.id);
     setEditQty(String(item.quantity));
     setEditDiscount(String(item.discount));
+    setOpenMenu(null);
   };
 
   const saveEdit = (itemId: string) => {
@@ -381,41 +383,30 @@ export function DealProductsSection({
   };
 
   return (
-    // compact=true (ContactAside): exibe título "Produtos" inline com botão +
-    // para evitar o + solto no canto superior direito sem contexto visual.
-    // compact=false (DealDetailPanel): sem título (o FieldCard já provê label).
-    <SidebarSection
-      title={compact && !hideTitle && items.length > 0 ? "Produtos" : undefined}
-      className={compact ? "border-b-0 pb-0" : undefined}
-      action={
-        // Em compact + empty state, o proprio empty state hero ja tem o botao "+"
-        // e o label "Produtos" — omitimos o header do SidebarSection pra nao
-        // duplicar. Nos demais casos (populated ou nao-compact), mantemos.
-        compact && items.length === 0 ? undefined : (
-          <div className="flex items-center gap-2">
-            {/* Contador só quando ha >1 item — com 1 item o "1 item" e ruido
-                visual (pedido do operador). */}
-            {items.length > 1 && (
-              <span className="font-display text-[11px] font-semibold tabular-nums text-[var(--color-ink-soft)]">
-                {items.length} itens
-              </span>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7 rounded-lg"
-              onClick={() => setShowAdd((v) => !v)}
-              aria-label={showAdd ? "Fechar busca de produto" : "Adicionar produto"}
-            >
-              <Plus className="size-3" />
-            </Button>
-          </div>
-        )
-      }
-    >
+    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      {/* ── Cabeçalho ── */}
+      <div className="flex items-center gap-2 px-4 py-3">
+        <span className="text-sm font-bold text-foreground">Produtos</span>
+        {items.length > 0 && (
+          <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--brand-primary)]">
+            {items.length}
+          </span>
+        )}
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={() => { setShowAdd((v) => !v); setOpenMenu(null); }}
+          aria-label={showAdd ? "Fechar busca de produto" : "Adicionar produto"}
+          className="flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-3 py-1 text-[12px] font-semibold text-white transition-all hover:brightness-110 active:scale-95"
+        >
+          <Plus className="size-3" strokeWidth={2.5} />
+          Adicionar
+        </button>
+      </div>
+
+      {/* ── Painel de busca / adicionar ── */}
       {showAdd && (
-        <div className="mb-3 space-y-2">
+        <div className="space-y-2 border-t border-border px-4 pb-3 pt-2">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -423,9 +414,11 @@ export function DealProductsSection({
             className="h-9 rounded-xl border-border bg-[var(--color-bg-subtle)] text-sm"
             autoFocus
           />
-          <div className="max-h-40 overflow-y-auto rounded-xl border border-border bg-white shadow-sm">
+          <div className="max-h-44 overflow-y-auto rounded-xl border border-border bg-white shadow-sm">
             {catalog.length === 0 ? (
-              <p className="px-3 py-3 text-center text-xs text-muted-foreground">Nenhum produto encontrado</p>
+              <p className="px-3 py-3 text-center text-xs text-muted-foreground">
+                Nenhum produto encontrado
+              </p>
             ) : (
               catalog.map((p) => (
                 <button
@@ -437,9 +430,13 @@ export function DealProductsSection({
                 >
                   <div className="min-w-0 flex-1">
                     <span className="font-medium">{p.name}</span>
-                    {p.sku && <span className="ml-1 text-muted-foreground">({p.sku})</span>}
+                    {p.sku && (
+                      <span className="ml-1 text-muted-foreground">({p.sku})</span>
+                    )}
                     {p.type === "SERVICE" && (
-                      <span className="ml-1.5 rounded bg-lavender-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">Serviço</span>
+                      <span className="ml-1.5 rounded bg-lavender-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+                        Serviço
+                      </span>
                     )}
                   </div>
                   <span className="shrink-0 font-semibold tabular-nums text-success">
@@ -452,49 +449,32 @@ export function DealProductsSection({
         </div>
       )}
 
+      {/* ── Lista de itens ── */}
       {items.length === 0 ? (
-        // Empty state — em compact (ContactAside) usamos layout hero com
-        // icone + label + subtitle + botao azul solido, casando com o
-        // mockup pedido. Fora do compact, so o texto discreto.
-        compact ? (
-          <div className="flex items-center gap-3">
-            <div className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-              <Package className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="font-display text-[13px] font-bold text-[var(--text-primary)]">Produtos</div>
-              <div className="text-[11.5px] text-[var(--text-muted)]">Nenhum produto vinculado</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowAdd((v) => !v)}
-              aria-label="Adicionar produto"
-              className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_10px_rgba(91,111,245,0.35)] transition-all hover:brightness-110 hover:shadow-[0_6px_14px_rgba(91,111,245,0.45)]"
-            >
-              <Plus className="size-4" />
-            </button>
-          </div>
-        ) : (
-          <div className="px-0 py-1 text-xs text-muted-foreground/70">
-            Nenhum produto vinculado
-          </div>
-        )
+        <div className="border-t border-border px-4 py-4 text-sm text-muted-foreground">
+          Nenhum produto vinculado.
+        </div>
       ) : (
-        <div className={cn("space-y-1.5", compact && "space-y-1")}>
-          {items.map((item) => (
+        <>
+          <div ref={menuRef}>
+          {items.map((item, idx) => (
             <div
               key={item.id}
               className={cn(
-                "group rounded-xl border border-primary/20 bg-linear-to-br from-[var(--brand-primary)]/5 to-transparent px-3 py-2 text-xs shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
-                compact && "px-2.5 py-1",
+                "px-4 py-3",
+                idx === 0 && "border-t border-border",
+                idx < items.length - 1 && "border-b border-border/60",
               )}
             >
+              {/* Modo edição inline */}
               {editingItem === item.id && item.productType !== "SERVICE" ? (
-                  <div className="space-y-2.5">
-                  <div className="text-sm font-medium text-foreground">{item.productName}</div>
+                <div className="space-y-2.5">
+                  <div className="text-sm font-semibold text-foreground">{item.productName}</div>
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Qtd</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted">
+                        Qtd
+                      </span>
                       <Input
                         type="number"
                         step="0.01"
@@ -505,7 +485,9 @@ export function DealProductsSection({
                       />
                     </div>
                     <div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Desc %</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-muted">
+                        Desc %
+                      </span>
                       <Input
                         type="number"
                         step="0.01"
@@ -518,7 +500,13 @@ export function DealProductsSection({
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    <Button type="button" variant="ghost" size="icon" className="size-7 rounded-lg" onClick={() => setEditingItem(null)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 rounded-lg"
+                      onClick={() => setEditingItem(null)}
+                    >
                       <X className="size-3" />
                     </Button>
                     <Button
@@ -534,97 +522,111 @@ export function DealProductsSection({
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Package className="size-3.5 shrink-0 text-primary-dark" />
+                /* Modo visualização */
+                <div className="flex items-center gap-3">
+                  {/* Ícone tile */}
+                  <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+                    <Package className="size-[18px]" strokeWidth={1.8} />
+                  </div>
+
+                  {/* Nome + subtítulo */}
                   <div className="min-w-0 flex-1">
-                    {/* Em compact (ContactAside) o nome fica em 1 linha (truncate)
-                        pra alinhar com o valor na MESMA linha — pedido do
-                        operador. Fora do compact mantem ate 2 linhas. */}
                     <div
-                      className={cn(
-                        "text-sm font-medium leading-tight text-foreground",
-                        compact ? "truncate" : "line-clamp-2",
-                      )}
+                      className="truncate text-sm font-semibold leading-tight text-foreground"
                       title={item.productName}
                     >
                       {item.productName}
                     </div>
-                    {(item.productType === "SERVICE" ||
-                      (item.productType !== "SERVICE" &&
-                        (item.quantity !== 1 || item.discount > 0))) && (
-                      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-[var(--color-ink-soft)]">
-                        {item.productType === "SERVICE" ? (
-                          <span className="rounded bg-lavender-soft px-1.5 py-0.5 font-semibold text-accent">
-                            Serviço
-                          </span>
-                        ) : null}
-                        {item.productType !== "SERVICE" &&
-                          (item.quantity !== 1 || item.discount > 0) && (
-                            <span>
-                              {item.quantity} {item.unit} × {formatCurrency(item.unitPrice)}
-                              {item.discount > 0 && (
-                                <span className="ml-1 text-warning">-{item.discount}%</span>
-                              )}
-                            </span>
-                          )}
-                        <AvailabilityBadge productId={item.productId} />
-                      </div>
-                    )}
+                    <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-[var(--color-ink-soft)]">
+                      <span>{item.quantity} un.</span>
+                      {item.productType === "SERVICE" && (
+                        <>
+                          <span className="opacity-40">·</span>
+                          <span>Serviço</span>
+                        </>
+                      )}
+                      {item.discount > 0 && (
+                        <>
+                          <span className="opacity-40">·</span>
+                          <span className="text-warning">-{item.discount}%</span>
+                        </>
+                      )}
+                      <AvailabilityBadge productId={item.productId} />
+                    </div>
                     <ProductCustomFieldsInline productId={item.productId} />
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+
+                  {/* Preço + menu kebab */}
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="text-sm font-semibold tabular-nums text-foreground">
                       {formatCurrency(item.total)}
                     </span>
-                    {/* Acoes so aparecem no hover pra nao competir com o
-                        nome. Em touch (sem hover) tap no card revela via
-                        focus-within. */}
-                    <div className="ml-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                      {item.productType !== "SERVICE" && (
-                        <button
-                          type="button"
-                          onClick={() => startEdit(item)}
-                          className="rounded p-1 text-ink-muted hover:bg-primary/10 hover:text-primary"
-                          aria-label="Editar item"
-                        >
-                          <Pencil className="size-3" />
-                        </button>
-                      )}
+                    {/* Menu ... */}
+                    <div className="relative">
                       <button
                         type="button"
-                        onClick={async () => {
-                          const ok = await confirmDialog({
-                            title: "Remover item",
-                            description: "Remover este item?",
-                            confirmLabel: "Remover",
-                            variant: "destructive",
-                          });
-                          if (ok) removeMutation.mutate(item.id);
-                        }}
-                        className="rounded p-1 text-ink-muted hover:bg-destructive/10 hover:text-destructive"
-                        aria-label="Remover item"
+                        onClick={() =>
+                          setOpenMenu((prev) => (prev === item.id ? null : item.id))
+                        }
+                        aria-label="Opções do item"
+                        className="rounded px-1 py-0.5 text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-foreground"
                       >
-                        <X className="size-3" />
+                        <span className="text-[13px] font-bold leading-none tracking-widest">
+                          ···
+                        </span>
                       </button>
+                      {openMenu === item.id && (
+                        <div className="absolute right-0 top-full z-50 mt-1 min-w-[120px] overflow-hidden rounded-xl border border-border bg-white shadow-lg">
+                          {item.productType !== "SERVICE" && (
+                            <button
+                              type="button"
+                              onClick={() => startEdit(item)}
+                              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]"
+                            >
+                              <Pencil className="size-3.5 text-ink-muted" />
+                              Editar
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setOpenMenu(null);
+                              const ok = await confirmDialog({
+                                title: "Remover produto",
+                                description: "Remover este produto do negócio?",
+                                confirmLabel: "Remover",
+                                variant: "destructive",
+                              });
+                              if (ok) removeMutation.mutate(item.id);
+                            }}
+                            className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/5"
+                          >
+                            <X className="size-3.5" />
+                            Remover
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
             </div>
           ))}
-          {/* Total so faz sentido quando ha somatoria real: mais de um item
-              OU algum item com desconto/quantidade nao trivial. Com 1 item
-              qty=1 desc=0, o Total repete o valor do item — ruido visual. */}
-          {(items.length > 1 ||
-            items.some((i) => i.quantity !== 1 || i.discount > 0)) && (
-            <div className="flex items-center justify-between pt-2 text-sm">
-              <span className="font-medium text-ink-muted">Total</span>
-              <span className="font-semibold tabular-nums text-foreground">{formatCurrency(totalValue)}</span>
+
+          </div>
+
+          {/* ── Rodapé Total ── */}
+          {showTotal && (
+            <div className="flex items-center justify-between border-t border-border px-4 py-3">
+              <span className="text-sm text-[var(--color-ink-soft)]">Total</span>
+              <span className="text-sm font-bold tabular-nums text-foreground">
+                {formatCurrency(totalValue)}
+              </span>
             </div>
           )}
-        </div>
+        </>
       )}
-    </SidebarSection>
+    </div>
   );
 }
 

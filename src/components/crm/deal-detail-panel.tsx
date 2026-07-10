@@ -290,8 +290,8 @@ export function DealDetailPanel({
     SIDEBAR_DEFAULT_ORDER,
   )
 
-  // Aba ativa (Perfil por padrão — conteúdo primário do operador).
-  const [activeTab, setActiveTab] = useState<SidebarTab>("perfil")
+  // Aba ativa da sidebar (Perfil por padrão — conteúdo primário do operador).
+  const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>("perfil")
 
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
   // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
@@ -382,14 +382,14 @@ export function DealDetailPanel({
   const tabbedSections = useMemo(
     () =>
       sectionOrder.filter((s) => {
-        if (SIDEBAR_SECTION_TAB[s] !== activeTab) return false
+        if (SIDEBAR_SECTION_TAB[s] !== activeSidebarTab) return false
         if (sectionHiddenMap[s]) return false
         if (s === "campos" && (!customFieldsSlot || customFieldsSlot.length === 0))
           return false
         if (s === "produtos" && !productsSlot) return false
         return true
       }),
-    [sectionOrder, activeTab, sectionHiddenMap, customFieldsSlot, productsSlot],
+    [sectionOrder, activeSidebarTab, sectionHiddenMap, customFieldsSlot, productsSlot],
   )
 
   function handleSidebarDragEnd(result: DropResult) {
@@ -765,8 +765,8 @@ export function DealDetailPanel({
                   {/* ── Pills: Perfil / Produto ── */}
                   <PageSegmentedControl
                     items={SIDEBAR_TAB_ITEMS}
-                    value={activeTab}
-                    onChange={(v) => setActiveTab(v as SidebarTab)}
+                    value={activeSidebarTab}
+                    onChange={(v) => setActiveSidebarTab(v as SidebarTab)}
                     aria-label="Alternar entre Perfil e Produto"
                     size="compact"
                     className="w-full [&>button]:flex [&>button]:flex-1 [&>button]:items-center [&>button]:justify-center"
@@ -1025,7 +1025,7 @@ export function DealDetailPanel({
                 {tabbedSections.length === 0 && (
                   <div className="px-3 py-6 text-center">
                     <p className="font-display text-[12px] text-[var(--text-muted)]">
-                      {activeTab === "produto"
+                      {activeSidebarTab === "produto"
                         ? "Nenhum produto adicionado a este negócio."
                         : "Nenhum dado de perfil disponível."}
                     </p>

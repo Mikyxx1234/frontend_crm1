@@ -591,16 +591,15 @@ export function DealDetailPanel({
                     kebab + engrenagem (canto direito).
                     Ordem: ← back | spacer | stage-pill | kebab | gear */}
                 <div className="relative flex items-center gap-1.5">
-                  <TooltipGlass label="Voltar" side="bottom">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      aria-label="Voltar"
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-white/80 transition-colors hover:bg-white/15 hover:text-white"
-                    >
-                      <IconArrowLeft size={15} />
-                    </button>
-                  </TooltipGlass>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Voltar"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-white backdrop-blur-sm transition-all hover:bg-white/25 hover:border-white/40"
+                  >
+                    <IconArrowLeft size={13} strokeWidth={2.5} />
+                    <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
+                  </button>
                   <div className="flex-1" />
                   {stageDropdownSlot ? (
                     <div className="relative z-30 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[11px] [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">

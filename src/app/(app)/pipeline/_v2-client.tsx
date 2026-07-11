@@ -944,7 +944,7 @@ export default function KanbanV2ClientPage({
               trigger={
                 <TooltipGlass label="Mais opções" side="left">
                   <span
-                    className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-white/70 transition-colors hover:bg-white/15 hover:text-white"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 transition-all hover:bg-white/20 hover:text-white hover:border-white/35"
                   >
                     <IconDotsVertical size={14} />
                   </span>

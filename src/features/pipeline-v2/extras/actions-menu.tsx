@@ -7,7 +7,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { IconTrash } from "@tabler/icons-react";
+import {
+  IconTrash,
+  IconCircleX,
+  IconCircleCheck,
+  IconRefresh,
+} from "@tabler/icons-react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
@@ -95,20 +100,25 @@ export function DealActionsMenu({
       {open && dropdownPos && typeof document !== "undefined" && createPortal(
         <div
           ref={dropdownRef}
-          className="w-52 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] py-1 shadow-[0_8px_32px_rgba(15,20,40,0.16)] backdrop-blur-xl"
+          className="w-56 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-white py-1.5 shadow-[0_8px_32px_rgba(15,20,40,0.18)]"
           style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right, zIndex: "var(--z-popover)" }}
           role="menu"
         >
+          {/* Status group */}
+          <div className="px-3 pb-1 pt-0.5">
+            <span className="font-display text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+              Alterar status
+            </span>
+          </div>
+
           {currentStatus !== "LOST" && (
             <button
               type="button"
               disabled={setStatus.isPending}
-              onClick={() => {
-                setOpen(false);
-                setLostDialogOpen(true);
-              }}
-              className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8 disabled:opacity-50"
+              onClick={() => { setOpen(false); setLostDialogOpen(true); }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[13px] font-semibold text-[#dc2626] transition-colors hover:bg-red-50 disabled:opacity-50"
             >
+              <IconCircleX size={15} strokeWidth={2} />
               Marcar como perdido
             </button>
           )}
@@ -117,8 +127,9 @@ export function DealActionsMenu({
               type="button"
               disabled={setStatus.isPending}
               onClick={() => apply("WON")}
-              className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--color-success)] transition-colors hover:bg-[var(--color-success)]/8 disabled:opacity-50"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[13px] font-semibold text-[#16a34a] transition-colors hover:bg-green-50 disabled:opacity-50"
             >
+              <IconCircleCheck size={15} strokeWidth={2} />
               Marcar como ganho
             </button>
           )}
@@ -127,12 +138,17 @@ export function DealActionsMenu({
               type="button"
               disabled={setStatus.isPending}
               onClick={() => apply("OPEN")}
-              className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[13px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] disabled:opacity-50"
             >
-              Reabrir
+              <IconRefresh size={15} strokeWidth={2} />
+              Reabrir negócio
             </button>
           )}
-          <div className="mx-3.5 my-1 h-px bg-[var(--glass-border)]" />
+
+          {/* Separator */}
+          <div className="mx-3 my-1.5 h-px bg-slate-100" />
+
+          {/* Danger zone */}
           <button
             type="button"
             disabled={!dealId || deleteDealMut.isPending}
@@ -155,9 +171,10 @@ export function DealActionsMenu({
                 },
               );
             }}
-            className="flex w-full items-center gap-2 px-3.5 py-2 text-left font-display text-[12.5px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8 disabled:opacity-60"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-display text-[13px] font-semibold text-[#dc2626] transition-colors hover:bg-red-50 disabled:opacity-60"
           >
-            Excluir negocio
+            <IconTrash size={14} strokeWidth={2} />
+            Excluir negócio
           </button>
         </div>,
         document.body,

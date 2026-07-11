@@ -2,17 +2,31 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconLayoutList as LayoutList, IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2 } from "@tabler/icons-react";
-import { useSearchParams } from "next/navigation";
+import {
+  IconCalendar,
+  IconEye,
+  IconEyeOff,
+  IconGripVertical,
+  IconHash,
+  IconLayoutList,
+  IconLink,
+  IconList,
+  IconMail,
+  IconPhone,
+  IconPlus,
+  IconSearch,
+  IconToggleLeft,
+  IconTrash,
+  IconPencil,
+  IconLetterT,
+} from "@tabler/icons-react";
 import * as React from "react";
 
 import { useConfirm } from "@/hooks/use-confirm";
-import { Badge } from "@/components/ui/badge";
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { GlassCard } from "@/components/crm/glass-card";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
-import { TabsGlass } from "@/components/crm/tabs-glass";
 import { InputGlass } from "@/components/crm/input-glass";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import {
   Dialog,
@@ -27,6 +41,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  type DropResult,
+} from "@hello-pangea/dnd";
+import { cn } from "@/lib/utils";
 
 type CustomFieldItem = {
   id: string;
@@ -52,26 +73,22 @@ const TYPES = [
   { value: "PHONE", label: "Telefone" },
 ] as const;
 
-const ENTITY_LABELS: Record<string, string> = {
-  contact: "Lead (contato)",
-  deal: "Negócio",
-  product: "Produto/Serviço",
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  TEXT: <IconLetterT size={14} strokeWidth={2.5} />,
+  NUMBER: <IconHash size={14} strokeWidth={2.5} />,
+  DATE: <IconCalendar size={14} strokeWidth={2.2} />,
+  SELECT: <IconList size={14} strokeWidth={2.2} />,
+  MULTI_SELECT: <IconList size={14} strokeWidth={2.2} />,
+  BOOLEAN: <IconToggleLeft size={14} strokeWidth={2.2} />,
+  URL: <IconLink size={14} strokeWidth={2.2} />,
+  EMAIL: <IconMail size={14} strokeWidth={2.2} />,
+  PHONE: <IconPhone size={14} strokeWidth={2.2} />,
 };
 
-async function fetchFields(): Promise<CustomFieldItem[]> {
-  const [contactRes, dealRes, productRes] = await Promise.all([
-    fetch(apiUrl("/api/custom-fields?entity=contact")),
-    fetch(apiUrl("/api/custom-fields?entity=deal")),
-    fetch(apiUrl("/api/custom-fields?entity=product")),
-  ]);
-  const contacts = contactRes.ok ? await contactRes.json() : [];
-  const deals = dealRes.ok ? await dealRes.json() : [];
-  const products = productRes.ok ? await productRes.json() : [];
-  return [
-    ...(Array.isArray(contacts) ? contacts : []),
-    ...(Array.isArray(deals) ? deals : []),
-    ...(Array.isArray(products) ? products : []),
-  ];
+async function fetchFields(entity: string): Promise<CustomFieldItem[]> {
+  const res = await fetch(apiUrl(`/api/custom-fields?entity=${entity}`));
+  const data = res.ok ? await res.json() : [];
+  return Array.isArray(data) ? data : [];
 }
 
 async function createField(data: {
@@ -111,151 +128,292 @@ async function deleteField(id: string) {
   if (!res.ok) throw new Error("Erro ao excluir campo");
 }
 
+type EntityTab = "deal" | "contact";
+
 export default function CustomFieldsPage() {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
-  const searchParams = useSearchParams();
+  const [activeEntity, setActiveEntity] = React.useState<EntityTab>("deal");
+  const [search, setSearch] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<CustomFieldItem | null>(null);
-  // Permite pré-selecionar a entidade via query string (ex.: a tela de
-  // Produtos linka pra cá com `?entity=product` e o usuário cai direto
-  // no filtro certo, sem ter que saber que existe uma aba).
-  const initialEntity = React.useMemo<"all" | "contact" | "deal" | "product">(() => {
-    const p = searchParams?.get("entity");
-    if (p === "contact" || p === "deal" || p === "product") return p;
-    return "all";
-  }, [searchParams]);
-  const [entityFilter, setEntityFilter] = React.useState<"all" | "contact" | "deal" | "product">(initialEntity);
+
+  const queryKey = ["custom-fields", activeEntity];
 
   const { data: fields = [], isLoading } = useQuery({
-    queryKey: ["custom-fields-all"],
-    queryFn: fetchFields,
+    queryKey,
+    queryFn: () => fetchFields(activeEntity),
   });
+
+  const [localOrder, setLocalOrder] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    setLocalOrder(fields.map((f) => f.id));
+  }, [fields]);
+
+  const orderedFields = React.useMemo(() => {
+    const map = Object.fromEntries(fields.map((f) => [f.id, f]));
+    return localOrder.map((id) => map[id]).filter(Boolean);
+  }, [fields, localOrder]);
+
+  const filtered = React.useMemo(() => {
+    if (!search.trim()) return orderedFields;
+    const q = search.toLowerCase();
+    return orderedFields.filter(
+      (f) =>
+        f.label.toLowerCase().includes(q) || f.name.toLowerCase().includes(q)
+    );
+  }, [orderedFields, search]);
+
+  const inboxCount = fields.filter((f) => f.showInInboxLeadPanel).length;
 
   const deleteMutation = useMutation({
     mutationFn: deleteField,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["custom-fields-all"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  const filtered = entityFilter === "all"
-    ? fields
-    : fields.filter((f) => f.entity === entityFilter);
+  const reorderMutation = useMutation({
+    mutationFn: async ({
+      id,
+      inboxLeadPanelOrder,
+    }: {
+      id: string;
+      inboxLeadPanelOrder: number;
+    }) => updateField(id, { inboxLeadPanelOrder }),
+  });
 
-  const contactCount = fields.filter((f) => f.entity === "contact").length;
-  const dealCount = fields.filter((f) => f.entity === "deal").length;
-  const productCount = fields.filter((f) => f.entity === "product").length;
+  function onDragEnd(result: DropResult) {
+    if (!result.destination) return;
+    const next = Array.from(localOrder);
+    const [moved] = next.splice(result.source.index, 1);
+    next.splice(result.destination.index, 0, moved);
+    setLocalOrder(next);
+    // Persist new order as inboxLeadPanelOrder
+    next.forEach((id, idx) => {
+      reorderMutation.mutate({ id, inboxLeadPanelOrder: idx });
+    });
+  }
 
-  const filterOptions = [
-    { val: "all" as const, label: "Todos", count: fields.length },
-    { val: "contact" as const, label: "Contatos", count: contactCount },
-    { val: "deal" as const, label: "Negócios", count: dealCount },
-    { val: "product" as const, label: "Produtos", count: productCount },
+  const TABS: { value: EntityTab; label: string }[] = [
+    { value: "deal", label: "Negócio" },
+    { value: "contact", label: "Contato" },
   ];
-  const activeTabIndex = filterOptions.findIndex((o) => o.val === entityFilter);
 
   return (
-    <div className="w-full">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <TabsGlass
-          tabs={filterOptions.map((o) => ({ label: o.label, count: o.count }))}
-          activeTab={activeTabIndex === -1 ? 0 : activeTabIndex}
-          onChange={(i) => setEntityFilter(filterOptions[i].val)}
-        />
+    <div className="w-full space-y-4">
+      {/* Header bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Entity tabs */}
+        <div className="flex items-center rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-0.5">
+          {TABS.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => {
+                setActiveEntity(tab.value);
+                setSearch("");
+              }}
+              className={cn(
+                "rounded-md px-4 py-1.5 text-sm font-medium transition-all",
+                activeEntity === tab.value
+                  ? "bg-white text-[var(--text-primary)] shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative flex-1 max-w-xs">
+          <IconSearch
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+          />
+          <InputGlass
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar campo..."
+            className="pl-8 text-sm"
+          />
+        </div>
 
         <div className="flex-1" />
 
         <ButtonGlass variant="primary" onClick={() => setCreateOpen(true)}>
-          <Plus className="size-4" />
+          <IconPlus size={16} />
           Novo campo
         </ButtonGlass>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+      {/* Counter row */}
+      {!isLoading && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-[var(--text-muted)]">
+            {fields.length} campo{fields.length !== 1 ? "s" : ""}
+          </span>
+          {inboxCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+              <IconEye size={11} />
+              {inboxCount} no painel da Inbox
+            </span>
+          )}
         </div>
-      ) : filtered.length === 0 ? (
-        <GlassCard className="border-dashed p-0">
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <LayoutList className="mb-3 size-10 text-[var(--text-muted)]/30" />
-            <p className="text-sm text-[var(--text-muted)]">
-              {fields.length === 0
-                ? "Nenhum campo personalizado criado ainda."
-                : "Nenhum campo nesta categoria."}
-            </p>
-            <ButtonGlass variant="glass" className="mt-4" onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4" /> Criar campo
-            </ButtonGlass>
-          </div>
-        </GlassCard>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {filtered.map((f) => (
-            <GlassCard key={f.id} className="group relative p-0 transition-shadow hover:shadow-[var(--glass-shadow)]">
-              <div className="px-4 pb-2 pt-4">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">{f.label}</h3>
-                    <p className="mt-0.5 font-mono text-xs text-[var(--text-muted)]">{f.name}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                    <ButtonGlass
-                      variant="icon" size="icon" className="size-7"
-                      onClick={() => setEditItem(f)}
-                    >
-                      <Pencil className="size-3" />
-                    </ButtonGlass>
-                    <ButtonGlass
-                      variant="icon" size="icon" className="size-7 text-[var(--color-destructive)] hover:bg-[color-mix(in_srgb,var(--color-destructive)_12%,transparent)] hover:text-[var(--color-destructive)]"
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: "Excluir campo",
-                          description: `Excluir o campo "${f.label}"? Todos os valores serão perdidos.`,
-                          confirmLabel: "Excluir",
-                          variant: "destructive",
-                        });
-                        if (ok) deleteMutation.mutate(f.id);
-                      }}
-                    >
-                      <Trash2 className="size-3" />
-                    </ButtonGlass>
-                  </div>
-                </div>
-              </div>
-              <div className="px-4 pb-4 pt-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="text-[10px]">
-                    {ENTITY_LABELS[f.entity] ?? f.entity}
-                  </Badge>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {TYPES.find((t) => t.value === f.type)?.label ?? f.type}
-                  </Badge>
-                  {f.required && (
-                    <Badge variant="destructive" className="text-[10px]">Obrigatório</Badge>
-                  )}
-                  {(f.entity === "contact" || f.entity === "deal") && f.showInInboxLeadPanel && (
-                    <Badge className="border border-[var(--color-teal)]/40 bg-[var(--color-teal)]/10 text-[10px] font-semibold text-[#0f766e]">
-                      Painel Inbox
-                    </Badge>
-                  )}
-                  {f.options.length > 0 && (
-                    <span className="text-[10px] text-muted-foreground">
-                      {f.options.length} opç{f.options.length === 1 ? "ão" : "ões"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </GlassCard>
+      )}
+
+      {/* List */}
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-14 rounded-xl" />
           ))}
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg)] px-6 py-16 text-center">
+          <IconLayoutList
+            size={40}
+            className="mb-3 text-[var(--text-muted)]/30"
+          />
+          <p className="text-sm text-[var(--text-muted)]">
+            {fields.length === 0
+              ? "Nenhum campo personalizado criado ainda."
+              : "Nenhum campo encontrado."}
+          </p>
+          {fields.length === 0 && (
+            <ButtonGlass
+              variant="glass"
+              className="mt-4"
+              onClick={() => setCreateOpen(true)}
+            >
+              <IconPlus size={14} /> Criar campo
+            </ButtonGlass>
+          )}
+        </div>
+      ) : (
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="custom-fields-list">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="space-y-1.5"
+              >
+                {filtered.map((field, index) => (
+                  <Draggable
+                    key={field.id}
+                    draggableId={field.id}
+                    index={index}
+                  >
+                    {(drag, snapshot) => (
+                      <div
+                        ref={drag.innerRef}
+                        {...drag.draggableProps}
+                        className={cn(
+                          "group flex items-center gap-3 rounded-xl border border-[var(--glass-border)] bg-white px-4 py-3 transition-shadow",
+                          snapshot.isDragging && "shadow-lg opacity-90"
+                        )}
+                      >
+                        {/* Drag handle */}
+                        <div
+                          {...drag.dragHandleProps}
+                          className="cursor-grab text-[var(--text-muted)]/40 transition-colors hover:text-[var(--text-muted)] active:cursor-grabbing"
+                        >
+                          <IconGripVertical size={16} />
+                        </div>
+
+                        {/* Type icon */}
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+                          {TYPE_ICONS[field.type] ?? (
+                            <IconLetterT size={14} strokeWidth={2.5} />
+                          )}
+                        </div>
+
+                        {/* Name + slug */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                              {field.label}
+                            </span>
+                            {field.required && (
+                              <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-red-50 text-red-600">
+                                Obrigatório
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                            {field.name}
+                            {" · "}
+                            {TYPES.find((t) => t.value === field.type)?.label ??
+                              field.type}
+                          </p>
+                        </div>
+
+                        {/* Inbox badge */}
+                        {(field.entity === "contact" ||
+                          field.entity === "deal") && (
+                          <div
+                            className={cn(
+                              "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium",
+                              field.showInInboxLeadPanel
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-[var(--glass-bg)] text-[var(--text-muted)]"
+                            )}
+                          >
+                            {field.showInInboxLeadPanel ? (
+                              <IconEye size={12} />
+                            ) : (
+                              <IconEyeOff size={12} />
+                            )}
+                            Inbox
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                          <ButtonGlass
+                            variant="icon"
+                            size="icon"
+                            className="size-7"
+                            onClick={() => setEditItem(field)}
+                          >
+                            <IconPencil size={13} />
+                          </ButtonGlass>
+                          <ButtonGlass
+                            variant="icon"
+                            size="icon"
+                            className="size-7 text-[var(--color-destructive)] hover:bg-red-50 hover:text-[var(--color-destructive)]"
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: "Excluir campo",
+                                description: `Excluir o campo "${field.label}"? Todos os valores serão perdidos.`,
+                                confirmLabel: "Excluir",
+                                variant: "destructive",
+                              });
+                              if (ok) deleteMutation.mutate(field.id);
+                            }}
+                          >
+                            <IconTrash size={13} />
+                          </ButtonGlass>
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       )}
 
       <FieldFormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         mode="create"
+        defaultEntity={activeEntity}
         onSaved={() => {
-          queryClient.invalidateQueries({ queryKey: ["custom-fields-all"] });
+          queryClient.invalidateQueries({ queryKey });
           setCreateOpen(false);
         }}
       />
@@ -263,11 +421,13 @@ export default function CustomFieldsPage() {
       {editItem && (
         <FieldFormDialog
           open={!!editItem}
-          onOpenChange={(o) => { if (!o) setEditItem(null); }}
+          onOpenChange={(o) => {
+            if (!o) setEditItem(null);
+          }}
           mode="edit"
           initial={editItem}
           onSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["custom-fields-all"] });
+            queryClient.invalidateQueries({ queryKey });
             setEditItem(null);
           }}
         />
@@ -277,25 +437,34 @@ export default function CustomFieldsPage() {
 }
 
 function FieldFormDialog({
-  open, onOpenChange, mode, initial, onSaved,
+  open,
+  onOpenChange,
+  mode,
+  initial,
+  defaultEntity = "deal",
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   mode: "create" | "edit";
   initial?: CustomFieldItem;
+  defaultEntity?: string;
   onSaved: () => void;
 }) {
   const [name, setName] = React.useState(initial?.name ?? "");
   const [label, setLabel] = React.useState(initial?.label ?? "");
   const [type, setType] = React.useState(initial?.type ?? "TEXT");
-  const [entity, setEntity] = React.useState(initial?.entity ?? "contact");
-  const [required, setRequired] = React.useState(initial?.required ?? false);
-  const [optionsText, setOptionsText] = React.useState(initial?.options.join("\n") ?? "");
+  const [entity, setEntity] = React.useState(
+    initial?.entity ?? defaultEntity
+  );
+  const [required, setRequired] = React.useState(
+    initial?.required ?? false
+  );
+  const [optionsText, setOptionsText] = React.useState(
+    initial?.options.join("\n") ?? ""
+  );
   const [showInInboxLeadPanel, setShowInInboxLeadPanel] = React.useState(
     initial?.showInInboxLeadPanel ?? false
-  );
-  const [inboxOrder, setInboxOrder] = React.useState(
-    initial?.inboxLeadPanelOrder != null ? String(initial.inboxLeadPanelOrder) : ""
   );
 
   React.useEffect(() => {
@@ -307,24 +476,22 @@ function FieldFormDialog({
       setRequired(initial.required);
       setOptionsText(initial.options.join("\n"));
       setShowInInboxLeadPanel(initial.showInInboxLeadPanel ?? false);
-      setInboxOrder(initial.inboxLeadPanelOrder != null ? String(initial.inboxLeadPanelOrder) : "");
     } else if (open && !initial) {
       setName("");
       setLabel("");
       setType("TEXT");
-      setEntity("contact");
+      setEntity(defaultEntity);
       setRequired(false);
       setOptionsText("");
       setShowInInboxLeadPanel(false);
-      setInboxOrder("");
     }
-  }, [open, initial]);
+  }, [open, initial, defaultEntity]);
 
   const supportsInboxPanel = entity === "contact" || entity === "deal";
+
   React.useEffect(() => {
     if (open && mode === "create" && !supportsInboxPanel) {
       setShowInInboxLeadPanel(false);
-      setInboxOrder("");
     }
   }, [supportsInboxPanel, open, mode]);
 
@@ -335,14 +502,6 @@ function FieldFormDialog({
         .map((o) => o.trim())
         .filter(Boolean);
 
-      const orderTrim = inboxOrder.trim();
-      const inboxLeadPanelOrder =
-        supportsInboxPanel && orderTrim !== "" && Number.isFinite(Number(orderTrim))
-          ? Math.floor(Number(orderTrim))
-          : supportsInboxPanel && orderTrim === ""
-            ? null
-            : undefined;
-
       if (mode === "create") {
         return createField({
           name,
@@ -351,26 +510,17 @@ function FieldFormDialog({
           options,
           required,
           entity,
-          ...(supportsInboxPanel
-            ? {
-                showInInboxLeadPanel,
-                inboxLeadPanelOrder: inboxLeadPanelOrder ?? null,
-              }
-            : {}),
+          ...(supportsInboxPanel ? { showInInboxLeadPanel } : {}),
         });
       } else if (initial) {
-        const editSupports = initial.entity === "contact" || initial.entity === "deal";
+        const editSupports =
+          initial.entity === "contact" || initial.entity === "deal";
         return updateField(initial.id, {
           label,
           type,
           options,
           required,
-          ...(editSupports
-            ? {
-                showInInboxLeadPanel,
-                ...(inboxLeadPanelOrder !== undefined ? { inboxLeadPanelOrder } : {}),
-              }
-            : {}),
+          ...(editSupports ? { showInInboxLeadPanel } : {}),
         });
       }
     },
@@ -379,12 +529,20 @@ function FieldFormDialog({
 
   const showOptions = type === "SELECT" || type === "MULTI_SELECT";
 
+  const entityOptions = [
+    { value: "contact", label: "Contato" },
+    { value: "deal", label: "Negócio" },
+    { value: "product", label: "Produto/Serviço" },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg">
         <DialogClose />
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Novo campo" : "Editar campo"}</DialogTitle>
+          <DialogTitle>
+            {mode === "create" ? "Novo campo" : "Editar campo"}
+          </DialogTitle>
           <DialogDescription>
             {mode === "create"
               ? "Defina o nome, tipo e entidade para o novo campo."
@@ -393,23 +551,28 @@ function FieldFormDialog({
         </DialogHeader>
 
         <form
-          onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate();
+          }}
           className="space-y-4"
         >
+          {/* Entidade + Tipo */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Entidade</Label>
               <DropdownGlass
-                options={[
-                  { value: "contact", label: "Contato" },
-                  { value: "deal", label: "Negócio" },
-                  { value: "product", label: "Produto/Serviço" },
-                ]}
+                options={entityOptions}
                 value={entity}
                 onValueChange={(v) => setEntity(v)}
                 disabled={mode === "edit"}
                 triggerClassName="w-full"
               />
+              {mode === "edit" && (
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Não pode ser alterada
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Tipo</Label>
@@ -422,8 +585,12 @@ function FieldFormDialog({
             </div>
           </div>
 
+          {/* Slug */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Identificador (slug) — opcional</Label>
+            <Label className="text-xs">
+              Identificador (slug){" "}
+              <span className="text-[var(--text-muted)]">— opcional</span>
+            </Label>
             <InputGlass
               value={name}
               onChange={(e) => {
@@ -440,23 +607,20 @@ function FieldFormDialog({
               disabled={mode === "edit"}
               className="font-mono"
             />
-            {mode === "create" ? (
-              <p className="text-[11px] text-muted-foreground">
-                Se deixar vazio, o sistema gera automaticamente (ex.:{" "}
-                <span className="font-mono">fonte_do_lead</span>).
-              </p>
-            ) : null}
           </div>
 
+          {/* Label */}
           <div className="space-y-1.5">
             <Label className="text-xs">Label (exibição)</Label>
             <InputGlass
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="ex: Fonte do Lead"
+              autoFocus={mode === "create"}
             />
           </div>
 
+          {/* Options (only for select types) */}
           {showOptions && (
             <div className="space-y-1.5">
               <Label className="text-xs">Opções (uma por linha)</Label>
@@ -470,57 +634,60 @@ function FieldFormDialog({
             </div>
           )}
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <CheckboxGlass
-              checked={required}
-              onChange={(v) => setRequired(v)}
-              aria-label="Campo obrigatório"
-            />
-            <span className="text-sm">Campo obrigatório</span>
-          </label>
-
-          {supportsInboxPanel && (
-            <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-3">
-              <p className="text-xs font-medium text-[var(--text-primary)]">Painel lateral na Inbox</p>
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                Marque os campos que o agente deve ver ao atender no chat.
-                {entity === "contact" && <> Ex.: CPF, matrícula, adimplente.</>}
-                {entity === "deal" && <> Ex.: origem do lead, segmento, plano.</>}
-                {" "}Use tipo <strong>Sim/Não</strong> para situações de destaque.
+          {/* Required toggle */}
+          <div className="flex items-start justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">
+                Campo obrigatório
               </p>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                Impede salvar o registro sem preencher este campo.
+              </p>
+            </div>
+            <SwitchGlass
+              checked={required}
+              onChange={setRequired}
+              aria-label="Campo obrigatório"
+              size="sm"
+            />
+          </div>
+
+          {/* Inbox panel */}
+          {supportsInboxPanel && (
+            <div className="space-y-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4">
+              <p className="text-sm font-medium text-[var(--text-primary)]">
+                Painel lateral na Inbox
+              </p>
+              <p className="text-[11px] leading-snug text-[var(--text-muted)]">
+                Marque os campos que o agente deve ver ao atender no chat (ex.:
+                origem do lead, segmento, plano). A ordem de exibição é definida
+                arrastando os campos na lista.
+              </p>
+              <label className="flex cursor-pointer items-center gap-2">
                 <CheckboxGlass
                   checked={showInInboxLeadPanel}
-                  onChange={(v) => setShowInInboxLeadPanel(v)}
+                  onChange={setShowInInboxLeadPanel}
                   aria-label="Exibir no painel lateral (Inbox)"
                 />
                 <span className="text-sm">Exibir no painel lateral (Inbox)</span>
               </label>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Ordem no painel (opcional)</Label>
-                <InputGlass
-                  type="number"
-                  inputMode="numeric"
-                  value={inboxOrder}
-                  onChange={(e) => setInboxOrder(e.target.value)}
-                  placeholder="0 = primeiro; vazio = após os numerados"
-                />
-              </div>
             </div>
           )}
 
           <Separator />
 
           <DialogFooter>
-            <ButtonGlass type="button" variant="glass" onClick={() => onOpenChange(false)}>
+            <ButtonGlass
+              type="button"
+              variant="glass"
+              onClick={() => onOpenChange(false)}
+            >
               Cancelar
             </ButtonGlass>
             <ButtonGlass
               type="submit"
               variant="primary"
-              disabled={
-                mutation.isPending || !label.trim()
-              }
+              disabled={mutation.isPending || !label.trim()}
             >
               {mutation.isPending
                 ? "Salvando…"
@@ -532,7 +699,9 @@ function FieldFormDialog({
 
           {mutation.isError && (
             <p className="text-sm text-[var(--color-destructive)]">
-              {mutation.error instanceof Error ? mutation.error.message : "Erro"}
+              {mutation.error instanceof Error
+                ? mutation.error.message
+                : "Erro ao salvar"}
             </p>
           )}
         </form>

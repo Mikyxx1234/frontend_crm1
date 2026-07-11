@@ -20,6 +20,7 @@ export type AgentPermissions = {
   canCloseConversation: boolean;
   canDeleteConversation: boolean;
   canManageQuickMessages: boolean;
+  canConfigureFieldVisibility: boolean;
   allowedConnectionIds: string[];
   allowedDepartmentIds: string[];
 };
@@ -31,6 +32,7 @@ export const DEFAULT_PERMISSIONS: AgentPermissions = {
   canCloseConversation: true,
   canDeleteConversation: false,
   canManageQuickMessages: false,
+  canConfigureFieldVisibility: false,
   allowedConnectionIds: [],
   allowedDepartmentIds: [],
 };

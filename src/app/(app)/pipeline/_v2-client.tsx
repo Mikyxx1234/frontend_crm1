@@ -981,28 +981,26 @@ export default function KanbanV2ClientPage({
         // do DealDetailPanel usando Contact.source nativo via
         // InlineNativeEditor.
         customFieldsSlot={(() => {
-          // Mesma lógica do toContactAside: mescla inboxLeadPanelFields (contato) +
-          // dealInboxPanelFields[activeDealId] (campos do negócio ativo),
-          // deduplicando por fieldId e filtrando vazios.
+          // Contact fields: filtrados por showInInboxLeadPanel (inalterado).
+          // Deal fields: agora usa dealPanelFields do deal detail (filtrados por
+          // showInDealPanel) para separar as configurações de visibilidade do inbox.
           const contactFields = dealContact?.inboxLeadPanelFields ?? [];
-          const dealFields = activeDealId
-            ? (dealContact?.dealInboxPanelFields?.[activeDealId] ?? [])
-            : [];
+          const dealPanelFields = (dealDetail as { dealPanelFields?: import("@/features/pipeline-v2/api/deals").DealPanelField[] } | null)?.dealPanelFields ?? [];
           const seen = new Set<string>();
-          type Tagged = (typeof contactFields[0]) & { _et: "contact" | "deal"; _eid: string };
-          const tagged: Tagged[] = [
+          type CFEntry = { fieldId: string; label?: string; name?: string; value: string | null; type: string; options?: string[]; highlightRules?: unknown[] | null; highlight?: { severity: string; label: string } | null; _et: "contact" | "deal"; _eid: string };
+          const tagged: CFEntry[] = [
             ...contactFields.map((f) => ({ ...f, _et: "contact" as const, _eid: dealContactId ?? "" })),
-            ...dealFields.map((f) => ({ ...f, _et: "deal" as const, _eid: activeDealId ?? "" })),
+            ...dealPanelFields.map((f) => ({ ...f, _et: "deal" as const, _eid: activeDealId ?? "" })),
           ];
           return tagged
             .filter((f) => {
               if (seen.has(f.fieldId)) return false;
               seen.add(f.fieldId);
-              return true; // não filtra vazios — o editor cuida de mostrar "Adicionar"
+              return true;
             })
             .map((f) => ({
               fieldId: f.fieldId,
-              label: f.label || f.name,
+              label: f.label || f.name || f.fieldId,
               value: f.value,
               type: f.type,
               options: f.options ?? [],

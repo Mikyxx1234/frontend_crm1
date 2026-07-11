@@ -65,6 +65,7 @@ export type CustomFieldItem = {
   entity: string;
   showInInboxLeadPanel?: boolean | null;
   inboxLeadPanelOrder?: number | null;
+  showInDealPanel?: boolean | null;
   highlightRules?: unknown[] | null;
 };
 
@@ -88,6 +89,20 @@ const TYPES = [
 const TYPE_LABEL: Record<string, string> = Object.fromEntries(
   TYPES.map((t) => [t.value, t.label]),
 );
+
+/* ─────────── tipo de contexto do painel ─────────── */
+
+/**
+ * Contexto do painel: determina qual campo de visibilidade é usado.
+ * - "inbox"  → showInInboxLeadPanel + inboxLeadPanelOrder
+ * - "deal"   → showInDealPanel (sem ordering separado por ora)
+ */
+export type PanelConfigContext = "inbox" | "deal";
+
+function contextFromLayout(context: FieldLayoutContext): PanelConfigContext {
+  if (context === "deal_panel_v2") return "deal";
+  return "inbox";
+}
 
 /* ─────────── helpers de API ─────────── */
 
@@ -126,6 +141,7 @@ async function updateField(
     required?: boolean;
     showInInboxLeadPanel?: boolean;
     inboxLeadPanelOrder?: number | null;
+    showInDealPanel?: boolean;
     highlightRules?: HighlightRule[];
   },
 ) {
@@ -144,14 +160,16 @@ async function deleteField(id: string) {
 }
 
 /** Ordena campos: visíveis primeiro (por order), ocultos ao final (por label). */
-function sortedFields(fields: CustomFieldItem[]): CustomFieldItem[] {
+function sortedFields(fields: CustomFieldItem[], panelCtx: PanelConfigContext = "inbox"): CustomFieldItem[] {
   return [...fields].sort((a, b) => {
-    const aVis = a.showInInboxLeadPanel === true;
-    const bVis = b.showInInboxLeadPanel === true;
+    const aVis = panelCtx === "deal" ? a.showInDealPanel === true : a.showInInboxLeadPanel === true;
+    const bVis = panelCtx === "deal" ? b.showInDealPanel === true : b.showInInboxLeadPanel === true;
     if (aVis !== bVis) return aVis ? -1 : 1;
-    const ao = a.inboxLeadPanelOrder ?? Infinity;
-    const bo = b.inboxLeadPanelOrder ?? Infinity;
-    if (ao !== bo) return ao - bo;
+    if (panelCtx !== "deal") {
+      const ao = a.inboxLeadPanelOrder ?? Infinity;
+      const bo = b.inboxLeadPanelOrder ?? Infinity;
+      if (ao !== bo) return ao - bo;
+    }
     return a.label.localeCompare(b.label, "pt-BR");
   });
 }
@@ -170,6 +188,7 @@ export interface FieldConfigPanelProps {
 }
 
 export function FieldConfigPanel({ entities, context, onClose }: FieldConfigPanelProps) {
+  const panelCtx = contextFromLayout(context);
   const { sections, isAdmin, saveAdmin, saveAdminPending } = useFieldLayout(context);
   const [localSections, setLocalSections] = React.useState<SectionConfig[] | null>(null);
   const effectiveSections = localSections ?? sections;
@@ -236,7 +255,7 @@ export function FieldConfigPanel({ entities, context, onClose }: FieldConfigPane
       )}
 
       {/* Lista de campos da entidade ativa */}
-      <EntityFieldsSection entity={activeEntity} />
+      <EntityFieldsSection entity={activeEntity} panelCtx={panelCtx} />
 
       {/* Blocos do painel (só admin) */}
       {isAdmin && effectiveSections.length > 0 && (
@@ -319,7 +338,13 @@ export function FieldConfigPanel({ entities, context, onClose }: FieldConfigPane
 
 /* ─────────── seção de campos por entidade com DnD ─────────── */
 
-function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
+function EntityFieldsSection({
+  entity,
+  panelCtx,
+}: {
+  entity: FieldConfigEntity;
+  panelCtx: PanelConfigContext;
+}) {
   const qc = useQueryClient();
   const queryKey = ["field-config-fields", entity];
 
@@ -344,7 +369,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
 
   // lista local para refletir drag imediatamente (otimistic)
   const [localOrder, setLocalOrder] = React.useState<CustomFieldItem[] | null>(null);
-  const fields = localOrder ?? sortedFields(rawFields);
+  const fields = localOrder ?? sortedFields(rawFields, panelCtx);
 
   // Sincroniza quando o servidor responde
   React.useEffect(() => {
@@ -393,6 +418,9 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
 
   const visibilityMutation = useMutation({
     mutationFn: async ({ id, visible, maxOrder }: { id: string; visible: boolean; maxOrder: number }) => {
+      if (panelCtx === "deal") {
+        return updateField(id, { showInDealPanel: visible });
+      }
       return updateField(id, {
         showInInboxLeadPanel: visible,
         inboxLeadPanelOrder: visible ? maxOrder : null,
@@ -403,7 +431,9 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
   });
 
   const toggleVisibility = (f: CustomFieldItem) => {
-    const isVisible = f.showInInboxLeadPanel === true;
+    const isVisible = panelCtx === "deal"
+      ? f.showInDealPanel === true
+      : f.showInInboxLeadPanel === true;
     const maxOrder = fields.reduce((acc, cur) => {
       const o = cur.inboxLeadPanelOrder ?? -1;
       return o > acc ? o : acc;
@@ -425,12 +455,19 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
     reorderMutation.mutate(reordered);
   };
 
+  const panelLabel = panelCtx === "deal" ? "Painel do Negócio" : "Inbox";
+
   return (
     <section>
       <div className="mb-2 flex items-center justify-between">
-        <p className="font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          Campos de {ENTITY_LABEL[entity as FieldConfigEntity]}
-        </p>
+        <div>
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            Campos de {ENTITY_LABEL[entity as FieldConfigEntity]}
+          </p>
+          <p className="font-body text-[10px] text-[var(--text-muted)] opacity-70">
+            Visibilidade: {panelLabel}
+          </p>
+        </div>
         <button
           type="button"
           onClick={openCreate}
@@ -479,7 +516,9 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
                 {fields.map((f, i) => (
                   <Draggable key={f.id} draggableId={f.id} index={i}>
                     {(dragProvided, dragSnapshot) => {
-                      const isVisible = f.showInInboxLeadPanel === true;
+                      const isVisible = panelCtx === "deal"
+                        ? f.showInDealPanel === true
+                        : f.showInInboxLeadPanel === true;
                       return (
                         <div
                           ref={dragProvided.innerRef}

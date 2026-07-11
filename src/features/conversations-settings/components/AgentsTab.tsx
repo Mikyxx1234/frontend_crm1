@@ -64,6 +64,7 @@ const PRESETS: Record<string, Partial<AgentPermissions>> = {
     canCloseConversation: true,
     canDeleteConversation: false,
     canManageQuickMessages: false,
+    canConfigureFieldVisibility: false,
   },
   supervisor: {
     canViewOtherAgentsConversations: true,
@@ -72,6 +73,7 @@ const PRESETS: Record<string, Partial<AgentPermissions>> = {
     canCloseConversation: true,
     canDeleteConversation: true,
     canManageQuickMessages: true,
+    canConfigureFieldVisibility: true,
   },
   readonly: {
     canViewOtherAgentsConversations: false,
@@ -80,6 +82,7 @@ const PRESETS: Record<string, Partial<AgentPermissions>> = {
     canCloseConversation: false,
     canDeleteConversation: false,
     canManageQuickMessages: false,
+    canConfigureFieldVisibility: false,
   },
 };
 
@@ -351,6 +354,12 @@ function SummaryCard({
         : "Não edita mensagens rápidas",
     },
     {
+      ok: draft.canConfigureFieldVisibility,
+      text: draft.canConfigureFieldVisibility
+        ? "Pode exibir/ocultar campos nos painéis"
+        : "Não configura visibilidade de campos",
+    },
+    {
       ok: !limitConn,
       text: limitConn
         ? `Acesso restrito a ${draft.allowedConnectionIds.length} de ${channels.length} conexão(ões)`
@@ -619,6 +628,14 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
               desc="Pode criar, editar e excluir os atalhos de mensagens rápidas da equipe."
               checked={draft.canManageQuickMessages}
               onChange={() => toggle("canManageQuickMessages")}
+              disabled={isAdmin}
+            />
+            <PermRow
+              icon={IconEye}
+              label="Configurar visibilidade de campos"
+              desc="Pode exibir ou ocultar campos personalizados nos painéis de inbox e negócio."
+              checked={draft.canConfigureFieldVisibility}
+              onChange={() => toggle("canConfigureFieldVisibility")}
               disabled={isAdmin}
             />
           </PermGroup>

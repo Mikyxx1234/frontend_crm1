@@ -567,7 +567,7 @@ export function DealDetailPanel({
             evitam quebrar layouts em telas pequenas / coluna direita ficar
             espremida. */}
         <div
-          className="grid min-h-0 flex-1 gap-4 overflow-hidden"
+          className="grid min-h-0 flex-1 gap-1 overflow-hidden"
           style={{ gridTemplateColumns: `${sidebarWidth}px 8px 1fr` }}
         >
           {/* SIDEBAR — painel funcional estilo Kommo (DS glass) */}

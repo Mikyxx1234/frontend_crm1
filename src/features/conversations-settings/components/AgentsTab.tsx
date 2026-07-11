@@ -20,7 +20,9 @@ import {
   IconSearch,
   IconChevronDown,
   IconSparkles,
+  IconDeviceFloppy,
 } from "@tabler/icons-react";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
@@ -688,35 +690,37 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
         <SummaryCard agent={agent} draft={draft} channels={channels} departments={departments} />
       </div>
 
-      {/* ── Save bar ── */}
-      <div className={cn(
-        "sticky bottom-0 z-10 flex items-center justify-between gap-4 rounded-[var(--radius-lg)] px-5 py-3.5 transition-all",
-        isDirty
-          ? "border border-[var(--glass-border)] bg-[var(--text-primary)] shadow-xl"
-          : "pointer-events-none opacity-0",
-      )}>
-        <div className="flex items-center gap-2.5">
-          <span className="h-2 w-2 rounded-full bg-amber-400" />
-          <span className="font-display text-[13px] font-medium text-white">Você tem alterações não salvas</span>
+      {/* ── Save footer (DS v2 padrão) ── */}
+      {isDirty && (
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-4 py-3 shadow-[var(--glass-shadow)]">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+            <span className="font-display text-[13px] font-medium text-[var(--text-secondary)]">
+              Alterações não salvas
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              type="button"
+              onClick={() => { setDraft({ ...DEFAULT_PERMISSIONS, ...saved }); setPreset("custom"); }}
+            >
+              Descartar
+            </ButtonGlass>
+            <ButtonGlass
+              variant="primary"
+              size="sm"
+              type="button"
+              onClick={() => saveMutation.mutate(draft)}
+              disabled={saveMutation.isPending}
+            >
+              <IconDeviceFloppy size={14} />
+              {saveMutation.isPending ? "Salvando…" : "Salvar permissões"}
+            </ButtonGlass>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => { setDraft({ ...DEFAULT_PERMISSIONS, ...saved }); setPreset("custom"); }}
-            className="rounded-[var(--radius-md)] px-4 py-2 font-display text-[13px] font-semibold text-white/60 transition-colors hover:text-white"
-          >
-            Descartar
-          </button>
-          <button
-            type="button"
-            onClick={() => saveMutation.mutate(draft)}
-            disabled={saveMutation.isPending}
-            className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {saveMutation.isPending ? "Salvando…" : "Salvar permissões"}
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

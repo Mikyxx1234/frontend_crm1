@@ -54,6 +54,7 @@ type CustomFieldItem = {
   entity: string;
   showInInboxLeadPanel?: boolean;
   inboxLeadPanelOrder?: number | null;
+  showInDealPanel?: boolean;
 };
 
 const TYPES = [
@@ -157,6 +158,7 @@ export default function CustomFieldsPage() {
   }, [orderedFields, search]);
 
   const inboxCount = fields.filter((f) => f.showInInboxLeadPanel).length;
+  const dealCount = fields.filter((f) => f.showInDealPanel).length;
 
   const deleteMutation = useMutation({
     mutationFn: deleteField,
@@ -231,6 +233,12 @@ export default function CustomFieldsPage() {
               {inboxCount} no painel da Inbox
             </span>
           )}
+          {dealCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 font-display text-[11px] font-semibold text-violet-700">
+              <IconEye size={11} />
+              {dealCount} no painel do Negócio
+            </span>
+          )}
         </div>
       )}
 
@@ -266,13 +274,14 @@ export default function CustomFieldsPage() {
           {/* Header */}
           <div className={cn(
             "grid items-center gap-3 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3 py-2.5",
-            "grid-cols-[20px_minmax(180px,2fr)_minmax(100px,1fr)_minmax(100px,0.9fr)_80px_60px]",
+            "grid-cols-[20px_minmax(160px,2fr)_minmax(90px,1fr)_minmax(80px,0.8fr)_70px_70px_60px]",
           )}>
             <span />
             <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Campo</span>
             <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Slug</span>
             <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Tipo</span>
-            <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Inbox</span>
+            <span className="font-display text-[13px] font-semibold tracking-normal text-emerald-600">Inbox</span>
+            <span className="font-display text-[13px] font-semibold tracking-normal text-violet-600">Negócio</span>
             <span />
           </div>
 
@@ -289,7 +298,7 @@ export default function CustomFieldsPage() {
                           {...drag.draggableProps}
                           className={cn(
                             "group grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]",
-                            "grid-cols-[20px_minmax(180px,2fr)_minmax(100px,1fr)_minmax(100px,0.9fr)_80px_60px]",
+                            "grid-cols-[20px_minmax(160px,2fr)_minmax(90px,1fr)_minmax(80px,0.8fr)_70px_70px_60px]",
                             snapshot.isDragging && "opacity-90 shadow-lg rounded-[var(--radius-md)]",
                           )}
                         >
@@ -321,7 +330,7 @@ export default function CustomFieldsPage() {
                           </div>
 
                           {/* Slug */}
-                          <span className="truncate font-mono text-[12px] text-[var(--text-muted)]">
+                          <span className="inline-block max-w-full truncate rounded-[4px] bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
                             {field.name}
                           </span>
 
@@ -334,13 +343,28 @@ export default function CustomFieldsPage() {
                           <div>
                             {(field.entity === "contact" || field.entity === "deal") && (
                               <span className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold",
+                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
                                 field.showInInboxLeadPanel
                                   ? "bg-emerald-100 text-emerald-700"
                                   : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
                               )}>
                                 {field.showInInboxLeadPanel ? <IconEye size={11} /> : <IconEyeOff size={11} />}
                                 {field.showInInboxLeadPanel ? "Sim" : "Não"}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Negócio (deal panel) */}
+                          <div>
+                            {field.entity === "deal" && (
+                              <span className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+                                field.showInDealPanel
+                                  ? "bg-violet-100 text-violet-700"
+                                  : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                              )}>
+                                {field.showInDealPanel ? <IconEye size={11} /> : <IconEyeOff size={11} />}
+                                {field.showInDealPanel ? "Sim" : "Não"}
                               </span>
                             )}
                           </div>
@@ -429,6 +453,7 @@ function FieldFormDialog({
   const [required, setRequired] = React.useState(initial?.required ?? false);
   const [optionsText, setOptionsText] = React.useState(initial?.options.join("\n") ?? "");
   const [showInInboxLeadPanel, setShowInInboxLeadPanel] = React.useState(initial?.showInInboxLeadPanel ?? false);
+  const [showInDealPanel, setShowInDealPanel] = React.useState(initial?.showInDealPanel ?? false);
 
   React.useEffect(() => {
     if (open && initial) {
@@ -436,10 +461,11 @@ function FieldFormDialog({
       setEntity(initial.entity); setRequired(initial.required);
       setOptionsText(initial.options.join("\n"));
       setShowInInboxLeadPanel(initial.showInInboxLeadPanel ?? false);
+      setShowInDealPanel(initial.showInDealPanel ?? false);
     } else if (open && !initial) {
       setName(""); setLabel(""); setType("TEXT");
       setEntity(defaultEntity); setRequired(false);
-      setOptionsText(""); setShowInInboxLeadPanel(false);
+      setOptionsText(""); setShowInInboxLeadPanel(false); setShowInDealPanel(false);
     }
   }, [open, initial, defaultEntity]);
 
@@ -452,10 +478,18 @@ function FieldFormDialog({
     mutationFn: async () => {
       const options = optionsText.split("\n").map((o) => o.trim()).filter(Boolean);
       if (mode === "create") {
-        return createField({ name, label, type, options, required, entity, ...(supportsInboxPanel ? { showInInboxLeadPanel } : {}) });
+        return createField({
+          name, label, type, options, required, entity,
+          ...(supportsInboxPanel ? { showInInboxLeadPanel } : {}),
+          ...(entity === "deal" ? { showInDealPanel } : {}),
+        });
       } else if (initial) {
         const editSupports = initial.entity === "contact" || initial.entity === "deal";
-        return updateField(initial.id, { label, type, options, required, ...(editSupports ? { showInInboxLeadPanel } : {}) });
+        return updateField(initial.id, {
+          label, type, options, required,
+          ...(editSupports ? { showInInboxLeadPanel } : {}),
+          ...(initial.entity === "deal" ? { showInDealPanel } : {}),
+        });
       }
     },
     onSuccess: () => onSaved(),
@@ -572,21 +606,26 @@ function FieldFormDialog({
               <SwitchGlass checked={required} onChange={setRequired} aria-label="Campo obrigatório" size="sm" />
             </div>
 
-            {/* Inbox panel */}
+            {/* Visibilidade de painéis */}
             {supportsInboxPanel && (
-              <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4">
-                <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">Painel lateral — Inbox</p>
-                <p className="mt-1 font-body text-[11.5px] leading-snug text-[var(--text-muted)]">
-                  Marque os campos que o agente deve ver ao atender no chat. A ordem é definida arrastando os campos na lista.
-                </p>
-                <label className="mt-3 flex cursor-pointer items-center gap-2.5">
-                  <CheckboxGlass
-                    checked={showInInboxLeadPanel}
-                    onChange={setShowInInboxLeadPanel}
-                    aria-label="Exibir no painel lateral"
-                  />
-                  <span className="font-body text-[13px] text-[var(--text-primary)]">Exibir no painel lateral</span>
-                </label>
+              <div className="flex flex-col gap-2">
+                <p className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Visibilidade nos painéis</p>
+                <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+                  <div>
+                    <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">Painel lateral — Inbox</p>
+                    <p className="mt-0.5 font-body text-[11.5px] leading-snug text-[var(--text-muted)]">Exibir no chat ao atender</p>
+                  </div>
+                  <SwitchGlass checked={showInInboxLeadPanel} onChange={setShowInInboxLeadPanel} aria-label="Exibir no painel Inbox" size="sm" />
+                </div>
+                {entity === "deal" && (
+                  <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+                    <div>
+                      <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">Painel do Negócio</p>
+                      <p className="mt-0.5 font-body text-[11.5px] leading-snug text-[var(--text-muted)]">Exibir no deal detail</p>
+                    </div>
+                    <SwitchGlass checked={showInDealPanel} onChange={setShowInDealPanel} aria-label="Exibir no painel do Negócio" size="sm" />
+                  </div>
+                )}
               </div>
             )}
 

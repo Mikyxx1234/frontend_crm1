@@ -23,7 +23,7 @@ import {
   IconDeviceFloppy,
 } from "@tabler/icons-react";
 import { ButtonGlass } from "@/components/crm/button-glass";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 import { SwitchGlass } from "@/components/crm/switch-glass";
@@ -89,6 +89,27 @@ const PRESET_OPTIONS = [
   { value: "supervisor", label: "Supervisor" },
   { value: "readonly",  label: "Somente leitura" },
 ];
+
+// ─── Preset group descriptions ────────────────────────────────────────────────
+
+const PRESET_GROUP_META: Record<string, { label: string; desc: string; color: string; bg: string }> = {
+  standard:  { label: "Atendente padrão", desc: "Tranferir e encerrar, sem ver outras conversas.",   color: "text-emerald-700",  bg: "bg-emerald-50" },
+  supervisor: { label: "Supervisor",       desc: "Visão total, pode excluir e gerir mensagens rápidas.", color: "text-violet-700",  bg: "bg-violet-50" },
+  readonly:  { label: "Somente leitura",  desc: "Apenas visualização, sem poder agir.",             color: "text-amber-700",   bg: "bg-amber-50" },
+  custom:    { label: "Personalizado",    desc: "Permissões definidas individualmente.",            color: "text-slate-600",   bg: "bg-slate-50" },
+};
+
+function detectPreset(perms: AgentPermissions | null): string {
+  if (!perms) return "custom";
+  for (const [key, preset] of Object.entries(PRESETS)) {
+    if (
+      Object.entries(preset).every(
+        ([k, v]) => (perms as Record<string, unknown>)[k] === v,
+      )
+    ) return key;
+  }
+  return "custom";
+}
 
 // ─── Avatar color ─────────────────────────────────────────────────────────────
 
@@ -783,10 +804,163 @@ function AgentListItem({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+// ─── Groups view ──────────────────────────────────────────────────────────────
+
+function GroupsView({
+  agents,
+  onSelectAgent,
+}: {
+  agents: AgentWithPermissions[];
+  onSelectAgent: (id: string) => void;
+}) {
+  const [expandedGroup, setExpandedGroup] = React.useState<string | null>("standard");
+  const saveMutation = useSaveAgentBulkPreset();
+
+  const grouped = React.useMemo(() => {
+    const map: Record<string, AgentWithPermissions[]> = {
+      standard: [], supervisor: [], readonly: [], custom: [],
+    };
+    for (const a of agents) {
+      const key = detectPreset(a.permissions);
+      map[key].push(a);
+    }
+    return map;
+  }, [agents]);
+
+  return (
+    <div className="flex flex-col gap-3 p-1">
+      {(["standard", "supervisor", "readonly", "custom"] as const).map((key) => {
+        const meta = PRESET_GROUP_META[key];
+        const members = grouped[key] ?? [];
+        const isOpen = expandedGroup === key;
+        return (
+          <div key={key} className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white/80 shadow-[0_1px_3px_rgba(100,130,180,0.07)]">
+            {/* Group header */}
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
+              onClick={() => setExpandedGroup(isOpen ? null : key)}
+            >
+              <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]", meta.bg, meta.color)}>
+                <IconShieldCheck size={16} strokeWidth={1.75} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={cn("font-display text-[13.5px] font-bold", meta.color)}>{meta.label}</p>
+                <p className="font-body text-[11.5px] text-[var(--text-muted)]">{meta.desc}</p>
+              </div>
+              <span className={cn("shrink-0 rounded-full px-2 py-0.5 font-display text-[11px] font-bold", meta.bg, meta.color)}>
+                {members.length}
+              </span>
+              <IconChevronDown size={14} className={cn("shrink-0 text-[var(--text-muted)] transition-transform", isOpen && "rotate-180")} />
+            </button>
+
+            {/* Members list */}
+            {isOpen && (
+              <div className="border-t border-[var(--glass-border-subtle)]">
+                {members.length === 0 ? (
+                  <p className="px-4 py-3 font-body text-[12.5px] text-[var(--text-muted)]">
+                    Nenhum atendente neste grupo.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)]">
+                      {members.map((agent) => (
+                        <button
+                          key={agent.id}
+                          type="button"
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                          onClick={() => onSelectAgent(agent.id)}
+                        >
+                          <div className="relative shrink-0">
+                            {agent.avatarUrl ? (
+                              <img src={agent.avatarUrl} className="h-7 w-7 rounded-full object-cover" alt={agent.name} />
+                            ) : (
+                              <span
+                                className="flex h-7 w-7 items-center justify-center rounded-full font-display text-[11px] font-bold text-white"
+                                style={{ background: avatarColor(agent.id) }}
+                              >
+                                {getInitials(agent.name)}
+                              </span>
+                            )}
+                            <span className={cn(
+                              "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white",
+                              agent.isOnline ? "bg-emerald-400" : "bg-slate-300",
+                            )} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)]">{agent.name}</p>
+                            <p className="truncate font-body text-[11px] text-[var(--text-muted)]">{agent.email}</p>
+                          </div>
+                          <IconChevronDown size={12} className="-rotate-90 text-[var(--text-muted)] opacity-40" />
+                        </button>
+                      ))}
+                    </div>
+                    {key !== "custom" && (
+                      <div className="border-t border-[var(--glass-border-subtle)] px-4 py-2.5">
+                        <button
+                          type="button"
+                          disabled={saveMutation.isPending}
+                          onClick={() =>
+                            saveMutation.mutate(
+                              members.map((a) => a.id),
+                              PRESETS[key],
+                            )
+                          }
+                          className={cn(
+                            "flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-md)] border px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+                            meta.bg, meta.color, "border-current/25 hover:opacity-80",
+                          )}
+                        >
+                          <IconDeviceFloppy size={13} />
+                          Reaplicar preset "{meta.label}" a todos
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function useSaveAgentBulkPreset() {
+  const qc = useQueryClient();
+  const [isPending, setIsPending] = React.useState(false);
+
+  const mutate = React.useCallback(
+    async (agentIds: string[], preset: Partial<AgentPermissions>) => {
+      setIsPending(true);
+      try {
+        await Promise.all(
+          agentIds.map((id) =>
+            fetch(`/api/settings/agent-permissions/${id}`, {
+              method: "PUT",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(preset),
+            }),
+          ),
+        );
+        qc.invalidateQueries({ queryKey: ["settings", "agent-permissions", "list"] });
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [qc],
+  );
+
+  return { isPending, mutate };
+}
+
 export function AgentsTab() {
   const { data: agents = [], isLoading, isError, error } = useAgentList();
   const [search, setSearch] = React.useState("");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [listView, setListView] = React.useState<"atendentes" | "grupos">("atendentes");
 
   const filtered = React.useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -809,19 +983,54 @@ export function AgentsTab() {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
       {/* ── Agent list sidebar ── */}
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
-        {/* Search */}
-        <div className="relative border-b border-[var(--glass-border-subtle)] p-3">
-          <IconSearch size={14} className="pointer-events-none absolute left-5.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar atendente…"
-            className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-3 font-body text-[13px] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-[var(--brand-primary)]"
-          />
+        {/* View toggle + search */}
+        <div className="flex flex-col gap-2 border-b border-[var(--glass-border-subtle)] p-3">
+          {/* Tabs: Atendentes / Grupos */}
+          <div className="flex rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+            {(["atendentes", "grupos"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setListView(v)}
+                className={cn(
+                  "flex-1 rounded-[var(--radius-sm)] px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+                  listView === v
+                    ? "bg-white text-[var(--text-primary)] shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
+              >
+                {v === "atendentes" ? (
+                  <span className="flex items-center justify-center gap-1.5"><IconUser size={12} />Atendentes</span>
+                ) : (
+                  <span className="flex items-center justify-center gap-1.5"><IconShieldCheck size={12} />Grupos</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Search — only in atendentes mode */}
+          {listView === "atendentes" && (
+            <div className="relative">
+              <IconSearch size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar atendente…"
+                className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-3 font-body text-[13px] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-[var(--brand-primary)]"
+              />
+            </div>
+          )}
         </div>
 
-        {/* List */}
-        {isLoading ? (
+        {/* Content */}
+        {listView === "grupos" ? (
+          <div className="max-h-[60vh] overflow-y-auto p-2">
+            <GroupsView
+              agents={agents}
+              onSelectAgent={(id) => { setSelectedId(id); setListView("atendentes"); }}
+            />
+          </div>
+        ) : isLoading ? (
           <div className="space-y-1 p-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-12 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)]" />
@@ -849,8 +1058,8 @@ export function AgentsTab() {
           </div>
         )}
 
-        {/* Footer */}
-        {!isLoading && filtered.length > 0 && (
+        {/* Footer — only in atendentes mode */}
+        {listView === "atendentes" && !isLoading && filtered.length > 0 && (
           <div className="border-t border-[var(--glass-border-subtle)] px-4 py-2.5">
             <p className="font-body text-[11.5px] text-[var(--text-muted)]">
               {filtered.length} atendente{filtered.length !== 1 ? "s" : ""}

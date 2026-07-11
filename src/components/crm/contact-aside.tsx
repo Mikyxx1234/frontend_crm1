@@ -420,51 +420,41 @@ function DealInline({
   const progress = totalStages > 0 ? Math.round((currentStage / totalStages) * 100) : 0
 
   return (
-    <div className="px-3 pt-3">
+    <div className="px-3 pt-2 pb-0">
       {/* ── Hero header (variante Vívida): fundo brand + anel de progresso ── */}
-      <header className="relative isolate rounded-[var(--radius-card)] bg-[var(--brand-primary)] p-4 text-white">
-        {/* Bolhas decorativas — clipadas num wrapper próprio pra não cortar o dropdown de fases */}
+      <header className="relative isolate rounded-[var(--radius-card)] bg-[var(--brand-primary)] px-3.5 py-2.5 text-white">
+        {/* Bolhas decorativas */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[var(--radius-card)]">
-          <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10" />
-          <div className="absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
+          <div className="absolute -right-8 -top-10 size-28 rounded-full bg-white/10" />
+          <div className="absolute -bottom-10 -left-6 size-24 rounded-full bg-white/10" />
         </div>
 
-        {/* Pill "Negócio" removida (redundante, pedido do operador) — o
-            dropdown de fase fica alinhado à direita sozinho. */}
-        <div className="relative flex items-start justify-end gap-2">
-          <div className="flex shrink-0 items-center gap-1.5">
-            {/* Pill "Perdido"/"Ganho" removida: o próprio dropdown de estágio
-                já mostra a etapa terminal (Perdido/Ganho) — mantê-la aqui
-                duplicava a informação no header. O motivo da perda continua
-                exibido abaixo (bloco `lostReason`). */}
-            {deal.stageDropdownSlot ? (
-              <div className="relative z-30 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
-                {deal.stageDropdownSlot}
-              </div>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
-                {stageLabel}
+        {/* Linha topo: título + stage dropdown numa única linha */}
+        <div className="relative flex items-center justify-between gap-2">
+          <h2 className="flex min-w-0 items-baseline gap-1.5 font-display text-[14px] font-bold leading-snug text-white">
+            <span className="min-w-0 truncate">{deal.title}</span>
+            {deal.number != null && (
+              <span className="shrink-0 font-mono text-[10px] font-semibold text-white/65">
+                #{deal.number}
               </span>
             )}
-          </div>
-        </div>
+          </h2>
 
-        <h2 className="relative mt-3 flex items-baseline gap-2 text-balance font-display text-[17px] font-bold leading-tight">
-          <span className="min-w-0">{deal.title}</span>
-          {deal.number != null && (
-            <span className="shrink-0 font-mono text-[11px] font-semibold text-white/70">
-              #{deal.number}
+          {deal.stageDropdownSlot ? (
+            <div className="relative z-30 shrink-0 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
+              {deal.stageDropdownSlot}
+            </div>
+          ) : (
+            <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium backdrop-blur-sm">
+              {stageLabel}
             </span>
           )}
-        </h2>
+        </div>
 
-        <div className="relative mt-3 flex items-center gap-3">
-          {/* Anel de progresso — cada segmento herda a cor da etapa
-              correspondente (mesma fonte usada na barra de funil abaixo).
-              Etapas percorridas ficam opacas; futuras ficam esmaecidas.
-              Fallback (sem funil): usa brand-primary sólido. */}
+        {/* Linha base: anel de progresso + pipeline info + responsável */}
+        <div className="relative mt-2 flex items-center gap-2.5">
           <div
-            className="grid size-11 shrink-0 place-items-center rounded-full"
+            className="grid size-9 shrink-0 place-items-center rounded-full"
             style={{
               background:
                 sortedSegments && sortedSegments.length > 0
@@ -485,18 +475,16 @@ function DealInline({
                   : `conic-gradient(var(--brand-primary) ${progress}%, rgba(255,255,255,0.25) 0)`,
             }}
           >
-            <div className="grid size-8 place-items-center rounded-full bg-[var(--brand-primary)]">
-              <span className="font-display text-[10px] font-bold text-white">
+            <div className="grid size-[26px] place-items-center rounded-full bg-[var(--brand-primary)]">
+              <span className="font-display text-[9px] font-bold text-white">
                 {totalStages > 0 ? `${currentStage}/${totalStages}` : "—"}
               </span>
             </div>
           </div>
-          <div className="min-w-0 flex-1 text-[11px] text-white/80">
-            <p className="font-medium text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
+          <div className="min-w-0 flex-1 text-[10.5px] text-white/80">
+            <p className="truncate font-semibold text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
             <p className="truncate">
-              {totalStages > 0
-                ? `Etapa ${currentStage} de ${totalStages}`
-                : stageLabel}
+              {totalStages > 0 ? `Etapa ${currentStage} de ${totalStages}` : stageLabel}
             </p>
           </div>
           {deal.assigneeSlot && (
@@ -509,11 +497,11 @@ function DealInline({
 
       {/* Barra de funil segmentada (real) — mantém cores/tooltips por etapa */}
       {sortedSegments && sortedSegments.length > 0 && (
-        <div className="mt-2 flex gap-1 px-1">
+        <div className="mt-1.5 flex gap-1 px-0.5">
           {sortedSegments.map((seg, i) => (
             <TooltipGlass key={seg.id} label={seg.name} side="top">
               <span
-                className="h-[4px] flex-1 rounded-full transition-colors"
+                className="h-[3px] flex-1 rounded-full transition-colors"
                 style={{
                   background: seg.color || "var(--brand-primary)",
                   opacity: i <= currentSegIdx ? 1 : 0.18,
@@ -809,11 +797,6 @@ export function ContactAside({
         {/* ── Hero do negócio (FIXO no topo, fora das abas) ── */}
         {deals.length > 0 && !sectionHiddenMap["negocios"] && (
           <div className="border-b border-[var(--glass-border-subtle)]">
-            <div className="flex justify-center pb-0 pt-1.5">
-              <span className="flex items-center gap-0.5 rounded px-2 py-0.5 text-[var(--text-muted)] opacity-0">
-                <IconGripVertical size={13} />
-              </span>
-            </div>
             {deals.map((deal) => (
               <DealInline key={deal.id} deal={deal} course={course} contact={contact} />
             ))}
@@ -821,7 +804,7 @@ export function ContactAside({
         )}
 
         {/* ── Pills: Perfil / Produto + toggle de visão ── */}
-        <div className="flex items-center gap-2 px-3 pt-3">
+        <div className="flex items-center gap-2 px-3 pt-2">
           <PageSegmentedControl
             items={ASIDE_TAB_ITEMS}
             value={activeTab}

@@ -979,19 +979,19 @@ export function ContactAside({
                                       <div
                                         key={f.fieldId}
                                         className={cn(
-                                          "flex items-center gap-2 px-3",
-                                          isCompact ? "py-1.5 text-[12px]" : "py-2 text-[13px]",
+                                          "flex items-baseline gap-2 px-3",
+                                          isCompact ? "py-1.5" : "py-2",
                                           i < resolvedContactPanelFields.length - 1 &&
                                             "border-b border-[var(--glass-border-subtle)]",
                                         )}
                                       >
                                         <span className={cn(
                                           "shrink-0 font-medium text-[var(--text-muted)]",
-                                          isCompact ? "w-[45%] text-[11px] leading-tight" : "w-[42%]"
+                                          isCompact ? "w-[40%] text-[11px] leading-tight" : "w-[38%] text-[12px]"
                                         )}>
                                           {f.label}
                                         </span>
-                                        <div className="min-w-0 flex-1 flex justify-end">
+                                        <div className="min-w-0 flex-1">
                                           {contactEditMode && canEdit ? (
                                             <InlineFieldEditor
                                               fieldId={f.fieldId}
@@ -1005,7 +1005,7 @@ export function ContactAside({
                                               onSaved={(v) =>
                                                 setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
                                               }
-                                              textClassName={cn("font-display font-bold text-[var(--text-primary)] text-right", isCompact ? "text-[12px]" : "text-[13px]")}
+                                              textClassName={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}
                                               placeholder="+ Adicionar"
                                             />
                                           ) : hl && colors ? (
@@ -1032,11 +1032,11 @@ export function ContactAside({
                                               onSaved={(v) =>
                                                 setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
                                               }
-                                              textClassName={cn("font-display font-bold text-[var(--text-primary)] text-right", isCompact ? "text-[12px]" : "text-[13px]")}
+                                              textClassName={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}
                                               placeholder="+ Adicionar"
                                             />
                                           ) : (
-                                            <span className={cn("font-display font-bold text-[var(--text-primary)] text-right", isCompact ? "text-[12px]" : "text-[13px]")}>
+                                            <span className={cn("font-display font-semibold text-[var(--text-primary)]", isCompact ? "text-[12px]" : "text-[13px]")}>
                                               {f.value || PLACEHOLDER}
                                             </span>
                                           )}
@@ -1149,20 +1149,20 @@ export function ContactAside({
                                           <div
                                             key={f.fieldId}
                                             className={cn(
-                                              "flex items-center gap-2 px-3 py-1.5 text-[12px]",
+                                              "flex items-baseline gap-2 px-3 py-1.5",
                                               idx < resolvedDealPanelFields.length - 1 && "border-b border-[var(--glass-border-subtle)]",
                                             )}
                                           >
-                                            <span className="w-[45%] shrink-0 text-[11px] text-[var(--text-muted)] leading-tight">{f.label}</span>
-                                            <div className="min-w-0 flex-1 text-right">
+                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">{f.label}</span>
+                                            <div className="min-w-0 flex-1">
                                               {dealFieldsEditMode && canEdit ? (
-                                                <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
+                                                <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                               ) : hl && colors ? (
                                                 <span style={{ backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }} className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold">{hl.label}</span>
                                               ) : canEdit ? (
-                                                <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
+                                                <InlineFieldEditor fieldId={f.fieldId} fieldType={f.type} fieldOptions={f.options ?? []} value={f.value || null} entityType={f.entityType!} entityId={f.entityId!} editMode={dealFieldsEditMode} invalidateKeys={[["deal-detail-v2", f.entityId!]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                               ) : (
-                                                <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">{f.value || PLACEHOLDER}</span>
+                                                <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{f.value || PLACEHOLDER}</span>
                                               )}
                                             </div>
                                           </div>

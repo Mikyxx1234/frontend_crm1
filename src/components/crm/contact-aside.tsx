@@ -421,10 +421,12 @@ function DealInline({
 
   return (
     <div className="px-3 pt-2 pb-0">
-      {/* ── Hero header (variante Vívida): fundo brand + anel de progresso ── */}
-      <header className="relative isolate rounded-[var(--radius-card)] bg-[var(--brand-primary)] px-3.5 py-2.5 text-white">
+      {/* ── Hero header: cor sólida da NavRail (--nav-bg), ocupando toda a
+          cabeça do container (edge-to-edge via margens negativas + cantos
+          superiores acompanhando o raio do container). ── */}
+      <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] bg-[var(--nav-bg)] px-3.5 pb-2.5 pt-3.5 text-white">
         {/* Bolhas decorativas */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[var(--radius-card)]">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-t-[var(--radius-xl)]">
           <div className="absolute -right-8 -top-10 size-28 rounded-full bg-white/10" />
           <div className="absolute -bottom-10 -left-6 size-24 rounded-full bg-white/10" />
         </div>

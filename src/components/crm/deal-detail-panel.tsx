@@ -578,11 +578,11 @@ export function DealDetailPanel({
             {/* Cabeçalho fixo: hero do negócio — paridade visual com o
                 contact-aside do inbox (fundo brand + anel de progresso).
                 Pill "Negócio" removida (redundante, pedido do operador). */}
-            <div className="shrink-0 p-3">
-              <header className="relative isolate rounded-[var(--radius-card)] bg-[var(--brand-primary)] p-4 text-white">
+            <div className="shrink-0">
+              <header className="relative isolate rounded-t-[var(--radius-xl)] bg-[var(--nav-bg)] p-4 text-white">
                 {/* Bolhas decorativas — clipadas num wrapper próprio pra não
                     cortar o dropdown de fases */}
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[var(--radius-card)]">
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-t-[var(--radius-xl)]">
                   <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10" />
                   <div className="absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
                 </div>

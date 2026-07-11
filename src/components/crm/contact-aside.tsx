@@ -774,7 +774,7 @@ export function ContactAside({
   return (
     <aside
       aria-label="Detalhes do contato"
-      className={cn("relative flex h-full flex-col pr-0.5", className)}
+      className={cn("relative flex h-full flex-col pr-0.5 overflow-visible", className)}
     >
       {/* Botao recolher — chevron minimalista tipo '>' na faixa entre aside
           e chat. Fica FORA do container interno (que tem overflow) para nao

@@ -828,7 +828,7 @@ export default function InboxV2ClientPage({
           >
             {conversationColumnNode}
             {chatNode}
-            <div className="relative min-h-0 overflow-hidden">
+            <div className="relative min-h-0 overflow-visible">
               <ColumnResizer
                 direction="left"
                 value={asideWidth}
@@ -857,7 +857,7 @@ export default function InboxV2ClientPage({
       {navRailNode}
       {conversationColumnNode}
       {chatNode}
-      <div className="relative min-h-0 overflow-hidden">
+      <div className="relative min-h-0 overflow-visible">
         <ColumnResizer
           direction="left"
           value={asideWidth}

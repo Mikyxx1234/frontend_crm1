@@ -1,13 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { IconBuilding, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import { IconBuilding, IconPlus, IconTrash } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { GlassCard } from "@/components/crm/glass-card";
 import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import {
+  Dialog,
+  DialogContent,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   useDepartments,
   useCreateDepartment,
@@ -35,9 +40,11 @@ const DEPT_ICONS = [
 // ─── Create department modal ─────────────────────────────────────────────────────
 
 function CreateDepartmentModal({
+  open,
   onClose,
   onCreated,
 }: {
+  open: boolean;
   onClose: () => void;
   onCreated?: () => void;
 }) {
@@ -56,6 +63,9 @@ function CreateDepartmentModal({
           toast.success("Departamento criado");
           onCreated?.();
           onClose();
+          setName("");
+          setColor(DEPT_COLORS[0]);
+          setIcon(DEPT_ICONS[0]);
         },
         onError: (err: Error) => toast.error(err.message),
       },
@@ -63,14 +73,10 @@ function CreateDepartmentModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <GlassCard variant="modal" className="w-full max-w-[420px] overflow-hidden p-0 shadow-2xl">
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent size="sm" bodyClassName="p-0 gap-0">
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-5 py-4">
-          {/* Preview badge */}
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[18px] shadow-sm"
             style={{ backgroundColor: color + "22" }}
@@ -87,13 +93,7 @@ function CreateDepartmentModal({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-          >
-            <IconX size={15} />
-          </button>
+          <DialogClose />
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -125,7 +125,7 @@ function CreateDepartmentModal({
                     className={cn(
                       "flex h-9 w-full items-center justify-center rounded-[var(--radius-sm)] text-[16px] transition-all",
                       icon === em
-                        ? "bg-[var(--brand-primary)]/15 ring-1 ring-[var(--brand-primary)]/50 scale-110"
+                        ? "scale-110 bg-[var(--brand-primary)]/15 ring-1 ring-[var(--brand-primary)]/50"
                         : "hover:bg-[var(--glass-bg-strong)]",
                     )}
                     aria-label={em}
@@ -149,7 +149,7 @@ function CreateDepartmentModal({
                     onClick={() => setColor(c)}
                     className={cn(
                       "size-7 rounded-full transition-all hover:scale-110",
-                      color === c && "scale-110 ring-2 ring-offset-2 ring-[var(--glass-border)]",
+                      color === c && "scale-110 ring-2 ring-[var(--glass-border)] ring-offset-2",
                     )}
                     style={{ backgroundColor: c }}
                     aria-label={c}
@@ -159,9 +159,8 @@ function CreateDepartmentModal({
             </div>
           </div>
 
-          {/* Footer actions */}
+          {/* Footer */}
           <div className="flex items-center justify-between border-t border-[var(--glass-border-subtle)] px-5 py-4">
-            {/* Preview */}
             <div className="flex items-center gap-2">
               <div
                 className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[13px]"
@@ -191,8 +190,8 @@ function CreateDepartmentModal({
             </div>
           </div>
         </form>
-      </GlassCard>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -205,30 +204,34 @@ function DeleteConfirmModal({
   isPending,
   errorMsg,
 }: {
-  dept: Department;
+  dept: Department | null;
   onConfirm: () => void;
   onCancel: () => void;
   isPending: boolean;
   errorMsg?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <GlassCard variant="panel" className="relative w-full max-w-sm p-6">
-        <div className="mb-1 flex items-center gap-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)]/12">
+    <Dialog open={!!dept} onOpenChange={(v) => { if (!v) onCancel(); }}>
+      <DialogContent size="sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)]/12">
             <IconTrash size={18} className="text-[var(--color-danger)]" />
           </div>
-          <h3 className="font-display text-[16px] font-bold text-[var(--text-primary)]">
-            Excluir departamento
-          </h3>
+          <div>
+            <h3 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+              Excluir departamento
+            </h3>
+            <p className="font-body text-[12.5px] text-[var(--text-muted)]">
+              Esta ação não pode ser desfeita.
+            </p>
+          </div>
         </div>
-        <p className="mb-4 mt-2 font-body text-sm text-[var(--text-muted)]">
+        <p className="font-body text-sm text-[var(--text-muted)]">
           Tem certeza que deseja excluir{" "}
-          <strong className="text-[var(--text-primary)]">{dept.name}</strong>? Esta ação não pode
-          ser desfeita.
+          <strong className="text-[var(--text-primary)]">{dept?.name}</strong>?
         </p>
         {errorMsg && (
-          <p className="mb-3 rounded-[var(--radius-md)] bg-[var(--color-danger)]/10 px-3 py-2 font-body text-[12.5px] text-[var(--color-danger)]">
+          <p className="rounded-[var(--radius-md)] bg-[var(--color-danger)]/10 px-3 py-2 font-body text-[12.5px] text-[var(--color-danger)]">
             {errorMsg}
           </p>
         )}
@@ -246,18 +249,12 @@ function DeleteConfirmModal({
             disabled={isPending}
             className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-4 py-2 font-display text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            Excluir
+            {isPending ? "Excluindo…" : "Excluir"}
           </button>
         </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="absolute right-4 top-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-        >
-          <IconX size={16} />
-        </button>
-      </GlassCard>
-    </div>
+        <DialogClose />
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -451,19 +448,17 @@ export function DepartmentsTab() {
       </GlassCard>
 
       {/* ── Modals ── */}
-      {showCreate && <CreateDepartmentModal onClose={() => setShowCreate(false)} />}
-      {deleteTarget && (
-        <DeleteConfirmModal
-          dept={deleteTarget}
-          onConfirm={confirmDelete}
-          onCancel={() => {
-            setDeleteTarget(null);
-            setDeleteError(undefined);
-          }}
-          isPending={deleteMutation.isPending}
-          errorMsg={deleteError}
-        />
-      )}
+      <CreateDepartmentModal open={showCreate} onClose={() => setShowCreate(false)} />
+      <DeleteConfirmModal
+        dept={deleteTarget}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setDeleteTarget(null);
+          setDeleteError(undefined);
+        }}
+        isPending={deleteMutation.isPending}
+        errorMsg={deleteError}
+      />
     </>
   );
 }

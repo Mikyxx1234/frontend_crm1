@@ -7,19 +7,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { InputGlass } from "@/components/crm/input-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InternalTemplateVariablePicker } from "@/components/templates/internal-template-variable-picker";
@@ -175,22 +171,19 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
             <ArrowLeft className="size-4" /> Configurações
           </Link>
 
-          <PageHeader
-            title="Modelos internos de mensagem"
-            icon={<FileText />}
-            description={
-              <>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="font-display text-[20px] font-extrabold tracking-tight text-[var(--text-primary)]">Modelos internos de mensagem</h1>
+              <p className="mt-0.5 font-body text-[13px] text-[var(--text-muted)]">
                 Mensagens prontas guardadas no CRM, usadas como atalho de resposta nas conversas. Use{" "}
-                <code className="rounded bg-muted px-1 text-xs">{"{{variável}}"}</code> para campos dinâmicos
-                (ex.: <code className="rounded bg-muted px-1 text-xs">{"{{nome}}"}</code>).
-              </>
-            }
-            actions={
-              <Button onClick={() => { setEditing(null); setFormOpen(true); }} className={`gap-2 ${pageHeaderPrimaryCtaClass}`}>
-                <Plus className="size-4" /> Novo modelo
-              </Button>
-            }
-          />
+                <code className="rounded-[var(--radius-sm)] bg-[var(--glass-bg-strong)] px-1 font-mono text-xs">{"{{variável}}"}</code>{" "}
+                para campos dinâmicos.
+              </p>
+            </div>
+            <ButtonGlass variant="primary" onClick={() => { setEditing(null); setFormOpen(true); }} className="gap-2 shrink-0">
+              <Plus className="size-4" /> Novo modelo
+            </ButtonGlass>
+          </div>
         </>
       )}
 
@@ -199,10 +192,10 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
           icon={<FileText className="size-[22px]" />}
           title="Modelos internos de mensagem"
           actions={
-            <Button type="button" size="sm" onClick={() => { setEditing(null); setFormOpen(true); }}>
+            <ButtonGlass type="button" variant="primary" size="sm" onClick={() => { setEditing(null); setFormOpen(true); }} className="gap-1.5">
               <Plus className="size-4" />
-              <span className="ml-2">Nova mensagem interna</span>
-            </Button>
+              Nova mensagem interna
+            </ButtonGlass>
           }
         >
           Mensagens prontas e reutilizáveis em qualquer canal do CRM — atalhos de resposta para
@@ -255,9 +248,9 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
             <FileText className="size-10 text-[var(--glass-border)]" />
             <div className="font-bold text-[var(--text-secondary)]">Nenhum modelo encontrado</div>
             <div className="text-[13px] text-[var(--text-muted)]">Tente outra busca ou crie um novo modelo interno.</div>
-            <Button onClick={() => { setEditing(null); setFormOpen(true); }} variant="outline" className="mt-2 gap-2">
+            <ButtonGlass onClick={() => { setEditing(null); setFormOpen(true); }} className="mt-2 gap-1.5">
               <Plus className="size-4" /> Novo modelo
-            </Button>
+            </ButtonGlass>
           </div>
         ) : (
           grouped.map(([cat, items]) => (
@@ -370,22 +363,26 @@ function TemplateForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid gap-2">
-        <Label htmlFor="tpl-name">Nome do modelo</Label>
-        <Input
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="tpl-name" className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          Nome do modelo
+        </label>
+        <InputGlass
           id="tpl-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="ex.: Boas-vindas, Pedido de orçamento, Pós-venda"
           required
         />
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="font-body text-[11.5px] text-[var(--text-muted)]">
           Nome curto e descritivo para encontrar rápido na hora de responder.
         </p>
       </div>
-      <div className="grid gap-2">
-        <Label htmlFor="tpl-content">Mensagem</Label>
-        <Textarea
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="tpl-content" className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          Mensagem
+        </label>
+        <textarea
           id="tpl-content"
           ref={contentRef}
           value={content}
@@ -393,9 +390,9 @@ function TemplateForm({
           placeholder="Olá {{contato.primeiroNome}}, tudo bem? Vi seu interesse no negócio {{negocio.titulo}}..."
           rows={6}
           required
-          className="resize-none rounded-[var(--radius-lg)] text-sm placeholder:text-[var(--text-muted)]"
+          className="w-full resize-none rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/10"
         />
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="font-body text-[11.5px] text-[var(--text-muted)]">
           Clique em uma variável abaixo para inseri-la na posição do cursor. Na hora de
           enviar, o CRM substitui automaticamente pelo valor real do contato e do negócio.
         </p>
@@ -404,17 +401,21 @@ function TemplateForm({
       <InternalTemplateVariablePicker onSelect={insertToken} />
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="tpl-category">Categoria (opcional)</Label>
-          <Input
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="tpl-category" className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            Categoria (opcional)
+          </label>
+          <InputGlass
             id="tpl-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder="Vendas, Suporte, Pós-venda…"
           />
         </div>
-        <div className="grid gap-2">
-          <Label>Canal (opcional)</Label>
+        <div className="flex flex-col gap-1.5">
+          <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            Canal (opcional)
+          </label>
           <DropdownGlass
             options={[
               { value: "", label: "Todos os canais" },
@@ -429,13 +430,13 @@ function TemplateForm({
           />
         </div>
       </div>
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" disabled={isPending || !name.trim() || !content.trim()} className="gap-2">
+      <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] pt-4">
+        <ButtonGlass type="button" onClick={onCancel}>Cancelar</ButtonGlass>
+        <ButtonGlass type="submit" variant="primary" disabled={isPending || !name.trim() || !content.trim()} className="gap-2">
           {isPending && <Loader2 className="size-4 animate-spin" />}
           {initial ? "Salvar" : "Criar"}
-        </Button>
-      </DialogFooter>
+        </ButtonGlass>
+      </div>
     </form>
   );
 }

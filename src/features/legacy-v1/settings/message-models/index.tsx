@@ -402,18 +402,6 @@ export default function MessageModelsHubPage() {
             <HubStat tone="warn" icon={<Clock className="size-5" />} value={metaPending} label="Aguardando revisão Meta" />
           </HubStatGrid>
 
-          <HubCallout icon={<Info className="size-[18px]" />}>
-            As rotas antigas{" "}
-            <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
-              /settings/templates
-            </code>{" "}
-            e{" "}
-            <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
-              /settings/whatsapp-templates
-            </code>{" "}
-            redirecionam para este hub.
-          </HubCallout>
-
           <HubPanel>
             <HubToolbar
               searchValue={ovQuery}

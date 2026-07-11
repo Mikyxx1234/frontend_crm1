@@ -493,24 +493,51 @@ function DealInline({
             </div>
           )}
         </div>
-      </header>
 
-      {/* Barra de funil segmentada (real) — mantém cores/tooltips por etapa */}
-      {sortedSegments && sortedSegments.length > 0 && (
-        <div className="mt-1.5 flex gap-1 px-0.5">
-          {sortedSegments.map((seg, i) => (
-            <TooltipGlass key={seg.id} label={seg.name} side="top">
-              <span
-                className="h-[3px] flex-1 rounded-full transition-colors"
-                style={{
-                  background: seg.color || "var(--brand-primary)",
-                  opacity: i <= currentSegIdx ? 1 : 0.18,
-                }}
-              />
-            </TooltipGlass>
-          ))}
-        </div>
-      )}
+        {/* Barra de funil segmentada — dentro do card */}
+        {sortedSegments && sortedSegments.length > 0 && (
+          <div className="relative mt-2 flex gap-1 px-0.5">
+            {sortedSegments.map((seg, i) => (
+              <TooltipGlass key={seg.id} label={seg.name} side="top">
+                <span
+                  className="h-[3px] flex-1 rounded-full transition-colors"
+                  style={{
+                    background: i <= currentSegIdx
+                      ? (seg.color || "var(--brand-primary)")
+                      : "rgba(255,255,255,0.28)",
+                  }}
+                />
+              </TooltipGlass>
+            ))}
+          </div>
+        )}
+
+        {/* Origem + Canal + Tags — seção inferior do card */}
+        {(deal.origin || contact.connection || deal.dealTagsNode !== undefined) && (
+          <div className="relative mt-2 flex flex-col gap-0 divide-y divide-white/15 rounded-[var(--radius-md)] bg-white/10 px-2.5 py-1">
+            {deal.origin && (
+              <div className="flex items-center justify-between gap-2 py-1">
+                <span className="shrink-0 text-[11px] text-white/60">Origem</span>
+                <span className="truncate text-right text-[11.5px] font-semibold text-white">{deal.origin}</span>
+              </div>
+            )}
+            {contact.connection && (
+              <div className="flex items-center justify-between gap-2 py-1">
+                <span className="shrink-0 text-[11px] text-white/60">Canal</span>
+                <span className="truncate text-right text-[11.5px] font-semibold text-white">
+                  {formatConnectionShort(contact.connection)}
+                </span>
+              </div>
+            )}
+            {deal.dealTagsNode !== undefined && (
+              <div className="flex flex-wrap items-center gap-1.5 py-1.5 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:!border-white/20">
+                <span className="shrink-0 text-[11px] text-white/60">Tags</span>
+                {deal.dealTagsNode}
+              </div>
+            )}
+          </div>
+        )}
+      </header>
 
       {isLost && lostReason && (
         <div className="mt-3 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-danger,#dc2626)_24%,transparent)] bg-[color-mix(in_srgb,var(--color-danger,#dc2626)_6%,transparent)] px-4 py-2.5">
@@ -520,28 +547,6 @@ function DealInline({
           <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
             {lostReason}
           </p>
-        </div>
-      )}
-
-      {/* Origem (read-only) — campo de sistema do negócio */}
-      {deal.origin && (
-        <div className="mt-2 flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 text-[12.5px]">
-          <span className="shrink-0 font-medium text-[var(--text-muted)]">Origem</span>
-          <span className="ml-auto truncate text-right font-display font-bold text-[var(--text-primary)]">
-            {deal.origin}
-          </span>
-        </div>
-      )}
-
-      {/* Tags do negócio — chips + botão adicionar */}
-      {deal.dealTagsNode !== undefined && (
-        <div className="mt-2 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-1.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
-              Tags
-            </span>
-            {deal.dealTagsNode}
-          </div>
         </div>
       )}
 

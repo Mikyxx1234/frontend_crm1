@@ -1,14 +1,31 @@
 "use client";
 
 import * as React from "react";
-import { IconChevronDown, IconInfoCircle, IconLink, IconLayoutGrid, IconUser } from "@tabler/icons-react";
+import {
+  IconUser,
+  IconUsers,
+  IconEye,
+  IconEyeOff,
+  IconArrowsExchange,
+  IconCircleCheck,
+  IconTrash,
+  IconMessageCircle,
+  IconLink,
+  IconLayoutGrid,
+  IconShieldCheck,
+  IconInfoCircle,
+  IconCheck,
+  IconX,
+  IconAlertTriangle,
+  IconSearch,
+  IconChevronDown,
+  IconSparkles,
+} from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
-import { GlassCard } from "@/components/crm/glass-card";
-import { InputGlass } from "@/components/crm/input-glass";
-import { ButtonGlass } from "@/components/crm/button-glass";
 import { SwitchGlass } from "@/components/crm/switch-glass";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import {
   useAgentList,
   useSaveAgentPermissions,
@@ -18,7 +35,7 @@ import {
 } from "../hooks/use-agent-permissions";
 import { useDepartments, type Department } from "../hooks/use-departments";
 
-// ─── Channels hook (local) ────────────────────────────────────────────────────
+// ─── Channels hook ────────────────────────────────────────────────────────────
 
 type Channel = { id: string; name: string; type: string; provider: string };
 
@@ -35,61 +52,57 @@ function useChannels() {
   });
 }
 
-// ─── Collapsible section ──────────────────────────────────────────────────────
+// ─── Preset models ────────────────────────────────────────────────────────────
 
-function CollapsibleSection({
-  title,
-  subtitle,
-  icon: Icon,
-  children,
-  defaultOpen = false,
-}: {
-  title: string;
-  subtitle?: string;
-  icon?: React.ElementType;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = React.useState(defaultOpen);
-  return (
-    <div className="rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 px-3.5 py-3 hover:bg-[var(--glass-bg-overlay)] transition-colors text-left"
-      >
-        {Icon && <Icon size={15} className="shrink-0 text-[var(--text-muted)]" />}
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">{title}</p>
-          {subtitle && (
-            <p className="font-body text-[11px] text-[var(--text-muted)]">{subtitle}</p>
-          )}
-        </div>
-        <IconChevronDown
-          size={15}
-          className={cn(
-            "shrink-0 text-[var(--text-muted)] transition-transform",
-            open && "rotate-180",
-          )}
-        />
-      </button>
-      {open && (
-        <div className="border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3">
-          {children}
-        </div>
-      )}
-    </div>
-  );
+const PRESETS: Record<string, Partial<AgentPermissions>> = {
+  standard: {
+    canViewOtherAgentsConversations: false,
+    disableConversationsWithoutAgent: false,
+    canTransferConversation: true,
+    canCloseConversation: true,
+    canDeleteConversation: false,
+    canManageQuickMessages: false,
+  },
+  supervisor: {
+    canViewOtherAgentsConversations: true,
+    disableConversationsWithoutAgent: false,
+    canTransferConversation: true,
+    canCloseConversation: true,
+    canDeleteConversation: true,
+    canManageQuickMessages: true,
+  },
+  readonly: {
+    canViewOtherAgentsConversations: false,
+    disableConversationsWithoutAgent: true,
+    canTransferConversation: false,
+    canCloseConversation: false,
+    canDeleteConversation: false,
+    canManageQuickMessages: false,
+  },
+};
+
+const PRESET_OPTIONS = [
+  { value: "custom",    label: "Personalizado" },
+  { value: "standard",  label: "Atendente padrão" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "readonly",  label: "Somente leitura" },
+];
+
+// ─── Avatar color ─────────────────────────────────────────────────────────────
+
+const AVATAR_COLORS = [
+  "#5B57F0", "#D97706", "#0F766E", "#BE185D", "#1C2030",
+  "#7C3AED", "#DC2626", "#2563EB", "#16A34A", "#0891B2",
+];
+
+function avatarColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
+  return name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
 function roleBadgeLabel(role: string) {
@@ -98,117 +111,307 @@ function roleBadgeLabel(role: string) {
   return "Atendente";
 }
 
-// ─── Permission toggle row ────────────────────────────────────────────────────
+// ─── Chip checkbox ────────────────────────────────────────────────────────────
 
-function PermissionRow({
+function Chip({
   label,
-  description,
   checked,
   onChange,
   disabled,
 }: {
   label: string;
-  description?: string;
   checked: boolean;
-  onChange: (v: boolean) => void;
+  onChange: () => void;
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-3">
-      <div className="min-w-0 flex-1">
-        <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">{label}</p>
-        {description && (
-          <p className="mt-0.5 font-body text-[12px] text-[var(--text-muted)]">{description}</p>
+    <button
+      type="button"
+      onClick={onChange}
+      disabled={disabled}
+      className={cn(
+        "flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-3 py-1.5 font-body text-[12.5px] font-medium transition-all",
+        checked
+          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+          : "border-[var(--glass-border)] bg-[var(--glass-bg-panel)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)]",
+        disabled && "pointer-events-none opacity-40",
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border",
+          checked
+            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+            : "border-[var(--glass-border)] bg-white",
         )}
+      >
+        {checked && <IconCheck size={9} strokeWidth={3} className="text-white" />}
       </div>
-      <SwitchGlass
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
-        size="sm"
-        aria-label={label}
-      />
-    </div>
+      {label}
+    </button>
   );
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
+// ─── Group card ───────────────────────────────────────────────────────────────
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
+function PermGroup({
+  title,
+  desc,
+  iconBg,
+  iconColor,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  desc: string;
+  iconBg: string;
+  iconColor: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
   return (
-    <p className="mb-1 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]", iconBg, iconColor)}>
+          <Icon size={16} strokeWidth={1.75} />
+        </div>
+        <div>
+          <h3 className="font-display text-[14px] font-bold text-[var(--text-primary)]">{title}</h3>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">{desc}</p>
+        </div>
+      </div>
       {children}
-    </p>
-  );
-}
-
-// ─── Channel icon by type ─────────────────────────────────────────────────────
-
-function ChannelTypeIcon({ type }: { type: string }) {
-  const map: Record<string, string> = {
-    WHATSAPP: "💬",
-    INSTAGRAM: "📷",
-    FACEBOOK: "📘",
-    EMAIL: "✉️",
-    WEBCHAT: "🌐",
-  };
-  return <span className="text-[13px]">{map[type] ?? "🔗"}</span>;
-}
-
-// ─── Checklist item ───────────────────────────────────────────────────────────
-
-function ChecklistItem({
-  label,
-  sublabel,
-  icon,
-  checked,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  sublabel?: string;
-  icon?: React.ReactNode;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-2.5 rounded-[var(--radius-sm)] py-1.5">
-      {icon && <span className="shrink-0">{icon}</span>}
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
-          {label}
-        </p>
-        {sublabel && (
-          <p className="truncate font-body text-[11px] text-[var(--text-muted)]">{sublabel}</p>
-        )}
-      </div>
-      <SwitchGlass
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
-        size="sm"
-        aria-label={label}
-      />
     </div>
   );
 }
 
-// ─── Right panel: permissions editor ─────────────────────────────────────────
+// ─── Permission row ───────────────────────────────────────────────────────────
+
+function PermRow({
+  icon: Icon,
+  iconBg,
+  iconColor,
+  label,
+  desc,
+  dangerTag,
+  checked,
+  onChange,
+  disabled,
+  children,
+}: {
+  icon: React.ElementType;
+  iconBg?: string;
+  iconColor?: string;
+  label: string;
+  desc: string;
+  dangerTag?: boolean;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="border-t border-[var(--glass-border-subtle)]">
+      <div className="flex items-start gap-3 px-5 py-3.5">
+        <div className={cn(
+          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
+          iconBg || "bg-[var(--glass-bg-strong)]",
+          iconColor || "text-[var(--text-muted)]",
+        )}>
+          <Icon size={15} strokeWidth={1.75} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">{label}</span>
+            {dangerTag && (
+              <span className="rounded-full bg-red-50 px-2 py-0.5 font-display text-[10px] font-bold tracking-wide text-red-600">
+                Irreversível
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 font-body text-[12.5px] leading-relaxed text-[var(--text-muted)]">{desc}</p>
+        </div>
+        <SwitchGlass checked={checked} onChange={onChange} disabled={disabled} size="sm" aria-label={label} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ─── Accordion ────────────────────────────────────────────────────────────────
+
+function Accordion({
+  icon: Icon,
+  title,
+  desc,
+  defaultOpen,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = React.useState(defaultOpen ?? false);
+  return (
+    <div className="border-t border-[var(--glass-border-subtle)]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-[var(--glass-bg-overlay)]"
+      >
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] text-[var(--text-muted)]">
+          <Icon size={15} strokeWidth={1.75} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[13.5px] font-semibold text-[var(--text-primary)]">{title}</p>
+          <p className="font-body text-[12px] text-[var(--text-muted)]">{desc}</p>
+        </div>
+        <IconChevronDown size={16} className={cn("shrink-0 text-[var(--text-muted)] transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="px-5 pb-5 pt-1 pl-[4.5rem]">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Summary sidebar ──────────────────────────────────────────────────────────
+
+function SummaryCard({
+  agent,
+  draft,
+  channels,
+  departments,
+}: {
+  agent: AgentWithPermissions;
+  draft: AgentPermissions;
+  channels: Channel[];
+  departments: Department[];
+}) {
+  const firstName = agent.name.split(" ")[0];
+  const limitConn = draft.allowedConnectionIds.length > 0;
+  const limitDept = draft.allowedDepartmentIds.length > 0;
+
+  const items = [
+    {
+      ok: draft.canViewOtherAgentsConversations,
+      text: draft.canViewOtherAgentsConversations
+        ? "Vê conversas de todos os atendentes"
+        : `Vê apenas as conversas atribuídas a ${firstName}`,
+    },
+    {
+      ok: draft.canTransferConversation,
+      text: draft.canTransferConversation
+        ? "Pode transferir conversas para outra pessoa ou depto."
+        : "Não pode transferir conversas",
+    },
+    {
+      ok: draft.canCloseConversation,
+      text: draft.canCloseConversation
+        ? "Pode fechar e resolver conversas"
+        : "Não pode fechar conversas",
+    },
+    {
+      risk: draft.canDeleteConversation,
+      text: draft.canDeleteConversation
+        ? "Pode excluir conversas permanentemente"
+        : "Não pode excluir conversas",
+    },
+    {
+      ok: draft.canManageQuickMessages,
+      text: draft.canManageQuickMessages
+        ? "Pode editar as mensagens rápidas da equipe"
+        : "Não edita mensagens rápidas",
+    },
+    {
+      ok: !limitConn,
+      text: limitConn
+        ? `Acesso restrito a ${draft.allowedConnectionIds.length} de ${channels.length} conexão(ões)`
+        : "Acesso liberado a todas as conexões",
+    },
+    {
+      ok: !limitDept,
+      text: limitDept
+        ? `Atende ${draft.allowedDepartmentIds.length} de ${departments.length} departamento(s)`
+        : "Acesso liberado a todos os departamentos",
+    },
+  ];
+
+  return (
+    <div className="sticky top-0 flex flex-col gap-4">
+      {/* Summary card */}
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
+        <div className="border-b border-[var(--glass-border-subtle)] px-4 py-3">
+          <h4 className="flex items-center gap-2 font-display text-[13px] font-bold text-[var(--text-primary)]">
+            <IconSparkles size={14} className="text-[var(--brand-primary)]" />
+            O que {firstName} pode fazer
+          </h4>
+          <p className="mt-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
+            Resumo atualizado em tempo real
+          </p>
+        </div>
+        <div className="divide-y divide-[var(--glass-border-subtle)] px-4">
+          {items.map((item, i) => {
+            const isRisk = item.risk && draft.canDeleteConversation;
+            const isOk = !isRisk && item.ok;
+            return (
+              <div key={i} className="flex items-start gap-2.5 py-2.5">
+                <div className={cn(
+                  "mt-0.5 shrink-0",
+                  isRisk ? "text-red-500" : isOk ? "text-[var(--color-success,#16a34a)]" : "text-[var(--text-muted)]",
+                )}>
+                  {isRisk
+                    ? <IconAlertTriangle size={13} strokeWidth={2} />
+                    : isOk
+                      ? <IconCheck size={13} strokeWidth={2.5} />
+                      : <IconX size={13} strokeWidth={2.5} />
+                  }
+                </div>
+                <span className={cn(
+                  "font-body text-[12.5px] leading-snug",
+                  isRisk ? "font-semibold text-red-600" : "text-[var(--text-primary)]",
+                )}>
+                  {item.text}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tip */}
+      <div className="rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/8 px-4 py-3.5">
+        <p className="flex items-center gap-2 font-display text-[12.5px] font-bold text-[var(--brand-primary)]">
+          <IconInfoCircle size={14} /> Dica
+        </p>
+        <p className="mt-1.5 font-body text-[12px] leading-relaxed text-[var(--brand-primary)]/80">
+          Comece por um modelo pronto no topo da página e ajuste só o que for diferente — é mais rápido do que configurar item a item.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Permissions panel ────────────────────────────────────────────────────────
 
 function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
   const isAdmin = agent.role === "ADMIN";
   const saved = agent.permissions ?? DEFAULT_PERMISSIONS;
 
   const [draft, setDraft] = React.useState<AgentPermissions>({ ...DEFAULT_PERMISSIONS, ...saved });
+  const [preset, setPreset] = React.useState("custom");
 
   const { data: channels = [] } = useChannels();
   const { data: departments = [] } = useDepartments();
 
-  // Reset draft when agent changes
   React.useEffect(() => {
     setDraft({ ...DEFAULT_PERMISSIONS, ...saved });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPreset("custom");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agent.id, agent.permissions]);
 
   const isDirty = React.useMemo(() => {
@@ -218,246 +421,303 @@ function PermissionsPanel({ agent }: { agent: AgentWithPermissions }) {
 
   const saveMutation = useSaveAgentPermissions(agent.id);
 
-  // ── Boolean toggle ──
   function toggle(key: keyof AgentPermissions) {
     setDraft((prev) => ({ ...prev, [key]: !prev[key] }));
+    setPreset("custom");
   }
 
-  // ── Connection scope helpers ──
-  const limitConnections = draft.allowedConnectionIds.length > 0;
-
-  function toggleLimitConnections() {
-    if (limitConnections) {
-      setDraft((prev) => ({ ...prev, allowedConnectionIds: [] }));
-    } else {
-      setDraft((prev) => ({ ...prev, allowedConnectionIds: channels.map((c) => c.id) }));
+  function applyPreset(value: string) {
+    setPreset(value);
+    if (value !== "custom" && PRESETS[value]) {
+      setDraft((prev) => ({ ...prev, ...PRESETS[value] }));
     }
   }
 
+  // Connection scope
+  const limitConnections = draft.allowedConnectionIds.length > 0;
+  function toggleLimitConnections() {
+    setDraft((prev) => ({
+      ...prev,
+      allowedConnectionIds: limitConnections ? [] : channels.map((c) => c.id),
+    }));
+    setPreset("custom");
+  }
   function toggleConnectionId(id: string) {
     setDraft((prev) => {
       const ids = prev.allowedConnectionIds;
-      const next = ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
-      return { ...prev, allowedConnectionIds: next };
+      return { ...prev, allowedConnectionIds: ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id] };
     });
+    setPreset("custom");
   }
 
-  // ── Department scope helpers ──
+  // Department scope
   const limitDepartments = draft.allowedDepartmentIds.length > 0;
-
   function toggleLimitDepartments() {
-    if (limitDepartments) {
-      setDraft((prev) => ({ ...prev, allowedDepartmentIds: [] }));
-    } else {
-      setDraft((prev) => ({ ...prev, allowedDepartmentIds: departments.map((d: Department) => d.id) }));
-    }
+    setDraft((prev) => ({
+      ...prev,
+      allowedDepartmentIds: limitDepartments ? [] : departments.map((d: Department) => d.id),
+    }));
+    setPreset("custom");
   }
-
   function toggleDepartmentId(id: string) {
     setDraft((prev) => {
       const ids = prev.allowedDepartmentIds;
-      const next = ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
-      return { ...prev, allowedDepartmentIds: next };
+      return { ...prev, allowedDepartmentIds: ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id] };
     });
+    setPreset("custom");
   }
 
-  function handleSave() {
-    saveMutation.mutate(draft, {
-      onSuccess: () => { /* isDirty auto-updates via useEffect */ },
-    });
-  }
+  const color = avatarColor(agent.id);
 
   return (
-    <GlassCard variant="panel" className="flex h-full flex-col overflow-hidden">
-      {/* Agent header */}
-      <div className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-5 py-4">
+    <div className="flex flex-col gap-4">
+      {/* ── Profile card ── */}
+      <div className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-5 py-4">
+        {/* Avatar */}
         <div className="relative shrink-0">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)]/12 font-display text-[14px] font-bold text-[var(--brand-primary)]">
+          <div
+            className="flex h-12 w-12 items-center justify-center rounded-full font-display text-[15px] font-bold text-white"
+            style={{ backgroundColor: color }}
+          >
             {getInitials(agent.name)}
           </div>
-          <span
-            className={cn(
-              "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--glass-bg-panel)]",
-              agent.isOnline ? "bg-[var(--color-success,#22c55e)]" : "bg-[var(--text-muted)]",
-            )}
+          <span className={cn(
+            "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--glass-bg-panel)]",
+            agent.isOnline ? "bg-green-500" : "bg-[var(--text-muted)]",
+          )} />
+        </div>
+
+        {/* Info */}
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[16px] font-bold text-[var(--text-primary)]">{agent.name}</p>
+          <p className="font-body text-[13px] text-[var(--text-muted)]">{agent.email}</p>
+        </div>
+
+        {/* Preset selector */}
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="font-body text-[12px] text-[var(--text-muted)]">Modelo</span>
+          <DropdownGlass
+            options={PRESET_OPTIONS}
+            value={preset}
+            onValueChange={applyPreset}
+            disabled={isAdmin}
+            triggerClassName="w-44 text-[13px]"
           />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[15px] font-bold text-[var(--text-primary)]">
-            {agent.name}
-          </p>
-          <p className="truncate font-body text-[12px] text-[var(--text-muted)]">{agent.email}</p>
-        </div>
-        <span className="shrink-0 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-secondary)]">
-          {roleBadgeLabel(agent.role)}
-        </span>
       </div>
 
-      {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto px-5 py-4">
-        {/* Admin alert */}
-        {isAdmin && (
-          <div className="mb-4 flex items-start gap-2.5 rounded-[var(--radius-md)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/8 px-3.5 py-3">
-            <IconInfoCircle size={16} className="mt-0.5 shrink-0 text-[var(--brand-primary)]" />
-            <p className="font-body text-[12.5px] text-[var(--brand-primary)]">
-              Permissões não são aplicadas a administradores
-            </p>
-          </div>
-        )}
+      {/* ── Admin alert ── */}
+      {isAdmin && (
+        <div className="flex items-start gap-2.5 rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/8 px-4 py-3">
+          <IconInfoCircle size={16} className="mt-0.5 shrink-0 text-[var(--brand-primary)]" />
+          <p className="font-body text-[13px] text-[var(--brand-primary)]">
+            Permissões não são aplicadas a administradores — eles sempre têm acesso total.
+          </p>
+        </div>
+      )}
 
-        {/* Visualização */}
-        <div className="mb-4">
-          <SectionHeader>Visualização do atendente</SectionHeader>
-          <div className="divide-y divide-[var(--glass-border-subtle)]">
-            <PermissionRow
+      {/* ── 2-column: permissions + summary ── */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_280px]">
+        {/* Left: permission groups */}
+        <div className="flex flex-col gap-4">
+          {/* VISIBILIDADE */}
+          <PermGroup
+            title="Visibilidade"
+            desc="Quais conversas esse atendente consegue ver"
+            icon={IconEye}
+            iconBg="bg-[var(--brand-primary)]/12"
+            iconColor="text-[var(--brand-primary)]"
+          >
+            <PermRow
+              icon={IconUsers}
               label="Ver conversas de outros atendentes"
-              description="Permite visualizar conversas atribuídas a outros"
+              desc="Permite visualizar conversas atribuídas a outras pessoas da equipe, não só as próprias."
               checked={draft.canViewOtherAgentsConversations}
               onChange={() => toggle("canViewOtherAgentsConversations")}
               disabled={isAdmin}
             />
-            <PermissionRow
+            <PermRow
+              icon={IconEyeOff}
               label="Ocultar conversas sem atendente"
-              description="Não permite ver conversas que não possuem atendente"
+              desc="Conversas que ainda não têm ninguém responsável ficam fora da fila desse atendente."
               checked={draft.disableConversationsWithoutAgent}
               onChange={() => toggle("disableConversationsWithoutAgent")}
               disabled={isAdmin}
             />
-          </div>
-        </div>
+          </PermGroup>
 
-        {/* Ações permitidas */}
-        <div className="mb-4">
-          <SectionHeader>Ações permitidas</SectionHeader>
-          <div className="divide-y divide-[var(--glass-border-subtle)]">
-            <PermissionRow
+          {/* AÇÕES PERMITIDAS */}
+          <PermGroup
+            title="Ações permitidas"
+            desc="O que o atendente pode fazer dentro de uma conversa"
+            icon={IconShieldCheck}
+            iconBg="bg-green-100"
+            iconColor="text-green-700"
+          >
+            <PermRow
+              icon={IconArrowsExchange}
               label="Transferir conversa"
+              desc="Pode encaminhar uma conversa para outro atendente ou departamento."
               checked={draft.canTransferConversation}
               onChange={() => toggle("canTransferConversation")}
               disabled={isAdmin}
             />
-            <PermissionRow
+            <PermRow
+              icon={IconCircleCheck}
               label="Fechar / resolver conversa"
+              desc="Pode marcar uma conversa como resolvida e encerrar o atendimento."
               checked={draft.canCloseConversation}
               onChange={() => toggle("canCloseConversation")}
               disabled={isAdmin}
             />
-            <PermissionRow
+            <PermRow
+              icon={IconTrash}
+              iconBg={draft.canDeleteConversation ? "bg-red-50" : undefined}
+              iconColor={draft.canDeleteConversation ? "text-red-500" : undefined}
               label="Excluir conversa"
+              desc="Apaga a conversa e seu histórico permanentemente. Não é possível desfazer."
+              dangerTag
               checked={draft.canDeleteConversation}
               onChange={() => toggle("canDeleteConversation")}
               disabled={isAdmin}
-            />
-            <PermissionRow
+            >
+              {draft.canDeleteConversation && (
+                <div className="mx-5 mb-3 ml-[4.5rem] flex items-start gap-2 rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 px-3 py-2.5">
+                  <IconAlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" />
+                  <p className="font-body text-[12px] leading-relaxed text-amber-700">
+                    Com essa opção ativa, {agent.name.split(" ")[0]} poderá apagar conversas de forma definitiva. Considere liberar apenas para líderes de equipe.
+                  </p>
+                </div>
+              )}
+            </PermRow>
+            <PermRow
+              icon={IconMessageCircle}
               label="Gerenciar mensagens rápidas"
+              desc="Pode criar, editar e excluir os atalhos de mensagens rápidas da equipe."
               checked={draft.canManageQuickMessages}
               onChange={() => toggle("canManageQuickMessages")}
               disabled={isAdmin}
             />
-          </div>
-        </div>
+          </PermGroup>
 
-        {/* Conexões */}
-        <div className="mb-4">
-          <SectionHeader>Conexões</SectionHeader>
-          <CollapsibleSection
-            title="Veja as permissões por conexão"
-            subtitle={limitConnections ? `${draft.allowedConnectionIds.length} de ${channels.length} ativas` : "Acesso a todas as conexões"}
+          {/* ACESSOS */}
+          <PermGroup
+            title="Escopos de acesso"
+            desc="Limite quais conexões e departamentos este atendente enxerga"
             icon={IconLink}
-            defaultOpen={limitConnections}
+            iconBg="bg-[var(--glass-bg-strong)]"
+            iconColor="text-[var(--text-muted)]"
           >
-            <div className="mb-3">
-              <ChecklistItem
-                label="Limitar acesso por conexões específicas"
-                sublabel="O atendente terá acesso apenas às conexões habilitadas"
-                checked={limitConnections}
-                onChange={toggleLimitConnections}
-                disabled={isAdmin}
-              />
-            </div>
-            {limitConnections && channels.length > 0 && (
-              <div className="divide-y divide-[var(--glass-border-subtle)]">
-                {channels.map((ch) => (
-                  <ChecklistItem
-                    key={ch.id}
-                    label={ch.name}
-                    sublabel={ch.type}
-                    icon={<ChannelTypeIcon type={ch.type} />}
-                    checked={draft.allowedConnectionIds.includes(ch.id)}
-                    onChange={() => toggleConnectionId(ch.id)}
-                    disabled={isAdmin}
-                  />
-                ))}
+            {/* Accordion: Conexões */}
+            <Accordion
+              icon={IconLink}
+              title={limitConnections
+                ? `Conexões · acesso a ${draft.allowedConnectionIds.length} de ${channels.length}`
+                : "Conexões · acesso a todas"}
+              desc="Quais canais (WhatsApp, Instagram, etc.) esse atendente enxerga"
+              defaultOpen={limitConnections}
+            >
+              <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+                <div>
+                  <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                    Limitar acesso por conexões específicas
+                  </p>
+                  <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+                    Quando ativo, o atendente só vê as conexões marcadas abaixo.
+                  </p>
+                </div>
+                <SwitchGlass checked={limitConnections} onChange={toggleLimitConnections} disabled={isAdmin} size="sm" />
               </div>
-            )}
-            {limitConnections && channels.length === 0 && (
-              <p className="pt-1 font-body text-[12px] text-[var(--text-muted)]">
-                Nenhuma conexão disponível.
-              </p>
-            )}
-          </CollapsibleSection>
+              {channels.length > 0 ? (
+                <div className={cn("mt-3 flex flex-wrap gap-2 transition-opacity", !limitConnections && "pointer-events-none opacity-40")}>
+                  {channels.map((ch) => (
+                    <Chip
+                      key={ch.id}
+                      label={ch.name}
+                      checked={draft.allowedConnectionIds.includes(ch.id)}
+                      onChange={() => toggleConnectionId(ch.id)}
+                      disabled={isAdmin || !limitConnections}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 font-body text-[12px] text-[var(--text-muted)]">Nenhuma conexão disponível.</p>
+              )}
+            </Accordion>
+
+            {/* Accordion: Departamentos */}
+            <Accordion
+              icon={IconLayoutGrid}
+              title={limitDepartments
+                ? `Departamentos · acesso a ${draft.allowedDepartmentIds.length} de ${departments.length}`
+                : "Departamentos · acesso a todos"}
+              desc="Quais equipes esse atendente pode atender"
+              defaultOpen={limitDepartments}
+            >
+              <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-3 py-2.5">
+                <div>
+                  <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">
+                    Limitar acesso por departamentos específicos
+                  </p>
+                  <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+                    Quando ativo, o atendente só atende os departamentos marcados abaixo.
+                  </p>
+                </div>
+                <SwitchGlass checked={limitDepartments} onChange={toggleLimitDepartments} disabled={isAdmin} size="sm" />
+              </div>
+              {departments.length > 0 ? (
+                <div className={cn("mt-3 flex flex-wrap gap-2 transition-opacity", !limitDepartments && "pointer-events-none opacity-40")}>
+                  {departments.map((dept: Department) => (
+                    <Chip
+                      key={dept.id}
+                      label={dept.name}
+                      checked={draft.allowedDepartmentIds.includes(dept.id)}
+                      onChange={() => toggleDepartmentId(dept.id)}
+                      disabled={isAdmin || !limitDepartments}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 font-body text-[12px] text-[var(--text-muted)]">Nenhum departamento cadastrado.</p>
+              )}
+            </Accordion>
+          </PermGroup>
         </div>
 
-        {/* Departamentos */}
-        <div>
-          <SectionHeader>Departamentos</SectionHeader>
-          <CollapsibleSection
-            title="Veja os departamentos que o atendente tem acesso"
-            subtitle={limitDepartments ? `${draft.allowedDepartmentIds.length} de ${departments.length} ativos` : "Acesso a todos os departamentos"}
-            icon={IconLayoutGrid}
-            defaultOpen={limitDepartments}
-          >
-            <div className="mb-3">
-              <ChecklistItem
-                label="Limitar acesso por departamentos específicos"
-                sublabel="O atendente terá acesso apenas aos departamentos habilitados"
-                checked={limitDepartments}
-                onChange={toggleLimitDepartments}
-                disabled={isAdmin}
-              />
-            </div>
-            {limitDepartments && departments.length > 0 && (
-              <div className="divide-y divide-[var(--glass-border-subtle)]">
-                {departments.map((dept: Department) => (
-                  <ChecklistItem
-                    key={dept.id}
-                    label={dept.name}
-                    icon={
-                      <span
-                        className="flex h-5 w-5 items-center justify-center rounded-[var(--radius-sm)] text-[11px]"
-                        style={{ backgroundColor: dept.color + "33" }}
-                      >
-                        {dept.icon ?? "🏢"}
-                      </span>
-                    }
-                    checked={draft.allowedDepartmentIds.includes(dept.id)}
-                    onChange={() => toggleDepartmentId(dept.id)}
-                    disabled={isAdmin}
-                  />
-                ))}
-              </div>
-            )}
-            {limitDepartments && departments.length === 0 && (
-              <p className="pt-1 font-body text-[12px] text-[var(--text-muted)]">
-                Nenhum departamento cadastrado.
-              </p>
-            )}
-          </CollapsibleSection>
-        </div>
+        {/* Right: summary */}
+        <SummaryCard agent={agent} draft={draft} channels={channels} departments={departments} />
       </div>
 
-      {/* Save button */}
-      <div className="border-t border-[var(--glass-border-subtle)] px-5 py-3">
-        <ButtonGlass
-          variant="primary"
-          disabled={!isDirty || saveMutation.isPending || isAdmin}
-          onClick={handleSave}
-          className="w-full justify-center"
-        >
-          {saveMutation.isPending ? "Salvando…" : "Salvar permissões"}
-        </ButtonGlass>
+      {/* ── Save bar ── */}
+      <div className={cn(
+        "sticky bottom-0 z-10 flex items-center justify-between gap-4 rounded-[var(--radius-lg)] px-5 py-3.5 transition-all",
+        isDirty
+          ? "border border-[var(--glass-border)] bg-[var(--text-primary)] shadow-xl"
+          : "pointer-events-none opacity-0",
+      )}>
+        <div className="flex items-center gap-2.5">
+          <span className="h-2 w-2 rounded-full bg-amber-400" />
+          <span className="font-display text-[13px] font-medium text-white">Você tem alterações não salvas</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setDraft({ ...DEFAULT_PERMISSIONS, ...saved }); setPreset("custom"); }}
+            className="rounded-[var(--radius-md)] px-4 py-2 font-display text-[13px] font-semibold text-white/60 transition-colors hover:text-white"
+          >
+            Descartar
+          </button>
+          <button
+            type="button"
+            onClick={() => saveMutation.mutate(draft)}
+            disabled={saveMutation.isPending}
+            className="rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {saveMutation.isPending ? "Salvando…" : "Salvar permissões"}
+          </button>
+        </div>
       </div>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -472,92 +732,48 @@ function AgentListItem({
   isSelected: boolean;
   onClick: () => void;
 }) {
+  const color = avatarColor(agent.id);
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition-colors",
-        isSelected
-          ? "bg-[var(--brand-primary)]/12 ring-1 ring-[var(--brand-primary)]/30"
-          : "hover:bg-[var(--glass-bg-overlay)]",
+        "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 py-2 text-left transition-colors",
+        isSelected ? "bg-[var(--brand-primary)]/10" : "hover:bg-[var(--glass-bg-overlay)]",
       )}
     >
-      {/* Avatar */}
       <div className="relative shrink-0">
         <div
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full font-display text-[12px] font-bold",
-            isSelected
-              ? "bg-[var(--brand-primary)] text-white"
-              : "bg-[var(--glass-bg-strong)] text-[var(--text-secondary)]",
-          )}
+          className="flex h-8 w-8 items-center justify-center rounded-full font-display text-[12px] font-bold text-white"
+          style={{ backgroundColor: color }}
         >
           {getInitials(agent.name)}
         </div>
-        <span
-          className={cn(
-            "absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-[var(--glass-bg-panel)]",
-            agent.isOnline ? "bg-[var(--color-success,#22c55e)]" : "bg-[var(--text-muted)]",
-          )}
-        />
+        <span className={cn(
+          "absolute bottom-0 right-0 h-2 w-2 rounded-full border-2 border-[var(--glass-bg-panel)]",
+          agent.isOnline ? "bg-green-500" : "bg-[var(--text-muted)]",
+        )} />
       </div>
 
-      {/* Info */}
       <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            "truncate font-display text-[13px] font-semibold",
-            isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]",
-          )}
-        >
+        <p className={cn(
+          "truncate font-display text-[13px] font-semibold",
+          isSelected ? "text-[var(--brand-primary)]" : "text-[var(--text-primary)]",
+        )}>
           {agent.name}
         </p>
         <p className="truncate font-body text-[11.5px] text-[var(--text-muted)]">{agent.email}</p>
       </div>
 
-      {/* Role badge */}
-      <span className="shrink-0 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-display text-[10px] font-semibold text-[var(--text-muted)]">
+      <span className={cn(
+        "shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-bold",
+        agent.role === "ADMIN"
+          ? "bg-[var(--brand-primary)]/12 text-[var(--brand-primary)]"
+          : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+      )}>
         {roleBadgeLabel(agent.role)}
       </span>
     </button>
-  );
-}
-
-// ─── Skeleton loaders ─────────────────────────────────────────────────────────
-
-function SkeletonList() {
-  return (
-    <div className="space-y-1 p-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-14 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)]"
-        />
-      ))}
-    </div>
-  );
-}
-
-function SkeletonPanel() {
-  return (
-    <GlassCard variant="panel" className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-5 py-4">
-        <div className="h-10 w-10 animate-pulse rounded-full bg-[var(--glass-bg-strong)]" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-32 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
-          <div className="h-3 w-48 animate-pulse rounded bg-[var(--glass-bg-strong)]" />
-        </div>
-      </div>
-      <div className="flex-1 space-y-3 p-5">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-10 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)]"
-          />
-        ))}
-      </div>
-    </GlassCard>
   );
 }
 
@@ -570,58 +786,53 @@ export function AgentsTab() {
 
   const filtered = React.useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return agents;
-    return agents.filter(
-      (a) => a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q),
-    );
+    return q ? agents.filter((a) => a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)) : agents;
   }, [agents, search]);
 
-  const selectedAgent = React.useMemo(
-    () => agents.find((a) => a.id === selectedId) ?? null,
-    [agents, selectedId],
-  );
+  const selectedAgent = agents.find((a) => a.id === selectedId) ?? null;
 
   if (isError) {
     return (
-      <GlassCard variant="panel" className="flex flex-col items-center gap-3 py-16 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] py-20 text-center">
         <IconUser size={36} className="text-[var(--text-muted)] opacity-40" />
-        <p className="font-display text-sm font-semibold text-[var(--text-muted)]">
-          Erro ao carregar atendentes
-        </p>
-        <p className="max-w-xs font-body text-[12.5px] text-[var(--text-muted)]">
-          {(error as Error)?.message ?? "Tente novamente mais tarde."}
-        </p>
-      </GlassCard>
+        <p className="font-display text-[14px] font-semibold text-[var(--text-muted)]">Erro ao carregar atendentes</p>
+        <p className="font-body text-[12.5px] text-[var(--text-muted)]">{(error as Error)?.message ?? "Tente novamente."}</p>
+      </div>
     );
   }
 
   return (
-    <div className="grid h-full grid-cols-1 gap-3 lg:grid-cols-[280px_1fr]">
-      {/* ── Left panel: agent list ── */}
-      <GlassCard variant="panel" className="flex flex-col overflow-hidden">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+      {/* ── Agent list sidebar ── */}
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
         {/* Search */}
-        <div className="border-b border-[var(--glass-border-subtle)] p-3">
-          <InputGlass
-            withSearch
+        <div className="relative border-b border-[var(--glass-border-subtle)] p-3">
+          <IconSearch size={14} className="pointer-events-none absolute left-5.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar atendente…"
+            className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-8 pr-3 font-body text-[13px] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-[var(--brand-primary)]"
           />
         </div>
 
         {/* List */}
         {isLoading ? (
-          <SkeletonList />
+          <div className="space-y-1 p-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-12 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)]" />
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-center">
+          <div className="flex flex-col items-center gap-2 py-12 text-center">
             <IconUser size={28} className="text-[var(--text-muted)] opacity-40" />
-            <p className="font-display text-[12.5px] font-semibold text-[var(--text-muted)]">
+            <p className="font-body text-[12.5px] text-[var(--text-muted)]">
               {search ? "Nenhum atendente encontrado" : "Nenhum atendente cadastrado"}
             </p>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto p-2">
-            <div className="space-y-0.5">
+            <div className="flex flex-col gap-0.5">
               {filtered.map((agent) => (
                 <AgentListItem
                   key={agent.id}
@@ -634,31 +845,33 @@ export function AgentsTab() {
           </div>
         )}
 
-        {/* Count */}
+        {/* Footer */}
         {!isLoading && filtered.length > 0 && (
-          <div className="border-t border-[var(--glass-border-subtle)] px-4 py-2">
-            <p className="font-display text-[11px] text-[var(--text-muted)]">
+          <div className="border-t border-[var(--glass-border-subtle)] px-4 py-2.5">
+            <p className="font-body text-[11.5px] text-[var(--text-muted)]">
               {filtered.length} atendente{filtered.length !== 1 ? "s" : ""}
             </p>
           </div>
         )}
-      </GlassCard>
+      </div>
 
-      {/* ── Right panel: permissions ── */}
+      {/* ── Permissions panel ── */}
       {isLoading ? (
-        <SkeletonPanel />
+        <div className="flex flex-col gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-36 animate-pulse rounded-[var(--radius-lg)] bg-[var(--glass-bg-strong)]" />
+          ))}
+        </div>
       ) : selectedAgent ? (
         <PermissionsPanel key={selectedAgent.id} agent={selectedAgent} />
       ) : (
-        <GlassCard
-          variant="panel"
-          className="flex flex-col items-center justify-center gap-2 py-16 text-center"
-        >
-          <IconUser size={36} className="text-[var(--text-muted)] opacity-40" />
-          <p className="font-body text-[13px] text-[var(--text-muted)]">
-            Selecione um atendente para configurar suas permissões.
-          </p>
-        </GlassCard>
+        <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-24 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
+            <IconUser size={24} className="text-[var(--text-muted)] opacity-40" />
+          </div>
+          <p className="font-display text-[14px] font-semibold text-[var(--text-muted)]">Selecione um atendente</p>
+          <p className="font-body text-[12.5px] text-[var(--text-muted)]">Clique em um nome na lista para configurar as permissões.</p>
+        </div>
       )}
     </div>
   );

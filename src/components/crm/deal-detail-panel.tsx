@@ -868,7 +868,7 @@ export function DealDetailPanel({
                                             </div>
                                           </div>
                                           {/* Canal */}
-                                          <div className={cn("flex items-baseline gap-2 px-3 py-1.5", contactTagsSlot && "border-b border-[var(--glass-border-subtle)]")}>
+                                          <div className="flex items-baseline gap-2 px-3 py-1.5">
                                             <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Canal</span>
                                             <div className="min-w-0 flex-1">
                                               {connection ? (
@@ -881,13 +881,6 @@ export function DealDetailPanel({
                                               )}
                                             </div>
                                           </div>
-                                          {/* Tags */}
-                                          {contactTagsSlot && (
-                                            <div className="flex items-start gap-2 px-3 py-1.5">
-                                              <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Tags</span>
-                                              <div className="min-w-0 flex-1 flex flex-wrap gap-1">{contactTagsSlot}</div>
-                                            </div>
-                                          )}
                                         </div>
                                       ) : (
                                         /* ── Focus: grid 2 colunas de cards ── */
@@ -928,13 +921,6 @@ export function DealDetailPanel({
                                               <span className="font-display text-[12.5px] italic text-[var(--text-muted)]">—</span>
                                             )}
                                           </div>
-                                          {/* Tags */}
-                                          {contactTagsSlot && (
-                                            <div className="col-span-2 flex flex-col gap-1 rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)] p-2">
-                                              <span className="text-[10px] font-medium text-[var(--text-muted)]">Tags</span>
-                                              <div className="flex flex-wrap items-center gap-1">{contactTagsSlot}</div>
-                                            </div>
-                                          )}
                                         </div>
                                       )}
                                     </FieldCard>

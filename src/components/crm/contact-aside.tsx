@@ -1047,21 +1047,7 @@ export function ContactAside({
                                 </div>
                               )}
 
-                              {/* Tags do CONTATO — mesmo padrao visual das tags de
-                                  negocio: wrapper card + label chip + tray com
-                                  chips coloridos + popover pra add/remove. Move
-                                  do topo pra depois dos campos, mantendo o
-                                  agrupamento visual proximo ao restante. */}
-                              {contactTagsNode && (
-                                <div className="mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
-                                      Tags
-                                    </span>
-                                    {contactTagsNode}
-                                  </div>
-                                </div>
-                              )}
+                              {/* Tags do CONTATO removidas das asides por decisão de design */}
                               </>
                               )}
                             </div>

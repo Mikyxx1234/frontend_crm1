@@ -44,9 +44,11 @@ import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import {
   useDepartments,
   useCreateDepartment,
+  useUpdateDepartment,
   useDeleteDepartment,
   type Department,
 } from "../hooks/use-departments";
+import { useAgentList } from "../hooks/use-agent-permissions";
 
 // ─── Icon registry ────────────────────────────────────────────────────────────
 
@@ -254,11 +256,169 @@ function DeleteConfirmModal({ dept, onConfirm, onCancel, isPending, errorMsg }: 
   );
 }
 
+// ─── Edit modal ──────────────────────────────────────────────────────────────
+
+function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClose: () => void }) {
+  const [name, setName] = React.useState(dept?.name ?? "");
+  const [icon, setIcon] = React.useState(dept?.icon ?? "IconBuilding");
+  const [color, setColor] = React.useState(dept?.color ?? "#6366f1");
+  const updateMutation = useUpdateDepartment();
+  const { data: allAgents = [] } = useAgentList();
+
+  // Sync fields when dept changes
+  React.useEffect(() => {
+    if (dept) { setName(dept.name); setIcon(dept.icon); setColor(dept.color); }
+  }, [dept?.id]);
+
+  const members = React.useMemo(
+    () => allAgents.filter((a) => a.permissions?.allowedDepartmentIds?.includes(dept?.id ?? "")),
+    [allAgents, dept?.id],
+  );
+
+  function handleSave() {
+    if (!dept) return;
+    updateMutation.mutate(
+      { id: dept.id, name: name.trim(), icon, color },
+      { onSuccess: () => onClose() },
+    );
+  }
+
+  return (
+    <Dialog open={!!dept} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent size="md">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          {dept && (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)]"
+              style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}>
+              <DeptIcon name={icon} size={18} color={color} />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display text-[15px] font-bold text-[var(--text-primary)]">Editar departamento</h3>
+            <p className="font-body text-[12px] text-[var(--text-muted)]">{dept?.name}</p>
+          </div>
+        </div>
+
+        {/* Form */}
+        <div className="flex flex-col gap-4">
+          {/* Nome */}
+          <div>
+            <label className="mb-1 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Nome</label>
+            <InputGlass value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do departamento" />
+          </div>
+
+          {/* Ícone */}
+          <div>
+            <label className="mb-2 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Ícone</label>
+            <div className="grid grid-cols-6 gap-1.5 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-2.5">
+              {DEPT_ICONS.map(({ name: n, label }) => (
+                <button key={n} type="button" title={label} onClick={() => setIcon(n)}
+                  className={cn(
+                    "flex flex-col items-center gap-1 rounded-[var(--radius-md)] px-1 py-2 transition-all",
+                    icon === n ? "bg-[var(--brand-primary)]/10 ring-1 ring-[var(--brand-primary)]" : "hover:bg-[var(--glass-bg-strong)]",
+                  )}>
+                  <DeptIcon name={n} size={16} color={icon === n ? color : "var(--text-muted)"} />
+                  <span className="text-center font-body text-[9px] leading-tight text-[var(--text-muted)]">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cor */}
+          <div>
+            <label className="mb-2 block font-display text-[12px] font-semibold text-[var(--text-muted)]">Cor</label>
+            <div className="flex flex-wrap gap-2">
+              {DEPT_COLORS.map((c) => (
+                <button key={c} type="button" onClick={() => setColor(c)}
+                  className={cn(
+                    "h-7 w-7 rounded-full transition-transform hover:scale-110",
+                    color === c && "ring-2 ring-offset-1 ring-[var(--brand-primary)] scale-110",
+                  )}
+                  style={{ background: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Membros */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="font-display text-[12px] font-semibold text-[var(--text-muted)]">Membros</label>
+              {members.length > 0 && (
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 px-1.5 font-display text-[10px] font-bold text-[var(--brand-primary)]">
+                  {members.length}
+                </span>
+              )}
+            </div>
+
+            {members.length === 0 ? (
+              <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-4 text-center">
+                <IconUsers size={16} className="mx-auto text-[var(--text-muted)] opacity-40" />
+                <p className="font-body text-[12px] text-[var(--text-muted)]">Nenhum atendente vinculado a este departamento.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)] rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] overflow-hidden">
+                {members.map((agent) => (
+                  <div key={agent.id} className="flex items-center gap-2.5 px-3 py-2.5">
+                    <div className="relative h-8 w-8 shrink-0">
+                      {agent.avatarUrl ? (
+                        <img src={agent.avatarUrl} alt={agent.name} className="h-8 w-8 rounded-full object-cover" />
+                      ) : (
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 font-display text-[12px] font-bold text-[var(--brand-primary)]">
+                          {agent.name.slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                      <span className={cn(
+                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white",
+                        agent.isOnline ? "bg-emerald-400" : "bg-slate-300",
+                      )} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">{agent.name}</p>
+                      <p className="truncate font-body text-[11px] text-[var(--text-muted)]">{agent.email}</p>
+                    </div>
+                    <span className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-semibold",
+                      agent.role === "ADMIN"
+                        ? "bg-violet-100 text-violet-700"
+                        : agent.role === "MANAGER"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-600",
+                    )}>
+                      {agent.role === "ADMIN" ? "Admin" : agent.role === "MANAGER" ? "Gerente" : "Atendente"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose}
+            className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
+            Cancelar
+          </button>
+          <ButtonGlass type="button" variant="primary" disabled={!name.trim() || updateMutation.isPending} onClick={handleSave}>
+            {updateMutation.isPending ? "Salvando…" : "Salvar"}
+          </ButtonGlass>
+        </div>
+        <DialogClose />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Row views ────────────────────────────────────────────────────────────────
 
-function CompactaRow({ dept, onDelete }: { dept: Department; onDelete: () => void }) {
+function CompactaRow({ dept, onDelete, onEdit }: { dept: Department; onDelete: () => void; onEdit: () => void }) {
   return (
-    <div className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-4 py-3 transition-shadow hover:shadow-sm">
+    <div
+      className="group flex cursor-pointer items-center gap-3 rounded-[var(--radius-lg)] border border-white/70 bg-white/80 px-4 py-3 shadow-[0_1px_3px_rgba(100,130,180,0.08)] backdrop-blur-sm transition-all hover:bg-white hover:shadow-[0_2px_8px_rgba(100,130,180,0.13)]"
+      onClick={onEdit}
+    >
       <DeptIconBadge dept={dept} size={40} />
 
       <div className="min-w-0 flex-1">
@@ -275,23 +435,21 @@ function CompactaRow({ dept, onDelete }: { dept: Department; onDelete: () => voi
           className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-red-50 hover:text-red-500 transition-colors">
           <IconTrash size={13} />
         </button>
-        <button type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] transition-colors">
-          <IconPencil size={13} />
-        </button>
       </div>
 
-      <IconChevronRight size={16} className="shrink-0 text-[var(--text-muted)] opacity-40" />
+      <IconChevronRight size={14} className="shrink-0 text-[var(--brand-primary)] opacity-30 group-hover:opacity-80 transition-opacity" />
     </div>
   );
 }
 
-function TabelaRow({ dept, onDelete, selected, onToggle }: { dept: Department; onDelete: () => void; selected: boolean; onToggle: () => void }) {
+function TabelaRow({ dept, onDelete, onEdit, selected, onToggle }: { dept: Department; onDelete: () => void; onEdit: () => void; selected: boolean; onToggle: () => void }) {
   return (
     <div className={cn(
-      "group grid grid-cols-[2rem_2.5rem_1fr_6rem_5.5rem_3.5rem] items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--glass-bg-overlay)]",
+      "group grid grid-cols-[2rem_2.5rem_1fr_6rem_5.5rem_3.5rem] cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-white/60",
       selected && "bg-[var(--brand-primary)]/5",
-    )}>
+    )}
+    onClick={onEdit}
+    >
       <input type="checkbox" checked={selected} onChange={onToggle} className="size-4 rounded accent-[var(--brand-primary)]" />
       <DeptIconBadge dept={dept} size={32} />
       <div>
@@ -311,9 +469,12 @@ function TabelaRow({ dept, onDelete, selected, onToggle }: { dept: Department; o
   );
 }
 
-function CardView({ dept, onDelete }: { dept: Department; onDelete: () => void }) {
+function CardView({ dept, onDelete, onEdit }: { dept: Department; onDelete: () => void; onEdit: () => void }) {
   return (
-    <div className="group relative flex flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-5 text-center transition-shadow hover:shadow-md">
+    <div
+      className="group relative flex cursor-pointer flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-white/70 bg-white/80 p-5 text-center shadow-[0_1px_3px_rgba(100,130,180,0.08)] backdrop-blur-sm transition-all hover:bg-white hover:shadow-[0_2px_8px_rgba(100,130,180,0.13)]"
+      onClick={onEdit}
+    >
       <DeptIconBadge dept={dept} size={52} />
       <div>
         <p className="font-display text-[14px] font-bold text-[var(--text-primary)]">{dept.name}</p>
@@ -326,10 +487,6 @@ function CardView({ dept, onDelete }: { dept: Department; onDelete: () => void }
         <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-red-50 hover:text-red-500 transition-colors">
           <IconTrash size={13} />
-        </button>
-        <button type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)] transition-colors">
-          <IconPencil size={13} />
         </button>
       </div>
     </div>
@@ -347,6 +504,7 @@ export function DepartmentsTab() {
   const [showCreate, setShowCreate] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<Department | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | undefined>();
+  const [editTarget, setEditTarget] = React.useState<Department | null>(null);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   const filtered = React.useMemo(() => {
@@ -452,6 +610,7 @@ export function DepartmentsTab() {
               key={dept.id}
               dept={dept}
               onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
+              onEdit={() => setEditTarget(dept)}
             />
           ))}
         </div>
@@ -463,6 +622,7 @@ export function DepartmentsTab() {
               key={dept.id}
               dept={dept}
               onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
+              onEdit={() => setEditTarget(dept)}
             />
           ))}
         </div>
@@ -493,6 +653,7 @@ export function DepartmentsTab() {
                 selected={selected.has(dept.id)}
                 onToggle={() => toggleSelect(dept.id)}
                 onDelete={() => { setDeleteError(undefined); setDeleteTarget(dept); }}
+                onEdit={() => setEditTarget(dept)}
               />
             ))}
           </div>
@@ -516,6 +677,7 @@ export function DepartmentsTab() {
         isPending={deleteMutation.isPending}
         errorMsg={deleteError}
       />
+      <EditDepartmentModal dept={editTarget} onClose={() => setEditTarget(null)} />
     </>
   );
 }

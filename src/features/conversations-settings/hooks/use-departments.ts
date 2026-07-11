@@ -51,6 +51,28 @@ export function useCreateDepartment() {
   });
 }
 
+export function useUpdateDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; color?: string; icon?: string }) => {
+      const res = await fetch(`/api/settings/departments/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { message?: string }).message ?? "Erro ao atualizar departamento");
+      }
+      return res.json() as Promise<Department>;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+}
+
 export function useDeleteDepartment() {
   const qc = useQueryClient();
   return useMutation({

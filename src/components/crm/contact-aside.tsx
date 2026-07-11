@@ -303,6 +303,7 @@ function Row({
   valueStyle,
   children,
   isLast,
+  compact,
   className,
 }: {
   label: string
@@ -310,24 +311,34 @@ function Row({
   valueStyle?: React.CSSProperties
   children?: React.ReactNode
   isLast?: boolean
+  compact?: boolean
   className?: string
 }) {
   return (
     <div
       className={cn(
-        // py reduzido pra 1.5 (antes 2) — reduz altura das linhas de campo
-        // nativo, ajuda a caber mais informacao sem scroll.
-        "flex items-center justify-between gap-3 py-1.5 text-[13px]",
+        "flex items-center gap-2 px-3",
+        compact ? "py-1.5 text-[12px]" : "py-1.5 text-[13px]",
         !isLast && "border-b border-[var(--glass-border-subtle)]",
         className,
       )}
     >
-      <span className="font-medium text-[var(--text-muted)]">{label}</span>
-      {children ?? (
-        <span className="font-display font-bold text-[var(--text-primary)]" style={valueStyle}>
-          {value}
-        </span>
-      )}
+      <span className={cn(
+        "shrink-0 font-medium text-[var(--text-muted)]",
+        compact ? "w-[45%] text-[11px] leading-tight" : "w-[42%]",
+      )}>
+        {label}
+      </span>
+      <div className="min-w-0 flex-1 flex justify-end">
+        {children ?? (
+          <span className={cn(
+            "font-display font-bold text-[var(--text-primary)] text-right break-words min-w-0",
+            compact ? "text-[12px]" : "text-[13px]",
+          )} style={valueStyle}>
+            {value}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -885,12 +896,12 @@ export function ContactAside({
 
                               {/* Campos nativos */}
                               <div className={cn(
-                                "rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)]",
+                                "rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] overflow-hidden",
                                 viewMode === "compact"
-                                  ? "bg-transparent overflow-hidden px-3"
+                                  ? "bg-[var(--glass-bg-overlay)]"
                                   : "bg-[var(--glass-bg-overlay)] px-3.5 py-1"
                               )}>
-                                <Row label="Nome">
+                                <Row label="Nome" compact={viewMode === "compact"}>
                                   <div className="flex items-center gap-1.5">
                                     <InlineNativeEditor
                                       value={native("name", contact.name)}
@@ -915,7 +926,7 @@ export function ContactAside({
                                     a um clique da acao de ligar. Edicao
                                     inline continua acessivel via botao de
                                     edit do painel (Nome/Email etc.). */}
-                                <Row label="Email">
+                                <Row label="Email" compact={viewMode === "compact"}>
                                   <InlineNativeEditor
                                     value={native("email", contact.email)}
                                     entityType="contact"
@@ -926,11 +937,11 @@ export function ContactAside({
                                     editMode={contactEditMode}
                                     invalidateKeys={contactInvalidateKeys}
                                     onSaved={(v) => setNativeValues((p) => ({ ...p, email: v }))}
-                                    textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)]"
+                                    textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right"
                                   />
                                 </Row>
                                 {contact.connection && (
-                                  <Row label="Canal">
+                                  <Row label="Canal" compact={viewMode === "compact"}>
                                     <TooltipGlass
                                       label={`Conversando por ${formatConnectionLabel(contact.connection)}`}
                                       side="left"
@@ -942,38 +953,45 @@ export function ContactAside({
                                     </TooltipGlass>
                                   </Row>
                                 )}
-                                {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} />}
-                                {isFilled(contact.rg) && <Row label="RG" value={contact.rg} />}
-                                {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} />}
+                                {isFilled(contact.cpf) && <Row label="CPF" value={contact.cpf} compact={viewMode === "compact"} />}
+                                {isFilled(contact.rg) && <Row label="RG" value={contact.rg} compact={viewMode === "compact"} />}
+                                {isFilled(contact.cep) && <Row label="CEP" value={contact.cep} compact={viewMode === "compact"} />}
                                 {isFilled(contact.addressNumber) && (
-                                  <Row label="N Residencia" value={contact.addressNumber} />
+                                  <Row label="N Residencia" value={contact.addressNumber} compact={viewMode === "compact"} />
                                 )}
                                 {isFilled(contact.birthDate) && (
-                                  <Row label="Data de Nascimento" value={contact.birthDate} isLast />
+                                  <Row label="Data de Nascimento" value={contact.birthDate} isLast compact={viewMode === "compact"} />
                                 )}
                               </div>
 
                               {/* Campos personalizados de contato */}
                               {resolvedContactPanelFields.length > 0 && (
-                                <div className={cn("mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)]", viewMode === "compact" ? "bg-transparent" : "bg-[var(--glass-bg-overlay)]")}>
+                                <div className={cn(
+                                  "mt-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] overflow-hidden",
+                                  "bg-[var(--glass-bg-overlay)]"
+                                )}>
                                   {resolvedContactPanelFields.map((f, i) => {
                                     const hl = f.highlight ?? resolveHighlight(f.value, f.highlightRules)
                                     const colors = hl ? SEVERITY_COLORS[hl.severity as HighlightSeverity] : null
                                     const canEdit = !!f.entityType && !!f.entityId
+                                    const isCompact = viewMode === "compact"
                                     return (
                                       <div
                                         key={f.fieldId}
                                         className={cn(
-                                          "flex items-center justify-between gap-3 px-3.5 py-2 text-[13px]",
+                                          "flex items-center gap-2 px-3",
+                                          isCompact ? "py-1.5 text-[12px]" : "py-2 text-[13px]",
                                           i < resolvedContactPanelFields.length - 1 &&
                                             "border-b border-[var(--glass-border-subtle)]",
                                         )}
                                       >
-                                        <span className="shrink-0 font-medium text-[var(--text-muted)]">
+                                        <span className={cn(
+                                          "shrink-0 font-medium text-[var(--text-muted)]",
+                                          isCompact ? "w-[45%] text-[11px] leading-tight" : "w-[42%]"
+                                        )}>
                                           {f.label}
                                         </span>
                                         <div className="min-w-0 flex-1 flex justify-end">
-                                          {/* Modo edição ativo: sempre mostra editor, ignorando badge */}
                                           {contactEditMode && canEdit ? (
                                             <InlineFieldEditor
                                               fieldId={f.fieldId}
@@ -987,7 +1005,7 @@ export function ContactAside({
                                               onSaved={(v) =>
                                                 setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
                                               }
-                                              textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                              textClassName={cn("font-display font-bold text-[var(--text-primary)] text-right", isCompact ? "text-[12px]" : "text-[13px]")}
                                               placeholder="+ Adicionar"
                                             />
                                           ) : hl && colors ? (
@@ -1014,11 +1032,11 @@ export function ContactAside({
                                               onSaved={(v) =>
                                                 setFieldValues((prev) => ({ ...prev, [f.fieldId]: v }))
                                               }
-                                              textClassName="font-display text-[13px] font-bold text-[var(--text-primary)]"
+                                              textClassName={cn("font-display font-bold text-[var(--text-primary)] text-right", isCompact ? "text-[12px]" : "text-[13px]")}
                                               placeholder="+ Adicionar"
                                             />
                                           ) : (
-                                            <span className="font-display font-bold text-[var(--text-primary)]">
+                                            <span className={cn("font-display font-bold text-[var(--text-primary)] text-right", isCompact ? "text-[12px]" : "text-[13px]")}>
                                               {f.value || PLACEHOLDER}
                                             </span>
                                           )}

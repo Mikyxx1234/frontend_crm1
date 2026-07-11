@@ -27,7 +27,7 @@ import {
   IconClock,
 } from "@tabler/icons-react"
 
-type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
+export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
 
 const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle },
@@ -123,6 +123,8 @@ interface ChatAreaProps {
   /** IB8: conteudo da aba "Chamadas" (logs de telefonia). Quando ausente,
    *  a aba "Chamadas" nao aparece. */
   callsSlot?: React.ReactNode
+  /** Contagens opcionais exibidas como badge em cada aba. */
+  tabCounts?: Partial<Record<ChatTabId, number>>
 }
 
 export function ChatArea({
@@ -152,6 +154,7 @@ export function ChatArea({
   activitiesSlot,
   timelineSlot,
   callsSlot,
+  tabCounts,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
@@ -192,18 +195,14 @@ export function ChatArea({
         className,
       )}
     >
-      {/* HEADER — minimalista (avatar + badge + abas inline + acoes).
-          Substituimos o nome longo do contato por um avatar pra garantir
-          que tudo caiba em uma linha, mesmo com nomes compostos. Nome
-          completo continua no ContactAside e via tooltip do avatar. */}
-      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-5 py-3">
-        <div className="flex items-center gap-2.5">
+      {/* HEADER — duas faixas: identidade do contato (topo) + abas (base).
+          A separação em linhas distintas dá segmentação visual clara entre
+          "quem é" e "o que ver", mantendo o header compacto e sem poluição. */}
+      <header className="shrink-0 flex-col border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]">
+        {/* Faixa 1 — identidade + ações */}
+        <div className="flex items-center gap-3 px-4 py-2.5">
           <TooltipGlass label={contact.name} side="bottom">
             {(() => {
-              // Reaproveita o gradiente da conversation-card quando
-              // `avatarColor` bater com uma chave conhecida; caso contrário,
-              // usa o valor CSS raw (compat). Assim o avatar do header do
-              // chat fica visualmente idêntico ao do card da lista.
               const bg =
                 (contact.avatarColor && avatarGradients[contact.avatarColor]) ||
                 contact.avatarColor ||
@@ -232,6 +231,7 @@ export function ChatArea({
               )
             })()}
           </TooltipGlass>
+
           {contact.badge && (
             <BadgeGlass variant={contact.badge}>
               {contact.badgeLabel ??
@@ -242,47 +242,44 @@ export function ChatArea({
                     : "CLIENTE")}
             </BadgeGlass>
           )}
-          {/* Chip de canal removido daqui: a informação já fica visível no
-              ContactAside (row "Canal" em Detalhes de Contato) tanto no inbox
-              quanto no deal detail (ver DD3 em `deal-detail-panel.tsx`). A
-              duplicação acima do chat poluía o header e foi removida a pedido
-              do operador. A prop `connection` segue sendo recebida e ignorada
-              aqui para manter compat com chamadores existentes. */}
-        </div>
-        {tabsEnabled && (
-          <ChatTabsBar
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            hiddenTabs={{
-              notas: !notesSlot,
-              atividades: !activitiesSlot,
-              timeline: !timelineSlot,
-              chamadas: !callsSlot,
-            }}
-          />
-        )}
 
-        <div className="ml-auto flex items-center gap-1.5">
-          {/* Acao de ligar entra via headerActionsSlot (DealCallButton do
-              softphone, integrado com useDealDial). Nao renderizamos chip
-              com o numero aqui — o numero fica no ContactAside pra manter
-              o header enxuto. */}
-          {headerActionsSlot ?? (
-            <>
-              {contact.phone && (
-                <IconBtn title={`Ligar para ${contact.phone}`} onClick={onPhoneClick}>
-                  <IconPhone size={18} />
+          <div className="flex-1" />
+
+          <div className="flex items-center gap-1">
+            {headerActionsSlot ?? (
+              <>
+                {contact.phone && (
+                  <IconBtn title={`Ligar para ${contact.phone}`} onClick={onPhoneClick}>
+                    <IconPhone size={17} />
+                  </IconBtn>
+                )}
+                <IconBtn title="Vídeo chamada" onClick={onVideoClick}>
+                  <IconVideo size={17} />
                 </IconBtn>
-              )}
-              <IconBtn title="Vídeo chamada" onClick={onVideoClick}>
-                <IconVideo size={18} />
-              </IconBtn>
-              <IconBtn title="Mais opções" onClick={onMoreClick}>
-                <IconDotsVertical size={18} />
-              </IconBtn>
-            </>
-          )}
+                <IconBtn title="Mais opções" onClick={onMoreClick}>
+                  <IconDotsVertical size={17} />
+                </IconBtn>
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Faixa 2 — abas de navegação (underline-style) */}
+        {tabsEnabled && (
+          <div className="border-t border-[var(--glass-border-subtle)]">
+            <ChatTabsBar
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              hiddenTabs={{
+                notas: !notesSlot,
+                atividades: !activitiesSlot,
+                timeline: !timelineSlot,
+                chamadas: !callsSlot,
+              }}
+              tabCounts={tabCounts}
+            />
+          </div>
+        )}
       </header>
 
       {tabsEnabled && activeTab !== "conversa" ? (
@@ -415,37 +412,51 @@ export function ChatArea({
 
 /**
  * Barra de abas do card de conversa (Conversa / Atividades / Notas /
- * Timeline). Mesmo visual do DealDetailPanel para consistencia.
+ * Timeline). Underline-style: linha inferior na aba ativa, badge de
+ * contagem opcional por aba.
  */
 function ChatTabsBar({
   activeTab,
   onChange,
   hiddenTabs,
+  tabCounts,
 }: {
   activeTab: ChatTabId
   onChange: (id: ChatTabId) => void
-  /** Map de tabs ocultos. "conversa" e' sempre visivel. */
   hiddenTabs?: Partial<Record<ChatTabId, boolean>>
+  tabCounts?: Partial<Record<ChatTabId, number>>
 }) {
   return (
-    <div className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-1">
+    <div className="flex items-stretch overflow-x-auto scrollbar-none px-1">
       {CHAT_TABS.filter((t) => t.id === "conversa" || !hiddenTabs?.[t.id]).map((tab) => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
+        const count = tabCounts?.[tab.id]
         return (
           <button
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all",
+              "relative inline-flex shrink-0 cursor-pointer items-center gap-1.5 px-3.5 py-2.5 font-display text-[12.5px] font-semibold transition-colors whitespace-nowrap",
+              "border-b-2",
               isActive
-                ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
+                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--glass-border)]",
             )}
           >
-            <Icon size={14} />
+            <Icon size={13} strokeWidth={isActive ? 2.4 : 2} />
             {tab.label}
+            {count != null && count > 0 && (
+              <span className={cn(
+                "inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 font-display text-[10px] font-bold leading-none",
+                isActive
+                  ? "bg-[var(--brand-primary)] text-white"
+                  : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+              )}>
+                {count > 99 ? "99+" : count}
+              </span>
+            )}
           </button>
         )
       })}

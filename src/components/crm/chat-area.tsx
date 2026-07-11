@@ -401,7 +401,8 @@ export function ChatArea({
 }
 
 /**
- * Barra de abas do card de conversa (Conversa / Atividades / Notas /
+ * Barra de abas do card de conversa (Conversa / Atividades / Notas / Timeline).
+ */
 function ChatTabsBar({
   activeTab,
   onChange,

@@ -317,22 +317,22 @@ function Row({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-3",
-        compact ? "py-1.5 text-[12px]" : "py-1.5 text-[13px]",
+        "flex items-baseline gap-2 px-3",
+        compact ? "py-1.5" : "py-2",
         !isLast && "border-b border-[var(--glass-border-subtle)]",
         className,
       )}
     >
       <span className={cn(
         "shrink-0 font-medium text-[var(--text-muted)]",
-        compact ? "w-[45%] text-[11px] leading-tight" : "w-[42%]",
+        compact ? "w-[40%] text-[11px] leading-tight" : "w-[38%] text-[12px]",
       )}>
         {label}
       </span>
-      <div className="min-w-0 flex-1 flex justify-end">
+      <div className="min-w-0 flex-1">
         {children ?? (
           <span className={cn(
-            "font-display font-bold text-[var(--text-primary)] text-right break-words min-w-0",
+            "font-display font-semibold text-[var(--text-primary)] break-words",
             compact ? "text-[12px]" : "text-[13px]",
           )} style={valueStyle}>
             {value}

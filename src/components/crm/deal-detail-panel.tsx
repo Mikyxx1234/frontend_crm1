@@ -761,7 +761,7 @@ export function DealDetailPanel({
                     <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                       Origem
                     </span>
-                    <div className="ml-auto flex min-w-0 justify-end text-right">
+                    <div className="ml-auto min-w-0">
                       {deal.contactId ? (
                         <InlineNativeEditor
                           value={deal.contactSource ?? undefined}
@@ -774,7 +774,7 @@ export function DealDetailPanel({
                             ["contact-sidebar", deal.contactId],
                             ["deal-detail-v2", deal.id],
                           ]}
-                          textClassName="font-display text-[12.5px] font-bold text-[var(--text-primary)]"
+                          textClassName="font-display text-[12.5px] font-semibold text-[var(--text-primary)]"
                         />
                       ) : (
                         <span className="font-display text-[12px] italic text-[var(--text-muted)]">
@@ -847,33 +847,33 @@ export function DealDetailPanel({
                                         /* ── Compact: flat rows (mesmo padrão dos campos de negócio) ── */
                                         <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] overflow-hidden mt-1">
                                           {/* Telefone */}
-                                          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[45%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Telefone</span>
-                                            <div className="min-w-0 flex-1 flex justify-end">
+                                          <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
+                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Telefone</span>
+                                            <div className="min-w-0 flex-1">
                                               {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right" />
+                                                <InlineNativeEditor value={dealNative["phone"] ?? deal.phone} entityType="contact" entityId={deal.contactId} fieldKey="phone" inputType="tel" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, phone: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)]" />
                                               ) : (
-                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12px] font-bold text-[var(--brand-primary)]">{deal.phone || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
+                                                <a href={deal.phone ? `tel:${deal.phone}` : undefined} className="font-display text-[12px] font-semibold text-[var(--brand-primary)]">{deal.phone || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</a>
                                               )}
                                             </div>
                                           </div>
                                           {/* Email */}
-                                          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
-                                            <span className="w-[45%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Email</span>
-                                            <div className="min-w-0 flex-1 flex justify-end">
+                                          <div className="flex items-baseline gap-2 px-3 py-1.5 border-b border-[var(--glass-border-subtle)]">
+                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Email</span>
+                                            <div className="min-w-0 flex-1">
                                               {deal.contactId ? (
-                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right break-all" />
+                                                <InlineNativeEditor value={dealNative["email"] ?? (deal.email ?? undefined)} entityType="contact" entityId={deal.contactId} fieldKey="email" inputType="email" placeholder="+ Adicionar" invalidateKeys={[["contact-sidebar", deal.contactId]]} onSaved={(v) => setDealNative((p) => ({ ...p, email: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--brand-primary)] break-all" />
                                               ) : (
-                                                <span className="font-display text-[12px] font-bold text-[var(--brand-primary)] text-right break-all">{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
+                                                <span className="font-display text-[12px] font-semibold text-[var(--brand-primary)] break-all">{deal.email || <span className="italic text-[var(--text-muted)]">+ Adicionar</span>}</span>
                                               )}
                                             </div>
                                           </div>
                                           {/* Canal */}
-                                          <div className={cn("flex items-center gap-2 px-3 py-1.5", contactTagsSlot && "border-b border-[var(--glass-border-subtle)]")}>
-                                            <span className="w-[45%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Canal</span>
-                                            <div className="min-w-0 flex-1 flex justify-end">
+                                          <div className={cn("flex items-baseline gap-2 px-3 py-1.5", contactTagsSlot && "border-b border-[var(--glass-border-subtle)]")}>
+                                            <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Canal</span>
+                                            <div className="min-w-0 flex-1">
                                               {connection ? (
-                                                <span className="inline-flex items-center gap-1 font-display text-[12px] font-bold text-[var(--text-primary)] text-right">
+                                                <span className="inline-flex items-center gap-1 font-display text-[12px] font-semibold text-[var(--text-primary)]">
                                                   <IconAffiliate size={11} className="shrink-0 text-[var(--brand-primary)]" />
                                                   {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
                                                 </span>
@@ -885,8 +885,8 @@ export function DealDetailPanel({
                                           {/* Tags */}
                                           {contactTagsSlot && (
                                             <div className="flex items-start gap-2 px-3 py-1.5">
-                                              <span className="w-[45%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Tags</span>
-                                              <div className="min-w-0 flex-1 flex flex-wrap justify-end gap-1">{contactTagsSlot}</div>
+                                              <span className="w-[38%] shrink-0 text-[11px] font-medium text-[var(--text-muted)] leading-tight">Tags</span>
+                                              <div className="min-w-0 flex-1 flex flex-wrap gap-1">{contactTagsSlot}</div>
                                             </div>
                                           )}
                                         </div>
@@ -990,17 +990,17 @@ export function DealDetailPanel({
                                             const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
                                             const canEdit = !!field.entityType && !!field.entityId
                                             return (
-                                              <div key={field.fieldId} className="flex items-center gap-2 px-1 py-1.5">
-                                                <span className="w-[45%] shrink-0 text-[11px] text-[var(--text-muted)] leading-tight">{field.label}</span>
-                                                <div className="min-w-0 flex-1 text-right">
+                                              <div key={field.fieldId} className="flex items-baseline gap-2 px-1 py-1.5">
+                                                <span className="w-[38%] shrink-0 text-[11px] text-[var(--text-muted)] leading-tight">{field.label}</span>
+                                                <div className="min-w-0 flex-1">
                                                   {dealCustomEditMode && canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
+                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} editMode={dealCustomEditMode} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                                   ) : hl ? (
                                                     <HighlightBadge severity={hl.severity as "danger" | "success" | "warning" | "info"} label={hl.label} />
                                                   ) : canEdit ? (
-                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-bold text-[var(--text-primary)] text-right" placeholder="+ Adicionar" />
+                                                    <InlineFieldEditor fieldId={field.fieldId} fieldType={(field as { type?: string }).type ?? "TEXT"} fieldOptions={field.options ?? []} value={currentValue ?? null} entityType={field.entityType!} entityId={field.entityId!} invalidateKeys={[["deal-detail-v2", deal.id]]} onSaved={(v) => setFieldValues((prev) => ({ ...prev, [field.fieldId]: v }))} textClassName="font-display text-[12px] font-semibold text-[var(--text-primary)]" placeholder="+ Adicionar" />
                                                   ) : (
-                                                    <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">{currentValue || <span className="italic text-[var(--text-muted)]">—</span>}</span>
+                                                    <span className="font-display text-[12px] font-semibold text-[var(--text-primary)]">{currentValue || <span className="italic text-[var(--text-muted)]">—</span>}</span>
                                                   )}
                                                 </div>
                                               </div>
@@ -1556,13 +1556,13 @@ function FieldRow({
         {label}
       </span>
       {valueNode ? (
-        <div className="ml-auto flex min-w-0 max-w-[70%] flex-wrap items-center justify-end gap-1.5 text-right">
+        <div className="min-w-0 flex flex-wrap items-center gap-1.5">
           {valueNode}
         </div>
       ) : (
         <span
           className={cn(
-            "group flex min-w-0 max-w-[70%] items-center justify-end gap-1.5 text-right font-display text-[13px] font-bold",
+            "group flex min-w-0 items-center gap-1.5 font-display text-[13px] font-semibold",
             empty ? "text-[var(--text-muted)]" : "text-[var(--text-primary)]",
             money && !empty && "text-[var(--color-success-text)]",
           )}

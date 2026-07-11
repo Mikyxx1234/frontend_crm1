@@ -32,13 +32,13 @@ import {
   IconTable,
   IconLayoutGrid,
   IconLayoutList,
-  IconSearch,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-import { InputGlass } from "@/components/crm/input-glass";
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { PageSearchBar, PageSegmentedControl, PagePrimaryButton } from "@/components/crm/page-toolbar";
+import { listTableHeadRowClass, ListColumnLabel } from "@/components/crm/sortable-header";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import {
   useDepartments,
@@ -371,53 +371,37 @@ export function DepartmentsTab() {
     });
   }
 
-  const VIEW_MODES: { id: ViewMode; icon: React.ReactNode; label: string }[] = [
-    { id: "tabela",   icon: <IconTable size={14} />,      label: "Tabela" },
-    { id: "cards",    icon: <IconLayoutGrid size={14} />,  label: "Cards" },
-    { id: "compacta", icon: <IconLayoutList size={14} />,  label: "Compacta" },
-  ];
+  const VIEW_SEGMENT_ITEMS = [
+    { value: "tabela",   label: <span className="flex items-center gap-1.5"><IconTable size={13} />Tabela</span> },
+    { value: "cards",    label: <span className="flex items-center gap-1.5"><IconLayoutGrid size={13} />Cards</span> },
+    { value: "compacta", label: <span className="flex items-center gap-1.5"><IconLayoutList size={13} />Compacta</span> },
+  ] as const;
 
   return (
     <>
       {/* ── Toolbar ── */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <IconSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar departamento…"
-            className="h-9 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] pl-8 pr-3 font-body text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--brand-primary)] transition-colors"
-          />
-        </div>
+        <PageSearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar departamento…"
+          variant="compact"
+          className="flex-1 min-w-[180px] max-w-xs"
+        />
 
         <div className="ml-auto flex items-center gap-2">
-          {/* View mode toggle */}
-          <div className="flex items-center gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-1">
-            {VIEW_MODES.map(({ id, icon, label }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setViewMode(id)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-[var(--radius-md)] px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
-                  viewMode === id
-                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-                )}
-              >
-                {icon}
-                {label}
-              </button>
-            ))}
-          </div>
+          <PageSegmentedControl
+            items={VIEW_SEGMENT_ITEMS}
+            value={viewMode}
+            onChange={(v) => setViewMode(v as ViewMode)}
+            aria-label="Modo de visualização"
+            size="compact"
+          />
 
-          {/* Create button */}
-          <ButtonGlass variant="primary" size="sm" onClick={() => setShowCreate(true)} className="gap-1.5 rounded-[var(--radius-lg)]">
+          <PagePrimaryButton onClick={() => setShowCreate(true)} className="gap-1.5">
             <IconPlus size={14} />
             Criar
-          </ButtonGlass>
+          </PagePrimaryButton>
         </div>
       </div>
 
@@ -485,7 +469,7 @@ export function DepartmentsTab() {
         /* ── Tabela ── */
         <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)]">
           {/* Table header */}
-          <div className="grid grid-cols-[2rem_2.5rem_1fr_6rem_5.5rem_3.5rem] items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-2.5">
+          <div className={listTableHeadRowClass("grid grid-cols-[2rem_2.5rem_1fr_6rem_5.5rem_3.5rem] rounded-none border-b-0 border-x-0 border-t-0")}>
             <input
               type="checkbox"
               checked={allSelected}
@@ -494,9 +478,9 @@ export function DepartmentsTab() {
               className="size-4 rounded accent-[var(--brand-primary)]"
             />
             <span />
-            <span className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Nome</span>
-            <span className="hidden font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)] sm:block">Criado em</span>
-            <span className="hidden font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)] sm:block">Status</span>
+            <ListColumnLabel>Nome</ListColumnLabel>
+            <ListColumnLabel className="hidden sm:block">Criado em</ListColumnLabel>
+            <ListColumnLabel className="hidden sm:block">Status</ListColumnLabel>
             <span />
           </div>
 

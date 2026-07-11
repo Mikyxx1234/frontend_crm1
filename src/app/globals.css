@@ -558,6 +558,10 @@
   .font-display {
     font-family: var(--font-display);
   }
+  /* Fonte body (DM Sans) — reseta herança de font-display em filhos */
+  .font-body {
+    font-family: var(--font-sans);
+  }
   .font-mono {
     font-family: var(--font-mono);
   }

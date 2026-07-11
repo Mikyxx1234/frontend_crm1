@@ -9,13 +9,10 @@ import { SettingsV2Shell, SETTINGS_HUB_BACK } from "../_v2-shell";
 import { ConversationsConfigTab } from "@/features/conversations-settings/components/ConversationsConfigTab";
 import { DepartmentsTab } from "@/features/conversations-settings/components/DepartmentsTab";
 import { AgentsTab } from "@/features/conversations-settings/components/AgentsTab";
-import { QuickMessagesTab } from "@/features/conversations-settings/components/QuickMessagesTab";
-
 const TABS = [
   { id: "configuracoes", label: "Configurações" },
   { id: "departamentos", label: "Departamentos" },
   { id: "atendentes", label: "Atendentes" },
-  { id: "mensagens-rapidas", label: "Mensagens rápidas" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -39,7 +36,7 @@ export function ConversationsSettingsClientPage() {
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Conversas"
-      description="Departamentos, atendentes, permissões e mensagens rápidas"
+      description="Departamentos, atendentes e permissões"
       icon={<IconMessageCircle size={22} />}
     >
       {/* Inner tab navigation */}
@@ -66,7 +63,6 @@ export function ConversationsSettingsClientPage() {
         {activeTab === "configuracoes" && <ConversationsConfigTab />}
         {activeTab === "departamentos" && <DepartmentsTab />}
         {activeTab === "atendentes" && <AgentsTab />}
-        {activeTab === "mensagens-rapidas" && <QuickMessagesTab />}
       </div>
     </SettingsV2Shell>
   );

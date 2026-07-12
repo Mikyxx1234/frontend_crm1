@@ -27,6 +27,9 @@ export interface InlineNativeEditorProps {
   invalidateKeys?: unknown[][];
   onSaved?: (newValue: string) => void;
   textClassName?: string;
+  /** Classe do estado vazio (placeholder). Default: muted+italic. Útil para
+   *  sobrepor a cor em fundos escuros (ex.: hero do aside). */
+  emptyClassName?: string;
   placeholder?: string;
   /** Formata o valor para exibição (ex.: moeda, data) */
   formatDisplay?: (raw: string) => string;
@@ -81,6 +84,7 @@ export function InlineNativeEditor({
   invalidateKeys,
   onSaved,
   textClassName,
+  emptyClassName,
   placeholder = "Adicionar",
   formatDisplay,
   editMode = false,
@@ -188,7 +192,7 @@ export function InlineNativeEditor({
         className={cn(
           "group flex min-w-0 items-center gap-1.5 text-right transition-colors",
           isEmpty
-            ? "font-display text-[11px] italic text-[var(--text-muted)] opacity-60"
+            ? (emptyClassName ?? "font-display text-[11px] italic text-[var(--text-muted)] opacity-60")
             : (textClassName ?? "font-display text-[13px] font-bold text-[var(--text-primary)]"),
         )}
         aria-label={`Editar ${fieldKey}`}

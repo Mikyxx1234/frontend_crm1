@@ -1065,12 +1065,15 @@ export default function KanbanV2ClientPage({
                   // Sem isso, tags longas no header do deal detail estouravam
                   // o slot e empurravam o resto do cabeçalho.
                   <TooltipGlass key={t.id} label={t.name} side="top">
+                    {/* Chip claro (color-mix com white) — mesmo padrão do
+                        DealTagsTray do inbox, garante contraste legível sobre
+                        o hero escuro (--nav-bg). */}
                     <span
                       className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
                       style={{
-                        background: `${t.color ?? "#5b6ff5"}22`,
-                        color: t.color ?? "var(--brand-primary)",
-                        border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                        background: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 18%, white)`,
+                        color: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 75%, black)`,
+                        border: `1px solid color-mix(in srgb, ${t.color ?? "#5b6ff5"} 40%, transparent)`,
                       }}
                     >
                       {t.name}
@@ -1082,7 +1085,7 @@ export default function KanbanV2ClientPage({
                     label={hiddenTags.map((t) => t.name).join(", ")}
                     side="top"
                   >
-                    <span className="inline-flex shrink-0 cursor-default items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-secondary)]">
+                    <span className="inline-flex shrink-0 cursor-default items-center rounded-full border border-white/25 bg-white/15 px-1.5 py-0.5 font-display text-[10.5px] font-bold text-white/85">
                       +{hiddenTags.length}
                     </span>
                   </TooltipGlass>
@@ -1093,7 +1096,7 @@ export default function KanbanV2ClientPage({
                   pipelineId={pipelineId}
                   statusFilter={status}
                   trigger={
-                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-white/35 px-2.5 py-0.5 font-display text-[11px] font-semibold text-white/70 transition-colors hover:border-white hover:text-white">
                       <IconPlus size={10} />
                       {allTags.length === 0 ? "Adicionar" : ""}
                     </span>

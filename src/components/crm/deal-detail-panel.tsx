@@ -734,6 +734,7 @@ export function DealDetailPanel({
                             ["deal-detail-v2", deal.id],
                           ]}
                           textClassName="font-display text-[11.5px] font-semibold text-white"
+                          emptyClassName="font-display text-[11.5px] italic text-white/55"
                         />
                       ) : (
                         <span className="text-[11.5px] italic text-white/60">

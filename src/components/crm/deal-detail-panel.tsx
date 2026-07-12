@@ -307,7 +307,12 @@ export function DealDetailPanel({
   const resolvedContactConfig = contactFieldConfigSlot ?? fieldConfigSlot ?? null;
   const resolvedDealConfig = dealFieldConfigSlot ?? null;
   const [activeTab, setActiveTab] = useState<TabId>("conversa")
-  const [configOpen, setConfigOpen] = useState(false)
+  // Config de visibilidade dos campos personalizados: um toggle por entidade
+  // (contato/negócio), aberto inline dentro do card "Informações do Negócio"
+  // — paridade com o aside do Inbox (contact-aside.tsx), que usa engrenagens
+  // por seção em vez de uma única engrenagem global no hero.
+  const [contactConfigOpen, setContactConfigOpen] = useState(false)
+  const [dealConfigOpen, setDealConfigOpen] = useState(false)
   const { data: contactSources = [] } = useContactSources(isOpen)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -606,26 +611,6 @@ export function DealDetailPanel({
                       {moreActionsSlot}
                     </div>
                   )}
-                  {(resolvedContactConfig || resolvedDealConfig) && (
-                    <TooltipGlass
-                      label={configOpen ? "Voltar aos campos" : "Configurar campos"}
-                      side="left"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setConfigOpen((v) => !v)}
-                        aria-label={configOpen ? "Voltar aos campos" : "Configurar campos"}
-                        className={cn(
-                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors",
-                          configOpen
-                            ? "bg-white text-[var(--brand-primary)]"
-                            : "text-white/80 hover:bg-white/15 hover:text-white",
-                        )}
-                      >
-                        {configOpen ? <IconX size={13} /> : <IconSettings size={13} />}
-                      </button>
-                    </TooltipGlass>
-                  )}
                 </div>
 
                 {/* Linha topo: título + #num + editar (esq) + pill de etapa (dir) */}
@@ -786,12 +771,6 @@ export function DealDetailPanel({
 
             {/* Conteúdo rolável: lista densa de campos */}
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5.5 py-4">
-              {configOpen && (resolvedContactConfig || resolvedDealConfig) ? (
-                <div className="flex min-w-0 flex-col gap-3">
-                  {resolvedContactConfig}
-                  {resolvedDealConfig}
-                </div>
-              ) : (
                 <div className="flex min-w-0 flex-col gap-5">
                   {/* Origem + Tags migraram para dentro do hero (paridade com o
                       aside do inbox). */}
@@ -948,30 +927,86 @@ export function DealDetailPanel({
                                     </section>
                                   )}
 
-                                  {sectionId === "campos" && customFieldsSlot && customFieldsSlot.length > 0 && (
+                                  {sectionId === "campos" &&
+                                    ((customFieldsSlot && customFieldsSlot.length > 0) ||
+                                      resolvedContactConfig ||
+                                      resolvedDealConfig) && (
                                     <FieldCard
                                       title="Informações do Negócio"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
                                       titleActions={
-                                        <button
-                                          type="button"
-                                          onClick={() => setDealCustomEditMode((v) => !v)}
-                                          title={dealCustomEditMode ? "Sair do modo edição" : "Editar campos"}
-                                          className={cn(
-                                            "flex h-6 w-6 items-center justify-center rounded transition-colors",
-                                            dealCustomEditMode
-                                              ? "bg-[var(--brand-primary)] text-white"
-                                              : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => setDealCustomEditMode((v) => !v)}
+                                            title={dealCustomEditMode ? "Sair do modo edição" : "Editar campos"}
+                                            className={cn(
+                                              "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                                              dealCustomEditMode
+                                                ? "bg-[var(--brand-primary)] text-white"
+                                                : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                            )}
+                                          >
+                                            {dealCustomEditMode ? <IconX size={12} /> : <IconPencil size={12} />}
+                                          </button>
+                                          {/* Engrenagens de configuração de visibilidade — uma por
+                                              entidade, ao lado das informações do negócio/campo,
+                                              paridade com contact-aside.tsx (Inbox). Antes vivia
+                                              como um único botão global no hero, substituindo toda
+                                              a aba por um painel de config em tela cheia. */}
+                                          {resolvedContactConfig && (
+                                            <TooltipGlass
+                                              label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
+                                              side="top"
+                                            >
+                                              <button
+                                                type="button"
+                                                onClick={() => setContactConfigOpen((v) => !v)}
+                                                aria-label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
+                                                className={cn(
+                                                  "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                                                  contactConfigOpen
+                                                    ? "bg-[var(--brand-primary)] text-white"
+                                                    : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                                )}
+                                              >
+                                                {contactConfigOpen ? <IconX size={12} /> : <IconSettings size={12} />}
+                                              </button>
+                                            </TooltipGlass>
                                           )}
-                                        >
-                                          {dealCustomEditMode ? <IconX size={12} /> : <IconPencil size={12} />}
-                                        </button>
+                                          {resolvedDealConfig && (
+                                            <TooltipGlass
+                                              label={dealConfigOpen ? "Fechar configurações" : "Configurar campos de negócio"}
+                                              side="top"
+                                            >
+                                              <button
+                                                type="button"
+                                                onClick={() => setDealConfigOpen((v) => !v)}
+                                                aria-label={dealConfigOpen ? "Fechar configurações" : "Configurar campos de negócio"}
+                                                className={cn(
+                                                  "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                                                  dealConfigOpen
+                                                    ? "bg-[var(--brand-primary)] text-white"
+                                                    : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                                )}
+                                              >
+                                                {dealConfigOpen ? <IconX size={12} /> : <IconSettings size={12} />}
+                                              </button>
+                                            </TooltipGlass>
+                                          )}
+                                        </>
                                       }
                                     >
+                                      {(contactConfigOpen || dealConfigOpen) && (
+                                        <div className="flex flex-col gap-3 border-b border-[var(--glass-border-subtle)] py-3">
+                                          {contactConfigOpen && resolvedContactConfig}
+                                          {dealConfigOpen && resolvedDealConfig}
+                                        </div>
+                                      )}
                                       {viewMode === "compact" ? (
                                         /* ── Compact: flat rows ── */
                                         <div className="divide-y divide-[var(--glass-border-subtle)] py-1">
-                                          {customFieldsSlot.map((field) => {
+                                          {(customFieldsSlot ?? []).map((field) => {
                                             const currentValue = fieldValues[field.fieldId] ?? field.value
                                             const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
                                             const canEdit = !!field.entityType && !!field.entityId
@@ -996,7 +1031,7 @@ export function DealDetailPanel({
                                       ) : (
                                         /* ── Focus (padrão): grid de cards ── */
                                         <div className="grid grid-cols-2 gap-1.5 py-2">
-                                          {customFieldsSlot.map((field) => {
+                                          {(customFieldsSlot ?? []).map((field) => {
                                             const currentValue = fieldValues[field.fieldId] ?? field.value
                                             const hl = field.highlight ?? resolveHighlight(currentValue, field.highlightRules)
                                             const canEdit = !!field.entityType && !!field.entityId
@@ -1081,7 +1116,6 @@ export function DealDetailPanel({
                   </div>
                 )}
                 </div>
-              )}
 
               {/* productsSlot agora vive dentro do DragDropContext acima
                   (sectionId === "produtos"). DD4: paridade com o

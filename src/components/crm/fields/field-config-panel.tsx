@@ -99,8 +99,17 @@ const TYPE_LABEL: Record<string, string> = Object.fromEntries(
  */
 export type PanelConfigContext = "inbox" | "deal";
 
-function contextFromLayout(context: FieldLayoutContext): PanelConfigContext {
-  if (context === "deal_panel_v2") return "deal";
+function contextFromLayout(
+  context: FieldLayoutContext,
+  entity: FieldConfigEntity,
+): PanelConfigContext {
+  // showInDealPanel só existe/filtra para entity=deal (ver getDealPanelFieldsForDeal
+  // no backend). Campos de contato no Deal Detail continuam lidos via
+  // inboxLeadPanelFields (showInInboxLeadPanel) — ver _v2-client.tsx. Sem esse
+  // guard, o toggle de contato em deal_panel_v2 tentava persistir showInDealPanel
+  // num campo entity=contact, que o backend ignora (payload vazio) e o Prisma
+  // rejeita com 500 (`update.data` vazio).
+  if (context === "deal_panel_v2" && entity === "deal") return "deal";
   return "inbox";
 }
 
@@ -188,12 +197,12 @@ export interface FieldConfigPanelProps {
 }
 
 export function FieldConfigPanel({ entities, context, onClose }: FieldConfigPanelProps) {
-  const panelCtx = contextFromLayout(context);
   const { sections, isAdmin, saveAdmin, saveAdminPending } = useFieldLayout(context);
   const [localSections, setLocalSections] = React.useState<SectionConfig[] | null>(null);
   const effectiveSections = localSections ?? sections;
 
   const [activeEntity, setActiveEntity] = React.useState<FieldConfigEntity>(entities[0]);
+  const panelCtx = contextFromLayout(context, activeEntity);
 
   const toggleSection = (id: string) => {
     setLocalSections(

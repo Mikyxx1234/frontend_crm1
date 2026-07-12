@@ -12,8 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { TooltipHost } from "@/components/ui/tooltip";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import {
+  ListColumnLabel,
+  listTableHeadRowClass,
+} from "@/components/crm/sortable-header";
 import { cn } from "@/lib/utils";
 
 type AgentOnlineStatus = "ONLINE" | "OFFLINE" | "AWAY";
@@ -42,15 +45,19 @@ type AgentRow = {
 
 const STATUS_LABELS: Record<AgentOnlineStatus, string> = { ONLINE: "Online", OFFLINE: "Offline", AWAY: "Ausente" };
 const STATUS_COLORS: Record<AgentOnlineStatus, string> = {
-  ONLINE: "bg-[var(--color-teal)] text-white",
-  OFFLINE: "bg-slate-200 text-[var(--color-ink-subtle)]",
-  AWAY: "bg-[var(--color-warning)] text-white",
+  ONLINE: "bg-[var(--color-success-bg)] text-[color-mix(in_srgb,var(--color-success)_78%,black)]",
+  OFFLINE: "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+  AWAY: "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
 };
 const STATUS_DOT: Record<AgentOnlineStatus, string> = {
-  ONLINE: "bg-[var(--color-teal)]",
-  OFFLINE: "bg-[var(--color-text-muted)]",
-  AWAY: "bg-[var(--color-warning)]",
+  ONLINE: "bg-[var(--color-success)]",
+  OFFLINE: "bg-[var(--text-muted)]",
+  AWAY: "bg-[var(--color-warn)]",
 };
+
+/** Colunas da tabela glass (grid CSS — padrão /contacts). */
+const TABELA_COLS =
+  "grid-cols-[minmax(0,1.4fr)_104px_112px_72px_130px_72px_minmax(150px,1fr)_60px]";
 
 const WEEKDAYS = [
   { value: 0, short: "Dom", label: "Domingo" },
@@ -159,121 +166,126 @@ export default function SchedulesPage() {
   return (
     <div className="w-full space-y-4">
       {isError && (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <p className="rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 px-4 py-3 text-sm text-[var(--color-danger)]">
           Erro ao carregar agentes.
         </p>
       )}
 
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-[var(--glass-bg-strong)]" />
+          ))}
         </div>
       ) : agents.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/80 py-16 text-center">
-          <Clock className="mx-auto mb-3 size-10 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">Nenhum agente encontrado.</p>
+        <div className="rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16 text-center">
+          <Clock className="mx-auto mb-3 size-10 text-[var(--text-muted)] opacity-40" />
+          <p className="text-sm text-[var(--text-muted)]">Nenhum agente encontrado.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[var(--glass-border)]/80 bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow-sm)]">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b bg-muted/30">
-                <th className="px-4 py-3 font-medium text-muted-foreground">Agente</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Ligações WA</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Início</th>
-                <th className="hidden px-4 py-3 font-medium text-muted-foreground md:table-cell">Almoço</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Fim</th>
-                <th className="hidden px-4 py-3 font-medium text-muted-foreground lg:table-cell">Dias</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agents.map((agent) => {
-                const status: AgentOnlineStatus = agent.agentStatus?.status ?? "OFFLINE";
-                const voiceOn = agent.agentStatus?.availableForVoiceCalls ?? false;
-                const sched = agent.schedule;
-                return (
-                  <tr key={agent.id} className="border-b last:border-b-0 hover:bg-muted/20 lumen-transition">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="flex size-9 items-center justify-center rounded-xl lumen-ai-gradient text-xs font-semibold text-white">
-                            {agent.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span className={cn("absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white", STATUS_DOT[status])} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-[var(--text-primary)]">{agent.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{agent.email}</p>
-                        </div>
+        <div className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
+            <ListColumnLabel>Agente</ListColumnLabel>
+            <ListColumnLabel>Status</ListColumnLabel>
+            <ListColumnLabel>Ligações WA</ListColumnLabel>
+            <ListColumnLabel>Início</ListColumnLabel>
+            <ListColumnLabel>Almoço</ListColumnLabel>
+            <ListColumnLabel>Fim</ListColumnLabel>
+            <ListColumnLabel>Dias</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
+          </div>
+
+          <div className="flex flex-col">
+            {agents.map((agent) => {
+              const status: AgentOnlineStatus = agent.agentStatus?.status ?? "OFFLINE";
+              const voiceOn = agent.agentStatus?.availableForVoiceCalls ?? false;
+              const sched = agent.schedule;
+              return (
+                <div
+                  key={agent.id}
+                  className={cn(
+                    "grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-0 hover:bg-[var(--glass-bg-overlay)]",
+                    TABELA_COLS,
+                  )}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="relative shrink-0">
+                      <div className="flex size-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)] text-xs font-semibold text-white">
+                        {agent.name.charAt(0).toUpperCase()}
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
+                      <span className={cn("absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-[var(--glass-bg-base)]", STATUS_DOT[status])} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">{agent.name}</p>
+                      <p className="truncate text-[12px] text-[var(--text-muted)]">{agent.email}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => cycleStatus(agent)}
+                      disabled={statusMutation.isPending}
+                      className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80", STATUS_COLORS[status])}
+                    >
+                      <span className={cn("size-1.5 rounded-full", STATUS_DOT[status])} />
+                      {STATUS_LABELS[status]}
+                    </button>
+                  </div>
+                  <div>
+                    <TooltipGlass label="Disponível para receber ligações WhatsApp (requer Online + horário)" side="top">
                       <button
                         type="button"
-                        onClick={() => cycleStatus(agent)}
-                        disabled={statusMutation.isPending}
-                        className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium lumen-transition hover:opacity-80", STATUS_COLORS[status])}
+                        onClick={() =>
+                          voiceMutation.mutate({ userId: agent.id, availableForVoiceCalls: !voiceOn })
+                        }
+                        disabled={voiceMutation.isPending}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80",
+                          voiceOn
+                            ? "bg-[var(--color-success-bg)] text-[color-mix(in_srgb,var(--color-success)_78%,black)]"
+                            : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                        )}
+                        aria-label="Disponível para receber ligações WhatsApp"
                       >
-                        <span className={cn("size-1.5 rounded-full", status === "ONLINE" ? "bg-[var(--glass-bg-overlay)]" : status === "AWAY" ? "bg-[var(--glass-bg-overlay)]" : "bg-[var(--color-ink-subtle)]")} />
-                        {STATUS_LABELS[status]}
+                        {voiceOn ? "Ativo" : "Inativo"}
                       </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <TooltipHost label="Disponível para receber ligações WhatsApp (requer Online + horário)" side="top">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            voiceMutation.mutate({ userId: agent.id, availableForVoiceCalls: !voiceOn })
-                          }
-                          disabled={voiceMutation.isPending}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium lumen-transition hover:opacity-80",
-                            voiceOn ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
-                          )}
-                          aria-label="Disponível para receber ligações WhatsApp"
-                        >
-                          {voiceOn ? "Ativo" : "Inativo"}
-                        </button>
-                      </TooltipHost>
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-[var(--text-primary)]">
-                      {sched?.startTime ?? "08:00"}
-                    </td>
-                    <td className="hidden px-4 py-3 tabular-nums text-muted-foreground md:table-cell">
-                      {sched ? `${sched.lunchStart} – ${sched.lunchEnd}` : "12:00 – 13:00"}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-[var(--text-primary)]">
-                      {sched?.endTime ?? "18:00"}
-                    </td>
-                    <td className="hidden px-4 py-3 lg:table-cell">
-                      <div className="flex gap-1">
-                        {WEEKDAYS.map((wd) => {
-                          const active = sched ? sched.weekdays.includes(wd.value) : [1,2,3,4,5].includes(wd.value);
-                          return (
-                            <TooltipHost key={wd.value} label={wd.label} side="top">
-                              <span className={cn(
-                                "inline-flex size-7 items-center justify-center rounded-lg text-[10px] font-medium",
-                                active ? "bg-blue-800 text-white" : "bg-muted text-muted-foreground"
-                              )}>{wd.short.charAt(0)}</span>
-                            </TooltipHost>
-                          );
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <TooltipHost label="Editar horário" side="left">
-                        <ButtonGlass variant="icon" className="size-8" onClick={() => openEdit(agent)} aria-label="Editar horário">
-                          <Pencil className="size-3.5" />
-                        </ButtonGlass>
-                      </TooltipHost>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </TooltipGlass>
+                  </div>
+                  <div className="tabular-nums text-[13px] text-[var(--text-primary)]">
+                    {sched?.startTime ?? "08:00"}
+                  </div>
+                  <div className="tabular-nums text-[13px] text-[var(--text-muted)]">
+                    {sched ? `${sched.lunchStart} – ${sched.lunchEnd}` : "12:00 – 13:00"}
+                  </div>
+                  <div className="tabular-nums text-[13px] text-[var(--text-primary)]">
+                    {sched?.endTime ?? "18:00"}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {WEEKDAYS.map((wd) => {
+                      const active = sched ? sched.weekdays.includes(wd.value) : [1, 2, 3, 4, 5].includes(wd.value);
+                      return (
+                        <TooltipGlass key={wd.value} label={wd.label} side="top">
+                          <span className={cn(
+                            "inline-flex size-7 items-center justify-center rounded-[var(--radius-md)] text-[10px] font-bold",
+                            active
+                              ? "bg-[var(--brand-primary)] text-white"
+                              : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                          )}>{wd.short.charAt(0)}</span>
+                        </TooltipGlass>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-end">
+                    <TooltipGlass label="Editar horário" side="left">
+                      <ButtonGlass variant="icon" size="icon" onClick={() => openEdit(agent)} aria-label="Editar horário">
+                        <Pencil className="size-3.5" />
+                      </ButtonGlass>
+                    </TooltipGlass>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -321,9 +333,9 @@ export default function SchedulesPage() {
                   return (
                     <button key={wd.value} type="button" onClick={() => toggleWeekday(wd.value)}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium lumen-transition",
+                        "inline-flex items-center gap-1 rounded-[var(--radius-md)] px-3 py-2 text-xs font-semibold transition-colors",
                         active
-                          ? "bg-blue-800 text-white shadow-sm"
+                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
                           : "border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] text-[var(--text-muted)] hover:border-[var(--brand-primary)] hover:text-[var(--text-primary)]"
                       )}>
                       {active && <Check className="size-3" />}

@@ -3,13 +3,13 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconGripVertical as GripVertical, IconPlus as Plus, IconToggleLeft as ToggleLeft, IconToggleRight as ToggleRight, IconTrash as Trash2 } from "@tabler/icons-react";
+import { IconGripVertical as GripVertical, IconPlus as Plus, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { InputGlass } from "@/components/crm/input-glass";
-import { Skeleton } from "@/components/ui/skeleton";
-import { TooltipHost } from "@/components/ui/tooltip";
+import { SwitchGlass } from "@/components/crm/switch-glass";
+import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { cn } from "@/lib/utils";
 
 type LossReason = {
@@ -146,18 +146,12 @@ export default function LossReasonsPage() {
           <p className="text-sm font-semibold text-[var(--text-secondary)]">Motivo obrigatório</p>
           <p className="text-xs text-[var(--text-muted)]">Exigir um motivo ao marcar negócio como perdido</p>
         </div>
-        <button
-          type="button"
-          onClick={() => toggleRequired.mutate(!isRequired)}
+        <SwitchGlass
+          checked={isRequired}
+          onChange={(v) => toggleRequired.mutate(v)}
           disabled={toggleRequired.isPending}
-          className="text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
-        >
-          {isRequired ? (
-            <ToggleRight className="size-8 text-[var(--color-cyan)]" />
-          ) : (
-            <ToggleLeft className="size-8 text-[var(--color-ink-muted)]" />
-          )}
-        </button>
+          aria-label="Motivo obrigatório"
+        />
       </div>
 
       {/* Toggle "Permitir outro motivo".
@@ -173,19 +167,12 @@ export default function LossReasonsPage() {
             Mostra a opção “Outro…” no momento de marcar como perdido. Desligue para forçar uso apenas dos motivos cadastrados abaixo.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => toggleAllowOther.mutate(!allowOther)}
+        <SwitchGlass
+          checked={allowOther}
+          onChange={(v) => toggleAllowOther.mutate(v)}
           disabled={toggleAllowOther.isPending}
-          className="text-[var(--text-muted)] transition hover:text-[var(--text-primary)]"
           aria-label={allowOther ? "Desligar motivo personalizado" : "Ligar motivo personalizado"}
-        >
-          {allowOther ? (
-            <ToggleRight className="size-8 text-[var(--color-cyan)]" />
-          ) : (
-            <ToggleLeft className="size-8 text-[var(--color-ink-muted)]" />
-          )}
-        </button>
+        />
       </div>
 
       {/* Add new */}
@@ -218,7 +205,10 @@ export default function LossReasonsPage() {
       <div className="space-y-1">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            <div
+              key={i}
+              className="h-12 w-full animate-pulse rounded-lg bg-[var(--glass-bg-strong)]"
+            />
           ))
         ) : reasons.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] py-10 text-center">
@@ -271,7 +261,7 @@ function ReasonRow({
         !reason.isActive && "opacity-50",
       )}
     >
-      <GripVertical className="size-4 shrink-0 cursor-grab text-[var(--color-text-muted)]" />
+      <GripVertical className="size-4 shrink-0 cursor-grab text-[var(--text-muted)]" />
 
       {editing ? (
         <InputGlass
@@ -292,23 +282,23 @@ function ReasonRow({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="min-w-0 flex-1 truncate text-left text-sm font-medium text-[var(--text-secondary)] hover:text-cyan-700"
+          className="min-w-0 flex-1 truncate text-left text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--brand-primary)]"
         >
           {reason.label}
         </button>
       )}
 
-      <TooltipHost label="Remover" side="left">
+      <TooltipGlass label="Remover" side="left">
         <button
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          className="shrink-0 rounded-md p-1.5 text-[var(--color-ink-muted)] transition hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)]"
+          className="shrink-0 rounded-md p-1.5 text-[var(--text-muted)] transition hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)]"
           aria-label="Remover"
         >
           <Trash2 className="size-4" />
         </button>
-      </TooltipHost>
+      </TooltipGlass>
     </div>
   );
 }

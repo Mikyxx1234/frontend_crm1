@@ -821,7 +821,34 @@ export function DealDetailPanel({
                                     <FieldCard
                                       title="Informações do Contato"
                                       dragHandleProps={provided.dragHandleProps ?? undefined}
+                                      titleActions={
+                                        resolvedContactConfig && (
+                                          <TooltipGlass
+                                            label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
+                                            side="top"
+                                          >
+                                            <button
+                                              type="button"
+                                              onClick={() => setContactConfigOpen((v) => !v)}
+                                              aria-label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
+                                              className={cn(
+                                                "flex h-6 w-6 items-center justify-center rounded transition-colors",
+                                                contactConfigOpen
+                                                  ? "bg-[var(--brand-primary)] text-white"
+                                                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
+                                              )}
+                                            >
+                                              {contactConfigOpen ? <IconX size={12} /> : <IconSettings size={12} />}
+                                            </button>
+                                          </TooltipGlass>
+                                        )
+                                      }
                                     >
+                                        {contactConfigOpen && resolvedContactConfig && (
+                                          <div className="mb-2 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] p-3">
+                                            {resolvedContactConfig}
+                                          </div>
+                                        )}
                                         {viewMode === "compact" ? (
                                         /* ── Compact: flat rows (mesmo padrão dos campos de negócio) ── */
                                         <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] overflow-hidden mt-1">
@@ -949,31 +976,10 @@ export function DealDetailPanel({
                                           >
                                             {dealCustomEditMode ? <IconX size={12} /> : <IconPencil size={12} />}
                                           </button>
-                                          {/* Engrenagens de configuração de visibilidade — uma por
-                                              entidade, ao lado das informações do negócio/campo,
-                                              paridade com contact-aside.tsx (Inbox). Antes vivia
-                                              como um único botão global no hero, substituindo toda
-                                              a aba por um painel de config em tela cheia. */}
-                                          {resolvedContactConfig && (
-                                            <TooltipGlass
-                                              label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
-                                              side="top"
-                                            >
-                                              <button
-                                                type="button"
-                                                onClick={() => setContactConfigOpen((v) => !v)}
-                                                aria-label={contactConfigOpen ? "Fechar configurações" : "Configurar campos de contato"}
-                                                className={cn(
-                                                  "flex h-6 w-6 items-center justify-center rounded transition-colors",
-                                                  contactConfigOpen
-                                                    ? "bg-[var(--brand-primary)] text-white"
-                                                    : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
-                                                )}
-                                              >
-                                                {contactConfigOpen ? <IconX size={12} /> : <IconSettings size={12} />}
-                                              </button>
-                                            </TooltipGlass>
-                                          )}
+                                          {/* Engrenagem de configuração de visibilidade dos campos
+                                              de NEGÓCIO. A de contato vive junto de "Informações do
+                                              Contato" (ver acima) — paridade com contact-aside.tsx
+                                              (Inbox), que também separa a engrenagem por entidade. */}
                                           {resolvedDealConfig && (
                                             <TooltipGlass
                                               label={dealConfigOpen ? "Fechar configurações" : "Configurar campos de negócio"}
@@ -997,10 +1003,9 @@ export function DealDetailPanel({
                                         </>
                                       }
                                     >
-                                      {(contactConfigOpen || dealConfigOpen) && (
-                                        <div className="flex flex-col gap-3 border-b border-[var(--glass-border-subtle)] py-3">
-                                          {contactConfigOpen && resolvedContactConfig}
-                                          {dealConfigOpen && resolvedDealConfig}
+                                      {dealConfigOpen && resolvedDealConfig && (
+                                        <div className="border-b border-[var(--glass-border-subtle)] py-3">
+                                          {resolvedDealConfig}
                                         </div>
                                       )}
                                       {viewMode === "compact" ? (

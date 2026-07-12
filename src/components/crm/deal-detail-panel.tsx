@@ -578,18 +578,18 @@ export function DealDetailPanel({
             {/* Cabeçalho fixo: hero do negócio — paridade visual com o
                 contact-aside do inbox (fundo brand + anel de progresso).
                 Pill "Negócio" removida (redundante, pedido do operador). */}
-            <div className="shrink-0">
-              <header className="relative isolate rounded-t-[var(--radius-xl)] bg-[var(--nav-bg)] p-4 text-white">
-                {/* Bolhas decorativas — clipadas num wrapper próprio pra não
-                    cortar o dropdown de fases */}
+            <div className="shrink-0 px-3 pt-2">
+              {/* ── Hero header: paridade total com o hero do inbox (DealInline).
+                  Fundo sólido da NavRail, edge-to-edge no topo do container via
+                  margens negativas + cantos superiores acompanhando o raio. ── */}
+              <header className="relative isolate -mx-3 -mt-2 mb-2 rounded-t-[var(--radius-xl)] bg-[var(--nav-bg)] px-3.5 pb-2.5 pt-3 text-white">
+                {/* Bolhas decorativas */}
                 <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-t-[var(--radius-xl)]">
-                  <div className="absolute -right-8 -top-10 size-32 rounded-full bg-white/10" />
-                  <div className="absolute -bottom-12 -left-6 size-28 rounded-full bg-white/10" />
+                  <div className="absolute -right-8 -top-10 size-28 rounded-full bg-white/10" />
+                  <div className="absolute -bottom-10 -left-6 size-24 rounded-full bg-white/10" />
                 </div>
 
-                {/* Linha topo: voltar (esq) + dropdown de fase (centro-dir) +
-                    kebab + engrenagem (canto direito).
-                    Ordem: ← back | spacer | stage-pill | kebab | gear */}
+                {/* Linha de controles: Voltar (esq) + spacer + kebab + engrenagem */}
                 <div className="relative flex items-center gap-1.5">
                   <button
                     type="button"
@@ -601,15 +601,6 @@ export function DealDetailPanel({
                     <span className="font-display text-[11px] font-semibold leading-none">Voltar</span>
                   </button>
                   <div className="flex-1" />
-                  {stageDropdownSlot ? (
-                    <div className="relative z-30 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[11px] [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
-                      {stageDropdownSlot}
-                    </div>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm">
-                      {deal.stage ?? "Em processo"}
-                    </span>
-                  )}
                   {moreActionsSlot && (
                     <div className="[&_button]:!text-white [&_button:hover]:!bg-white/15 [&_button]:!rounded-[var(--radius-sm)]">
                       {moreActionsSlot}
@@ -637,38 +628,35 @@ export function DealDetailPanel({
                   )}
                 </div>
 
-                {/* Nome + #id do negócio + editar contato */}
-                <h2 className="relative mt-3 flex items-baseline gap-2 text-balance font-display text-[17px] font-bold leading-tight">
-                  <span className="min-w-0">{deal.name}</span>
-                  <span className="shrink-0 font-mono text-[11px] font-semibold text-white/70">
-                    #{deal.number ?? deal.id.slice(-6).toUpperCase()}
-                  </span>
-                  {contactEditSlot && (
-                    <span className="shrink-0 self-center [&_button]:!text-white/70 [&_button:hover]:!text-white">
-                      {contactEditSlot}
+                {/* Linha topo: título + #num + editar (esq) + pill de etapa (dir) */}
+                <div className="relative mt-2 flex items-center justify-between gap-2">
+                  <h2 className="flex min-w-0 items-baseline gap-1.5 font-display text-[14px] font-bold leading-snug text-white">
+                    <span className="min-w-0 truncate">{deal.name}</span>
+                    <span className="shrink-0 font-mono text-[10px] font-semibold text-white/65">
+                      #{deal.number ?? deal.id.slice(-6).toUpperCase()}
+                    </span>
+                    {contactEditSlot && (
+                      <span className="shrink-0 self-center [&_button]:!text-white/70 [&_button:hover]:!text-white">
+                        {contactEditSlot}
+                      </span>
+                    )}
+                  </h2>
+
+                  {stageDropdownSlot ? (
+                    <div className="relative z-30 shrink-0 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-primary)] shadow-sm [&_button]:!text-[var(--brand-primary)] [&_button]:hover:!opacity-100">
+                      {stageDropdownSlot}
+                    </div>
+                  ) : (
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium backdrop-blur-sm">
+                      {deal.stage ?? "Em processo"}
                     </span>
                   )}
-                </h2>
+                </div>
 
-                {/* Chip de conexão (canal ativo) — migrado da barra de topo. */}
-                {connection && (
-                  <div className="relative mt-1.5">
-                    <TooltipGlass
-                      label={`Conversando por ${formatConnectionLabel(connection)}`}
-                      side="bottom"
-                    >
-                      <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[10.5px] font-semibold text-white backdrop-blur-sm">
-                        <IconAffiliate size={11} />
-                        {channelTypeLabel(connection.type)} · {formatConnectionShort(connection)}
-                      </span>
-                    </TooltipGlass>
-                  </div>
-                )}
-
-                {/* Anel de progresso + funil + responsável */}
-                <div className="relative mt-3 flex items-center gap-3">
+                {/* Linha base: anel de progresso + pipeline info + responsável */}
+                <div className="relative mt-2 flex items-center gap-2.5">
                   <div
-                    className="grid size-11 shrink-0 place-items-center rounded-full"
+                    className="grid size-9 shrink-0 place-items-center rounded-full"
                     style={{
                       background:
                         sortedFunnel && sortedFunnel.length > 0
@@ -689,14 +677,14 @@ export function DealDetailPanel({
                           : "conic-gradient(rgba(255,255,255,0.25) 0% 100%)",
                     }}
                   >
-                    <div className="grid size-8 place-items-center rounded-full bg-[var(--brand-primary)]">
-                      <span className="font-display text-[10px] font-bold text-white">
+                    <div className="grid size-[26px] place-items-center rounded-full bg-[var(--brand-primary)]">
+                      <span className="font-display text-[9px] font-bold text-white">
                         {funnelTotal > 0 ? `${funnelCurrent}/${funnelTotal}` : "—"}
                       </span>
                     </div>
                   </div>
-                  <div className="min-w-0 flex-1 text-[11px] text-white/80">
-                    <p className="font-medium text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
+                  <div className="min-w-0 flex-1 text-[10.5px] text-white/80">
+                    <p className="truncate font-semibold text-white">{deal.pipelineName ?? "Funil de vendas"}</p>
                     <p className="truncate">
                       {funnelTotal > 0
                         ? `Etapa ${funnelCurrent} de ${funnelTotal}`
@@ -709,24 +697,73 @@ export function DealDetailPanel({
                     </div>
                   )}
                 </div>
-              </header>
 
-              {/* Barra de funil segmentada (real) — cores/tooltips por etapa */}
-              {sortedFunnel && sortedFunnel.length > 0 && (
-                <div className="mt-2 flex gap-1 px-1">
-                  {sortedFunnel.map((seg, i) => (
-                    <TooltipGlass key={seg.id} label={seg.name} side="top">
-                      <span
-                        className="h-[4px] flex-1 rounded-full transition-opacity"
-                        style={{
-                          background: seg.color || "var(--brand-primary)",
-                          opacity: i <= currentSegIdx ? 1 : 0.18,
-                        }}
-                      />
-                    </TooltipGlass>
-                  ))}
+                {/* Barra de funil segmentada — dentro do hero (igual inbox) */}
+                {sortedFunnel && sortedFunnel.length > 0 && (
+                  <div className="relative mt-2 flex gap-1 px-0.5">
+                    {sortedFunnel.map((seg, i) => (
+                      <TooltipGlass key={seg.id} label={seg.name} side="top">
+                        <span
+                          className="h-[3px] flex-1 rounded-full transition-colors"
+                          style={{
+                            background: i <= currentSegIdx
+                              ? (seg.color || "var(--brand-primary)")
+                              : "rgba(255,255,255,0.28)",
+                          }}
+                        />
+                      </TooltipGlass>
+                    ))}
+                  </div>
+                )}
+
+                {/* Origem + Canal + Tags — seção inferior do hero (igual inbox) */}
+                <div className="relative mt-2 flex flex-col gap-0 divide-y divide-white/15 rounded-[var(--radius-md)] bg-white/10 px-2.5 py-1">
+                  <div className="flex items-center justify-between gap-2 py-1">
+                    <span className="shrink-0 text-[11px] text-white/60">Origem</span>
+                    <div className="ml-auto min-w-0 text-right [&_input]:!bg-white [&_input]:!text-[var(--text-primary)] [&_input]:!rounded [&_input]:!px-1">
+                      {deal.contactId ? (
+                        <InlineNativeEditor
+                          value={deal.contactSource ?? undefined}
+                          entityType="contact"
+                          entityId={deal.contactId}
+                          fieldKey="source"
+                          placeholder="Adicionar origem"
+                          suggestions={contactSources}
+                          invalidateKeys={[
+                            ["contact-sidebar", deal.contactId],
+                            ["deal-detail-v2", deal.id],
+                          ]}
+                          textClassName="font-display text-[11.5px] font-semibold text-white"
+                        />
+                      ) : (
+                        <span className="text-[11.5px] italic text-white/60">
+                          Vincule um contato
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {connection && (
+                    <div className="flex items-center justify-between gap-2 py-1">
+                      <span className="shrink-0 text-[11px] text-white/60">Canal</span>
+                      <TooltipGlass
+                        label={`Conversando por ${formatConnectionLabel(connection)}`}
+                        side="left"
+                      >
+                        <span className="inline-flex items-center gap-1 truncate text-right text-[11.5px] font-semibold text-white">
+                          <IconAffiliate size={11} className="shrink-0" />
+                          {formatConnectionShort(connection)}
+                        </span>
+                      </TooltipGlass>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-1.5 py-1.5 [&_.tag-chip]:!bg-white/15 [&_.tag-chip]:!text-white [&_.tag-chip]:!border-white/20">
+                    <span className="shrink-0 text-[11px] text-white/60">Tags</span>
+                    {tagsSlot ?? (
+                      <span className="text-[11.5px] text-white/60">Nenhuma tag</span>
+                    )}
+                  </div>
                 </div>
-              )}
+              </header>
 
               {/* Motivo da perda — destaque vermelho quando deal está LOST. */}
               {deal.status === "LOST" && deal.lostReason?.trim() ? (
@@ -755,45 +792,8 @@ export function DealDetailPanel({
                 </div>
               ) : (
                 <div className="flex min-w-0 flex-col gap-5">
-                  {/* ── Origem (campo de sistema do negócio) ── */}
-                  <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 text-[12.5px]">
-                    <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                      Origem
-                    </span>
-                    <div className="ml-auto min-w-0">
-                      {deal.contactId ? (
-                        <InlineNativeEditor
-                          value={deal.contactSource ?? undefined}
-                          entityType="contact"
-                          entityId={deal.contactId}
-                          fieldKey="source"
-                          placeholder="Adicionar origem"
-                          suggestions={contactSources}
-                          invalidateKeys={[
-                            ["contact-sidebar", deal.contactId],
-                            ["deal-detail-v2", deal.id],
-                          ]}
-                          textClassName="font-display text-[12.5px] font-semibold text-[var(--text-primary)]"
-                        />
-                      ) : (
-                        <span className="font-display text-[12px] italic text-[var(--text-muted)]">
-                          Vincule um contato
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ── Tags do negócio ── */}
-                  <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
-                        Tags
-                      </span>
-                      {tagsSlot ?? (
-                        <span className="text-[12px] text-[var(--text-muted)]">Nenhuma tag</span>
-                      )}
-                    </div>
-                  </div>
+                  {/* Origem + Tags migraram para dentro do hero (paridade com o
+                      aside do inbox). */}
 
                   {/* ── Pills: Perfil / Produto + toggle de visão ── */}
                   <div className="flex items-center gap-2">

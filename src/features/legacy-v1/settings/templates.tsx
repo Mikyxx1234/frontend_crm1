@@ -293,7 +293,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
       </HubPanel>
 
       <Dialog open={formOpen} onOpenChange={(v) => { if (!v) { setFormOpen(false); setEditing(null); } else setFormOpen(true); }}>
-        <DialogContent size="lg">
+        <DialogContent size="xl">
           <DialogClose />
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Template" : "Novo Template"}</DialogTitle>
@@ -363,59 +363,36 @@ function TemplateForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="tpl-name" className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          Nome do modelo
-        </label>
-        <InputGlass
-          id="tpl-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="ex.: Boas-vindas, Pedido de orçamento, Pós-venda"
-          required
-        />
-        <p className="font-body text-[11.5px] text-[var(--text-muted)]">
-          Nome curto e descritivo para encontrar rápido na hora de responder.
-        </p>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="tpl-content" className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          Mensagem
-        </label>
-        <textarea
-          id="tpl-content"
-          ref={contentRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Olá {{contato.primeiroNome}}, tudo bem? Vi seu interesse no negócio {{negocio.titulo}}..."
-          rows={6}
-          required
-          className="w-full resize-none rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/10"
-        />
-        <p className="font-body text-[11.5px] text-[var(--text-muted)]">
-          Clique em uma variável abaixo para inseri-la na posição do cursor. Na hora de
-          enviar, o CRM substitui automaticamente pelo valor real do contato e do negócio.
-        </p>
-      </div>
-
-      <InternalTemplateVariablePicker onSelect={insertToken} />
-
-      <div className="grid grid-cols-2 gap-4">
+      {/* Campos de identificação compactos no topo — nome, categoria e canal
+          cabem numa única linha em vez de três blocos empilhados com
+          rótulo+ajuda cada, que era a origem da "lacuna gigante" entre os
+          campos e o corpo da mensagem. */}
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="tpl-category" className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            Categoria (opcional)
+          <label htmlFor="tpl-name" className={FIELD_LABEL_CLASS}>
+            Nome do modelo
+          </label>
+          <InputGlass
+            id="tpl-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="ex.: Boas-vindas, Pós-venda"
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="tpl-category" className={FIELD_LABEL_CLASS}>
+            Categoria
           </label>
           <InputGlass
             id="tpl-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="Vendas, Suporte, Pós-venda…"
+            placeholder="Vendas, Suporte…"
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            Canal (opcional)
-          </label>
+          <label className={FIELD_LABEL_CLASS}>Canal</label>
           <DropdownGlass
             options={[
               { value: "", label: "Todos os canais" },
@@ -430,6 +407,34 @@ function TemplateForm({
           />
         </div>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="tpl-content" className={FIELD_LABEL_CLASS}>
+              Mensagem
+            </label>
+            <textarea
+              id="tpl-content"
+              ref={contentRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Olá {{contato.primeiroNome}}, tudo bem? Vi seu interesse no negócio {{negocio.titulo}}..."
+              rows={6}
+              required
+              className="w-full resize-none rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/10"
+            />
+            <p className="font-body text-[11.5px] text-[var(--text-muted)]">
+              Clique numa variável abaixo para inserir no cursor — o CRM substitui pelo valor real na hora de enviar.
+            </p>
+          </div>
+
+          <InternalTemplateVariablePicker onSelect={insertToken} />
+        </div>
+
+        <InternalTemplatePreview name={name} content={content} channelType={channelType} />
+      </div>
+
       <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] pt-4">
         <ButtonGlass type="button" onClick={onCancel}>Cancelar</ButtonGlass>
         <ButtonGlass type="submit" variant="primary" disabled={isPending || !name.trim() || !content.trim()} className="gap-2">
@@ -438,6 +443,56 @@ function TemplateForm({
         </ButtonGlass>
       </div>
     </form>
+  );
+}
+
+/** Rótulo padrão dos campos do form — mesma escala usada em todo o hub
+ * (Modelos de mensagem) e no assistente de templates WhatsApp/Meta. */
+const FIELD_LABEL_CLASS =
+  "font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]";
+
+/**
+ * Pré-visualização em tempo real do modelo interno (espelha o padrão já
+ * usado no assistente de templates WhatsApp/Meta — `WhatsappTemplatePreview`
+ * em `whatsapp-templates.tsx` — porém em bolha neutra, já que o modelo
+ * interno pode ser usado em qualquer canal).
+ */
+function InternalTemplatePreview({
+  name,
+  content,
+  channelType,
+}: {
+  name: string;
+  content: string;
+  channelType: string;
+}) {
+  const channelLabel = channelType ? CHANNEL_LABELS[channelType] ?? channelType : "Todos os canais";
+  return (
+    <aside aria-label="Pré-visualização da mensagem" className="space-y-2">
+      <p className={FIELD_LABEL_CLASS}>Pré-visualização</p>
+      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)]">
+        <div className="flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+            <FileText className="size-3.5" />
+          </span>
+          <span className="truncate text-[12px] font-bold text-[var(--text-primary)]">
+            {name.trim() || "Novo modelo"}
+          </span>
+        </div>
+        <div className="p-3">
+          <div className="rounded-xl rounded-tl-sm bg-[var(--glass-bg-strong)] px-3 py-2.5 text-[12.5px] leading-relaxed text-[var(--text-secondary)] shadow-sm">
+            {content.trim() ? (
+              highlightVars(content)
+            ) : (
+              <span className="text-[var(--text-muted)] opacity-60">A mensagem aparece aqui…</span>
+            )}
+          </div>
+        </div>
+        <div className="border-t border-[var(--glass-border-subtle)] px-3 py-2 text-[11px] font-semibold text-[var(--text-muted)]">
+          {channelLabel}
+        </div>
+      </div>
+    </aside>
   );
 }
 

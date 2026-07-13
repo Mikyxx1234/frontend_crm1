@@ -30,7 +30,7 @@ export function WorkspaceTabs({
 }: WorkspaceTabsProps) {
   const tabs: TabDef[] = [
     { value: "conversations", label: "Principal", count: conversationsCount },
-    { value: "activities", label: "Atividades", count: activitiesCount },
+    { value: "activities", label: "Tarefas", count: activitiesCount },
     { value: "notes", label: "Notas", count: notesCount },
     { value: "timeline", label: "Timeline" },
   ];

@@ -211,7 +211,7 @@
    ficam disponíveis via var() pra uso pontual)
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  /* Glass backgrounds */
+  /* Glass backgrounds — semitransparentes (efeito original) */
   --glass-bg:         rgba(255, 255, 255, 0.25);
   --glass-bg-strong:  rgba(255, 255, 255, 0.40);
   --glass-bg-subtle:  rgba(255, 255, 255, 0.12);
@@ -219,10 +219,10 @@
 
   /* Glass borders */
   --glass-border:        rgba(255, 255, 255, 0.55);
-  --glass-border-subtle: rgba(255, 255, 255, 0.30);
+  --glass-border-subtle: rgba(255, 255, 255, 0.35);
 
   /* Glass shadows */
-  --glass-shadow:     0 12px 40px rgba(91, 111, 245, 0.22), 0 4px 12px rgba(91, 111, 245, 0.10);
+  --glass-shadow:     0 8px 32px rgba(100, 130, 180, 0.18);
   --glass-shadow-lg:  0 16px 48px rgba(100, 130, 180, 0.24);
   --glass-shadow-sm:  0 4px 16px rgba(100, 130, 180, 0.12);
 
@@ -237,7 +237,7 @@
   --glass-blur-subtle: blur(8px);
 
   /* Mesh gradient base — usado em <body> */
-  --bg-gradient: linear-gradient(135deg, #c5d8ef 0%, #8faedb 40%, #d8b3e6 70%, #c5d8ef 100%);
+  --bg-gradient: #dde8f5;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -557,6 +557,10 @@
   /* Fonte display (Plus Jakarta Sans) */
   .font-display {
     font-family: var(--font-display);
+  }
+  /* Fonte body (DM Sans) — reseta herança de font-display em filhos */
+  .font-body {
+    font-family: var(--font-sans);
   }
   .font-mono {
     font-family: var(--font-mono);

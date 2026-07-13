@@ -407,9 +407,9 @@ export function ContactInfoPanel({
             </Section>
 
             {/* Activities */}
-            <Section title="Atividades recentes" icon={Info} open={openActivities} onToggle={() => setOpenActivities((v) => !v)}>
+            <Section title="Tarefas recentes" icon={Info} open={openActivities} onToggle={() => setOpenActivities((v) => !v)}>
               {data.activities.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhuma atividade</p>
+                <p className="text-xs text-muted-foreground">Nenhuma tarefa</p>
               ) : (
                 <ul className="space-y-2">
                   {data.activities.slice(0, 8).map((a) => (

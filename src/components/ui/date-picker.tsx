@@ -30,12 +30,18 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
-  const selectedDate = parseValue(value);
+  const selectedDate = React.useMemo(() => parseValue(value), [value]);
   const [visibleMonth, setVisibleMonth] = React.useState<Date>(selectedDate ?? new Date());
 
+  // Sync visibleMonth only when the string value changes — using `value` (string)
+  // avoids the bug where parseISO creates a new Date reference on every render,
+  // which caused the useEffect to fire on every render and reset visibleMonth,
+  // making the prev/next navigation buttons appear to do nothing.
   React.useEffect(() => {
-    if (selectedDate) setVisibleMonth(selectedDate);
-  }, [selectedDate]);
+    const parsed = parseValue(value);
+    if (parsed) setVisibleMonth(parsed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -115,9 +121,9 @@ export function DatePicker({
                   }}
                   className={cn(
                     "flex h-8 items-center justify-center rounded-lg text-xs font-medium transition",
-                    isSelected && "bg-[var(--glass-bg-modal)] text-white",
-                    !isSelected && inMonth && "text-foreground hover:bg-[var(--glass-bg-base)]",
-                    !inMonth && "text-[var(--text-faint)] hover:bg-[var(--color-bg-subtle)]",
+                    isSelected && "bg-[var(--brand-primary)] text-white shadow-sm",
+                    !isSelected && inMonth && "text-foreground hover:bg-[var(--glass-bg-overlay)]",
+                    !inMonth && "text-[var(--text-muted)] opacity-40 hover:bg-[var(--glass-bg-overlay)]",
                   )}
                 >
                   {format(day, "d")}

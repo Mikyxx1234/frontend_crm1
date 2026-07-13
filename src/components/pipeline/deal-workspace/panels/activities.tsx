@@ -3,10 +3,11 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconMail as Mail, IconMessageCircle as MessageCircle, IconPhoneCall as PhoneCall, IconPlus as Plus, IconTrash as Trash2, IconUsers as Users, IconLoader2 as Loader2 } from "@tabler/icons-react"
+import { IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconClock, IconMail as Mail, IconMessageCircle as MessageCircle, IconPhoneCall as PhoneCall, IconPlus as Plus, IconTrash as Trash2, IconUsers as Users, IconLoader2 as Loader2 } from "@tabler/icons-react"
 import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { SelectNative } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +16,64 @@ import { cn, formatDateTime } from "@/lib/utils";
 
 import type { DealDetailActivity } from "../shared";
 import { ACTIVITY_TYPES } from "../shared";
+
+// ── TimePicker DS v2 ──────────────────────────────────────────────
+// Substituição do <input type="time"> nativo (exibe scroll-wheel do browser).
+// Dois selects compactos para hora e minuto, estilizados com tokens do DS.
+function TimePickerInline({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;         // "HH:mm" ou ""
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const [hh, mm] = value ? value.split(":") : ["", ""];
+
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
+  function handleHour(h: string) {
+    onChange(`${h}:${mm || "00"}`);
+  }
+  function handleMinute(m: string) {
+    onChange(`${hh || "00"}:${m}`);
+  }
+
+  const selectCls = cn(
+    "h-8 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 text-[13px] text-foreground transition appearance-none cursor-pointer",
+    "focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]/40",
+    "disabled:cursor-not-allowed disabled:opacity-40",
+  );
+
+  return (
+    <div className={cn("flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 transition", disabled && "opacity-40 pointer-events-none")}>
+      <IconClock size={12} className="shrink-0 text-[var(--color-ink-muted)]" />
+      <select
+        disabled={disabled}
+        value={hh || ""}
+        onChange={(e) => handleHour(e.target.value)}
+        className={cn(selectCls, "w-[38px] border-0 bg-transparent focus:ring-0 px-0.5")}
+        aria-label="Hora"
+      >
+        <option value="">--</option>
+        {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+      </select>
+      <span className="text-[11px] font-bold text-[var(--color-ink-muted)]">:</span>
+      <select
+        disabled={disabled}
+        value={mm || ""}
+        onChange={(e) => handleMinute(e.target.value)}
+        className={cn(selectCls, "w-[38px] border-0 bg-transparent focus:ring-0 px-0.5")}
+        aria-label="Minuto"
+      >
+        <option value="">--</option>
+        {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+    </div>
+  );
+}
 
 // Mapa de tipo -> visual (icone + cor accent + bg pilula)
 const TYPE_VISUAL: Record<
@@ -43,8 +102,16 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
   const [type, setType] = React.useState("TASK");
   const [title, setTitle] = React.useState("");
   const [desc, setDesc] = React.useState("");
-  const [scheduled, setScheduled] = React.useState("");
+  const [scheduledDate, setScheduledDate] = React.useState(""); // "yyyy-MM-dd"
+  const [scheduledTime, setScheduledTime] = React.useState(""); // "HH:mm"
   const [open, setOpen] = React.useState(false);
+
+  // Combina data + hora em ISO string (ou vazia)
+  const scheduledISO = React.useMemo(() => {
+    if (!scheduledDate) return "";
+    const time = scheduledTime || "00:00";
+    return `${scheduledDate}T${time}`;
+  }, [scheduledDate, scheduledTime]);
 
   const { data: activities = [], isLoading } = useQuery<DealDetailActivity[]>({
     queryKey: activitiesKey(dealId),
@@ -67,7 +134,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
     mutationFn: async () => {
       const body: Record<string, unknown> = { type, title: title.trim(), dealId };
       if (desc.trim()) body.description = desc.trim();
-      if (scheduled.trim()) body.scheduledAt = new Date(scheduled).toISOString();
+      if (scheduledISO) body.scheduledAt = new Date(scheduledISO).toISOString();
       const res = await fetch(apiUrl("/api/activities"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,7 +144,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
       return res.json();
     },
     onSuccess: () => {
-      setTitle(""); setDesc(""); setScheduled(""); setOpen(false);
+      setTitle(""); setDesc(""); setScheduledDate(""); setScheduledTime(""); setOpen(false);
       invalidate();
     },
   });
@@ -120,7 +187,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
               )}
             >
               <Plus className="size-4 text-primary" strokeWidth={2.4} />
-              <span className="font-semibold">Nova atividade</span>
+              <span className="font-semibold">Nova tarefa</span>
             </button>
           ) : (
             <div className="space-y-2.5">
@@ -143,18 +210,25 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                     Agendar
                   </label>
-                  <Input
-                    type="datetime-local"
-                    value={scheduled}
-                    onChange={(e) => setScheduled(e.target.value)}
-                    className="h-9 rounded-xl border-border text-sm"
-                  />
+                    <div className="flex gap-1.5">
+                    <DatePicker
+                      value={scheduledDate || null}
+                      onChange={(v) => setScheduledDate(v)}
+                      placeholder="Data"
+                      className="min-w-0 flex-1"
+                    />
+                    <TimePickerInline
+                      value={scheduledTime}
+                      onChange={setScheduledTime}
+                      disabled={!scheduledDate}
+                    />
+                  </div>
                 </div>
               </div>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titulo da atividade..."
+                placeholder="Titulo da tarefa..."
                 className="h-9 rounded-xl border-border text-sm"
                 autoFocus
               />
@@ -171,7 +245,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   variant="ghost"
                   size="sm"
                   className="rounded-full px-4 text-[12px] font-bold text-[var(--text-muted)]"
-                  onClick={() => { setOpen(false); setTitle(""); setDesc(""); setScheduled(""); }}
+                  onClick={() => { setOpen(false); setTitle(""); setDesc(""); setScheduledDate(""); setScheduledTime(""); }}
                 >
                   Cancelar
                 </Button>
@@ -196,7 +270,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
           </div>
         ) : activities.length === 0 ? (
           <p className="py-12 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
-            Nenhuma atividade registrada.
+            Nenhuma tarefa registrada.
           </p>
         ) : (
           <ActivityTimeline

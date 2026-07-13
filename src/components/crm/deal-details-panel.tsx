@@ -48,6 +48,8 @@ export interface DealRecord {
   tag: string;
   funnelStage: string;
   funnelSubtitle?: string;
+  /** Nome real do pipeline. Quando ausente exibe "Funil de vendas". */
+  pipelineName?: string | null;
   segments: FunnelSegment[];
   groups: DealFieldGroup[];
 }
@@ -112,7 +114,7 @@ export function DealDetailsPanel({
 
         <div className="mt-4">
           <div className="font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-            Funil de vendas
+            {record.pipelineName ?? "Funil de vendas"}
           </div>
           <button
             type="button"

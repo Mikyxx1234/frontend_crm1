@@ -36,6 +36,9 @@ export type CustomFieldFilter = {
 
 export type TagMode = "any" | "all" | "none";
 
+/** Sentinela do filtro de origem para "Sem origem" (espelha o backend). */
+export const SOURCE_NONE = "__none__";
+
 export type AdvancedDealFilters = {
   logic?: "AND" | "OR";
   search?: string;
@@ -45,7 +48,10 @@ export type AdvancedDealFilters = {
   ownerIds?: (string | null)[];
   withoutOwner?: boolean;
   withoutContact?: boolean;
+  /** Origens do contato (Contact.source). Pode incluir `SOURCE_NONE`. */
   sources?: string[];
+  /** true = só leads sem origem. */
+  withoutSource?: boolean;
   /** Motivos de perda (Deal.lostReason) — match exato com a tabulação. */
   lostReasons?: string[];
   tagIds?: string[];
@@ -126,7 +132,7 @@ export function countActiveFilters(f: AdvancedDealFilters | null | undefined): n
   if (f.statuses?.length) n++;
   if (f.ownerIds?.length || f.withoutOwner) n++;
   if (f.withoutContact) n++;
-  if (f.sources?.length) n++;
+  if (f.sources?.length || f.withoutSource) n++;
   if (f.lostReasons?.length) n++;
   if (f.tagIds?.length || f.withoutTags) n++;
   if (f.contactSearch?.trim()) n++;
@@ -140,4 +146,13 @@ export function countActiveFilters(f: AdvancedDealFilters | null | undefined): n
   if (f.contactCustomFields?.length) n += f.contactCustomFields.length;
   if (f.valueFrom != null || f.valueTo != null) n++;
   return n;
+}
+
+/** Critérios que o backend aplica via POST /board (kanban-filters). */
+export function hasServerSideFilters(
+  f: AdvancedDealFilters | null | undefined,
+): boolean {
+  if (!f) return false;
+  const { valueFrom: _vf, valueTo: _vt, ...server } = f;
+  return !isEmptyFilters(server);
 }

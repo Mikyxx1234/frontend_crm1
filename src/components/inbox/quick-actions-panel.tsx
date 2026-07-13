@@ -214,7 +214,7 @@ export function QuickActionsPanel({ contactId, contactPhone, lastInboundAt, onSe
             <Clock className="mb-0.5 mr-1 inline size-3" /> Histórico
           </p>
           {activities.length === 0 ? (
-            <p className="text-[11px] text-[var(--text-muted)]">Nenhuma atividade registrada</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Nenhuma tarefa registrada</p>
           ) : (
             <div className="space-y-0">
               {activities.slice(0, 5).map((a, idx) => {

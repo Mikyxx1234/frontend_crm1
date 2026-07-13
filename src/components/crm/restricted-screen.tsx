@@ -19,7 +19,7 @@ export function RestrictedScreen({
   description?: string;
 }) {
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
       <main className="flex min-w-0 items-center justify-center overflow-hidden">
         <div className="flex max-w-sm flex-col items-center gap-4 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-8 py-10 text-center shadow-[var(--glass-shadow)] backdrop-blur-[16px]">

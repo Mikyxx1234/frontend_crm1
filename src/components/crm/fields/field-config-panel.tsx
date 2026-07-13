@@ -65,6 +65,7 @@ export type CustomFieldItem = {
   entity: string;
   showInInboxLeadPanel?: boolean | null;
   inboxLeadPanelOrder?: number | null;
+  showInDealPanel?: boolean | null;
   highlightRules?: unknown[] | null;
 };
 
@@ -88,6 +89,29 @@ const TYPES = [
 const TYPE_LABEL: Record<string, string> = Object.fromEntries(
   TYPES.map((t) => [t.value, t.label]),
 );
+
+/* ─────────── tipo de contexto do painel ─────────── */
+
+/**
+ * Contexto do painel: determina qual campo de visibilidade é usado.
+ * - "inbox"  → showInInboxLeadPanel + inboxLeadPanelOrder
+ * - "deal"   → showInDealPanel (sem ordering separado por ora)
+ */
+export type PanelConfigContext = "inbox" | "deal";
+
+function contextFromLayout(
+  context: FieldLayoutContext,
+  entity: FieldConfigEntity,
+): PanelConfigContext {
+  // showInDealPanel só existe/filtra para entity=deal (ver getDealPanelFieldsForDeal
+  // no backend). Campos de contato no Deal Detail continuam lidos via
+  // inboxLeadPanelFields (showInInboxLeadPanel) — ver _v2-client.tsx. Sem esse
+  // guard, o toggle de contato em deal_panel_v2 tentava persistir showInDealPanel
+  // num campo entity=contact, que o backend ignora (payload vazio) e o Prisma
+  // rejeita com 500 (`update.data` vazio).
+  if (context === "deal_panel_v2" && entity === "deal") return "deal";
+  return "inbox";
+}
 
 /* ─────────── helpers de API ─────────── */
 
@@ -126,6 +150,7 @@ async function updateField(
     required?: boolean;
     showInInboxLeadPanel?: boolean;
     inboxLeadPanelOrder?: number | null;
+    showInDealPanel?: boolean;
     highlightRules?: HighlightRule[];
   },
 ) {
@@ -144,14 +169,16 @@ async function deleteField(id: string) {
 }
 
 /** Ordena campos: visíveis primeiro (por order), ocultos ao final (por label). */
-function sortedFields(fields: CustomFieldItem[]): CustomFieldItem[] {
+function sortedFields(fields: CustomFieldItem[], panelCtx: PanelConfigContext = "inbox"): CustomFieldItem[] {
   return [...fields].sort((a, b) => {
-    const aVis = a.showInInboxLeadPanel === true;
-    const bVis = b.showInInboxLeadPanel === true;
+    const aVis = panelCtx === "deal" ? a.showInDealPanel === true : a.showInInboxLeadPanel === true;
+    const bVis = panelCtx === "deal" ? b.showInDealPanel === true : b.showInInboxLeadPanel === true;
     if (aVis !== bVis) return aVis ? -1 : 1;
-    const ao = a.inboxLeadPanelOrder ?? Infinity;
-    const bo = b.inboxLeadPanelOrder ?? Infinity;
-    if (ao !== bo) return ao - bo;
+    if (panelCtx !== "deal") {
+      const ao = a.inboxLeadPanelOrder ?? Infinity;
+      const bo = b.inboxLeadPanelOrder ?? Infinity;
+      if (ao !== bo) return ao - bo;
+    }
     return a.label.localeCompare(b.label, "pt-BR");
   });
 }
@@ -175,6 +202,7 @@ export function FieldConfigPanel({ entities, context, onClose }: FieldConfigPane
   const effectiveSections = localSections ?? sections;
 
   const [activeEntity, setActiveEntity] = React.useState<FieldConfigEntity>(entities[0]);
+  const panelCtx = contextFromLayout(context, activeEntity);
 
   const toggleSection = (id: string) => {
     setLocalSections(
@@ -236,7 +264,7 @@ export function FieldConfigPanel({ entities, context, onClose }: FieldConfigPane
       )}
 
       {/* Lista de campos da entidade ativa */}
-      <EntityFieldsSection entity={activeEntity} />
+      <EntityFieldsSection entity={activeEntity} panelCtx={panelCtx} />
 
       {/* Blocos do painel (só admin) */}
       {isAdmin && effectiveSections.length > 0 && (
@@ -319,9 +347,29 @@ export function FieldConfigPanel({ entities, context, onClose }: FieldConfigPane
 
 /* ─────────── seção de campos por entidade com DnD ─────────── */
 
-function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
+function EntityFieldsSection({
+  entity,
+  panelCtx,
+}: {
+  entity: FieldConfigEntity;
+  panelCtx: PanelConfigContext;
+}) {
   const qc = useQueryClient();
   const queryKey = ["field-config-fields", entity];
+
+  /**
+   * Invalida a lista de config E as queries que alimentam as asides
+   * (inbox ContactAside + pipeline DealDetailPanel). Sem isso, alterar
+   * visibilidade/ordem/formatação condicional de um campo não refletia
+   * no deal detail (que lê de `contact-sidebar`): só o inbox atualizava,
+   * por acaso, via refetch do `use-realtime`. Agora ambos atualizam na
+   * hora. `deal-detail-v2` cobre os campos nativos do negócio.
+   */
+  const invalidatePanels = () => {
+    qc.invalidateQueries({ queryKey });
+    qc.invalidateQueries({ queryKey: ["contact-sidebar"] });
+    qc.invalidateQueries({ queryKey: ["deal-detail-v2"] });
+  };
 
   const { data: rawFields = [], isLoading, error } = useQuery({
     queryKey,
@@ -330,7 +378,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
 
   // lista local para refletir drag imediatamente (otimistic)
   const [localOrder, setLocalOrder] = React.useState<CustomFieldItem[] | null>(null);
-  const fields = localOrder ?? sortedFields(rawFields);
+  const fields = localOrder ?? sortedFields(rawFields, panelCtx);
 
   // Sincroniza quando o servidor responde
   React.useEffect(() => {
@@ -356,7 +404,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
   const deleteMutation = useMutation({
     mutationFn: deleteField,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey });
+      invalidatePanels();
       toast.success("Campo excluído");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -370,7 +418,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
         visible.map((f, idx) => updateField(f.id, { inboxLeadPanelOrder: idx })),
       );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey }),
+    onSuccess: () => invalidatePanels(),
     onError: (e: Error) => {
       toast.error(e.message);
       setLocalOrder(null);
@@ -379,17 +427,22 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
 
   const visibilityMutation = useMutation({
     mutationFn: async ({ id, visible, maxOrder }: { id: string; visible: boolean; maxOrder: number }) => {
+      if (panelCtx === "deal") {
+        return updateField(id, { showInDealPanel: visible });
+      }
       return updateField(id, {
         showInInboxLeadPanel: visible,
         inboxLeadPanelOrder: visible ? maxOrder : null,
       });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey }),
+    onSuccess: () => invalidatePanels(),
     onError: (e: Error) => toast.error(e.message),
   });
 
   const toggleVisibility = (f: CustomFieldItem) => {
-    const isVisible = f.showInInboxLeadPanel === true;
+    const isVisible = panelCtx === "deal"
+      ? f.showInDealPanel === true
+      : f.showInInboxLeadPanel === true;
     const maxOrder = fields.reduce((acc, cur) => {
       const o = cur.inboxLeadPanelOrder ?? -1;
       return o > acc ? o : acc;
@@ -411,12 +464,19 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
     reorderMutation.mutate(reordered);
   };
 
+  const panelLabel = panelCtx === "deal" ? "Painel do Negócio" : "Inbox";
+
   return (
     <section>
       <div className="mb-2 flex items-center justify-between">
-        <p className="font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          Campos de {ENTITY_LABEL[entity as FieldConfigEntity]}
-        </p>
+        <div>
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            Campos de {ENTITY_LABEL[entity as FieldConfigEntity]}
+          </p>
+          <p className="font-body text-[10px] text-[var(--text-muted)] opacity-70">
+            Visibilidade: {panelLabel}
+          </p>
+        </div>
         <button
           type="button"
           onClick={openCreate}
@@ -465,7 +525,9 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
                 {fields.map((f, i) => (
                   <Draggable key={f.id} draggableId={f.id} index={i}>
                     {(dragProvided, dragSnapshot) => {
-                      const isVisible = f.showInInboxLeadPanel === true;
+                      const isVisible = panelCtx === "deal"
+                        ? f.showInDealPanel === true
+                        : f.showInInboxLeadPanel === true;
                       return (
                         <div
                           ref={dragProvided.innerRef}
@@ -564,7 +626,7 @@ function EntityFieldsSection({ entity }: { entity: FieldConfigEntity }) {
           initial={editItem}
           onCancel={closeForm}
           onSaved={() => {
-            qc.invalidateQueries({ queryKey });
+            invalidatePanels();
             closeForm();
             toast.success(editItem ? "Campo atualizado" : "Campo criado");
           }}

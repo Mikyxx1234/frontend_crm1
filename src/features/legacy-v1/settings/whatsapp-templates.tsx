@@ -5,21 +5,17 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconAlertTriangle as AlertTriangle, IconArrowLeft as ArrowLeft, IconBook2 as BookOpen, IconCheck as Check, IconCircleCheck as CheckCircle2, IconClipboard as ClipboardCopy, IconClock as Clock, IconEye as Eye, IconInfoCircle as Info, IconStack as Layers, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconRefresh as RefreshCw, IconSearch as Search, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
+import { IconAlertTriangle as AlertTriangle, IconArrowLeft as ArrowLeft, IconBook2 as BookOpen, IconCheck as Check, IconCircleCheck as CheckCircle2, IconClipboard as ClipboardCopy, IconClock as Clock, IconEye as Eye, IconStack as Layers, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconRefresh as RefreshCw, IconSearch as Search, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/hooks/use-confirm";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { InputGlass } from "@/components/crm/input-glass";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { TooltipHost } from "@/components/ui/tooltip";
 import { analyzeTemplateComponents } from "@/lib/meta-whatsapp/analyze-template-components";
 import { mergeOperatorVariables, type OperatorVariableMeta } from "@/lib/meta-whatsapp/operator-template-variables";
 import { cn } from "@/lib/utils";
@@ -466,14 +462,14 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
         title="Templates WhatsApp (Meta)"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+            <ButtonGlass type="button" variant="glass" size="sm" onClick={() => void refetch()} disabled={isFetching}>
               {isFetching ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
               <span className="ml-2">Atualizar</span>
-            </Button>
-            <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+            </ButtonGlass>
+            <ButtonGlass type="button" variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="size-4" />
               <span className="ml-2">Novo template</span>
-            </Button>
+            </ButtonGlass>
           </>
         }
       >
@@ -521,18 +517,6 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
         <HubStat tone="brand" icon={<MessageSquare className="size-5" />} value={rows.length} label="Templates na WABA" />
         <HubStat tone="violet" icon={<UserCheck className="size-5" />} value={countAgent} label="Habilitados p/ Agente" />
       </HubStatGrid>
-
-      <HubCallout icon={<Info className="size-[18px]" />}>
-        As rotas antigas{" "}
-        <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
-          /settings/templates
-        </code>{" "}
-        e{" "}
-        <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
-          /settings/whatsapp-templates
-        </code>{" "}
-        redirecionam para este hub.
-      </HubCallout>
 
       {isError ? (
         <HubCallout tone="danger" icon={<AlertTriangle className="size-[18px]" />}>
@@ -607,12 +591,10 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                 <th>Estado</th>
                 <th>Qualidade</th>
                 <th className="text-center">
-                  <TooltipHost label="Liberado para o agente usar no chat" side="bottom">
-                    <span className="inline-flex items-center justify-center gap-1.5">
-                      <UserCheck className="size-3.5" />
-                      Agente
-                    </span>
-                  </TooltipHost>
+                  <span className="inline-flex items-center justify-center gap-1.5">
+                    <UserCheck className="size-3.5" />
+                    Agente
+                  </span>
                 </th>
                 <th className="w-[120px] text-right">Ações</th>
               </tr>
@@ -668,12 +650,10 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                       <div className="flex items-center gap-2">
                         <span>{row.name}</span>
                         {isCallPermission ? (
-                          <TooltipHost label="Template de permissão de ligação (Business Calling API)" side="top">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-info)] ring-1 ring-[color-mix(in_srgb,var(--color-info)_30%,transparent)]">
-                              <Phone className="size-2.5" />
-                              Voz
-                            </span>
-                          </TooltipHost>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--color-info)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-info)] ring-1 ring-[color-mix(in_srgb,var(--color-info)_30%,transparent)]">
+                            <Phone className="size-2.5" />
+                            Voz
+                          </span>
                         ) : null}
                       </div>
                     </td>
@@ -684,7 +664,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                           saveConfig({ label: labelDraft });
                           setEditingLabelId(null);
                         }}>
-                          <Input
+                          <InputGlass
                             ref={labelInputRef}
                             value={labelDraft}
                             onChange={(e) => setLabelDraft(e.target.value)}
@@ -723,101 +703,87 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                       </span>
                     </td>
                     <td className="px-4 py-3.5 align-middle">
-                      <Badge
-                        variant="secondary"
+                      <span
                         className={cn(
-                          row.status === "APPROVED" && "bg-[color-mix(in_srgb,var(--color-success)_18%,transparent)] text-[var(--color-success)]",
-                          (row.status === "PENDING" || row.status === "PENDING_APPROVAL") &&
-                            "bg-[color-mix(in_srgb,var(--color-warning)_18%,transparent)] text-[var(--color-warning)]",
-                          row.status === "REJECTED" && "bg-[color-mix(in_srgb,var(--color-danger)_18%,transparent)] text-[var(--color-danger)]",
+                          "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold",
+                          row.status === "APPROVED" && "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
+                          (row.status === "PENDING" || row.status === "PENDING_APPROVAL") && "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
+                          (row.status === "PAUSED") && "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
+                          row.status === "REJECTED" && "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
+                          row.status === "DISABLED" && "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
+                          !["APPROVED", "PENDING", "PENDING_APPROVAL", "PAUSED", "REJECTED", "DISABLED"].includes(row.status) && "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]",
                         )}
                       >
                         {st}
-                      </Badge>
+                      </span>
                       {rejectReason ? (
-                        <TooltipHost label={rejectReason} side="bottom">
-                          <p className="mt-1 max-w-xs text-xs text-[var(--color-danger)]">
-                            {rejectReason}
-                          </p>
-                        </TooltipHost>
+                        <p className="mt-1 max-w-xs text-xs text-[var(--color-danger)]">
+                          {rejectReason}
+                        </p>
                       ) : null}
                     </td>
                     <td className="px-4 py-3.5 align-middle text-xs text-[var(--text-secondary)]">{q}</td>
                     <td className="px-4 py-3.5 text-center align-middle">
-                      <TooltipHost
-                        label={cfg?.agentEnabled ? "Liberado para agentes — clique para bloquear" : "Bloqueado para agentes — clique para liberar"}
-                        side="left"
+                      <button
+                        type="button"
+                        aria-label={cfg?.agentEnabled ? "Bloquear para agentes" : "Liberar para agentes"}
+                        className={cn(
+                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                          cfg?.agentEnabled
+                            ? "border-[var(--color-success)] bg-[var(--color-success)]"
+                            : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
+                          row.status !== "APPROVED" && "cursor-not-allowed opacity-40",
+                        )}
+                        onClick={() => saveConfig({ agentEnabled: !cfg?.agentEnabled })}
+                        disabled={row.status !== "APPROVED"}
                       >
-                        <button
-                          type="button"
-                          aria-label={cfg?.agentEnabled ? "Bloquear para agentes" : "Liberar para agentes"}
-                          className={cn(
-                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                            cfg?.agentEnabled
-                              ? "border-[var(--color-success)] bg-[var(--color-success)]"
-                              : "border-[var(--glass-border)] bg-[var(--glass-bg-strong)]",
-                            row.status !== "APPROVED" && "cursor-not-allowed opacity-40",
-                          )}
-                          onClick={() => saveConfig({ agentEnabled: !cfg?.agentEnabled })}
-                          disabled={row.status !== "APPROVED"}
-                        >
-                          <span className={cn(
-                            "pointer-events-none inline-block size-5 rounded-full bg-[var(--color-bg-card)] shadow-sm ring-0 transition-transform duration-200",
-                            cfg?.agentEnabled ? "translate-x-5" : "translate-x-0",
-                          )} />
-                        </button>
-                      </TooltipHost>
+                        <span className={cn(
+                          "pointer-events-none inline-block size-5 rounded-full bg-[var(--color-bg-card)] shadow-sm ring-0 transition-transform duration-200",
+                          cfg?.agentEnabled ? "translate-x-5" : "translate-x-0",
+                        )} />
+                      </button>
                     </td>
                     <td className="px-4 py-3.5 align-middle">
                       <div className="flex items-center justify-end gap-1">
-                        <TooltipHost label="Ver texto do template" side="top">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            aria-label="Ver texto do template"
-                            onClick={() => setPreviewRow(row)}
-                          >
-                            <Eye className="size-3.5" />
-                          </Button>
-                        </TooltipHost>
-                        <TooltipHost label="Copiar ID Graph" side="top">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            aria-label="Copiar ID Graph"
-                            onClick={() => {
-                              void navigator.clipboard.writeText(row.id);
-                              toast.message("ID copiado");
-                            }}
-                          >
-                            <ClipboardCopy className="size-3.5" />
-                          </Button>
-                        </TooltipHost>
-                        <TooltipHost label="Excluir na Meta" side="top">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-[var(--color-danger)] hover:text-[var(--color-danger)]"
-                            aria-label="Excluir na Meta"
-                            onClick={async () => {
-                              const ok = await confirmDialog({
-                                title: "Excluir template",
-                                description: `Excluir o template "${row.name}" na Meta? Esta ação não pode ser desfeita.`,
-                                confirmLabel: "Excluir",
-                                variant: "destructive",
-                              });
-                              if (ok) deleteMutation.mutate(row.id);
-                            }}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </TooltipHost>
+                        <ButtonGlass
+                          type="button"
+                          variant="glass"
+                          className="size-8"
+                          aria-label="Ver texto do template"
+                          onClick={() => setPreviewRow(row)}
+                        >
+                          <Eye className="size-3.5" />
+                        </ButtonGlass>
+                        <ButtonGlass
+                          type="button"
+                          variant="glass"
+                          className="size-8"
+                          aria-label="Copiar ID Graph"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(row.id);
+                            toast.message("ID copiado");
+                          }}
+                        >
+                          <ClipboardCopy className="size-3.5" />
+                        </ButtonGlass>
+                        <ButtonGlass
+                          type="button"
+                          variant="glass"
+                          className="size-8 text-[var(--color-danger)] hover:text-[var(--color-danger)]"
+                          aria-label="Excluir na Meta"
+                          onClick={async () => {
+                            const ok = await confirmDialog({
+                              title: "Excluir template",
+                              description: `Excluir o template "${row.name}" na Meta? Esta ação não pode ser desfeita.`,
+                              confirmLabel: "Excluir",
+                              variant: "destructive",
+                            });
+                            if (ok) deleteMutation.mutate(row.id);
+                          }}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </ButtonGlass>
                       </div>
                     </td>
                   </tr>
@@ -830,19 +796,19 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
       </HubPanel>
 
       {nextCursor ? (
-        <Button
+        <ButtonGlass
           type="button"
-          variant="outline"
+          variant="glass"
           size="sm"
           onClick={() => setAfterStack((s) => [...s, nextCursor])}
         >
           Carregar mais
-        </Button>
+        </ButtonGlass>
       ) : null}
       {afterStack.length > 0 ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => setAfterStack([])}>
+        <ButtonGlass type="button" variant="glass" size="sm" onClick={() => setAfterStack([])}>
           Voltar ao início da lista
-        </Button>
+        </ButtonGlass>
       ) : null}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -859,31 +825,31 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
           </DialogHeader>
 
           <div className="flex gap-2 border-b border-[var(--glass-border-subtle)] pb-2">
-            <Button
+            <ButtonGlass
               type="button"
-              variant={createMode === "assisted" ? "secondary" : "ghost"}
+              variant="glass"
               size="sm"
               onClick={() => setCreateMode("assisted")}
             >
               Assistido
-            </Button>
-            <Button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
-              variant={createMode === "json" ? "secondary" : "ghost"}
+              variant="glass"
               size="sm"
               onClick={() => setCreateMode("json")}
             >
               JSON avançado
-            </Button>
+            </ButtonGlass>
           </div>
 
           {createMode === "json" ? (
             <div className="space-y-2">
-              <Label>Cole o JSON do corpo do POST (oficial Meta)</Label>
-              <Textarea
+              <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Cole o JSON do corpo do POST (oficial Meta)</label>
+              <textarea
                 value={rawJson}
                 onChange={(e) => setRawJson(e.target.value)}
-                className="min-h-[220px] font-mono text-xs"
+                className="w-full resize-none rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/10 min-h-[220px] font-mono text-xs"
                 spellCheck={false}
               />
               <p className="text-xs text-[var(--text-muted)]">
@@ -898,8 +864,8 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               <div className="space-y-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
-                  <Label>Nome interno (snake_case)</Label>
-                  <Input
+                  <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Nome interno (snake_case)</label>
+                  <InputGlass
                     value={name}
                     onChange={(e) => setName(e.target.value.toLowerCase())}
                     placeholder="ex.: lembrete_pagamento"
@@ -907,12 +873,12 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                   />
                 </div>
                 <div>
-                  <Label>Idioma</Label>
-                  <Input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="pt_BR" />
+                  <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Idioma</label>
+                  <InputGlass value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="pt_BR" />
                 </div>
               </div>
               <div>
-                <Label>Categoria</Label>
+                <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Categoria</label>
                 <DropdownGlass
                   options={[
                     { value: "UTILITY", label: "UTILITY (transacional)" },
@@ -926,7 +892,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               </div>
               {category !== "AUTHENTICATION" ? (
                 <div>
-                  <Label>Formato de parâmetros</Label>
+                  <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Formato de parâmetros</label>
                   <DropdownGlass
                     options={[
                       { value: "POSITIONAL", label: "POSITIONAL ({{1}}, {{2}}…)" },
@@ -942,7 +908,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
               {category !== "AUTHENTICATION" ? (
                 <>
                   <div>
-                    <Label>Cabeçalho</Label>
+                    <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Cabeçalho</label>
                     <DropdownGlass
                       options={[
                         { value: "NONE", label: "Sem cabeçalho" },
@@ -955,16 +921,16 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                   </div>
                   {headerFormat === "TEXT" ? (
                     <div>
-                      <Label>Texto do cabeçalho</Label>
-                      <Input value={headerText} onChange={(e) => setHeaderText(e.target.value)} />
+                      <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Texto do cabeçalho</label>
+                      <InputGlass value={headerText} onChange={(e) => setHeaderText(e.target.value)} />
                     </div>
                   ) : null}
                 </>
               ) : null}
 
               <div>
-                <Label>Corpo {category === "AUTHENTICATION" ? "(ex.: {{1}} é seu código)" : ""}</Label>
-                <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="text-sm" />
+                <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Corpo {category === "AUTHENTICATION" ? "(ex.: {{1}} é seu código)" : ""}</label>
+                <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full resize-none rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/10 text-sm" />
               </div>
 
               {category === "AUTHENTICATION" ? (
@@ -978,8 +944,8 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     Recomendação de segurança (Meta)
                   </label>
                   <div>
-                    <Label>Expiração do código (minutos)</Label>
-                    <Input
+                    <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Expiração do código (minutos)</label>
+                    <InputGlass
                       type="number"
                       min={1}
                       max={90}
@@ -988,7 +954,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     />
                   </div>
                   <div>
-                    <Label>Tipo OTP</Label>
+                    <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Tipo OTP</label>
                     <DropdownGlass
                       options={[
                         { value: "COPY_CODE", label: "COPY_CODE" },
@@ -1000,20 +966,20 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     />
                   </div>
                   <div>
-                    <Label>Texto do botão OTP</Label>
-                    <Input value={otpButtonText} onChange={(e) => setOtpButtonText(e.target.value)} />
+                    <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Texto do botão OTP</label>
+                    <InputGlass value={otpButtonText} onChange={(e) => setOtpButtonText(e.target.value)} />
                   </div>
                 </div>
               ) : (
                 <>
                   <div>
-                    <Label>Rodapé (opcional)</Label>
-                    <Input value={footer} onChange={(e) => setFooter(e.target.value)} />
+                    <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Rodapé (opcional)</label>
+                    <InputGlass value={footer} onChange={(e) => setFooter(e.target.value)} />
                   </div>
                   <div>
-                    <Label className="text-xs text-[var(--text-muted)]">Botões rápidos (um por linha)</Label>
+                    <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Botões rápidos (um por linha)</label>
                     {quickTexts.map((q, i) => (
-                      <Input
+                      <InputGlass
                         key={i}
                         className="mb-1 mt-1"
                         value={q}
@@ -1025,21 +991,21 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                         placeholder="Texto do quick reply"
                       />
                     ))}
-                    <Button
+                    <ButtonGlass
                       type="button"
-                      variant="outline"
+                      variant="glass"
                       size="sm"
                       className="mt-1"
                       onClick={() => setQuickTexts((q) => [...q, ""])}
                     >
                       + Quick reply
-                    </Button>
+                    </ButtonGlass>
                   </div>
                   <div>
-                    <Label className="text-xs text-[var(--text-muted)]">Botões URL</Label>
+                    <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Botões URL</label>
                     {urlRows.map((r, i) => (
                       <div key={i} className="mb-2 flex gap-2">
-                        <Input
+                        <InputGlass
                           placeholder="Texto"
                           value={r.text}
                           onChange={(e) => {
@@ -1048,7 +1014,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                             setUrlRows(n);
                           }}
                         />
-                        <Input
+                        <InputGlass
                           placeholder="https://..."
                           value={r.url}
                           onChange={(e) => {
@@ -1059,14 +1025,14 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                         />
                       </div>
                     ))}
-                    <Button
+                    <ButtonGlass
                       type="button"
-                      variant="outline"
+                      variant="glass"
                       size="sm"
                       onClick={() => setUrlRows((u) => [...u, { text: "", url: "" }])}
                     >
                       + URL
-                    </Button>
+                    </ButtonGlass>
                   </div>
                   <div className="rounded-[var(--radius-lg)] border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-3">
                     <label className="flex items-center gap-2 text-sm font-bold text-[var(--text-secondary)]">
@@ -1081,7 +1047,7 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                     {flowAssistEnabled ? (
                       <div className="mt-3 space-y-2">
                         <div>
-                          <Label>Flow publicado (CRM)</Label>
+                          <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Flow publicado (CRM)</label>
                           <DropdownGlass
                             options={publishedFlows.map((f) => ({
                               value: f.metaFlowId!.trim(),
@@ -1106,15 +1072,15 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                           ) : null}
                         </div>
                         <div>
-                          <Label>Texto do botão (máx. 25)</Label>
-                          <Input
+                          <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Texto do botão (máx. 25)</label>
+                          <InputGlass
                             value={flowButtonText}
                             onChange={(e) => setFlowButtonText(e.target.value.slice(0, 25))}
                             className="mt-1"
                           />
                         </div>
                         <div>
-                          <Label>flow_action</Label>
+                          <label className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">flow_action</label>
                           <DropdownGlass
                             options={[
                               { value: "NAVIGATE", label: "NAVIGATE" },
@@ -1144,19 +1110,20 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] pt-4">
+            <ButtonGlass type="button" variant="glass" onClick={() => setCreateOpen(false)}>
               Cancelar
-            </Button>
-            <Button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="primary"
               disabled={createMutation.isPending}
               onClick={() => (createMode === "json" ? submitJson() : submitAssisted())}
             >
               {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
               <span className={cn(createMutation.isPending && "ml-2")}>Criar na Meta</span>
-            </Button>
-          </DialogFooter>
+            </ButtonGlass>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1197,11 +1164,11 @@ function WhatsappMetaTemplatesPage({ embedded = false }: { embedded?: boolean })
                 ))
               : null}
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setPreviewRow(null)}>
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] pt-4">
+            <ButtonGlass type="button" variant="glass" onClick={() => setPreviewRow(null)}>
               Fechar
-            </Button>
-          </DialogFooter>
+            </ButtonGlass>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

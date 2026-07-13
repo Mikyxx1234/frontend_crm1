@@ -192,24 +192,24 @@ export default function V2ActivitiesClientPage() {
   const isToday = isSameDay(selectedDate, new Date())
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
           icon={<IconCalendarEvent size={22} stroke={2.2} />}
-          title="Atividades"
+          title="Tarefas"
           description="Agende e acompanhe tarefas, reuniões, ligações e eventos."
           actions={
             <PagePrimaryButton type="button" onClick={() => setComposerOpen(true)}>
-              <IconPlus size={15} stroke={2.4} /> Nova atividade
+              <IconPlus size={15} stroke={2.4} /> Nova tarefa
             </PagePrimaryButton>
           }
         />
 
         {isDemo && (
           <PageDemoBanner>
-            Dados de exemplo — atividades ilustrativas para visualizar o calendário e a agenda.
+            Dados de exemplo — tarefas ilustrativas para visualizar o calendário e a agenda.
           </PageDemoBanner>
         )}
 
@@ -227,7 +227,7 @@ export default function V2ActivitiesClientPage() {
               />
             </section>
 
-            <section aria-label="Tipos de atividade" className={cn(PANEL, "p-4")}>
+            <section aria-label="Tipos de tarefa" className={cn(PANEL, "p-4")}>
               <p className="mb-3 font-display text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[var(--text-muted)]">
                 Este mês
               </p>
@@ -321,7 +321,7 @@ export default function V2ActivitiesClientPage() {
                   </h2>
                   <p className="mt-px font-body text-[12.5px] text-[var(--text-muted)]">
                     {dayItems.length}{" "}
-                    {dayItems.length === 1 ? "atividade" : "atividades"}
+                    {dayItems.length === 1 ? "tarefa" : "tarefas"}
                     {isToday ? " para hoje" : ""}
                     {dayItems.some((a) => a.status !== "concluida") && (
                       <>
@@ -340,7 +340,7 @@ export default function V2ActivitiesClientPage() {
                 <div className="flex flex-wrap items-center gap-2.5">
                   <PageSegmentedControl
                     size="compact"
-                    aria-label="Filtrar atividades"
+                    aria-label="Filtrar tarefas"
                     items={STATUS_FILTERS.map((f) => ({
                       value: f.key,
                       label: f.label,
@@ -373,7 +373,7 @@ export default function V2ActivitiesClientPage() {
                         <IconCalendarEvent size={28} />
                       </div>
                       <h3 className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
-                        Nenhuma atividade neste dia
+                        Nenhuma tarefa neste dia
                       </h3>
                       <p className="mt-1 mb-4 font-body text-[13px] text-[var(--text-muted)]">
                         Clique em “Nova atividade” para agendar uma tarefa, reunião,
@@ -384,7 +384,7 @@ export default function V2ActivitiesClientPage() {
                         onClick={() => setComposerOpen(true)}
                         className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-dark)]"
                       >
-                        <IconPlus size={16} stroke={2.5} /> Nova atividade
+                        <IconPlus size={16} stroke={2.5} /> Nova tarefa
                       </button>
                     </div>
                   </div>

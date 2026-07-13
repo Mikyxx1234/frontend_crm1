@@ -356,7 +356,7 @@ Retry-After: 30
   },
   {
     id: "atividades",
-    title: "Atividades",
+    title: "Tarefas",
     description: "Gerencie tarefas, reuniões, chamadas e outras atividades.",
     endpoints: [
       {

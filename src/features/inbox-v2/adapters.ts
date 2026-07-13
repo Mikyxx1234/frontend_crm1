@@ -286,6 +286,8 @@ export function toConversationCard(
     sessionExpired: sess.expired,
     lastMessageType,
     lastMessageDirection,
+    // Conversas encerradas/finalizadas — badge visual "Resolvida" no card.
+    resolved: row.status === "RESOLVED",
     // Canal de origem — substitui o status dot pelo logo da plataforma
     // no canto inferior direito do avatar.
     channel: row.channel ?? null,
@@ -365,12 +367,15 @@ export function toMessageBubble(
   // ou SSE futuro mude o casing — nunca regredir o lado dos balões).
   const dir = String(dto.direction ?? "").toLowerCase();
   const isInbound = dir === "in" || dir === "inbound";
-  // O backend não envia `sender.kind`; a única chave de autoria serializada
-  // hoje é `senderName`. Automação grava `senderName === "Automação"` (mesma
-  // convenção da v1 e de lib/message-author.ts). Mantemos `sender.kind` como
-  // fallback forward-compatible caso o DTO passe a expor o objeto sender.
+  // Preferência: campo explícito `authorType` (novo — permite o backend
+  // gravar o nome real da automação em `senderName` sem quebrar a detecção
+  // do bot). Fallbacks: `sender.kind === "BOT"` (forward-compat) e o antigo
+  // `senderName === "Automação"` (mensagens legadas gravadas antes do
+  // `authorType` explícito no automation-executor).
   const isBot =
-    dto.sender?.kind === "BOT" || (!isInbound && dto.senderName === "Automação");
+    dto.authorType === "bot" ||
+    dto.sender?.kind === "BOT" ||
+    (!isInbound && dto.senderName === "Automação");
 
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
@@ -449,6 +454,10 @@ export interface ChatContactView {
   badge?: ConversationBadge;
   phone: string;
   contactId: string;
+  /** Canal da conversa — usado pra renderizar o badge do canal
+      (whatsapp/instagram/...) no avatar do header do chat, idêntico
+      ao card da lista de conversas. */
+  channel?: string | null;
 }
 
 export function toChatContact(row: ConversationListRow): ChatContactView {
@@ -461,6 +470,7 @@ export function toChatContact(row: ConversationListRow): ChatContactView {
     badge: deriveBadge(row),
     phone: row.contact?.phone ?? "",
     contactId: row.contact?.id ?? row.id,
+    channel: row.channel ?? null,
   };
 }
 
@@ -557,11 +567,14 @@ export interface ContactAsideView {
   panelFields: PanelField[];
   deals: {
     id: string;
+    /** N\u00famero sequencial do neg\u00f3cio por organiza\u00e7\u00e3o (1, 2, 3...). */
+    number: number | null;
     title: string;
     value: number | null;
     stageName: string | null;
     stageId: string | null;
     pipelineId: string | null;
+    pipelineName: string | null;
     productName: string | null;
     /** Status do negocio: OPEN | WON | LOST. */
     status: string | null;
@@ -617,19 +630,36 @@ export function toContactAside(
           : undefined,
   }));
 
+  // Deriva origem do negócio a partir do canal da conversa (campo de sistema,
+  // não editável). Só exibe quando o canal é reconhecido.
+  function deriveOriginLabel(channel: ConversationListRow["channel"] | null | undefined): string | null {
+    switch (channel) {
+      case "whatsapp": return "WhatsApp";
+      case "instagram":
+      case "meta": return "Facebook / Instagram";
+      case "email": return "E-mail";
+      case "webchat": return "Chat Web";
+      default: return null;
+    }
+  }
+  const dealOrigin = deriveOriginLabel(row.channel);
+
   // Mapeia todos os deals vinculados ao contato com campos customizados.
   // stageCount/stageIndex NÃO são derivados aqui — são falsos.
   // O client do inbox usa useDealDetail + useBoard para obter segmentos reais.
   const deals = (contact?.deals ?? []).map((d) => ({
     id: d.id,
+    number: (d as { number?: number | null }).number ?? null,
     title: d.title,
     value: d.value,
     stageName: d.stageName ?? null,
     stageId: d.stageId ?? null,
     pipelineId: (d as { pipelineId?: string }).pipelineId ?? null,
+    pipelineName: (d as { pipelineName?: string | null }).pipelineName ?? null,
     productName: d.productName ?? null,
     status: (d as { status?: string | null }).status ?? null,
     lostReason: (d as { lostReason?: string | null }).lostReason ?? null,
+    origin: dealOrigin,
     customFields: (d as { customFields?: { fieldId: string; label: string; value: string | null }[] }).customFields ?? [],
   }));
 
@@ -691,7 +721,7 @@ export function toContactAside(
     financialStatus: financial.status,
     financialLabel: financial.label,
     product: firstDeal?.productName ?? FALLBACK_FIELD,
-    origin: FALLBACK_FIELD,
+    origin: contact?.source?.trim() || FALLBACK_FIELD,
     formation: FALLBACK_FIELD,
     entry: FALLBACK_FIELD,
     phone: contact?.phone ?? row.contact?.phone ?? FALLBACK_FIELD,

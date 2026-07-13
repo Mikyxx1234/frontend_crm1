@@ -52,7 +52,7 @@ const FUNNEL = [
 
 const TABS = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
-  { id: "atividades", label: "Atividades", icon: IconChecklist, count: 3 },
+  { id: "atividades", label: "Tarefas", icon: IconChecklist, count: 3 },
   { id: "notas", label: "Notas", icon: IconNote },
   { id: "timeline", label: "Timeline", icon: IconClock },
 ] as const

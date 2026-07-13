@@ -191,7 +191,7 @@ export function TeamTable({
                       className="ml-auto inline-flex items-center gap-1.5 hover:text-foreground"
                       onClick={() => toggleSort("activitiesCompleted")}
                     >
-                      Atividades
+                      Tarefas
                       <SortIcon column="activitiesCompleted" />
                     </button>
                   </th>

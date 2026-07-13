@@ -105,7 +105,7 @@ export function LeadConversations({ contact }: { contact: ContactSlim }) {
               )}
             </TabsTrigger>
             <TabsTrigger value="activities" className="gap-1.5 data-[state=active]:shadow-none">
-              <Calendar className="size-3.5" /> Atividades
+              <Calendar className="size-3.5" /> Tarefas
             </TabsTrigger>
             <TabsTrigger value="notes" className="gap-1.5 data-[state=active]:shadow-none">
               <FileText className="size-3.5" /> Notas
@@ -231,7 +231,7 @@ function ActivitiesTab({ activities }: { activities: ActivityRow[] }) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
         <Calendar className="mb-3 size-10 text-muted-foreground/30" />
-        <p className="text-sm text-muted-foreground">Nenhuma atividade registrada.</p>
+        <p className="text-sm text-muted-foreground">Nenhuma tarefa registrada.</p>
       </div>
     );
   }

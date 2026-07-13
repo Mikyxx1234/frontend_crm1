@@ -7,6 +7,29 @@ import { cn } from "@/lib/utils";
 
 type Side = "top" | "right" | "bottom" | "left";
 
+/**
+ * Superfície canônica do tooltip do Design System (glass escuro).
+ * Fonte única de verdade para TODOS os tooltips do sistema — reutilizada
+ * pelo `TooltipGlass`, pelo `TooltipContent` (components/ui/tooltip) e pelo
+ * rótulo do `DockButton` (NavRail). Tokens `--tooltip-bg`/`--tooltip-text`
+ * definidos em globals-v2.css (light + dark).
+ */
+export const tooltipSurfaceClass = cn(
+  "select-none rounded-[var(--radius-md)] px-2.5 py-1.5",
+  "bg-[var(--tooltip-bg)] text-[var(--tooltip-text)]",
+  "font-display text-xs font-semibold leading-tight tracking-tight",
+  "shadow-[0_8px_24px_rgba(15,20,40,0.28)] ring-1 ring-white/10 backdrop-blur-md",
+);
+
+/** Animação de entrada/saída padrão (Radix data-side/data-state). */
+export const tooltipMotionClass = cn(
+  "origin-(--radix-tooltip-content-transform-origin)",
+  "animate-in fade-in-0 zoom-in-95",
+  "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+  "data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1",
+  "data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
+);
+
 interface TooltipGlassProps {
   /** Texto exibido no tooltip. */
   label: React.ReactNode;
@@ -61,13 +84,9 @@ export function TooltipGlass({
           align={align}
           sideOffset={sideOffset}
           className={cn(
-            "z-50 select-none rounded-[var(--radius-md)] px-2.5 py-1.5",
-            "bg-[var(--tooltip-bg)] text-[var(--tooltip-text)]",
-            "font-display text-xs font-semibold leading-none tracking-tight",
-            "shadow-[0_8px_24px_rgba(15,20,40,0.28)] ring-1 ring-white/10 backdrop-blur-md",
-            "origin-(--radix-tooltip-content-transform-origin)",
-            "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-            "data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
+            "z-50 max-w-xs",
+            tooltipSurfaceClass,
+            tooltipMotionClass,
             className,
           )}
         >

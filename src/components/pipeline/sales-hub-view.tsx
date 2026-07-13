@@ -738,7 +738,7 @@ export function SalesHubView({
                 onClose={handleDeselectDeal}
                 tabs={[
                   { key: "conversations", label: "Conversa" },
-                  { key: "activities", label: "Atividades" },
+                  { key: "activities", label: "Tarefas" },
                   { key: "notes", label: "Notas" },
                   { key: "timeline", label: "Timeline" },
                 ]}

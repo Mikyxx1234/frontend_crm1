@@ -230,11 +230,15 @@ export function KanbanCard({
         className={cn(
           // Surface: tokens de glass do tema — `bg-[var(--glass-bg-overlay)]` causava cartões
           // esbranquiçados em dark mode mesmo com o variant `.dark` ativo.
-          "group relative cursor-pointer rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] backdrop-blur-sm transition-all",
+          // transition-all excluído: o wrapper Draggable (kanban-column) controla
+          // transform — adicionar transition ao card filho causaria dupla
+          // interpolação e lag. Só transicionamos propriedades seguras.
+          "group relative cursor-pointer rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] backdrop-blur-sm",
+          isDragging
+            ? "rotate-1 border-primary/40 bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-lg)]"
+            : "transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
           dt.card.shadow,
           dt.card.kanbanHover,
-          "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
-          isDragging && "rotate-1 border-primary/40 bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-lg)]",
           isHighlighted && "animate-[kanban-highlight_3s_ease]",
           // Card selecionado em bulk-mode: borda accent + ring sutil. Override
           // de hover bg pra distinguir mesmo com mouse em cima de outro card.
@@ -431,7 +435,7 @@ export function KanbanCard({
 
                     {primaryTags.map((tag) => (
                       <TooltipHost key={tag.id} label={tag.name} side="top">
-                        <span className={cn("max-w-full truncate", dt.pill.sm)} style={tagPillStyle(tag.name, tag.color)}>
+                        <span className={cn("whitespace-nowrap", dt.pill.sm)} style={tagPillStyle(tag.name, tag.color)}>
                           {tag.name}
                         </span>
                       </TooltipHost>

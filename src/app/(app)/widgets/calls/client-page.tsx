@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
-import { PageFilterBar } from "@/components/crm/page-toolbar";
+import { PageFilterBar, PageGhostButton, PageSearchBar, pageGhostButtonClass } from "@/components/crm/page-toolbar";
 import { CallHistoryFilters } from "@/features/softphone/components/call-history-filters";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { useCallsWidget } from "@/features/softphone/hooks/use-calls-widget";
@@ -43,8 +43,17 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
   const callsWidget = useCallsWidget(isAuthenticated);
 
   const [filters, setFilters] = useState<ListCallsFilters>(DEFAULT_FILTERS);
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const autoSyncedRef = useRef(false);
+
+  // Debounce search → filters
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilters((f) => ({ ...f, search: search.trim() || undefined, page: 1 }));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const syncMutation = useMutation({
     mutationFn: syncCalls,
@@ -75,7 +84,7 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
   }, [callsWidget.enabled, syncMutation]);
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       {navRail ?? <NavRailV2 />}
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
@@ -83,27 +92,34 @@ export default function CallsClientPage({ navRail }: CallsClientPageProps = {}) 
           icon={<IconPhone size={22} stroke={2.2} />}
           title="Chamadas"
           description="Histórico de chamadas recebidas, realizadas e perdidas."
+          center={
+            <PageSearchBar
+              variant="compact"
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar por contato ou telefone..."
+              aria-label="Buscar chamadas"
+            />
+          }
           actions={
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <PageGhostButton
                 onClick={() => syncMutation.mutate()}
                 disabled={syncMutation.isPending}
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-2 font-display text-[13px] font-medium text-[var(--text-primary)] transition-all hover:-translate-y-px hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
                 title="Sincronizar chamadas com a Api4com"
               >
                 <IconRefresh
-                  size={16}
+                  size={15}
                   className={syncMutation.isPending ? "animate-spin" : undefined}
                 />
                 {syncMutation.isPending ? "Sincronizando…" : "Sincronizar"}
-              </button>
+              </PageGhostButton>
               <Link
                 href="/settings/softphone"
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-2 font-display text-[13px] font-medium text-[var(--text-primary)] transition-all hover:-translate-y-px hover:bg-[var(--glass-bg-strong)]"
-                title="Abrir configurações do softphone (provedor, ramal, webhook)"
+                className={pageGhostButtonClass()}
+                title="Configurações do softphone"
               >
-                <IconSettings size={16} />
+                <IconSettings size={15} />
                 Configurações
               </Link>
             </div>

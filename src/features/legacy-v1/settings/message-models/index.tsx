@@ -402,34 +402,37 @@ export default function MessageModelsHubPage() {
             <HubStat tone="warn" icon={<Clock className="size-5" />} value={metaPending} label="Aguardando revisão Meta" />
           </HubStatGrid>
 
-          <HubCallout icon={<Info className="size-[18px]" />}>
-            As rotas antigas{" "}
-            <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
-              /settings/templates
-            </code>{" "}
-            e{" "}
-            <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
-              /settings/whatsapp-templates
-            </code>{" "}
-            redirecionam para este hub.
-          </HubCallout>
-
           <HubPanel>
             <HubToolbar
               searchValue={ovQuery}
               onSearchChange={setOvQuery}
               placeholder="Buscar por nome, conteúdo ou variável..."
             >
-              <HubChip active={ovFilter === "all"} onClick={() => setOvFilter("all")}>
+              <HubChip active={ovFilter === "all"} onClick={() => setOvFilter("all")} tone="brand">
                 Todos os canais
               </HubChip>
-              <HubChip active={ovFilter === "interno"} onClick={() => setOvFilter("interno")} dot="var(--text-muted)">
+              <HubChip
+                active={ovFilter === "interno"}
+                onClick={() => setOvFilter("interno")}
+                dot="var(--text-muted)"
+                tone="neutral"
+              >
                 Interno
               </HubChip>
-              <HubChip active={ovFilter === "waba"} onClick={() => setOvFilter("waba")} dot="var(--color-online)">
+              <HubChip
+                active={ovFilter === "waba"}
+                onClick={() => setOvFilter("waba")}
+                dot="var(--color-success)"
+                tone="success"
+              >
                 WhatsApp
               </HubChip>
-              <HubChip active={ovFilter === "flow"} onClick={() => setOvFilter("flow")} dot="var(--brand-primary)">
+              <HubChip
+                active={ovFilter === "flow"}
+                onClick={() => setOvFilter("flow")}
+                dot="var(--color-info)"
+                tone="info"
+              >
                 Flow
               </HubChip>
             </HubToolbar>
@@ -828,7 +831,7 @@ function OverviewTypeBadge({ type }: { type: "interno" | "waba" | "flow" }) {
     flow: {
       label: "Flow",
       icon: <Workflow className="size-3.5" />,
-      cls: "border-[var(--input-border-focus)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary-dark)]",
+      cls: "border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-[var(--color-info)]",
     },
   } as const;
   const m = map[type];

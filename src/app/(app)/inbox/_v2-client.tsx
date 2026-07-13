@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
@@ -50,20 +51,113 @@ import {
   type PendingTemplate,
 } from "@/features/inbox-v2/extras";
 import type { ConversationListRow, InboxFilters, InboxTab } from "@/features/inbox-v2/api";
+import { hasInboxServerFilters } from "@/features/inbox-v2/api/types";
 import {
   useBoard,
   useDealDetail,
 } from "@/features/pipeline-v2/hooks";
 import { StagePicker } from "@/features/pipeline-v2/extras/stage-picker";
+import { DealTagsPopover } from "@/features/pipeline-v2/extras/deal-tags-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
+import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import {
-  DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
 } from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
+
+// ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
+// Mostra ate 2 tags mais recentes; excedente vira `+N` com tooltip listando o resto.
+function DealTagsTray({
+  dealId,
+  currentTags,
+}: {
+  dealId: string;
+  currentTags: { id: string; name: string; color: string | null }[];
+}) {
+  const MAX_VISIBLE = 2;
+  const visible = currentTags.slice(0, MAX_VISIBLE);
+  const overflow = currentTags.slice(MAX_VISIBLE);
+
+  function chip(t: { id: string; name: string; color: string | null }) {
+    const color = t.color ?? "#5b6ff5";
+    return (
+      <span
+        key={t.id}
+        className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold whitespace-nowrap"
+        style={{
+          background: `color-mix(in srgb, ${color} 18%, white)`,
+          color: `color-mix(in srgb, ${color} 75%, black)`,
+          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+        }}
+        title={t.name}
+      >
+        {t.name}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {visible.map(chip)}
+      {overflow.length > 0 && (
+        <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
+          <span className="inline-flex h-5 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+            +{overflow.length}
+          </span>
+        </TooltipGlass>
+      )}
+      <DealTagsPopover dealId={dealId} currentTags={currentTags} />
+    </div>
+  );
+}
+
+// ── ContactTagsTray — mesmo padrao de DealTagsTray, so troca o popover ──
+function ContactTagsTray({
+  contactId,
+  currentTags,
+}: {
+  contactId: string;
+  currentTags: { id: string; name: string; color: string | null }[];
+}) {
+  const MAX_VISIBLE = 2;
+  const visible = currentTags.slice(0, MAX_VISIBLE);
+  const overflow = currentTags.slice(MAX_VISIBLE);
+
+  function chip(t: { id: string; name: string; color: string | null }) {
+    const color = t.color ?? "#5b6ff5";
+    return (
+      <span
+        key={t.id}
+        className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold whitespace-nowrap"
+        style={{
+          background: `color-mix(in srgb, ${color} 18%, white)`,
+          color: `color-mix(in srgb, ${color} 75%, black)`,
+          border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
+        }}
+        title={t.name}
+      >
+        {t.name}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {visible.map(chip)}
+      {overflow.length > 0 && (
+        <TooltipGlass label={overflow.map((t) => t.name).join(", ")}>
+          <span className="inline-flex h-5 items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-semibold text-[var(--text-muted)]">
+            +{overflow.length}
+          </span>
+        </TooltipGlass>
+      )}
+      <ContactTagsPopover contactId={contactId} currentTags={currentTags} triggerVariant="icon" />
+    </div>
+  );
+}
 
 const DEFAULT_FILTERS: InboxFilters = {};
 
@@ -325,6 +419,9 @@ export default function InboxV2ClientPage({
   // Com header de página, busca no centro do header e filtro nas actions.
   const searchInHeader = !!pageHeader;
 
+  const useFilteredTabCount =
+    hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
+
   const conversationColumnNode = (
     <ConversationColumn
       conversations={conversationCards}
@@ -341,14 +438,24 @@ export default function InboxV2ClientPage({
       filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
-        count: tabCounts?.[t.id] ?? undefined,
+        count:
+          useFilteredTabCount && t.id === tab
+            ? listData?.total
+            : tabCounts?.[t.id] ?? undefined,
       }))}
       activeTabIndex={TABS.findIndex((t) => t.id === tab)}
       onTabChange={(idx) => {
         const next = TABS[idx]?.id;
         if (next) setTab(next);
       }}
-      resizerSlot={<ColumnResizer value={convWidth} onChange={setConvWidth} />}
+      resizerSlot={
+        <ColumnResizer
+          value={convWidth}
+          onChange={setConvWidth}
+          min={280}
+          max={440}
+        />
+      }
       onLoadMore={() => {
         if (hasNextPage && !isFetchingNextPage) fetchNextPage();
       }}
@@ -400,10 +507,10 @@ export default function InboxV2ClientPage({
         return (
           <TooltipGlass key={t.id} label={t.name} side="top">
             <span
-              className="inline-flex max-w-[100px] shrink-0 items-center truncate rounded-full border px-2 py-px font-display text-[10.5px] font-semibold"
+              className="inline-flex shrink-0 items-center rounded-full border px-2 py-px font-display text-[10.5px] font-semibold whitespace-nowrap"
               style={{ background: bg, color: fg, borderColor: border }}
             >
-              <span className="truncate">{t.name}</span>
+              {t.name}
             </span>
           </TooltipGlass>
         );
@@ -432,10 +539,11 @@ export default function InboxV2ClientPage({
   // aside mostrava "Sem estágio" sem dropdown de troca de fase.
   const dealStage = (
     firstDealDetail as
-      | { stage?: { id?: string; pipeline?: { id?: string } } }
+      | { stage?: { id?: string; pipeline?: { id?: string; name?: string } } }
       | undefined
   )?.stage;
   const firstDealPipelineId = dealStage?.pipeline?.id ?? firstDeal?.pipelineId ?? null;
+  const firstDealPipelineName = dealStage?.pipeline?.name ?? null;
   const { data: boardStages } = useBoard({
     pipelineId: firstDealPipelineId,
     enabled: !!firstDealPipelineId,
@@ -455,13 +563,14 @@ export default function InboxV2ClientPage({
     firstDeal?.stageName ??
     null;
 
-  // Injeta funnelSegments + stageDropdownSlot apenas no primeiro deal.
+  // Injeta funnelSegments + stageDropdownSlot + assigneeSlot apenas no primeiro deal.
   const dealsWithSlots = (contactAsideView?.deals ?? []).map((d, idx) => {
     if (idx !== 0 || !boardStages?.length) return d;
     return {
       ...d,
       stageId: firstDealStageId ?? d.stageId,
       stageName: firstDealStageName ?? d.stageName,
+      pipelineName: firstDealPipelineName ?? d.pipelineName,
       funnelSegments: firstDealFunnelSegments,
       stageDropdownSlot: firstDealId && firstDealStageId ? (
         <StagePicker
@@ -479,6 +588,34 @@ export default function InboxV2ClientPage({
           )}
         </StagePicker>
       ) : undefined,
+      // Responsável da conversa — injetado aqui para aparecer abaixo
+      // das informações do deal, não no header flutuante do aside.
+      assigneeSlot: activeRow ? (
+        <RequirePermission
+          permission="conversation:reassign"
+          fallback={
+            <AssigneePopover
+              conversationId={activeId}
+              currentAssigneeName={activeRow.assignedTo?.name}
+              currentAssigneeId={activeRow.assignedTo?.id ?? null}
+              disabled
+            />
+          }
+        >
+          <AssigneePopover
+            conversationId={activeId}
+            currentAssigneeName={activeRow.assignedTo?.name}
+            currentAssigneeId={activeRow.assignedTo?.id ?? null}
+          />
+        </RequirePermission>
+      ) : undefined,
+      // Tags do negócio — chips existentes + popover para adicionar/remover.
+      dealTagsNode: (
+        <DealTagsTray
+          dealId={d.id}
+          currentTags={(firstDealDetail as { tags?: { id: string; name: string; color: string | null }[] } | undefined)?.tags ?? []}
+        />
+      ),
     };
   });
 
@@ -487,9 +624,9 @@ export default function InboxV2ClientPage({
     : null;
 
   // ── Slots das abas do card da conversa ──────────────────────────
-  // Notas/Timeline sao escopados ao 1o negocio do contato (mesmo
-  // padrao do DealDetailPanel). Sem negocio vinculado, mostra um
-  // placeholder amigavel. Atividades ainda e' placeholder global.
+  // Notas/Timeline/Tarefas sao escopados ao 1o negocio do contato
+  // (mesmo padrao do DealDetailPanel). Sem negocio vinculado, mostra
+  // um placeholder amigavel.
   const dealNotes =
     (firstDealDetail as { notes?: string | null } | undefined)?.notes ?? null;
   const notesSlot = firstDealId ? (
@@ -506,7 +643,13 @@ export default function InboxV2ClientPage({
   ) : (
     <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
   );
-  const activitiesSlot = <DealActivitiesTab />;
+  const activitiesSlot = firstDealId ? (
+    <div className="flex-1 overflow-auto">
+      <ActivitiesPanel dealId={firstDealId} />
+    </div>
+  ) : (
+    <NoDealTab message="Vincule um negocio a este contato para registrar tarefas." />
+  );
   // IB8: aba "Chamadas" no topo do inbox, igual ao DealDetailPanel. Lista
   // os logs de telefonia do contato ativo. Usamos `activeContactId` (nao
   // o dealId) porque o historico de chamadas e' por contato.
@@ -579,47 +722,26 @@ export default function InboxV2ClientPage({
     contactAsideViewWithSlots && activeRow ? (
       <ContactAside
         contact={contactAsideViewWithSlots}
-        headerActionsNode={
-          <>
-            {/* DealCallButton devolvido pro header do chat (ao lado do
-                chip de telefone). Aqui no aside ficam so acoes de
-                atribuicao / colapso pra evitar duplicidade do "Ligar
-                para <numero>" que ja aparece no header do inbox. */}
-            <RequirePermission permission="conversation:reassign">
-              <AssigneePopover
-                conversationId={activeId}
-                currentAssigneeName={activeRow.assignedTo?.name}
-                currentAssigneeId={activeRow.assignedTo?.id ?? null}
-              />
-            </RequirePermission>
-          </>
-        }
+        headerActionsNode={undefined}
         tagsNode={tagsNode}
         contactTagsNode={
-          // IB7: tags do CONTATO (separadas das tags da conversa). Lista
-          // os chips ja aplicados + popover pra adicionar/remover.
-          // `contactDetail.tags` ja vem flatten do backend.
+          // IB7: tags do CONTATO (mesmo padrao das tags de negocio) —
+          // mostra 2 mais recentes + `+N` com tooltip pro resto + popover
+          // pra adicionar/remover.
           activeContactId ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(contactDetail?.tags ?? []).map((t) => (
-                <span
-                  key={t.id}
-                  className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
-                  style={{
-                    background: `${t.color ?? "#5b6ff5"}22`,
-                    color: t.color ?? "var(--brand-primary)",
-                    border: `1px solid ${t.color ?? "#5b6ff5"}44`,
-                  }}
-                >
-                  {t.name}
-                </span>
-              ))}
-              <ContactTagsPopover
-                contactId={activeContactId}
-                currentTags={contactDetail?.tags ?? []}
-                triggerVariant="icon"
-              />
-            </div>
+            <ContactTagsTray
+              contactId={activeContactId}
+              /* Backend (getContactById) devolve tags como TagOnContact[]
+                 = { contactId, tagId, tag: { id, name, color } }[]. Já a
+                 rota de list (getContacts) achata pra { id, name, color }[].
+                 Como ContactTagsTray/Popover esperam o shape achatado,
+                 normalizamos aqui — assim as pills ganham cor e label
+                 corretos (antes ficavam vazias). */
+              currentTags={(contactDetail?.tags ?? []).map((t) =>
+                (t as unknown as { tag?: { id: string; name: string; color: string | null } }).tag
+                  ?? (t as unknown as { id: string; name: string; color: string | null })
+              )}
+            />
           ) : null
         }
         collapsed={asideCollapsed}
@@ -665,7 +787,7 @@ export default function InboxV2ClientPage({
     return (
       <div
         className="v2-screen grid gap-4 p-4"
-        style={{ gridTemplateColumns: "72px minmax(0, 1fr)" }}
+        style={{ gridTemplateColumns: "var(--nav-rail-w, 72px) minmax(0, 1fr)" }}
       >
         {navRailNode}
         <div className="flex min-w-0 flex-col gap-4 overflow-hidden">
@@ -688,17 +810,17 @@ export default function InboxV2ClientPage({
           />
           <div
             className="grid min-h-0 flex-1 gap-4 transition-[grid-template-columns] duration-200"
-            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}` }}
+            style={{ gridTemplateColumns: `${convWidth}px 1fr ${asideCollapsed ? "28px" : `${asideWidth}px`}` }}
           >
             {conversationColumnNode}
             {chatNode}
-            <div className="relative min-h-0 overflow-hidden">
+            <div className="relative min-h-0 overflow-visible">
               <ColumnResizer
                 direction="left"
                 value={asideWidth}
                 onChange={setAsideWidth}
                 min={280}
-                max={560}
+                max={440}
               />
               {asideNode}
             </div>
@@ -715,19 +837,19 @@ export default function InboxV2ClientPage({
       className="v2-screen grid gap-4 p-4"
       style={{
         // Coluna 1 fixa (NavRail), 2 controlada pelo resizer, 3 flexível, 4 redimensionável.
-        gridTemplateColumns: `72px ${convWidth}px 1fr ${asideCollapsed ? "44px" : `${asideWidth}px`}`,
+        gridTemplateColumns: `var(--nav-rail-w, 72px) ${convWidth}px 1fr ${asideCollapsed ? "28px" : `${asideWidth}px`}`,
       }}
     >
       {navRailNode}
       {conversationColumnNode}
       {chatNode}
-      <div className="relative min-h-0 overflow-hidden">
+      <div className="relative min-h-0 overflow-visible">
         <ColumnResizer
           direction="left"
           value={asideWidth}
           onChange={setAsideWidth}
           min={280}
-          max={560}
+          max={440}
         />
         {asideNode}
       </div>
@@ -793,20 +915,43 @@ function InboxStageDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const current = stages.find((s) => s.id === currentStageId);
 
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      // Fecha ao clicar fora — o menu esta portado no body entao precisa
+      // checar tambem se o clique caiu dentro do menu.
+      const menu = document.getElementById("inbox-stage-dropdown-menu");
+      if (menu?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
+  // Calcula posicao do trigger em coord de viewport (position:fixed) para o
+  // portal — evita clip pelo overflow do aside e garante que o menu apareca
+  // sempre por cima, sem "vazar" para fora quando encosta na borda direita.
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const b = triggerRef.current.getBoundingClientRect();
+    const menuWidth = 200;
+    // Se caber a partir de left, mantem alinhamento a esquerda; se vazar
+    // pela direita da viewport, ancora pela direita do trigger.
+    const wouldOverflow = b.left + menuWidth > window.innerWidth - 8;
+    const left = wouldOverflow ? Math.max(8, b.right - menuWidth) : b.left;
+    setPos({ top: b.bottom + 4, left, width: menuWidth });
+  }, [open]);
+
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         disabled={isPending}
         onClick={() => setOpen((v) => !v)}
@@ -825,43 +970,47 @@ function InboxStageDropdown({
         />
       </button>
 
-      {open && (
-        // DD2: opaco real (sem backdrop-blur) — o token `--glass-bg-modal`
-        // tem 0.97 alpha e o blur dava sensacao de transparencia sobre
-        // o card. Cor fixa de superficie de menu cobre light/dark.
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
-          {[...stages]
-            .sort((a, b) => a.position - b.position)
-            .map((s) => {
-              const isActive = s.id === currentStageId;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => { onSelect(s.id); setOpen(false); }}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 font-display text-[12px] font-semibold transition-colors",
-                    isActive
-                      ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
-                  )}
-                >
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: s.color ?? "var(--brand-primary)" }}
-                  />
-                  {s.name}
-                  {isActive && (
-                    <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                      Atual
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-        </div>
-      )}
+      {open && pos && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            id="inbox-stage-dropdown-menu"
+            style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
+            className="z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_12px_32px_rgba(15,20,40,0.18)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+          >
+            {[...stages]
+              .sort((a, b) => a.position - b.position)
+              .map((s) => {
+                const isActive = s.id === currentStageId;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => { onSelect(s.id); setOpen(false); }}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-3 py-2 font-display text-[12px] font-semibold transition-colors",
+                      isActive
+                        ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                        : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                    )}
+                  >
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ background: s.color ?? "var(--brand-primary)" }}
+                    />
+                    {s.name}
+                    {isActive && (
+                      <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                        Atual
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>,
+          document.body,
+        )
+      }
     </div>
   );
 }

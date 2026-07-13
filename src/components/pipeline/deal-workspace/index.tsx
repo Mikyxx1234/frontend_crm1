@@ -308,7 +308,7 @@ export function DealWorkspace({
   const isLoading = dealLoading || (!!contactId && contactLoading);
   const workspaceTabs: ConversationHeaderTab[] = [
     { key: "conversations", label: "Conversa", count: contact?.conversations.length ?? 0 },
-    { key: "activities", label: "Atividades", count: deal?.activities?.length ?? 0 },
+    { key: "activities", label: "Tarefas", count: deal?.activities?.length ?? 0 },
     { key: "notes", label: "Notas", count: deal?.notes?.length ?? 0 },
     { key: "timeline", label: "Timeline" },
   ];

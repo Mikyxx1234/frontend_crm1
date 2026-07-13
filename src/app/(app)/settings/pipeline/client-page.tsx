@@ -1942,7 +1942,7 @@ export default function PipelineSettingsClientPage() {
 
   return (
     <>
-      <div className="v2-screen grid grid-cols-[72px_1fr] grid-rows-1 gap-4 p-4">
+      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] grid-rows-1 gap-4 p-4">
         <NavRailV2 />
 
         <div

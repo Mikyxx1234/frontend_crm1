@@ -104,6 +104,8 @@ export interface InboxFilters {
   channel?: string;
   stageId?: string;
   tagIds?: string[];
+  /** Origens do contato (Contact.source). Pode incluir `__none__` para "Sem origem". */
+  sources?: string[];
   /**
    * Ordenação e janela são aplicadas CLIENT-SIDE no /inbox-v2 (não vão
    * para o backend). `sortBy` aceita "lastInboundAt" (padrão) ou
@@ -112,6 +114,21 @@ export interface InboxFilters {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   windowState?: "open" | "closed";
+}
+
+/** Filtros enviados ao GET /api/conversations (exclui ordenação e janela). */
+export function hasInboxServerFilters(
+  f: InboxFilters | null | undefined,
+): boolean {
+  if (!f) return false;
+  const { sortBy: _sb, sortOrder: _so, windowState: _ws, ...server } = f;
+  return (
+    Boolean(server.ownerId) ||
+    Boolean(server.channel) ||
+    Boolean(server.stageId) ||
+    (server.tagIds?.length ?? 0) > 0 ||
+    (server.sources?.length ?? 0) > 0
+  );
 }
 
 export interface ReactionDto {
@@ -157,6 +174,14 @@ export interface InboxMessageDto {
    * automation-executor: bot grava `senderName === "Automação"`.
    */
   senderName?: string | null;
+  /**
+   * Autoria explícita da mensagem (`human` | `bot` | `system`). Setado
+   * pelos serviços que criam mensagens outbound (automation-executor, AI
+   * handler, whatsapp-flow-response). Preferido sobre a heurística de
+   * `senderName === "Automação"` — permite que o backend grave o NOME
+   * real da automação em `senderName` sem quebrar a detecção do bot na UI.
+   */
+  authorType?: "human" | "bot" | "system";
   /** Status bruto de envio (string livre do backend: sent/delivered/read/failed). */
   sendStatus?: string | null;
   /**

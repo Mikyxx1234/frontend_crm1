@@ -160,30 +160,31 @@ function ConnectedSummary({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
+            <ButtonGlass
+              variant="glass"
+              size="sm"
               onClick={onReconnect}
               disabled={disconnecting}
-              className="inline-flex h-7 items-center gap-1 rounded border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] disabled:opacity-50"
               title="Trocar de conta ou re-autenticar"
             >
-              <IconPencil size={12} />
+              <IconPencil size={13} />
               Reconectar
-            </button>
-            <button
-              type="button"
+            </ButtonGlass>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
               onClick={onDisconnect}
               disabled={disconnecting}
-              className="inline-flex h-7 items-center gap-1 rounded border border-[var(--color-destructive)]/30 bg-[var(--color-danger)]/10 px-2 text-[11px] font-medium text-[var(--color-destructive)] transition hover:bg-[var(--color-danger)]/20 disabled:opacity-50"
+              className="!border-[var(--color-danger)]/30 !bg-[var(--color-danger)]/10 !text-[var(--color-danger)] hover:!bg-[var(--color-danger)]/20"
               title="Apaga o ramal salvo. Você poderá reconectar depois com outra conta."
             >
               {disconnecting ? (
-                <IconLoader2 size={12} className="animate-spin" />
+                <IconLoader2 size={13} className="animate-spin" />
               ) : (
-                <IconLogout size={12} />
+                <IconLogout size={13} />
               )}
               Desconectar
-            </button>
+            </ButtonGlass>
           </div>
         </div>
       </div>

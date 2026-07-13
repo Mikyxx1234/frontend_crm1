@@ -13,16 +13,18 @@
 
 @theme {
   /* ── Background do mesh (DealDetailPanel fullscreen + v2 layout) ── */
-  --bg-base:                #c5d8ef;
-  --bg-mesh-1:              #8faedb;
-  --bg-mesh-2:              #d8b3e6;
-  --bg-mesh:                linear-gradient(135deg, #c5d8ef 0%, #8faedb 40%, #d8b3e6 70%, #c5d8ef 100%);
+  --bg-base:                #dde8f5;
+  --bg-mesh-1:              #dde8f5;
+  --bg-mesh-2:              #dde8f5;
+  --bg-mesh:                #dde8f5;
 
   /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
+  /* Opacidade aumentada para chips/badges terem contraste sobre fundo
+     quasi-branco — mínimo 18% para ser legível em superfície clara */
   --color-online:           #10b981;
-  --color-enterprise-bg:    rgba(91, 111, 245, 0.15);
+  --color-enterprise-bg:    rgba(91, 111, 245, 0.12);
   --color-lead:             #f59e0b;
-  --color-lead-bg:          rgba(245, 158, 11, 0.15);
+  --color-lead-bg:          rgba(245, 158, 11, 0.14);
   --color-success-bg:       rgba(16, 185, 129, 0.12);
 
   /* ── Marca: primária / secundária ──────────────────────────────
@@ -53,12 +55,14 @@
   --color-warn:             #d97706;
   --color-warn-text:        #92600a;  /* texto sobre fundo âmbar claro (badge warning) */
 
-  /* session alert (coral) */
-  --color-session-border:   #F5C2B0;
-  --color-session-bg:       #FDE8E2;
-  --color-session-hover-bg: #FDF5F2;
-  --color-session-text:     #6B2118;
-  --color-session-subtext:  #8A4034;
+  /* session alert (vermelho — indica sessão expirada / atenção)
+     Intensificado: fundo red-200 (antes red-100 quase branco) + borda
+     red-400 pra o alerta ficar visivelmente vermelho, nao lavado. */
+  --color-session-border:   #f87171;   /* red-400 */
+  --color-session-bg:       #fecaca;   /* red-200 */
+  --color-session-hover-bg: #fca5a5;   /* red-300 */
+  --color-session-text:     #991b1b;   /* red-800 */
+  --color-session-subtext:  #b91c1c;   /* red-700 */
 
   /* WhatsApp message status ticks */
   --wa-tick-read:    #7fd4ff;   /* ticks azuis = lido */
@@ -97,18 +101,32 @@
   --col-nego:      #f59e0b;    /* amber */
   --col-fecha:     #10b981;    /* emerald — fechamento/sucesso */
 
-  /* ── Glass — superfícies, bordas e sombras ────────────────────── */
-  --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de negócio/conversa — legíveis */
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);   /* inputs, popovers */
-  --glass-bg-panel:         rgba(255, 255, 255, 0.32);   /* nav-rail, colunas — translúcido real */
-  --glass-bg-strong:        rgba(255, 255, 255, 0.32);   /* kanban columns — mesmo nível do panel */
-  --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais/dialogs — opaco */
-  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);   /* hovers sutis — realce leve */
-  --glass-border:           rgba(140, 165, 210, 0.70);   /* borda padrão (amp) */
-  --glass-border-subtle:    rgba(140, 165, 210, 0.40);   /* borda sutil (amp) */
-  --glass-shadow-sm:        0 2px 10px rgba(91, 111, 245, 0.14);
-  --glass-shadow:           0 12px 40px rgba(91, 111, 245, 0.22), 0 4px 12px rgba(91, 111, 245, 0.10);
-  --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+  /* ── NavRail (dedicada, opaca, alto contraste) ────────────────────
+     Trilho lateral escuro que devolve identidade visual perdida
+     quando a rail virou glass sobre mesh lavanda. Ficando fora da
+     família --glass-* pra permitir escurecer sem afetar cards. */
+  --nav-bg:               rgba(30, 41, 99, 0.97);        /* indigo-900 quase sólido — tom do original */
+  --nav-border:           rgba(255, 255, 255, 0.06);
+  --nav-text-muted:       rgba(199, 210, 254, 0.65);    /* indigo-200 — ícone inativo */
+  --nav-text-hover-bg:    rgba(255, 255, 255, 0.10);    /* hover leve */
+  --nav-text-hover:       #ffffff;
+
+  /* ── Warning text (referenciado por chip/badge/status-pill/deal-card,
+     estava ausente → texto âmbar não resolvia) ──────────────────── */
+  --color-warning-text:    #b45309;
+
+  /* ── Glass — superfícies semitransparentes sobre fundo azul-lavanda ── */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.60);
+  --glass-bg-panel:         rgba(255, 255, 255, 0.40);
+  --glass-bg-strong:        rgba(255, 255, 255, 0.50);
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.18);
+  --glass-border:           rgba(255, 255, 255, 0.55);
+  --glass-border-subtle:    rgba(255, 255, 255, 0.35);
+  --glass-shadow-sm:        0 4px 16px rgba(100, 130, 180, 0.12);
+  --glass-shadow:           0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:        0 16px 48px rgba(100, 130, 180, 0.24);
   --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
   --shadow-success:         0 4px 14px rgba(16, 185, 129, 0.35);
   --shadow-danger:          0 4px 14px rgba(239, 68, 68, 0.35);
@@ -161,11 +179,11 @@
    Declarar aqui DE NOVO garante a presença literal no documento.
    ────────────────────────────────────────────────────────────────── */
 :root {
-  /* Background mesh */
-  --bg-base: #c5d8ef;
-  --bg-mesh-1: #8faedb;
-  --bg-mesh-2: #d8b3e6;
-  --bg-mesh: linear-gradient(135deg, #c5d8ef 0%, #8faedb 40%, #d8b3e6 70%, #c5d8ef 100%);
+  /* Background — lavanda sólido (sem gradiente) */
+  --bg-base: #dde8f5;
+  --bg-mesh-1: #dde8f5;
+  --bg-mesh-2: #dde8f5;
+  --bg-mesh: #dde8f5;
 
   /* Marca — duplicado em :root para garantir que inline styles
      resolvam mesmo quando o resolver do Tailwind v4 falha. */
@@ -200,18 +218,37 @@
   --text-secondary:      #374151;
   --text-muted:          #4b5563;
 
-  /* Glass — superfícies, bordas e sombras */
-  --glass-bg-base:          rgba(255, 255, 255, 0.82);
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);
-  --glass-bg-panel:         rgba(255, 255, 255, 0.32);
-  --glass-bg-strong:        rgba(255, 255, 255, 0.32);
-  --glass-bg-modal:         rgba(255, 255, 255, 0.97);
-  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);
-  --glass-border:           rgba(140, 165, 210, 0.70);
-  --glass-border-subtle:    rgba(140, 165, 210, 0.40);
-  --glass-shadow-sm:        0 2px 10px rgba(91, 111, 245, 0.14);
-  --glass-shadow:           0 12px 40px rgba(91, 111, 245, 0.22), 0 4px 12px rgba(91, 111, 245, 0.10);
-  --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+  /* Warning text (âmbar escuro sobre lead-bg) — token faltante */
+  --color-warning-text:  #b45309;
+
+  /* Colunas do Kanban — espelho do @theme para inline styles */
+  --col-novo:      #94a3b8;
+  --col-quali:     #5b6ff5;
+  --col-proposta:  #a78bfa;
+  --col-nego:      #f59e0b;
+  --col-fecha:     #10b981;
+
+  /* NavRail dedicada (indigo-900 — tom do visual original) */
+  --nav-bg:               rgba(30, 41, 99, 0.97);
+  --nav-border:           rgba(255, 255, 255, 0.06);
+  --nav-text-muted:       rgba(199, 210, 254, 0.65);
+  --nav-text-hover-bg:    rgba(255, 255, 255, 0.10);
+  --nav-text-hover:       #ffffff;
+
+  /* Glass — superfícies semitransparentes sobre fundo azul-lavanda
+     (o efeito visual original vinha da transparência, não da opacidade).
+     Valores calibrados para reproduzir o look da versão pré-DS-v2. */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de conversa/deal */
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.60);   /* inputs, popovers */
+  --glass-bg-panel:         rgba(255, 255, 255, 0.40);   /* colunas kanban */
+  --glass-bg-strong:        rgba(255, 255, 255, 0.50);   /* header de coluna */
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais */
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.18);   /* hovers sutis */
+  --glass-border:           rgba(255, 255, 255, 0.55);   /* borda principal */
+  --glass-border-subtle:    rgba(255, 255, 255, 0.35);   /* borda sutil */
+  --glass-shadow-sm:        0 4px 16px rgba(100, 130, 180, 0.12);
+  --glass-shadow:           0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:        0 16px 48px rgba(100, 130, 180, 0.24);
   --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
   --shadow-success:         0 4px 14px rgba(16, 185, 129, 0.35);
   --shadow-danger:          0 4px 14px rgba(239, 68, 68, 0.35);
@@ -292,8 +329,20 @@
    escala diferente (ex.: 0.9 para mais conservador, 0.85 para mais
    denso). Nao mexa em px/font-size dos componentes individuais.
    ────────────────────────────────────────────────────────────────── */
+/* ── Largura da NavRail v2 ──────────────────────────────────────────
+   Publicada em `<html>` pelo `NavRailV2` (via effect em `dataset`).
+   Todas as page shells v2 usam `grid-cols-[var(--nav-rail-w,72px)_...]`
+   pra que a coluna do trilho expanda automaticamente quando o usuário
+   clica o botão `»`, sem quebrar o layout do grid. */
+:root {
+  --nav-rail-w: 72px;
+}
+html[data-nav-expanded="true"] {
+  --nav-rail-w: 220px;
+}
+
 .v2-root {
-  --v2-scale: 0.88;
+  --v2-scale: 0.93;
   /* Recíproco da escala — usado para NEUTRALIZAR o zoom em subtrees que
      precisam de coordenadas reais da viewport (ex.: canvas do React Flow,
      que não compensa CSS `zoom` ao mapear cursor→fluxo). calc() num custom

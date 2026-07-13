@@ -59,7 +59,7 @@ export function DealTabs({
             value="activities"
             className="gap-1.5 rounded-lg px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:text-[var(--text-primary)] data-[state=active]:shadow-sm"
           >
-            <Calendar className="size-3.5" /> Atividades
+            <Calendar className="size-3.5" /> Tarefas
             {activitiesCount > 0 && (
               <Badge variant="secondary" className="ml-0.5 h-4 min-w-[16px] px-1 text-[9px]">
                 {activitiesCount}
@@ -322,15 +322,15 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
               <Input type="datetime-local" value={scheduled} onChange={(e) => setScheduled(e.target.value)} className="h-9 text-sm" />
             </div>
           </div>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da atividade…" className="h-9 text-sm" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da tarefa…" className="h-9 text-sm" />
           <Textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (opcional)" className="text-sm" />
           <Button type="button" size="sm" className="rounded-xl px-4" disabled={!title.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? "Salvando…" : "Adicionar atividade"}
+            {mutation.isPending ? "Salvando…" : "Adicionar tarefa"}
           </Button>
         </div>
 
         {activities.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma atividade registrada.</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma tarefa registrada.</p>
         ) : (
           <div className="relative space-y-0">
             {activities.map((a, idx) => (
@@ -357,13 +357,13 @@ export function ActivitiesPanel({ activities, dealId, onCreated }: ActivitiesPan
                     ) : (
                       <Circle className="size-3.5 text-[var(--glass-border)]" />
                     )}
-                    <TooltipHost label="Excluir atividade" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
+                    <TooltipHost label="Excluir tarefa" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
                       <button
                         type="button"
                         onClick={() => deleteMut.mutate(a.id)}
                         disabled={deleteMut.isPending}
                         className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
-                        aria-label="Excluir atividade"
+                        aria-label="Excluir tarefa"
                       >
                         <Trash2 className="size-3" />
                       </button>

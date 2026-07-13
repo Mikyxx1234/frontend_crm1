@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { DATE_PRESET_LABELS, detectPreset } from "./date-presets";
 import type { AdvancedDealFilters, FilterOptionsResponse } from "./types";
+import { SOURCE_NONE } from "./types";
 
 type Props = {
   filters: AdvancedDealFilters;
@@ -92,9 +93,14 @@ export function FilterChips({ filters, options, onPatch, className }: Props) {
     });
   }
 
-  if (filters.sources && filters.sources.length > 0) {
+  if (filters.withoutSource) {
     chips.push({
-      label: `Origem: ${filters.sources.join(", ")}`,
+      label: "Sem origem",
+      onRemove: () => onPatch({ withoutSource: undefined }),
+    });
+  } else if (filters.sources && filters.sources.length > 0) {
+    chips.push({
+      label: `Origem: ${filters.sources.map((s) => (s === SOURCE_NONE ? "Sem origem" : s)).join(", ")}`,
       onRemove: () => onPatch({ sources: undefined }),
     });
   }

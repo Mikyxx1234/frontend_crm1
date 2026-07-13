@@ -12,6 +12,9 @@ export interface ListCallsFilters {
   direction?: CallDirection;
   contactId?: string;
   status?: CallStatus;
+  search?: string;
+  dateFrom?: string; // YYYY-MM-DD
+  dateTo?: string;   // YYYY-MM-DD
   page?: number;
   perPage?: number;
 }

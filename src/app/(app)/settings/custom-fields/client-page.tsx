@@ -16,7 +16,7 @@ export default function CustomFieldsV2ClientPage() {
     <SettingsV2Shell
       back={SETTINGS_HUB_BACK}
       title="Campos personalizados"
-      description="Crie campos extras para contatos, empresas, negócios e produtos"
+      description="Configure os campos exibidos nos registros. Arraste pelo indicador para definir a ordem de exibição no painel lateral da Inbox."
       icon={<IconForms size={22} />}
     >
       <OldCustomFieldsPage />

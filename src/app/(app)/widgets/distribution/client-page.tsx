@@ -20,6 +20,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
+import { PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { cn } from "@/lib/utils";
@@ -135,7 +136,7 @@ export default function DistributionClientPage({
   if (roleReady && !isManagerUp) return <RestrictedScreen />;
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       {navRail ?? <NavRailV2 />}
 
       <main className="flex min-w-0 flex-col gap-4 overflow-y-auto pr-1">
@@ -145,11 +146,9 @@ export default function DistributionClientPage({
           description="Distribua leads entre consultores com regras de disponibilidade, fila e equilíbrio"
           actions={
             smartInstalled ? (
-              <button
-                type="button"
+              <PagePrimaryButton
                 onClick={handleTest}
                 disabled={simulateMut.isPending}
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {simulateMut.isPending ? (
                   <IconLoader2 size={16} className="animate-spin" />
@@ -157,7 +156,7 @@ export default function DistributionClientPage({
                   <IconPlayerPlay size={16} />
                 )}
                 Testar distribuição
-              </button>
+              </PagePrimaryButton>
             ) : undefined
           }
         />

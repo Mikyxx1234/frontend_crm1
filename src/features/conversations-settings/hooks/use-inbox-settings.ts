@@ -1,0 +1,79 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiUrl } from "@/lib/api";
+
+export interface InboxSettings {
+  agentSignatureEnabled: boolean;
+  agentSignatureEditable: boolean;
+  requireSignature: boolean;
+  keepAgentOnEnd: boolean;
+  keepDepartmentOnEnd: boolean;
+  audioTranscription: "none" | "all" | "on_demand";
+  transcriptionLanguage: "pt-BR" | "en-US" | "es-ES";
+}
+
+const DEFAULTS: InboxSettings = {
+  agentSignatureEnabled: true,
+  agentSignatureEditable: true,
+  requireSignature: false,
+  keepAgentOnEnd: false,
+  keepDepartmentOnEnd: false,
+  audioTranscription: "none",
+  transcriptionLanguage: "pt-BR",
+};
+
+const QUERY_KEY = ["org-settings", "inbox"];
+
+async function fetchInboxSettings(): Promise<InboxSettings> {
+  const res = await fetch(apiUrl("/api/settings/org?prefix=conversation."), {
+    credentials: "include",
+  });
+  if (!res.ok) return DEFAULTS;
+  const data: Record<string, string> = await res.json();
+
+  return {
+    agentSignatureEnabled: data["conversation.agentSignatureEnabled"] !== "false",
+    agentSignatureEditable: data["conversation.agentSignatureEditable"] !== "false",
+    requireSignature: data["conversation.requireSignature"] === "true",
+    keepAgentOnEnd: data["conversation.keepAgentOnEnd"] === "true",
+    keepDepartmentOnEnd: data["conversation.keepDepartmentOnEnd"] === "true",
+    audioTranscription: (data["conversation.audioTranscription"] as InboxSettings["audioTranscription"]) ?? "none",
+    transcriptionLanguage: (data["conversation.transcriptionLanguage"] as InboxSettings["transcriptionLanguage"]) ?? "pt-BR",
+  };
+}
+
+export function useInboxSettings() {
+  const { data, ...rest } = useQuery<InboxSettings>({
+    queryKey: QUERY_KEY,
+    queryFn: fetchInboxSettings,
+    staleTime: 5 * 60_000,
+  });
+
+  return {
+    settings: data ?? DEFAULTS,
+    ...rest,
+  };
+}
+
+export function useSaveInboxSetting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ key, value }: { key: keyof InboxSettings; value: string | boolean }) => {
+      const fullKey = `conversation.${key}`;
+      const res = await fetch(apiUrl("/api/settings/org"), {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: fullKey, value: String(value) }),
+      });
+      if (!res.ok) throw new Error("Falha ao salvar configuração");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEY });
+      // Also invalidate legacy key used by other components
+      qc.invalidateQueries({ queryKey: ["org-settings", "conversation"] });
+    },
+  });
+}

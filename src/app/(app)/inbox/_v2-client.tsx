@@ -5,9 +5,16 @@ import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
-import { IconChevronDown } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconCircleCheck,
+  IconRotateClockwise,
+  IconSquareCheck,
+  IconX,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { ButtonGlass } from "@/components/crm/button-glass";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
@@ -29,6 +36,7 @@ import {
   toMessageBubble,
 } from "@/features/inbox-v2/adapters";
 import {
+  useBulkConversationAction,
   useConversationFeatures,
   useConversations,
   useContactSidebar,
@@ -227,6 +235,33 @@ export default function InboxV2ClientPage({
   const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
 
+  // ── Seleção múltipla + ações em massa (encerrar/reabrir) ────────
+  // Modo explícito (como o legado): entrar em "seleção" desativa o clique
+  // de abrir conversa nos cards (só o checkbox alterna), evitando abrir a
+  // conversa errada por engano ao marcar várias.
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelectOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Trocar de aba muda o conjunto de conversas visíveis — limpa a seleção
+  // pra não arrastar ids que já não aparecem na lista atual.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [tab]);
+
   // Debounce do search (300ms). Evita refetch a cada tecla.
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
@@ -318,7 +353,27 @@ export default function InboxV2ClientPage({
   // ── Mutations ───────────────────────────────────────────────────
   const sendMessage = useSendMessage(activeId);
   const markRead = useMarkConversationRead();
+  const bulkAction = useBulkConversationAction();
   const { features: convFeatures } = useConversationFeatures();
+
+  function handleBulkAction(action: "resolve" | "reopen") {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    const count = ids.length;
+    bulkAction.mutate(
+      { ids, action },
+      {
+        onSuccess: () => {
+          toast.success(
+            action === "resolve"
+              ? `${count} conversa${count > 1 ? "s" : ""} encerrada${count > 1 ? "s" : ""}`
+              : `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
+          );
+          exitSelectionMode();
+        },
+      },
+    );
+  }
 
   // Seletor de canal: lista de WhatsApps CONNECTED da org + estado
   // persistido por conversa. Quando a org tem 1 só canal, o widget não
@@ -422,6 +477,60 @@ export default function InboxV2ClientPage({
   const useFilteredTabCount =
     hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
 
+  // Botão que entra/sai do modo de seleção — vive ao lado do filtro, na
+  // mesma linha do dropdown de status.
+  const selectionToggleNode = (
+    <TooltipGlass label={selectionMode ? "Sair da seleção" : "Selecionar conversas"} side="bottom">
+      <button
+        type="button"
+        onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
+        aria-pressed={selectionMode}
+        className={cn(
+          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
+          selectionMode
+            ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
+        )}
+      >
+        {selectionMode ? <IconX size={17} stroke={2} /> : <IconSquareCheck size={17} stroke={2} />}
+      </button>
+    </TooltipGlass>
+  );
+
+  // Ações da barra de seleção — Encerrar/Reabrir (protegidas por permissão,
+  // mesma regra do menu de ações de uma conversa) + Cancelar (sempre visível).
+  const bulkActionsNode = (
+    <div className="flex shrink-0 items-center gap-1.5">
+      {selectedIds.size > 0 && (
+        <RequirePermission permission="conversation:close">
+          <ButtonGlass
+            type="button"
+            variant="glass"
+            size="sm"
+            disabled={bulkAction.isPending}
+            onClick={() => handleBulkAction("resolve")}
+          >
+            <IconCircleCheck size={14} />
+            <span className="ml-1.5">Encerrar</span>
+          </ButtonGlass>
+          <ButtonGlass
+            type="button"
+            variant="glass"
+            size="sm"
+            disabled={bulkAction.isPending}
+            onClick={() => handleBulkAction("reopen")}
+          >
+            <IconRotateClockwise size={14} />
+            <span className="ml-1.5">Reabrir</span>
+          </ButtonGlass>
+        </RequirePermission>
+      )}
+      <ButtonGlass type="button" variant="glass" size="sm" onClick={exitSelectionMode}>
+        Cancelar
+      </ButtonGlass>
+    </div>
+  );
+
   const conversationColumnNode = (
     <ConversationColumn
       conversations={conversationCards}
@@ -435,7 +544,17 @@ export default function InboxV2ClientPage({
       // busca sobe pro topo mas o filtro **fica** aqui — antes ele migrava
       // pro canto direito superior junto da busca, distante do controle
       // mais relacionado a ele (tabs de status).
-      filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
+      filterSlot={
+        <>
+          {selectionToggleNode}
+          <InboxFilterButton value={filters} onChange={setFilters} />
+        </>
+      }
+      selectionMode={selectionMode}
+      selectedIds={selectedIds}
+      onToggleSelectOne={toggleSelectOne}
+      onSelectAllChange={(ids) => setSelectedIds(new Set(ids))}
+      bulkActionsSlot={bulkActionsNode}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
         count:

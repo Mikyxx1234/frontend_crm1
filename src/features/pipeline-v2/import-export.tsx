@@ -52,6 +52,7 @@ import {
 } from "@/lib/csv-parse";
 import {
   type ImportEntity,
+  type ImportMode,
   type ImportModel,
   deleteImportModel,
   getImportModels,
@@ -123,6 +124,7 @@ const SYSTEM_FIELDS: Record<ImportEntity, SystemField[]> = {
     { key: "avatar_url", label: "URL do avatar" },
   ],
   deals: [
+    { key: "external_id", label: "ID de origem (external_id) — chave de atualização" },
     { key: "deal_number", label: "Número do negócio (chave de atualização)" },
     { key: "title", label: "Título" },
     { key: "value", label: "Valor" },
@@ -164,6 +166,11 @@ const ALIAS_MAP: Record<string, string> = {
   email_do_responsavel: "assigned_to_email",
   email_responsavel: "assigned_to_email",
   // deals
+  external_id: "external_id",
+  externalid: "external_id",
+  id_de_origem: "external_id",
+  id_origem: "external_id",
+  id_externo: "external_id",
   numero_do_negocio: "deal_number",
   numero_negocio: "deal_number",
   numero: "deal_number",
@@ -415,6 +422,9 @@ export function ImportPanel({
   const [columnMapping, setColumnMapping] = React.useState<Record<string, string>>({});
   const [tag, setTag] = React.useState(`importar_${todayYmd()}`);
   const [updateExisting, setUpdateExisting] = React.useState(true);
+  // Modo de importação (deals): "create" = só leads novos, "update" = só
+  // atualizar existentes (casa por ID de origem/external_id). Default "create".
+  const [importMode, setImportMode] = React.useState<ImportMode>("create");
   const [modelName, setModelName] = React.useState("");
   const [selectedModel, setSelectedModel] = React.useState("");
   const [savedModels, setSavedModels] = React.useState<ImportModel[]>([]);
@@ -430,9 +440,20 @@ export function ImportPanel({
   // linha já trouxer `pipeline_name`, o valor do CSV prevalece.
   const [targetPipelineName, setTargetPipelineName] = React.useState<string>("");
 
-  // Lista de pipelines da org para o dropdown opcional. Só faz fetch quando
-  // o painel é renderizado em modo "deals" — para "contacts" não há custo.
-  const { data: pipelines = [] } = useQuery<{ id: string; name: string }[]>({
+  // Etapa alvo opcional (apenas para entity="deals"). Quando definida, injeta
+  // `stage_id` em TODAS as linhas — necessário para arquivos que não trazem
+  // coluna de etapa (ex.: relatório de matriculados só com Título/CPF/RGM). O
+  // backend exige `stage_id` OU o par `pipeline_name`+`stage_name`; sem isso a
+  // importação é rejeitada inteira. Se a linha já trouxer stage_id/stage_name,
+  // o valor do CSV prevalece (extraValues é só fallback).
+  const [targetStageId, setTargetStageId] = React.useState<string>("");
+
+  type PipelineLite = { id: string; name: string; stages: { id: string; name: string }[] };
+
+  // Lista de pipelines da org (com etapas) para os dropdowns opcionais. Só faz
+  // fetch quando o painel é renderizado em modo "deals" — para "contacts" não
+  // há custo.
+  const { data: pipelines = [] } = useQuery<PipelineLite[]>({
     queryKey: ["pipelines"],
     enabled: entity === "deals",
     queryFn: async () => {
@@ -442,12 +463,37 @@ export function ImportPanel({
       if (!Array.isArray(data)) return [];
       return data
         .filter(
-          (p): p is { id: string; name: string } =>
+          (p): p is { id: string; name: string; stages?: unknown } =>
             !!p && typeof (p as { id?: string }).id === "string",
         )
-        .map((p) => ({ id: p.id, name: p.name }));
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          stages: Array.isArray(p.stages)
+            ? (p.stages as unknown[])
+                .filter(
+                  (s): s is { id: string; name: string } =>
+                    !!s && typeof (s as { id?: string }).id === "string",
+                )
+                .map((s) => ({ id: s.id, name: s.name }))
+            : [],
+        }));
     },
   });
+
+  // Etapas do pipeline alvo selecionado (por nome). Alimenta o dropdown de
+  // "Etapa alvo".
+  const targetPipelineStages = React.useMemo(() => {
+    if (!targetPipelineName.trim()) return [];
+    const p = pipelines.find((x) => x.name === targetPipelineName);
+    return p?.stages ?? [];
+  }, [pipelines, targetPipelineName]);
+
+  // Trocar de pipeline invalida a etapa alvo escolhida (evita stage_id órfão
+  // de outro pipeline).
+  React.useEffect(() => {
+    setTargetStageId("");
+  }, [targetPipelineName]);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -513,6 +559,8 @@ export function ImportPanel({
     setResult(null);
     setSelectedModel("");
     setModelName("");
+    setTargetPipelineName("");
+    setTargetStageId("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
@@ -600,6 +648,7 @@ export function ImportPanel({
     setDelimiter(m.delimiter);
     setSkipHeader(m.skipHeader);
     setUpdateExisting(m.updateExisting);
+    if (m.importMode) setImportMode(m.importMode);
     toast.success(`Modelo "${m.name}" aplicado.`);
   };
 
@@ -616,6 +665,7 @@ export function ImportPanel({
       delimiter,
       skipHeader,
       updateExisting,
+      ...(entity === "deals" ? { importMode } : {}),
     });
     setSavedModels(getImportModels(entity));
     setModelName("");
@@ -638,17 +688,24 @@ export function ImportPanel({
 
     setBusy(true);
     try {
-      // Pipeline alvo (entity=deals): fallback para linhas sem `pipeline_name`.
-      const extraValues: Record<string, string> =
-        entity === "deals" && targetPipelineName.trim()
-          ? { pipeline_name: targetPipelineName.trim() }
-          : {};
+      // Pipeline/Etapa alvo (entity=deals): fallback para linhas sem
+      // `pipeline_name` / sem estágio. `stage_id` injetado satisfaz a validação
+      // do backend (que exige stage_id OU pipeline_name+stage_name) e resolve a
+      // etapa direto por id.
+      const extraValues: Record<string, string> = {};
+      if (entity === "deals") {
+        if (targetPipelineName.trim()) extraValues.pipeline_name = targetPipelineName.trim();
+        if (targetStageId.trim()) extraValues.stage_id = targetStageId.trim();
+      }
       const remapped = buildRemappedCsv(headers, allRows, columnMapping, extraValues);
       const fd = new FormData();
       fd.append("file", new Blob([remapped], { type: "text/csv;charset=utf-8" }), "import.csv");
       fd.append("delimiter", ",");
       if (tag.trim()) fd.append("tag", tag.trim());
       fd.append("updateExisting", String(updateExisting));
+      // Deals: modo explícito (novos vs atualizar). O backend usa importMode e,
+      // na ausência dele, cai no updateExisting (compat).
+      if (entity === "deals") fd.append("importMode", importMode);
 
       const endpoint = entity === "contacts" ? "/api/contacts/import" : "/api/deals/import";
       const res = await fetch(apiUrl(endpoint), { method: "POST", body: fd });
@@ -717,6 +774,7 @@ export function ImportPanel({
     customFields,
     tag,
     updateExisting,
+    importMode,
     modelName,
     selectedModel,
     savedModels,
@@ -731,6 +789,7 @@ export function ImportPanel({
     onColumnChange: (h: string, v: string) => setColumnMapping((m) => ({ ...m, [h]: v })),
     onTagChange: setTag,
     onUpdateExistingChange: setUpdateExisting,
+    onImportModeChange: setImportMode,
     onModelNameChange: setModelName,
     onApplyModel: applyModel,
     onSaveModel: persistModel,
@@ -773,6 +832,30 @@ export function ImportPanel({
           <p className="font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
             Use quando o arquivo só trouxer a etapa (ex.: <span className="font-medium">Status do lead</span> do Kommo) sem indicar o pipeline. Se a linha já tiver coluna <span className="font-medium">Pipeline</span> preenchida, ela prevalece.
           </p>
+
+          {/* Etapa alvo: aparece após escolher o pipeline. Injeta `stage_id`
+              em todas as linhas — necessário para arquivos SEM coluna de etapa
+              (ex.: relatório de matriculados só com Título/CPF/RGM). Se a linha
+              já trouxer stage_id / stage_name, o valor da linha prevalece. */}
+          {targetPipelineName.trim() && (
+            <div className="mt-2 flex flex-col gap-2 border-t border-[var(--brand-primary)]/15 pt-3">
+              <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                Etapa alvo (opcional)
+              </label>
+              <DropdownGlass
+                options={[
+                  { value: "", label: "— Usar etapa do CSV (coluna Etapa) —" },
+                  ...targetPipelineStages.map((s) => ({ value: s.id, label: s.name })),
+                ]}
+                value={targetStageId}
+                onValueChange={setTargetStageId}
+                triggerClassName="h-10 w-full text-[13px]"
+              />
+              <p className="font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
+                Defina a etapa quando o arquivo <span className="font-medium">não</span> tiver coluna de etapa (ex.: relatório de matriculados). Todos os negócios importados entram nesta etapa.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -782,11 +865,11 @@ export function ImportPanel({
         {...sharedFlowProps}
       />
 
-      {/* Progresso da importação assíncrona (ETL worker) — contatos. */}
+      {/* Progresso da importação assíncrona (ETL worker) — contatos e negócios. */}
       <BulkOperationProgressDialog
         operationId={etlOperationId}
         optimisticTotal={etlTotal}
-        title="Importação de contatos"
+        title={entity === "deals" ? "Importação de negócios" : "Importação de contatos"}
         onOpenChange={(open) => {
           if (!open) {
             setEtlOperationId(null);
@@ -816,6 +899,7 @@ interface ImportFlowProps {
   customFields: CustomFieldLite[];
   tag: string;
   updateExisting: boolean;
+  importMode: ImportMode;
   modelName: string;
   selectedModel: string;
   savedModels: ImportModel[];
@@ -831,6 +915,7 @@ interface ImportFlowProps {
   onColumnChange: (header: string, value: string) => void;
   onTagChange: (v: string) => void;
   onUpdateExistingChange: (v: boolean) => void;
+  onImportModeChange: (v: ImportMode) => void;
   onModelNameChange: (v: string) => void;
   onApplyModel: (id: string) => void;
   onSaveModel: () => void;
@@ -972,6 +1057,7 @@ function MappingStep({
   customFields,
   tag,
   updateExisting,
+  importMode,
   modelName,
   selectedModel,
   savedModels,
@@ -982,6 +1068,7 @@ function MappingStep({
   onColumnChange,
   onTagChange,
   onUpdateExistingChange,
+  onImportModeChange,
   onModelNameChange,
   onApplyModel,
   onSaveModel,
@@ -1202,23 +1289,83 @@ function MappingStep({
         </div>
       </div>
 
-      {/* ── Toggle: atualizar dados existentes ── */}
-      <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 transition-colors hover:bg-[var(--glass-bg-strong)]">
-        <CheckboxGlass
-          checked={updateExisting}
-          onChange={onUpdateExistingChange}
-          aria-label="Atualizar dados existentes"
-        />
-        <span className="font-body text-[14px] leading-relaxed text-[var(--text-primary)]">
-          Atualizar dados existentes{" "}
-          <span className="text-[var(--text-muted)]">
-            (match por{" "}
-            <code className="rounded bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--text-primary)]">id</code>
-            {" "}ou{" "}
-            <code className="rounded bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--text-primary)]">external_id</code>)
+      {/* ── Modo de importação (deals) / atualizar existentes (contatos) ── */}
+      {entity === "deals" ? (
+        <div className="flex flex-col gap-2">
+          <label className="font-display text-[12px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+            Modo de importação
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              {
+                value: "create" as ImportMode,
+                title: "Leads novos",
+                desc: "Cria novos negócios. Se o lead já existir (mesmo ID de origem), é ignorado — sem duplicar.",
+              },
+              {
+                value: "update" as ImportMode,
+                title: "Atualizar existentes",
+                desc: "Casa por ID de origem (external_id) e atualiza os dados. Linhas sem correspondência são ignoradas.",
+              },
+            ].map((opt) => {
+              const active = importMode === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onImportModeChange(opt.value)}
+                  className={cn(
+                    "flex flex-col items-start gap-1 rounded-[var(--radius-md)] border px-4 py-3 text-left transition-colors",
+                    active
+                      ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/[0.06]"
+                      : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] hover:bg-[var(--glass-bg-strong)]",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-full border",
+                        active
+                          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]"
+                          : "border-[var(--glass-border)]",
+                      )}
+                    >
+                      {active && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </span>
+                    <span className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+                      {opt.title}
+                    </span>
+                  </span>
+                  <span className="font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
+                    {opt.desc}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="font-body text-[12px] leading-relaxed text-[var(--text-muted)]">
+            Para atualizar, mapeie a coluna que identifica o lead como{" "}
+            <span className="font-medium">ID de origem (external_id)</span>.
+          </p>
+        </div>
+      ) : (
+        <label className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-4 py-3 transition-colors hover:bg-[var(--glass-bg-strong)]">
+          <CheckboxGlass
+            checked={updateExisting}
+            onChange={onUpdateExistingChange}
+            aria-label="Atualizar dados existentes"
+          />
+          <span className="font-body text-[14px] leading-relaxed text-[var(--text-primary)]">
+            Atualizar dados existentes{" "}
+            <span className="text-[var(--text-muted)]">
+              (match por{" "}
+              <code className="rounded bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--text-primary)]">id</code>
+              {" "}ou{" "}
+              <code className="rounded bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--text-primary)]">external_id</code>)
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      )}
 
       {/* ── Loading state ── */}
       {busy && (

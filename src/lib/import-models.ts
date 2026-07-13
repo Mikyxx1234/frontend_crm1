@@ -12,6 +12,14 @@ const STORAGE_KEY = "crm_import_models_v1";
 
 export type ImportEntity = "contacts" | "deals";
 
+/**
+ * Modo de importação (usado em deals):
+ *   "create" → só cria leads novos (ignora existentes)
+ *   "update" → só atualiza leads existentes (casa por external_id)
+ *   "upsert" → cria e atualiza
+ */
+export type ImportMode = "create" | "update" | "upsert";
+
 export interface ImportModel {
   id: string;
   name: string;
@@ -20,6 +28,8 @@ export interface ImportModel {
   delimiter: CsvDelimiter;
   skipHeader: boolean;
   updateExisting: boolean;
+  /** Opcional (deals). Ausente em modelos antigos → cai no default do wizard. */
+  importMode?: ImportMode;
   createdAt: string;
 }
 

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
 import { ImageLightbox } from "@/components/crm/image-lightbox"
@@ -919,10 +920,17 @@ function ReceivedMessageMenu({
     [message, onReact],
   )
 
-  // Fallback comum para itens ainda não plugados no container. Fecha o
-  // menu silenciosamente — em vez de sumir com o botão, mantemos o
-  // layout previsível e ativamos quando o backend/UX estiver pronto.
-  const stub = useCallback(() => setOpen(false), [])
+  // Fallback comum para itens ainda não plugados. Sinaliza ao usuário
+  // que o botão foi reconhecido mas a ação ainda não está disponível,
+  // em vez de parecer bugado. Toast substituí quando o container
+  // implementar o handler correspondente.
+  const stub = useCallback((label: string) => {
+    toast.info(`${label} — em breve`, {
+      description: "Essa ação ainda não foi ativada nesta versão.",
+      duration: 2200,
+    })
+    setOpen(false)
+  }, [])
 
   return (
     <>
@@ -984,40 +992,60 @@ function ReceivedMessageMenu({
                   icon={<IconArrowBackUp size={15} />}
                   label="Responder"
                   onClick={() => {
-                    onReply ? onReply(message) : stub()
-                    setOpen(false)
+                    if (onReply) {
+                      onReply(message)
+                      setOpen(false)
+                    } else {
+                      stub("Responder")
+                    }
                   }}
                 />
                 <MenuItem
                   icon={<IconMoodPlus size={15} />}
                   label="Reagir"
                   onClick={() => {
-                    onReact ? onReact(message, null) : stub()
-                    setOpen(false)
+                    if (onReact) {
+                      onReact(message, null)
+                      setOpen(false)
+                    } else {
+                      stub("Reagir")
+                    }
                   }}
                 />
                 <MenuItem
                   icon={<IconShare2 size={15} />}
                   label="Encaminhar"
                   onClick={() => {
-                    onForward ? onForward(message) : stub()
-                    setOpen(false)
+                    if (onForward) {
+                      onForward(message)
+                      setOpen(false)
+                    } else {
+                      stub("Encaminhar")
+                    }
                   }}
                 />
                 <MenuItem
                   icon={<IconPin size={15} />}
                   label="Fixar"
                   onClick={() => {
-                    onPin ? onPin(message) : stub()
-                    setOpen(false)
+                    if (onPin) {
+                      onPin(message)
+                      setOpen(false)
+                    } else {
+                      stub("Fixar")
+                    }
                   }}
                 />
                 <MenuItem
                   icon={<IconStar size={15} />}
                   label="Favoritar"
                   onClick={() => {
-                    onFavorite ? onFavorite(message) : stub()
-                    setOpen(false)
+                    if (onFavorite) {
+                      onFavorite(message)
+                      setOpen(false)
+                    } else {
+                      stub("Favoritar")
+                    }
                   }}
                 />
                 {canCopy && (

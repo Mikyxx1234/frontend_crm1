@@ -344,15 +344,15 @@ export function ChatArea({
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-4.5 pr-2 shadow-[var(--glass-shadow-sm)]"
+          className="mx-6 mb-6 flex h-11 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-3 pr-1.5 shadow-[var(--glass-shadow-sm)]"
         >
           <TooltipGlass label="Anexar" side="top">
             <button
               type="button"
               onClick={onAttachClick}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--brand-primary)]"
             >
-              <IconPaperclip size={18} />
+              <IconPaperclip size={17} />
             </button>
           </TooltipGlass>
           <input
@@ -361,15 +361,15 @@ export function ChatArea({
             disabled={effectiveDisabled || sending}
             value={isControlled ? value : undefined}
             onChange={isControlled ? (e) => onInputChange?.(e.target.value) : undefined}
-            className="flex-1 border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-w-0 flex-1 self-stretch border-none bg-transparent px-1 font-body text-[13.5px] leading-none text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
           />
           <TooltipGlass label="Emoji" side="top">
             <button
               type="button"
               onClick={onEmojiClick}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--brand-primary)]"
             >
-              <IconMoodSmile size={18} />
+              <IconMoodSmile size={17} />
             </button>
           </TooltipGlass>
           {onRecordClick && (
@@ -377,9 +377,9 @@ export function ChatArea({
               <button
                 type="button"
                 onClick={onRecordClick}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--brand-primary)]"
               >
-                <IconMoodSmile size={18} />
+                <IconMoodSmile size={17} />
               </button>
             </TooltipGlass>
           )}
@@ -387,9 +387,9 @@ export function ChatArea({
             <button
               type={isControlled ? "submit" : "button"}
               disabled={isControlled && (!value.trim() || sending || effectiveDisabled)}
-              className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-all hover:scale-105 hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)] transition-all hover:scale-[1.05] hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
-              <IconSend size={16} />
+              <IconSend size={15} />
             </button>
           </TooltipGlass>
         </form>

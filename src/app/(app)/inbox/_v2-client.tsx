@@ -43,6 +43,7 @@ import {
   useInboxRealtime,
   useMarkConversationRead,
   useMessages,
+  useReactMessage,
   useSelectedOutboundChannel,
   useSendMessage,
   useTabCounts,
@@ -352,8 +353,23 @@ export default function InboxV2ClientPage({
 
   // ── Mutations ───────────────────────────────────────────────────
   const sendMessage = useSendMessage(activeId);
+  const reactMessage = useReactMessage(activeId);
   const markRead = useMarkConversationRead();
   const bulkAction = useBulkConversationAction();
+
+  // Handler de reação disparado pelo menu contextual de cada bubble.
+  // WhatsApp: apertar o mesmo emoji novamente remove; escolher outro
+  // substitui. Repassamos `""` pra remoção (backend interpreta como
+  // toggle-off + envia reaction vazia à Meta pra limpar no cliente).
+  function handleReactMessage(msg: { id: string }, emoji: string | null) {
+    if (!activeId) return;
+    reactMessage.mutate(
+      { messageId: msg.id, emoji: emoji ?? "" },
+      {
+        onError: (err) => toast.error(err.message || "Falha ao reagir"),
+      },
+    );
+  }
   const { features: convFeatures } = useConversationFeatures();
 
   function handleBulkAction(action: "resolve" | "reopen") {
@@ -788,6 +804,7 @@ export default function InboxV2ClientPage({
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
         onUseTemplate={() => setTemplateOpen(true)}
+        onReactMessage={handleReactMessage}
         headerActionsSlot={
           <>
             {/* DealCallButton volta pro header do chat, ao lado do chip

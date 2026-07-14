@@ -837,7 +837,12 @@ function ReceivedMessageMenu({
   )
 
   return (
-    <div ref={containerRef} className="absolute right-1 top-1 z-10">
+    <div
+      ref={containerRef}
+      // Chevron fica FORA da bolha (canto sup-direito, deslocado ~8px)
+      // pra nao sobrepor conteudo do texto. Padrao WhatsApp Web.
+      className="absolute -right-2 -top-2 z-10"
+    >
       <button
         type="button"
         onClick={(e) => {
@@ -847,24 +852,28 @@ function ReceivedMessageMenu({
         aria-label="Ações da mensagem"
         aria-expanded={open}
         className={cn(
-          "flex h-5 w-5 items-center justify-center rounded-full bg-white/85 text-[var(--text-secondary)] shadow-[0_1px_4px_rgba(15,20,40,0.18)] backdrop-blur-sm transition-opacity",
-          "hover:bg-white hover:text-[var(--text-primary)]",
+          "flex h-6 w-6 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.22)] transition-opacity",
           // some por padrão; só aparece com hover na bolha ou quando aberto
           open ? "opacity-100" : "opacity-0 group-hover:opacity-100",
         )}
+        style={{ background: "#ffffff", color: "#334155" }}
       >
-        <IconChevronDown size={13} stroke={2.2} />
+        <IconChevronDown size={14} stroke={2.2} />
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-6 min-w-[220px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white shadow-[0_12px_32px_rgba(15,20,40,0.18)]"
+          className="absolute right-0 top-7 min-w-[220px] overflow-hidden rounded-[var(--radius-lg)] border border-black/5 shadow-[0_12px_32px_rgba(15,20,40,0.22)]"
+          style={{ background: "#ffffff", color: "#0f172a" }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Barra de reações rápidas (só aparece quando há callback) */}
           {onReact && (
-            <div className="flex items-center gap-0.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-1.5 py-1">
+            <div
+              className="flex items-center gap-0.5 border-b px-1.5 py-1"
+              style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}
+            >
               {QUICK_REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
@@ -941,9 +950,16 @@ function MenuItem({
         type="button"
         onClick={onClick}
         role="menuitem"
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-body text-[13px] text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-subtle)]"
+        // Cores hardcoded: em v2-dark, --text-primary flipa pra claro
+        // e o item fica branco-sobre-branco (invisivel). Popover sempre
+        // fundo branco + texto slate-900 pra manter contraste.
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-body text-[13px] transition-colors hover:bg-slate-50"
+        style={{ color: "#0f172a" }}
       >
-        <span className="flex h-5 w-5 items-center justify-center text-[var(--text-secondary)]">
+        <span
+          className="flex h-5 w-5 items-center justify-center"
+          style={{ color: "#475569" }}
+        >
           {icon}
         </span>
         {label}

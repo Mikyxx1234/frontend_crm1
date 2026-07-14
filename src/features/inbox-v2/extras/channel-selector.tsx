@@ -48,7 +48,7 @@ export function ChannelSelector({
             ) : null}
           </span>
         ),
-        icon: <IconBrandWhatsapp size={14} className="text-emerald-500" />,
+        icon: <IconBrandWhatsapp size={14} className="text-[var(--color-success)]" />,
         description: ch.phoneNumber ?? undefined,
       };
     });
@@ -78,7 +78,7 @@ export function ChannelSelector({
           )}
           aria-label={`Canal de envio: ${labelText}`}
         >
-          <IconBrandWhatsapp size={13} className="shrink-0 text-emerald-500" />
+          <IconBrandWhatsapp size={13} className="shrink-0 text-[var(--color-success)]" />
           <span className="truncate">{labelText}</span>
           {sublabelText ? (
             <span className="hidden truncate text-[var(--text-muted)] sm:inline">

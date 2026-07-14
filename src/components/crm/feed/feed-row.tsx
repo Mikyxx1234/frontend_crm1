@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Bot, Workflow, Webhook, User as UserIcon, Cog } from "lucide-react";
+import { IconRobot as Bot, IconHierarchy as Workflow, IconWebhook as Webhook, IconUser as UserIcon, IconSettings as Cog } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -37,17 +37,17 @@ function ActorBadge({
   type: "HUMAN" | "AI" | "AUTOMATION" | "INTEGRATION" | "SYSTEM";
 }) {
   const map = {
-    HUMAN: { Icon: UserIcon, cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" },
-    AI: { Icon: Bot, cls: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/50 dark:text-fuchsia-300" },
+    HUMAN: { Icon: UserIcon, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-[var(--glass-bg-base)] dark:text-[var(--color-text-muted)]" },
+    AI: { Icon: Bot, cls: "bg-[var(--color-fuchsia-soft)] text-[var(--color-fuchsia)] dark:bg-fuchsia-950/50 dark:text-[var(--color-fuchsia-muted)]" },
     AUTOMATION: {
       Icon: Workflow,
-      cls: "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300",
+      cls: "bg-[var(--color-lavender-soft)] text-[var(--color-purple-text)] dark:bg-purple-950/50 dark:text-purple-300",
     },
     INTEGRATION: {
       Icon: Webhook,
-      cls: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300",
+      cls: "bg-[var(--color-cyan-soft)] text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300",
     },
-    SYSTEM: { Icon: Cog, cls: "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400" },
+    SYSTEM: { Icon: Cog, cls: "bg-[var(--glass-bg-base)] text-[var(--text-secondary)] dark:bg-gray-900 dark:text-[var(--text-muted)]" },
   } as const;
   const { Icon, cls } = map[type];
   return (

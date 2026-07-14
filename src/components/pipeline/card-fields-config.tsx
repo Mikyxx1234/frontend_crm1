@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { Settings2 } from "lucide-react";
+import { IconAdjustments as Settings2 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { TooltipHost } from "@/components/ui/tooltip";
@@ -145,7 +145,7 @@ export function CardFieldsConfig({ fields, onChange }: Props) {
               top: pos.top,
               right: pos.right,
               width: 224,
-              zIndex: 9999,
+              zIndex: "var(--z-popover)",
               isolation: "isolate",
             }}
             className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-2 shadow-[var(--glass-shadow)]"

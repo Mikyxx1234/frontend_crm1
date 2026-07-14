@@ -3,11 +3,12 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, MessageSquarePlus, Send, Wifi, WifiOff } from "lucide-react";
+import { IconLoader2 as Loader2, IconMessagePlus as MessageSquarePlus, IconSend as Send, IconWifi as Wifi, IconWifiOff as WifiOff } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type ChannelOption = {
@@ -121,7 +122,7 @@ export function NewConversationButton({
   }
 
   return (
-    <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-3">
+    <div className="rounded-lg border border-[var(--color-brand-primary)]/20 bg-[var(--color-brand-primary)]/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-foreground">Iniciar Nova Conversa</h4>
         <Button
@@ -185,7 +186,7 @@ export function NewConversationButton({
 
             {selected && (
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-1">
-                <Wifi className="size-3 text-emerald-500" />
+                <Wifi className="size-3 text-[var(--color-success)]" />
                 <span>Envio via WhatsApp Business API (Meta Oficial)</span>
               </div>
             )}
@@ -195,16 +196,12 @@ export function NewConversationButton({
 
       <div className="space-y-1">
         <Label className="text-xs text-muted-foreground">Mensagem</Label>
-        <textarea
+        <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Escreva a primeira mensagem..."
           rows={3}
-          className={cn(
-            "w-full resize-none rounded-lg border border-border/80 bg-background px-3 py-2 text-sm",
-            "shadow-inner outline-none placeholder:text-muted-foreground",
-            "focus-visible:ring-2 focus-visible:ring-indigo-500/40"
-          )}
+          className="w-full resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && message.trim() && selectedChannel) {
               e.preventDefault();

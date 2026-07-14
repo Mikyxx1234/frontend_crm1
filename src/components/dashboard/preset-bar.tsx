@@ -2,14 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import {
-  Activity,
-  BriefcaseBusiness,
-  Headphones,
-  LayoutDashboard,
-  Monitor,
-  Users,
-} from "lucide-react";
+import { IconActivity as Activity, IconBriefcase2 as BriefcaseBusiness, IconHeadphones as Headphones, IconLayoutDashboard as LayoutDashboard, IconDeviceDesktop as Monitor, IconUsers as Users } from "@tabler/icons-react";
 
 import {
   DASHBOARD_PRESETS,
@@ -76,7 +69,7 @@ export function PresetBar() {
       </div>
 
       {preset === "custom" && (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-warn)]">
           <Activity className="size-3" /> Personalizado
         </span>
       )}

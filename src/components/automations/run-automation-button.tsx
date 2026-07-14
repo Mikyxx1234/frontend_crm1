@@ -13,7 +13,7 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Workflow } from "lucide-react";
+import { IconLoader2 as Loader2, IconHierarchy as Workflow } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import {

@@ -2,26 +2,17 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Key,
-  Loader2,
-  PlugZap,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconEye as Eye, IconEyeOff as EyeOff, IconKey as Key, IconLoader2 as Loader2, IconPlugConnected as PlugZap, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type AiStatus = {
   configured: boolean;
@@ -61,6 +52,7 @@ export default function AiSettingsPage() {
   const [showKey, setShowKey] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   const statusQuery = useQuery({
     queryKey: ["ai-settings-status"],
@@ -145,7 +137,7 @@ export default function AiSettingsPage() {
           {statusQuery.isLoading ? (
             <Skeleton className="h-20 w-full" />
           ) : status?.configured ? (
-            <div className="rounded-lg border border-emerald-200/60 bg-emerald-50/60 p-3 text-sm dark:border-emerald-800/60 dark:bg-emerald-950/30">
+            <div className="rounded-lg border border-[var(--color-success-subtle)]/60 bg-[var(--color-success-subtle)]/60 p-3 text-sm dark:border-emerald-800/60 dark:bg-emerald-950/30">
               <div className="flex items-start gap-2 text-emerald-900 dark:text-emerald-200">
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -159,8 +151,8 @@ export default function AiSettingsPage() {
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-amber-200/60 bg-amber-50/60 p-3 text-sm dark:border-amber-800/60 dark:bg-amber-950/30">
-              <div className="flex items-start gap-2 text-amber-900 dark:text-amber-200">
+            <div className="rounded-lg border border-[var(--color-amber-soft)]/60 bg-[var(--color-amber-soft)]/60 p-3 text-sm dark:border-amber-800/60 dark:bg-amber-950/30">
+              <div className="flex items-start gap-2 text-[var(--color-amber-text)] dark:text-[var(--color-amber-muted)]">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">IA desativada</p>
@@ -180,7 +172,7 @@ export default function AiSettingsPage() {
             </Label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Input
+                <InputGlass
                   id="openai-key"
                   type={showKey ? "text" : "password"}
                   value={apiKey}
@@ -203,7 +195,8 @@ export default function AiSettingsPage() {
                   )}
                 </button>
               </div>
-              <Button
+              <ButtonGlass
+                variant="primary"
                 type="button"
                 onClick={() => saveMutation.mutate(apiKey.trim())}
                 disabled={!apiKey.trim() || saveMutation.isPending}
@@ -212,7 +205,7 @@ export default function AiSettingsPage() {
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : null}
                 Salvar
-              </Button>
+              </ButtonGlass>
             </div>
             <p className="text-[12px] text-muted-foreground">
               Obtenha em{" "}
@@ -233,9 +226,9 @@ export default function AiSettingsPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-6 py-3">
-          <Button
+          <ButtonGlass
             type="button"
-            variant="outline"
+            variant="glass"
             size="sm"
             onClick={() => testMutation.mutate()}
             disabled={!status?.configured || testMutation.isPending}
@@ -246,17 +239,22 @@ export default function AiSettingsPage() {
               <PlugZap className="mr-2 size-4" />
             )}
             Testar conexão
-          </Button>
+          </ButtonGlass>
           {status?.source === "database" && (
-            <Button
+            <ButtonGlass
               type="button"
-              variant="ghost"
+              variant="glass"
               size="sm"
               className="text-destructive/80 hover:text-destructive"
-              onClick={() => {
-                if (!confirm("Remover a chave da OpenAI? Os agentes de IA ficarão indisponíveis até que uma nova chave seja configurada."))
-                  return;
-                removeMutation.mutate();
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Remover a chave da OpenAI?",
+                  description:
+                    "Os agentes de IA ficarão indisponíveis até que uma nova chave seja configurada.",
+                  confirmLabel: "Remover",
+                  destructive: true,
+                });
+                if (ok) removeMutation.mutate();
               }}
               disabled={removeMutation.isPending}
             >
@@ -266,7 +264,7 @@ export default function AiSettingsPage() {
                 <Trash2 className="mr-2 size-4" />
               )}
               Remover
-            </Button>
+            </ButtonGlass>
           )}
         </div>
       </GlassCard>
@@ -276,7 +274,7 @@ export default function AiSettingsPage() {
           className={cn(
             "rounded-lg border p-3 text-sm",
             testResult.ok
-              ? "border-emerald-200/60 bg-emerald-50/60 text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+              ? "border-[var(--color-success-subtle)]/60 bg-[var(--color-success-subtle)]/60 text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-200"
               : "border-destructive/40 bg-destructive/5 text-destructive",
           )}
         >
@@ -308,6 +306,7 @@ export default function AiSettingsPage() {
           </div>
         </div>
       )}
+      {dialog}
     </div>
   );
 }
@@ -330,7 +329,7 @@ function StatusBadge({
     return (
       <Badge
         variant="secondary"
-        className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+        className="bg-[var(--color-success-subtle)] text-emerald-700 hover:bg-[var(--color-success-subtle)] dark:bg-emerald-950 dark:text-emerald-200"
       >
         Ativa
       </Badge>
@@ -339,7 +338,7 @@ function StatusBadge({
   return (
     <Badge
       variant="secondary"
-      className="bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-200"
+        className="bg-[var(--color-amber-soft)] text-[var(--color-amber-text)] hover:bg-[var(--color-amber-soft)] dark:bg-amber-950 dark:text-[var(--color-amber-muted)]"
     >
       Desativada
     </Badge>

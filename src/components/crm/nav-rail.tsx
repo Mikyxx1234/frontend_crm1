@@ -1,3 +1,9 @@
+/**
+ * @deprecated DS-012 — componente legado (v1). O canônico é
+ * `components/crm/nav-rail-v2.tsx`. Não adicionar novos imports
+ * fora de `features/legacy-v1/*` e das rotas legadas.
+ * Remoção física após aposentadoria das rotas que ainda o usam.
+ */
 "use client"
 
 import { cn } from "@/lib/utils"
@@ -30,7 +36,7 @@ const items: NavItem[] = [
   { icon: <IconUsers size={20} />, title: "Contatos", href: "/contacts" },
   { icon: <IconBuilding size={20} />, title: "Empresas", href: "/companies" },
   { icon: <IconMessageCircle size={20} />, title: "Inbox", href: "/" },
-  { icon: <IconChecklist size={20} />, title: "Atividades", href: "/activities" },
+  { icon: <IconChecklist size={20} />, title: "Tarefas", href: "/activities" },
   { icon: <IconBolt size={20} />, title: "Automações", href: "/automations" },
   { icon: <IconChartBar size={20} />, title: "Relatórios", href: "/reports" },
   { icon: <IconClipboardList size={20} />, title: "Logs", href: "/logs" },

@@ -3,21 +3,11 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Calendar,
-  CheckCircle2,
-  Circle,
-  Mail,
-  MessageCircle,
-  PhoneCall,
-  Plus,
-  Trash2,
-  Users,
-  Loader2,
-  type LucideIcon,
-} from "lucide-react";
+import { IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconClock, IconMail as Mail, IconMessageCircle as MessageCircle, IconPhoneCall as PhoneCall, IconPlus as Plus, IconTrash as Trash2, IconUsers as Users, IconLoader2 as Loader2 } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { SelectNative } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,18 +17,76 @@ import { cn, formatDateTime } from "@/lib/utils";
 import type { DealDetailActivity } from "../shared";
 import { ACTIVITY_TYPES } from "../shared";
 
+// ── TimePicker DS v2 ──────────────────────────────────────────────
+// Substituição do <input type="time"> nativo (exibe scroll-wheel do browser).
+// Dois selects compactos para hora e minuto, estilizados com tokens do DS.
+function TimePickerInline({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;         // "HH:mm" ou ""
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const [hh, mm] = value ? value.split(":") : ["", ""];
+
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+  const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
+  function handleHour(h: string) {
+    onChange(`${h}:${mm || "00"}`);
+  }
+  function handleMinute(m: string) {
+    onChange(`${hh || "00"}:${m}`);
+  }
+
+  const selectCls = cn(
+    "h-8 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 text-[13px] text-foreground transition appearance-none cursor-pointer",
+    "focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]/40",
+    "disabled:cursor-not-allowed disabled:opacity-40",
+  );
+
+  return (
+    <div className={cn("flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border bg-[var(--color-bg-card)] px-1.5 transition", disabled && "opacity-40 pointer-events-none")}>
+      <IconClock size={12} className="shrink-0 text-[var(--color-ink-muted)]" />
+      <select
+        disabled={disabled}
+        value={hh || ""}
+        onChange={(e) => handleHour(e.target.value)}
+        className={cn(selectCls, "w-[38px] border-0 bg-transparent focus:ring-0 px-0.5")}
+        aria-label="Hora"
+      >
+        <option value="">--</option>
+        {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+      </select>
+      <span className="text-[11px] font-bold text-[var(--color-ink-muted)]">:</span>
+      <select
+        disabled={disabled}
+        value={mm || ""}
+        onChange={(e) => handleMinute(e.target.value)}
+        className={cn(selectCls, "w-[38px] border-0 bg-transparent focus:ring-0 px-0.5")}
+        aria-label="Minuto"
+      >
+        <option value="">--</option>
+        {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+    </div>
+  );
+}
+
 // Mapa de tipo -> visual (icone + cor accent + bg pilula)
 const TYPE_VISUAL: Record<
   string,
   { Icon: LucideIcon; bg: string; ring: string; fg: string }
 > = {
-  CALL:     { Icon: PhoneCall,     bg: "bg-cyan-50",     ring: "ring-cyan-200/70",     fg: "text-cyan-700" },
-  EMAIL:    { Icon: Mail,          bg: "bg-emerald-50",  ring: "ring-emerald-200/70",  fg: "text-emerald-700" },
-  MEETING:  { Icon: Users,         bg: "bg-violet-50",   ring: "ring-violet-200/70",   fg: "text-violet-700" },
-  TASK:     { Icon: CheckCircle2,  bg: "bg-blue-50",     ring: "ring-blue-200/70",     fg: "text-blue-700" },
-  NOTE:     { Icon: MessageCircle, bg: "bg-[var(--color-bg-subtle)]",    ring: "ring-slate-200/70",    fg: "text-[var(--color-ink-soft)]" },
-  WHATSAPP: { Icon: MessageCircle, bg: "bg-green-50",    ring: "ring-green-200/70",    fg: "text-green-700" },
-  OTHER:    { Icon: Calendar,      bg: "bg-amber-50",    ring: "ring-amber-200/70",    fg: "text-amber-700" },
+  CALL:     { Icon: PhoneCall,     bg: "bg-[var(--color-cyan-soft)]",              ring: "ring-[var(--color-cyan)]/70",        fg: "text-[var(--color-cyan)]" },
+  EMAIL:    { Icon: Mail,          bg: "bg-[var(--color-success-bg)]",             ring: "ring-[var(--color-success)]/70",     fg: "text-[var(--color-success-text)]" },
+  MEETING:  { Icon: Users,         bg: "bg-[var(--color-lavender-soft)]",          ring: "ring-[var(--color-lavender)]/70",    fg: "text-[var(--color-lavender)]" },
+  TASK:     { Icon: CheckCircle2,  bg: "bg-[var(--color-primary)]/8",              ring: "ring-[var(--color-primary)]/70",     fg: "text-[var(--color-primary)]" },
+  NOTE:     { Icon: MessageCircle, bg: "bg-[var(--color-bg-subtle)]",              ring: "ring-[var(--color-border-soft)]",    fg: "text-[var(--color-ink-soft)]" },
+  WHATSAPP: { Icon: MessageCircle, bg: "bg-[var(--color-success-soft)]",           ring: "ring-[var(--color-success)]/70",     fg: "text-[var(--color-success-text)]" },
+  OTHER:    { Icon: Calendar,      bg: "bg-[var(--color-warn-bg)]",                ring: "ring-[var(--color-warn)]/70",        fg: "text-[var(--color-warn)]" },
 };
 
 type ActivitiesPanelProps = {
@@ -54,8 +102,16 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
   const [type, setType] = React.useState("TASK");
   const [title, setTitle] = React.useState("");
   const [desc, setDesc] = React.useState("");
-  const [scheduled, setScheduled] = React.useState("");
+  const [scheduledDate, setScheduledDate] = React.useState(""); // "yyyy-MM-dd"
+  const [scheduledTime, setScheduledTime] = React.useState(""); // "HH:mm"
   const [open, setOpen] = React.useState(false);
+
+  // Combina data + hora em ISO string (ou vazia)
+  const scheduledISO = React.useMemo(() => {
+    if (!scheduledDate) return "";
+    const time = scheduledTime || "00:00";
+    return `${scheduledDate}T${time}`;
+  }, [scheduledDate, scheduledTime]);
 
   const { data: activities = [], isLoading } = useQuery<DealDetailActivity[]>({
     queryKey: activitiesKey(dealId),
@@ -78,7 +134,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
     mutationFn: async () => {
       const body: Record<string, unknown> = { type, title: title.trim(), dealId };
       if (desc.trim()) body.description = desc.trim();
-      if (scheduled.trim()) body.scheduledAt = new Date(scheduled).toISOString();
+      if (scheduledISO) body.scheduledAt = new Date(scheduledISO).toISOString();
       const res = await fetch(apiUrl("/api/activities"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,7 +144,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
       return res.json();
     },
     onSuccess: () => {
-      setTitle(""); setDesc(""); setScheduled(""); setOpen(false);
+      setTitle(""); setDesc(""); setScheduledDate(""); setScheduledTime(""); setOpen(false);
       invalidate();
     },
   });
@@ -126,12 +182,12 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
               className={cn(
                 "flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border",
                 "bg-[var(--color-bg-subtle)]/60 px-3.5 py-3 text-left text-[13px]",
-                "tracking-tight text-slate-500 transition-colors",
-                "hover:border-[var(--color-primary)]/40 hover:bg-white hover:text-slate-800",
+                "tracking-tight text-[var(--text-muted)] transition-colors",
+                "hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-bg-card)] hover:text-[var(--text-primary)]",
               )}
             >
               <Plus className="size-4 text-primary" strokeWidth={2.4} />
-              <span className="font-semibold">Nova atividade</span>
+              <span className="font-semibold">Nova tarefa</span>
             </button>
           ) : (
             <div className="space-y-2.5">
@@ -154,18 +210,25 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                     Agendar
                   </label>
-                  <Input
-                    type="datetime-local"
-                    value={scheduled}
-                    onChange={(e) => setScheduled(e.target.value)}
-                    className="h-9 rounded-xl border-border text-sm"
-                  />
+                    <div className="flex gap-1.5">
+                    <DatePicker
+                      value={scheduledDate || null}
+                      onChange={(v) => setScheduledDate(v)}
+                      placeholder="Data"
+                      className="min-w-0 flex-1"
+                    />
+                    <TimePickerInline
+                      value={scheduledTime}
+                      onChange={setScheduledTime}
+                      disabled={!scheduledDate}
+                    />
+                  </div>
                 </div>
               </div>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titulo da atividade..."
+                placeholder="Titulo da tarefa..."
                 className="h-9 rounded-xl border-border text-sm"
                 autoFocus
               />
@@ -181,8 +244,8 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="rounded-full px-4 text-[12px] font-bold text-slate-500"
-                  onClick={() => { setOpen(false); setTitle(""); setDesc(""); setScheduled(""); }}
+                  className="rounded-full px-4 text-[12px] font-bold text-[var(--text-muted)]"
+                  onClick={() => { setOpen(false); setTitle(""); setDesc(""); setScheduledDate(""); setScheduledTime(""); }}
                 >
                   Cancelar
                 </Button>
@@ -207,7 +270,7 @@ export function ActivitiesPanel({ dealId, onCreated }: ActivitiesPanelProps) {
           </div>
         ) : activities.length === 0 ? (
           <p className="py-12 text-center text-[13px] tracking-tight text-[var(--color-ink-muted)]">
-            Nenhuma atividade registrada.
+            Nenhuma tarefa registrada.
           </p>
         ) : (
           <ActivityTimeline
@@ -301,23 +364,23 @@ function ActivityTimeline({
                         {ACTIVITY_TYPES.find((t) => t.value === a.type)?.label ?? a.type}
                       </span>
                       {a.completed ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-emerald-600">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--color-success-text)]">
                           <CheckCircle2 className="size-3" /> Concluida
                         </span>
                       ) : (
-                        <Circle className="size-3 text-slate-300" />
+                        <Circle className="size-3 text-[var(--text-faint)]" />
                       )}
                     </div>
                     <p
                       className={cn(
-                        "mt-1 text-[14px] font-bold tracking-tight text-slate-900",
-                        a.completed && "line-through decoration-slate-300",
+                        "mt-1 text-[14px] font-bold tracking-tight text-[var(--text-primary)]",
+                        a.completed && "line-through decoration-[var(--color-border-strong)]",
                       )}
                     >
                       {a.title}
                     </p>
                     {a.description ? (
-                      <p className="mt-0.5 line-clamp-2 text-[12px] tracking-tight text-slate-500">
+                      <p className="mt-0.5 line-clamp-2 text-[12px] tracking-tight text-[var(--text-muted)]">
                         {a.description}
                       </p>
                     ) : null}
@@ -333,7 +396,7 @@ function ActivityTimeline({
                       aria-label="Excluir"
                       className={cn(
                         "shrink-0 rounded-full p-1 text-[var(--color-ink-muted)] opacity-0",
-                        "transition-all hover:bg-rose-50 hover:text-rose-500",
+                        "transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]",
                         "group-hover:opacity-100",
                       )}
                     >

@@ -10,38 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { differenceInMinutes } from "date-fns";
 import { toast } from "sonner";
-import {
-  Activity,
-  AlertCircle,
-  Bot,
-  Check,
-  CheckCheck,
-  CheckCircle2,
-  CheckSquare,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  FileText,
-  Film,
-  Filter,
-  Image as ImageIcon,
-  LayoutTemplate,
-  List,
-  ListChecks,
-  Loader2,
-  MessageCircle,
-  MessageSquare,
-  Mic,
-  Paperclip,
-  Phone,
-  Plus,
-  Search,
-  Square,
-  StickyNote,
-  UserPlus,
-  UserRound,
-  X,
-} from "lucide-react";
+import { IconActivity as Activity, IconAlertCircle as AlertCircle, IconRobot as Bot, IconCheck as Check, IconChecks as CheckCheck, IconCircleCheck as CheckCircle2, IconSquareCheck as CheckSquare, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconClock as Clock, IconFileText as FileText, IconMovie as Film, IconFilter as Filter, IconPhoto as ImageIcon, IconTemplate as LayoutTemplate, IconList as List, IconListCheck as ListChecks, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconMessage as MessageSquare, IconMicrophone as Mic, IconPaperclip as Paperclip, IconPhone as Phone, IconPlus as Plus, IconSearch as Search, IconSquare as Square, IconNote as StickyNote, IconUserPlus as UserPlus, IconUserCircle as UserRound, IconX as X } from "@tabler/icons-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipHost } from "@/components/ui/tooltip";
@@ -51,7 +20,15 @@ import { PresenceDashboard } from "@/components/inbox/presence-dashboard";
 import { SwipeRow } from "@/components/inbox/swipe-row";
 import { dt } from "@/lib/design-tokens";
 import { cn, tagPillStyle } from "@/lib/utils";
-import type { InboxFilters } from "@/components/inbox/inbox-filters";
+// InboxFilters type moved here (inbox-filters.tsx é código morto — DS-010/DS-012)
+export type InboxFilters = {
+  ownerId?: string;
+  channel?: string;
+  stageId?: string;
+  tagIds?: string[];
+  sortBy?: string;
+  sortOrder?: string;
+};
 import type { InboxTab } from "@/services/conversations";
 
 export type { InboxTab };
@@ -244,7 +221,7 @@ export function InboxListHeader({
   agentCapacityLoading,
 }: InboxListHeaderProps) {
   return (
-    <div className="relative z-30 shrink-0 border-b border-white/40 bg-white/40 backdrop-blur dark:border-white/10 dark:bg-white/5">
+    <div className="relative z-30 shrink-0 border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)] backdrop-blur dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
       <div className="flex items-center justify-between px-3 pb-1.5 pt-3">
         <span className="font-display text-[15px] font-bold text-foreground">Conversas</span>
         <div className="flex min-w-0 max-w-[min(100%,11rem)] items-center gap-2">
@@ -270,11 +247,11 @@ export function InboxListHeader({
                       e.stopPropagation();
                       onTabChange("esperando");
                     }}
-                    className="relative inline-flex h-7 items-center justify-center rounded-[4px] px-2 text-[var(--color-destructive)] lumen-transition hover:bg-muted"
+                    className="relative inline-flex h-7 items-center justify-center rounded px-2 text-[var(--color-destructive)] lumen-transition hover:bg-muted"
                     aria-label={`Esperando: ${counts.esperando}`}
                   >
                     <Clock className="size-3.5" strokeWidth={2.5} />
-                    <span className="ml-1 inline-flex min-w-[16px] items-center justify-center rounded-[4px] bg-[var(--color-destructive)] px-1 py-0.5 text-[9px] font-bold leading-none text-white tabular-nums">
+                    <span className="ml-1 inline-flex min-w-[16px] items-center justify-center rounded bg-[var(--color-destructive)] px-1 py-0.5 text-[9px] font-bold leading-none text-white tabular-nums">
                       {counts.esperando > 99 ? "99+" : counts.esperando}
                     </span>
                   </button>
@@ -302,7 +279,7 @@ export function InboxListHeader({
       )}
 
       <div className="flex items-center gap-1.5 px-3 pb-2">
-        <div className="flex h-9 flex-1 items-center gap-1.5 rounded-full border border-white/55 bg-white/55 px-3 backdrop-blur transition-all focus-within:border-primary focus-within:bg-white/75 focus-within:ring-[3px] focus-within:ring-primary/15">
+        <div className="flex h-9 flex-1 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 backdrop-blur transition-all focus-within:border-primary focus-within:bg-[var(--glass-bg-overlay)] focus-within:ring-[3px] focus-within:ring-primary/15">
           <Search className="size-3.5 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2} />
           <input
             value={search}
@@ -321,7 +298,7 @@ export function InboxListHeader({
             type="button"
             onClick={onToggleFilters}
             className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-full border border-white/55 bg-white/55 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/70 hover:text-foreground",
+              "flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-[var(--glass-bg-overlay)] hover:text-foreground",
               showFilters && "border-primary/40 bg-primary/15 text-primary",
             )}
           >
@@ -457,7 +434,7 @@ function InboxCategorySelect({
 
         {selectOpen ? (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-[70] overflow-hidden rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-slate-700 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-(--z-popover) overflow-hidden rounded-lg border border-black/10 shadow-[0_12px_40px_rgba(15,23,42,0.18)] backdrop-blur-md dark:border-[var(--glass-border)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
             style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
             role="listbox"
             aria-label="Categoria da inbox"
@@ -1044,8 +1021,8 @@ function ConversationItem({
       {...staggerItem}
       layout
       className={cn(
-        "group relative flex w-full cursor-pointer gap-2 border-b border-white/30 px-3 py-2.5 transition-all duration-150 hover:bg-white/40 dark:border-white/5 dark:hover:bg-white/5",
-        active && "border-l-2 border-l-primary bg-white/60 shadow-[var(--glass-shadow-sm)] dark:bg-white/10",
+        "group relative flex w-full cursor-pointer gap-2 border-b border-[var(--glass-border)] px-3 py-2.5 transition-all duration-150 hover:bg-[var(--glass-bg-panel)] dark:border-[var(--glass-border-subtle)] dark:hover:bg-[var(--glass-bg-subtle)]",
+        active && "border-l-2 border-l-primary bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] dark:bg-[var(--glass-bg-subtle)]",
         !active && unread && "bg-primary/8 hover:bg-primary/12 dark:bg-primary/15 dark:hover:bg-primary/20",
         !active && !unread && "bg-transparent",
       )}
@@ -1125,7 +1102,7 @@ function ConversationItem({
                 side="left"
               >
                 <span
-                  className="inline-flex min-w-[16px] items-center justify-center rounded-[4px] bg-primary px-1 py-0.5 text-[9px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
+                  className="inline-flex min-w-[16px] items-center justify-center rounded bg-primary px-1 py-0.5 text-[9px] font-bold leading-none text-primary-foreground shadow-[var(--shadow-sm)] tabular-nums"
                   aria-label={`${row.unreadCount} mensagens não lidas`}
                 >
                   {row.unreadCount! > 99 ? "99+" : row.unreadCount}
@@ -1198,7 +1175,7 @@ function ConversationItem({
               disabled={assigningId === row.id}
               aria-label="Atribuir para mim"
               className={cn(
-                "inline-flex items-center gap-1 rounded-[4px] border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary transition-all duration-200 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:opacity-60",
+                "inline-flex items-center gap-1 rounded border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-primary transition-all duration-200 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:opacity-60",
               )}
             >
               {assigningId === row.id ? (
@@ -1211,7 +1188,7 @@ function ConversationItem({
           </TooltipHost>
         ) : (
           <TooltipHost label="Sem responsável atribuído" side="left">
-            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-white dark:bg-ink-soft text-ink-subtle dark:text-ink-soft">
+            <div className="flex size-6 items-center justify-center rounded-full border border-dashed border-border bg-[var(--color-bg-card)] dark:bg-ink-soft text-ink-subtle dark:text-ink-soft">
               <UserRound size={12} />
             </div>
           </TooltipHost>

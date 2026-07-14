@@ -7,13 +7,12 @@ import { toast } from "sonner";
 import { IconX, IconClock } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
+import { Textarea } from "@/components/ui/textarea";
 import { createScheduledMessage } from "@/features/inbox-v2/api";
 
 const inputClass =
   "h-[var(--input-height)] w-full rounded-[var(--input-radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 font-body text-[13px] text-[var(--input-text)] outline-none placeholder:text-[var(--input-placeholder)] backdrop-blur-sm transition-[border-color,box-shadow] duration-150 focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-ring-focus)]";
 
-const textareaClass =
-  "w-full resize-none rounded-[var(--input-radius)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2.5 font-body text-[13px] text-[var(--input-text)] outline-none placeholder:text-[var(--input-placeholder)] backdrop-blur-sm transition-[border-color,box-shadow] duration-150 focus:border-[var(--input-border-focus)] focus:ring-2 focus:ring-[var(--input-ring-focus)]";
 
 const labelClass = "mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]";
 
@@ -68,7 +67,7 @@ export function ScheduleDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <form
@@ -97,13 +96,12 @@ export function ScheduleDialog({
         {/* Mensagem */}
         <div className="mb-4">
           <label className={labelClass}>Mensagem</label>
-          <textarea
+          <Textarea
             autoFocus
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={4}
             placeholder="Escreva a mensagem a ser enviada..."
-            className={textareaClass}
           />
         </div>
 

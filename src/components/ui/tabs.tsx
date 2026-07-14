@@ -80,7 +80,7 @@ const TabsList = React.forwardRef<
     role="tablist"
     className={cn(
       // TabsList glass: fundo translúcido, radius pill, com sombra sutil
-      "inline-flex h-9 items-center justify-center rounded-[10px] border border-white/40 bg-white/35 p-1 text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
+      "inline-flex h-9 items-center justify-center rounded-[var(--radius-input)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-1 text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur-sm",
       className
     )}
     {...props}
@@ -114,8 +114,8 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
           // TabsTrigger glass: ativa = pill branca translúcida + texto brand
           "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3.5 py-1 font-display text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50",
           selected
-            ? "border border-white/55 bg-white/70 text-primary shadow-[var(--glass-shadow-sm)] font-semibold backdrop-blur"
-            : "text-[var(--color-ink-soft)] hover:text-foreground hover:bg-white/40",
+            ? "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-primary shadow-[var(--glass-shadow-sm)] font-semibold backdrop-blur"
+            : "text-[var(--color-ink-soft)] hover:text-foreground hover:bg-[var(--glass-bg-panel)]",
           className
         )}
         {...props}

@@ -5,48 +5,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSSE } from "@/hooks/use-sse";
 import { useIsMobile } from "@/hooks/use-media-query";
-import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowRight,
-  Bot,
-  CheckCheck,
-  CheckCircle2,
-  CheckSquare,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Download,
-  FileText,
-  LayoutTemplate,
-  Loader2,
-  Lock,
-  Megaphone,
-  MoreHorizontal,
-  Paperclip,
-  Pause,
-  Pencil,
-  Phone,
-  PhoneIncoming,
-  PhoneOff,
-  PhoneOutgoing,
-  Pin,
-  Play,
-  Plus,
-  Reply,
-  RotateCcw,
-  Save,
-  Search,
-  Send,
-  Share2,
-  ShieldCheck,
-  Smile,
-  Smartphone,
-  Upload,
-  Volume2,
-  Wrench,
-  X,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconAlertTriangle as AlertTriangle, IconArrowRight as ArrowRight, IconRobot as Bot, IconChecks as CheckCheck, IconCircleCheck as CheckCircle2, IconSquareCheck as CheckSquare, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconTemplate as LayoutTemplate, IconLoader2 as Loader2, IconLock as Lock, IconSpeakerphone as Megaphone, IconDots as MoreHorizontal, IconPaperclip as Paperclip, IconPlayerPause as Pause, IconPencil as Pencil, IconPhone as Phone, IconPhoneIncoming as PhoneIncoming, IconPhoneOff as PhoneOff, IconPhoneOutgoing as PhoneOutgoing, IconPin as Pin, IconPlayerPlay as Play, IconPlus as Plus, IconArrowBackUp as Reply, IconRotate2 as RotateCcw, IconDeviceFloppy as Save, IconSearch as Search, IconSend as Send, IconShare2 as Share2, IconShieldCheck as ShieldCheck, IconMoodSmile as Smile, IconDeviceMobile as Smartphone, IconUpload as Upload, IconVolume as Volume2, IconTool as Wrench, IconX as X } from "@tabler/icons-react";
 import { AIDraftCard } from "@/components/inbox/ai-draft-card";
 import { ChatAvatar } from "@/components/inbox/chat-avatar";
 import { useSession } from "next-auth/react";
@@ -78,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -304,10 +264,10 @@ function HighlightedText({
           <mark
             key={i}
             className={cn(
-              "rounded-[2px] px-px",
+              "rounded-sm px-px",
               isCurrentMatch
-                ? "bg-[#f59e0b] text-white"
-                : "bg-[#fef3c7] text-[#92400e]",
+                ? "bg-[var(--color-warning)] text-white"
+                : "bg-[var(--color-warn-bg)] text-[var(--color-warning)]",
             )}
           >
             {part}
@@ -359,7 +319,7 @@ function AttachPopover({
       >
         <Plus className="size-5" strokeWidth={2} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="z-[60] min-w-[208px] rounded-xl border border-black/5 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
+      <DropdownMenuContent className="z-(--z-popover) min-w-[208px] rounded-xl border border-black/5 bg-white p-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]">
         <DropdownMenuItem
           className="gap-2 px-2 py-1.5 text-[13px] hover:bg-muted focus:bg-muted"
           onClick={onFile}
@@ -1363,41 +1323,175 @@ export function ChatWindow({
    * `preventDefault` só é chamado quando encontramos imagem, para não
    * quebrar o paste de texto em cenários normais.
    */
-  const onPaste = React.useCallback(
-    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const items = e.clipboardData?.items;
-      if (!items || items.length === 0) return;
-      for (let i = 0; i < items.length; i += 1) {
-        const it = items[i];
-        if (it.kind !== "file" || !it.type.startsWith("image/")) continue;
-        const blob = it.getAsFile();
-        if (!blob) continue;
-        if (blob.size > 16 * 1024 * 1024) {
-          toast.warning("A imagem colada excede o limite de 16 MB.");
-          e.preventDefault();
-          return;
-        }
-        const ext = (blob.type.split("/")[1] || "png")
-          .split("+")[0]
-          .toLowerCase();
-        const stamp = new Date()
-          .toISOString()
-          .replace(/[-:.TZ]/g, "")
-          .slice(0, 14);
-        const fileName =
-          (blob as File).name && (blob as File).name !== "image.png"
-            ? (blob as File).name
-            : `screenshot-${stamp}.${ext}`;
-        const file = new File([blob], fileName, { type: blob.type });
-        e.preventDefault();
-        if (acceptIncomingFile(file)) {
-          toast.success("Imagem colada — digite a legenda e envie");
-        }
-        return;
+  /**
+   * Converte um Blob de imagem em File e anexa via acceptIncomingFile.
+   * Retorna true se anexou com sucesso.
+   */
+  const attachImageBlob = React.useCallback(
+    (blob: Blob): boolean => {
+      if (blob.size > 16 * 1024 * 1024) {
+        toast.warning("A imagem colada excede o limite de 16 MB.");
+        return false;
       }
+      const type = blob.type || "image/png";
+      const ext = (type.split("/")[1] || "png").split("+")[0].toLowerCase();
+      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+      const originalName = (blob as File).name;
+      const fileName =
+        originalName && originalName !== "image.png"
+          ? originalName
+          : `screenshot-${stamp}.${ext}`;
+      const file = new File([blob], fileName, { type });
+      if (acceptIncomingFile(file)) {
+        toast.success("Imagem colada — digite a legenda e envie");
+        return true;
+      }
+      return false;
     },
     [acceptIncomingFile],
   );
+
+  /**
+   * Tenta ler imagem da Clipboard API moderna (navigator.clipboard.read).
+   * Mais confiável que clipboardData para imagens colocadas por apps nativos
+   * do Windows (Snipping Tool, Print Screen) que usam formatos como CF_BITMAP
+   * que nem sempre chegam ao clipboardData do evento paste.
+   *
+   * Requer permissão de clipboard-read (concedida por padrão em Chromium
+   * quando o usuário inicia a ação — Ctrl+V ou clique).
+   */
+  const tryModernClipboardRead = React.useCallback(async (): Promise<boolean> => {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.read) {
+      return false;
+    }
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith("image/"));
+        if (!imageType) continue;
+        const blob = await item.getType(imageType);
+        return attachImageBlob(blob);
+      }
+    } catch (err) {
+      // Permissão negada ou clipboard vazio — silencioso; o handler síncrono
+      // já rodou antes e mostrou toast se tivesse encontrado algo.
+      console.debug("[chat-paste] navigator.clipboard.read falhou:", err);
+    }
+    return false;
+  }, [attachImageBlob]);
+
+  const onPaste = React.useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const cd = e.clipboardData;
+      if (!cd) {
+        void tryModernClipboardRead();
+        return;
+      }
+
+      // Debug: expõe o que veio no clipboard pra F12 diagnosticar
+      // quando o paste não pega imagem.
+      if (typeof window !== "undefined") {
+        const typesList = cd.types ? Array.from(cd.types) : [];
+        const itemsInfo = cd.items
+          ? Array.from(cd.items).map((it) => ({ kind: it.kind, type: it.type }))
+          : [];
+        const filesInfo = cd.files
+          ? Array.from(cd.files).map((f) => ({ name: f.name, type: f.type, size: f.size }))
+          : [];
+        console.debug("[chat-paste] onPaste", { types: typesList, items: itemsInfo, files: filesInfo });
+      }
+
+      // 1) clipboardData.files — Chromium/Edge para Print Screen, "copiar imagem".
+      const filesList: File[] = [];
+      if (cd.files && cd.files.length > 0) {
+        for (let i = 0; i < cd.files.length; i += 1) {
+          const f = cd.files.item(i);
+          if (f && f.type.startsWith("image/")) filesList.push(f);
+        }
+      }
+
+      // 2) clipboardData.items — Firefox + fallback Chromium.
+      if (filesList.length === 0 && cd.items && cd.items.length > 0) {
+        for (let i = 0; i < cd.items.length; i += 1) {
+          const it = cd.items[i];
+          if (!it) continue;
+          if (!it.type.startsWith("image/")) continue;
+          const f = it.getAsFile();
+          if (f) filesList.push(f);
+        }
+      }
+
+      // 3) Se nada foi encontrado nos dados síncronos, tenta a Clipboard API
+      //    moderna (assíncrona). Não faz preventDefault aqui porque o texto
+      //    (se houver) já foi tratado pelo browser; queremos APENAS pegar a
+      //    imagem que não veio no clipboardData.
+      if (filesList.length === 0) {
+        void tryModernClipboardRead();
+        return;
+      }
+
+      const blob = filesList[0];
+      if (!blob) return;
+      e.preventDefault();
+      attachImageBlob(blob);
+    },
+    [attachImageBlob, tryModernClipboardRead],
+  );
+
+  /**
+   * Safety net: escuta paste no nível de `document` enquanto a janela de
+   * conversa está montada. Cobre casos em que o operador dá Ctrl+V sem
+   * o textarea estar focado (ex.: clicou numa bolha, ficou na sidebar
+   * de detalhes, ou o navegador desfocou o input após uma ação).
+   *
+   * Só age quando há imagem no clipboard e nenhum input editável está
+   * focado (input, textarea ou contenteditable), pra não conflitar com
+   * pastes de texto em outros campos da tela.
+   */
+  React.useEffect(() => {
+    if (!conversationId) return;
+    const handler = (e: ClipboardEvent) => {
+      const cd = e.clipboardData;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isEditable =
+        tag === "input" ||
+        tag === "textarea" ||
+        target?.getAttribute("contenteditable") === "true";
+      // Se um input editável está focado, deixa o handler local do textarea agir
+      // (React tratou via onPaste do JSX). Só ajuda quando NADA editável focado.
+      if (isEditable) return;
+
+      if (!cd) {
+        void tryModernClipboardRead();
+        return;
+      }
+
+      const files: File[] = [];
+      if (cd.files && cd.files.length > 0) {
+        for (let i = 0; i < cd.files.length; i += 1) {
+          const f = cd.files.item(i);
+          if (f && f.type.startsWith("image/")) files.push(f);
+        }
+      }
+      if (files.length === 0 && cd.items && cd.items.length > 0) {
+        for (let i = 0; i < cd.items.length; i += 1) {
+          const it = cd.items[i];
+          if (!it || !it.type.startsWith("image/")) continue;
+          const f = it.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length === 0) {
+        void tryModernClipboardRead();
+        return;
+      }
+      e.preventDefault();
+      attachImageBlob(files[0]!);
+    };
+    document.addEventListener("paste", handler);
+    return () => document.removeEventListener("paste", handler);
+  }, [conversationId, attachImageBlob, tryModernClipboardRead]);
 
   /**
    * Drag-and-drop de arquivos diretamente sobre a janela de conversa.
@@ -1556,7 +1650,7 @@ export function ChatWindow({
         {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton
             key={i}
-            className={cn("h-14 rounded-[20px]", i % 2 ? "ml-16" : "mr-16")}
+            className={cn("h-14 rounded-2xl", i % 2 ? "ml-16" : "mr-16")}
           />
         ))}
       </div>
@@ -1564,7 +1658,7 @@ export function ChatWindow({
   if (isError)
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center bg-[var(--chat-bg)] p-6">
-        <div className="rounded-[16px] border border-destructive/30 bg-destructive/5 px-5 py-3 text-[14px] text-destructive">
+        <div className="rounded-[var(--radius-xl)] border border-destructive/30 bg-destructive/5 px-5 py-3 text-[14px] text-destructive">
           {error instanceof Error
             ? error.message
             : "Erro ao carregar mensagens."}
@@ -1857,10 +1951,10 @@ export function ChatWindow({
       */}
       {isDraggingFile && (
         <div
-          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-white/40 p-6 backdrop-blur-sm"
+          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-[var(--glass-bg-panel)] p-6 backdrop-blur-sm"
           aria-hidden
         >
-          <div className="flex max-w-md flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-primary/60 bg-white/70 px-8 py-7 text-center shadow-2xl backdrop-blur-md">
+          <div className="flex max-w-md flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-primary/60 bg-[var(--glass-bg-overlay)] px-8 py-7 text-center shadow-2xl backdrop-blur-md">
             <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
               <Upload className="size-6" />
             </span>
@@ -2171,7 +2265,7 @@ export function ChatWindow({
                       <div
                         data-reaction-picker
                         className={cn(
-                          "absolute bottom-full z-20 mb-1 flex items-center gap-0.5 rounded-[20px] border border-border bg-card px-1.5 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]",
+                          "absolute bottom-full z-20 mb-1 flex items-center gap-0.5 rounded-2xl border border-border bg-card px-1.5 py-1 shadow-[0_8px_32px_rgba(0,0,0,0.10)]",
                           out ? "right-0" : "left-0",
                         )}
                       >
@@ -2338,10 +2432,10 @@ export function ChatWindow({
                       <div
                         className={cn(
                           isAudioOnly
-                            ? "px-[9px] py-[5px]"
+                            ? "px-2 py-1"
                             : isNote
                               ? "px-3 py-1.5"
-                              : "px-[9px] py-[5px]",
+                              : "px-2 py-1",
                         )}
                       >
                         {isNote ? (
@@ -2719,7 +2813,7 @@ export function ChatWindow({
                                 >
                                   {textBody}
                                 </p>
-                                <span className="flex-shrink-0 -mb-[3px]">
+                                <span className="flex-shrink-0 -mb-1">
                                   {timeEl}
                                 </span>
                               </div>
@@ -2736,7 +2830,7 @@ export function ChatWindow({
                       </div>
 
                       {m.sendStatus === "failed" && (
-                        <div className="flex items-center gap-2 rounded-b-[16px] border-t border-[rgba(239,68,68,0.2)] bg-destructive/5 px-3.5 py-2">
+                        <div className="flex items-center gap-2 rounded-b-[var(--radius-xl)] border-t border-[rgba(239,68,68,0.2)] bg-destructive/5 px-3.5 py-2">
                           <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
                           <span className="flex-1 truncate text-[11px] text-destructive">
                             {m.sendError ? summarizeSendError(m.sendError) : "Falha ao enviar"}
@@ -2936,7 +3030,7 @@ export function ChatWindow({
               return (
                 <div
                   key={sm.id}
-                  className="flex items-center gap-2 rounded-xl bg-white/70 px-3 py-1.5 text-[12px] text-info"
+                  className="flex items-center gap-2 rounded-xl bg-[var(--glass-bg-overlay)] px-3 py-1.5 text-[12px] text-info"
                 >
                   <Clock
                     className="size-3.5 shrink-0 text-info"
@@ -2956,7 +3050,7 @@ export function ChatWindow({
                     type="button"
                     onClick={() => cancelScheduledMutation.mutate(sm.id)}
                     disabled={cancelScheduledMutation.isPending}
-                    className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-info transition-colors hover:bg-sky-200 disabled:opacity-50"
+                    className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-info transition-colors hover:bg-[var(--color-info)]/20 disabled:opacity-50"
                   >
                     <X className="size-3" /> Cancelar
                   </button>
@@ -3008,7 +3102,7 @@ export function ChatWindow({
           />
 
           {activePanel === "task" && (
-            <div className="rounded-t-[16px] border border-b-0 border-border bg-card p-4">
+            <div className="rounded-t-[var(--radius-xl)] border border-b-0 border-border bg-card p-4">
               <div className="mb-3 flex items-center gap-2">
                 <CheckSquare className="size-4 text-success" />
                 <span className="text-[14px] font-semibold text-info">
@@ -3065,7 +3159,7 @@ export function ChatWindow({
           )}
 
           {activePanel === "schedule" && (
-            <div className="rounded-t-[16px] border border-b-0 border-border bg-card p-4">
+            <div className="rounded-t-[var(--radius-xl)] border border-b-0 border-border bg-card p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Clock className="size-4 text-info" />
                 <span className="text-[14px] font-semibold text-info">
@@ -3081,12 +3175,12 @@ export function ChatWindow({
                 </button>
               </div>
 
-              <textarea
+              <Textarea
                 value={scheduleContent}
                 onChange={(e) => setScheduleContent(e.target.value)}
                 placeholder="Digite a mensagem que será enviada no horário escolhido..."
                 rows={3}
-                className="mb-2 w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-[14px] outline-none focus:border-accent"
+                className="mb-2 w-full resize-none"
               />
 
               <div className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -3259,7 +3353,7 @@ export function ChatWindow({
           <div
             className={cn(rowMax, compactChrome ? "px-2 pt-1.5" : "px-6 pt-2")}
           >
-            <div className="flex items-start gap-2 rounded-t-[16px] bg-[var(--chat-bg)] px-4 py-2.5">
+            <div className="flex items-start gap-2 rounded-t-[var(--radius-xl)] bg-[var(--chat-bg)] px-4 py-2.5">
               <div className="min-w-0 flex-1 border-l-[3px] border-accent pl-3">
                 {replyTo.senderName && (
                   <p className="text-[11px] font-semibold text-accent">
@@ -3284,7 +3378,7 @@ export function ChatWindow({
           <div
             className={cn(rowMax, compactChrome ? "px-2 pt-1.5" : "px-6 pt-2")}
           >
-            <div className="flex items-center gap-2 rounded-[16px] bg-[var(--chat-bg)] px-4 py-2.5">
+            <div className="flex items-center gap-2 rounded-[var(--radius-xl)] bg-[var(--chat-bg)] px-4 py-2.5">
               <Paperclip className="size-4 text-muted-foreground" />
               <span className="max-w-[200px] truncate text-[14px] font-medium text-foreground">
                 {pendingFile.name}
@@ -3306,7 +3400,7 @@ export function ChatWindow({
           <div
             className={cn(rowMax, compactChrome ? "px-2 pt-2" : "px-6 pt-3")}
           >
-            <div className="rounded-[16px] border border-success/30 bg-success/5 p-4">
+            <div className="rounded-[var(--radius-xl)] border border-success/30 bg-success/5 p-4">
               <div className="flex items-start gap-3">
                 <LayoutTemplate className="mt-0.5 size-5 shrink-0 text-success" />
                 <div className="min-w-0 flex-1">
@@ -3328,7 +3422,7 @@ export function ChatWindow({
                     {renderedTemplatePreview || pendingTemplate.content}
                   </p>
                   {templatePlaceholders.length > 0 && (
-                    <div className="mt-3 space-y-2 rounded-[12px] border border-success/20 bg-white p-3">
+                    <div className="mt-3 space-y-2 rounded-[var(--radius-lg)] border border-success/20 bg-white p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Preencha as variaveis do template
                       </p>
@@ -3358,7 +3452,7 @@ export function ChatWindow({
                       })}
                     </div>
                   )}
-                  <div className="mt-3 space-y-2 rounded-[12px] border border-border/40 bg-white/80 p-3">
+                  <div className="mt-3 space-y-2 rounded-[var(--radius-lg)] border border-border/40 bg-[var(--glass-bg-base)] p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Flow (opcional)
                     </p>
@@ -3397,7 +3491,7 @@ export function ChatWindow({
                       <span className="text-[11px] font-medium text-muted-foreground">
                         JSON inicial do Flow
                       </span>
-                      <textarea
+                      <Textarea
                         value={flowActionJson}
                         onChange={(e) => {
                           setFlowActionJson(e.target.value);
@@ -3405,7 +3499,7 @@ export function ChatWindow({
                         }}
                         placeholder='Ex.: {"screen":"NOME_DA_TELA","data":{"campo":"valor"}}'
                         rows={3}
-                        className="resize-y rounded-lg border border-border/60 bg-background px-2.5 py-1.5 font-mono text-[11px] outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-success/40"
+                        className="resize-y font-mono text-[11px]"
                       />
                     </label>
                     {flowJsonError ? (
@@ -3512,7 +3606,7 @@ export function ChatWindow({
                           { onSuccess: () => setPendingTemplate(null) },
                         );
                       }}
-                      className="flex items-center gap-2 rounded-[14px] lumen-ai-gradient px-5 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(123,97,255,0.25)] lumen-transition hover:scale-105 disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-xl lumen-ai-gradient px-5 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(123,97,255,0.25)] lumen-transition hover:scale-105 disabled:opacity-50"
                     >
                       {templateSendMutation.isPending ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -3551,7 +3645,7 @@ export function ChatWindow({
 
         {/* Composer — padrão completo (inbox) vs uma linha (DealWorkspace / compactChrome). */}
         {compactChrome ? (
-          <footer className="relative shrink-0 overflow-visible border-t border-white/40 bg-white/45 pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+          <footer className="relative shrink-0 overflow-visible border-t border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-[calc(env(safe-area-inset-bottom,0px)+2px)] backdrop-blur-xl dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
             <SlashCommandMenu
               state={slash.state}
               onSelectItem={slash.onSelectItem}
@@ -3562,7 +3656,7 @@ export function ChatWindow({
               <div
                 className={cn(
                   rowMax,
-                  "flex h-6 items-center gap-2 border-b border-white/40 bg-warning-soft/40 px-2 backdrop-blur",
+                  "flex h-6 items-center gap-2 border-b border-[var(--glass-border)] bg-warning-soft/40 px-2 backdrop-blur",
                 )}
               >
                 <Lock className="size-3 shrink-0 text-[var(--color-ink-soft)]" />
@@ -3615,7 +3709,7 @@ export function ChatWindow({
                 type="button"
                 onClick={() => togglePanel("emoji")}
                 className={cn(
-                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-transparent text-[var(--color-ink-soft)] transition-all hover:border-white/55 hover:bg-white/55 hover:text-foreground",
+                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-transparent text-[var(--color-ink-soft)] transition-all hover:border-[var(--glass-border)] hover:bg-[var(--glass-bg-overlay)] hover:text-foreground",
                   activePanel === "emoji" &&
                     "border-primary/30 bg-[var(--color-primary-soft)] text-primary",
                 )}
@@ -3698,22 +3792,22 @@ export function ChatWindow({
                   <AudioRecorder
                     onSend={sendAudio}
                     disabled={isBusy}
-                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border border-white/55 bg-white/55 !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-4"
+                    className="!flex h-9 min-h-9 w-auto min-w-9 shrink-0 items-center justify-center !rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-[var(--glass-bg-overlay)] hover:text-foreground [&_svg]:!size-4"
                   />
                 </div>
               </div>
             </div>
           </footer>
         ) : (
-          <footer className="relative border-t border-white/40 bg-white/45 px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-white/10 dark:bg-white/5">
+          <footer className="relative border-t border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] backdrop-blur-xl sm:p-6 dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
             <SlashCommandMenu
               state={slash.state}
               onSelectItem={slash.onSelectItem}
               onHover={slash.setActiveIndex}
               className="absolute bottom-full left-3 mb-2 sm:left-6"
             />
-            <div className="rounded-[22px] border border-white/55 bg-white/65 shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-white/10 dark:bg-white/8">
-              <div className="flex items-center border-b border-white/40 px-5 py-3">
+            <div className="rounded-[var(--radius-card)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-sm)] backdrop-blur dark:border-[var(--glass-border-subtle)] dark:bg-[var(--glass-bg-subtle)]">
+              <div className="flex items-center border-b border-[var(--glass-border)] px-5 py-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <TooltipHost
                     label={
@@ -3891,7 +3985,7 @@ export function ChatWindow({
                     <AudioRecorder
                       onSend={sendAudio}
                       disabled={isBusy}
-                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border border-white/55 bg-white/55 !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-white/75 hover:text-foreground [&_svg]:!size-5"
+                      className="!flex h-10 min-h-10 w-auto min-w-10 shrink-0 items-center justify-center !rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] !p-0 text-[var(--color-ink-soft)] backdrop-blur shadow-[var(--glass-shadow-sm)] transition-all hover:bg-[var(--glass-bg-overlay)] hover:text-foreground [&_svg]:!size-5"
                     />
                   </div>
                 </div>
@@ -4038,10 +4132,10 @@ function TemplateBadge({ content }: { content: string }) {
   // praticamente ilegível. Marketing/Utility também só tinham variante
   // clara, então em dark mode amber-50/sky-50 sumiam.
   const colors = isMkt
-    ? "border-warning/40/60 bg-warning-soft text-warning dark:border-warning/40/50 dark:bg-warning/20 dark:text-amber-100"
+    ? "border-warning/40/60 bg-warning-soft text-warning dark:border-warning/40/50 dark:bg-warning/20 dark:text-[var(--color-warning)]"
     : isUtility
-      ? "border-primary/40/60 bg-primary-soft text-info dark:border-primary/40/50 dark:bg-sky-400/20 dark:text-sky-100"
-      : "border-primary/40/60 bg-primary-soft text-primary-dark dark:border-primary/40/50 dark:bg-indigo-400/25 dark:text-indigo-50";
+      ? "border-primary/40/60 bg-primary-soft text-info dark:border-primary/40/50 dark:bg-[var(--color-info)]/20 dark:text-[var(--color-info)]"
+      : "border-primary/40/60 bg-primary-soft text-primary-dark dark:border-primary/40/50 dark:bg-[var(--brand-secondary)]/25 dark:text-[var(--brand-secondary)]";
 
   return (
     <div className="group/tpl relative mb-1.5">
@@ -4214,7 +4308,7 @@ function SystemEventRow({
         transition={{ duration: 0.25 }}
         className="flex w-full justify-center py-2"
       >
-        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-[20px] border border-warning/30/60 bg-warning-soft/55 px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+        <div className="flex max-w-[520px] flex-col items-stretch gap-2 rounded-2xl border border-warning/30/60 bg-warning-soft/55 px-4 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
           <div className="flex items-center gap-2">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-warning-soft">
               <Smartphone
@@ -4232,7 +4326,7 @@ function SystemEventRow({
             )}
           </div>
           <div className="flex items-center justify-center gap-2 px-1">
-            <span className="rounded-md bg-white/80 px-2 py-1 text-[12px] font-bold tabular-nums text-ink-muted line-through decoration-slate-400/60">
+            <span className="rounded-md bg-[var(--glass-bg-base)] px-2 py-1 text-[12px] font-bold tabular-nums text-ink-muted line-through decoration-[var(--text-muted)]/60">
               {oldPhone}
             </span>
             <ArrowRight
@@ -4643,7 +4737,7 @@ function UploadingOverlay({
         rounded,
       )}
     >
-      <div className="flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-[var(--shadow-lg)]">
+      <div className="flex items-center gap-2 rounded-full bg-[var(--glass-bg-modal)] px-3 py-1.5 shadow-[var(--shadow-lg)]">
         <Loader2 className="size-3.5 animate-spin text-primary" />
         <span className="text-[11px] font-semibold uppercase tracking-widest text-foreground">
           {label}
@@ -4944,7 +5038,7 @@ function AudioMessage({
       <div className="flex min-w-[220px] max-w-[320px] flex-col gap-1">
         <div
           className={cn(
-            "font-display flex items-center gap-2 rounded-[6px] px-2 py-1.5",
+            "font-display flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5",
             playerSurface,
           )}
         >
@@ -5070,7 +5164,7 @@ function AudioMessage({
                       ? "text-[color:var(--chat-bubble-sent-check-read)]"
                       : "text-[color:var(--chat-bubble-sent-time)]"
                     : isRead
-                      ? "text-[#06b6d4]"
+                      ? "text-[var(--color-info)]"
                       : "text-[var(--color-ink-muted)]",
                 )}
                 strokeWidth={2.5}

@@ -90,7 +90,7 @@ export function MultiSelectPopover({
           <div
             ref={popoverRef}
             style={{ top: position.top, left: position.left, width }}
-            className="fixed z-[9999] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
+            className="fixed z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl"
           >
             <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">
               <span className="font-display text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">

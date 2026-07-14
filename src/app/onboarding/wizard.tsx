@@ -3,29 +3,14 @@
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  Check,
-  Flag,
-  ImageIcon,
-  Kanban,
-  Link as LinkIcon,
-  Loader2,
-  LogOut,
-  Palette,
-  Radio,
-  SkipForward,
-  Trash2,
-  Upload,
-  Users,
-} from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconBuilding as Building2, IconCheck as Check, IconFlag as Flag, IconPhoto as ImageIcon, IconLayoutKanban as Kanban, IconLink as LinkIcon, IconLoader2 as Loader2, IconLogout as LogOut, IconPalette as Palette, IconRadio as Radio, IconPlayerSkipForward as SkipForward, IconTrash as Trash2, IconUpload as Upload, IconUsers as Users } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import { SelectNative } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   PIPELINE_TEMPLATE_LIST,
   type PipelineTemplateId,
@@ -65,6 +50,7 @@ type TeamInvite = { email: string; role: "MANAGER" | "MEMBER" };
 
 export default function OnboardingWizard({ initialOrganization }: Props) {
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -154,9 +140,12 @@ export default function OnboardingWizard({ initialOrganization }: Props) {
   }
 
   async function handleSkipAll() {
-    const ok = window.confirm(
-      "Pular o onboarding? Voce cai direto no CRM com as configuracoes basicas. Logo, pipeline, time e canal podem ser ajustados depois em /settings.",
-    );
+    const ok = await confirm({
+      title: "Pular o onboarding?",
+      description:
+        "Você cai direto no CRM com as configurações básicas. Logo, pipeline, time e canal podem ser ajustados depois em Configurações.",
+      confirmLabel: "Pular",
+    });
     if (!ok) return;
     setError(null);
     setSaving(true);
@@ -171,9 +160,12 @@ export default function OnboardingWizard({ initialOrganization }: Props) {
   }
 
   async function handleLogout() {
-    const ok = window.confirm(
-      "Sair da conta? Voce volta pra tela inicial. Os dados ja preenchidos ficam salvos na sua organizacao.",
-    );
+    const ok = await confirm({
+      title: "Sair da conta?",
+      description:
+        "Você volta pra tela inicial. Os dados já preenchidos ficam salvos na sua organização.",
+      confirmLabel: "Sair",
+    });
     if (!ok) return;
     await signOut({ callbackUrl: "/" });
   }
@@ -382,6 +374,7 @@ export default function OnboardingWizard({ initialOrganization }: Props) {
           </div>
         </div>
       </main>
+      {dialog}
     </div>
   );
 }
@@ -427,11 +420,11 @@ function StepEmpresa(props: {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="size">Tamanho</Label>
-          <select
+          <SelectNative
             id="size"
             value={props.size}
             onChange={(e) => props.setSize(e.target.value)}
-            className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm"
+            className="h-10 text-sm"
           >
             <option value="">Selecione...</option>
             <option value="1-10">1-10</option>
@@ -439,7 +432,7 @@ function StepEmpresa(props: {
             <option value="51-200">51-200</option>
             <option value="201-500">201-500</option>
             <option value="500+">500+</option>
-          </select>
+          </SelectNative>
         </div>
         <div>
           <Label htmlFor="phone">Telefone de contato</Label>
@@ -737,12 +730,12 @@ function StepBranding(props: {
             <img
               src={props.logoUrl}
               alt=""
-              className="h-10 w-10 rounded-lg bg-white/20 object-contain p-1"
+              className="h-10 w-10 rounded-lg bg-[var(--glass-bg-subtle)] object-contain p-1"
               onError={() => setImgError(true)}
               onLoad={() => setImgError(false)}
             />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--glass-bg-subtle)]">
               <ImageIcon className="size-5 text-white/70" aria-hidden />
             </div>
           )}
@@ -844,18 +837,18 @@ function StepTime(props: {
               </div>
               <div className="w-40">
                 <Label className="text-xs">Papel</Label>
-                <select
+                <SelectNative
                   value={m.role}
                   onChange={(e) =>
                     props.updateTeamMember(i, {
                       role: e.target.value as "MANAGER" | "MEMBER",
                     })
                   }
-                  className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm"
+                  className="h-10 text-sm"
                 >
                   <option value="MEMBER">Membro</option>
                   <option value="MANAGER">Gestor</option>
-                </select>
+                </SelectNative>
               </div>
               <Button
                 type="button"

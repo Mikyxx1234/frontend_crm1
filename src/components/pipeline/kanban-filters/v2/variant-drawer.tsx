@@ -9,7 +9,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { SlidersHorizontal, X } from "lucide-react";
+import { IconAdjustmentsHorizontal as SlidersHorizontal, IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
@@ -62,29 +62,29 @@ export function FilterDrawer({
   const section: SectionProps = { draft, options, optionsLoading, optionsError, setDraftField, toggleArray };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999]">
-      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]" onMouseDown={() => onOpenChange(false)} aria-hidden />
+    <div className="fixed inset-0 z-(--z-popover)">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onMouseDown={() => onOpenChange(false)} aria-hidden />
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Filtros avançados"
-        className="absolute right-0 top-0 flex h-full w-[min(540px,100vw)] flex-col bg-slate-50 shadow-[0_0_60px_-12px_rgba(15,23,42,0.4)]"
+        className="absolute right-0 top-0 flex h-full w-[min(540px,100vw)] flex-col bg-[var(--glass-bg-subtle)] shadow-[0_0_60px_-12px_rgba(15,23,42,0.4)]"
       >
         {/* Header */}
-        <header className="flex items-center justify-between gap-3 border-b border-black/6 bg-white px-5 py-4">
+        <header className="flex items-center justify-between gap-3 border-b border-[var(--glass-border-subtle)] bg-white px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
               <SlidersHorizontal className="size-4" />
             </span>
             <div className="flex items-center gap-2">
-              <h2 className="text-[16px] font-semibold tracking-tight text-slate-900">Filtros</h2>
+              <h2 className="text-[16px] font-semibold tracking-tight text-[var(--text-primary)]">Filtros</h2>
               <ActiveCountBadge draft={draft} />
             </div>
           </div>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="flex size-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
             aria-label="Fechar"
           >
             <X className="size-4" />
@@ -92,8 +92,8 @@ export function FilterDrawer({
         </header>
 
         {/* Quick filters */}
-        <div className="border-b border-black/6 bg-white px-5 py-3">
-          <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Atalhos</span>
+        <div className="border-b border-[var(--glass-border-subtle)] bg-white px-5 py-3">
+          <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Atalhos</span>
           <QuickFiltersList
             draft={draft}
             onApply={applyWhole}
@@ -118,14 +118,14 @@ export function FilterDrawer({
         </div>
 
         {/* Footer */}
-        <footer className="flex items-center justify-between gap-2 border-t border-black/6 bg-white px-5 py-3">
+        <footer className="flex items-center justify-between gap-2 border-t border-[var(--glass-border-subtle)] bg-white px-5 py-3">
           <button
             type="button"
             onClick={() => {
               reset();
               onClear();
             }}
-            className="text-[12px] font-medium text-slate-500 transition-colors hover:text-slate-900"
+            className="text-[12px] font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
           >
             Limpar tudo
           </button>
@@ -134,7 +134,7 @@ export function FilterDrawer({
               <button
                 type="button"
                 onClick={() => onRequestSave(draft)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-[13px] font-medium text-slate-700 transition-colors hover:bg-slate-200"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--glass-bg-overlay)] px-3 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)]"
               >
                 Salvar filtro
               </button>
@@ -142,7 +142,7 @@ export function FilterDrawer({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-[13px] font-medium text-white transition-colors hover:bg-blue-700")}
+              className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[var(--brand-primary-dark)]")}
             >
               Aplicar
             </button>

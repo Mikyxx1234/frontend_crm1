@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Loader2, X } from "lucide-react";
+import { IconFileText as FileText, IconLoader2 as Loader2, IconX as X } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -140,7 +140,7 @@ export function TemplatePicker({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar template…"
-          className="mb-2 h-8 w-full rounded-lg border border-border/60 bg-background px-2.5 text-xs outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-indigo-500/40"
+          className="mb-2 h-8 w-full rounded-lg border border-border/60 bg-background px-2.5 text-xs outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-[var(--color-brand-primary)]/40"
         />
 
         <div className="scrollbar-thin max-h-[240px] space-y-1 overflow-y-auto">

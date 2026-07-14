@@ -109,9 +109,9 @@ export const ds = {
       "rounded-2xl border border-black/6 bg-white transition-colors hover:border-black/10",
     /** Card interativo (clicável, com focus ring). */
     interactive:
-      "rounded-2xl border border-black/6 bg-white transition-colors cursor-pointer outline-none hover:border-black/10 focus-visible:ring-2 focus-visible:ring-blue-500/40",
+      "rounded-2xl border border-black/6 bg-white transition-colors cursor-pointer outline-none hover:border-black/10 focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
     /** Estado ativo de um card interativo (combine via cn). */
-    active: "border-blue-200",
+    active: "border-[var(--brand-primary)]/30",
     /** Padding canônico do card (16px). */
     padding: "p-4",
     /** Padding compacto (12px) — para cards densos como list items. */
@@ -126,22 +126,22 @@ export const ds = {
   chip: {
     /** Chip neutro padrão (counts, etapas, status genérico). */
     soft:
-      "inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[12px] font-medium text-[var(--color-ink-soft)]",
+      "inline-flex items-center gap-1.5 rounded-full bg-[var(--glass-bg-subtle)] px-2 py-0.5 text-[12px] font-medium text-[var(--color-ink-soft)]",
     /** Chip muito sutil (slate-50) — para metadata sem peso. */
     softer:
       "inline-flex items-center gap-1.5 rounded-full bg-[var(--color-bg-subtle)] px-2 py-0.5 text-[12px] font-medium text-[var(--color-ink-soft)]",
     /** Chip primário (azul) — para etapa/responsável ativo. */
     info:
-      "inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[12px] font-medium text-blue-700",
+      "inline-flex items-center gap-1.5 rounded-full bg-[var(--brand-primary)]/10 px-2 py-0.5 text-[12px] font-medium text-[var(--brand-primary)]",
     /** Chip de sucesso (Ganho, online). */
     success:
-      "inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[12px] font-medium text-emerald-700",
+      "inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success)]/10 px-2 py-0.5 text-[12px] font-medium text-[var(--color-success)]",
     /** Chip de erro (Perdido). */
     danger:
-      "inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2 py-0.5 text-[12px] font-medium text-rose-700",
+      "inline-flex items-center gap-1.5 rounded-full bg-[var(--color-danger)]/10 px-2 py-0.5 text-[12px] font-medium text-[var(--color-danger)]",
     /** Chip de atenção (overdue, pendente). */
     warn:
-      "inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[12px] font-medium text-amber-700",
+      "inline-flex items-center gap-1.5 rounded-full bg-[var(--color-warning)]/10 px-2 py-0.5 text-[12px] font-medium text-[var(--color-warning)]",
     /** Dot 6px usado dentro de chips (pega cor via style). */
     dot: "size-1.5 shrink-0 rounded-full",
   },
@@ -164,10 +164,10 @@ export const ds = {
       "inline-flex items-center truncate rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-white",
     /** Chip "+N" (mais tags ocultas). */
     more:
-      "inline-flex items-center rounded-lg bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500",
+      "inline-flex items-center rounded-lg bg-[var(--glass-bg-subtle)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--text-muted)]",
     /** Chip "+N" — variante maior (pareada com `solidLg`). */
     moreLg:
-      "inline-flex items-center rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500",
+      "inline-flex items-center rounded-lg bg-[var(--glass-bg-subtle)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-muted)]",
     /** Botão "+" para adicionar tag (Kanban). */
     add:
       "inline-flex items-center rounded-lg px-1.5 py-0.5 text-[9px] font-bold text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-ink-soft)]",
@@ -193,23 +193,23 @@ export const ds = {
       "h-9 w-full rounded-lg bg-[var(--color-bg-subtle)]/80 px-3 text-[13px] text-foreground placeholder:text-[var(--color-ink-muted)] outline-none transition-colors focus:bg-white focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.1)]",
     /** Input compacto (filtros, popovers). */
     compact:
-      "h-7 w-full rounded-md bg-white px-2 text-[12px] text-foreground placeholder:text-[var(--color-ink-muted)] outline-none focus:ring-2 focus:ring-blue-500/30",
+      "h-7 w-full rounded-md bg-white px-2 text-[12px] text-foreground placeholder:text-[var(--color-ink-muted)] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30",
   },
 
   /** ── Buttons ── */
   button: {
     /** Primário sólido (ação principal de form/diálogo). */
     primary:
-      "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 text-[13px] font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-50",
+      "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--text-primary)]/90 disabled:opacity-50",
     /** Acento azul (CTA do produto). */
     accent:
-      "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 text-[13px] font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50",
+      "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[var(--brand-primary)]/90 disabled:opacity-50",
     /** Soft (ação secundária — slate-100 fundo). */
     soft:
-      "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-slate-200 disabled:opacity-50",
+      "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[var(--glass-bg-subtle)] px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-[var(--glass-bg-subtle)] disabled:opacity-50",
     /** Ghost (sem fundo, hover slate-50). */
     ghost:
-      "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-slate-900",
+      "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--text-primary)]",
     /** Icon-only button compacto (28px). */
     icon:
       "inline-flex size-7 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-foreground",
@@ -225,59 +225,59 @@ export const ds = {
     item:
       "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] text-foreground transition-colors hover:bg-[var(--color-bg-subtle)]",
     /** Item ativo / selecionado. */
-    itemActive: "bg-blue-50/60 text-blue-700",
+    itemActive: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
   },
 
   /** ── Avatar ── (uso como owner/contact) */
   avatar: {
     /** Avatar padrão 28px com iniciais. */
-    sm: "flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold uppercase tracking-tight text-white",
+    sm: "flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[10px] font-semibold uppercase tracking-tight text-white",
     /** Avatar 24px (List view, dropdowns). */
-    xs: "flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold uppercase tracking-tight text-white",
+    xs: "flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[10px] font-semibold uppercase tracking-tight text-white",
     /** Avatar 40px (chat header). */
-    md: "flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[13px] font-semibold uppercase tracking-tight text-white",
+    md: "flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--text-primary)] text-[13px] font-semibold uppercase tracking-tight text-white",
     /** Slot vazio (dashed circle). */
     empty:
-      "flex shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 text-[var(--color-ink-muted)]",
+      "flex shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--glass-border)] text-[var(--color-ink-muted)]",
   },
 
   /** ── Tipografia ── */
   text: {
     /** Title 16px semibold — títulos de cards, seções. */
-    title: "text-[16px] font-semibold leading-tight tracking-tight text-slate-900",
+    title: "text-[16px] font-semibold leading-tight tracking-tight text-[var(--text-primary)]",
     /** Body 13px medium — texto comum em UI densa. */
     body: "text-[13px] font-medium text-foreground",
     /** Body normal — parágrafos, descrições. */
     bodyNormal: "text-[13px] text-[var(--color-ink-soft)]",
     /** Meta 12px regular — timestamps, contadores, hints. */
-    meta: "text-[12px] text-slate-500",
+    meta: "text-[12px] text-[var(--text-muted)]",
     /** Meta sutil 12px — em estados secundários. */
     metaSubtle: "text-[12px] text-[var(--color-ink-muted)]",
     /** Label uppercase 11px — section labels, tabs. */
     label:
       "text-[11px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]",
     /** Mono tabular numérico (#id, contagens). */
-    mono: "font-mono text-[12px] tabular-nums text-slate-500",
+    mono: "font-mono text-[12px] tabular-nums text-[var(--text-muted)]",
   },
 
   /** ── Border utilities ── */
   border: {
     base: "border border-black/6",
     hover: "border-black/10",
-    active: "border-blue-200",
+    active: "border-[var(--brand-primary)]/30",
     /** Divisor horizontal entre seções de um card. */
-    divider: "border-t border-slate-100",
+    divider: "border-t border-[var(--glass-border-subtle)]",
     /** Divisor vertical entre colunas. */
-    dividerY: "border-r border-slate-100",
+    dividerY: "border-r border-[var(--glass-border-subtle)]",
   },
 
   /** ── Focus ring (acessibilidade). */
-  focus: "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+  focus: "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
 
   /** ── Pre-built compositions ── */
   /** Header sticky de listas/colunas (8pt padding, divisor soft). */
   sectionHeader:
-    "flex items-center gap-2 border-b border-slate-100 px-4 py-3",
+    "flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-4 py-3",
 } as const;
 
 // ── Helpers utilitários ────────────────────────────────────────

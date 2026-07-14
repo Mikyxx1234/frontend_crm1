@@ -18,6 +18,7 @@ import {
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
 import { InputGlass } from "@/components/crm/input-glass";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { MultiSelectPopover } from "@/features/dashboard-v2/components/multi-select-popover";
 
@@ -162,7 +163,7 @@ export default function NewCampaignClientPage() {
   }
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
@@ -434,11 +435,11 @@ export default function NewCampaignClientPage() {
                   </>
                 ) : (
                   <Field label="Mensagem">
-                    <textarea
+                    <Textarea
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
                       placeholder="Digite a mensagem que será enviada..."
-                      className="min-h-[140px] w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-3 font-body text-[13px] text-[var(--text-primary)]"
+                      className="min-h-[140px] w-full"
                     />
                   </Field>
                 )}
@@ -614,8 +615,8 @@ function AudiencePreview({
     <div
       className={`rounded-[var(--radius-md)] border p-4 ${
         count > 0
-          ? "border-emerald-500/30 bg-emerald-500/5"
-          : "border-amber-500/30 bg-amber-500/5"
+          ? "border-[var(--color-success)]/30 bg-[var(--color-success)]/5"
+          : "border-[var(--color-warning)]/30 bg-[var(--color-warning)]/5"
       }`}
     >
       <p className="font-display text-[15px] font-bold text-[var(--text-primary)]">

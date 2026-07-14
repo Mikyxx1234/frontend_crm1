@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Building2, CreditCard, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { IconBuilding as Building2, IconCreditCard as CreditCard, IconLayoutDashboard as LayoutDashboard, IconShieldCheck as ShieldCheck } from "@tabler/icons-react";
 
 import { auth } from "@/lib/auth-public";
 
@@ -46,21 +46,21 @@ export default async function AdminLayout({
           <nav className="flex items-center gap-1">
             <Link
               href="/admin/organizations"
-              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-white/40"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-[var(--glass-bg-panel)]"
             >
               <Building2 className="size-4" />
               Organizações
             </Link>
             <Link
               href="/admin/billing"
-              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-white/40"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-[var(--glass-bg-panel)]"
             >
               <CreditCard className="size-4" />
               Billing
             </Link>
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-white/40 hover:text-foreground"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-[var(--glass-bg-panel)] hover:text-foreground"
             >
               <LayoutDashboard className="size-4" />
               Voltar pro CRM

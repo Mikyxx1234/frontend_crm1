@@ -12,7 +12,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown, Search, Save, Trash2, Bookmark, Lock, Users as UsersIcon, X } from "lucide-react";
+import { IconCheck as Check, IconChevronDown as ChevronDown, IconSearch as Search, IconDeviceFloppy as Save, IconTrash as Trash2, IconBookmark as Bookmark, IconLock as Lock, IconUsers as UsersIcon, IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { ds } from "@/lib/design-system";
@@ -36,7 +36,7 @@ import type {
   SavedFilter,
   TagMode,
 } from "../types";
-import { countActiveFilters, isEmptyFilters } from "../types";
+import { countActiveFilters, isEmptyFilters, SOURCE_NONE } from "../types";
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -77,11 +77,11 @@ function operatorsForType(type: string): CustomFieldOperator[] {
 }
 
 export const QUICK_FILTERS: { label: string; dot?: string; filters: AdvancedDealFilters }[] = [
-  { label: "Leads ativos", dot: "#3b82f6", filters: { statuses: ["OPEN"] } },
+  { label: "Leads ativos", dot: "var(--color-info)", filters: { statuses: ["OPEN"] } },
   { label: "Meus leads", dot: "#6366f1", filters: { ownerIds: ["__me__"] } },
-  { label: "Leads ganhos", dot: "#10b981", filters: { statuses: ["WON"] } },
-  { label: "Leads perdidos", dot: "#ef4444", filters: { statuses: ["LOST"] } },
-  { label: "Sem responsável", dot: "#f59e0b", filters: { withoutOwner: true } },
+  { label: "Leads ganhos", dot: "var(--color-success)", filters: { statuses: ["WON"] } },
+  { label: "Leads perdidos", dot: "var(--color-danger)", filters: { statuses: ["LOST"] } },
+  { label: "Sem responsável", dot: "var(--color-warning)", filters: { withoutOwner: true } },
 ];
 
 // ─── Hook de estado (apply imediato, estilo Kommo) ──────────────────────────────
@@ -232,7 +232,7 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={cn(
-          "h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none transition-colors focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20",
+          "h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none transition-colors focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20",
           icon && "pl-8",
         )}
       />
@@ -264,14 +264,14 @@ function DateRangeField({ value, onChange }: { value?: DateRangeValue; onChange:
             type="date"
             value={value?.from ?? ""}
             onChange={(e) => onChange({ ...value, from: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-blue-500/20"
+            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
           <span className="shrink-0 text-[12px] text-ink-subtle">até</span>
           <input
             type="date"
             value={value?.to ?? ""}
             onChange={(e) => onChange({ ...value, to: e.target.value || null })}
-            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-blue-500/20"
+            className="h-9 w-full rounded-lg border border-black/6 bg-white px-2 text-[13px] text-foreground outline-none focus:border-primary/40 focus:ring-2 focus:ring-[var(--brand-primary)]/20"
           />
         </div>
       )}
@@ -348,20 +348,77 @@ export function StagesSection({ draft, options, optionsLoading, setDraftField, t
 }
 
 export function SourcesSection({ draft, options, setDraftField, toggleArray }: SectionProps) {
-  const sources = options?.sources ?? [];
-  if (sources.length === 0) return null;
+  const [search, setSearch] = React.useState("");
+  const allSources = options?.sources ?? [];
+  const filtered = search
+    ? allSources.filter((s) => s.toLowerCase().includes(search.toLowerCase()))
+    : allSources;
+  const selected = (draft.sources ?? []).filter((s) => s !== SOURCE_NONE);
+
+  function toggleSource(source: string) {
+    const next = toggleArray(selected, source);
+    setDraftField("sources", next);
+    setDraftField("withoutSource", undefined);
+  }
+
   return (
-    <FieldCard label="Lead fonte" active={!!draft.sources?.length} onClear={() => setDraftField("sources", undefined)}>
-      <div className="flex flex-wrap gap-1.5">
-        {sources.map((s) => (
-          <ChipToggle
-            key={s}
-            active={(draft.sources ?? []).includes(s)}
-            onClick={() => setDraftField("sources", toggleArray(draft.sources, s))}
+    <FieldCard
+      label="Origem"
+      active={!!(selected.length || draft.withoutSource)}
+      onClear={() => {
+        setDraftField("sources", undefined);
+        setDraftField("withoutSource", undefined);
+      }}
+    >
+      <div className="space-y-2">
+        <TextField
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar origem…"
+          icon={<Search className="size-3.5" />}
+        />
+        <div className="max-h-40 space-y-0.5 overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setDraftField("withoutSource", !draft.withoutSource || undefined);
+              setDraftField("sources", undefined);
+            }}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
+              draft.withoutSource ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
+            )}
           >
-            {s}
-          </ChipToggle>
-        ))}
+            <span className="inline-block size-2.5 shrink-0 rounded-full border border-dashed border-black/15" />
+            Sem origem
+            {draft.withoutSource && <Check className="ml-auto size-3.5" />}
+          </button>
+          {filtered.map((source) => {
+            const active = selected.includes(source);
+            return (
+              <button
+                key={source}
+                type="button"
+                onClick={() => toggleSource(source)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] transition-colors",
+                  active ? "bg-primary-soft font-medium text-primary-dark" : "text-ink-soft hover:bg-muted",
+                )}
+              >
+                <span className="flex-1 truncate text-left">{source}</span>
+                {active && <Check className="size-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+          {filtered.length === 0 && search && (
+            <p className="px-2 py-3 text-center text-[12px] text-ink-subtle">Nenhuma origem encontrada.</p>
+          )}
+          {allSources.length === 0 && !search && (
+            <p className="px-2 py-2 text-[12px] text-ink-subtle">
+              Nenhuma origem cadastrada ainda. Use &quot;Sem origem&quot; ou cadastre a origem nos contatos.
+            </p>
+          )}
+        </div>
       </div>
     </FieldCard>
   );
@@ -519,7 +576,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Mínimo"
           value={draft.valueFrom ?? ""}
           onChange={(e) => setDraftField("valueFrom", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
         <span className="shrink-0 text-[12px] text-ink-subtle">–</span>
         <input
@@ -527,7 +584,7 @@ export function ValueSection({ draft, setDraftField }: SectionProps) {
           placeholder="Máximo"
           value={draft.valueTo ?? ""}
           onChange={(e) => setDraftField("valueTo", e.target.value !== "" ? Number(e.target.value) : undefined)}
-          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 w-full rounded-lg border border-black/6 bg-muted/80 px-3 text-[13px] text-foreground placeholder:text-ink-subtle outline-none focus:border-primary/40 focus:bg-white focus:ring-2 focus:ring-[var(--brand-primary)]/20"
         />
       </div>
     </FieldCard>
@@ -631,13 +688,13 @@ function CustomFieldRow({
                 type="date"
                 value={dateVal.from ?? ""}
                 onChange={(e) => onChange({ ...filter, value: { ...dateVal, from: e.target.value || null } })}
-                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               />
               <input
                 type="date"
                 value={dateVal.to ?? ""}
                 onChange={(e) => onChange({ ...filter, value: { ...dateVal, to: e.target.value || null } })}
-                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               />
             </div>
           ) : hasOptions ? (
@@ -669,7 +726,7 @@ function CustomFieldRow({
               value={typeof filter.value === "string" ? filter.value : ""}
               onChange={(e) => onChange({ ...filter, value: e.target.value })}
               placeholder="Valor"
-              className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="h-9 rounded-lg border border-black/6 bg-white px-2 text-[12px] outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
             />
           )
         ) : (

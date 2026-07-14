@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { InputGlass } from "@/components/crm/input-glass";
 import {
   IconAlertTriangle,
   IconBrandTelegram,
@@ -21,6 +22,8 @@ import {
   type ConnectApi4ComResponse,
 } from "../api/extensions";
 import { useSoftphone } from "../hooks/use-softphone";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { ButtonGlass } from "@/components/crm/button-glass";
 
 /**
  * Bloco de feedback pós-conexão — extraído pra que o discriminated
@@ -41,13 +44,13 @@ function ConnectSuccessFeedback({
   const { api4com, webhook } = data;
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-emerald-400">
+      <p className="text-xs text-[var(--color-success)]/80">
         Conectado! Ramal: {api4com.ramal} ({api4com.domain}). O softphone
         está se registrando — acompanhe o chip no canto inferior direito.
       </p>
 
       {!webhook && (
-        <p className="inline-flex items-center gap-1.5 text-xs text-amber-400">
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-warning)]/80">
           <IconAlertTriangle size={12} />
           Webhook de chamadas não está configurado. Atualize o backend
           (commit 269af93+) e reconecte pra que ligações aparecem em /calls.
@@ -55,7 +58,7 @@ function ConnectSuccessFeedback({
       )}
 
       {webhook?.configured ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-success)]/80">
           <IconCheck size={12} stroke={2.5} />
           Webhook de chamadas configurado automaticamente — o histórico em
           /calls vai registrar cada ligação.
@@ -84,34 +87,34 @@ function WebhookFallback({
   onCopy: (url: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-amber-400/40 bg-amber-500/10 p-3 text-amber-100">
-      <div className="inline-flex items-start gap-1.5 text-xs">
-        <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-warning)]/40 bg-[var(--color-warning-soft)] p-3">
+      <div className="inline-flex items-start gap-1.5 text-xs text-[var(--text-primary)]">
+        <IconAlertTriangle size={14} className="mt-0.5 flex-shrink-0 text-[var(--color-warning)]" />
         <span>
           <strong>Setup manual do webhook necessário.</strong> Não
           conseguimos configurar automaticamente: {reason}
         </span>
       </div>
-      <p className="text-xs">
+      <p className="text-xs text-[var(--text-secondary)]">
         Cole esta URL no portal Api4Com →{" "}
         <em>Integrações → Webhook</em> (eventos:{" "}
         <code>channel-answer</code>, <code>channel-hangup</code>):
       </p>
       <div className="flex items-center gap-2">
-        <code className="flex-1 truncate rounded bg-black/30 px-2 py-1 font-mono text-[11px]">
+        <code className="flex-1 truncate rounded border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-1 font-mono text-[11px] text-[var(--text-primary)]">
           {webhookUrl}
         </code>
         <button
           type="button"
           onClick={() => onCopy(webhookUrl)}
-          className="inline-flex h-7 items-center gap-1 rounded bg-white/10 px-2 text-[11px] font-medium text-white transition hover:bg-white/20"
+          className="inline-flex h-7 items-center gap-1 rounded border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 text-[11px] font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
           title="Copiar URL"
         >
           {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
           {copied ? "Copiado" : "Copiar"}
         </button>
       </div>
-      <p className="text-[11px] opacity-80">
+      <p className="text-[11px] text-[var(--text-muted)]">
         Sem isso, as chamadas funcionam mas não aparecem na lista
         /calls. Após colar a URL, próximas ligações serão registradas.
       </p>
@@ -142,51 +145,52 @@ function ConnectedSummary({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-emerald-400/30 bg-emerald-500/10 p-3 text-emerald-100">
+      <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2">
-            <IconPhoneCheck size={16} className="mt-0.5 flex-shrink-0 text-emerald-300" />
+            <IconPhoneCheck size={16} className="mt-0.5 flex-shrink-0 text-[var(--color-success)]" />
             <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-medium text-emerald-50">
+              <p className="text-sm font-medium text-[var(--text-primary)]">
                 Conectado{status.email ? ` como ${status.email}` : ""}
               </p>
-              <p className="text-xs opacity-80">
+              <p className="text-xs text-[var(--text-secondary)]">
                 Ramal <strong>{status.ramal ?? "—"}</strong>
                 {status.domain ? ` (${status.domain})` : ""}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
+            <ButtonGlass
+              variant="glass"
+              size="sm"
               onClick={onReconnect}
               disabled={disconnecting}
-              className="inline-flex h-7 items-center gap-1 rounded bg-white/10 px-2 text-[11px] font-medium text-white transition hover:bg-white/20 disabled:opacity-50"
               title="Trocar de conta ou re-autenticar"
             >
-              <IconPencil size={12} />
+              <IconPencil size={13} />
               Reconectar
-            </button>
-            <button
-              type="button"
+            </ButtonGlass>
+            <ButtonGlass
+              variant="glass"
+              size="sm"
               onClick={onDisconnect}
               disabled={disconnecting}
-              className="inline-flex h-7 items-center gap-1 rounded border border-red-300/30 bg-red-500/10 px-2 text-[11px] font-medium text-red-100 transition hover:bg-red-500/20 disabled:opacity-50"
+              className="!border-[var(--color-danger)]/30 !bg-[var(--color-danger)]/10 !text-[var(--color-danger)] hover:!bg-[var(--color-danger)]/20"
               title="Apaga o ramal salvo. Você poderá reconectar depois com outra conta."
             >
               {disconnecting ? (
-                <IconLoader2 size={12} className="animate-spin" />
+                <IconLoader2 size={13} className="animate-spin" />
               ) : (
-                <IconLogout size={12} />
+                <IconLogout size={13} />
               )}
               Desconectar
-            </button>
+            </ButtonGlass>
           </div>
         </div>
       </div>
 
       {status.webhook.configured ? (
-        <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-success)]/80">
           <IconCheck size={12} stroke={2.5} />
           Webhook de chamadas configurado — histórico em /calls registra
           cada ligação.
@@ -199,7 +203,7 @@ function ConnectedSummary({
           onCopy={onCopy}
         />
       ) : (
-        <p className="inline-flex items-center gap-1.5 text-xs text-amber-400">
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--color-warning)]/80">
           <IconAlertTriangle size={12} />
           Webhook de chamadas não configurado. Clique em "Reconectar"
           para tentar a configuração automática novamente.
@@ -291,6 +295,8 @@ export function Api4ComConnectForm() {
     },
   });
 
+  const { confirm, dialog } = useConfirm();
+
   const copyUrl = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
@@ -330,22 +336,24 @@ export function Api4ComConnectForm() {
           copied={copied}
           onCopy={copyUrl}
           onReconnect={() => setShowForm(true)}
-          onDisconnect={() => {
-            if (
-              window.confirm(
-                "Desconectar sua conta Api4Com?\n\nO ramal salvo será apagado e você precisará informar e-mail + senha de novo pra usar telefonia. Chamadas em andamento serão encerradas.",
-              )
-            ) {
-              disconnectMutation.mutate();
-            }
+          onDisconnect={async () => {
+            const ok = await confirm({
+              title: "Desconectar sua conta Api4Com?",
+              description:
+                "O ramal salvo será apagado e você precisará informar e-mail + senha de novo pra usar telefonia. Chamadas em andamento serão encerradas.",
+              confirmLabel: "Desconectar",
+              destructive: true,
+            });
+            if (ok) disconnectMutation.mutate();
           }}
           disconnecting={disconnectMutation.isPending}
         />
         {disconnectMutation.isError && (
-          <p className="text-xs text-red-400">
+          <p className="text-xs text-[var(--color-danger)]">
             {(disconnectMutation.error as Error)?.message ?? "Falha ao desconectar"}
           </p>
         )}
+        {dialog}
       </div>
     );
   }
@@ -364,24 +372,22 @@ export function Api4ComConnectForm() {
           : "Informe suas credenciais Api4Com. O CRM detectará automaticamente o ramal vinculado ao seu e-mail."}
       </p>
 
-      <input
+      <InputGlass
         type="email"
         placeholder="E-mail Api4Com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
       />
 
-      <input
+      <InputGlass
         type="password"
         placeholder="Senha Api4Com"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)] focus:outline-none"
       />
 
       {mutation.isError && (
-        <p className="text-xs text-red-400">
+        <p className="text-xs text-[var(--color-danger)]">
           {(mutation.error as Error)?.message ?? "Falha ao conectar"}
         </p>
       )}
@@ -391,10 +397,11 @@ export function Api4ComConnectForm() {
       )}
 
       <div className="flex items-center gap-2">
-        <button
+        <ButtonGlass
           type="submit"
+          variant="primary"
           disabled={!email || !password || mutation.isPending}
-          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-4 text-sm font-medium text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1"
         >
           {mutation.isPending ? (
             <IconLoader2 size={14} className="animate-spin" />
@@ -402,20 +409,20 @@ export function Api4ComConnectForm() {
             <IconBrandTelegram size={14} />
           )}
           {status?.connected ? "Reconectar" : "Conectar Api4Com"}
-        </button>
+        </ButtonGlass>
 
         {status?.connected && showForm && (
-          <button
+          <ButtonGlass
             type="button"
+            variant="glass"
             onClick={() => {
               setShowForm(false);
               setPassword("");
               mutation.reset();
             }}
-            className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] px-3 text-xs text-[var(--text-muted)] transition-colors hover:bg-white/5"
           >
             Cancelar
-          </button>
+          </ButtonGlass>
         )}
       </div>
     </form>

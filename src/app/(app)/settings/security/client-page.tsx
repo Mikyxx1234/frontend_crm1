@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconShield } from "@tabler/icons-react";
-import { AlertTriangle, CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconCircle as Circle, IconLoader2 as Loader2 } from "@tabler/icons-react";
 
 import { EmptyState } from "@/components/crm/empty-state";
 import { GlassCard } from "@/components/crm/glass-card";

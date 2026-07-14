@@ -3,18 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  Building2,
-  Check,
-  ExternalLink,
-  Handshake,
-  Mail,
-  Pencil,
-  Phone,
-  Tag,
-  User,
-  X,
-} from "lucide-react";
+import { IconBuilding as Building2, IconCheck as Check, IconExternalLink as ExternalLink, IconHeartHandshake as Handshake, IconMail as Mail, IconPencil as Pencil, IconPhone as Phone, IconTag as Tag, IconUser as User, IconX as X } from "@tabler/icons-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -29,11 +18,11 @@ import { cn, formatCurrency, tagPillStyle, tagStyle } from "@/lib/utils";
 
 const LIFECYCLE_OPTIONS = [
   { value: "SUBSCRIBER", label: "Assinante", color: "bg-gray-400" },
-  { value: "LEAD", label: "Lead", color: "bg-blue-500" },
-  { value: "MQL", label: "MQL", color: "bg-amber-500" },
+  { value: "LEAD", label: "Lead", color: "bg-[var(--color-info)]" },
+  { value: "MQL", label: "MQL", color: "bg-[var(--color-warning)]" },
   { value: "SQL", label: "SQL", color: "bg-orange-500" },
   { value: "OPPORTUNITY", label: "Oportunidade", color: "bg-purple-500" },
-  { value: "CUSTOMER", label: "Cliente", color: "bg-emerald-500" },
+  { value: "CUSTOMER", label: "Cliente", color: "bg-[var(--color-success)]" },
   { value: "EVANGELIST", label: "Evangelista", color: "bg-pink-500" },
   { value: "OTHER", label: "Outro", color: "bg-gray-400" },
 ] as const;
@@ -178,7 +167,7 @@ export function LeadInfoPanel({ contact, onUpdate, isUpdating }: Props) {
               <Button type="button" variant="ghost" size="icon" className="size-7" onClick={() => setEditingBasic(false)}>
                 <X className="size-3.5" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="size-7 text-emerald-600" onClick={saveBasic} disabled={isUpdating}>
+              <Button type="button" variant="ghost" size="icon" className="size-7 text-[var(--color-success-text)]" onClick={saveBasic} disabled={isUpdating}>
                 <Check className="size-3.5" />
               </Button>
             </div>

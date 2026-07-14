@@ -27,9 +27,11 @@ import {
   subDays,
 } from "date-fns";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Calendar, ChartBar as BarChart3 } from "lucide-react";
+import { IconArrowUpRight as ArrowUpRight, IconCalendar as Calendar, IconChartBar as BarChart3 } from "@tabler/icons-react";
 
+import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { SelectNative } from "@/components/ui/select";
 
 import { ForecastChart } from "@/components/analytics/forecast-chart";
 import { FunnelChart } from "@/components/analytics/funnel-chart";
@@ -180,13 +182,13 @@ export default function AnalyticsPage() {
           icon={<BarChart3 />}
           actions={
             <>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-bg-subtle)] px-3 py-1.5 text-[11px] font-bold text-slate-500">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-bg-subtle)] px-3 py-1.5 text-[11px] font-bold text-[var(--color-text-secondary)]">
                 <Calendar className="size-3.5" />
                 {activePresetLabel}
               </span>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-[13px] font-bold text-[var(--color-ink-soft)] transition-all hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-[var(--color-bg-card)] px-4 py-2 text-[13px] font-bold text-[var(--color-ink-soft)] transition-all hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
               >
                 Exportar Relatório <ArrowUpRight className="size-4" />
               </button>
@@ -200,7 +202,7 @@ export default function AnalyticsPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05, type: "spring", stiffness: 340, damping: 28 }}
-        className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm md:p-6"
+        className="rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-bg-card)] p-5 shadow-sm md:p-6"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
@@ -217,7 +219,7 @@ export default function AnalyticsPage() {
                       "rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-all",
                       active
                         ? "bg-primary text-white shadow-sm"
-                        : "bg-[var(--color-bg-subtle)] text-[var(--color-ink-soft)] hover:bg-slate-100",
+                        : "bg-[var(--color-bg-subtle)] text-[var(--color-ink-soft)] hover:bg-[var(--color-bg-muted)]",
                     )}
                   >
                     {p.label}
@@ -229,49 +231,46 @@ export default function AnalyticsPage() {
 
           <div className="flex w-full flex-col gap-2 sm:max-w-xs lg:w-72">
             <span className={bentoLabelClass}>Pipeline</span>
-            <div className="relative">
-              <select
-                id="pipeline-select"
-                value={pipelineId}
-                onChange={(e) => setPipelineId(e.target.value)}
-                disabled={!pipelines?.length}
-                className="w-full appearance-none rounded-xl border border-border bg-[var(--color-bg-subtle)] px-4 py-2.5 text-[13px] font-semibold text-foreground transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {!pipelines?.length ? (
-                  <option value="">Carregando…</option>
-                ) : (
-                  pipelines.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))
-                )}
-              </select>
-              <ArrowUpRight className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 rotate-90 text-[var(--color-ink-muted)]" />
-            </div>
+            <SelectNative
+              id="pipeline-select"
+              value={pipelineId}
+              onChange={(e) => setPipelineId(e.target.value)}
+              disabled={!pipelines?.length}
+              className="w-full rounded-xl text-[13px] font-semibold"
+            >
+              {!pipelines?.length ? (
+                <option value="">Carregando…</option>
+              ) : (
+                pipelines.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))
+              )}
+            </SelectNative>
           </div>
         </div>
 
         {preset === "custom" && (
-          <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row">
+          <div className="mt-5 flex flex-col gap-3 border-t border-[var(--color-border-soft)] pt-4 sm:flex-row">
             <div className="flex-1 space-y-2 sm:max-w-[220px]">
               <span className={bentoLabelClass}>De</span>
-              <input
+              <Input
                 id="from-date"
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl text-[13px] font-semibold"
               />
             </div>
             <div className="flex-1 space-y-2 sm:max-w-[220px]">
               <span className={bentoLabelClass}>Até</span>
-              <input
+              <Input
                 id="to-date"
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-[13px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl text-[13px] font-semibold"
               />
             </div>
           </div>
@@ -293,7 +292,7 @@ export default function AnalyticsPage() {
             <TabsTrigger
               key={t.v}
               value={t.v}
-              className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--color-ink-soft)] transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm"
+              className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--color-ink-soft)] transition-all data-[state=active]:bg-[var(--color-bg-card)] data-[state=active]:text-[var(--color-text-primary)] data-[state=active]:shadow-sm"
             >
               {t.label}
             </TabsTrigger>

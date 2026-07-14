@@ -12,7 +12,7 @@
  */
 
 import * as React from "react";
-import { ChevronDown, Variable, Search } from "lucide-react";
+import { IconChevronDown as ChevronDown, IconVariable as Variable, IconSearch as Search } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -53,55 +53,55 @@ export function InternalTemplateVariablePicker({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border/60 bg-muted/20",
+        "rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]",
         className,
       )}
     >
       <button
         type="button"
         onClick={() => setOpen((s) => !s)}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/40"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]"
         aria-expanded={open}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <Variable className="size-3.5 text-muted-foreground" />
-          <span className="text-xs font-semibold">
+          <Variable className="size-3.5 text-[var(--text-muted)]" />
+          <span className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)]">
             Variáveis disponíveis
           </span>
-          <span className="hidden truncate text-[11px] text-muted-foreground sm:inline">
+          <span className="hidden truncate text-[11.5px] text-[var(--text-muted)] sm:inline">
             · clique para inserir no cursor da mensagem
           </span>
         </div>
         <ChevronDown
           className={cn(
-            "size-3.5 text-muted-foreground transition-transform",
+            "size-3.5 text-[var(--text-muted)] transition-transform",
             open && "rotate-180",
           )}
         />
       </button>
 
       {open && (
-        <div className="space-y-3 border-t border-border/60 p-3">
+        <div className="space-y-3 border-t border-[var(--glass-border-subtle)] p-3">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar (ex.: nome, telefone, valor)"
-              className="w-full rounded-lg border border-border bg-background py-1.5 pl-8 pr-2 text-xs placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-1.5 pl-8 pr-2 font-body text-[12.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--brand-primary)]"
             />
           </div>
 
           {grouped.length === 0 ? (
-            <p className="px-1 py-2 text-[11px] text-muted-foreground">
+            <p className="px-1 py-2 text-[11.5px] text-[var(--text-muted)]">
               Nenhuma variável encontrada para &quot;{search}&quot;.
             </p>
           ) : (
             <div className="max-h-60 space-y-3 overflow-y-auto pr-1">
               {grouped.map((g) => (
                 <div key={g.group}>
-                  <div className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="mb-1 px-1 font-display text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     {g.group}
                   </div>
                   <div className="grid gap-1">
@@ -114,17 +114,17 @@ export function InternalTemplateVariablePicker({
                         // isso o cursor "some" e o token cai no final.
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => onSelect(opt.token)}
-                        className="flex items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted"
+                        className="flex items-start gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--glass-bg-strong)]"
                       >
-                        <code className="mt-0.5 shrink-0 rounded bg-background px-1.5 py-0.5 font-mono text-[10px] text-foreground shadow-sm">
+                        <code className="mt-0.5 shrink-0 rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]">
                           {opt.token}
                         </code>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-medium text-foreground">
+                          <span className="block truncate text-[12.5px] font-semibold text-[var(--text-primary)]">
                             {opt.label}
                           </span>
                           {opt.hint && (
-                            <span className="block truncate text-[10px] text-muted-foreground">
+                            <span className="block truncate text-[10.5px] text-[var(--text-muted)]">
                               {opt.hint}
                             </span>
                           )}

@@ -18,7 +18,7 @@ const FALLBACK_COLORS = [
 
 function getAvatarColor(seed: string): string {
   const normalized = seed.toLowerCase();
-  if (normalized === "luz" || normalized.includes("luz")) return "#f59e0b";
+  if (normalized === "luz" || normalized.includes("luz")) return "var(--color-warning)";
 
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -56,7 +56,7 @@ export interface ChatAvatarProps {
   className?: string;
 }
 
-const WHATSAPP_BADGE_COLOR = "#25d366";
+const WHATSAPP_BADGE_COLOR = "var(--channel-whatsapp)";
 const UNREAD_BADGE_COLOR = "#22c55e";
 
 function WhatsappIcon({ size }: { size: number }) {

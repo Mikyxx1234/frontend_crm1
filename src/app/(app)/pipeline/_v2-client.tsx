@@ -40,6 +40,7 @@ import { ScrollMap } from "@/components/crm/scroll-map";
 import { DealDetailPanel, type DealDetail } from "@/components/crm/deal-detail-panel";
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
+import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ContactEditDialog } from "@/components/crm/contact-edit-dialog";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
@@ -59,7 +60,7 @@ import { avatarInitials } from "@/features/inbox-v2/adapters";
 import { useContactSidebar } from "@/features/inbox-v2/hooks";
 import {
   useBoard,
-  useBoardSearch,
+  useBoardFiltered,
   useDealDetail,
   useMoveDeal,
   usePipelines,
@@ -86,7 +87,6 @@ import {
   AddDealDialog,
   AssigneePopover,
   DealActionsMenu,
-  DealActivitiesTab,
   DealNotesTab,
   DealTimelineTab,
   InlineEditText,
@@ -103,6 +103,7 @@ import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
 import {
   countActiveFilters,
   isEmptyFilters,
+  hasServerSideFilters,
   type AdvancedDealFilters,
 } from "@/components/pipeline/kanban-filters/types";
 
@@ -266,40 +267,39 @@ export default function KanbanV2ClientPage({
     return undefined;
   }, [sortKey]);
 
-  // ── Busca server-side (varre todo o pipeline, não só os 100 carregados) ──
-  // O GET /board pagina 100 deals/coluna; a busca client-side em cima desses
-  // 100 nunca encontra deals em posições posteriores (ex.: #4129 numa coluna
-  // de 671 cards). Quando há termo digitado (≥2 chars debounced), trocamos
-  // o board pelo resultado do POST /board com `filters.search` — server-side
-  // com telefone normalizado e match por número do deal.
-  //
-  // Sem termo: continua o GET paginado normal (mesmo cache, sem refetch
-  // extra). useBoard fica desabilitado durante a busca pra evitar duas
-  // queries simultâneas competindo pelo mesmo state.
+  // ── Filtros server-side (varre todo o pipeline, não só os 100 carregados) ──
+  // O GET /board pagina 100 deals/coluna e ignora filtros avançados (origem,
+  // tags, datas, etc.). Quando há qualquer critério ativo, trocamos pelo
+  // POST /board com `filters` — mesma engine do backend usada na edição em massa.
   const rawSearch = (filters.search ?? search).trim();
   const [debouncedSearch, setDebouncedSearch] = useState(rawSearch);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(rawSearch), 300);
     return () => clearTimeout(t);
   }, [rawSearch]);
-  const hasServerSearch = debouncedSearch.length >= 2;
+
+  const mergedFilters = useMemo(() => {
+    const f: AdvancedDealFilters = { ...filters };
+    if (debouncedSearch.length >= 2) f.search = debouncedSearch;
+    return f;
+  }, [filters, debouncedSearch]);
+
+  const hasServerBoard = hasServerSideFilters(mergedFilters);
 
   const boardNormal = useBoard({
     pipelineId,
     status,
     sort: boardSort,
-    enabled: isAuthenticated && !hasServerSearch,
+    enabled: isAuthenticated && !hasServerBoard,
   });
-  const boardSearch = useBoardSearch({
+  const boardFiltered = useBoardFiltered({
     pipelineId,
     status,
-    search: debouncedSearch,
+    filters: mergedFilters,
     sort: boardSort,
-    enabled: isAuthenticated && hasServerSearch,
+    enabled: isAuthenticated && hasServerBoard,
   });
-  const board = hasServerSearch
-    ? boardSearch.data ?? []
-    : boardNormal.data ?? [];
+  const board = hasServerBoard ? boardFiltered.data ?? [] : boardNormal.data ?? [];
 
   const moveDeal = useMoveDeal(pipelineId, status);
 
@@ -390,13 +390,26 @@ export default function KanbanV2ClientPage({
 
   // Aplica filtros client-side ANTES de virar colunas.
   const filteredBoard = useMemo(() => {
-    // Quando o board veio do POST /board com `filters.search`, o servidor
-    // JÁ filtrou (telefone normalizado, número do deal etc.) — re-filtrar
-    // aqui em cima descartaria matches que só o backend consegue achar
-    // (ex.: telefone `+55 (11) 99697-8282` vs busca `11996978282`).
-    const queries = hasServerSearch
-      ? []
-      : [filters.search, search]
+    // Board vindo do POST /board já foi filtrado no servidor (origem, busca,
+    // tags, datas, etc.). Filtros só-cliente (ex.: faixa de valor) ainda
+    // passam pelo bloco abaixo.
+    if (hasServerBoard) {
+      const vMin = filters.valueFrom != null ? Number(filters.valueFrom) : null;
+      const vMax = filters.valueTo != null ? Number(filters.valueTo) : null;
+      const hasValue = vMin !== null || vMax !== null;
+      if (!hasValue) return board;
+      return board.map((stage) => {
+        const deals = stage.deals.filter((d) => {
+          const val = Number(d.value) || 0;
+          if (vMin !== null && val < vMin) return false;
+          if (vMax !== null && val > vMax) return false;
+          return true;
+        });
+        return { ...stage, deals, totalCount: deals.length };
+      });
+    }
+
+    const queries = [filters.search, search]
           .map((v) => (v ?? "").trim().toLowerCase())
           .filter((v) => v.length > 0);
     const hasSearch = queries.length > 0;
@@ -483,7 +496,7 @@ export default function KanbanV2ClientPage({
       }
       return { ...stage, deals };
     });
-  }, [board, filters, search, sortKey, hasServerSearch]);
+  }, [board, filters, search, sortKey, hasServerBoard]);
 
   // Filtrar stages por stageGrants do usuário (Permissions v2).
   // stageGrants vazio = todas as fases visíveis (sem restrição).
@@ -586,6 +599,8 @@ export default function KanbanV2ClientPage({
       value: dealDetail.value ?? null,
       online: undefined,
       stage: activeDealStageName,
+      pipelineName:
+        (dealDetail as { stage?: { pipeline?: { name?: string } } }).stage?.pipeline?.name ?? null,
       owner: {
         initials: avatarInitials(ownerName),
         name: ownerName,
@@ -663,7 +678,7 @@ export default function KanbanV2ClientPage({
   }
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 p-4" style={{ gridTemplateRows: "1fr" }}>
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 p-4" style={{ gridTemplateRows: "1fr" }}>
       {navRail ?? <NavRailV2 />}
       <div
         ref={boardWrapperRef}
@@ -929,7 +944,7 @@ export default function KanbanV2ClientPage({
               trigger={
                 <TooltipGlass label="Mais opções" side="left">
                   <span
-                    className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 transition-all hover:bg-white/20 hover:text-white hover:border-white/35"
                   >
                     <IconDotsVertical size={14} />
                   </span>
@@ -947,13 +962,15 @@ export default function KanbanV2ClientPage({
               pipelineId={pipelineId}
               statusFilter={status}
               trigger={
-                <Chip
-                  variant="brand"
-                  className="cursor-pointer transition-colors hover:bg-[rgba(91,111,245,0.22)]"
-                >
-                  {dealDetail?.owner?.name ?? "Sem responsável"}
-                  <IconChevronDown size={10} />
-                </Chip>
+                dealDetail?.owner?.name ? (
+                  <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[11px] font-semibold transition-opacity hover:opacity-75">
+                    {dealDetail.owner.name}
+                  </span>
+                ) : (
+                  <span className="inline-flex cursor-pointer items-center rounded-full px-2.5 py-1 font-display text-[11px] font-semibold transition-opacity hover:opacity-75">
+                    + Responsável
+                  </span>
+                )
               }
             />
           ) : undefined
@@ -964,28 +981,26 @@ export default function KanbanV2ClientPage({
         // do DealDetailPanel usando Contact.source nativo via
         // InlineNativeEditor.
         customFieldsSlot={(() => {
-          // Mesma lógica do toContactAside: mescla inboxLeadPanelFields (contato) +
-          // dealInboxPanelFields[activeDealId] (campos do negócio ativo),
-          // deduplicando por fieldId e filtrando vazios.
+          // Contact fields: filtrados por showInInboxLeadPanel (inalterado).
+          // Deal fields: agora usa dealPanelFields do deal detail (filtrados por
+          // showInDealPanel) para separar as configurações de visibilidade do inbox.
           const contactFields = dealContact?.inboxLeadPanelFields ?? [];
-          const dealFields = activeDealId
-            ? (dealContact?.dealInboxPanelFields?.[activeDealId] ?? [])
-            : [];
+          const dealPanelFields = (dealDetail as { dealPanelFields?: import("@/features/pipeline-v2/api/deals").DealPanelField[] } | null)?.dealPanelFields ?? [];
           const seen = new Set<string>();
-          type Tagged = (typeof contactFields[0]) & { _et: "contact" | "deal"; _eid: string };
-          const tagged: Tagged[] = [
+          type CFEntry = { fieldId: string; label?: string; name?: string; value: string | null; type: string; options?: string[]; highlightRules?: unknown[] | null; highlight?: { severity: string; label: string } | null; _et: "contact" | "deal"; _eid: string };
+          const tagged: CFEntry[] = [
             ...contactFields.map((f) => ({ ...f, _et: "contact" as const, _eid: dealContactId ?? "" })),
-            ...dealFields.map((f) => ({ ...f, _et: "deal" as const, _eid: activeDealId ?? "" })),
+            ...dealPanelFields.map((f) => ({ ...f, _et: "deal" as const, _eid: activeDealId ?? "" })),
           ];
           return tagged
             .filter((f) => {
               if (seen.has(f.fieldId)) return false;
               seen.add(f.fieldId);
-              return true; // não filtra vazios — o editor cuida de mostrar "Adicionar"
+              return true;
             })
             .map((f) => ({
               fieldId: f.fieldId,
-              label: f.label || f.name,
+              label: f.label || f.name || f.fieldId,
               value: f.value,
               type: f.type,
               options: f.options ?? [],
@@ -1017,7 +1032,11 @@ export default function KanbanV2ClientPage({
                   />
                 ),
                 timeline: <DealTimelineTab dealId={activeDealId} />,
-                atividades: <DealActivitiesTab />,
+                atividades: (
+                  <div className="flex-1 overflow-auto">
+                    <ActivitiesPanel dealId={activeDealId} />
+                  </div>
+                ),
                 chamadas: (
                   <div className="flex-1 overflow-auto p-4">
                     <CallHistoryList
@@ -1046,12 +1065,15 @@ export default function KanbanV2ClientPage({
                   // Sem isso, tags longas no header do deal detail estouravam
                   // o slot e empurravam o resto do cabeçalho.
                   <TooltipGlass key={t.id} label={t.name} side="top">
+                    {/* Chip claro (color-mix com white) — mesmo padrão do
+                        DealTagsTray do inbox, garante contraste legível sobre
+                        o hero escuro (--nav-bg). */}
                     <span
-                      className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 font-display text-[11px] font-semibold"
                       style={{
-                        background: `${t.color ?? "#5b6ff5"}22`,
-                        color: t.color ?? "var(--brand-primary)",
-                        border: `1px solid ${t.color ?? "#5b6ff5"}44`,
+                        background: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 18%, white)`,
+                        color: `color-mix(in srgb, ${t.color ?? "#5b6ff5"} 75%, black)`,
+                        border: `1px solid color-mix(in srgb, ${t.color ?? "#5b6ff5"} 40%, transparent)`,
                       }}
                     >
                       {t.name}
@@ -1063,7 +1085,7 @@ export default function KanbanV2ClientPage({
                     label={hiddenTags.map((t) => t.name).join(", ")}
                     side="top"
                   >
-                    <span className="inline-flex shrink-0 cursor-default items-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-display text-[10.5px] font-bold text-[var(--text-secondary)]">
+                    <span className="inline-flex shrink-0 cursor-default items-center rounded-full border border-white/25 bg-white/15 px-1.5 py-0.5 font-display text-[10.5px] font-bold text-white/85">
                       +{hiddenTags.length}
                     </span>
                   </TooltipGlass>
@@ -1074,7 +1096,7 @@ export default function KanbanV2ClientPage({
                   pipelineId={pipelineId}
                   statusFilter={status}
                   trigger={
-                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[rgba(163,163,163,0.40)] px-2.5 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]">
+                    <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-white/35 px-2.5 py-0.5 font-display text-[11px] font-semibold text-white/70 transition-colors hover:border-white hover:text-white">
                       <IconPlus size={10} />
                       {allTags.length === 0 ? "Adicionar" : ""}
                     </span>
@@ -1104,7 +1126,7 @@ export default function KanbanV2ClientPage({
               {(dealDetail?.contact?.tags ?? []).map((t) => (
                 <span
                   key={t.id}
-                  className="inline-flex max-w-[140px] items-center gap-1 truncate rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
+                  className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 font-display text-[10.5px] font-semibold"
                   style={{
                     background: `${t.color ?? "#5b6ff5"}22`,
                     color: t.color ?? "var(--brand-primary)",
@@ -1383,7 +1405,7 @@ function CardMoveDropdown({
             position: "absolute",
             top: coords.top,
             left: coords.left,
-            zIndex: 9999,
+            zIndex: "var(--z-popover)",
             transform: "translate(-100%, -100%)",
             marginBottom: "6px",
           }}
@@ -1499,6 +1521,7 @@ function DroppableColumn({
         <KanbanColumn
           title={column.title}
           color={column.color}
+          stageColor={column.stageColor}
           count={column.count}
           total={column.total}
           deals={column.deals}
@@ -1572,11 +1595,11 @@ function DroppableColumn({
                               // usado no inbox v2 (`inbox/_v2-client.tsx`).
                               <TooltipGlass key={t.id} label={t.name} side="top">
                                 <span
-                                  className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide max-w-[110px] truncate"
+                                  className="font-display text-[9.5px] font-bold px-2 py-px rounded-full inline-flex items-center tracking-wide whitespace-nowrap"
                                   style={{
-                                    background: `${t.color || "#5b6ff5"}22`,
+                                    background: `${t.color || "#5b6ff5"}33`,
                                     color: t.color || "var(--brand-primary)",
-                                    border: `1px solid ${t.color || "#5b6ff5"}44`,
+                                    border: `1px solid ${t.color || "#5b6ff5"}66`,
                                   }}
                                 >
                                   {t.name}
@@ -1616,16 +1639,26 @@ function DroppableColumn({
                           statusFilter={statusFilter}
                           trigger={
                             raw?.owner?.name ? (
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="font-display text-[9.5px] font-bold text-[var(--text-muted)]">
-                                  Responsável
-                                </span>
-                                <Chip
-                                  variant="brand"
-                                  className="max-w-full cursor-pointer truncate whitespace-nowrap transition-colors hover:bg-[rgba(91,111,245,0.22)]"
+                              // Owner: mini-avatar colorido (paleta av-* por hash do
+                              // nome) + nome. Devolve identidade que o antigo Chip
+                              // monocromático indigo tinha suprimido; o círculo
+                              // colorido diferencia responsáveis "de relance".
+                              <span
+                                className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] py-px pl-px pr-2 transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--glass-bg-base)]"
+                                title={raw.owner.name}
+                              >
+                                <span
+                                  className={cn(
+                                    `av-${deal.owner.avatarColor}`,
+                                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full font-display text-[8px] font-bold text-white",
+                                  )}
+                                  aria-hidden
                                 >
+                                  {deal.owner.initials}
+                                </span>
+                                <span className="min-w-0 truncate font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
                                   {raw.owner.name}
-                                </Chip>
+                                </span>
                               </span>
                             ) : (
                               <Chip
@@ -1885,7 +1918,7 @@ interface ImportExportModalProps {
 function ImportExportModal({ activeTab, onClose, bump }: ImportExportModalProps) {
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/25 px-4 py-4 backdrop-blur-[2px] sm:px-6 sm:py-6"
+      className="fixed inset-0 z-(--z-modal) flex items-center justify-center bg-black/25 px-4 py-4 backdrop-blur-[2px] sm:px-6 sm:py-6"
       onClick={onClose}
     >
       <div

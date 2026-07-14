@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, EyeOff, GripVertical, RotateCcw, Save, Settings2 } from "lucide-react";
+import { IconEye as Eye, IconEyeOff as EyeOff, IconGripVertical as GripVertical, IconRotate2 as RotateCcw, IconDeviceFloppy as Save, IconAdjustments as Settings2 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import type { SectionConfig } from "@/lib/field-layout";
@@ -62,8 +62,8 @@ export function SortableSidebar({
           onClick={onToggleEditMode}
           className={cn(
             "absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md px-2 py-1",
-            "text-[10px] font-medium text-slate-400 transition-colors",
-            "hover:bg-slate-100 hover:text-slate-600",
+            "text-[10px] font-medium text-[var(--text-muted)] transition-colors",
+            "hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-secondary)]",
             hasAgentOverride && "text-primary/60 hover:text-primary",
           )}
           aria-label="Personalizar layout"
@@ -80,8 +80,8 @@ export function SortableSidebar({
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-slate-100 bg-white px-3 py-2">
-        <span className="text-[11px] font-semibold text-slate-700">
+      <div className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-[var(--glass-border-subtle)] bg-white px-3 py-2">
+        <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
           {isAdmin ? "Padrão da org" : "Meu layout"}
         </span>
         <div className="flex items-center gap-1.5">
@@ -92,7 +92,7 @@ export function SortableSidebar({
                 onResetAgent();
                 onToggleEditMode();
               }}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-secondary)]"
             >
               <RotateCcw className="size-3" />
               Resetar
@@ -147,22 +147,22 @@ export function SortableSidebar({
               dragOver.current = null;
             }}
             className={cn(
-              "flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2.5 transition-all select-none",
-              !section.fixed && "cursor-grab hover:border-slate-200 hover:shadow-sm active:cursor-grabbing",
+              "flex items-center gap-2 rounded-lg border border-[var(--glass-border-subtle)] bg-white px-3 py-2.5 transition-all select-none",
+              !section.fixed && "cursor-grab hover:border-[var(--glass-border)] hover:shadow-sm active:cursor-grabbing",
               section.fixed && "opacity-50",
               dragging === section.id && "opacity-40 ring-2 ring-primary/20",
               section.hidden && "opacity-40",
             )}
           >
-            <GripVertical className={cn("size-3.5 shrink-0 text-slate-300", section.fixed && "invisible")} />
-            <span className="flex-1 text-[13px] font-medium text-slate-700">{section.label}</span>
+            <GripVertical className={cn("size-3.5 shrink-0 text-[var(--text-faint)]", section.fixed && "invisible")} />
+            <span className="flex-1 text-[13px] font-medium text-[var(--text-secondary)]">{section.label}</span>
             {section.fixed ? (
-              <span className="text-[9px] font-semibold uppercase tracking-widest text-slate-300">fixo</span>
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-faint)]">fixo</span>
             ) : (
               <button
                 type="button"
                 onClick={() => toggleHidden(section.id)}
-                className="flex size-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="flex size-6 items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-secondary)]"
                 aria-label={section.hidden ? "Mostrar seção" : "Ocultar seção"}
               >
                 {section.hidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -173,7 +173,7 @@ export function SortableSidebar({
       </div>
 
       {isAdmin ? (
-        <p className="px-3 pb-3 text-[10px] leading-snug text-slate-400">
+        <p className="px-3 pb-3 text-[10px] leading-snug text-[var(--text-muted)]">
           <strong>Salvar padrão</strong> define o layout para todos os agentes da org.
           <br />
           <strong>Salvar meu layout</strong> é um override só seu.
@@ -183,7 +183,7 @@ export function SortableSidebar({
       <button
         type="button"
         onClick={onToggleEditMode}
-        className="mx-3 mb-3 rounded-lg border border-slate-100 py-1.5 text-[11px] text-slate-400 hover:bg-slate-50"
+        className="mx-3 mb-3 rounded-lg border border-[var(--glass-border-subtle)] py-1.5 text-[11px] text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)]"
       >
         Cancelar
       </button>

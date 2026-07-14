@@ -215,7 +215,7 @@ function CopyToStageModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/25 backdrop-blur-[2px]"
+      className="fixed inset-0 z-(--z-sheet) flex items-center justify-center bg-foreground/25 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div
@@ -223,7 +223,7 @@ function CopyToStageModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="relative flex items-start justify-between bg-gradient-to-br from-[#5B6FF5]/10 via-[var(--glass-bg-base)] to-[var(--glass-bg-base)] px-5 pb-4 pt-5">
+        <div className="relative flex items-start justify-between bg-gradient-to-br from-[var(--brand-primary)]/10 via-[var(--glass-bg-base)] to-[var(--glass-bg-base)] px-5 pb-4 pt-5">
           <span className="absolute left-0 top-0 h-full w-[3px] rounded-r-full bg-[var(--brand-primary)]" />
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary)]/10">
@@ -363,7 +363,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
 
         {/* Tag de gatilho + menu contextual */}
         <div className="relative flex items-center justify-between" ref={menuRef}>
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 font-display text-[10px] font-bold text-white/90">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--glass-bg-subtle)] px-2.5 py-0.5 font-display text-[10px] font-bold text-white/90">
             <IconBolt size={10} />
             {automation.stageTrigger}
           </span>
@@ -372,7 +372,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-white/0 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg bg-transparent text-white/60 transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-white"
             >
               <IconDots size={14} />
             </button>
@@ -408,7 +408,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
         {/* Nome + toggle */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/20">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--glass-bg-subtle)]">
               <IconBolt size={14} className="text-white" />
             </div>
             <p className="truncate font-display text-[13.5px] font-bold text-white">
@@ -436,7 +436,7 @@ function AutomationCard({ automation, stageId, stages, onCopy, onEdit, onDelete 
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setCopyModalOpen(true); }}
-          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/20 py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-white/30"
+          className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] py-1.5 font-display text-[11px] font-semibold text-white/90 transition-colors hover:bg-[var(--glass-bg-panel)]"
         >
           <IconCopy size={12} />
           Duplicar
@@ -576,8 +576,8 @@ function StageOptionsMenu({
               Alterar cor
             </span>
             <span
-              className="h-4 w-4 rounded-full border border-white/30"
-              style={{ background: currentColor }}
+              className="h-4 w-4 rounded-full border border-[var(--glass-border)]"
+            style={{ background: currentColor }}
             />
           </button>
 
@@ -918,9 +918,9 @@ function StageColumn({
             </TooltipGlass>
           ) : (
             <TooltipGlass label="Arrastar para reordenar" side="top">
-              <span className="flex cursor-grab flex-col gap-[3px] active:cursor-grabbing">
+              <span className="flex cursor-grab flex-col gap-1 active:cursor-grabbing">
                 {[0,1,2].map((i) => (
-                <span key={i} className="flex gap-[3px]">
+                <span key={i} className="flex gap-1">
                   <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
                   <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-muted)]/40" />
                 </span>
@@ -1942,7 +1942,7 @@ export default function PipelineSettingsClientPage() {
 
   return (
     <>
-      <div className="v2-screen grid grid-cols-[72px_1fr] grid-rows-1 gap-4 p-4">
+      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] grid-rows-1 gap-4 p-4">
         <NavRailV2 />
 
         <div

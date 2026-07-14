@@ -16,10 +16,11 @@ import { apiUrl } from "@/lib/api";
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Package, Sparkles, Info, Loader2 } from "lucide-react";
+import { IconPackage as Package, IconSparkles as Sparkles, IconInfoCircle as Info, IconLoader2 as Loader2 } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 
@@ -162,7 +163,7 @@ export function ProductPolicyPanel({
   return (
     <div className={cn("space-y-4", compact ? "" : "rounded-xl border bg-muted/10 p-4")}>
       <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-info-bg)] text-[var(--brand-primary)] dark:bg-indigo-950 dark:text-[var(--color-brand-primary)]">
           <Package className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
@@ -178,7 +179,7 @@ export function ProductPolicyPanel({
       </div>
 
       {!enabled && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50/60 p-3 text-[12px] text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="flex items-start gap-2 rounded-lg border border-[var(--color-warning)]/70 bg-[var(--color-warn-bg)]/60 p-3 text-[12px] text-[var(--color-warn-text)] dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-[var(--color-warning)]/70">
           <Info className="mt-0.5 size-4 shrink-0" />
           <p>
             A tool <strong>Consultar catálogo de produtos</strong> não está selecionada
@@ -217,13 +218,13 @@ export function ProductPolicyPanel({
                   className={cn(
                     "group flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors",
                     isSel
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-900 dark:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-100"
+                      ? "border-[var(--color-brand-primary)] bg-[var(--color-info-bg)] text-indigo-900 dark:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-100"
                       : "border-border bg-background text-muted-foreground hover:bg-muted/60",
                   )}
                 >
                   <span className="font-medium">{f.label}</span>
                   {f.source === "custom" && (
-                    <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                    <span className="rounded-full bg-[var(--color-lavender-soft)] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-[var(--color-purple-text)] dark:bg-purple-950 dark:text-purple-300">
                       custom
                     </span>
                   )}
@@ -252,7 +253,7 @@ export function ProductPolicyPanel({
             "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-medium transition-colors",
             selected.size === 0
               ? "cursor-not-allowed border-border text-muted-foreground/60"
-              : "border-indigo-500 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-200",
+              : "border-[var(--color-brand-primary)] bg-[var(--color-info-bg)] text-[var(--brand-primary)] hover:bg-[var(--color-primary-soft)] dark:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-200",
           )}
         >
           <Sparkles className="size-3.5" />
@@ -275,7 +276,7 @@ export function ProductPolicyPanel({
         <Label htmlFor="product-policy" className="text-[12px] font-medium">
           Instruções ao agente
         </Label>
-        <textarea
+        <Textarea
           id="product-policy"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -285,7 +286,7 @@ export function ProductPolicyPanel({
 - Inclua modalidade e duração quando disponível.
 - Nunca prometa desconto.
 - Ao final, pergunte se o lead quer falar com um consultor.`}
-          className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="w-full resize-y"
         />
         <p className="text-[10px] text-muted-foreground">
           Máximo recomendado: ~800 caracteres. Quanto mais conciso, melhor o agente segue.

@@ -3,7 +3,7 @@
 import { apiUrl } from "@/lib/api";
 
 import { useConfirm } from "@/hooks/use-confirm";
-import { Plus, Radio } from "lucide-react";
+import { IconPlus as Plus, IconRadio as Radio } from "@tabler/icons-react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -13,7 +13,8 @@ import { CreateChannelDialog } from "@/components/channels/create-channel-dialog
 import { MetaConfigPanel } from "@/components/channels/meta-config-panel";
 import type { ApiChannel } from "@/components/channels/types";
 import { WhatsappQrModal } from "@/components/channels/whatsapp-qr-modal";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import {
   Dialog,
   DialogClose,
@@ -22,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -193,17 +194,18 @@ export default function SettingsChannelsPage({
     : channels;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-6">
       {!hideToolbar ? (
         <div className="flex justify-end">
-          <Button
+          <ButtonGlass
             type="button"
-            className="shrink-0 gap-2"
+            variant="primary"
+            className="shrink-0"
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" />
             Novo Canal
-          </Button>
+          </ButtonGlass>
         </div>
       ) : null}
 
@@ -214,37 +216,44 @@ export default function SettingsChannelsPage({
       ) : null}
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
+        >
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 rounded-[var(--radius-lg)]" />
+            <Skeleton key={i} className="h-[232px] rounded-[var(--radius-xl)]" />
           ))}
         </div>
       ) : channels.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-6 py-16 text-center">
+        <GlassCard variant="subtle" className="flex flex-col items-center justify-center border-dashed px-6 py-16 text-center">
           <Radio className="mb-3 size-10 text-[var(--text-muted)]" />
           <p className="font-medium text-[var(--text-primary)]">Nenhum canal ainda</p>
           <p className="mt-1 max-w-sm text-sm text-[var(--text-muted)]">
             Crie um canal para começar a receber conversas no CRM.
           </p>
-          <Button
+          <ButtonGlass
             type="button"
-            className="mt-6 gap-2"
+            variant="primary"
+            className="mt-6"
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" />
             Novo Canal
-          </Button>
-        </div>
+          </ButtonGlass>
+        </GlassCard>
       ) : filteredChannels.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-6 py-16 text-center">
+        <GlassCard variant="subtle" className="flex flex-col items-center justify-center border-dashed px-6 py-16 text-center">
           <Radio className="mb-3 size-10 text-[var(--text-muted)]" />
           <p className="font-medium text-[var(--text-primary)]">Nenhum canal encontrado</p>
           <p className="mt-1 max-w-sm text-sm text-[var(--text-muted)]">
             Nenhum canal corresponde à busca atual.
           </p>
-        </div>
+        </GlassCard>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
+        >
           {filteredChannels.map((ch) => (
             <ChannelCard
               key={ch.id}
@@ -315,7 +324,7 @@ export default function SettingsChannelsPage({
           if (!o) setMetaChannel(null);
         }}
       >
-        <DialogContent size="lg" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle>Configurar Meta Cloud API</DialogTitle>
           </DialogHeader>
@@ -342,7 +351,7 @@ export default function SettingsChannelsPage({
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="simp-name">Nome</Label>
-              <Input
+              <InputGlass
                 id="simp-name"
                 value={simpleName}
                 onChange={(e) => setSimpleName(e.target.value)}
@@ -350,7 +359,7 @@ export default function SettingsChannelsPage({
             </div>
             <div className="space-y-2">
               <Label htmlFor="simp-phone">Telefone (opcional)</Label>
-              <Input
+              <InputGlass
                 id="simp-phone"
                 value={simplePhone}
                 onChange={(e) => setSimplePhone(e.target.value)}
@@ -363,20 +372,21 @@ export default function SettingsChannelsPage({
             />
           </div>
           <DialogFooter>
-            <Button
+            <ButtonGlass
               type="button"
-              variant="outline"
+              variant="glass"
               onClick={() => setSimpleChannel(null)}
             >
               Cancelar
-            </Button>
-            <Button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="primary"
               disabled={saveSimpleMutation.isPending || !simpleName.trim()}
               onClick={() => saveSimpleMutation.mutate()}
             >
               Salvar
-            </Button>
+            </ButtonGlass>
           </DialogFooter>
           <DialogClose />
         </DialogContent>

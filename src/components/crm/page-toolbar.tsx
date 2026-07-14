@@ -190,8 +190,8 @@ export function PageSegmentedControl({
             className={cn(
               "cursor-pointer rounded-full font-display font-bold transition-colors",
               compact
-                ? "px-3 py-1 text-[12px]"
-                : "px-4 py-[7px] text-[13px]",
+                ? "px-3 py-1 text-xs"
+                : "px-4 py-2 text-[13px]",
               active
                 ? "bg-[var(--glass-bg-modal)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]"
                 : "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
@@ -238,7 +238,7 @@ export function PagePillButton({
     <button
       type={type}
       className={cn(
-        "cursor-pointer whitespace-nowrap rounded-full border px-4 py-[7px] font-display text-[13px] font-bold transition-colors",
+        "cursor-pointer whitespace-nowrap rounded-full border px-4 py-2 font-display text-[13px] font-bold transition-colors",
         active
           ? "border-transparent bg-[var(--glass-bg-modal)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]"
           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-secondary)]",

@@ -5,19 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  Building2,
-  ChevronDown,
-  ChevronRight,
-  Handshake,
-  Info,
-  Mail,
-  Phone,
-  Plus,
-  Tag,
-  User,
-  X,
-} from "lucide-react";
+import { IconBuilding as Building2, IconChevronDown as ChevronDown, IconChevronRight as ChevronRight, IconHeartHandshake as Handshake, IconInfoCircle as Info, IconMail as Mail, IconPhone as Phone, IconPlus as Plus, IconTag as Tag, IconUser as User, IconX as X } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -120,7 +108,7 @@ function Section({
         className="flex w-full items-center gap-2 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
       >
         {open ? <ChevronDown className="size-3.5 shrink-0" /> : <ChevronRight className="size-3.5 shrink-0" />}
-        <Icon className="size-3.5 shrink-0 text-indigo-500" />
+        <Icon className="size-3.5 shrink-0 text-[var(--brand-primary)]" />
         {title}
       </button>
       {open ? <div className="space-y-2 pb-3">{children}</div> : null}
@@ -240,7 +228,7 @@ export function ContactInfoPanel({
     <aside className={cn("flex w-[300px] shrink-0 flex-col border-l border-border/60 bg-muted/20", className)}>
       <div className="flex items-center justify-between border-b border-border/60 px-3 py-2.5">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Info className="size-4 text-indigo-500" />
+          <Info className="size-4 text-[var(--brand-primary)]" />
           Contato
         </div>
         {onClose && (
@@ -266,7 +254,7 @@ export function ContactInfoPanel({
             <div className="py-3">
               <Link
                 href={`/contacts/${data.id}`}
-                className="text-base font-semibold text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+                className="text-base font-semibold text-[var(--brand-primary)] underline-offset-2 hover:underline dark:text-[var(--color-brand-primary)]"
               >
                 Ver perfil completo →
               </Link>
@@ -277,13 +265,13 @@ export function ContactInfoPanel({
               <div className="space-y-2 text-sm">
                 <p className="font-medium text-foreground">{data.name}</p>
                 {data.email && (
-                  <a href={`mailto:${data.email}`} className="flex items-center gap-2 text-muted-foreground hover:text-indigo-600">
+                  <a href={`mailto:${data.email}`} className="flex items-center gap-2 text-muted-foreground hover:text-[var(--brand-primary)]">
                     <Mail className="size-3.5 shrink-0" />
                     <span className="truncate text-xs">{data.email}</span>
                   </a>
                 )}
                 {data.phone && (
-                  <a href={`tel:${data.phone}`} className="flex items-center gap-2 text-muted-foreground hover:text-indigo-600">
+                  <a href={`tel:${data.phone}`} className="flex items-center gap-2 text-muted-foreground hover:text-[var(--brand-primary)]">
                     <Phone className="size-3.5 shrink-0" />
                     <span className="text-xs">{data.phone}</span>
                   </a>
@@ -291,7 +279,7 @@ export function ContactInfoPanel({
                 <div className="flex flex-wrap gap-2 pt-1">
                   <Badge variant="secondary" className="text-[10px] font-normal">Ciclo: {lifecycleLabel}</Badge>
                   {data.leadScore != null && (
-                    <Badge variant="outline" className="border-indigo-500/30 text-[10px] font-normal">Score: {data.leadScore}</Badge>
+                    <Badge variant="outline" className="border-[var(--color-brand-primary)]/30 text-[10px] font-normal">Score: {data.leadScore}</Badge>
                   )}
                 </div>
               </div>
@@ -302,9 +290,9 @@ export function ContactInfoPanel({
                 options={LIFECYCLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
                 value={lifecycleLocal}
                 onValueChange={(v) => setLifecycleLocal(v)}
-                triggerClassName="h-9 w-full border-indigo-500/20 text-xs"
+                triggerClassName="h-9 w-full border-[var(--color-brand-primary)]/20 text-xs"
               />
-                <Button type="button" size="sm" variant="secondary" className="h-8 text-xs"
+                <Button type="button" size="sm" variant="glass" className="h-8 text-xs"
                   disabled={lifecycleMutation.isPending || lifecycleLocal === data.lifecycleStage}
                   onClick={() => lifecycleMutation.mutate(lifecycleLocal)}>
                   {lifecycleMutation.isPending ? "Salvando…" : "Aplicar estágio"}
@@ -396,7 +384,7 @@ export function ContactInfoPanel({
                     const valueLabel = Number.isFinite(n) ? formatCurrency(n) : d.value;
                     return (
                       <li key={d.id} className="rounded-lg border border-border/60 bg-background/80 px-2.5 py-2 text-xs">
-                        <Link href={`/pipeline/${d.id}`} className="font-medium text-foreground hover:text-indigo-600">
+                        <Link href={`/pipeline/${d.id}`} className="font-medium text-foreground hover:text-[var(--brand-primary)]">
                           {d.title}
                         </Link>
                         <p className="mt-0.5 text-[10px] text-muted-foreground">
@@ -419,9 +407,9 @@ export function ContactInfoPanel({
             </Section>
 
             {/* Activities */}
-            <Section title="Atividades recentes" icon={Info} open={openActivities} onToggle={() => setOpenActivities((v) => !v)}>
+            <Section title="Tarefas recentes" icon={Info} open={openActivities} onToggle={() => setOpenActivities((v) => !v)}>
               {data.activities.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhuma atividade</p>
+                <p className="text-xs text-muted-foreground">Nenhuma tarefa</p>
               ) : (
                 <ul className="space-y-2">
                   {data.activities.slice(0, 8).map((a) => (

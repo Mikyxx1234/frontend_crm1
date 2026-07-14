@@ -59,7 +59,7 @@ export function buttonGlassClassName({
     variant === 'glass' && "bg-[var(--glass-bg-strong)] backdrop-blur-md border border-[var(--glass-border)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-overlay)]",
     variant === 'danger' && "bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)] shadow-[0_4px_14px_rgba(239,68,68,0.35)] hover:bg-[color-mix(in_srgb,var(--color-destructive)_88%,black)] hover:-translate-y-0.5",
     variant === 'icon' && "bg-transparent text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]",
-    size === 'default' && "px-[18px] py-2 text-[13px]",
+    size === 'default' && "px-4.5 py-2 text-[13px]",
     size === 'sm' && "px-3 py-1.5 text-xs",
     size === 'icon' && "h-9 w-9 p-0 rounded-[var(--radius-md)] text-[17px]",
     className,

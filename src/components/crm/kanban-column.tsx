@@ -36,6 +36,13 @@ export interface KanbanColumnSelection {
 interface KanbanColumnProps {
   title: string
   color: ColumnColor
+  /**
+   * Cor hex opcional (ex.: `#ec4899`) do backend `stage.color`.
+   * Quando fornecida, sobrepõe o preset de `color` na strip do topo
+   * e no badge de contagem — devolve identidade por estágio em vez
+   * de forçar a paleta fixa de 5 slugs.
+   */
+  stageColor?: string
   count: number
   total: string
   deals: Deal[]
@@ -61,24 +68,25 @@ interface KanbanColumnProps {
 }
 
 const colorMap: Record<ColumnColor, string> = {
-  novo: "#5b6ff5",
-  quali: "#10b981",
-  proposta: "#f59e0b",
-  nego: "#a78bfa",
-  fecha: "#ef4444",
+  novo: "var(--col-novo)",
+  quali: "var(--col-quali)",
+  proposta: "var(--col-proposta)",
+  nego: "var(--col-nego)",
+  fecha: "var(--col-fecha)",
 }
 
 const colorBgMap: Record<ColumnColor, string> = {
-  novo:     "rgba(91, 111, 245, 0.10)",
-  quali:    "rgba(16, 185, 129, 0.10)",
-  proposta: "rgba(245, 158, 11,  0.10)",
-  nego:     "rgba(167, 139, 250, 0.10)",
-  fecha:    "rgba(239, 68,  68,  0.10)",
+  novo:     "color-mix(in srgb, var(--col-novo) 10%, transparent)",
+  quali:    "color-mix(in srgb, var(--col-quali) 10%, transparent)",
+  proposta: "color-mix(in srgb, var(--col-proposta) 10%, transparent)",
+  nego:     "color-mix(in srgb, var(--col-nego) 10%, transparent)",
+  fecha:    "color-mix(in srgb, var(--col-fecha) 10%, transparent)",
 }
 
 export function KanbanColumn({
   title,
   color,
+  stageColor,
   count,
   total,
   deals,
@@ -96,21 +104,24 @@ export function KanbanColumn({
     selection.totalInColumn > 0 &&
     selection.enabled !== false
 
+  // Cor efetiva do estágio: hex do backend > preset. Badge usa
+  // color-mix inline para gerar background 15% da cor do estágio
+  // (opacidade um pouco maior que o preset 10% p/ melhorar contraste
+  // sobre lavanda do mesh).
+  const effectiveColor = stageColor ?? colorMap[color]
+  const effectiveBg = stageColor
+    ? `color-mix(in srgb, ${stageColor} 15%, transparent)`
+    : colorBgMap[color]
+
   return (
     <section
       aria-label={`Coluna ${title}`}
-      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] pb-2 backdrop-blur-md shadow-[var(--glass-shadow)]"
+      className="kanban-col flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
     >
-      {/* Barra de acento colorida no topo da coluna */}
-      <div
-        className="h-[3px] w-full shrink-0 rounded-t-[var(--radius-xl)]"
-        style={{ background: colorMap[color] }}
-      />
-
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pb-1.5 pt-2.5">
-        <div className="flex items-center gap-2">
-          {/* Checkbox "selecionar todos desta etapa" */}
+      {/* Header — reproduz a estrutura do kanban legado (surface forte + border-b) */}
+      <header className="relative shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2.5 backdrop-blur">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
           {showSelectAll && selection ? (
             <TooltipGlass
               label={
@@ -156,53 +167,48 @@ export function KanbanColumn({
             {title}
           </h3>
 
-          {/* Badge de contagem com cor da etapa */}
+          {/* Badge de contagem — círculo colorido simples, sem background */}
           <span
-            className="rounded-full px-2 py-0.5 font-display text-[11px] font-bold"
-            style={{
-              background: colorBgMap[color],
-              color: colorMap[color],
-            }}
+            className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 font-display text-[11px] font-bold text-white"
+            style={{ background: effectiveColor }}
           >
             {count}
           </span>
+          </div>
+
+          <TooltipGlass label="Adicionar negócio" side="top">
+            <button
+              type="button"
+              onClick={onAddDeal}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:text-white"
+              onMouseEnter={(e) => {
+                const btn = e.currentTarget
+                btn.style.background = effectiveColor
+                btn.style.color = "#fff"
+              }}
+              onMouseLeave={(e) => {
+                const btn = e.currentTarget
+                btn.style.background = ""
+                btn.style.color = ""
+              }}
+            >
+              <IconPlus size={15} />
+            </button>
+          </TooltipGlass>
         </div>
 
-        <TooltipGlass label="Adicionar negócio" side="top">
-          <button
-            type="button"
-            onClick={onAddDeal}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] transition-colors hover:text-white"
-            style={
-              {
-                "--hover-bg": colorMap[color],
-              } as React.CSSProperties
-            }
-            onMouseEnter={(e) => {
-              const btn = e.currentTarget
-              btn.style.background = colorMap[color]
-              btn.style.borderColor = colorMap[color]
-              btn.style.color = "#fff"
-            }}
-            onMouseLeave={(e) => {
-              const btn = e.currentTarget
-              btn.style.background = ""
-              btn.style.borderColor = ""
-              btn.style.color = ""
-            }}
-          >
-            <IconPlus size={15} />
-          </button>
-        </TooltipGlass>
-      </div>
+        {/* Faixa de cor — abaixo do título (igual ao legado) */}
+        {effectiveColor ? (
+          <div
+            className="mt-1.5 h-[2px] w-full rounded-full opacity-90"
+            style={{ backgroundColor: effectiveColor }}
+            aria-hidden
+          />
+        ) : null}
 
-      {/* Total */}
-      <div className="mb-2 border-b border-[var(--glass-border-subtle)] px-4 pb-1.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">
-        {total}
-      </div>
-
-      {/* Padding lateral dos deals */}
-      <div className="flex min-h-0 flex-1 flex-col px-2.5">
+        {/* Total */}
+        <p className="mt-1.5 text-[11px] tabular-nums text-[var(--text-muted)]">{total}</p>
+      </header>
 
       {/* Deals — container respeita Droppable (ref + props do react-dnd).
           min-h-0 e' OBRIGATORIO: este e' o no onde o scroll-Y precisa
@@ -212,7 +218,7 @@ export function KanbanColumn({
       <div
         ref={dealsContainerRef}
         {...dealsContainerProps}
-        className="kanban-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1"
+        className="kanban-scroll flex min-h-[120px] flex-1 flex-col gap-1.5 overflow-y-auto overflow-x-hidden p-2"
       >
         {/* Formulário inline de criação — renderizado no TOPO da fase,
             acima dos cards. Disparado pelo "+" no header da coluna. */}
@@ -227,7 +233,6 @@ export function KanbanColumn({
         )}
         {placeholderSlot}
       </div>
-      </div>{/* fim do padding lateral */}
     </section>
   )
 }

@@ -43,7 +43,7 @@ export const dashboardCardClassCompact =
 
 /** Classe-base de card premium no modo War Room (fundo dark). */
 export const dashboardCardClassDark =
-  "rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.6)] backdrop-blur-sm";
+  "rounded-2xl border border-[var(--glass-border-subtle)] bg-white/[0.03] p-5 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.6)] backdrop-blur-sm";
 
 /**
  * Tipografia de título de página do dashboard.
@@ -70,11 +70,11 @@ export const kpiGridClass =
  * cresce no hover. Usado nos KPIs e painéis do dashboard refeitos.
  */
 export const bentoCardClass =
-  "rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md";
+  "rounded-3xl border border-[var(--glass-border-subtle)] bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md";
 
 /** Variante 32px de radius para painéis grandes (gráficos principais). */
 export const bentoCardLargeClass =
-  "rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm";
+  "rounded-[var(--radius-2xl)] border border-[var(--glass-border-subtle)] bg-white p-8 shadow-sm";
 
 /** Label minúsculo em caixa alta, "ar" Linear/Stripe. */
 export const bentoLabelClass =
@@ -82,11 +82,11 @@ export const bentoLabelClass =
 
 /** Título secundário dos widgets (abaixo do label). */
 export const bentoSubtitleClass =
-  "text-[18px] font-bold text-slate-900 tracking-tight";
+  "text-[18px] font-bold text-[var(--text-primary)] tracking-tight";
 
 /** Valor principal dos KPIs (dentro do bentoCardClass). */
 export const bentoValueClass =
-  "text-[28px] font-bold text-slate-900 tracking-tight md:text-[32px]";
+  "text-[28px] font-bold text-[var(--text-primary)] tracking-tight md:text-[32px]";
 
 /**
  * Paleta de accents ícone → combinações tailwind (bg suave + texto vivo).
@@ -103,14 +103,14 @@ export type BentoAccent =
   | "slate";
 
 export const bentoAccentMap: Record<BentoAccent, { bg: string; text: string; solid: string }> = {
-  blue: { bg: "bg-blue-50", text: "text-primary", solid: "var(--color-primary)" },
-  emerald: { bg: "bg-emerald-50", text: "text-emerald-600", solid: "#10b981" },
-  amber: { bg: "bg-amber-50", text: "text-amber-600", solid: "#f59e0b" },
-  violet: { bg: "bg-violet-50", text: "text-violet-600", solid: "#8b5cf6" },
-  rose: { bg: "bg-rose-50", text: "text-rose-600", solid: "#f43f5e" },
-  indigo: { bg: "bg-indigo-50", text: "text-indigo-600", solid: "#6366f1" },
-  cyan: { bg: "bg-cyan-50", text: "text-cyan-600", solid: "#06b6d4" },
-  slate: { bg: "bg-slate-100", text: "text-foreground", solid: "#475569" },
+  blue: { bg: "bg-[var(--color-indigo-soft)]", text: "text-primary", solid: "var(--color-primary)" },
+  emerald: { bg: "bg-[var(--color-success-bg)]", text: "text-[var(--color-success-text)]", solid: "var(--color-success)" },
+  amber: { bg: "bg-[var(--color-warn-bg)]", text: "text-[var(--color-warning)]", solid: "var(--color-warning)" },
+  violet: { bg: "bg-[var(--color-lavender-soft)]", text: "text-[var(--color-lavender)]", solid: "#8b5cf6" }, // no token match for #8b5cf6 (--brand-secondary is #a78bfa)
+  rose: { bg: "bg-[var(--color-danger-bg)]", text: "text-[var(--color-danger-text)]", solid: "var(--color-rose)" },
+  indigo: { bg: "bg-[var(--color-info-bg)]", text: "text-[var(--brand-primary)]", solid: "var(--brand-primary)" }, // indigo-600 ≈ --brand-primary (#5b6ff5)
+  cyan: { bg: "bg-[var(--color-cyan-soft)]", text: "text-[var(--color-cyan)]", solid: "var(--color-cyan)" },
+  slate: { bg: "bg-[var(--glass-bg-base)]", text: "text-foreground", solid: "#475569" }, // --text-muted is #4b5563, close but different semantic
 };
 
 /** Grid bento mais denso (6 colunas) usado em dashboards com 6+ KPIs. */

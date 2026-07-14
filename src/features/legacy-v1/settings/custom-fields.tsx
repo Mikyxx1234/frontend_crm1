@@ -2,29 +2,47 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutList, Pencil, Plus, Trash2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import {
+  IconCalendar,
+  IconEye,
+  IconEyeOff,
+  IconGripVertical,
+  IconHash,
+  IconLayoutList,
+  IconLink,
+  IconList,
+  IconMail,
+  IconPhone,
+  IconPlus,
+  IconSearch,
+  IconToggleLeft,
+  IconTrash,
+  IconPencil,
+  IconLetterT,
+  IconAlertCircle,
+} from "@tabler/icons-react";
 import * as React from "react";
 
 import { useConfirm } from "@/hooks/use-confirm";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { GlassCard } from "@/components/crm/glass-card";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { SwitchGlass } from "@/components/crm/switch-glass";
+import { CheckboxGlass } from "@/components/crm/checkbox-glass";
 import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  type DropResult,
+} from "@hello-pangea/dnd";
 import { cn } from "@/lib/utils";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type CustomFieldItem = {
   id: string;
@@ -36,52 +54,43 @@ type CustomFieldItem = {
   entity: string;
   showInInboxLeadPanel?: boolean;
   inboxLeadPanelOrder?: number | null;
+  showInDealPanel?: boolean;
 };
 
 const TYPES = [
-  { value: "TEXT", label: "Texto" },
-  { value: "NUMBER", label: "Número" },
-  { value: "DATE", label: "Data" },
-  { value: "SELECT", label: "Seleção" },
+  { value: "TEXT",         label: "Texto" },
+  { value: "NUMBER",       label: "Número" },
+  { value: "DATE",         label: "Data" },
+  { value: "SELECT",       label: "Seleção" },
   { value: "MULTI_SELECT", label: "Multi-seleção" },
-  { value: "BOOLEAN", label: "Sim/Não" },
-  { value: "URL", label: "URL" },
-  { value: "EMAIL", label: "E-mail" },
-  { value: "PHONE", label: "Telefone" },
+  { value: "BOOLEAN",      label: "Sim/Não" },
+  { value: "URL",          label: "URL" },
+  { value: "EMAIL",        label: "E-mail" },
+  { value: "PHONE",        label: "Telefone" },
 ] as const;
 
-const ENTITY_LABELS: Record<string, string> = {
-  contact: "Lead (contato)",
-  deal: "Negócio",
-  product: "Produto/Serviço",
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  TEXT:         <IconLetterT size={13} strokeWidth={2.5} />,
+  NUMBER:       <IconHash size={13} strokeWidth={2.5} />,
+  DATE:         <IconCalendar size={13} strokeWidth={2.2} />,
+  SELECT:       <IconList size={13} strokeWidth={2.2} />,
+  MULTI_SELECT: <IconList size={13} strokeWidth={2.2} />,
+  BOOLEAN:      <IconToggleLeft size={13} strokeWidth={2.2} />,
+  URL:          <IconLink size={13} strokeWidth={2.2} />,
+  EMAIL:        <IconMail size={13} strokeWidth={2.2} />,
+  PHONE:        <IconPhone size={13} strokeWidth={2.2} />,
 };
 
-async function fetchFields(): Promise<CustomFieldItem[]> {
-  const [contactRes, dealRes, productRes] = await Promise.all([
-    fetch(apiUrl("/api/custom-fields?entity=contact")),
-    fetch(apiUrl("/api/custom-fields?entity=deal")),
-    fetch(apiUrl("/api/custom-fields?entity=product")),
-  ]);
-  const contacts = contactRes.ok ? await contactRes.json() : [];
-  const deals = dealRes.ok ? await dealRes.json() : [];
-  const products = productRes.ok ? await productRes.json() : [];
-  return [
-    ...(Array.isArray(contacts) ? contacts : []),
-    ...(Array.isArray(deals) ? deals : []),
-    ...(Array.isArray(products) ? products : []),
-  ];
-}
+type EntityTab = "deal" | "contact";
 
-async function createField(data: {
-  name: string;
-  label: string;
-  type: string;
-  options: string[];
-  required: boolean;
-  entity: string;
-  showInInboxLeadPanel?: boolean;
-  inboxLeadPanelOrder?: number | null;
-}) {
+// ─── API ──────────────────────────────────────────────────────────────────────
+
+async function fetchFields(entity: string): Promise<CustomFieldItem[]> {
+  const res = await fetch(apiUrl(`/api/custom-fields?entity=${entity}`));
+  const data = res.ok ? await res.json() : [];
+  return Array.isArray(data) ? data : [];
+}
+async function createField(data: Record<string, unknown>) {
   const res = await fetch(apiUrl("/api/custom-fields"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -89,11 +98,10 @@ async function createField(data: {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message ?? "Erro ao criar campo");
+    throw new Error((body as { message?: string })?.message ?? "Erro ao criar campo");
   }
   return res.json();
 }
-
 async function updateField(id: string, data: Record<string, unknown>) {
   const res = await fetch(apiUrl(`/api/custom-fields/${id}`), {
     method: "PUT",
@@ -103,281 +111,384 @@ async function updateField(id: string, data: Record<string, unknown>) {
   if (!res.ok) throw new Error("Erro ao atualizar campo");
   return res.json();
 }
-
 async function deleteField(id: string) {
   const res = await fetch(apiUrl(`/api/custom-fields/${id}`), { method: "DELETE" });
   if (!res.ok) throw new Error("Erro ao excluir campo");
 }
 
+// ─── DS v2 helpers ────────────────────────────────────────────────────────────
+
+function FieldLabel({ children, htmlFor, hint }: { children: React.ReactNode; htmlFor?: string; hint?: string }) {
+  return (
+    <label htmlFor={htmlFor} className="block font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+      {children}
+      {hint && <span className="ml-1 normal-case font-normal text-[var(--text-muted)]/70">{hint}</span>}
+    </label>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function CustomFieldsPage() {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
-  const searchParams = useSearchParams();
+  const [activeEntity, setActiveEntity] = React.useState<EntityTab>("deal");
+  const [search, setSearch] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<CustomFieldItem | null>(null);
-  // Permite pré-selecionar a entidade via query string (ex.: a tela de
-  // Produtos linka pra cá com `?entity=product` e o usuário cai direto
-  // no filtro certo, sem ter que saber que existe uma aba).
-  const initialEntity = React.useMemo<"all" | "contact" | "deal" | "product">(() => {
-    const p = searchParams?.get("entity");
-    if (p === "contact" || p === "deal" || p === "product") return p;
-    return "all";
-  }, [searchParams]);
-  const [entityFilter, setEntityFilter] = React.useState<"all" | "contact" | "deal" | "product">(initialEntity);
+
+  const queryKey = ["custom-fields", activeEntity];
 
   const { data: fields = [], isLoading } = useQuery({
-    queryKey: ["custom-fields-all"],
-    queryFn: fetchFields,
+    queryKey,
+    queryFn: () => fetchFields(activeEntity),
   });
+
+  const [localOrder, setLocalOrder] = React.useState<string[]>([]);
+  React.useEffect(() => { setLocalOrder(fields.map((f) => f.id)); }, [fields]);
+
+  const orderedFields = React.useMemo(() => {
+    const map = Object.fromEntries(fields.map((f) => [f.id, f]));
+    return localOrder.map((id) => map[id]).filter(Boolean);
+  }, [fields, localOrder]);
+
+  const filtered = React.useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return q ? orderedFields.filter((f) => f.label.toLowerCase().includes(q) || f.name.toLowerCase().includes(q)) : orderedFields;
+  }, [orderedFields, search]);
+
+  const inboxCount = fields.filter((f) => f.showInInboxLeadPanel).length;
+  const dealCount = fields.filter((f) => f.showInDealPanel).length;
 
   const deleteMutation = useMutation({
     mutationFn: deleteField,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["custom-fields-all"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  const filtered = entityFilter === "all"
-    ? fields
-    : fields.filter((f) => f.entity === entityFilter);
+  const reorderMutation = useMutation({
+    mutationFn: async ({ id, inboxLeadPanelOrder }: { id: string; inboxLeadPanelOrder: number }) =>
+      updateField(id, { inboxLeadPanelOrder }),
+  });
 
-  const contactCount = fields.filter((f) => f.entity === "contact").length;
-  const dealCount = fields.filter((f) => f.entity === "deal").length;
-  const productCount = fields.filter((f) => f.entity === "product").length;
+  function onDragEnd(result: DropResult) {
+    if (!result.destination) return;
+    const next = Array.from(localOrder);
+    const [moved] = next.splice(result.source.index, 1);
+    next.splice(result.destination.index, 0, moved);
+    setLocalOrder(next);
+    next.forEach((id, idx) => reorderMutation.mutate({ id, inboxLeadPanelOrder: idx }));
+  }
 
   return (
-    <div className="w-full">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 rounded-lg border border-border/60 bg-muted/20 p-0.5">
-          {([
-            { val: "all" as const, label: `Todos (${fields.length})` },
-            { val: "contact" as const, label: `Contatos (${contactCount})` },
-            { val: "deal" as const, label: `Negócios (${dealCount})` },
-            { val: "product" as const, label: `Produtos (${productCount})` },
-          ]).map((opt) => (
+    <div className="w-full space-y-4">
+      {/* ── Toolbar ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Entity pill tabs */}
+        <div className="flex items-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1">
+          {(["deal", "contact"] as const).map((entity, i) => (
             <button
-              key={opt.val}
+              key={entity}
               type="button"
-              onClick={() => setEntityFilter(opt.val)}
+              onClick={() => { setActiveEntity(entity); setSearch(""); }}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                entityFilter === opt.val
-                  ? "bg-background text-[var(--text-primary)] shadow-sm"
-                  : "text-muted-foreground hover:text-[var(--text-primary)]"
+                "rounded-[var(--radius-md)] px-4 py-1.5 font-display text-[13px] font-semibold transition-all",
+                activeEntity === entity
+                  ? "bg-[var(--glass-bg-panel)] text-[var(--text-primary)] shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
               )}
             >
-              {opt.label}
+              {i === 0 ? "Negócio" : "Contato"}
             </button>
           ))}
         </div>
 
+        {/* Search */}
+        <div className="relative min-w-[180px] max-w-xs flex-1">
+          <IconSearch size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar campo..."
+            className="h-9 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] pl-8 pr-3 font-body text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-[var(--brand-primary)]"
+          />
+        </div>
+
         <div className="flex-1" />
 
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus className="size-4" />
+        <ButtonGlass variant="primary" onClick={() => setCreateOpen(true)} className="gap-1.5 rounded-[var(--radius-lg)]">
+          <IconPlus size={15} />
           Novo campo
-        </Button>
+        </ButtonGlass>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
-        </div>
-      ) : filtered.length === 0 ? (
-        <GlassCard className="border-dashed p-0">
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <LayoutList className="mb-3 size-10 text-[var(--text-muted)]/30" />
-            <p className="text-sm text-[var(--text-muted)]">
-              {fields.length === 0
-                ? "Nenhum campo personalizado criado ainda."
-                : "Nenhum campo nesta categoria."}
-            </p>
-            <Button variant="outline" className="mt-4 gap-2" onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4" /> Criar campo
-            </Button>
-          </div>
-        </GlassCard>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {filtered.map((f) => (
-            <GlassCard key={f.id} className="group relative p-0 transition-shadow hover:shadow-[var(--glass-shadow)]">
-              <div className="px-4 pb-2 pt-4">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">{f.label}</h3>
-                    <p className="mt-0.5 font-mono text-xs text-[var(--text-muted)]">{f.name}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button
-                      variant="ghost" size="icon" className="size-7"
-                      onClick={() => setEditItem(f)}
-                    >
-                      <Pencil className="size-3" />
-                    </Button>
-                    <Button
-                      variant="ghost" size="icon" className="size-7 text-destructive hover:bg-destructive/10"
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: "Excluir campo",
-                          description: `Excluir o campo "${f.label}"? Todos os valores serão perdidos.`,
-                          confirmLabel: "Excluir",
-                          variant: "destructive",
-                        });
-                        if (ok) deleteMutation.mutate(f.id);
-                      }}
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="px-4 pb-4 pt-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="text-[10px]">
-                    {ENTITY_LABELS[f.entity] ?? f.entity}
-                  </Badge>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {TYPES.find((t) => t.value === f.type)?.label ?? f.type}
-                  </Badge>
-                  {f.required && (
-                    <Badge variant="destructive" className="text-[10px]">Obrigatório</Badge>
-                  )}
-                  {(f.entity === "contact" || f.entity === "deal") && f.showInInboxLeadPanel && (
-                    <Badge className="border border-[#00d4aa]/40 bg-[#00d4aa]/10 text-[10px] font-semibold text-[#0f766e]">
-                      Painel Inbox
-                    </Badge>
-                  )}
-                  {f.options.length > 0 && (
-                    <span className="text-[10px] text-muted-foreground">
-                      {f.options.length} opç{f.options.length === 1 ? "ão" : "ões"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </GlassCard>
-          ))}
+      {/* ── Counter ── */}
+      {!isLoading && (
+        <div className="flex items-center gap-2">
+          <span className="font-body text-[12.5px] text-[var(--text-muted)]">
+            {fields.length} campo{fields.length !== 1 ? "s" : ""}
+          </span>
+          {inboxCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 font-display text-[11px] font-semibold text-emerald-700">
+              <IconEye size={11} />
+              {inboxCount} no painel da Inbox
+            </span>
+          )}
+          {dealCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 font-display text-[11px] font-semibold text-violet-700">
+              <IconEye size={11} />
+              {dealCount} no painel do Negócio
+            </span>
+          )}
         </div>
       )}
 
+      {/* ── Table ── */}
+      {isLoading ? (
+        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+          <div className="mb-1.5 h-10 animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-strong)]" />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-[54px] animate-pulse rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] mb-0.5" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-6 py-16 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--glass-bg-strong)]">
+            <IconLayoutList size={22} className="text-[var(--text-muted)] opacity-50" />
+          </div>
+          <div>
+            <p className="font-display text-[14px] font-semibold text-[var(--text-primary)]">
+              {fields.length === 0 ? "Nenhum campo personalizado criado" : "Nenhum campo encontrado"}
+            </p>
+            <p className="mt-1 font-body text-[12.5px] text-[var(--text-muted)]">
+              {fields.length === 0 ? "Crie campos para enriquecer seus registros." : "Tente um termo diferente."}
+            </p>
+          </div>
+          {fields.length === 0 && (
+            <ButtonGlass variant="primary" size="sm" onClick={() => setCreateOpen(true)} className="mt-1 gap-1.5">
+              <IconPlus size={13} /> Criar campo
+            </ButtonGlass>
+          )}
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+          {/* Header */}
+          <div className={cn(
+            "grid items-center gap-3 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3 py-2.5",
+            "grid-cols-[20px_minmax(160px,2fr)_minmax(90px,1fr)_minmax(80px,0.8fr)_70px_70px_60px]",
+          )}>
+            <span />
+            <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Campo</span>
+            <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Slug</span>
+            <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Tipo</span>
+            <span className="font-display text-[13px] font-semibold tracking-normal text-emerald-600">Inbox</span>
+            <span className="font-display text-[13px] font-semibold tracking-normal text-violet-600">Negócio</span>
+            <span />
+          </div>
+
+          {/* Rows */}
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="custom-fields-list">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col">
+                  {filtered.map((field, index) => (
+                    <Draggable key={field.id} draggableId={field.id} index={index}>
+                      {(drag, snapshot) => (
+                        <div
+                          ref={drag.innerRef}
+                          {...drag.draggableProps}
+                          className={cn(
+                            "group grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]",
+                            "grid-cols-[20px_minmax(160px,2fr)_minmax(90px,1fr)_minmax(80px,0.8fr)_70px_70px_60px]",
+                            snapshot.isDragging && "opacity-90 shadow-lg rounded-[var(--radius-md)]",
+                          )}
+                        >
+                          {/* Drag handle */}
+                          <div
+                            {...drag.dragHandleProps}
+                            className="cursor-grab text-[var(--text-muted)]/30 transition-colors hover:text-[var(--text-muted)] active:cursor-grabbing"
+                          >
+                            <IconGripVertical size={14} />
+                          </div>
+
+                          {/* Campo: ícone + nome + obrigatório */}
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+                              {TYPE_ICONS[field.type] ?? <IconLetterT size={13} strokeWidth={2.5} />}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+                                  {field.label}
+                                </span>
+                                {field.required && (
+                                  <span className="shrink-0 rounded-[4px] bg-red-50 px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-red-500">
+                                    Obrigatório
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Slug */}
+                          <span className="inline-block max-w-full truncate rounded-[4px] bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
+                            {field.name}
+                          </span>
+
+                          {/* Tipo */}
+                          <span className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                            {TYPES.find((t) => t.value === field.type)?.label ?? field.type}
+                          </span>
+
+                          {/* Inbox */}
+                          <div>
+                            {(field.entity === "contact" || field.entity === "deal") && (
+                              <span className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+                                field.showInInboxLeadPanel
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                              )}>
+                                {field.showInInboxLeadPanel ? <IconEye size={11} /> : <IconEyeOff size={11} />}
+                                {field.showInInboxLeadPanel ? "Sim" : "Não"}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Negócio (deal panel) */}
+                          <div>
+                            {field.entity === "deal" && (
+                              <span className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+                                field.showInDealPanel
+                                  ? "bg-violet-100 text-violet-700"
+                                  : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                              )}>
+                                {field.showInDealPanel ? <IconEye size={11} /> : <IconEyeOff size={11} />}
+                                {field.showInDealPanel ? "Sim" : "Não"}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button
+                              type="button"
+                              onClick={() => setEditItem(field)}
+                              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                              title="Editar"
+                            >
+                              <IconPencil size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: "Excluir campo",
+                                  description: `Excluir o campo "${field.label}"? Todos os valores serão perdidos.`,
+                                  confirmLabel: "Excluir",
+                                  variant: "destructive",
+                                });
+                                if (ok) deleteMutation.mutate(field.id);
+                              }}
+                              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
+                              title="Excluir"
+                            >
+                              <IconTrash size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </div>
+      )}
+
+      {/* ── Modals ── */}
       <FieldFormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         mode="create"
-        onSaved={() => {
-          queryClient.invalidateQueries({ queryKey: ["custom-fields-all"] });
-          setCreateOpen(false);
-        }}
+        defaultEntity={activeEntity}
+        onSaved={() => { queryClient.invalidateQueries({ queryKey }); setCreateOpen(false); }}
       />
-
       {editItem && (
         <FieldFormDialog
           open={!!editItem}
           onOpenChange={(o) => { if (!o) setEditItem(null); }}
           mode="edit"
           initial={editItem}
-          onSaved={() => {
-            queryClient.invalidateQueries({ queryKey: ["custom-fields-all"] });
-            setEditItem(null);
-          }}
+          onSaved={() => { queryClient.invalidateQueries({ queryKey }); setEditItem(null); }}
         />
       )}
     </div>
   );
 }
 
+// ─── Field form dialog ────────────────────────────────────────────────────────
+
 function FieldFormDialog({
-  open, onOpenChange, mode, initial, onSaved,
+  open,
+  onOpenChange,
+  mode,
+  initial,
+  defaultEntity = "deal",
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   mode: "create" | "edit";
   initial?: CustomFieldItem;
+  defaultEntity?: string;
   onSaved: () => void;
 }) {
   const [name, setName] = React.useState(initial?.name ?? "");
   const [label, setLabel] = React.useState(initial?.label ?? "");
   const [type, setType] = React.useState(initial?.type ?? "TEXT");
-  const [entity, setEntity] = React.useState(initial?.entity ?? "contact");
+  const [entity, setEntity] = React.useState(initial?.entity ?? defaultEntity);
   const [required, setRequired] = React.useState(initial?.required ?? false);
   const [optionsText, setOptionsText] = React.useState(initial?.options.join("\n") ?? "");
-  const [showInInboxLeadPanel, setShowInInboxLeadPanel] = React.useState(
-    initial?.showInInboxLeadPanel ?? false
-  );
-  const [inboxOrder, setInboxOrder] = React.useState(
-    initial?.inboxLeadPanelOrder != null ? String(initial.inboxLeadPanelOrder) : ""
-  );
+  const [showInInboxLeadPanel, setShowInInboxLeadPanel] = React.useState(initial?.showInInboxLeadPanel ?? false);
+  const [showInDealPanel, setShowInDealPanel] = React.useState(initial?.showInDealPanel ?? false);
 
   React.useEffect(() => {
     if (open && initial) {
-      setName(initial.name);
-      setLabel(initial.label);
-      setType(initial.type);
-      setEntity(initial.entity);
-      setRequired(initial.required);
+      setName(initial.name); setLabel(initial.label); setType(initial.type);
+      setEntity(initial.entity); setRequired(initial.required);
       setOptionsText(initial.options.join("\n"));
       setShowInInboxLeadPanel(initial.showInInboxLeadPanel ?? false);
-      setInboxOrder(initial.inboxLeadPanelOrder != null ? String(initial.inboxLeadPanelOrder) : "");
+      setShowInDealPanel(initial.showInDealPanel ?? false);
     } else if (open && !initial) {
-      setName("");
-      setLabel("");
-      setType("TEXT");
-      setEntity("contact");
-      setRequired(false);
-      setOptionsText("");
-      setShowInInboxLeadPanel(false);
-      setInboxOrder("");
+      setName(""); setLabel(""); setType("TEXT");
+      setEntity(defaultEntity); setRequired(false);
+      setOptionsText(""); setShowInInboxLeadPanel(false); setShowInDealPanel(false);
     }
-  }, [open, initial]);
+  }, [open, initial, defaultEntity]);
 
   const supportsInboxPanel = entity === "contact" || entity === "deal";
   React.useEffect(() => {
-    if (open && mode === "create" && !supportsInboxPanel) {
-      setShowInInboxLeadPanel(false);
-      setInboxOrder("");
-    }
+    if (open && mode === "create" && !supportsInboxPanel) setShowInInboxLeadPanel(false);
   }, [supportsInboxPanel, open, mode]);
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const options = optionsText
-        .split("\n")
-        .map((o) => o.trim())
-        .filter(Boolean);
-
-      const orderTrim = inboxOrder.trim();
-      const inboxLeadPanelOrder =
-        supportsInboxPanel && orderTrim !== "" && Number.isFinite(Number(orderTrim))
-          ? Math.floor(Number(orderTrim))
-          : supportsInboxPanel && orderTrim === ""
-            ? null
-            : undefined;
-
+      const options = optionsText.split("\n").map((o) => o.trim()).filter(Boolean);
       if (mode === "create") {
         return createField({
-          name,
-          label,
-          type,
-          options,
-          required,
-          entity,
-          ...(supportsInboxPanel
-            ? {
-                showInInboxLeadPanel,
-                inboxLeadPanelOrder: inboxLeadPanelOrder ?? null,
-              }
-            : {}),
+          name, label, type, options, required, entity,
+          ...(supportsInboxPanel ? { showInInboxLeadPanel } : {}),
+          ...(entity === "deal" ? { showInDealPanel } : {}),
         });
       } else if (initial) {
         const editSupports = initial.entity === "contact" || initial.entity === "deal";
         return updateField(initial.id, {
-          label,
-          type,
-          options,
-          required,
-          ...(editSupports
-            ? {
-                showInInboxLeadPanel,
-                ...(inboxLeadPanelOrder !== undefined ? { inboxLeadPanelOrder } : {}),
-              }
-            : {}),
+          label, type, options, required,
+          ...(editSupports ? { showInInboxLeadPanel } : {}),
+          ...(initial.entity === "deal" ? { showInDealPanel } : {}),
         });
       }
     },
@@ -385,172 +496,163 @@ function FieldFormDialog({
   });
 
   const showOptions = type === "SELECT" || type === "MULTI_SELECT";
+  const entityOptions = [
+    { value: "contact", label: "Contato" },
+    { value: "deal", label: "Negócio" },
+    { value: "product", label: "Produto/Serviço" },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
-        <DialogClose />
-        <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Novo campo" : "Editar campo"}</DialogTitle>
-          <DialogDescription>
-            {mode === "create"
-              ? "Defina o nome, tipo e entidade para o novo campo."
-              : `Editando o campo "${initial?.label}".`}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
-          className="space-y-4"
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Entidade</Label>
-              <DropdownGlass
-                options={[
-                  { value: "contact", label: "Contato" },
-                  { value: "deal", label: "Negócio" },
-                  { value: "product", label: "Produto/Serviço" },
-                ]}
-                value={entity}
-                onValueChange={(v) => setEntity(v)}
-                disabled={mode === "edit"}
-                triggerClassName="w-full"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Tipo</Label>
-              <DropdownGlass
-                options={TYPES.map((t) => ({ value: t.value, label: t.label }))}
-                value={type}
-                onValueChange={(v) => setType(v)}
-                triggerClassName="w-full"
-              />
-            </div>
+      <DialogContent size="md" bodyClassName="p-0 gap-0">
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b border-[var(--glass-border-subtle)] px-6 py-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+            {TYPE_ICONS[type] ?? <IconLetterT size={16} strokeWidth={2.5} />}
           </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Identificador (slug) — opcional</Label>
-            <Input
-              value={name}
-              onChange={(e) => {
-                const cleaned = e.target.value
-                  .toLowerCase()
-                  .normalize("NFD")
-                  .replace(/[\u0300-\u036f]/g, "")
-                  .replace(/[^a-z0-9]+/g, "_")
-                  .replace(/^_+|_+$/g, "")
-                  .replace(/_+/g, "_");
-                setName(cleaned);
-              }}
-              placeholder="vazio = gerar automático pelo label"
-              disabled={mode === "edit"}
-              className="h-9 font-mono text-sm"
-            />
-            {mode === "create" ? (
-              <p className="text-[11px] text-muted-foreground">
-                Se deixar vazio, o sistema gera automaticamente (ex.:{" "}
-                <span className="font-mono">fonte_do_lead</span>).
-              </p>
-            ) : null}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Label (exibição)</Label>
-            <Input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="ex: Fonte do Lead"
-              className="h-9"
-            />
-          </div>
-
-          {showOptions && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Opções (uma por linha)</Label>
-              <textarea
-                value={optionsText}
-                onChange={(e) => setOptionsText(e.target.value)}
-                rows={4}
-                className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
-                placeholder={"Opção 1\nOpção 2\nOpção 3"}
-              />
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="cf-required"
-              checked={required}
-              onChange={(e) => setRequired(e.target.checked)}
-              className="size-4 rounded border-border"
-            />
-            <Label htmlFor="cf-required" className="text-sm cursor-pointer">
-              Campo obrigatório
-            </Label>
-          </div>
-
-          {supportsInboxPanel && (
-            <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-3">
-              <p className="text-xs font-medium text-[var(--text-primary)]">Painel lateral na Inbox</p>
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                Marque os campos que o agente deve ver ao atender no chat.
-                {entity === "contact" && <> Ex.: CPF, matrícula, adimplente.</>}
-                {entity === "deal" && <> Ex.: origem do lead, segmento, plano.</>}
-                {" "}Use tipo <strong>Sim/Não</strong> para situações de destaque.
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="cf-inbox-panel"
-                  checked={showInInboxLeadPanel}
-                  onChange={(e) => setShowInInboxLeadPanel(e.target.checked)}
-                  className="size-4 rounded border-border"
-                />
-                <Label htmlFor="cf-inbox-panel" className="text-sm cursor-pointer">
-                  Exibir no painel lateral (Inbox)
-                </Label>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Ordem no painel (opcional)</Label>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  value={inboxOrder}
-                  onChange={(e) => setInboxOrder(e.target.value)}
-                  placeholder="0 = primeiro; vazio = após os numerados"
-                  className="h-9"
-                />
-              </div>
-            </div>
-          )}
-
-          <Separator />
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                mutation.isPending || !label.trim()
-              }
-            >
-              {mutation.isPending
-                ? "Salvando…"
-                : mode === "create"
-                  ? "Criar campo"
-                  : "Salvar"}
-            </Button>
-          </DialogFooter>
-
-          {mutation.isError && (
-            <p className="text-sm text-destructive">
-              {mutation.error instanceof Error ? mutation.error.message : "Erro"}
+          <div className="flex-1">
+            <h2 className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+              {mode === "create" ? "Novo campo" : "Editar campo"}
+            </h2>
+            <p className="font-body text-[12px] text-[var(--text-muted)]">
+              {mode === "create" ? "Defina o nome, tipo e entidade." : `Editando "${initial?.label}"`}
             </p>
-          )}
+          </div>
+          <DialogClose />
+        </div>
+
+        {/* Body */}
+        <form
+          id="field-form"
+          onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
+        >
+          <div className="flex flex-col gap-5 px-6 py-5">
+            {/* Entidade + Tipo */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <FieldLabel>Entidade</FieldLabel>
+                <DropdownGlass
+                  options={entityOptions}
+                  value={entity}
+                  onValueChange={(v) => setEntity(v)}
+                  disabled={mode === "edit"}
+                  triggerClassName="w-full"
+                />
+                {mode === "edit" && (
+                  <p className="font-body text-[11px] text-[var(--text-muted)]">Não pode ser alterada</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <FieldLabel>Tipo</FieldLabel>
+                <DropdownGlass
+                  options={TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                  value={type}
+                  onValueChange={(v) => setType(v)}
+                  triggerClassName="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Slug */}
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel hint="— deixe vazio para gerar automaticamente">
+                Identificador (slug)
+              </FieldLabel>
+              <InputGlass
+                value={name}
+                onChange={(e) => {
+                  const cleaned = e.target.value.toLowerCase().normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_")
+                    .replace(/^_+|_+$/g, "").replace(/_+/g, "_");
+                  setName(cleaned);
+                }}
+                placeholder="ex: fonte_do_lead"
+                disabled={mode === "edit"}
+                className="font-mono"
+              />
+            </div>
+
+            {/* Label */}
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>Nome (exibição)</FieldLabel>
+              <InputGlass
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="ex: Fonte do Lead"
+                autoFocus={mode === "create"}
+              />
+            </div>
+
+            {/* Options */}
+            {showOptions && (
+              <div className="flex flex-col gap-1.5">
+                <FieldLabel>Opções (uma por linha)</FieldLabel>
+                <textarea
+                  value={optionsText}
+                  onChange={(e) => setOptionsText(e.target.value)}
+                  rows={4}
+                  placeholder={"Opção 1\nOpção 2\nOpção 3"}
+                  className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 font-body text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-colors focus:border-[var(--brand-primary)]"
+                />
+              </div>
+            )}
+
+            {/* Required toggle */}
+            <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+              <div>
+                <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">Campo obrigatório</p>
+                <p className="mt-0.5 font-body text-[11.5px] text-[var(--text-muted)]">Impede salvar o registro sem preencher este campo.</p>
+              </div>
+              <SwitchGlass checked={required} onChange={setRequired} aria-label="Campo obrigatório" size="sm" />
+            </div>
+
+            {/* Visibilidade de painéis */}
+            {supportsInboxPanel && (
+              <div className="flex flex-col gap-2">
+                <p className="font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">Visibilidade nos painéis</p>
+                <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+                  <div>
+                    <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">Painel lateral — Inbox</p>
+                    <p className="mt-0.5 font-body text-[11.5px] leading-snug text-[var(--text-muted)]">Exibir no chat ao atender</p>
+                  </div>
+                  <SwitchGlass checked={showInInboxLeadPanel} onChange={setShowInInboxLeadPanel} aria-label="Exibir no painel Inbox" size="sm" />
+                </div>
+                {entity === "deal" && (
+                  <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-3">
+                    <div>
+                      <p className="font-display text-[13px] font-semibold text-[var(--text-primary)]">Painel do Negócio</p>
+                      <p className="mt-0.5 font-body text-[11.5px] leading-snug text-[var(--text-muted)]">Exibir no deal detail</p>
+                    </div>
+                    <SwitchGlass checked={showInDealPanel} onChange={setShowInDealPanel} aria-label="Exibir no painel do Negócio" size="sm" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Error */}
+            {mutation.isError && (
+              <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-100 bg-red-50 px-3 py-2.5">
+                <IconAlertCircle size={14} className="shrink-0 text-red-500" />
+                <p className="font-body text-[12.5px] text-red-600">
+                  {mutation.error instanceof Error ? mutation.error.message : "Erro ao salvar"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--glass-border-subtle)] px-6 py-4">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+            >
+              Cancelar
+            </button>
+            <ButtonGlass type="submit" variant="primary" disabled={mutation.isPending || !label.trim()}>
+              {mutation.isPending ? "Salvando…" : mode === "create" ? "Criar campo" : "Salvar"}
+            </ButtonGlass>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -10,10 +10,7 @@ import {
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
-import {
-  GlassModal,
-  GlassModalPanel,
-} from "@/components/crm/glass-modal";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
 import { EmailRichEditor } from "./email-rich-editor";
@@ -119,10 +116,11 @@ export function ComposeModal({
   const fromAccount = accounts.find((a) => a.id === accountId);
 
   return (
-    <GlassModal open={open} onOpenChange={(o) => { if (!loading) { if (!o) resetAndClose(); else onOpenChange(o); } }}>
-      <GlassModalPanel
-        className="flex w-[min(780px,96vw)] max-w-none flex-col overflow-hidden p-0"
-        style={{ maxHeight: "min(90vh, 680px)", minHeight: "480px" }}
+    <Dialog open={open} onOpenChange={(o) => { if (!loading) { if (!o) resetAndClose(); else onOpenChange(o); } }}>
+      <DialogContent
+        size="xl"
+        panelClassName="w-[min(780px,96vw)] max-h-[min(90vh,680px)] min-h-[480px]"
+        bodyClassName="flex min-h-0 flex-1 flex-col p-0 gap-0"
       >
         {/* Barra de título */}
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3">
@@ -294,8 +292,8 @@ export function ComposeModal({
             </ButtonGlass>
           </div>
         </div>
-      </GlassModalPanel>
-    </GlassModal>
+      </DialogContent>
+    </Dialog>
   );
 }
 

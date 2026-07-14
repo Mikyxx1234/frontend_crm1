@@ -12,6 +12,9 @@ import {
   type StatusFilter,
 } from "../api";
 
+import type { AdvancedDealFilters } from "@/components/pipeline/kanban-filters/types";
+import { isEmptyFilters, hasServerSideFilters } from "@/components/pipeline/kanban-filters/types";
+
 import { isPreviewMode } from "@/lib/preview-mode";
 
 /** Lista de pipelines (dropdown do header). */
@@ -105,6 +108,47 @@ export function useBoardSearch(params: {
       }),
     enabled:
       (params.enabled ?? true) && !!params.pipelineId && term.length >= 2,
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * Board com filtros avançados server-side via POST /api/pipelines/:id/board.
+ *
+ * Ativado quando há qualquer critério em `filters` (origem, tags, datas,
+ * responsável, etc.). O GET pagina 100 deals/coluna e não aplica esses
+ * filtros — sem este hook, origem e demais critérios parecem "não funcionar".
+ */
+export function useBoardFiltered(params: {
+  pipelineId: string | null;
+  status: StatusFilter;
+  filters: AdvancedDealFilters;
+  sort?: BoardSortParam;
+  enabled?: boolean;
+  perStage?: number;
+}) {
+  const sortKey = params.sort
+    ? `${params.sort.field}:${params.sort.direction}`
+    : "default";
+  const perStage = params.perStage ?? 200;
+  const active = hasServerSideFilters(params.filters);
+  return useQuery<BoardStageDto[]>({
+    queryKey: [
+      "pipeline-board-filtered",
+      params.pipelineId ?? "__none__",
+      params.status,
+      params.filters,
+      sortKey,
+      perStage,
+    ],
+    queryFn: () =>
+      getBoardFiltered(params.pipelineId ?? "pl-1", {
+        status: params.status,
+        filters: params.filters,
+        sort: params.sort,
+        perStage,
+      }),
+    enabled: (params.enabled ?? true) && !!params.pipelineId && active,
     staleTime: 10_000,
   });
 }

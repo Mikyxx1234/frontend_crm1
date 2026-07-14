@@ -29,7 +29,7 @@
  */
 
 import * as React from "react";
-import { Loader2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { IconLoader2 as Loader2, IconRotate2 as RotateCcw, IconZoomIn as ZoomIn, IconZoomOut as ZoomOut } from "@tabler/icons-react";
 
 import {
   Dialog,

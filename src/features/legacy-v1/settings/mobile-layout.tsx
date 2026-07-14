@@ -2,20 +2,12 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  Loader2,
-  Lock,
-  RotateCcw,
-  Save,
-  Smartphone,
-} from "lucide-react";
+import { IconArrowDown as ArrowDown, IconArrowUp as ArrowUp, IconCheck as Check, IconLoader2 as Loader2, IconLock as Lock, IconRotate2 as RotateCcw, IconDeviceFloppy as Save, IconDeviceMobile as Smartphone } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import { pageHeaderDescriptionClass, pageHeaderTitleClass } from "@/components/ui/page-header";
 import {
   MOBILE_LAYOUT_QUERY_KEY,
@@ -219,7 +211,7 @@ export function MobileLayoutClientPage() {
         {/* COLUNA ESQUERDA — Catalogo de modulos */}
         <div className="space-y-6">
           {/* Bottom nav editor */}
-          <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-6 shadow-[var(--glass-shadow)]">
+          <GlassCard variant="overlay" className="p-6">
             <div className="mb-4 flex items-end justify-between gap-2">
               <div>
                 <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
@@ -229,16 +221,16 @@ export function MobileLayoutClientPage() {
                   Até {BOTTOM_NAV_MAX} módulos · usados {bottomNavCount}
                 </p>
               </div>
-              <Button
+              <ButtonGlass
                 type="button"
-                variant="ghost"
+                variant="icon"
                 size="sm"
                 onClick={resetDefaults}
-                className="gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                className="gap-1.5"
               >
                 <RotateCcw className="size-3.5" />
                 Restaurar padrão
-              </Button>
+              </ButtonGlass>
             </div>
 
             <ol className="space-y-2">
@@ -257,24 +249,28 @@ export function MobileLayoutClientPage() {
                       <p className="truncate text-[12px] text-[var(--text-muted)]">{desc.description}</p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button
+                      <ButtonGlass
                         type="button"
+                        variant="icon"
+                        size="icon"
                         onClick={() => moveBottomNav(d.id, -1)}
                         disabled={idx === 0}
                         aria-label={`Mover ${desc.label} para cima`}
-                        className="touch-target flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30"
+                        className="disabled:opacity-30"
                       >
                         <ArrowUp className="size-4" />
-                      </button>
-                      <button
+                      </ButtonGlass>
+                      <ButtonGlass
                         type="button"
+                        variant="icon"
+                        size="icon"
                         onClick={() => moveBottomNav(d.id, 1)}
                         disabled={idx === orderedBottomNav.length - 1}
                         aria-label={`Mover ${desc.label} para baixo`}
-                        className="touch-target flex items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-subtle)] disabled:opacity-30"
+                        className="disabled:opacity-30"
                       >
                         <ArrowDown className="size-4" />
-                      </button>
+                      </ButtonGlass>
                       {desc.required ? (
                         <span
                           className="touch-target flex items-center justify-center rounded-full text-[var(--color-ink-muted)]"
@@ -283,24 +279,26 @@ export function MobileLayoutClientPage() {
                           <Lock className="size-4" />
                         </span>
                       ) : (
-                        <button
+                        <ButtonGlass
                           type="button"
+                          variant="danger"
+                          size="sm"
                           onClick={() => toggleBottomNav(d.id)}
                           aria-label={`Remover ${desc.label} da barra inferior`}
-                          className="touch-target rounded-full text-[11px] font-bold uppercase tracking-wider text-rose-500 hover:bg-rose-50"
+                          className="text-[11px] uppercase tracking-wider"
                         >
                           Tirar
-                        </button>
+                        </ButtonGlass>
                       )}
                     </div>
                   </li>
                 );
               })}
             </ol>
-          </section>
+          </GlassCard>
 
           {/* Catalogo completo */}
-          <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-6 shadow-[var(--glass-shadow)]">
+          <GlassCard variant="overlay" className="p-6">
             <div className="mb-4">
               <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">Todos os módulos</h2>
               <p className="text-sm text-[var(--text-muted)]">
@@ -343,7 +341,7 @@ export function MobileLayoutClientPage() {
                           desc.required
                             ? "cursor-not-allowed bg-[var(--glass-bg-subtle)] text-[var(--color-ink-muted)]"
                             : d.enabled
-                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                              ? "bg-[var(--color-success-subtle)] text-emerald-700 hover:bg-[var(--color-success-subtle)]"
                               : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)] hover:bg-slate-300",
                         )}
                       >
@@ -370,24 +368,28 @@ export function MobileLayoutClientPage() {
                 );
               })}
             </div>
-          </section>
+          </GlassCard>
 
           {/* Save bar (sticky) */}
-          <div className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]/95 p-4 shadow-[var(--glass-shadow)] backdrop-blur">
+          <GlassCard
+            variant="overlay"
+            className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-2xl p-4 backdrop-blur"
+          >
             {saved && (
-              <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-600">
+              <span className="flex items-center gap-1.5 text-sm font-bold text-[var(--color-success)]">
                 <Check className="size-4" />
                 Salvo
               </span>
             )}
             {dirty && !saved && (
-              <span className="text-sm text-amber-600">Você tem alterações não salvas.</span>
+              <span className="text-sm text-[var(--color-warning)]">Você tem alterações não salvas.</span>
             )}
-            <Button
+            <ButtonGlass
               type="button"
+              variant="primary"
               onClick={save}
               disabled={!dirty || saveMutation.isPending}
-              className="h-11 gap-2 rounded-full bg-primary px-6 text-white shadow-[var(--shadow-indigo-glow)] hover:bg-[#4466d6]"
+              className="h-11 gap-2 px-6"
             >
               {saveMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -395,8 +397,8 @@ export function MobileLayoutClientPage() {
                 <Save className="size-4" />
               )}
               Salvar layout
-            </Button>
-          </div>
+            </ButtonGlass>
+          </GlassCard>
         </div>
 
         {/* COLUNA DIREITA — Mockup iPhone */}
@@ -428,10 +430,10 @@ function IPhoneMockup({ bottomNav }: { bottomNav: MobileModuleId[] }) {
         Pré-visualização ao vivo
       </p>
       <div
-        className="relative aspect-[9/19.5] w-full max-w-[320px] rounded-[44px] border-[10px] border-slate-900 bg-slate-900 shadow-[var(--glass-shadow)]"
+        className="relative aspect-[9/19.5] w-full max-w-[320px] rounded-full border-[10px] border-slate-900 bg-slate-900 shadow-[var(--glass-shadow)]"
       >
         {/* Tela */}
-        <div className="absolute inset-0 overflow-hidden rounded-[34px] bg-[#f4f7fa]">
+        <div className="absolute inset-0 overflow-hidden rounded-3xl bg-[var(--color-primary-soft)]">
           {/* Notch */}
           <div className="absolute left-1/2 top-0 z-20 h-6 w-32 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
           {/* Top bar (status bar imitada) */}

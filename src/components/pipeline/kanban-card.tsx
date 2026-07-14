@@ -1,3 +1,8 @@
+/**
+ * @deprecated DS-012 — componente legado (v1). O canônico é
+ * `components/crm/deal-card.tsx` (usado pelo pipeline-v2).
+ * Não adicionar novos imports. Remoção física após aposentadoria do kanban v1.
+ */
 "use client";
 
 import { apiUrl } from "@/lib/api";
@@ -6,7 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AlertCircle, Check, ChevronDown, Clock, GripVertical, MessageCircle, Plus, Tag as TagIcon, X } from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconCheck as Check, IconChevronDown as ChevronDown, IconClock as Clock, IconGripVertical as GripVertical, IconMessageCircle as MessageCircle, IconPlus as Plus, IconTag as TagIcon, IconX as X } from "@tabler/icons-react";
 
 import type { CardVisibleFields } from "@/components/pipeline/card-fields-config";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
@@ -214,22 +219,26 @@ export function KanbanCard({
   // não mais barra-borda lateral 3px. Mantém o sinal visual sem
   // colar uma cor saturada no card inteiro.
   const attentionDot = deal.isRotting
-    ? "bg-amber-500"
+    ? "bg-[var(--color-warning)]"
     : deal.priority === "HIGH"
-      ? "bg-red-500"
+      ? "bg-[var(--color-danger)]"
       : null;
 
   return (
     <>
       <div
         className={cn(
-          // Surface: tokens de glass do tema — `bg-white/55` causava cartões
+          // Surface: tokens de glass do tema — `bg-[var(--glass-bg-overlay)]` causava cartões
           // esbranquiçados em dark mode mesmo com o variant `.dark` ativo.
-          "group relative cursor-pointer rounded-[18px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] backdrop-blur-sm transition-all",
+          // transition-all excluído: o wrapper Draggable (kanban-column) controla
+          // transform — adicionar transition ao card filho causaria dupla
+          // interpolação e lag. Só transicionamos propriedades seguras.
+          "group relative cursor-pointer rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] backdrop-blur-sm",
+          isDragging
+            ? "rotate-1 border-primary/40 bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-lg)]"
+            : "transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
           dt.card.shadow,
           dt.card.kanbanHover,
-          "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
-          isDragging && "rotate-1 border-primary/40 bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-lg)]",
           isHighlighted && "animate-[kanban-highlight_3s_ease]",
           // Card selecionado em bulk-mode: borda accent + ring sutil. Override
           // de hover bg pra distinguir mesmo com mouse em cima de outro card.
@@ -285,7 +294,7 @@ export function KanbanCard({
               tabIndex={0}
               onClick={onClick}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick?.(); }}
-              className="min-w-0 flex-1 cursor-pointer rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+              className="min-w-0 flex-1 cursor-pointer rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]/40"
             >
               <div className="flex flex-col gap-2">
                 {/* HEADER do card — avatar 28 + nome + data (canto sup. direito).
@@ -357,7 +366,7 @@ export function KanbanCard({
                       soft chip (sem borda) alinhado ao DNA Chat. */}
                   {inboundPreview ? (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--color-ink-muted)]">
-                      <MessageCircle className="size-3 shrink-0 text-blue-500 dark:text-blue-400" strokeWidth={2} />
+                      <MessageCircle className="size-3 shrink-0 text-[var(--color-info)] dark:text-[var(--color-info)]" strokeWidth={2} />
                       <p className="min-w-0 flex-1 truncate">{inboundPreview}</p>
                       {interaction ? <span className="shrink-0 tabular-nums">{interaction}</span> : null}
                     </div>
@@ -405,10 +414,10 @@ export function KanbanCard({
                       >
                         <span
                           className={cn(
-                            "inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[11px] font-medium tabular-nums",
+                            "inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium tabular-nums",
                             deal.hasOverdueActivity
-                              ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
-                              : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+                              ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] dark:bg-[var(--color-danger)]/15 dark:text-[var(--color-destructive)]"
+                              : "bg-[var(--color-primary)]/5 text-[var(--color-primary)] dark:bg-[var(--color-info)]/15 dark:text-[var(--color-primary)]",
                           )}
                         >
                           {deal.hasOverdueActivity ? (
@@ -426,7 +435,7 @@ export function KanbanCard({
 
                     {primaryTags.map((tag) => (
                       <TooltipHost key={tag.id} label={tag.name} side="top">
-                        <span className={cn("max-w-full truncate", dt.pill.sm)} style={tagPillStyle(tag.name, tag.color)}>
+                        <span className={cn("whitespace-nowrap", dt.pill.sm)} style={tagPillStyle(tag.name, tag.color)}>
                           {tag.name}
                         </span>
                       </TooltipHost>
@@ -733,9 +742,9 @@ function PresenceDot({
         // Ring usa `--color-card` (branco em light, navy em dark) — evita
         // o anel branco fixo que ficava destoante sobre cards escuros.
         "inline-flex size-2 rounded-full ring-2 ring-[var(--color-card)]",
-        status === "ONLINE" && "bg-emerald-500",
-        status === "AWAY" && "bg-amber-400",
-        status === "OFFLINE" && "bg-slate-400 dark:bg-slate-500",
+        status === "ONLINE" && "bg-[var(--color-success)]",
+        status === "AWAY" && "bg-[var(--color-status-away)]",
+        status === "OFFLINE" && "bg-[var(--color-status-offline)]",
         className,
       )}
       aria-hidden

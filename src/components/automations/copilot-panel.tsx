@@ -15,18 +15,7 @@ import { apiUrl } from "@/lib/api";
  * bar pra persistir.
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  AlertTriangle,
-  Check,
-  ChevronRight,
-  Info,
-  Loader2,
-  PanelRightClose,
-  Send,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconAlertTriangle as AlertTriangle, IconCheck as Check, IconChevronRight as ChevronRight, IconInfoCircle as Info, IconLoader2 as Loader2, IconLayoutSidebarRightCollapse as PanelRightClose, IconSend as Send, IconSparkles as Sparkles, IconX as X } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -89,10 +78,10 @@ const SEVERITY_ICON: Record<AuditSeverity, typeof AlertCircle> = {
 
 const SEVERITY_CLASS: Record<AuditSeverity, string> = {
   error:
-    "border-rose-200 bg-rose-50/70 text-rose-700",
+    "border-[var(--color-danger)]/20 bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
   warning:
-    "border-amber-200 bg-amber-50/70 text-amber-800",
-  info: "border-sky-200 bg-sky-50/70 text-sky-700",
+    "border-[var(--color-warning)]/20 bg-[var(--color-warn-bg)] text-[var(--color-warning)]",
+  info: "border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-[var(--color-info)]",
 };
 
 function newMsgId() {
@@ -115,17 +104,17 @@ export function CopilotPanel(props: CopilotPanelProps) {
   const [tab, setTab] = useState<"audit" | "chat">("audit");
 
   return (
-    <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-border/60 bg-white/90 backdrop-blur-xl">
-      <div className="flex shrink-0 items-center justify-between border-b border-border/60 bg-linear-to-r from-[#eef4ff]/40 to-white px-4 py-2.5">
+    <aside className="flex h-full w-[420px] shrink-0 flex-col border-l border-border/60 bg-[var(--glass-bg-overlay)] backdrop-blur-xl">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/60 bg-linear-to-r from-[var(--color-primary-soft)]/40 to-white px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-primary to-[#6f8cf5] text-white shadow-[var(--shadow-indigo-glow)]">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-primary to-[var(--brand-primary-light)] text-white shadow-[var(--shadow-indigo-glow)]">
             <Sparkles className="size-3.5" strokeWidth={2.6} />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-[13px] font-extrabold tracking-tight text-slate-900">
+            <span className="text-[13px] font-extrabold tracking-tight text-[var(--text-primary)]">
               Copilot de Automações
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
               Auditoria & Sugestões
             </span>
           </div>
@@ -134,7 +123,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
           type="button"
           onClick={onClose}
           aria-label="Fechar painel"
-          className="flex size-7 items-center justify-center rounded-full text-[var(--color-ink-muted)] transition-colors hover:bg-slate-100 hover:text-foreground"
+          className="flex size-7 items-center justify-center rounded-full text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-foreground"
         >
           <PanelRightClose className="size-4" strokeWidth={2.4} />
         </button>
@@ -217,7 +206,7 @@ function AuditTab({
 
   if (query.isError) {
     return (
-      <div className="p-4 text-[12px] text-rose-600">
+      <div className="p-4 text-[12px] text-[var(--color-danger-text)]">
         {(query.error as Error).message ?? "Erro ao auditar."}
       </div>
     );
@@ -249,12 +238,12 @@ function AuditTab({
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
         {hasNothing && (
-          <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-200 bg-emerald-50/40 p-6 text-center">
-            <Check className="size-6 text-emerald-500" strokeWidth={2.4} />
-            <div className="text-[12px] font-bold text-emerald-800">
+          <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-success)]/20 bg-[var(--color-success-bg)] p-6 text-center">
+            <Check className="size-6 text-[var(--color-success)]" strokeWidth={2.4} />
+            <div className="text-[12px] font-bold text-[var(--color-success-text)]">
               Nenhum problema encontrado.
             </div>
-            <div className="text-[11px] text-emerald-700/70">
+            <div className="text-[11px] text-[var(--color-success-text)]/70">
               O grafo desta automação parece consistente.
             </div>
           </div>
@@ -262,7 +251,7 @@ function AuditTab({
 
         {issues.length > 0 && (
           <div className="space-y-2">
-            <h4 className="px-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            <h4 className="px-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
               Problemas na automação
             </h4>
             {issues.map((iss, i) => {
@@ -286,7 +275,7 @@ function AuditTab({
 
         {crossConflicts.length > 0 && (
           <div className="space-y-2">
-            <h4 className="px-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            <h4 className="px-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
               Conflitos com outras automações
             </h4>
             {crossConflicts.map((c, i) => {
@@ -323,12 +312,12 @@ function ResumePill({
 }) {
   const bg =
     count === 0
-      ? "bg-[var(--color-bg-subtle)] text-[var(--color-ink-muted)] ring-slate-200"
+      ? "bg-[var(--color-bg-subtle)] text-[var(--color-ink-muted)] ring-[var(--glass-border-subtle)]"
       : tone === "error"
-        ? "bg-rose-50 text-rose-700 ring-rose-200"
+        ? "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)] ring-[var(--color-danger)]/20"
         : tone === "warning"
-          ? "bg-amber-50 text-amber-700 ring-amber-200"
-          : "bg-sky-50 text-sky-700 ring-sky-200";
+          ? "bg-[var(--color-warn-bg)] text-[var(--color-warning)] ring-[var(--color-warning)]/20"
+          : "bg-[var(--color-info-bg)] text-[var(--color-info)] ring-[var(--color-info-border)]";
   return (
     <span
       className={cn(
@@ -373,7 +362,7 @@ function IssueCard({
           )}
           <div className="mt-2 flex items-center gap-2">
             {badge && (
-              <span className="inline-flex items-center rounded-full bg-white/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ring-white/70">
+              <span className="inline-flex items-center rounded-full bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ring-white/70">
                 {badge}
               </span>
             )}
@@ -526,7 +515,7 @@ function ChatTab({
             <div className="text-[12px] font-bold text-foreground">
               Como posso ajudar com esta automação?
             </div>
-            <div className="max-w-[280px] text-[11px] leading-relaxed text-slate-500">
+            <div className="max-w-[280px] text-[11px] leading-relaxed text-[var(--text-muted)]">
               Peça análise de conflitos, sugestão de próximo passo ou explicação
               de algum comportamento. Patches propostos aparecem como cards de
               diff que você aprova ou descarta.
@@ -542,14 +531,14 @@ function ChatTab({
           />
         ))}
         {send.isPending && (
-          <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500">
+          <div className="flex items-center gap-2 text-[11px] font-bold text-[var(--text-muted)]">
             <Loader2 className="size-3.5 animate-spin" strokeWidth={2.4} />
             Copilot pensando…
           </div>
         )}
       </div>
 
-      <div className="flex shrink-0 items-end gap-2 rounded-xl border border-border bg-white p-2 shadow-sm">
+      <div className="flex shrink-0 items-end gap-2 rounded-xl border border-border bg-[var(--color-bg-card)] p-2 shadow-sm">
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -600,7 +589,7 @@ function ChatBubble({
           "max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12px] leading-relaxed shadow-sm",
           isUser
             ? "bg-primary text-white"
-            : "bg-white text-slate-800 ring-1 ring-slate-200",
+            : "bg-[var(--color-bg-card)] text-[var(--text-primary)] ring-1 ring-[var(--glass-border-subtle)]",
         )}
       >
         {msg.content}
@@ -633,16 +622,16 @@ function PatchDiffCard({
   return (
     <div
       className={cn(
-        "w-full max-w-[92%] rounded-xl border bg-linear-to-br from-white to-[#f8faff] p-3 shadow-sm transition-opacity",
+        "w-full max-w-[92%] rounded-xl border bg-linear-to-br from-white to-[var(--color-primary-soft)] p-3 shadow-sm transition-opacity",
         patch.applied && "opacity-60",
         patch.dismissed && "opacity-40",
       )}
-      style={{ borderColor: "#c9d7f5" }}
+      style={{ borderColor: "var(--color-info-border)" }}
     >
       <div className="flex items-start gap-2">
         <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={2.4} />
         <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-bold leading-tight text-slate-900">
+          <div className="text-[12px] font-bold leading-tight text-[var(--text-primary)]">
             {patch.summary}
           </div>
           <div className="mt-0.5 text-[11px] leading-relaxed text-[var(--color-ink-soft)]">
@@ -652,7 +641,7 @@ function PatchDiffCard({
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold tracking-tight text-slate-500 hover:text-slate-800"
+            className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold tracking-tight text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
             <ChevronRight
               className={cn(
@@ -699,13 +688,13 @@ function PatchDiffCard({
               </>
             )}
             {patch.applied && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-700 ring-1 ring-emerald-200">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--color-success-text)] ring-1 ring-[var(--color-success)]/20">
                 <Check className="size-3" strokeWidth={2.6} />
                 Aplicado — clique Salvar pra persistir
               </span>
             )}
             {patch.dismissed && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-subtle)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 ring-1 ring-slate-200">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-subtle)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] ring-1 ring-[var(--glass-border-subtle)]">
                 Descartado
               </span>
             )}

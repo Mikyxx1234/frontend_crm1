@@ -4,15 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Flame,
-  Snowflake,
-  Sun,
-  Tag,
-} from "lucide-react";
+import { IconChevronRight as ChevronRight, IconChevronsLeft as ChevronsLeft, IconChevronsRight as ChevronsRight, IconFlame as Flame, IconSnowflake as Snowflake, IconSun as Sun, IconTag as Tag } from "@tabler/icons-react";
 import { SortableSidebar } from "@/components/ui/sortable-sidebar";
 import { SidebarField } from "@/components/ui/sidebar-field";
 import { DealProductsSection } from "@/components/pipeline/deal-detail/sidebar";
@@ -68,11 +60,11 @@ const LIFECYCLE_LABELS: Record<string, string> = {
 };
 
 function getEngagement(lastInboundAt?: string | null) {
-  if (!lastInboundAt) return { label: "Sem interação", icon: Snowflake, color: "text-blue-400", bg: "bg-primary-soft" } as const;
+  if (!lastInboundAt) return { label: "Sem interação", icon: Snowflake, color: "text-[var(--color-info)]", bg: "bg-primary-soft" } as const;
   const hours = (Date.now() - new Date(lastInboundAt).getTime()) / 3_600_000;
   if (hours < 1) return { label: "Alto", icon: Flame, color: "text-destructive", bg: "bg-destructive-soft" } as const;
   if (hours < 24) return { label: "Médio", icon: Sun, color: "text-warning", bg: "bg-warning-soft" } as const;
-  return { label: "Baixo", icon: Snowflake, color: "text-blue-400", bg: "bg-primary-soft" } as const;
+  return { label: "Baixo", icon: Snowflake, color: "text-[var(--color-info)]", bg: "bg-primary-soft" } as const;
 }
 
 function parseStoredBoolean(raw: string | null): boolean | null {
@@ -123,12 +115,12 @@ function EngagementBadge({ value }: { value: string }) {
     value === "Alto"
       ? "bg-success-soft text-success"
       : value === "Médio"
-        ? "bg-warning-soft text-amber-900"
+        ? "bg-warning-soft text-[var(--color-warn-text)]"
         : value === "Baixo"
           ? "bg-primary-soft text-primary-dark"
           : "bg-muted dark:bg-ink-soft text-ink-soft dark:text-ink-subtle dark:text-ink-soft";
   return (
-    <span className={cn("inline-flex items-center rounded-[4px] px-2 py-0.5 text-[10px] font-semibold leading-tight", tone)}>
+    <span className={cn("inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold leading-tight", tone)}>
       {value}
     </span>
   );
@@ -198,7 +190,7 @@ export function ContactDealSidebar(props: Props) {
             </div>
             {activeDeal ? (
               <>
-                <div className="border-b border-black/5 dark:border-slate-800 bg-muted dark:bg-ink-soft/40 px-4 py-3">
+                <div className="border-b border-black/5 dark:border-[var(--glass-border)] bg-muted dark:bg-ink-soft/40 px-4 py-3">
                   <p className="mb-1.5 text-[10px] font-bold text-foreground dark:text-white">Negócio ativo</p>
                   <Link href={`/pipeline/${activeDeal.id}`} className="mb-1.5 block w-full truncate text-left text-[12px] font-medium text-primary hover:underline">{activeDeal.title}</Link>
                   <div className="flex items-center gap-2">
@@ -209,15 +201,15 @@ export function ContactDealSidebar(props: Props) {
                   </div>
                 </div>
                 {activeDeal.owner ? (
-                  <div className="flex items-center justify-between border-b border-black/5 dark:border-slate-800 px-4 py-2">
+                  <div className="flex items-center justify-between border-b border-black/5 dark:border-[var(--glass-border)] px-4 py-2">
                     <span className="text-[12px] text-ink-subtle dark:text-ink-muted">Responsável</span>
                     <span className="text-[12px] font-medium text-ink-soft dark:text-ink-subtle">{activeDeal.owner.name}</span>
                   </div>
                 ) : null}
-                <div className="flex items-center justify-between border-b border-black/5 dark:border-slate-800 px-4 py-2">
+                <div className="flex items-center justify-between border-b border-black/5 dark:border-[var(--glass-border)] px-4 py-2">
                   <span className="text-[12px] text-ink-subtle dark:text-ink-muted">Estágio</span>
                   <span
-                    className="rounded-[4px] px-2 py-0.5 text-[11px] font-semibold"
+                    className="rounded px-2 py-0.5 text-[11px] font-semibold"
                     style={{
                       background: (activeDeal.stage?.color ?? "#2563eb") + "14",
                       color: activeDeal.stage?.color ?? "#2563eb",
@@ -227,12 +219,12 @@ export function ContactDealSidebar(props: Props) {
                     {activeDeal.stage?.name}
                   </span>
                 </div>
-                <div className="border-b border-black/5 px-4 py-3 dark:border-slate-800">
+                <div className="border-b border-black/5 px-4 py-3 dark:border-[var(--glass-border)]">
                   <DealProductsSection dealId={activeDeal.id} compact />
                 </div>
               </>
             ) : (
-              <div className="border-b border-black/5 dark:border-slate-800 px-4 py-3">
+              <div className="border-b border-black/5 dark:border-[var(--glass-border)] px-4 py-3">
                 <p className="mb-2 text-[10px] font-bold text-foreground dark:text-white">Negócio ativo</p>
                 <div className="flex items-center justify-between">
                   <span className="text-[12px] text-ink-subtle dark:text-ink-muted">Nenhum negócio</span>
@@ -268,7 +260,7 @@ export function ContactDealSidebar(props: Props) {
           <div key="campos_contato">
             {visibleCustomFields.length > 0 ? (
               <>
-                <div className="mt-1 border-t border-black/5 dark:border-slate-800 px-4 pb-1 pt-3">
+                <div className="mt-1 border-t border-black/5 dark:border-[var(--glass-border)] px-4 pb-1 pt-3">
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-subtle dark:text-ink-muted">Campos do contato</span>
                 </div>
                 {(extraFieldsOpen ? visibleCustomFields : visibleCustomFields.slice(0, 3)).map((f) => {
@@ -299,7 +291,7 @@ export function ContactDealSidebar(props: Props) {
           <div key="todos_negocios">
             {allDeals.length > 0 ? (
               <>
-                <div className="mt-1 border-t border-black/5 dark:border-slate-800 px-4 pb-1 pt-3">
+                <div className="mt-1 border-t border-black/5 dark:border-[var(--glass-border)] px-4 pb-1 pt-3">
                   <p className="text-[10px] font-bold text-foreground dark:text-white">Todos os negócios</p>
                 </div>
                 {allDeals.map((d) => (
@@ -326,11 +318,11 @@ export function ContactDealSidebar(props: Props) {
         // pai, evitando o body gradient vazar embaixo quando o conteúdo
         // interno é curto (bug do refactor de width: `h-full` dependia
         // de altura explícita do pai, que não vinha do `lg:flex` puro).
-        "flex min-h-0 w-full flex-1 shrink-0 flex-col overflow-hidden bg-white dark:bg-foreground",
-        side === "right" ? "border-l border-black/5 dark:border-slate-800" : "border-r border-black/5 dark:border-slate-800",
+        "flex min-h-0 w-full flex-1 shrink-0 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-foreground",
+        side === "right" ? "border-l border-black/5 dark:border-[var(--glass-border)]" : "border-r border-black/5 dark:border-[var(--glass-border)]",
       )}
     >
-      <div className="relative flex h-8 shrink-0 items-center justify-between border-b border-black/5 dark:border-slate-800 bg-white dark:bg-foreground px-3">
+      <div className="relative flex h-8 shrink-0 items-center justify-between border-b border-black/5 dark:border-[var(--glass-border)] bg-[var(--color-bg-card)] dark:bg-foreground px-3">
         <span className="text-[11px] font-medium text-ink-subtle dark:text-ink-muted">CRM</span>
         <div className="flex items-center gap-0.5">
           {onCollapse ? (
@@ -350,8 +342,8 @@ export function ContactDealSidebar(props: Props) {
         </div>
       </div>
 
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-white dark:bg-foreground">
-        <div className="border-b border-black/5 dark:border-slate-800 px-4 py-3">
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[var(--color-bg-card)] dark:bg-foreground">
+        <div className="border-b border-black/5 dark:border-[var(--glass-border)] px-4 py-3">
           <p className="text-[14px] font-semibold text-foreground dark:text-white">{displayName}</p>
           {contact?.company?.name ? (
             <p className="mt-0.5 truncate text-[11px] text-ink-subtle dark:text-ink-muted">{contact.company.name}</p>
@@ -374,7 +366,7 @@ export function ContactDealSidebar(props: Props) {
         <Link
           href={`/contacts/${contactId}`}
           className={cn(
-            "mt-auto flex items-center justify-between border-t border-black/5 dark:border-slate-800 px-4 py-3 text-[12px] font-medium transition-colors hover:text-primary-dark",
+            "mt-auto flex items-center justify-between border-t border-black/5 dark:border-[var(--glass-border)] px-4 py-3 text-[12px] font-medium transition-colors hover:text-primary-dark",
             dt.text.link,
           )}
         >

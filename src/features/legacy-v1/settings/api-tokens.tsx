@@ -2,11 +2,11 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Key, Plus, Trash2 } from "lucide-react";
+import { IconCopy as Copy, IconKey as Key, IconPlus as Plus, IconTrash as Trash2 } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { GlassCard } from "@/components/crm/glass-card";
 import { PagePrimaryButton } from "@/components/crm/page-toolbar";
@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import {
   Table,
@@ -200,14 +200,15 @@ export default function ApiTokensPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
+                        <ButtonGlass
+                          variant="icon"
                           size="icon"
-                          className="text-destructive hover:text-destructive"
+                          className="text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
                           onClick={() => setDeleteId(t.id)}
+                          aria-label="Revogar"
                         >
                           <Trash2 className="size-4" />
-                        </Button>
+                        </ButtonGlass>
                       </TableCell>
                     </TableRow>
                   );
@@ -231,20 +232,20 @@ export default function ApiTokensPage() {
               </DialogHeader>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Input readOnly value={createdToken} className="font-mono text-xs" />
+                  <InputGlass readOnly value={createdToken} className="font-mono text-xs" />
                   <TooltipHost label="Copiar" side="top">
-                    <Button
-                      variant="outline"
+                    <ButtonGlass
+                      variant="glass"
                       size="icon"
                       onClick={handleCopy}
                       aria-label="Copiar"
                     >
                       <Copy className="size-4" />
-                    </Button>
+                    </ButtonGlass>
                   </TooltipHost>
                 </div>
                 {copied && (
-                  <p className="text-xs text-green-600">Copiado!</p>
+                  <p className="text-xs text-[var(--color-success)]">Copiado!</p>
                 )}
                 <div className="rounded-md border border-[var(--color-warning)]/30 bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] p-3 text-xs text-[var(--color-warning)]">
                   Guarde esta chave em um local seguro. Ela será usada como
@@ -252,7 +253,7 @@ export default function ApiTokensPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleCloseCreated}>Fechar</Button>
+                <ButtonGlass variant="primary" onClick={handleCloseCreated}>Fechar</ButtonGlass>
               </DialogFooter>
             </>
           ) : (
@@ -266,7 +267,7 @@ export default function ApiTokensPage() {
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
                   <Label htmlFor="tk-name">Nome</Label>
-                  <Input
+                  <InputGlass
                     id="tk-name"
                     value={tokenName}
                     onChange={(e) => setTokenName(e.target.value)}
@@ -275,7 +276,7 @@ export default function ApiTokensPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tk-expiry">Expira em (opcional)</Label>
-                  <Input
+                  <InputGlass
                     id="tk-expiry"
                     type="date"
                     value={tokenExpiry}
@@ -284,18 +285,19 @@ export default function ApiTokensPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  variant="outline"
+                <ButtonGlass
+                  variant="glass"
                   onClick={() => setCreateOpen(false)}
                 >
                   Cancelar
-                </Button>
-                <Button
+                </ButtonGlass>
+                <ButtonGlass
+                  variant="primary"
                   disabled={!tokenName.trim() || createMutation.isPending}
                   onClick={() => createMutation.mutate()}
                 >
                   {createMutation.isPending ? "Criando..." : "Criar chave"}
-                </Button>
+                </ButtonGlass>
               </DialogFooter>
               {createMutation.isError && (
                 <p className="text-sm text-destructive">
@@ -323,18 +325,18 @@ export default function ApiTokensPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>
+            <ButtonGlass variant="glass" onClick={() => setDeleteId(null)}>
               Cancelar
-            </Button>
-            <Button
-              variant="destructive"
+            </ButtonGlass>
+            <ButtonGlass
+              variant="danger"
               disabled={deleteMutation.isPending}
               onClick={() => {
                 if (deleteId) deleteMutation.mutate(deleteId);
               }}
             >
               {deleteMutation.isPending ? "Revogando..." : "Revogar"}
-            </Button>
+            </ButtonGlass>
           </DialogFooter>
         </DialogContent>
       </Dialog>

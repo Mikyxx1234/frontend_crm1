@@ -11,12 +11,22 @@ import {
   IconPencil,
   IconPlus,
   IconSchool,
-  IconSearch,
 } from "@tabler/icons-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { Chip } from "@/components/crm/chip";
+import { StatusPill } from "@/components/crm/status-pill";
+import {
+  PageSearchBar,
+  PageSegmentedControl,
+  PagePrimaryButton,
+  type PageSegmentItem,
+} from "@/components/crm/page-toolbar";
+import {
+  ListColumnLabel,
+  listTableHeadRowClass,
+} from "@/components/crm/sortable-header";
+import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
 import { apiUrl } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -41,6 +51,19 @@ const KIND_ICON: Record<ProductKind, React.ReactNode> = {
   JOB_OPENING: <IconBriefcase size={12} />,
 };
 
+/** Pills de filtro por tipo — "Todos" + cada ProductKind. */
+const KIND_FILTER_ITEMS: readonly PageSegmentItem[] = [
+  { value: "", label: "Todos" },
+  ...(Object.keys(KIND_LABEL) as ProductKind[]).map((k) => ({
+    value: k,
+    label: KIND_LABEL[k],
+  })),
+];
+
+/** Colunas da tabela glass (mesmo padrão de /contacts): grid CSS. */
+const TABELA_COLS =
+  "grid-cols-[minmax(0,1fr)_130px_150px_140px_120px_72px]";
+
 async function fetchProducts(search: string): Promise<ProductRow[]> {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
@@ -52,6 +75,7 @@ async function fetchProducts(search: string): Promise<ProductRow[]> {
 }
 
 export function ProductsV2Page() {
+  const slots = useSettingsHeaderSlots();
   const [search, setSearch] = React.useState("");
   const [kindFilter, setKindFilter] = React.useState<ProductKind | "">("");
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -75,122 +99,114 @@ export function ProductsV2Page() {
     setDialogOpen(true);
   };
 
+  /* Injeta busca (center) + filtros/ação (actions) no PageHeader do
+     SettingsV2Shell — padrão canônico /contacts. */
+  React.useEffect(() => {
+    if (!slots) return;
+    slots.setCenter(
+      <PageSearchBar
+        variant="compact"
+        value={search}
+        onChange={setSearch}
+        placeholder="Buscar por nome ou SKU…"
+      />,
+    );
+    slots.setActions(
+      <div className="flex items-center gap-2">
+        <PageSegmentedControl
+          items={KIND_FILTER_ITEMS}
+          value={kindFilter}
+          onChange={(v) => setKindFilter(v as ProductKind | "")}
+          size="compact"
+          aria-label="Filtrar por tipo de produto"
+        />
+        <PagePrimaryButton onClick={openCreate}>
+          <IconPlus size={15} /> Novo produto
+        </PagePrimaryButton>
+      </div>,
+    );
+    return () => {
+      slots.setCenter(null);
+      slots.setActions(null);
+    };
+  }, [slots, search, kindFilter]);
+
   return (
     <div className="w-full">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[220px] flex-1">
-          <IconSearch
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
-          />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou SKU…"
-            className="pl-9"
-          />
-        </div>
-        <div className="flex gap-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] p-0.5">
-          {([{ val: "", label: "Todos" }] as Array<{ val: ProductKind | ""; label: string }>)
-            .concat(
-              (Object.keys(KIND_LABEL) as ProductKind[]).map((k) => ({
-                val: k,
-                label: KIND_LABEL[k],
-              })),
-            )
-            .map((opt) => (
-              <button
-                key={opt.val || "all"}
-                type="button"
-                onClick={() => setKindFilter(opt.val)}
-                className={cn(
-                  "rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium transition-colors",
-                  kindFilter === opt.val
-                    ? "bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)]"
-                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-        </div>
-        <Button onClick={openCreate}>
-          <IconPlus size={16} /> Novo produto
-        </Button>
-      </div>
-
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <IconLoader2 size={24} className="animate-spin text-[var(--text-secondary)]" />
+          <IconLoader2 size={24} className="animate-spin text-[var(--text-muted)]" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] py-16">
-          <IconPackage size={40} className="text-[var(--text-secondary)] opacity-40" />
-          <p className="text-sm text-[var(--text-secondary)]">Nenhum produto encontrado.</p>
-          <Button variant="outline" size="sm" onClick={openCreate}>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-xl)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-base)] py-16">
+          <IconPackage size={40} className="text-[var(--text-muted)] opacity-40" />
+          <p className="text-sm text-[var(--text-muted)]">Nenhum produto encontrado.</p>
+          <ButtonGlass variant="glass" size="sm" onClick={openCreate}>
             <IconPlus size={14} /> Criar primeiro
-          </Button>
+          </ButtonGlass>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--glass-border)] text-left text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                <th className="px-4 py-3">Nome</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">SKU</th>
-                <th className="px-4 py-3 text-right">Preço base</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr
-                  key={p.id}
-                  className={cn(
-                    "border-b border-[var(--glass-border)] transition-colors last:border-0 hover:bg-[var(--glass-bg-subtle)]",
-                    !p.isActive && "opacity-50",
+        <div className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
+            <ListColumnLabel>Nome</ListColumnLabel>
+            <ListColumnLabel>Tipo</ListColumnLabel>
+            <ListColumnLabel>SKU</ListColumnLabel>
+            <ListColumnLabel align="right">Preço base</ListColumnLabel>
+            <ListColumnLabel className="text-center">Status</ListColumnLabel>
+            <ListColumnLabel align="right">Ações</ListColumnLabel>
+          </div>
+
+          <div className="flex flex-col">
+            {filtered.map((p) => (
+              <div
+                key={p.id}
+                className={cn(
+                  "grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-0 hover:bg-[var(--glass-bg-overlay)]",
+                  TABELA_COLS,
+                  !p.isActive && "opacity-55",
+                )}
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+                    {p.name}
+                  </p>
+                  {p.description && (
+                    <p className="mt-0.5 truncate text-[12px] text-[var(--text-muted)]">
+                      {p.description}
+                    </p>
                   )}
-                >
-                  <td className="px-4 py-3">
-                    <span className="font-medium text-[var(--text-primary)]">{p.name}</span>
-                    {p.description && (
-                      <p className="mt-0.5 line-clamp-1 text-xs text-[var(--text-secondary)]">
-                        {p.description}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className="gap-1 text-[10px]">
-                      {KIND_ICON[p.kind]} {KIND_LABEL[p.kind]}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--text-secondary)]">
-                    {p.sku || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-[var(--text-primary)]">
-                    {formatCurrency(Number(p.price))}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Badge variant={p.isActive ? "default" : "secondary"} className="text-[10px]">
-                      {p.isActive ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7"
-                      onClick={() => openEdit(p.id)}
-                    >
-                      <IconPencil size={14} />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </div>
+                <div className="min-w-0">
+                  <Chip variant="ghost">
+                    {KIND_ICON[p.kind]} {KIND_LABEL[p.kind]}
+                  </Chip>
+                </div>
+                <div className="truncate font-mono text-[12px] text-[var(--text-muted)]">
+                  {p.sku || "—"}
+                </div>
+                <div className="text-right font-display text-[13px] font-bold tabular-nums text-[var(--text-primary)]">
+                  {formatCurrency(Number(p.price))}
+                </div>
+                <div className="flex justify-center">
+                  {p.isActive ? (
+                    <StatusPill variant="success">Ativo</StatusPill>
+                  ) : (
+                    <Chip variant="ghost">Inativo</Chip>
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <ButtonGlass
+                    variant="icon"
+                    size="icon"
+                    onClick={() => openEdit(p.id)}
+                    aria-label={`Editar ${p.name}`}
+                  >
+                    <IconPencil size={14} />
+                  </ButtonGlass>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

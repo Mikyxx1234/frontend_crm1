@@ -34,6 +34,7 @@ function buildConversationsUrl(p: ListConversationsParams): string {
   if (p.channel) q.set("channel", p.channel);
   if (p.stageId) q.set("stageId", p.stageId);
   if (p.tagIds?.length) q.set("tagIds", p.tagIds.join(","));
+  if (p.sources?.length) q.set("sources", p.sources.join(","));
   if (p.sortBy) q.set("sortBy", p.sortBy);
   if (p.sortOrder) q.set("sortOrder", p.sortOrder);
   const s = p.search?.trim();

@@ -3,16 +3,26 @@
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
-  ChevronDown,
-  ChevronRight,
-  Download,
-  Pencil,
-  Save,
-  Settings2,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+  IconArrowLeft as ArrowLeft,
+  IconChevronDown as ChevronDown,
+  IconChevronRight as ChevronRight,
+  IconDownload as Download,
+  IconPencil as Pencil,
+  IconDeviceFloppy as Save,
+  IconAdjustments as Settings2,
+  IconSparkles as Sparkles,
+  IconTrash as Trash2,
+  IconCheck,
+  IconAlertTriangle,
+  IconMicroscope,
+  IconCopy,
+  IconCode,
+  IconSitemap,
+  IconBriefcase,
+  IconCircleCheck,
+  IconCircleCheckFilled,
+  IconCircleXFilled,
+} from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
@@ -25,7 +35,7 @@ const WorkflowCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-[#f0f4f8]">
+      <div className="flex h-full w-full items-center justify-center bg-[var(--color-primary-soft)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     ),
@@ -45,6 +55,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -54,14 +65,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
 import {
@@ -137,6 +140,12 @@ type LogRow = {
   payload?: Record<string, unknown> | null;
   metaWebhookEvent?: MetaWebhookEventLite | null;
   contactAdTracking?: ContactAdTracking | null;
+  // Enriched fields (may be present in API response)
+  contactName?: string | null;
+  dealName?: string | null;
+  dealNumber?: number | null;
+  stageName?: string | null;
+  stageColor?: string | null;
 };
 
 type LogsResponse = {
@@ -177,7 +186,7 @@ function ActiveSwitch({
     >
       <span
         className={cn(
-          "pointer-events-none block size-5 translate-x-0.5 rounded-full bg-white shadow-sm transition-transform",
+          "pointer-events-none block size-5 translate-x-0.5 rounded-full bg-[var(--color-bg-card)] shadow-sm transition-transform",
           active && "translate-x-5"
         )}
       />
@@ -185,244 +194,497 @@ function ActiveSwitch({
   );
 }
 
-function LogsTableView({
-  rows,
-  expandedId,
-  onToggle,
-  statusVariant,
+/** ─── Status helpers ─────────────────────────────────────────── */
+function statusMeta(status: string) {
+  if (status === "SUCCESS")
+    return {
+      icon: <IconCircleCheckFilled size={17} className="text-emerald-500" />,
+      label: "Concluído com sucesso",
+      badge: "bg-emerald-100 text-emerald-700",
+    };
+  if (status === "FAILED")
+    return {
+      icon: <IconCircleXFilled size={17} className="text-red-500" />,
+      label: "Falhou",
+      badge: "bg-red-100 text-red-700",
+    };
+  if (status === "SKIPPED")
+    return {
+      icon: <IconAlertTriangle size={16} className="text-amber-500" />,
+      label: "Ignorado",
+      badge: "bg-amber-100 text-amber-700",
+    };
+  return {
+    icon: <IconCircleCheck size={16} className="text-slate-400" />,
+    label: status,
+    badge: "bg-slate-100 text-slate-600",
+  };
+}
+
+/** ─── JSON Tree Viewer ───────────────────────────────────────── */
+function JsonNode({
+  value,
+  depth = 0,
 }: {
-  rows: LogRow[];
-  expandedId: string | null;
-  onToggle: (id: string | null) => void;
-  statusVariant: (s: string) => "default" | "secondary" | "destructive" | "outline" | "success" | "warning";
+  value: unknown;
+  depth?: number;
 }) {
+  const [open, setOpen] = useState(true);
+  if (value === null) return <span className="text-slate-400">null</span>;
+  if (typeof value === "boolean")
+    return (
+      <span className={value ? "text-emerald-600" : "text-red-500"}>
+        {String(value)}
+      </span>
+    );
+  if (typeof value === "number")
+    return <span className="text-blue-600">{value}</span>;
+  if (typeof value === "string")
+    return <span className="text-amber-700">"{value}"</span>;
+  if (Array.isArray(value)) {
+    if (value.length === 0)
+      return <span className="text-slate-400">[]</span>;
+    return (
+      <span>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="mr-1 font-mono text-slate-400 hover:text-slate-600"
+        >
+          {open ? "▾" : "▸"}
+        </button>
+        <span className="text-slate-500">[{value.length}]</span>
+        {open && (
+          <div className="ml-4">
+            {value.map((item, i) => (
+              <div key={i}>
+                <span className="text-slate-400 mr-1">{i}:</span>
+                <JsonNode value={item} depth={depth + 1} />
+              </div>
+            ))}
+          </div>
+        )}
+      </span>
+    );
+  }
+  if (typeof value === "object") {
+    const keys = Object.keys(value as object);
+    if (keys.length === 0)
+      return <span className="text-slate-400">{"{}"}</span>;
+    return (
+      <span>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="mr-1 font-mono text-slate-400 hover:text-slate-600"
+        >
+          {open ? "▾" : "▸"}
+        </button>
+        <span className="text-slate-500">{"{"}…{"}"}</span>
+        {open && (
+          <div className="ml-4">
+            {keys.map((k) => (
+              <div key={k} className="leading-5">
+                <span className="text-[var(--brand-primary)] font-medium">{k}</span>
+                <span className="text-slate-400">: </span>
+                <JsonNode
+                  value={(value as Record<string, unknown>)[k]}
+                  depth={depth + 1}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </span>
+    );
+  }
+  return <span>{String(value)}</span>;
+}
+
+/** ─── Log Inspect Modal ─────────────────────────────────────── */
+function LogInspectModal({
+  row,
+  onClose,
+}: {
+  row: LogRow | null;
+  onClose: () => void;
+}) {
+  const [activeSection, setActiveSection] = useState<string>("resumo");
+  const [viewMode, setViewMode] = useState<"tree" | "raw">("tree");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (row) setActiveSection("resumo");
+  }, [row?.id]);
+
+  if (!row) return null;
+
+  const sections: {
+    key: string;
+    label: string;
+    count: string;
+    data: unknown;
+  }[] = [
+    {
+      key: "resumo",
+      label: "Resumo / metadados",
+      count: "6 chaves",
+      data: {
+        id: row.id,
+        status: row.status,
+        message: row.message,
+        executedAt: row.executedAt,
+        contactId: row.contactId,
+        dealId: row.dealId,
+      },
+    },
+    ...(row.payload && Object.keys(row.payload).length > 0
+      ? [
+          {
+            key: "payload",
+            label: "Parâmetros",
+            count: `${Object.keys(row.payload).length} chaves`,
+            data: row.payload,
+          },
+        ]
+      : []),
+    ...(row.metaWebhookEvent
+      ? [
+          {
+            key: "meta",
+            label: "Evento Meta",
+            count: "webhook",
+            data: {
+              eventType: row.metaWebhookEvent.eventType,
+              waMessageId: row.metaWebhookEvent.waMessageId,
+              fromPhone: row.metaWebhookEvent.fromPhone,
+              phoneNumberId: row.metaWebhookEvent.phoneNumberId,
+              signatureValid: row.metaWebhookEvent.signatureValid,
+              receivedAt: row.metaWebhookEvent.receivedAt,
+              rawBody: row.metaWebhookEvent.rawBody,
+              headers: row.metaWebhookEvent.headers,
+            },
+          },
+        ]
+      : []),
+    ...(row.contactAdTracking &&
+    (row.contactAdTracking.adSourceId || row.contactAdTracking.adResolvedId)
+      ? [
+          {
+            key: "ad",
+            label: "Rastreamento",
+            count: "anúncio",
+            data: row.contactAdTracking,
+          },
+        ]
+      : []),
+  ];
+
+  const activeData = sections.find((s) => s.key === activeSection)?.data;
+  const rawJson = JSON.stringify(activeData, null, 2);
+
+  function handleCopy() {
+    void navigator.clipboard.writeText(rawJson);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  const sm = statusMeta(row.status);
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[28px]" />
-          <TableHead>Status</TableHead>
-          <TableHead>Quando</TableHead>
-          <TableHead>Mensagem</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => {
-          const hasPayload = row.payload && Object.keys(row.payload).length > 0;
-          const hasMetaWebhook = !!row.metaWebhookEvent;
-          const adTracking = row.contactAdTracking;
-          const hasAdTracking =
-            !!adTracking &&
-            (!!adTracking.adSourceId ||
-              !!adTracking.adResolvedId ||
-              !!adTracking.adResolveStatus);
-          const msg = row.message ?? "";
-          // Uma msg "longa" (>60 chars) também deve poder ser expandida
-          // mesmo sem payload — é o caso típico de erro "send_whatsapp_message:
-          // content obrigatório (mensagem vazia)" que antes ficava truncado
-          // sem jeito de o operador ler o texto completo.
-          const isLongMessage = msg.length > 60;
-          const isExpandable = hasPayload || isLongMessage || hasMetaWebhook || hasAdTracking;
-          const isExpanded = expandedId === row.id;
-          return (
-            <TableRow
-              key={row.id}
-              className={cn(
-                isExpandable && "cursor-pointer hover:bg-muted/40",
-                isExpanded && "bg-muted/30"
-              )}
-              onClick={() => {
-                if (isExpandable) onToggle(isExpanded ? null : row.id);
-              }}
-            >
-              <TableCell className="w-[28px] px-1">
-                {isExpandable && (
-                  isExpanded
-                    ? <ChevronDown className="size-3.5 text-muted-foreground" />
-                    : <ChevronRight className="size-3.5 text-muted-foreground" />
-                )}
-              </TableCell>
-              <TableCell>
-                <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
-              </TableCell>
-              <TableCell className="whitespace-nowrap text-muted-foreground">
-                {formatDateTime(row.executedAt)}
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                <div className={isExpanded ? "whitespace-pre-wrap wrap-break-word" : "max-w-[320px] truncate"}>
-                  {row.message ?? "—"}
+    <Dialog open={!!row} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent size="xl" panelClassName="max-h-[88vh] p-0 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-[var(--glass-border)] px-5 py-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <IconMicroscope size={18} className="text-[var(--brand-primary)]" />
+              <DialogTitle className="text-base font-semibold">
+                Inspeção da sessão
+              </DialogTitle>
+            </div>
+            <DialogDescription className="mt-0.5 font-mono text-[11px] text-[var(--text-muted)]">
+              Sessão {row.id}
+            </DialogDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={cn("flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium", sm.badge)}>
+              {sm.icon}
+              {sm.label}
+            </span>
+            <DialogClose className="rounded p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* Left sidebar */}
+          <div className="w-52 shrink-0 border-r border-[var(--glass-border)] bg-[var(--glass-bg)] p-3">
+            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+              Seções
+            </p>
+            <nav className="space-y-0.5">
+              {sections.map((sec) => (
+                <button
+                  key={sec.key}
+                  type="button"
+                  onClick={() => setActiveSection(sec.key)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
+                    activeSection === sec.key
+                      ? "bg-[var(--brand-primary)]/10 font-medium text-[var(--brand-primary)]"
+                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]"
+                  )}
+                >
+                  <span className="truncate">{sec.label}</span>
+                  <span className="ml-1 shrink-0 text-[10px] text-[var(--text-muted)]">
+                    {sec.count}
+                  </span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Right panel */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {/* Toolbar */}
+            <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] px-4 py-2">
+              <span className="text-xs font-medium text-[var(--text-primary)]">
+                {sections.find((s) => s.key === activeSection)?.label}
+              </span>
+              <div className="flex-1" />
+              {/* View mode toggle */}
+              <div className="flex items-center rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("tree")}
+                  className={cn(
+                    "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-all",
+                    viewMode === "tree"
+                      ? "bg-white font-medium text-[var(--text-primary)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  )}
+                >
+                  <IconSitemap size={12} />
+                  Árvore
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("raw")}
+                  className={cn(
+                    "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-all",
+                    viewMode === "raw"
+                      ? "bg-white font-medium text-[var(--text-primary)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  )}
+                >
+                  <IconCode size={12} />
+                  Raw
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="flex items-center gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+              >
+                {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
+                {copied ? "Copiado" : "Copiar"}
+              </button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-4">
+              {viewMode === "raw" ? (
+                <pre className="text-[12px] leading-relaxed text-[var(--text-primary)] font-mono whitespace-pre-wrap">
+                  {rawJson}
+                </pre>
+              ) : (
+                <div className="text-[12px] font-mono leading-5">
+                  <JsonNode value={activeData} />
                 </div>
-                {isExpanded && hasPayload && (
-                  <div className="mt-2">
-                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Resumo do trigger
-                    </div>
-                    <pre className="max-h-[200px] overflow-auto rounded border border-border bg-muted/50 p-2 text-[11px] leading-relaxed text-foreground">
-                      {JSON.stringify(row.payload, null, 2)}
-                    </pre>
-                  </div>
-                )}
-                {isExpanded && hasAdTracking && adTracking && (
-                  <div className="mt-3 rounded border border-border bg-muted/30 p-2">
-                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Origem — Anúncio
-                    </div>
-                    <div className="grid grid-cols-1 gap-x-3 gap-y-0.5 text-[11px] text-foreground sm:grid-cols-2">
-                      {adTracking.adHeadline && (
-                        <div className="col-span-full">
-                          <span className="text-muted-foreground">Título:</span>{" "}
-                          <span className="font-medium">{adTracking.adHeadline}</span>
-                        </div>
-                      )}
-                      {adTracking.adSourceType && (
-                        <div>
-                          <span className="text-muted-foreground">Origem do clique:</span>{" "}
-                          <span className="font-mono">{adTracking.adSourceType}</span>
-                          {adTracking.adSourceId ? (
-                            <span className="text-muted-foreground"> · </span>
-                          ) : null}
-                          {adTracking.adSourceId && (
-                            <span className="font-mono">{adTracking.adSourceId}</span>
-                          )}
-                        </div>
-                      )}
-                      {adTracking.adResolvedId ? (
-                        <div>
-                          <span className="text-muted-foreground">Ad ID:</span>{" "}
-                          <span className="font-mono">{adTracking.adResolvedId}</span>
-                        </div>
-                      ) : adTracking.adResolveStatus ? (
-                        <div>
-                          <span className="text-muted-foreground">Ad ID:</span>{" "}
-                          <span className="font-mono text-amber-600">
-                            ({adTracking.adResolveStatus}
-                            {adTracking.adResolveError ? `: ${adTracking.adResolveError}` : ""})
-                          </span>
-                        </div>
-                      ) : null}
-                      {adTracking.adResolvedName && (
-                        <div>
-                          <span className="text-muted-foreground">Anúncio:</span>{" "}
-                          <span>{adTracking.adResolvedName}</span>
-                        </div>
-                      )}
-                      {adTracking.adResolvedCampaignName && (
-                        <div>
-                          <span className="text-muted-foreground">Campanha:</span>{" "}
-                          <span>{adTracking.adResolvedCampaignName}</span>
-                          {adTracking.adResolvedCampaignId && (
-                            <span className="ml-1 font-mono text-muted-foreground">
-                              ({adTracking.adResolvedCampaignId})
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {adTracking.adResolvedAdsetName && (
-                        <div>
-                          <span className="text-muted-foreground">Conjunto:</span>{" "}
-                          <span>{adTracking.adResolvedAdsetName}</span>
-                        </div>
-                      )}
-                      {adTracking.adCtwaClid && (
-                        <div className="col-span-full">
-                          <span className="text-muted-foreground">CTWA Click ID:</span>{" "}
-                          <span className="font-mono">{adTracking.adCtwaClid}</span>
-                        </div>
-                      )}
-                      {(adTracking.adUtmSource ||
-                        adTracking.adUtmMedium ||
-                        adTracking.adUtmCampaign ||
-                        adTracking.adUtmContent ||
-                        adTracking.adUtmTerm) && (
-                        <div className="col-span-full mt-2 border-t border-border/60 pt-2">
-                          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            UTMs do anúncio
-                          </div>
-                          <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
-                            {adTracking.adUtmSource && (
-                              <div>
-                                <span className="text-muted-foreground">utm_source:</span>{" "}
-                                <span className="font-mono">{adTracking.adUtmSource}</span>
-                              </div>
-                            )}
-                            {adTracking.adUtmMedium && (
-                              <div>
-                                <span className="text-muted-foreground">utm_medium:</span>{" "}
-                                <span className="font-mono">{adTracking.adUtmMedium}</span>
-                              </div>
-                            )}
-                            {adTracking.adUtmCampaign && (
-                              <div>
-                                <span className="text-muted-foreground">utm_campaign:</span>{" "}
-                                <span className="font-mono">{adTracking.adUtmCampaign}</span>
-                              </div>
-                            )}
-                            {adTracking.adUtmContent && (
-                              <div>
-                                <span className="text-muted-foreground">utm_content:</span>{" "}
-                                <span className="font-mono">{adTracking.adUtmContent}</span>
-                              </div>
-                            )}
-                            {adTracking.adUtmTerm && (
-                              <div>
-                                <span className="text-muted-foreground">utm_term:</span>{" "}
-                                <span className="font-mono">{adTracking.adUtmTerm}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {isExpanded && hasMetaWebhook && row.metaWebhookEvent && (
-                  <div className="mt-3">
-                    <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      <span>Webhook Meta (payload bruto)</span>
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[9px] normal-case tracking-normal text-foreground/70">
-                        {row.metaWebhookEvent.eventType}
-                      </span>
-                      {row.metaWebhookEvent.signatureValid ? (
-                        <span className="text-[9px] font-medium normal-case text-emerald-600">assinatura ok</span>
-                      ) : (
-                        <span className="text-[9px] font-medium normal-case text-amber-600">assinatura não verificada</span>
-                      )}
-                    </div>
-                    <div className="mb-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground sm:grid-cols-4">
-                      {row.metaWebhookEvent.waMessageId && (
-                        <div><span className="font-mono">waMessageId:</span> {row.metaWebhookEvent.waMessageId}</div>
-                      )}
-                      {row.metaWebhookEvent.fromPhone && (
-                        <div><span className="font-mono">from:</span> {row.metaWebhookEvent.fromPhone}</div>
-                      )}
-                      {row.metaWebhookEvent.phoneNumberId && (
-                        <div><span className="font-mono">phoneNumberId:</span> {row.metaWebhookEvent.phoneNumberId}</div>
-                      )}
-                      <div><span className="font-mono">recebido:</span> {formatDateTime(row.metaWebhookEvent.receivedAt)}</div>
-                    </div>
-                    <pre className="max-h-[400px] overflow-auto rounded border border-border bg-muted/50 p-2 text-[11px] leading-relaxed text-foreground">
-                      {JSON.stringify(row.metaWebhookEvent.rawBody, null, 2)}
-                    </pre>
-                    {row.metaWebhookEvent.headers && Object.keys(row.metaWebhookEvent.headers).length > 0 && (
-                      <details className="mt-1">
-                        <summary className="cursor-pointer text-[10px] text-muted-foreground hover:text-foreground">
-                          Headers
-                        </summary>
-                        <pre className="mt-1 max-h-[150px] overflow-auto rounded border border-border bg-muted/30 p-2 text-[10px] leading-relaxed text-foreground/80">
-                          {JSON.stringify(row.metaWebhookEvent.headers, null, 2)}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+              )}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
+
+/** ─── Log Row Card ───────────────────────────────────────────── */
+function LogRowCard({
+  row,
+  onInspect,
+}: {
+  row: LogRow;
+  onInspect: (row: LogRow) => void;
+}) {
+  const sm = statusMeta(row.status);
+  const hasDetail =
+    (row.payload && Object.keys(row.payload).length > 0) ||
+    !!row.metaWebhookEvent ||
+    !!(
+      row.contactAdTracking &&
+      (row.contactAdTracking.adSourceId || row.contactAdTracking.adResolvedId)
+    ) ||
+    !!row.message;
+
+  return (
+    <div className="rounded-xl border border-[var(--glass-border)] bg-white px-4 py-3">
+      {/* Top row: status + date + inspect */}
+      <div className="flex items-center gap-2.5">
+        <span className="shrink-0">{sm.icon}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              {sm.label}
+            </span>
+            {row.message && row.status !== "SUCCESS" && (
+              <span className="truncate text-xs text-[var(--text-muted)]">
+                — {row.message}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+            {formatDateTime(row.executedAt)}
+          </p>
+        </div>
+        {hasDetail && (
+          <button
+            type="button"
+            onClick={() => onInspect(row)}
+            title="Inspecionar sessão"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2.5 py-1.5 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--brand-primary)]/5 hover:text-[var(--brand-primary)]"
+          >
+            <IconMicroscope size={13} />
+            Detalhes
+          </button>
+        )}
+      </div>
+
+      {/* Bottom row: lead + deal */}
+      {(row.contactId || row.dealId) && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--glass-border)] pt-2">
+          {row.contactId && (
+            <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-600">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/20 text-[8px] font-bold text-[var(--brand-primary)] uppercase">
+                {(row.contactName ?? row.contactId ?? "L").charAt(0)}
+              </span>
+              <span className="font-medium">
+                {row.contactName ?? `Contato ${row.contactId.slice(0, 6)}`}
+              </span>
+            </div>
+          )}
+          {row.dealId && (
+            <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-600">
+              <IconBriefcase size={11} className="shrink-0 text-slate-500" />
+              <span className="font-medium">
+                {row.dealName
+                  ? `${row.dealName}${row.dealNumber ? ` #${row.dealNumber}` : ""}`
+                  : `Negócio ${row.dealId.slice(0, 6)}`}
+              </span>
+            </div>
+          )}
+          {row.stageName && (
+            <div
+              className="h-1.5 w-16 rounded-full"
+              style={{ backgroundColor: row.stageColor ?? "#6366f1" }}
+              title={row.stageName}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** ─── Logs List View ─────────────────────────────────────────── */
+type LogStatusFilter = "all" | "SUCCESS" | "FAILED" | "SKIPPED";
+
+const STATUS_TABS: { key: LogStatusFilter; label: string }[] = [
+  { key: "all", label: "Entraram" },
+  { key: "SUCCESS", label: "Sucessos" },
+  { key: "SKIPPED", label: "Alertas" },
+  { key: "FAILED", label: "Erros" },
+];
+
+function LogsListView({
+  rows,
+  onInspect,
+}: {
+  rows: LogRow[];
+  onInspect: (row: LogRow) => void;
+}) {
+  const [statusFilter, setStatusFilter] = useState<LogStatusFilter>("all");
+
+  const filtered =
+    statusFilter === "all"
+      ? rows
+      : rows.filter((r) => r.status === statusFilter);
+
+  const counts = {
+    all: rows.length,
+    SUCCESS: rows.filter((r) => r.status === "SUCCESS").length,
+    SKIPPED: rows.filter((r) => r.status === "SKIPPED").length,
+    FAILED: rows.filter((r) => r.status === "FAILED").length,
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Tabs */}
+      <div className="flex items-center gap-1 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-1">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setStatusFilter(tab.key)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
+              statusFilter === tab.key
+                ? "bg-white text-[var(--text-primary)] shadow-sm"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            )}
+          >
+            {tab.label}
+            {counts[tab.key] > 0 && (
+              <span
+                className={cn(
+                  "min-w-[18px] rounded-full px-1 text-center text-[10px] font-semibold",
+                  statusFilter === tab.key
+                    ? tab.key === "FAILED"
+                      ? "bg-red-100 text-red-600"
+                      : tab.key === "SKIPPED"
+                        ? "bg-amber-100 text-amber-600"
+                        : tab.key === "SUCCESS"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "bg-slate-100 text-slate-600"
+                    : "bg-slate-100 text-slate-500"
+                )}
+              >
+                {counts[tab.key]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Rows */}
+      {filtered.length === 0 ? (
+        <p className="py-6 text-center text-sm text-[var(--text-muted)]">
+          Nenhum registro nesta categoria.
+        </p>
+      ) : (
+        <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+          {filtered.map((row) => (
+            <LogRowCard key={row.id} row={row} onInspect={onInspect} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── (removed legacy table view) ───────────────────────────────
+
 
 export default function AutomationDetailPage() {
   const params = useParams();
@@ -455,6 +717,7 @@ export default function AutomationDetailPage() {
   const [logsOpen, setLogsOpen] = useState(false);
   const [stepLogsId, setStepLogsId] = useState<string | null>(null);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [inspectRow, setInspectRow] = useState<LogRow | null>(null);
   // 27/mai/26 — Contador pra trigger `fitView` no canvas após o
   // auto-alinhar. Incrementa a cada click; canvas observa via
   // `autoAlignVersion` prop.
@@ -665,17 +928,6 @@ export default function AutomationDetailPage() {
 
   const logRows = logsQuery.data?.logs ?? logsQuery.data?.items ?? [];
 
-  const statusVariant = (
-    s: string
-  ): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" => {
-    if (s === "SUCCESS") return "success";
-    if (s === "FAILED") return "destructive";
-    if (s === "SKIPPED") return "warning";
-    return "secondary";
-  };
-
-  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
-
   if (!id) {
     return <p className="text-sm text-muted-foreground">ID inválido.</p>;
   }
@@ -708,20 +960,20 @@ export default function AutomationDetailPage() {
           glassmorphism + pill buttons + glow no Salvar — alinhado ao
           design system EduIT Premium. ActiveSwitch local mantido pra
           não desalinhar com os outros usos no Config dialog. */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border/60 bg-white/85 px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border/60 bg-[var(--glass-bg-overlay)] px-4 py-2.5 shadow-[0_1px_0_rgba(13,27,62,0.04)] backdrop-blur-xl">
         {/* Breadcrumb */}
         <Link
           href={listHref}
-          className="group/back flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-[var(--color-ink-soft)] transition-colors hover:bg-[#eef4ff]/60 hover:text-primary"
+          className="group/back flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-bold tracking-tight text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--color-primary-soft)]/60 hover:text-primary"
         >
           <ArrowLeft className="size-4 transition-transform group-hover/back:-translate-x-0.5" strokeWidth={2.4} />
           Automações
         </Link>
-        <ChevronRight className="size-3.5 text-slate-300" />
+        <ChevronRight className="size-3.5 text-[var(--color-text-muted)]" />
         <button
           type="button"
           onClick={openNameEdit}
-          className="group/name flex items-center gap-1.5 rounded-lg px-2 py-1 text-[14px] font-extrabold tracking-tighter text-slate-900 transition-colors hover:bg-[var(--color-bg-subtle)]"
+          className="group/name flex items-center gap-1.5 rounded-lg px-2 py-1 text-[14px] font-extrabold tracking-tighter text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-bg-subtle)]"
         >
           {name}
           <Pencil className="size-3 text-[var(--color-ink-muted)] transition-colors group-hover/name:text-primary" strokeWidth={2.4} />
@@ -729,7 +981,7 @@ export default function AutomationDetailPage() {
 
         {/* Unsaved indicator — pílula âmbar */}
         {dirty && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-extrabold tracking-tight text-amber-700 ring-1 ring-amber-200">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-amber-soft)] px-2.5 py-0.5 text-[11px] font-extrabold tracking-tight text-[var(--color-amber-text)] ring-1 ring-amber-200">
             <span className="size-1.5 animate-pulse-soft rounded-full bg-amber-500" />
             Alterações não salvas
           </span>
@@ -743,14 +995,14 @@ export default function AutomationDetailPage() {
             className={cn(
               "flex items-center gap-2 rounded-full px-3 py-1 ring-1 transition-colors",
               active
-                ? "bg-emerald-50 ring-emerald-200"
-                : "bg-[var(--color-bg-subtle)] ring-slate-200"
+                ? "bg-[var(--color-success-subtle)] ring-[var(--color-success-subtle)]"
+                : "bg-[var(--color-bg-subtle)] ring-[var(--color-border-soft)]"
             )}
           >
             <span
               className={cn(
                 "text-[11px] font-semibold uppercase tracking-widest",
-                active ? "text-emerald-700" : "text-slate-500"
+                active ? "text-emerald-700" : "text-[var(--color-text-secondary)]"
               )}
             >
               {active ? "Ativa" : "Inativa"}
@@ -766,7 +1018,7 @@ export default function AutomationDetailPage() {
             <button
               type="button"
               onClick={() => setConfigOpen(true)}
-              className="flex size-9 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900"
+              className="flex size-9 items-center justify-center rounded-full text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-text-primary)]"
               aria-label="Configuração"
             >
               <Settings2 className="size-4" strokeWidth={2.2} />
@@ -786,7 +1038,7 @@ export default function AutomationDetailPage() {
                 "flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-bold tracking-tight transition-all",
                 copilotOpen
                   ? "bg-primary text-white shadow-[var(--shadow-indigo-glow)] hover:-translate-y-px"
-                  : "border border-border bg-white text-foreground hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm",
+                  : "border border-border bg-[var(--color-bg-card)] text-foreground hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm",
               )}
             >
               <Sparkles className="size-3.5" strokeWidth={2.4} />
@@ -798,7 +1050,7 @@ export default function AutomationDetailPage() {
             <button
               type="button"
               onClick={handleAutoAlign}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm"
             >
               <Sparkles className="size-3.5" strokeWidth={2.4} />
               Auto alinhar
@@ -809,7 +1061,7 @@ export default function AutomationDetailPage() {
             <button
               type="button"
               onClick={handleExportJson}
-              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[#c9d7f5] hover:text-primary hover:shadow-sm"
+              className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-primary/20 hover:text-primary hover:shadow-sm"
             >
               <Download className="size-3.5" strokeWidth={2.4} />
               Exportar JSON
@@ -819,7 +1071,7 @@ export default function AutomationDetailPage() {
           <button
             type="button"
             onClick={() => setLogsOpen(true)}
-            className="h-9 rounded-full border border-border bg-white px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-slate-300 hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
+            className="h-9 rounded-full border border-border bg-[var(--color-bg-card)] px-3.5 text-[12px] font-bold tracking-tight text-foreground transition-all hover:-translate-y-px hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-subtle)] hover:shadow-sm"
           >
             Logs
           </button>
@@ -841,7 +1093,7 @@ export default function AutomationDetailPage() {
               "flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-extrabold tracking-tight text-white shadow-[var(--shadow-indigo-glow)] transition-all",
               !hydrated || saveMutation.isPending || !name.trim()
                 ? "cursor-not-allowed opacity-60"
-                : "hover:-translate-y-px hover:bg-[#4466d6] hover:shadow-[0_14px_30px_-6px_rgba(80,125,241,0.45)]"
+                : "hover:-translate-y-px hover:bg-[var(--brand-primary-hover)] hover:shadow-[0_14px_30px_-6px_rgba(80,125,241,0.45)]"
             )}
           >
             <Save className="size-3.5" strokeWidth={2.4} />
@@ -851,7 +1103,7 @@ export default function AutomationDetailPage() {
       </div>
 
       {saveMutation.isError && (
-        <div className="shrink-0 border-b border-rose-200/60 bg-rose-50/70 px-4 py-2 text-[12px] font-bold text-rose-700 backdrop-blur-sm">
+        <div className="shrink-0 border-b border-[var(--color-danger-subtle)]/60 bg-[var(--color-rose-soft)]/70 px-4 py-2 text-[12px] font-bold text-rose-700 backdrop-blur-sm">
           {(saveMutation.error as Error).message}
         </div>
       )}
@@ -896,7 +1148,7 @@ export default function AutomationDetailPage() {
 
       {/* ═══ Config dialog ═══ */}
       <Dialog open={configOpen} onOpenChange={setConfigOpen}>
-        <DialogContent size="lg" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="lg" panelClassName="max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Configuração</DialogTitle>
             <DialogDescription>
@@ -991,16 +1243,21 @@ export default function AutomationDetailPage() {
 
       {/* ═══ Logs dialog ═══ */}
       <Dialog open={logsOpen} onOpenChange={setLogsOpen}>
-        <DialogContent size="xl" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="xl" panelClassName="max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Execuções</DialogTitle>
+            <DialogTitle>Logs do bloco</DialogTitle>
             <DialogDescription>
-              Últimos registros (
-              {logsQuery.data?.total ?? logRows.length} no total).
+              {logsQuery.data
+                ? `${logsQuery.data.total} execução(ões) registrada(s)`
+                : "Carregando registros…"}
             </DialogDescription>
           </DialogHeader>
           {logsQuery.isLoading ? (
-            <Skeleton className="h-48 w-full" />
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 rounded-xl" />
+              ))}
+            </div>
           ) : logsQuery.isError ? (
             <p className="text-sm text-destructive">
               {(logsQuery.error as Error).message}
@@ -1010,7 +1267,7 @@ export default function AutomationDetailPage() {
               Nenhum log ainda.
             </p>
           ) : (
-            <LogsTableView rows={logRows} expandedId={expandedLogId} onToggle={setExpandedLogId} statusVariant={statusVariant} />
+            <LogsListView rows={logRows} onInspect={setInspectRow} />
           )}
           <DialogFooter>
             <Button
@@ -1026,9 +1283,9 @@ export default function AutomationDetailPage() {
 
       {/* ═══ Step logs dialog ═══ */}
       <Dialog open={Boolean(stepLogsId)} onOpenChange={(open) => { if (!open) setStepLogsId(null); }}>
-        <DialogContent size="xl" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="xl" panelClassName="max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Eventos — {stepLogsLabel}</DialogTitle>
+            <DialogTitle>Logs — {stepLogsLabel}</DialogTitle>
             <DialogDescription>
               {stepLogsQuery.data
                 ? `${stepLogsQuery.data.total} registro(s)`
@@ -1036,7 +1293,11 @@ export default function AutomationDetailPage() {
             </DialogDescription>
           </DialogHeader>
           {stepLogsQuery.isLoading ? (
-            <Skeleton className="h-48 w-full" />
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 rounded-xl" />
+              ))}
+            </div>
           ) : stepLogsQuery.isError ? (
             <p className="text-sm text-destructive">
               {(stepLogsQuery.error as Error).message}
@@ -1046,7 +1307,7 @@ export default function AutomationDetailPage() {
               Nenhum evento ainda.
             </p>
           ) : (
-            <LogsTableView rows={stepLogRows} expandedId={expandedLogId} onToggle={setExpandedLogId} statusVariant={statusVariant} />
+            <LogsListView rows={stepLogRows} onInspect={setInspectRow} />
           )}
           <DialogFooter>
             <Button
@@ -1059,6 +1320,9 @@ export default function AutomationDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ═══ Log inspect modal ═══ */}
+      <LogInspectModal row={inspectRow} onClose={() => setInspectRow(null)} />
 
       {/* ═══ Name edit ═══ */}
       <Dialog open={nameDialogOpen} onOpenChange={setNameDialogOpen}>

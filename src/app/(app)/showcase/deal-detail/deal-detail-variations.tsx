@@ -52,7 +52,7 @@ const FUNNEL = [
 
 const TABS = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle, count: 1 },
-  { id: "atividades", label: "Atividades", icon: IconChecklist, count: 3 },
+  { id: "atividades", label: "Tarefas", icon: IconChecklist, count: 3 },
   { id: "notas", label: "Notas", icon: IconNote },
   { id: "timeline", label: "Timeline", icon: IconClock },
 ] as const
@@ -210,7 +210,7 @@ function LeadFieldsCard() {
       <div className="flex items-center justify-between py-2.5">
         <span className="font-display text-[12.5px] text-[var(--text-muted)]">Tags</span>
         <span className="flex items-center gap-1.5">
-          <span className="rounded-full border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.1)] px-2 py-0.5 font-display text-[11px] font-bold text-[#ef4444]">
+          <span className="rounded-full border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.1)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-destructive)]">
             {DEAL.tag}
           </span>
           <span className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-[var(--glass-border)] px-2 py-0.5 font-display text-[11px] font-semibold text-[var(--text-muted)]">

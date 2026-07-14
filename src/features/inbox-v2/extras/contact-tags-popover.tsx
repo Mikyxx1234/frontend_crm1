@@ -158,7 +158,7 @@ export function ContactTagsPopover({
                 width: 256,
                 isolation: "isolate",
               }}
-              className="z-[10000] rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+              className="z-(--z-popover) rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
             >
               <div className="mb-2 px-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 Tags do contato

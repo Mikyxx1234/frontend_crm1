@@ -154,6 +154,37 @@
   --color-cyan:      #06b6d4;
   --color-cyan-soft: rgba(6, 182, 212, 0.15);
 
+  /* ── Tons adicionais (Onda 16-17 — shades sem mapeamento anterior) ── */
+  --color-amber-text:   #b45309;                  /* amber-700 */
+  --color-amber-muted:  #fbbf24;                  /* amber-400 — tom mais claro */
+  --color-amber-soft:   rgba(245, 158, 11, 0.10); /* amber-50/100 bg */
+  --color-sky:          #0ea5e9;                  /* sky-500 */
+  --color-sky-muted:    #7dd3fc;                  /* sky-300 — tom mais claro */
+  --color-sky-soft:     rgba(14, 165, 233, 0.12); /* sky-100 bg */
+  --color-fuchsia:      #d946ef;                  /* fuchsia-500 */
+  --color-fuchsia-muted:#e879f9;                  /* fuchsia-400 — tom mais claro */
+  --color-fuchsia-soft: rgba(217, 70, 239, 0.12); /* fuchsia-100 bg */
+  --color-indigo-soft:  rgba(99, 102, 241, 0.10); /* indigo-50/100 bg */
+  --color-rose:         #f43f5e;                  /* rose-500 */
+  --color-rose-muted:   #fda4af;                  /* rose-300 — tom mais claro */
+  --color-rose-soft:    rgba(244, 63, 94, 0.10);  /* rose-100 bg */
+  --color-orange:       #f97316;                  /* orange-500 */
+  --color-orange-muted: #fb923c;                  /* orange-400 — tom mais claro */
+  --color-zinc-muted:   #a1a1aa;                  /* zinc-400 */
+  --color-purple-text:  #7c3aed;                  /* violet-600/purple-600 */
+
+  /* ── Aliases semânticos (Ondas 13b/13c — tokens faltantes) ────── */
+  --color-text-primary:    var(--color-foreground);        /* #1e2a3b */
+  --color-text-secondary:  var(--color-ink-soft);          /* #374151 */
+  --color-text-muted:      var(--color-ink-muted);         /* #4b5563 */
+  --color-text-inverse:    #ffffff;
+  --color-bg-card:         #ffffff;
+  --color-brand-primary:   var(--color-primary);           /* #5b6ff5 */
+  --color-success-subtle:  var(--color-success-soft);      /* rgba(16,185,129,0.12) */
+  --color-danger-subtle:   var(--color-destructive-soft);  /* rgba(239,68,68,0.12) */
+  --color-warn-subtle:     var(--color-warning-soft);      /* rgba(245,158,11,0.12) */
+  --color-border-strong:   rgba(180, 200, 230, 0.65);
+
   /* ── Radius (escala glassmorphism) ──────────────────────────── */
   --radius-sm:  0.375rem;   /* 6px  */
   --radius-md:  0.625rem;   /* 10px */
@@ -180,7 +211,7 @@
    ficam disponíveis via var() pra uso pontual)
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  /* Glass backgrounds */
+  /* Glass backgrounds — semitransparentes (efeito original) */
   --glass-bg:         rgba(255, 255, 255, 0.25);
   --glass-bg-strong:  rgba(255, 255, 255, 0.40);
   --glass-bg-subtle:  rgba(255, 255, 255, 0.12);
@@ -188,7 +219,7 @@
 
   /* Glass borders */
   --glass-border:        rgba(255, 255, 255, 0.55);
-  --glass-border-subtle: rgba(255, 255, 255, 0.30);
+  --glass-border-subtle: rgba(255, 255, 255, 0.35);
 
   /* Glass shadows */
   --glass-shadow:     0 8px 32px rgba(100, 130, 180, 0.18);
@@ -206,7 +237,7 @@
   --glass-blur-subtle: blur(8px);
 
   /* Mesh gradient base — usado em <body> */
-  --bg-gradient: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dce8f5 100%);
+  --bg-gradient: #dde8f5;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -366,7 +397,14 @@
 
   --color-border:         rgba(255, 255, 255, 0.08);
   --color-border-soft:    rgba(255, 255, 255, 0.05);
+  --color-border-strong:  rgba(255, 255, 255, 0.15);
   --color-input:          rgba(255, 255, 255, 0.08);
+
+  /* Aliases semânticos dark */
+  --color-text-primary:   var(--color-foreground);    /* #e8edf5 */
+  --color-text-secondary: var(--color-ink-soft);      /* #9ba8b9 */
+  --color-text-muted:     var(--color-ink-muted);     /* #6b7a8c */
+  --color-bg-card:        #1a2238;
 
   --color-card:           rgba(255, 255, 255, 0.05);
   --color-card-foreground: #e8edf5;
@@ -504,7 +542,7 @@
 
 .dark .hover\:border-white\/55:hover { border-color: rgba(255, 255, 255, 0.14); }
 
-/* `bg-slate-50` e `border-slate-100` aparecem como background sutil de
+/* `bg-[var(--glass-bg-subtle)]` e `border-[var(--glass-border-subtle)]` aparecem como background sutil de
    menus e dividers. No dark eles ficam quase preto pra preservar contraste. */
 .dark .bg-slate-50 { background-color: rgba(255, 255, 255, 0.04); }
 .dark .hover\:bg-slate-50:hover { background-color: rgba(255, 255, 255, 0.06); }
@@ -519,6 +557,10 @@
   /* Fonte display (Plus Jakarta Sans) */
   .font-display {
     font-family: var(--font-display);
+  }
+  /* Fonte body (DM Sans) — reseta herança de font-display em filhos */
+  .font-body {
+    font-family: var(--font-sans);
   }
   .font-mono {
     font-family: var(--font-mono);
@@ -789,10 +831,10 @@
 /* ── Radix poppers (DropdownMenu/Select/Popover/Tooltip) ──
  * Garante que o conteúdo flutuante do Radix (portalado para o body com
  * z-index: auto) fique acima de popovers customizados de z alto, como o
- * painel de filtros do inbox (z-[10000]). Sem isso, os dropdowns abrem
+ * painel de filtros do inbox (z-(--z-popover)). Sem isso, os dropdowns abrem
  * ATRÁS do painel e parecem "não carregar nada". */
 [data-radix-popper-content-wrapper] {
-  z-index: 10001 !important;
+  z-index: var(--z-radix, 90) !important;
 }
 
 /* ── Animação das barras do gravador de áudio (AudioRecorderButton) ── */

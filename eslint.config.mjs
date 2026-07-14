@@ -95,6 +95,50 @@ const eslintConfig = [
       "@next/next/no-html-link-for-pages": "warn",
     },
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DS-001: Ícones — @tabler/icons-react é o padrão.
+  //   lucide-react é legado (features/legacy-v1) e não deve crescer.
+  //   warn = sinaliza no IDE sem bloquear CI; a contagem é travada pelo ratchet
+  //   em scripts/ds-scan.mjs (categoria lucideImports).
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    files: ["**/*.{ts,tsx}"],
+    ignores: ["src/features/legacy-v1/**"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          paths: [
+            {
+              name: "lucide-react",
+              message:
+                "DS-001: use @tabler/icons-react. lucide-react é legado; veja audit/divergencias-backlog.md#DS-001.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DS-009: Diálogos de confirmação — window.confirm() é proibido.
+  //   Deve ser zero no codebase; qualquer nova ocorrência falha o lint.
+  //   Use useConfirm() de @/hooks/use-confirm.
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    files: ["src/app/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}", "src/features/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        {
+          name: "confirm",
+          message:
+            "DS-009: use useConfirm() de @/hooks/use-confirm em vez de confirm() nativo.",
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

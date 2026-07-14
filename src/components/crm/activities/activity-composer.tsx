@@ -6,6 +6,7 @@ import { IconX } from "@tabler/icons-react"
 import { cn } from "@/lib/utils"
 import { InputGlass } from "@/components/crm/input-glass"
 import { ButtonGlass } from "@/components/crm/button-glass"
+import { Textarea } from "@/components/ui/textarea"
 import {
   ACTIVITY_KINDS,
   ACTIVITY_KIND_ORDER,
@@ -80,7 +81,7 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
           <div className="mb-4 flex items-start justify-between">
             <div>
               <Dialog.Title className="font-display text-[17px] font-bold text-[var(--text-primary)]">
-                Nova atividade
+                Nova tarefa
               </Dialog.Title>
               <Dialog.Description className="font-body text-[12px] text-[var(--text-muted)]">
                 Agende uma tarefa, reunião, ligação ou evento.
@@ -209,13 +210,13 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
             <label htmlFor="ac-notes" className={labelCls}>
               Notas
             </label>
-            <textarea
+            <Textarea
               id="ac-notes"
               rows={3}
               placeholder="Detalhes adicionais (opcional)"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full resize-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 font-body text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none backdrop-blur-sm transition-all duration-150 focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+              className="w-full resize-none"
             />
           </div>
 
@@ -225,7 +226,7 @@ export function ActivityComposer({ open, onOpenChange, defaultDate, onCreate }: 
               <ButtonGlass variant="glass">Cancelar</ButtonGlass>
             </Dialog.Close>
             <ButtonGlass variant="primary" onClick={submit} disabled={!title.trim()}>
-              Agendar atividade
+              Agendar tarefa
             </ButtonGlass>
           </div>
         </Dialog.Content>

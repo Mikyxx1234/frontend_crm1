@@ -3,17 +3,8 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Bot,
-  GitBranch,
-  Globe,
-  MessageSquare,
-  Search,
-  Sparkles,
-  X,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { IconRobot as Bot, IconGitBranch as GitBranch, IconGlobe as Globe, IconMessage as MessageSquare, IconSearch as Search, IconSparkles as Sparkles, IconX as X, IconBolt as Zap } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 import type { ActionStepType } from "@/lib/automation-workflow";
 import { stepTypeLabel } from "@/lib/automation-workflow";
@@ -28,8 +19,8 @@ import { STEP_GROUPS, stepColor, stepDescription, stepIcon } from "./add-step-no
 // search + grid 2-col de cards, no padrao premium da referencia.
 //
 // Visual:
-//  - backdrop fixed inset-0 z-[70] bg-slate-900/30 backdrop-blur-md
-//  - card central rounded-[28px] bg-white/95 backdrop-blur-xl shadow-[var(--shadow-lg)]
+//  - backdrop fixed inset-0 z-(--z-modal) bg-[var(--glass-bg-modal)]/30 backdrop-blur-md
+//  - card central rounded-3xl bg-[var(--glass-bg-modal)] backdrop-blur-xl shadow-[var(--shadow-lg)]
 //  - header sticky com icone gradiente, titulo font-[900] tracking-tighter,
 //    subtitle, search input pill e botao X
 //  - secoes com eyebrow colorido (icone + label)
@@ -43,10 +34,10 @@ const GROUP_VISUAL: Record<
   string,
   { Icon: LucideIcon; tone: string; bg: string; ring: string; fg: string }
 > = {
-  Mensagens:    { Icon: MessageSquare, tone: "blue",    bg: "bg-blue-50",    ring: "ring-blue-200/70",    fg: "text-blue-600" },
-  Salesbot:     { Icon: Bot,           tone: "violet",  bg: "bg-violet-50",  ring: "ring-violet-200/70",  fg: "text-violet-600" },
-  Acoes:        { Icon: Zap,           tone: "amber",   bg: "bg-amber-50",   ring: "ring-amber-200/70",   fg: "text-amber-600" },
-  Logica:       { Icon: GitBranch,     tone: "cyan",    bg: "bg-cyan-50",    ring: "ring-cyan-200/70",    fg: "text-cyan-600" },
+  Mensagens:    { Icon: MessageSquare, tone: "blue",    bg: "bg-[var(--color-primary)]/8",       ring: "ring-[var(--color-primary)]/70",    fg: "text-[var(--color-info)]" },
+  Salesbot:     { Icon: Bot,           tone: "violet",  bg: "bg-[var(--color-lavender-soft)]",   ring: "ring-[var(--color-lavender)]/70",   fg: "text-[var(--color-lavender)]" },
+  Acoes:        { Icon: Zap,           tone: "amber",   bg: "bg-[var(--color-warn-bg)]",         ring: "ring-[var(--color-warn)]/70",       fg: "text-[var(--color-warn)]" },
+  Logica:       { Icon: GitBranch,     tone: "cyan",    bg: "bg-[var(--color-cyan-soft)]",       ring: "ring-[var(--color-cyan)]/70",       fg: "text-[var(--color-cyan)]" },
   Integracoes:  { Icon: Globe,         tone: "slate",   bg: "bg-[var(--glass-bg-overlay)]",  ring: "ring-[var(--glass-border)]",   fg: "text-[var(--text-muted)]" },
 };
 

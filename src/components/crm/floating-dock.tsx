@@ -12,6 +12,7 @@ import {
 } from "framer-motion";
 
 import { cn } from "@/lib/utils";
+import { tooltipSurfaceClass } from "@/components/crm/tooltip-glass";
 
 /**
  * Efeito "FloatingDock" (estilo Aceternity / macOS dock) adaptado para a
@@ -20,10 +21,15 @@ import { cn } from "@/lib/utils";
  * - `DockProvider` renderiza o `<nav>` e rastreia o Y do mouse num
  *   MotionValue compartilhado por contexto.
  * - `DockButton` mede a posição do seu CONTAINER (tamanho fixo) e magnifica
- *   apenas via `scale` (transform). Como o transform não reflui o layout,
- *   o centro medido permanece estável → o mapeamento cursor→ícone fica
- *   exato em todos os botões (inclusive os de baixo). Reflow de width/height
- *   causava drift do centro e desalinhava o pico nos ícones inferiores.
+ *   apenas o GLIFO (o ícone interno) via `scale`, mantendo o TILE do mesmo
+ *   tamanho. Isso é essencial: a área rolável da NavRail é um scroll
+ *   container (`overflow-y:auto`), o que força `overflow-x` a recortar
+ *   (o CSS não permite eixo Y rolável com eixo X visível). A barra tem só
+ *   ~72px; um tile ampliado (44px × 1.55 ≈ 68px + sombra) não cabe e era
+ *   cortado nas laterais. Ampliando só o glifo (20px → ~31px), tudo cabe
+ *   com folga dentro do tile de 44px e nada é recortado.
+ *   Como o transform não reflui o layout, o centro medido permanece
+ *   estável → o mapeamento cursor→ícone fica exato em todos os botões.
  *
  * Não usa `useId` → sem risco de hydration mismatch (ver nota em
  * nav-rail-v2.tsx). Os `<Link href>` são preservados: rotas intactas.
@@ -31,16 +37,13 @@ import { cn } from "@/lib/utils";
 
 const DockMouseYContext = React.createContext<MotionValue<number> | null>(null);
 
-/** Escala no pico da magnificação (1 = sem efeito). Efeito forte estilo
- *  dock macOS — o ícone também salta para fora do trilho (ver `POP_X`) para
- *  não estourar nas bordas do painel ao crescer. */
+/** Escala do GLIFO no pico da magnificação (1 = sem efeito). Aplicada só ao
+ *  ícone interno, não ao tile — assim o efeito nunca estoura as bordas da
+ *  barra estreita (~72px) nem é cortado pelo `overflow-x` do scroll. */
 const MAX_SCALE = 1.55;
 /** Raio (px) de influência do cursor em torno do centro do botão. Maior =
  *  mais vizinhos acompanham o pico (efeito "onda"). */
 const INFLUENCE = 120;
-/** Deslocamento horizontal (px) no pico — empurra o ícone para fora do
- *  trilho (à direita, em direção ao conteúdo) como no dock do macOS. */
-const POP_X = 12;
 
 const SPRING = { mass: 0.1, stiffness: 210, damping: 13 } as const;
 
@@ -82,11 +85,9 @@ export interface DockButtonProps {
   active?: boolean;
   className?: string;
   /**
-   * Desativa o "pop" horizontal (POP_X) no pico da magnificação. Usado nos
-   * itens dentro da área rolável da NavRail: ali o container tem
-   * `overflow-x: clip` (para permitir scroll vertical sem quebrar a rail no
-   * zoom), então o ícone não pode saltar para fora do trilho — senão seria
-   * cortado. A magnificação por `scale` continua e cabe dentro do padding.
+   * @deprecated No-op. Mantido por compatibilidade com chamadas existentes.
+   * O zoom agora amplia apenas o glifo (não o tile), então nunca há salto
+   * horizontal a desativar — nada é cortado pelo `overflow-x` do scroll.
    */
   disablePop?: boolean;
 }
@@ -98,7 +99,6 @@ export function DockButton({
   onClick,
   active,
   className,
-  disablePop,
 }: DockButtonProps) {
   const mouseY = React.useContext(DockMouseYContext);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -138,29 +138,32 @@ export function DockButton({
     [1, MAX_SCALE, 1],
   );
   const scale = useSpring(scaleTarget, SPRING);
-  // Salto horizontal: no pico o ícone avança `POP_X` para fora do trilho,
-  // reforçando a sensação de "dock" e evitando clipping nas bordas.
-  // `disablePop` zera o salto para itens em containers com overflow-x clip.
-  const peakX = disablePop ? 0 : POP_X;
-  const xTarget = useTransform(distance, [-INFLUENCE, 0, INFLUENCE], [0, peakX, 0]);
-  const x = useSpring(xTarget, SPRING);
-  // z-index sobe junto com a escala para o ícone magnificado ficar por cima
-  // dos vizinhos (que ele passa a sobrepor ao crescer via transform).
-  const zIndex = useTransform(scale, (s) => Math.round(s * 20));
 
-  // Só o efeito de magnificação (scale). Sem mudança de cor/fundo no hover —
-  // o estado ativo (item selecionado) continua destacado.
+  // Magnificação (scale) + hover leve pra devolver feedback nos inativos.
+  // Como a NavRail é escura (--nav-bg slate-900), usamos --nav-text-muted
+  // no idle e --nav-text-hover-bg/--nav-text-hover no hover — contraste
+  // adequado sobre fundo escuro. Estado ativo mantém o brand-primary.
   const innerClasses = cn(
-    "flex h-full w-full items-center justify-center rounded-[var(--radius-md)]",
+    "flex h-full w-full items-center justify-center rounded-[var(--radius-md)] transition-colors",
     active
       ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)]"
-      : "bg-transparent text-[var(--text-muted)]",
+      : "bg-transparent text-[var(--nav-text-muted)] hover:bg-[var(--nav-text-hover-bg)] hover:text-[var(--nav-text-hover)]",
     className,
+  );
+
+  // Só o GLIFO amplia (o tile fica fixo) — ver nota no topo do arquivo.
+  const glyph = (
+    <motion.span
+      style={{ scale, transformOrigin: "center" }}
+      className="flex items-center justify-center"
+    >
+      {children}
+    </motion.span>
   );
 
   const content = href ? (
     <Link href={href} aria-label={title} className={innerClasses}>
-      {children}
+      {glyph}
     </Link>
   ) : (
     <button
@@ -169,7 +172,7 @@ export function DockButton({
       aria-label={title}
       className={innerClasses}
     >
-      {children}
+      {glyph}
     </button>
   );
 
@@ -180,12 +183,7 @@ export function DockButton({
       onMouseLeave={hideLabel}
       className="group relative flex h-11 w-11 shrink-0 items-center justify-center"
     >
-      <motion.div
-        style={{ scale, x, zIndex, transformOrigin: "center" }}
-        className="h-full w-full"
-      >
-        {content}
-      </motion.div>
+      {content}
 
       {/* Rótulo no hover — portaled no <body> para não ser cortado pelo
           `overflow-x: clip` do container rolável da NavRail. Aparece à
@@ -197,14 +195,16 @@ export function DockButton({
             style={{
               position: "fixed",
               top: labelPos.top,
-              left: labelPos.left + 12,
+              left: labelPos.left + 14,
               transform: "translateY(-50%)",
             }}
             className={cn(
-              "pointer-events-none z-[9999] whitespace-nowrap rounded-[var(--radius-md)]",
-              "border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] backdrop-blur-md",
-              "px-2.5 py-1 text-[12px] font-semibold text-[var(--text-primary)]",
-              "shadow-[var(--glass-shadow)]",
+              // Estilo canônico do tooltip do DS (mesma superfície glass
+              // escura de TooltipGlass / TooltipContent) — padroniza o
+              // rótulo da NavRail com o resto do sistema.
+              "pointer-events-none z-(--z-popover) whitespace-nowrap",
+              tooltipSurfaceClass,
+              "animate-in fade-in-0 zoom-in-95 slide-in-from-left-1",
             )}
           >
             {title}

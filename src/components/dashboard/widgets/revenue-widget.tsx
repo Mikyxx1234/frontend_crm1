@@ -72,8 +72,8 @@ export function RevenueWidget() {
           <AreaChart data={revenueData}>
             <defs>
               <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--color-success)" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -102,7 +102,7 @@ export function RevenueWidget() {
             <Area
               type="monotone"
               dataKey="revenue"
-              stroke="#10b981"
+              stroke="var(--color-success)"
               strokeWidth={2}
               fill="url(#revGrad)"
             />

@@ -2,25 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Bot,
-  ChevronRight,
-  ExternalLink,
-  Flag,
-  Link2,
-  Loader2,
-  MessageSquare,
-  Pencil,
-  Plus,
-  Power,
-  Send,
-  Tag,
-  Trash2,
-  Trophy,
-  UserCheck,
-  XCircle,
-  Zap,
-} from "lucide-react";
+import { IconRobot as Bot, IconChevronRight as ChevronRight, IconExternalLink as ExternalLink, IconFlag as Flag, IconLink as Link2, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPencil as Pencil, IconPlus as Plus, IconPower as Power, IconSend as Send, IconTag as Tag, IconTrash as Trash2, IconTrophy as Trophy, IconUserCheck as UserCheck, IconCircleX as XCircle, IconBolt as Zap } from "@tabler/icons-react";
 import NextLink from "next/link";
 import * as React from "react";
 
@@ -38,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -503,12 +486,12 @@ function QuickRuleForm({
                 triggerClassName="h-7 w-full text-xs"
               />
             ) : action.type === "send_message" ? (
-              <textarea
+              <Textarea
                 value={action.value}
                 onChange={(e) => updateAction(idx, { value: e.target.value })}
                 placeholder={ACTION_PLACEHOLDERS[action.type]}
                 rows={2}
-                className="w-full resize-none rounded border border-border bg-white px-2 py-1 text-xs outline-none placeholder:text-[var(--color-ink-muted)] focus-visible:ring-1 focus-visible:ring-indigo-400"
+                className="w-full resize-none text-xs"
               />
             ) : (
               <Input
@@ -903,7 +886,7 @@ export function FunnelAutomations({
         <div className="flex items-stretch gap-3" style={{ minWidth: "fit-content" }}>
           <FunnelColumn
             title="Entrada"
-            color="#3b82f6"
+            color="var(--color-info)"
             icon={<Flag className="size-3.5" />}
             automations={automationsForEvent("deal_created")}
             onAddRule={() => openAdd("deal_created")}
@@ -952,7 +935,7 @@ export function FunnelAutomations({
 
           <FunnelColumn
             title="Perdido"
-            color="#ef4444"
+            color="var(--color-danger)"
             icon={<XCircle className="size-3.5" />}
             automations={automationsForEvent("deal_lost")}
             onAddRule={() => openAdd("deal_lost")}

@@ -68,7 +68,7 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
         onClick={() => mutation.mutate(!enabled)}
         className={cn(
           "relative h-5 w-9 rounded-full transition-colors",
-          enabled ? "bg-emerald-500" : "bg-[var(--glass-border)]",
+          enabled ? "bg-[var(--color-success)]" : "bg-[var(--glass-border)]",
           mutation.isPending && "opacity-50",
         )}
       >
@@ -81,20 +81,20 @@ export function TelephonyToggle({ userId }: TelephonyToggleProps) {
       </button>
 
       {isProvisioning && (
-        <span className="flex items-center gap-1 text-xs text-amber-400">
+        <span className="flex items-center gap-1 text-xs text-[var(--color-warning)]/80">
           <IconLoader2 size={11} className="animate-spin" />
           Provisionando…
         </span>
       )}
 
       {step === "FAILED" && (
-        <span className="text-xs text-red-400" title={error ?? undefined}>
+        <span className="text-xs text-[var(--color-danger)]" title={error ?? undefined}>
           Falhou
         </span>
       )}
 
       {step === "ACTIVE" && enabled && (
-        <span className="text-xs text-emerald-400">Ativo</span>
+        <span className="text-xs text-[var(--color-success)]/80">Ativo</span>
       )}
     </div>
   );

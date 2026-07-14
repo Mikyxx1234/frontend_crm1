@@ -2,22 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import type { ChannelProvider, ChannelType } from "@/lib/prisma-enum-types";
-import {
-  AtSign,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  Copy,
-  ExternalLink,
-  Globe,
-  Loader2,
-  Mail,
-  MessageCircle,
-  QrCode,
-  Share2,
-  Sparkles,
-  Webhook,
-} from "lucide-react";
+import { IconAt as AtSign, IconCheck as Check, IconChevronDown as ChevronDown, IconChevronLeft as ChevronLeft, IconCopy as Copy, IconExternalLink as ExternalLink, IconGlobe as Globe, IconLoader2 as Loader2, IconMail as Mail, IconMessageCircle as MessageCircle, IconQrcode as QrCode, IconShare2 as Share2, IconSparkles as Sparkles, IconWebhook as Webhook } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -50,7 +35,7 @@ const TYPES: {
     description: "Mensagens e automações",
     icon: MessageCircle,
     cardClass:
-      "border-[#25D366]/30 bg-[#25D366]/[0.06] hover:border-[#25D366]/50",
+      "border-[var(--channel-whatsapp)]/30 bg-[var(--channel-whatsapp)]/[0.06] hover:border-[var(--channel-whatsapp)]/50",
   },
   {
     type: "INSTAGRAM",
@@ -58,14 +43,14 @@ const TYPES: {
     description: "Direct e comentários",
     icon: AtSign,
     cardClass:
-      "border-pink-500/25 bg-gradient-to-br from-pink-500/10 to-violet-500/10 hover:border-pink-500/40",
+      "border-[var(--color-pink)]/25 bg-gradient-to-br from-[var(--color-pink)]/10 to-[var(--color-lavender)]/10 hover:border-[var(--color-pink)]/40",
   },
   {
     type: "FACEBOOK",
     label: "Facebook",
     description: "Messenger e páginas",
     icon: Share2,
-    cardClass: "border-blue-600/25 bg-blue-600/5 hover:border-blue-600/40",
+    cardClass: "border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 hover:border-[var(--color-primary)]/40",
   },
   {
     type: "EMAIL",
@@ -79,7 +64,7 @@ const TYPES: {
     label: "Webchat",
     description: "Widget no site",
     icon: Globe,
-    cardClass: "border-cyan-500/25 bg-cyan-500/5 hover:border-cyan-500/40",
+    cardClass: "border-[var(--color-cyan)]/25 bg-[var(--color-cyan)]/5 hover:border-[var(--color-cyan)]/40",
   },
 ];
 
@@ -350,7 +335,7 @@ export function CreateChannelDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         size="lg"
-        panelClassName="max-h-[90vh] overflow-y-auto"
+        panelClassName="max-h-[90vh]"
         className="p-0"
       >
         <div className="p-6">
@@ -388,7 +373,7 @@ export function CreateChannelDialog({
                     <Icon
                       className={cn(
                         "size-8",
-                        type === "WHATSAPP" && "text-[#25D366]"
+                        type === "WHATSAPP" && "text-[var(--channel-whatsapp)]"
                       )}
                     />
                     <span className="font-semibold text-[var(--text-primary)]">{label}</span>
@@ -413,7 +398,7 @@ export function CreateChannelDialog({
                   onClick={() => setProvider("META_CLOUD_API")}
                   className={cn(
                     "rounded-xl border-2 p-4 text-left transition-all",
-                    "border-blue-500/20 bg-blue-500/5 hover:border-blue-500/40",
+                    "border-[var(--color-brand-primary)]/20 bg-[var(--color-info)]/5 hover:border-[var(--color-brand-primary)]/40",
                     provider === "META_CLOUD_API" &&
                       "ring-2 ring-[var(--brand-primary)] ring-offset-2"
                   )}
@@ -429,13 +414,13 @@ export function CreateChannelDialog({
                   onClick={() => setProvider("BAILEYS_MD")}
                   className={cn(
                     "rounded-xl border-2 p-4 text-left transition-all",
-                    "border-[#25D366]/20 bg-[#25D366]/5 hover:border-[#25D366]/40",
+                    "border-[var(--channel-whatsapp)]/20 bg-[var(--channel-whatsapp)]/5 hover:border-[var(--channel-whatsapp)]/40",
                     provider === "BAILEYS_MD" &&
                       "ring-2 ring-[var(--brand-primary)] ring-offset-2"
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <QrCode className="size-5 text-[#25D366]" />
+                    <QrCode className="size-5 text-[var(--channel-whatsapp)]" />
                     <p className="font-semibold">WhatsApp QR Code</p>
                   </div>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -462,7 +447,7 @@ export function CreateChannelDialog({
                   <>
                     {showEmbeddedSignup ? (
                       <div className="space-y-3">
-                        <div className="rounded-xl border-2 border-blue-500/20 bg-blue-500/5 p-4">
+                        <div className="rounded-xl border-2 border-[var(--color-brand-primary)]/20 bg-[var(--color-info)]/5 p-4">
                           <p className="text-sm font-medium text-[var(--text-primary)]">
                             Conectar via Facebook
                           </p>
@@ -472,7 +457,7 @@ export function CreateChannelDialog({
                           </p>
                           <Button
                             type="button"
-                            className="mt-3 w-full gap-2 bg-[#1877F2] text-white hover:bg-[#166FE5]"
+                            className="mt-3 w-full gap-2 bg-[var(--channel-facebook)] text-white hover:bg-[var(--channel-facebook)]"
                             disabled={submitting || !name.trim()}
                             onClick={() => void handleEmbeddedSignup()}
                           >
@@ -588,7 +573,7 @@ export function CreateChannelDialog({
                 ) : null}
 
                 {effectiveProvider === "BAILEYS_MD" ? (
-                  <div className="rounded-lg border border-[#25D366]/20 bg-[#25D366]/5 p-3">
+                  <div className="rounded-lg border border-[var(--channel-whatsapp)]/20 bg-[var(--channel-whatsapp)]/5 p-3">
                     <p className="text-sm text-[var(--text-muted)]">
                       Após criar o canal, clique em <strong>Conectar</strong> e escaneie o QR code
                       com seu WhatsApp. O número será detectado automaticamente.
@@ -698,7 +683,7 @@ export function CreateChannelDialog({
       </DialogContent>
 
       <Dialog open={webhookModalOpen} onOpenChange={setWebhookModalOpen}>
-        <DialogContent size="md" panelClassName="max-h-[90vh] overflow-y-auto">
+        <DialogContent size="md" panelClassName="max-h-[90vh]">
           <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2">
               <Webhook className="size-5 text-[var(--brand-primary)]" />
@@ -712,7 +697,7 @@ export function CreateChannelDialog({
           {webhookInfo ? (
             <div className="mt-2 space-y-5">
               {webhookInfo.warning ? (
-                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                <div className="rounded-md border border-[var(--color-warn-border)] bg-[var(--color-warn-bg)] p-3 text-xs text-[var(--color-warn-text)] dark:text-[var(--color-warning)]/70">
                   <strong>Atenção:</strong> {webhookInfo.warning} Confira se a
                   URL abaixo aponta pro domínio público do backend antes de
                   colar no painel Meta.

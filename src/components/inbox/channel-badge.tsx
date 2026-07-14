@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, Globe, Mail, MessageCircle } from "lucide-react";
+import { IconAt as AtSign, IconGlobe as Globe, IconMail as Mail, IconMessageCircle as MessageCircle } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
@@ -17,10 +17,10 @@ function normalize(ch: string): InboxChannel {
 }
 
 const styles: Record<string, string> = {
-  whatsapp: "border-emerald-500/40 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200",
+  whatsapp: "border-[var(--color-success)]/40 bg-[var(--color-success)]/15 text-[var(--color-success-text)] dark:text-[var(--color-success)]/50",
   instagram:
-    "border-pink-500/40 bg-gradient-to-r from-purple-500/20 via-pink-500/15 to-amber-400/15 text-pink-950 dark:text-pink-100",
-  email: "border-blue-500/40 bg-blue-500/15 text-blue-900 dark:text-blue-100",
+    "border-[var(--color-pink)]/40 bg-gradient-to-r from-[var(--color-lavender)]/20 via-[var(--color-pink)]/15 to-[var(--color-warning)]/15 text-[var(--color-text-primary)] dark:text-[var(--color-text-muted)]",
+  email: "border-[var(--color-primary)]/40 bg-[var(--color-info)]/15 text-[var(--color-text-primary)] dark:text-[var(--color-text-muted)]",
   web: "border-border bg-muted/80 text-muted-foreground",
 };
 

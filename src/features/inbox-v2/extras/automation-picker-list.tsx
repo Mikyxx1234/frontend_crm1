@@ -123,7 +123,7 @@ export function AutomationPickerList({
           <button
             type="button"
             onClick={onClose}
-            className="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
             Fechar
           </button>
@@ -131,11 +131,11 @@ export function AutomationPickerList({
       </div>
 
       {isLoading ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Carregando...
         </div>
       ) : isError ? (
-        <div className="px-2 py-3 text-center text-[12px] text-rose-600 dark:text-rose-400">
+        <div className="px-2 py-3 text-center text-xs text-[var(--color-danger)]">
           Falha ao carregar automações.
           <button
             type="button"
@@ -146,7 +146,7 @@ export function AutomationPickerList({
           </button>
         </div>
       ) : !items.length ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Nenhuma automação manual ativa.
           <div className="mt-1 text-[11px] text-[var(--text-muted)]/70">
             Crie uma em <span className="font-medium">Automações</span> com gatilho{" "}
@@ -179,7 +179,7 @@ export function AutomationPickerList({
                   </span>
                 </div>
                 {a.description ? (
-                  <div className="mt-0.5 line-clamp-2 pl-[18px] text-[11.5px] text-[var(--text-muted)]">
+                  <div className="mt-0.5 line-clamp-2 pl-4.5 text-[11.5px] text-[var(--text-muted)]">
                     {a.description}
                   </div>
                 ) : null}

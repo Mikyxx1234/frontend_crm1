@@ -95,7 +95,7 @@ export default function CampaignsClientPage() {
   const isDemo = isDemoBase && !isLoading;
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
@@ -225,7 +225,7 @@ function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
   return (
     <Link
       href={`/campaigns/${campaign.id}`}
-      className="group flex cursor-pointer items-center gap-[18px] rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-[18px] py-3.5 shadow-[var(--glass-shadow-sm)] transition-all hover:translate-x-0.5 hover:border-[var(--input-border-focus,rgba(91,111,245,0.50))] hover:shadow-[var(--glass-shadow)]"
+      className="group flex cursor-pointer items-center gap-4.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4.5 py-3.5 shadow-[var(--glass-shadow-sm)] transition-all hover:translate-x-0.5 hover:border-[var(--input-border-focus,rgba(91,111,245,0.50))] hover:shadow-[var(--glass-shadow)]"
     >
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-wa-bg,rgba(37,211,102,0.14))] text-[var(--color-wa-dark,#128c4b)]">
         <IconBrandWhatsapp size={24} />
@@ -243,7 +243,7 @@ function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
       </div>
 
       <span
-        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-[11px] py-1 font-display text-[11.5px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current ${TONE_CLASSES[meta.tone]} ${
+        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 font-display text-[11.5px] font-bold before:h-1.5 before:w-1.5 before:rounded-full before:bg-current ${TONE_CLASSES[meta.tone]} ${
           isSending ? "before:animate-pulse" : ""
         }`}
       >
@@ -280,7 +280,7 @@ function CampaignRow({ campaign }: { campaign: CampaignListItem }) {
       )}
 
       {!noMetrics && (
-        <div className="hidden shrink-0 gap-[22px] min-[1100px]:flex">
+        <div className="hidden shrink-0 gap-5.5 min-[1100px]:flex">
           <Metric label="Total" value={total} tone="brand" />
           <Metric label="Enviado" value={sent} tone="success" />
           <Metric

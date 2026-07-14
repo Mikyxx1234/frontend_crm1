@@ -1,15 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "reactflow";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  HelpCircle,
-  MessageCircleQuestion,
-  MousePointerClick,
-  Trash2,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2, IconClock as Clock, IconHelpCircle as HelpCircle, IconMessageQuestion as MessageCircleQuestion, IconClick as MousePointerClick, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -59,35 +51,35 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
 
   // Ambos usam violet, mas mantemos a estrutura caso queiramos
   // distinguir no futuro (ex.: question = blue, interactive = violet).
-  const accentBorder = "border-violet-400/60";
-  const accentRing = "ring-violet-300/30";
+  const accentBorder = "border-[var(--color-lavender)]/60";
+  const accentRing = "ring-[var(--color-lavender)]/30";
   const accentShadow =
     "shadow-[0_10px_30px_-10px_rgba(139,92,246,0.4)] hover:shadow-[0_10px_30px_-10px_rgba(139,92,246,0.3)]";
-  const iconBg = "bg-violet-50 text-violet-500 ring-violet-100";
-  const handleColor = "bg-violet-500!";
-  const buttonDot = "bg-violet-400";
+  const iconBg = "bg-[var(--color-lavender-soft)] text-[var(--color-lavender)] ring-[var(--color-lavender)]/15";
+  const handleColor = "bg-[var(--color-lavender)]!";
+  const buttonDot = "bg-[var(--color-lavender)]";
 
   return (
     <div
       className={cn(
-        "group/node relative min-w-[260px] max-w-[320px] rounded-lg border bg-white transition-all duration-200",
+        "group/node relative min-w-[260px] max-w-[320px] rounded-lg border bg-[var(--color-bg-card)] transition-all duration-200",
         selected
           ? cn(accentBorder, "ring-2", accentRing, accentShadow.split(" ")[0])
           : cn(
-              "border-slate-100 shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px",
+              "border-[var(--glass-border-subtle)] shadow-[0_4px_16px_-8px_rgba(13,27,62,0.08)] hover:-translate-y-px",
               `hover:${accentBorder}`,
               accentShadow.split(" ")[1]
             )
       )}
     >
       {data.stepIndex != null && (
-        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[#1e3a8a] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
+        <span className="absolute -left-2.5 -top-2.5 z-10 flex size-[24px] items-center justify-center rounded-full bg-linear-to-br from-primary to-[var(--brand-gradient-end)] text-[10px] font-bold tabular-nums text-white shadow-md ring-2 ring-white">
           {data.stepIndex}
         </span>
       )}
       {data.incomplete && (
         <TooltipHost label="Configuração incompleta — esse passo vai falhar em runtime" side="top">
-          <span className="absolute -right-1.5 -top-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-md ring-2 ring-white">
+          <span className="absolute -right-1.5 -top-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-[var(--color-warning)] text-white shadow-md ring-2 ring-white">
             <AlertTriangle className="size-3" strokeWidth={2.6} />
           </span>
         </TooltipHost>
@@ -95,7 +87,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
       <Handle
         type="target"
         position={Position.Left}
-        className="size-3! border-2! border-white! bg-slate-300!"
+        className="size-3! border-2! border-white! bg-[var(--glass-border-subtle)]!"
       />
 
       {/* Header */}
@@ -109,10 +101,10 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           <Icon className="size-4" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-slate-900">
+          <p className="truncate text-[14px] font-extrabold tracking-tighter leading-tight text-[var(--text-primary)]">
             {data.label}
           </p>
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-slate-500">
+          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium tracking-tight text-[var(--text-muted)]">
             {data.summary}
           </p>
         </div>
@@ -120,7 +112,7 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           <TooltipHost label="Remover passo" side="top">
             <button
               type="button"
-              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover/node:opacity-100"
+              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[var(--color-ink-muted)] opacity-0 transition-all hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] group-hover/node:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onDelete?.();
@@ -135,11 +127,11 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
 
       {/* Button rows — cada um com seu handle */}
       {buttons.length > 0 && (
-        <div className="border-t border-slate-100 bg-linear-to-b from-slate-50/40 to-transparent">
+        <div className="border-t border-[var(--glass-border-subtle)] bg-linear-to-b from-[var(--color-bg-subtle)] to-transparent">
           {buttons.map((btn, i) => (
             <div
               key={btn.id || i}
-              className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5 last:border-b-0"
+              className="relative flex h-8 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5 last:border-b-0"
             >
               <span className={cn("size-1.5 shrink-0 rounded-full", buttonDot)} />
               <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-foreground">
@@ -160,32 +152,32 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
           (não mais Bottom) pra manter o padrão visual dos demais handles
           e permitir conectar facilmente ao próximo card à direita. */}
       {(data.hasElse || data.hasTimeout) && (
-        <div className="border-t border-slate-100">
+        <div className="border-t border-[var(--glass-border-subtle)]">
           {data.hasElse && (
-            <div className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5 last:border-b-0">
-              <HelpCircle className="size-3 shrink-0 text-amber-500" strokeWidth={2.4} />
-              <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-amber-700">
+            <div className="relative flex h-8 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5 last:border-b-0">
+              <HelpCircle className="size-3 shrink-0 text-[var(--color-warn)]" strokeWidth={2.4} />
+              <span className="flex-1 truncate text-[11px] font-bold tracking-tight text-[var(--color-warn)]">
                 Outra resposta
               </span>
               <Handle
                 type="source"
                 position={Position.Right}
                 id="else"
-                className="size-3! border-2! border-white! bg-amber-500!"
+                className="size-3! border-2! border-white! bg-[var(--color-warning)]!"
               />
             </div>
           )}
           {data.hasTimeout && (
-            <div className="relative flex h-8 items-center gap-2 border-b border-slate-100/80 px-3.5 last:border-b-0">
+            <div className="relative flex h-8 items-center gap-2 border-b border-[var(--glass-border-subtle)]/80 px-3.5 last:border-b-0">
               <Clock className="size-3 shrink-0 text-[var(--color-ink-muted)]" strokeWidth={2.4} />
-              <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-slate-500">
+              <span className="flex-1 truncate text-[11px] font-medium tracking-tight text-[var(--text-muted)]">
                 Sem resposta
               </span>
               <Handle
                 type="source"
                 position={Position.Right}
                 id="timeout"
-                className="size-3! border-2! border-white! bg-slate-400!"
+                className="size-3! border-2! border-white! bg-[var(--color-status-offline)]!"
               />
             </div>
           )}
@@ -202,19 +194,19 @@ export function InteractiveNode({ data, selected }: NodeProps<InteractiveNodeDat
         <TooltipHost label="Ver eventos" side="bottom">
           <button
             type="button"
-            className="flex w-full items-center gap-2 border-t border-slate-100 px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
+            className="flex w-full items-center gap-2 border-t border-[var(--glass-border-subtle)] px-3.5 py-2 transition-colors hover:bg-[var(--color-bg-subtle)]/60"
             onClick={(e) => {
               e.stopPropagation();
               data.onStatsClick?.();
             }}
             aria-label="Ver eventos"
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-emerald-100">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-success-text)] ring-1 ring-[var(--color-success)]/15">
               <CheckCircle2 className="size-3" />
               {s.success}
             </span>
             {s.failed > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-rose-700 ring-1 ring-rose-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--color-danger-text)] ring-1 ring-[var(--color-destructive)]/15">
                 <AlertTriangle className="size-3" />
                 {s.failed}
               </span>

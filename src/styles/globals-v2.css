@@ -14,15 +14,17 @@
 @theme {
   /* ── Background do mesh (DealDetailPanel fullscreen + v2 layout) ── */
   --bg-base:                #dde8f5;
-  --bg-mesh-1:              #b8cfec;
-  --bg-mesh-2:              #e8d5f0;
-  --bg-mesh:                linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
+  --bg-mesh-1:              #dde8f5;
+  --bg-mesh-2:              #dde8f5;
+  --bg-mesh:                #dde8f5;
 
   /* ── Cores semânticas faltantes do v0 ─────────────────────────── */
+  /* Opacidade aumentada para chips/badges terem contraste sobre fundo
+     quasi-branco — mínimo 18% para ser legível em superfície clara */
   --color-online:           #10b981;
-  --color-enterprise-bg:    rgba(91, 111, 245, 0.15);
+  --color-enterprise-bg:    rgba(91, 111, 245, 0.12);
   --color-lead:             #f59e0b;
-  --color-lead-bg:          rgba(245, 158, 11, 0.15);
+  --color-lead-bg:          rgba(245, 158, 11, 0.14);
   --color-success-bg:       rgba(16, 185, 129, 0.12);
 
   /* ── Marca: primária / secundária ──────────────────────────────
@@ -35,6 +37,8 @@
   --brand-primary:          #5b6ff5;
   --brand-primary-light:    #7b8df7;
   --brand-primary-dark:     #3d52e8;
+  --brand-primary-hover:    #4466d6;  /* hover state do botão primary */
+  --brand-gradient-end:     #1e3a8a;  /* tom escuro no final dos gradientes de nós */
   --brand-secondary:        #a78bfa;
   --brand-accent:           #f472b6;
 
@@ -49,6 +53,23 @@
   /* ── Variantes "warn" (âmbar escuro) + backgrounds semânticos usados
      pelos hubs de Modelos de mensagem (callouts, badges) ─────────── */
   --color-warn:             #d97706;
+  --color-warn-text:        #92600a;  /* texto sobre fundo âmbar claro (badge warning) */
+
+  /* session alert (vermelho — indica sessão expirada / atenção)
+     Intensificado: fundo red-200 (antes red-100 quase branco) + borda
+     red-400 pra o alerta ficar visivelmente vermelho, nao lavado. */
+  --color-session-border:   #f87171;   /* red-400 */
+  --color-session-bg:       #fecaca;   /* red-200 */
+  --color-session-hover-bg: #fca5a5;   /* red-300 */
+  --color-session-text:     #991b1b;   /* red-800 */
+  --color-session-subtext:  #b91c1c;   /* red-700 */
+
+  /* WhatsApp message status ticks */
+  --wa-tick-read:    #7fd4ff;   /* ticks azuis = lido */
+  --wa-tick-fail:    #fca5a5;   /* ícone de falha = rosa */
+
+  /* Toggle unchecked */
+  --toggle-bg-off:   #cbd5e1;   /* slate-300 */
   --color-warn-bg:          rgba(217, 119, 6, 0.08);
   --color-warn-border:      rgba(217, 119, 6, 0.30);
   --color-danger-bg:        rgba(239, 68, 68, 0.10);
@@ -80,18 +101,32 @@
   --col-nego:      #f59e0b;    /* amber */
   --col-fecha:     #10b981;    /* emerald — fechamento/sucesso */
 
-  /* ── Glass — superfícies, bordas e sombras ────────────────────── */
-  --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de negócio/conversa — legíveis */
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);   /* inputs, popovers */
-  --glass-bg-panel:         rgba(255, 255, 255, 0.32);   /* nav-rail, colunas — translúcido real */
-  --glass-bg-strong:        rgba(255, 255, 255, 0.32);   /* kanban columns — mesmo nível do panel */
-  --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais/dialogs — opaco */
-  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);   /* hovers sutis — realce leve */
-  --glass-border:           rgba(180, 200, 230, 0.55);   /* borda padrão */
-  --glass-border-subtle:    rgba(180, 200, 230, 0.30);   /* borda sutil */
-  --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
-  --glass-shadow:           0 4px 24px rgba(100, 130, 180, 0.18);
-  --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+  /* ── NavRail (dedicada, opaca, alto contraste) ────────────────────
+     Trilho lateral escuro que devolve identidade visual perdida
+     quando a rail virou glass sobre mesh lavanda. Ficando fora da
+     família --glass-* pra permitir escurecer sem afetar cards. */
+  --nav-bg:               rgba(30, 41, 99, 0.97);        /* indigo-900 quase sólido — tom do original */
+  --nav-border:           rgba(255, 255, 255, 0.06);
+  --nav-text-muted:       rgba(199, 210, 254, 0.65);    /* indigo-200 — ícone inativo */
+  --nav-text-hover-bg:    rgba(255, 255, 255, 0.10);    /* hover leve */
+  --nav-text-hover:       #ffffff;
+
+  /* ── Warning text (referenciado por chip/badge/status-pill/deal-card,
+     estava ausente → texto âmbar não resolvia) ──────────────────── */
+  --color-warning-text:    #b45309;
+
+  /* ── Glass — superfícies semitransparentes sobre fundo azul-lavanda ── */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.60);
+  --glass-bg-panel:         rgba(255, 255, 255, 0.40);
+  --glass-bg-strong:        rgba(255, 255, 255, 0.50);
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.18);
+  --glass-border:           rgba(255, 255, 255, 0.55);
+  --glass-border-subtle:    rgba(255, 255, 255, 0.35);
+  --glass-shadow-sm:        0 4px 16px rgba(100, 130, 180, 0.12);
+  --glass-shadow:           0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:        0 16px 48px rgba(100, 130, 180, 0.24);
   --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
   --shadow-success:         0 4px 14px rgba(16, 185, 129, 0.35);
   --shadow-danger:          0 4px 14px rgba(239, 68, 68, 0.35);
@@ -102,11 +137,24 @@
   --radius-lg:   0.75rem;   /* 12px */
   --radius-xl:   1rem;      /* 16px */
   --radius-2xl:  2rem;      /* 32px — wrappers da NavRail / DealDetailPanel */
+  --radius-xs:   0.25rem;   /*  4px — checkboxes, small badges, mínimo UI */
+  --radius-card: 1.375rem;  /* 22px — cards principais da UI */
+  --radius-input: 0.625rem; /* 10px — inputs, chips, pills */
   --radius-full: 9999px;
 
   /* ── Transições padrão do v0 ──────────────────────────────────── */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Escala fechada de z-index (DS-008) ───────────────────────────
+     Camadas do manual (cap. 6.8). Nunca usar valor fora da escala.
+     10–40 (sticky/fixed in-page) já são utilitários nativos z-10..z-40.  */
+  --z-overlay:  50;  /* backdrops/overlays semitransparentes            */
+  --z-sheet:    60;  /* painéis flutuantes (deal-workspace, drawers)    */
+  --z-modal:    70;  /* modais customizados acima de sheets             */
+  --z-popover:  80;  /* menus/popovers portalados em document.body      */
+  --z-radix:    90;  /* poppers Radix — sempre acima de popover custom  */
+  --z-above:   100;  /* acima de portais Radix (onboarding, emergencial)*/
 
   /* ── Tokens de input / formulário ─────────────────────────────── */
   --input-bg:           var(--glass-bg-overlay);
@@ -131,11 +179,11 @@
    Declarar aqui DE NOVO garante a presença literal no documento.
    ────────────────────────────────────────────────────────────────── */
 :root {
-  /* Background mesh */
+  /* Background — lavanda sólido (sem gradiente) */
   --bg-base: #dde8f5;
-  --bg-mesh-1: #b8cfec;
-  --bg-mesh-2: #e8d5f0;
-  --bg-mesh: linear-gradient(135deg, #dde8f5 0%, #b8cfec 40%, #e8d5f0 70%, #dde8f5 100%);
+  --bg-mesh-1: #dde8f5;
+  --bg-mesh-2: #dde8f5;
+  --bg-mesh: #dde8f5;
 
   /* Marca — duplicado em :root para garantir que inline styles
      resolvam mesmo quando o resolver do Tailwind v4 falha. */
@@ -170,18 +218,37 @@
   --text-secondary:      #374151;
   --text-muted:          #4b5563;
 
-  /* Glass — superfícies, bordas e sombras */
-  --glass-bg-base:          rgba(255, 255, 255, 0.82);
-  --glass-bg-overlay:       rgba(255, 255, 255, 0.58);
-  --glass-bg-panel:         rgba(255, 255, 255, 0.32);
-  --glass-bg-strong:        rgba(255, 255, 255, 0.32);
-  --glass-bg-modal:         rgba(255, 255, 255, 0.97);
-  --glass-bg-subtle:        rgba(255, 255, 255, 0.12);
-  --glass-border:           rgba(180, 200, 230, 0.55);
-  --glass-border-subtle:    rgba(180, 200, 230, 0.30);
-  --glass-shadow-sm:        0 1px 6px rgba(100, 130, 180, 0.10);
-  --glass-shadow:           0 4px 24px rgba(100, 130, 180, 0.18);
-  --glass-shadow-lg:        0 8px 40px rgba(100, 130, 180, 0.22);
+  /* Warning text (âmbar escuro sobre lead-bg) — token faltante */
+  --color-warning-text:  #b45309;
+
+  /* Colunas do Kanban — espelho do @theme para inline styles */
+  --col-novo:      #94a3b8;
+  --col-quali:     #5b6ff5;
+  --col-proposta:  #a78bfa;
+  --col-nego:      #f59e0b;
+  --col-fecha:     #10b981;
+
+  /* NavRail dedicada (indigo-900 — tom do visual original) */
+  --nav-bg:               rgba(30, 41, 99, 0.97);
+  --nav-border:           rgba(255, 255, 255, 0.06);
+  --nav-text-muted:       rgba(199, 210, 254, 0.65);
+  --nav-text-hover-bg:    rgba(255, 255, 255, 0.10);
+  --nav-text-hover:       #ffffff;
+
+  /* Glass — superfícies semitransparentes sobre fundo azul-lavanda
+     (o efeito visual original vinha da transparência, não da opacidade).
+     Valores calibrados para reproduzir o look da versão pré-DS-v2. */
+  --glass-bg-base:          rgba(255, 255, 255, 0.82);   /* cards de conversa/deal */
+  --glass-bg-overlay:       rgba(255, 255, 255, 0.60);   /* inputs, popovers */
+  --glass-bg-panel:         rgba(255, 255, 255, 0.40);   /* colunas kanban */
+  --glass-bg-strong:        rgba(255, 255, 255, 0.50);   /* header de coluna */
+  --glass-bg-modal:         rgba(255, 255, 255, 0.97);   /* modais */
+  --glass-bg-subtle:        rgba(255, 255, 255, 0.18);   /* hovers sutis */
+  --glass-border:           rgba(255, 255, 255, 0.55);   /* borda principal */
+  --glass-border-subtle:    rgba(255, 255, 255, 0.35);   /* borda sutil */
+  --glass-shadow-sm:        0 4px 16px rgba(100, 130, 180, 0.12);
+  --glass-shadow:           0 8px 32px rgba(100, 130, 180, 0.18);
+  --glass-shadow-lg:        0 16px 48px rgba(100, 130, 180, 0.24);
   --shadow-brand:           0 4px 14px rgba(91, 111, 245, 0.35);
   --shadow-success:         0 4px 14px rgba(16, 185, 129, 0.35);
   --shadow-danger:          0 4px 14px rgba(239, 68, 68, 0.35);
@@ -192,7 +259,18 @@
   --radius-lg:   0.75rem;
   --radius-xl:   1rem;
   --radius-2xl:  2rem;
+  --radius-xs:   0.25rem;
+  --radius-card: 1.375rem;
+  --radius-input: 0.625rem;
   --radius-full: 9999px;
+
+  /* Escala fechada de z-index (DS-008) — espelho do @theme */
+  --z-overlay:  50;
+  --z-sheet:    60;
+  --z-modal:    70;
+  --z-popover:  80;
+  --z-radix:    90;
+  --z-above:   100;
 
   /* Tokens de input */
   --input-bg:           rgba(255, 255, 255, 0.72);
@@ -225,6 +303,15 @@
   --wa-field-bg:      #f7f8fa;
   --wa-field-border:  #e3e6ea;
   --wa-header:        #075e54;
+
+  /* ── Canais — cores de marca (fixas, sem dark mode override) ─────────────── */
+  --channel-whatsapp:  #25d366;
+  --channel-instagram: #e1306c;
+  --channel-facebook:  #1877f2;
+  --channel-messenger: #0084ff;
+  --channel-telegram:  #229ed9;
+  --channel-email:     var(--brand-primary);
+  --channel-webchat:   var(--brand-primary);
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -242,8 +329,20 @@
    escala diferente (ex.: 0.9 para mais conservador, 0.85 para mais
    denso). Nao mexa em px/font-size dos componentes individuais.
    ────────────────────────────────────────────────────────────────── */
+/* ── Largura da NavRail v2 ──────────────────────────────────────────
+   Publicada em `<html>` pelo `NavRailV2` (via effect em `dataset`).
+   Todas as page shells v2 usam `grid-cols-[var(--nav-rail-w,72px)_...]`
+   pra que a coluna do trilho expanda automaticamente quando o usuário
+   clica o botão `»`, sem quebrar o layout do grid. */
+:root {
+  --nav-rail-w: 72px;
+}
+html[data-nav-expanded="true"] {
+  --nav-rail-w: 220px;
+}
+
 .v2-root {
-  --v2-scale: 0.88;
+  --v2-scale: 0.93;
   /* Recíproco da escala — usado para NEUTRALIZAR o zoom em subtrees que
      precisam de coordenadas reais da viewport (ex.: canvas do React Flow,
      que não compensa CSS `zoom` ao mapear cursor→fluxo). calc() num custom
@@ -447,6 +546,24 @@
 .v2-dark .v2-root ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.22);
 }
+
+/* ── Scrollbar dentro de <dialog> ──────────────────────────────────
+   O <dialog> é portado via createPortal para document.body, ficando
+   fora de .v2-root. Sem estas regras o browser renderiza o scrollbar
+   nativo default (largo, fora do padrão visual DS v2).
+   Espelha as regras de .v2-root ::-webkit-scrollbar acima. */
+dialog ::-webkit-scrollbar          { width: 6px; height: 6px; }
+dialog ::-webkit-scrollbar-track    { background: transparent; }
+dialog ::-webkit-scrollbar-thumb    { background: rgba(15,23,42,0.12); border-radius: 9999px; transition: background 150ms ease; }
+dialog ::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.28); }
+dialog ::-webkit-scrollbar-button   { display: none; height: 0; width: 0; }
+dialog ::-webkit-scrollbar-corner   { background: transparent; }
+dialog *  { scrollbar-width: thin; scrollbar-color: rgba(15,23,42,0.18) transparent; }
+
+/* Dark mode para dialogs */
+.v2-dark dialog ::-webkit-scrollbar-thumb       { background: rgba(255,255,255,0.10); }
+.v2-dark dialog ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+.v2-dark dialog *  { scrollbar-color: rgba(255,255,255,0.12) transparent; }
 
 /* Background do layout dark */
 .v2-dark .bg-\[var\(--bg-base\)\] {

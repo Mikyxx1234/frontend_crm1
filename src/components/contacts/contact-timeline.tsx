@@ -2,17 +2,8 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Briefcase,
-  Calendar,
-  CheckSquare,
-  FileText,
-  Mail,
-  MessageSquare,
-  Phone,
-  StickyNote,
-  type LucideIcon,
-} from "lucide-react";
+import { IconBriefcase as Briefcase, IconCalendar as Calendar, IconSquareCheck as CheckSquare, IconFileText as FileText, IconMail as Mail, IconMessage as MessageSquare, IconPhone as Phone, IconNote as StickyNote } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";
@@ -68,8 +59,8 @@ function itemVisuals(item: TimelineItem) {
     const a = item.activity;
     return {
       Icon: ACTIVITY_ICONS[a.type] ?? FileText,
-      ringClass: "ring-emerald-500/30 text-emerald-700",
-      bgClass: "bg-emerald-50 dark:bg-emerald-950/40",
+      ringClass: "ring-[var(--color-success)]/30 text-[var(--color-success-text)]",
+      bgClass: "bg-[var(--color-success-bg)] dark:bg-emerald-950/40",
       title: a.title,
       subtitle: a.description,
       userName: a.user.name,
@@ -79,8 +70,8 @@ function itemVisuals(item: TimelineItem) {
   if (item.kind === "note") {
     return {
       Icon: StickyNote,
-      ringClass: "ring-amber-500/30 text-amber-800",
-      bgClass: "bg-amber-50 dark:bg-amber-950/40",
+      ringClass: "ring-[var(--color-warning)]/30 text-[var(--color-warn)]",
+      bgClass: "bg-[var(--color-warn-bg)] dark:bg-amber-950/40",
       title: "Anotação",
       subtitle: item.note.content,
       userName: item.note.user.name,
@@ -90,8 +81,8 @@ function itemVisuals(item: TimelineItem) {
   const d = item.deal;
   return {
     Icon: Briefcase,
-    ringClass: "ring-blue-500/30 text-blue-800",
-    bgClass: "bg-blue-50 dark:bg-blue-950/40",
+    ringClass: "ring-[var(--color-primary)]/30 text-[var(--color-primary)]",
+    bgClass: "bg-[var(--color-primary)]/5 dark:bg-blue-950/40",
     title: `${DEAL_LABEL[item.event]}: ${d.title}`,
     subtitle: `${d.value} · ${d.stage.name}`,
     userName: d.owner?.name ?? null,

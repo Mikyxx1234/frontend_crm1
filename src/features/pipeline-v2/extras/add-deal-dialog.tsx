@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { Input } from "@/components/ui/input";
 
 import { apiUrl } from "@/lib/api";
 import { normalizePhone } from "@/lib/phone";
@@ -44,8 +45,6 @@ interface DealFieldDef {
   required?: boolean;
 }
 
-const inputCls =
-  "w-full rounded-[var(--radius-md)] border border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--brand-primary)]";
 const labelCls =
   "mb-1 block font-display text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]";
 
@@ -142,10 +141,12 @@ export function AddDealDialog({
   const pending = saving || createDeal.isPending || createContact.isPending;
 
   const canSubmit = useMemo(() => {
-    if (!title.trim() || !stageId) return false;
+    // Título é opcional: negócio sem nome é batizado como "Negócio - #<id>"
+    // no backend. Só o estágio (e o contato, quando modo "novo") são exigidos.
+    if (!stageId) return false;
     if (contactMode === "new" && !newName.trim()) return false;
     return true;
-  }, [title, stageId, contactMode, newName]);
+  }, [stageId, contactMode, newName]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -173,7 +174,8 @@ export function AddDealDialog({
 
       const num = value.trim() ? Number(value.replace(",", ".")) : undefined;
       const { deal } = await createDeal.mutateAsync({
-        title: title.trim(),
+        // Sem título → não envia; backend gera "Negócio - #<number>".
+        title: title.trim() || undefined,
         stageId,
         value: Number.isFinite(num) ? (num as number) : undefined,
         ownerId: ownerId || undefined,
@@ -209,7 +211,7 @@ export function AddDealDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
       onClick={() => onOpenChange(false)}
     >
       <form
@@ -223,29 +225,26 @@ export function AddDealDialog({
 
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           <label className="block">
-            <span className={labelCls}>Título *</span>
-            <input
+            <span className={labelCls}>Título</span>
+            <Input
               type="text"
               autoFocus
-              required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex.: Proposta Empresa X"
-              className={inputCls}
+              placeholder="Opcional — vira “Negócio - #id” se vazio"
             />
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className={labelCls}>Valor (R$)</span>
-              <input
+              <Input
                 type="number"
                 min="0"
                 step="0.01"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="0,00"
-                className={inputCls}
               />
             </label>
             <label className="block">
@@ -274,11 +273,10 @@ export function AddDealDialog({
             </label>
             <label className="block">
               <span className={labelCls}>Fechamento esperado</span>
-              <input
+              <Input
                 type="date"
                 value={expectedClose}
                 onChange={(e) => setExpectedClose(e.target.value)}
-                className={inputCls}
               />
             </label>
           </div>
@@ -326,12 +324,11 @@ export function AddDealDialog({
                   </div>
                 ) : (
                   <>
-                    <input
+                    <Input
                       type="text"
                       value={contactSearch}
                       onChange={(e) => setContactSearch(e.target.value)}
                       placeholder="Buscar por nome, e-mail…"
-                      className={inputCls}
                     />
                     <div className="mt-1 max-h-40 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)]">
                       {contactsLoading ? (
@@ -375,15 +372,14 @@ export function AddDealDialog({
 
             {contactMode === "new" ? (
               <div className="space-y-2">
-                <input
+                <Input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Nome do contato *"
-                  className={inputCls}
                 />
                 <div className="grid grid-cols-2 gap-2">
-                  <input
+                  <Input
                     type="tel"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
@@ -396,12 +392,11 @@ export function AddDealDialog({
                     placeholder="Telefone (ex.: 11987654321)"
                     className={inputCls}
                   />
-                  <input
+                  <Input
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="E-mail"
-                    className={inputCls}
                   />
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)]">
@@ -434,25 +429,22 @@ export function AddDealDialog({
                         triggerClassName="w-full"
                       />
                     ) : type === "date" ? (
-                      <input
+                      <Input
                         type="date"
                         value={v}
                         onChange={(e) => onChange(e.target.value)}
-                        className={inputCls}
                       />
                     ) : type === "number" ? (
-                      <input
+                      <Input
                         type="number"
                         value={v}
                         onChange={(e) => onChange(e.target.value)}
-                        className={inputCls}
                       />
                     ) : (
-                      <input
+                      <Input
                         type="text"
                         value={v}
                         onChange={(e) => onChange(e.target.value)}
-                        className={inputCls}
                       />
                     )}
                   </label>

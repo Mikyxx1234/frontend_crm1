@@ -28,24 +28,10 @@ type GlassModalContextValue = {
 const GlassModalContext = React.createContext<GlassModalContextValue | null>(null);
 
 /**
- * Modal glass padrão do DS v2 (portal + backdrop + Escape + foco preso + retorno de foco).
- *
- * Uso típico:
- * ```tsx
- * <GlassModal open={open} onOpenChange={setOpen}>
- *   <GlassModalPanel as="form" onSubmit={handleSubmit} className="w-[460px]">
- *     <GlassModalHeader title="Novo contato" />
- *     <GlassModalBody>…campos…</GlassModalBody>
- *     <GlassModalFooter>
- *       <ButtonGlass variant="glass" size="sm" type="button" onClick={() => setOpen(false)}>Cancelar</ButtonGlass>
- *       <ButtonGlass variant="primary" size="sm" type="submit">Salvar</ButtonGlass>
- *     </GlassModalFooter>
- *   </GlassModalPanel>
- * </GlassModal>
- * ```
- *
- * Preferir este componente em páginas v2. Reservar `Dialog` de `@/components/ui/dialog`
- * apenas para conteúdo legacy-v1 (frente separada de migração).
+ * @deprecated DS-002 — o shell canônico de modal é o `Dialog` de
+ * `@/components/ui/dialog` (presets sm/md/lg/xl/2xl, foco/Esc nativos via
+ * `<dialog>`). Todos os usos foram migrados; NÃO adicionar novos usos.
+ * Este arquivo será removido após um ciclo de release sem regressões.
  */
 export function GlassModal({
   open,
@@ -149,7 +135,7 @@ export function GlassModal({
   return createPortal(
     <GlassModalContext.Provider value={{ panelRef, titleId }}>
       <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
         onClick={closeOnBackdrop ? () => onOpenChange(false) : undefined}
         role="presentation"
       >

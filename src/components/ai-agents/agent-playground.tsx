@@ -2,7 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, Send, Sparkles, Wrench } from "lucide-react";
+import { IconLoader2 as Loader2, IconSend as Send, IconSparkles as Sparkles, IconTool as Wrench } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -129,7 +129,7 @@ export function AgentPlayground({
         <DialogClose />
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="size-4 text-indigo-500" />
+            <Sparkles className="size-4 text-[var(--brand-primary)]" />
             Playground — {agentName}
           </DialogTitle>
         </DialogHeader>
@@ -176,7 +176,7 @@ export function AgentPlayground({
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite a mensagem do cliente..."
               disabled={mutation.isPending}
-              className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-primary)]/40"
             />
             <Button
               type="submit"
@@ -204,12 +204,12 @@ export function AgentPlayground({
 function TurnRow({ turn }: { turn: Turn }) {
   if (turn.role === "tool") {
     return (
-      <div className="rounded-lg border border-amber-300/50 bg-amber-50/50 p-2 text-[11px] dark:border-amber-700/50 dark:bg-amber-950/20">
-        <div className="flex items-center gap-1 font-medium text-amber-900 dark:text-amber-200">
+      <div className="rounded-lg border border-[var(--color-warning)]/50 bg-[var(--color-warn-bg)]/50 p-2 text-[11px] dark:border-amber-700/50 dark:bg-amber-950/20">
+        <div className="flex items-center gap-1 font-medium text-[var(--color-warn-text)] dark:text-[var(--color-warning)]/70">
           <Wrench className="size-3" /> tool: {turn.name}
         </div>
         <details className="mt-1">
-          <summary className="cursor-pointer text-[10px] text-amber-800/80 dark:text-amber-300/70">
+          <summary className="cursor-pointer text-[10px] text-[var(--color-amber-text)]/80 dark:text-[var(--color-amber-muted)]/70">
             args / result
           </summary>
           <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/70 p-2 text-[10px] leading-tight">
@@ -224,7 +224,7 @@ function TurnRow({ turn }: { turn: Turn }) {
     <div
       className={
         isUser
-          ? "max-w-[80%] self-end rounded-2xl rounded-br-sm bg-indigo-500 px-3 py-2 text-sm text-white"
+          ? "max-w-[80%] self-end rounded-2xl rounded-br-sm bg-[var(--color-brand-primary)] px-3 py-2 text-sm text-white"
           : "max-w-[80%] self-start rounded-2xl rounded-bl-sm bg-background px-3 py-2 text-sm shadow-sm"
       }
     >

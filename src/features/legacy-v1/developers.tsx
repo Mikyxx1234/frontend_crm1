@@ -1,6 +1,6 @@
 "use client";
 
-import { Book, ChevronRight, Copy, ExternalLink, Key } from "lucide-react";
+import { IconBook as Book, IconChevronRight as ChevronRight, IconCopy as Copy, IconExternalLink as ExternalLink, IconKey as Key } from "@tabler/icons-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -356,7 +356,7 @@ Retry-After: 30
   },
   {
     id: "atividades",
-    title: "Atividades",
+    title: "Tarefas",
     description: "Gerencie tarefas, reuniões, chamadas e outras atividades.",
     endpoints: [
       {
@@ -539,11 +539,11 @@ Todas as respostas de erro incluem um campo "message" com detalhes:
 /* ────────────────────────────────────────────── */
 
 const METHOD_COLORS: Record<HttpMethod, string> = {
-  GET: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  POST: "bg-blue-100 text-blue-700 border-blue-200",
-  PUT: "bg-amber-100 text-amber-700 border-amber-200",
-  DELETE: "bg-red-100 text-red-700 border-red-200",
-  PATCH: "bg-purple-100 text-purple-700 border-purple-200",
+  GET: "bg-[var(--color-success-subtle)] text-emerald-700 border-[var(--color-success-subtle)]",
+  POST: "bg-[var(--color-indigo-soft)] text-blue-700 border-[var(--color-primary-soft)]",
+  PUT: "bg-[var(--color-amber-soft)] text-[var(--color-amber-text)] border-[var(--color-amber-soft)]",
+  DELETE: "bg-[var(--color-danger-subtle)] text-red-700 border-[var(--color-danger-subtle)]",
+  PATCH: "bg-[var(--color-lavender-soft)] text-[var(--color-purple-text)] border-[var(--color-lavender-soft)]",
 };
 
 function MethodBadge({ method }: { method: HttpMethod }) {
@@ -575,7 +575,7 @@ function CopyButton({ text }: { text: string }) {
       aria-label="Copiar"
     >
       {copied ? (
-        <span className="text-xs text-green-400">Copiado!</span>
+        <span className="text-xs text-[var(--color-success)]">Copiado!</span>
       ) : (
         <Copy className="size-3.5" />
       )}
@@ -623,7 +623,7 @@ function ParamsTable({ params, title }: { params: Param[]; title: string }) {
                     {p.name}
                   </code>
                   {p.required && (
-                    <span className="ml-1 text-[10px] text-red-500">*</span>
+                    <span className="ml-1 text-[10px] text-[var(--color-danger)]">*</span>
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
@@ -651,7 +651,7 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
     ep.description;
 
   return (
-    <div className="rounded-lg border border-border bg-white transition-shadow hover:shadow-sm">
+    <div className="rounded-lg border border-border bg-[var(--color-bg-card)] transition-shadow hover:shadow-sm">
       <button
         type="button"
         onClick={() => hasDetails && setOpen(!open)}
@@ -849,7 +849,7 @@ export default function DevelopersPage() {
   return (
     <div className="-m-6 flex h-[calc(100dvh-0px)] overflow-hidden md:-m-8">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 overflow-y-auto border-r border-border bg-white p-4">
+      <aside className="w-64 shrink-0 overflow-y-auto border-r border-border bg-[var(--color-bg-card)] p-4">
         <div className="mb-6 flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
             <Book className="size-5 text-primary" />

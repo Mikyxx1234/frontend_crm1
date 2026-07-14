@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { IconPlus as Plus } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import type { ActionStepType } from "@/lib/automation-workflow";
@@ -82,15 +82,15 @@ export function NodePalette({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "scrollbar-thin flex flex-col gap-4 overflow-y-auto border-l border-slate-100 bg-white/85 p-4 backdrop-blur-xl",
+        "scrollbar-thin flex flex-col gap-4 overflow-y-auto border-l border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] p-4 backdrop-blur-xl",
         className
       )}
     >
-      <div className="border-b border-slate-100 pb-3">
-        <p className="font-heading text-[15px] font-extrabold tracking-tighter text-slate-900">
+      <div className="border-b border-[var(--glass-border-subtle)] pb-3">
+        <p className="font-heading text-[15px] font-extrabold tracking-tighter text-[var(--text-primary)]">
           Blocos
         </p>
-        <p className="mt-0.5 text-[11px] font-medium tracking-tight text-slate-500">
+        <p className="mt-0.5 text-[11px] font-medium tracking-tight text-[var(--text-muted)]">
           Arraste para o canvas
         </p>
       </div>
@@ -102,7 +102,7 @@ export function NodePalette({ className }: { className?: string }) {
           <ul className="flex flex-col gap-1">
             {g.items.map(({ type }) => {
               const Icon = stepIcon[type] ?? Plus;
-              const color = stepColor[type] ?? "text-slate-500";
+              const color = stepColor[type] ?? "text-[var(--text-muted)]";
               return (
                 <li key={type}>
                   <button
@@ -112,11 +112,11 @@ export function NodePalette({ className }: { className?: string }) {
                       e.dataTransfer.setData(PALETTE_DRAG_TYPE, type);
                       e.dataTransfer.effectAllowed = "copy";
                     }}
-                    className="group/item flex w-full cursor-grab items-center gap-2.5 rounded-xl border border-slate-100 bg-white px-2.5 py-2 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/30 hover:bg-[#eef4ff]/40 hover:shadow-[var(--shadow-indigo-glow)] active:cursor-grabbing"
+                    className="group/item flex w-full cursor-grab items-center gap-2.5 rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--color-bg-card)] px-2.5 py-2 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/30 hover:bg-[var(--color-primary-soft)]/40 hover:shadow-[var(--shadow-indigo-glow)] active:cursor-grabbing"
                   >
                     <span
                       className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-bg-subtle)] ring-1 ring-slate-100 transition-all group-hover/item:scale-105 group-hover/item:bg-white group-hover/item:ring-primary/20",
+                        "flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-bg-subtle)] ring-1 ring-[var(--color-border)] transition-all group-hover/item:scale-105 group-hover/item:bg-[var(--color-bg-card)] group-hover/item:ring-primary/20",
                         color
                       )}
                     >

@@ -7,7 +7,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, MoreVertical, Phone, Search, X } from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconDotsVertical as MoreVertical, IconPhone as Phone, IconSearch as Search, IconX as X } from "@tabler/icons-react";
 
 import { ChatAvatar, type ChatAvatarChannel } from "@/components/inbox/chat-avatar";
 import {
@@ -113,7 +113,7 @@ export function ConversationHeader({
 
   return (
     <div
-      className="flex shrink-0 items-stretch border-b border-white/40 bg-white/40 backdrop-blur-md"
+      className="flex shrink-0 items-stretch border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)] backdrop-blur-md"
       style={{ minHeight: 46 }}
     >
       <div className="flex min-w-0 shrink-0 items-center gap-2.5 border-r border-border px-2 sm:px-3">
@@ -154,16 +154,16 @@ export function ConversationHeader({
           size={34}
         />
 
-        <div className="min-w-0 max-w-[min(200px,40vw)] sm:max-w-[min(260px,32vw)]">
+        <div className="min-w-0 max-w-[180px] overflow-hidden sm:max-w-[220px]">
           {contactHref ? (
             <Link
               href={contactHref}
-              className="block truncate text-[13px] font-semibold text-foreground transition-colors hover:text-primary"
+              className="block truncate whitespace-nowrap text-[13px] font-semibold text-foreground transition-colors hover:text-primary"
             >
               {contactName}
             </Link>
           ) : (
-            <p className="truncate text-[13px] font-semibold text-foreground">{contactName}</p>
+            <p className="truncate whitespace-nowrap text-[13px] font-semibold text-foreground">{contactName}</p>
           )}
           {contactPhone ? (
             <p className="truncate font-mono text-[10px] text-[var(--color-ink-muted)] tabular-nums">

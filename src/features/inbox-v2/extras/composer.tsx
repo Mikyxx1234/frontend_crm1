@@ -318,7 +318,7 @@ export function Composer({
   }
 
   return (
-    <div ref={rootRef} className="relative mx-[22px] mb-[22px]">
+    <div ref={rootRef} className="relative mx-5.5 mb-5.5">
       {/* Painel de validação do template do WhatsApp — flutua acima do composer */}
       {pendingTemplate && conversationId ? (
         <TemplateComposePanel
@@ -353,7 +353,7 @@ export function Composer({
                 type="button"
                 onClick={() => setNoteMode(false)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-semibold transition-all",
                   !noteMode
                     ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)]"
                     : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
@@ -366,7 +366,7 @@ export function Composer({
                 type="button"
                 onClick={() => setNoteMode(true)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-semibold transition-all",
                   noteMode
                     ? "border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] text-[var(--text-primary)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
                     : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
@@ -497,7 +497,7 @@ export function Composer({
 
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-[18px] py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)]"
+        className="flex items-center gap-2 rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4.5 py-2 backdrop-blur-md shadow-[var(--glass-shadow-sm)]"
       >
         {/* Controles padrão — ocultos durante gravação de áudio */}
         {!isAudioActive && (

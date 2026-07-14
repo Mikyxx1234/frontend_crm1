@@ -12,12 +12,13 @@ import { toast } from "sonner";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import {
-  GlassModal,
-  GlassModalBody,
-  GlassModalFooter,
-  GlassModalHeader,
-  GlassModalPanel,
-} from "@/components/crm/glass-modal";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
@@ -112,25 +113,28 @@ export function EmailRulesModal({
   }
 
   return (
-    <GlassModal open={open} onOpenChange={onOpenChange}>
-      <GlassModalPanel
-        as="form"
-        onSubmit={handleCreate}
-        className="flex max-h-[min(90vh,640px)] w-[min(520px,94vw)] flex-col overflow-hidden p-0"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        size="md"
+        panelClassName="max-h-[min(90vh,640px)]"
+        bodyClassName="p-0 gap-0"
       >
+        <form onSubmit={handleCreate} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="border-b border-[var(--glass-border)] px-5 py-4">
-          <GlassModalHeader
-            icon={
-              <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
                 <IconFilter size={18} stroke={2.2} />
               </span>
-            }
-            title="Regras de e-mail"
-            description="Quando um e-mail recebido corresponder à condição, aplique a ação automaticamente na sincronização."
-          />
+              <DialogTitle className="text-base">Regras de e-mail</DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              Quando um e-mail recebido corresponder à condição, aplique a ação automaticamente na sincronização.
+            </DialogDescription>
+          </DialogHeader>
         </div>
 
-        <GlassModalBody className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
           {accounts.length > 1 ? (
             <FieldRow label="Conta">
               <DropdownGlass
@@ -258,9 +262,9 @@ export function EmailRulesModal({
               </ul>
             )}
           </div>
-        </GlassModalBody>
+        </div>
 
-        <GlassModalFooter className="border-t border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-5 py-3">
+        <DialogFooter className="border-t border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-5 py-3">
           <ButtonGlass
             type="button"
             variant="glass"
@@ -278,9 +282,10 @@ export function EmailRulesModal({
               "Adicionar regra"
             )}
           </ButtonGlass>
-        </GlassModalFooter>
-      </GlassModalPanel>
-    </GlassModal>
+        </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

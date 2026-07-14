@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { GripVertical, X } from "lucide-react";
+import { IconGripVertical as GripVertical, IconX as X } from "@tabler/icons-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SUBTLE_SPRING } from "@/lib/dashboard-tokens";
 import { cn } from "@/lib/utils";

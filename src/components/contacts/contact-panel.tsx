@@ -6,28 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  ArrowLeft,
-  Building2,
-  Calendar,
-  Check,
-  CheckCircle2,
-  ExternalLink,
-  FileText,
-  Handshake,
-  Loader2,
-  Mail,
-  MessageSquare,
-  Pencil,
-  Phone,
-  Plus,
-  Star,
-  Tag,
-  User,
-  Circle,
-  Trash2,
-  X,
-} from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconBuilding as Building2, IconCalendar as Calendar, IconCheck as Check, IconCircleCheck as CheckCircle2, IconExternalLink as ExternalLink, IconFileText as FileText, IconHeartHandshake as Handshake, IconLoader2 as Loader2, IconMail as Mail, IconMessage as MessageSquare, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconStar as Star, IconTag as Tag, IconUser as User, IconCircle as Circle, IconTrash as Trash2, IconX as X } from "@tabler/icons-react";
 
 import { ChannelBadge } from "@/components/inbox/channel-badge";
 import { ChatWindow } from "@/components/inbox/chat-window";
@@ -82,25 +61,25 @@ type NoteRow = {
 // ── Constants ─────────────────────────────────
 
 const LIFECYCLE_OPTIONS = [
-  { value: "SUBSCRIBER", label: "Assinante", color: "bg-gray-400" },
-  { value: "LEAD", label: "Lead", color: "bg-blue-500" },
-  { value: "MQL", label: "MQL", color: "bg-amber-500" },
-  { value: "SQL", label: "SQL", color: "bg-orange-500" },
-  { value: "OPPORTUNITY", label: "Oportunidade", color: "bg-purple-500" },
-  { value: "CUSTOMER", label: "Cliente", color: "bg-emerald-500" },
-  { value: "EVANGELIST", label: "Evangelista", color: "bg-pink-500" },
-  { value: "OTHER", label: "Outro", color: "bg-gray-400" },
+  { value: "SUBSCRIBER", label: "Assinante", color: "bg-[var(--glass-bg-overlay)]" },
+  { value: "LEAD", label: "Lead", color: "bg-[var(--brand-primary)]" },
+  { value: "MQL", label: "MQL", color: "bg-[var(--color-warning)]" },
+  { value: "SQL", label: "SQL", color: "bg-[var(--color-warning)]" },
+  { value: "OPPORTUNITY", label: "Oportunidade", color: "bg-[var(--brand-secondary)]" },
+  { value: "CUSTOMER", label: "Cliente", color: "bg-[var(--color-success)]" },
+  { value: "EVANGELIST", label: "Evangelista", color: "bg-[var(--brand-accent)]" },
+  { value: "OTHER", label: "Outro", color: "bg-[var(--glass-bg-overlay)]" },
 ] as const;
 
 const LIFECYCLE_COLORS: Record<string, string> = {
-  SUBSCRIBER: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-  LEAD: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-  MQL: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-  SQL: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-  OPPORTUNITY: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-  CUSTOMER: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
-  EVANGELIST: "bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300",
-  OTHER: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  SUBSCRIBER: "bg-[var(--glass-bg-subtle)] text-[var(--text-secondary)]",
+  LEAD: "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
+  MQL: "bg-[var(--color-warn-bg)] text-[var(--color-warning)]",
+  SQL: "bg-[var(--color-warn-bg)] text-[var(--color-warning)]",
+  OPPORTUNITY: "bg-[var(--brand-secondary)]/10 text-[var(--brand-secondary)]",
+  CUSTOMER: "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
+  EVANGELIST: "bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]",
+  OTHER: "bg-[var(--glass-bg-subtle)] text-[var(--text-muted)]",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -212,7 +191,7 @@ export function ContactPanel({ contactId, open, onOpenChange }: ContactPanelProp
                         )}
                       </TabsTrigger>
                       <TabsTrigger value="activities" className="gap-1.5 data-[state=active]:shadow-none">
-                        <Calendar className="size-3.5" /> Atividades
+                        <Calendar className="size-3.5" /> Tarefas
                       </TabsTrigger>
                       <TabsTrigger value="notes" className="gap-1.5 data-[state=active]:shadow-none">
                         <FileText className="size-3.5" /> Notas
@@ -274,7 +253,7 @@ function ContactHeader({ contact }: { contact: ContactDetail }) {
               {currentStage?.label ?? contact.lifecycleStage}
             </span>
             <span className="inline-flex items-center gap-1">
-              <Star className="size-3 text-amber-500" />
+              <Star className="size-3 text-[var(--color-warning)]" />
               <span className="text-xs font-semibold tabular-nums">{contact.leadScore}</span>
             </span>
           </div>
@@ -352,7 +331,7 @@ function ContactLeftPanel({
       <div className="space-y-1.5">
         <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fase do Ciclo</Label>
         <div className="flex items-center gap-2">
-          <span className={cn("size-2.5 rounded-full", currentStageOpt?.color ?? "bg-gray-400")} />
+          <span className={cn("size-2.5 rounded-full", currentStageOpt?.color ?? "bg-[var(--glass-bg-overlay)]")} />
           <DropdownGlass
             options={LIFECYCLE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
             value={contact.lifecycleStage}
@@ -374,7 +353,7 @@ function ContactLeftPanel({
           ) : (
             <div className="flex gap-0.5">
               <Button type="button" variant="ghost" size="icon" className="size-6" onClick={() => setEditingBasic(false)}><X className="size-3" /></Button>
-              <Button type="button" variant="ghost" size="icon" className="size-6 text-emerald-600" onClick={saveBasic} disabled={isUpdating}><Check className="size-3" /></Button>
+              <Button type="button" variant="ghost" size="icon" className="size-6 text-[var(--color-success-text)]" onClick={saveBasic} disabled={isUpdating}><Check className="size-3" /></Button>
             </div>
           )}
         </div>
@@ -450,7 +429,7 @@ function ContactLeftPanel({
                   onClick={() => addTagMutation.mutate({ tagId: t.id })}
                   className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-muted/50"
                 >
-                  <span className="size-2 rounded-full" style={{ backgroundColor: t.color || "#6b7280" }} />
+                  <span className="size-2 rounded-full" style={{ backgroundColor: t.color || "var(--text-muted)" }} />
                   {t.name}
                 </button>
               ))}
@@ -654,15 +633,15 @@ function ActivitiesPanel({
               <Input type="datetime-local" value={scheduled} onChange={(e) => setScheduled(e.target.value)} className="h-8 text-sm" />
             </div>
           </div>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da atividade…" className="h-8 text-sm" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título da tarefa…" className="h-8 text-sm" />
           <Textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descrição (opcional)" className="text-sm" />
           <Button type="button" size="sm" disabled={!title.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? "Salvando…" : "Adicionar atividade"}
+            {mutation.isPending ? "Salvando…" : "Adicionar tarefa"}
           </Button>
         </div>
 
         {activities.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nenhuma atividade registrada.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhuma tarefa registrada.</p>
         ) : (
           <div className="relative space-y-0">
             {activities.map((a, idx) => (
@@ -673,7 +652,7 @@ function ActivitiesPanel({
                     type="button"
                     onClick={() => toggleMut.mutate(a.id)}
                     disabled={toggleMut.isPending}
-                    className={cn("relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-emerald-400", a.completed ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40" : "border-border bg-muted/40")}
+                    className={cn("relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm transition-colors hover:border-[var(--color-success)]", a.completed ? "border-[var(--color-success)]/40 bg-[var(--color-success-bg)]" : "border-border bg-muted/40")}
                   >
                     {ACTIVITY_TYPES.find((t) => t.value === a.type)?.icon ?? "📌"}
                   </button>
@@ -682,17 +661,17 @@ function ActivitiesPanel({
                   <div className="flex items-center gap-2">
                     <span className={cn("text-sm font-medium", a.completed && "line-through text-muted-foreground")}>{a.title}</span>
                     {a.completed ? (
-                      <CheckCircle2 className="size-3.5 text-emerald-500" />
+                      <CheckCircle2 className="size-3.5 text-[var(--color-success)]" />
                     ) : (
-                      <Circle className="size-3.5 text-slate-300" />
+                      <Circle className="size-3.5 text-[var(--text-faint)]" />
                     )}
-                    <TooltipGlass label="Excluir atividade" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
+                    <TooltipGlass label="Excluir tarefa" side="left" className="ml-auto opacity-0 group-hover/act:opacity-100">
                       <button
                         type="button"
                         onClick={() => deleteMut.mutate(a.id)}
                         disabled={deleteMut.isPending}
-                        className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-red-50 hover:text-red-500"
-                        aria-label="Excluir atividade"
+                        className="shrink-0 rounded p-1 text-[var(--color-ink-muted)] transition hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                        aria-label="Excluir tarefa"
                       >
                         <Trash2 className="size-3" />
                       </button>
@@ -759,15 +738,15 @@ function NotesPanel({
       <Separator />
 
       <form onSubmit={(e) => { e.preventDefault(); if (draft.trim()) mutation.mutate(draft.trim()); }} className="flex gap-2 p-3">
-        <textarea
+        <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Escreva uma nota…"
           rows={2}
-          className="min-h-[44px] flex-1 resize-none rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm shadow-inner outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="min-h-[44px] flex-1 resize-none"
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (draft.trim()) mutation.mutate(draft.trim()); } }}
         />
-        <Button type="submit" size="icon" className="size-11 shrink-0 rounded-xl bg-indigo-600 hover:bg-indigo-700" disabled={!draft.trim() || mutation.isPending}>
+        <Button type="submit" size="icon" className="size-11 shrink-0 rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/90" disabled={!draft.trim() || mutation.isPending}>
           {mutation.isPending ? <Loader2 className="size-5 animate-spin" /> : <Plus className="size-5" />}
         </Button>
       </form>

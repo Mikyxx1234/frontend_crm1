@@ -3,11 +3,11 @@
 import * as React from "react";
 import { IconLoader2, IconMail, IconCheck } from "@tabler/icons-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
-import { SelectNative } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { SwitchGlass } from "@/components/crm/switch-glass";
 import {
   Dialog,
   DialogContent,
@@ -104,7 +104,7 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
             <div className="space-y-3 py-2">
               <div>
                 <Label htmlFor="email-input">Endereço de e-mail</Label>
-                <Input
+                <InputGlass
                   id="email-input"
                   type="email"
                   placeholder="voce@empresa.com"
@@ -120,8 +120,8 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
             </div>
 
             <DialogFooter>
-              <Button variant="ghost" onClick={resetAndClose}>Cancelar</Button>
-              <Button onClick={handleStep1Continue}>Continuar</Button>
+              <ButtonGlass variant="glass" onClick={resetAndClose}>Cancelar</ButtonGlass>
+              <ButtonGlass variant="primary" onClick={handleStep1Continue}>Continuar</ButtonGlass>
             </DialogFooter>
           </>
         ) : (
@@ -137,7 +137,7 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
             <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
               {/* Senha */}
               <FieldRow label="Senha do e-mail" error={errors.password}>
-                <Input
+                <InputGlass
                   type="password"
                   placeholder="••••••••"
                   value={form.password}
@@ -149,14 +149,14 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
               {/* IMAP */}
               <div className="grid grid-cols-[1fr_100px_140px] gap-2">
                 <FieldRow label="Servidor IMAP" error={errors.imap_host}>
-                  <Input
+                  <InputGlass
                     placeholder="imap.gmail.com"
                     value={form.imapHost}
                     onChange={(e) => setField("imapHost", e.target.value)}
                   />
                 </FieldRow>
                 <FieldRow label="Porta" error={errors.imap_port}>
-                  <Input
+                  <InputGlass
                     type="number"
                     placeholder="993"
                     value={form.imapPort}
@@ -164,28 +164,29 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
                   />
                 </FieldRow>
                 <FieldRow label="Criptografia">
-                  <SelectNative
+                  <DropdownGlass
                     value={form.imapEncryption}
-                    onChange={(e) => setField("imapEncryption", e.target.value as EmailEncryption)}
-                  >
-                    <option value="SSL_TLS">SSL/TLS</option>
-                    <option value="STARTTLS">STARTTLS</option>
-                    <option value="NONE">Nenhuma</option>
-                  </SelectNative>
+                    onValueChange={(v) => setField("imapEncryption", v as EmailEncryption)}
+                    options={[
+                      { value: "SSL_TLS", label: "SSL/TLS" },
+                      { value: "STARTTLS", label: "STARTTLS" },
+                      { value: "NONE", label: "Nenhuma" },
+                    ]}
+                  />
                 </FieldRow>
               </div>
 
               {/* SMTP */}
               <div className="grid grid-cols-[1fr_100px_140px] gap-2">
                 <FieldRow label="Servidor SMTP" error={errors.smtp_host}>
-                  <Input
+                  <InputGlass
                     placeholder="smtp.gmail.com"
                     value={form.smtpHost}
                     onChange={(e) => setField("smtpHost", e.target.value)}
                   />
                 </FieldRow>
                 <FieldRow label="Porta" error={errors.smtp_port}>
-                  <Input
+                  <InputGlass
                     type="number"
                     placeholder="587"
                     value={form.smtpPort}
@@ -193,14 +194,15 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
                   />
                 </FieldRow>
                 <FieldRow label="Criptografia">
-                  <SelectNative
+                  <DropdownGlass
                     value={form.smtpEncryption}
-                    onChange={(e) => setField("smtpEncryption", e.target.value as EmailEncryption)}
-                  >
-                    <option value="STARTTLS">STARTTLS</option>
-                    <option value="SSL_TLS">SSL/TLS</option>
-                    <option value="NONE">Nenhuma</option>
-                  </SelectNative>
+                    onValueChange={(v) => setField("smtpEncryption", v as EmailEncryption)}
+                    options={[
+                      { value: "STARTTLS", label: "STARTTLS" },
+                      { value: "SSL_TLS", label: "SSL/TLS" },
+                      { value: "NONE", label: "Nenhuma" },
+                    ]}
+                  />
                 </FieldRow>
               </div>
 
@@ -233,9 +235,9 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
               {/* Opções */}
               <div className="space-y-3 pt-1">
                 <label className="flex items-start gap-3 cursor-pointer">
-                  <Switch
+                  <SwitchGlass
                     checked={form.groupInThreads}
-                    onCheckedChange={(v) => setField("groupInThreads", v)}
+                    onChange={(v) => setField("groupInThreads", v)}
                     className="mt-0.5"
                   />
                   <span className="text-sm text-[var(--text-primary)]">
@@ -243,9 +245,9 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
                   </span>
                 </label>
                 <label className="flex items-start gap-3 cursor-pointer">
-                  <Switch
+                  <SwitchGlass
                     checked={form.createContactsForReplies}
-                    onCheckedChange={(v) => setField("createContactsForReplies", v)}
+                    onChange={(v) => setField("createContactsForReplies", v)}
                     className="mt-0.5"
                   />
                   <span className="text-sm text-[var(--text-primary)]">
@@ -256,14 +258,14 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
             </div>
 
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setStep("email")}>Voltar</Button>
-              <Button onClick={handleConnect} disabled={loading}>
+              <ButtonGlass variant="glass" onClick={() => setStep("email")}>Voltar</ButtonGlass>
+              <ButtonGlass variant="primary" onClick={handleConnect} disabled={loading}>
                 {loading ? (
                   <><IconLoader2 size={14} className="animate-spin mr-1" /> Conectando…</>
                 ) : (
                   <><IconCheck size={14} className="mr-1" /> Conectar</>
                 )}
-              </Button>
+              </ButtonGlass>
             </DialogFooter>
           </>
         )}

@@ -2,15 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  BarChart3,
-  BriefcaseBusiness,
-  Check,
-  Headphones,
-  Search,
-  Users,
-  X,
-} from "lucide-react";
+import { IconChartBar as BarChart3, IconBriefcase2 as BriefcaseBusiness, IconCheck as Check, IconHeadphones as Headphones, IconSearch as Search, IconUsers as Users, IconX as X } from "@tabler/icons-react";
 
 import {
   ALL_WIDGETS,
@@ -31,9 +23,9 @@ const CATEGORY_ICONS: Record<WidgetCategory, typeof BarChart3> = {
 };
 
 const CATEGORY_ACCENTS: Record<WidgetCategory, string> = {
-  sales: "text-violet-600 bg-violet-500/10",
-  service: "text-cyan-600 bg-cyan-500/10",
-  team: "text-amber-600 bg-amber-500/10",
+  sales: "text-[var(--color-lavender)] bg-violet-500/10",
+  service: "text-[var(--color-cyan)] bg-cyan-500/10",
+  team: "text-[var(--color-warn)] bg-[var(--color-warning)]/10",
 };
 
 type Props = {

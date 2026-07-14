@@ -1,16 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  GripVertical,
-  Loader2,
-  Lock,
-  RotateCcw,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCheck as Check, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconGripVertical as GripVertical, IconLoader2 as Loader2, IconLock as Lock, IconRotate2 as RotateCcw } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Switch } from "@/components/ui/switch";
@@ -111,7 +102,7 @@ export function SidebarCustomizationCard() {
           </p>
         </div>
         {dirty && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-warning)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-warn)]">
             Alterações não salvas
           </span>
         )}
@@ -123,7 +114,7 @@ export function SidebarCustomizationCard() {
             <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
           </div>
         ) : isError ? (
-          <div className="flex items-start gap-2 rounded-2xl border border-red-100 bg-red-50/60 px-4 py-3 text-sm text-red-700">
+          <div className="flex items-start gap-2 rounded-2xl border border-[var(--color-danger-subtle)] bg-[var(--color-danger-bg)]/60 px-4 py-3 text-sm text-[var(--color-danger-text)]">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>
               {error instanceof Error
@@ -160,7 +151,7 @@ export function SidebarCustomizationCard() {
                   {/* Drag handle + botoes de ordenacao (fallback mobile/a11y) */}
                   <div className="flex shrink-0 items-center gap-0.5">
                     <span
-                      className="hidden cursor-grab text-slate-300 active:cursor-grabbing sm:block"
+                      className="hidden cursor-grab text-[var(--text-faint)] active:cursor-grabbing sm:block"
                       aria-hidden
                     >
                       <GripVertical className="size-4" />
@@ -171,7 +162,7 @@ export function SidebarCustomizationCard() {
                         onClick={() => move(idx, idx - 1)}
                         disabled={idx === 0}
                         aria-label={`Mover ${meta.title} para cima`}
-                        className="text-slate-400 transition-colors hover:text-slate-700 disabled:opacity-30"
+                        className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] disabled:opacity-30"
                       >
                         <ChevronUp className="size-4" />
                       </button>
@@ -180,24 +171,24 @@ export function SidebarCustomizationCard() {
                         onClick={() => move(idx, idx + 1)}
                         disabled={idx === items.length - 1}
                         aria-label={`Mover ${meta.title} para baixo`}
-                        className="text-slate-400 transition-colors hover:text-slate-700 disabled:opacity-30"
+                        className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] disabled:opacity-30"
                       >
                         <ChevronDown className="size-4" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-primary">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary">
                     <Icon size={18} />
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-slate-900">
+                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                         {meta.title}
                       </p>
                       {meta.locked && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg-base)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                           <Lock className="size-2.5" />
                           Obrigatório
                         </span>
@@ -235,7 +226,7 @@ export function SidebarCustomizationCard() {
           type="button"
           onClick={handleSave}
           disabled={!dirty || saveMutation.isPending || isLoading || isError}
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6] disabled:opacity-50"
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
         >
           {saveMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />

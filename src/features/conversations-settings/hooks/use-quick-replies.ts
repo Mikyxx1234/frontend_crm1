@@ -1,0 +1,97 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+export type QuickReplyGroup = {
+  id: string;
+  name: string;
+  order: number;
+  _count: { quickReplies: number };
+};
+
+export type QuickReply = {
+  id: string;
+  title: string;
+  content: string;
+  groupId: string | null;
+  attachmentUrl: string | null;
+  position: number;
+  group: { id: string; name: string } | null;
+};
+
+const GROUPS_QK = ["settings", "quick-reply-groups"];
+const REPLIES_QK = ["settings", "quick-replies"];
+
+export function useQuickReplyGroups() {
+  return useQuery<QuickReplyGroup[]>({
+    queryKey: GROUPS_QK,
+    queryFn: async () => {
+      const res = await fetch("/api/settings/quick-replies/groups", { credentials: "include" });
+      if (!res.ok) throw new Error("Falha ao carregar grupos");
+      return res.json();
+    },
+  });
+}
+
+export function useQuickReplies(search = "") {
+  return useQuery<QuickReply[]>({
+    queryKey: [...REPLIES_QK, search],
+    queryFn: async () => {
+      const url = `/api/settings/quick-replies${search ? `?q=${encodeURIComponent(search)}` : ""}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Falha ao carregar mensagens rápidas");
+      return res.json();
+    },
+  });
+}
+
+export function useCreateQuickReply() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { title: string; content: string; groupId?: string | null }) => {
+      const res = await fetch("/api/settings/quick-replies", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).message ?? "Erro ao criar");
+      return res.json() as Promise<QuickReply>;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: REPLIES_QK });
+      toast.success("Mensagem rápida criada.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteQuickReply() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/settings/quick-replies/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Erro ao excluir");
+      return res.json();
+    },
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: REPLIES_QK });
+      const prevs = qc.getQueriesData<QuickReply[]>({ queryKey: REPLIES_QK });
+      qc.setQueriesData<QuickReply[]>({ queryKey: REPLIES_QK }, (old) =>
+        old?.filter((r) => r.id !== id) ?? []
+      );
+      return { prevs };
+    },
+    onError: (e: Error, _id, ctx: { prevs: [unknown, QuickReply[] | undefined][] } | undefined) => {
+      if (ctx?.prevs) {
+        for (const [key, data] of ctx.prevs) qc.setQueryData(key as string[], data);
+      }
+      toast.error(e.message);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: REPLIES_QK }),
+  });
+}

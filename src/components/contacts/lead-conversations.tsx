@@ -4,16 +4,7 @@ import { apiUrl } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  ArrowLeft,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  FileText,
-  Loader2,
-  MessageSquare,
-  Plus,
-} from "lucide-react";
+import { IconArrowLeft as ArrowLeft, IconCalendar as Calendar, IconCircleCheck as CheckCircle2, IconClock as Clock, IconFileText as FileText, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPlus as Plus } from "@tabler/icons-react";
 import * as React from "react";
 
 import { ChannelBadge } from "@/components/inbox/channel-badge";
@@ -22,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { cn, formatDateTime } from "@/lib/utils";
 
 type ConversationRow = {
@@ -113,7 +105,7 @@ export function LeadConversations({ contact }: { contact: ContactSlim }) {
               )}
             </TabsTrigger>
             <TabsTrigger value="activities" className="gap-1.5 data-[state=active]:shadow-none">
-              <Calendar className="size-3.5" /> Atividades
+              <Calendar className="size-3.5" /> Tarefas
             </TabsTrigger>
             <TabsTrigger value="notes" className="gap-1.5 data-[state=active]:shadow-none">
               <FileText className="size-3.5" /> Notas
@@ -239,7 +231,7 @@ function ActivitiesTab({ activities }: { activities: ActivityRow[] }) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
         <Calendar className="mb-3 size-10 text-muted-foreground/30" />
-        <p className="text-sm text-muted-foreground">Nenhuma atividade registrada.</p>
+        <p className="text-sm text-muted-foreground">Nenhuma tarefa registrada.</p>
       </div>
     );
   }
@@ -256,7 +248,7 @@ function ActivitiesTab({ activities }: { activities: ActivityRow[] }) {
               className={cn(
                 "relative z-10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm",
                 a.completed
-                  ? "border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40"
+                  ? "border-emerald-500/40 bg-[var(--color-success-bg)] dark:bg-emerald-950/40"
                   : "border-border bg-muted/40"
               )}
             >
@@ -269,7 +261,7 @@ function ActivitiesTab({ activities }: { activities: ActivityRow[] }) {
                   {ACTIVITY_TYPE_LABEL[a.type] ?? a.type}
                 </Badge>
                 {a.completed && (
-                  <CheckCircle2 className="size-3.5 text-emerald-500" />
+                  <CheckCircle2 className="size-3.5 text-[var(--color-success)]" />
                 )}
               </div>
               {a.description && (
@@ -350,12 +342,12 @@ function NotesTab({ contactId, notes: initialNotes }: { contactId: string; notes
       <Separator />
 
       <form onSubmit={onSubmit} className="flex gap-2 p-3">
-        <textarea
+        <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Escreva uma nota…"
           rows={2}
-          className="min-h-[44px] flex-1 resize-none rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm shadow-inner outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+          className="min-h-[44px] flex-1 resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(e); }
           }}
@@ -363,7 +355,7 @@ function NotesTab({ contactId, notes: initialNotes }: { contactId: string; notes
         <Button
           type="submit"
           size="icon"
-          className="size-11 shrink-0 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+          className="size-11 shrink-0 rounded-xl bg-[var(--color-brand-primary)] hover:bg-indigo-700"
           disabled={!draft.trim() || createMutation.isPending}
         >
           {createMutation.isPending ? (

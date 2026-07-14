@@ -35,17 +35,18 @@ export const dt = {
 
   pill: {
     /** Tag padrão F — combinar com `tagStyle` / `tagPillStyle` em `utils.ts`. */
-    base: "inline-flex items-center px-2 py-0.5 text-[11px] font-semibold leading-tight rounded-[4px]",
-    sm: "inline-flex items-center px-2 py-0.5 text-[10px] font-semibold leading-tight rounded-[4px]",
+    base: "inline-flex items-center px-2 py-0.5 text-[11px] font-semibold leading-tight rounded",
+    sm: "inline-flex items-center px-2 py-0.5 text-[10px] font-semibold leading-tight rounded",
     expired:
-      "inline-flex items-center rounded-[4px] border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground",
+      "inline-flex items-center rounded border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground",
     neutral:
-      "inline-flex items-center rounded-[4px] border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground",
+      "inline-flex items-center rounded border border-border bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground",
     /** Chip de etapa de pipeline (não é etiqueta de contato). */
     stage:
-      "inline-flex items-center gap-1.5 rounded-[4px] border border-border bg-card px-2.5 py-1 text-[12px] font-medium text-primary shadow-[var(--shadow-sm)]",
+      "inline-flex items-center gap-1.5 rounded border border-border bg-card px-2.5 py-1 text-[12px] font-medium text-primary shadow-[var(--shadow-sm)]",
   },
 
+  // TODO DS-004: add --workspace-leader-bg/border tokens to globals-v2.css
   /** Header petróleo do DealWorkspace (coluna esquerda compacta). */
   workspace: {
     leader:
@@ -53,21 +54,21 @@ export const dt = {
     leaderLabel: "mb-1 text-[10px] font-medium text-white/45",
     leaderTitle: "mb-3 truncate text-[14px] font-semibold text-white",
     leaderValue: "text-[13px] font-bold text-white tabular-nums",
-    leaderBarTrack: "relative h-[3px] overflow-hidden rounded-full bg-white/10",
+    leaderBarTrack: "relative h-[3px] overflow-hidden rounded-full bg-[var(--glass-bg-subtle)]",
     leaderBarFill: "absolute inset-y-0 left-0 rounded-full bg-sky-400 transition-all",
     leaderMeta: "mt-1 text-[10px] text-white/35",
   },
 
   chat: {
     bubble: {
-      /** Cores via `var(--chat-bubble-sent-*)` no wrapper; padding no bloco interno (`px-[9px] py-[5px]`). */
-      sent: "rounded-[10px] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
+      /** Cores via `var(--chat-bubble-sent-*)` no wrapper; padding no bloco interno (`px-2 py-1`). */
+      sent: "rounded-[var(--radius-input)] rounded-br-sm shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
       /** Recebida — fundo via token de tema para suportar dark mode corretamente. */
       received:
-        "rounded-[10px] rounded-bl-[2px] border border-[var(--chat-bubble-received-border)] bg-[var(--chat-bubble-received-bg)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
+        "rounded-[var(--radius-input)] rounded-bl-sm border border-[var(--chat-bubble-received-border)] bg-[var(--chat-bubble-received-bg)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
       /** Nota interna — faixa compacta (menos altura que bolha de conversa). */
       note: "border-l-2 border-l-[var(--chat-bubble-note-border)] bg-[var(--chat-bubble-note-bg)]",
-      audio: "rounded-[10px] rounded-br-[2px] shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
+      audio: "rounded-[var(--radius-input)] rounded-br-sm shadow-[0_1px_1px_rgba(0,0,0,0.08)]",
     },
     text: {
       sent: "text-[13px] leading-[1.4]",
@@ -77,7 +78,7 @@ export const dt = {
     time: {
       sent: "text-[10px] tabular-nums",
       received: "text-[10px] tabular-nums text-[color:var(--chat-bubble-received-time)]",
-      note: "text-[10px] tabular-nums text-slate-400",
+      note: "text-[10px] tabular-nums text-[var(--text-muted)]",
     },
     check: {
       sent: "text-[color:var(--chat-bubble-sent-time)]",
@@ -92,7 +93,7 @@ export const dt = {
       "rounded-full border border-[var(--color-success)]/25 bg-[var(--color-success-soft)] px-3 py-0.5 font-display text-[11px] font-semibold text-[var(--color-success)] shadow-[var(--glass-shadow-sm)] backdrop-blur",
     /** Card de sessão 24h encerrada (footer compactChrome) — ver `chat-window.tsx`. */
     sessionExpiredCard:
-      "mx-3 my-2 flex items-center gap-3 rounded-xl border border-red-200 bg-card px-3 py-2.5 shadow-[0_2px_8px_rgba(220,38,38,0.08)]",
+      "mx-3 my-2 flex items-center gap-3 rounded-xl border border-[var(--color-danger-subtle)] bg-card px-3 py-2.5 shadow-[0_2px_8px_rgba(220,38,38,0.08)]",
     noteLabel: "text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground",
   },
 

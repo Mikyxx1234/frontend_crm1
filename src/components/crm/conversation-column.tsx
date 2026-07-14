@@ -18,6 +18,7 @@ import { InputGlass } from "./input-glass"
 import { type TabItem } from "./tabs-glass"
 import { TooltipGlass } from "./tooltip-glass"
 import { ConversationCard, type Conversation } from "./conversation-card"
+import { CheckboxGlass } from "./checkbox-glass"
 
 interface ConversationColumnProps {
   conversations: Conversation[]
@@ -81,6 +82,18 @@ interface ConversationColumnProps {
   onLoadMore?: () => void
   hasMore?: boolean
   isLoadingMore?: boolean
+  /**
+   * Modo de seleção múltipla (ações em massa). Quando ativo, exibe uma
+   * barra "Selecionar todas" + `bulkActionsSlot` acima da lista e um
+   * checkbox em cada `ConversationCard`.
+   */
+  selectionMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelectOne?: (id: string) => void
+  /** Disparado pelo checkbox "selecionar todas" com a lista final de ids marcados (vazia = limpar). */
+  onSelectAllChange?: (ids: string[]) => void
+  /** Ações renderizadas ao lado do contador, na barra de seleção (ex.: Encerrar, Reabrir, Cancelar). */
+  bulkActionsSlot?: React.ReactNode
 }
 
 const DEFAULT_TABS: TabItem[] = [
@@ -149,6 +162,11 @@ export function ConversationColumn({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
+  selectionMode = false,
+  selectedIds,
+  onToggleSelectOne,
+  onSelectAllChange,
+  bulkActionsSlot,
 }: ConversationColumnProps) {
   // Sentinela invisível no fim da lista. Quando entra no viewport
   // (com 200px de margem), dispara `onLoadMore`. IntersectionObserver
@@ -316,7 +334,7 @@ export function ConversationColumn({
         createPortal(
           <div
             role="listbox"
-            className="fixed z-[100] flex flex-col gap-0.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+            className="fixed z-(--z-above) flex flex-col gap-0.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-xl"
             style={{
               top: dropdownPos.top,
               left: dropdownPos.left,
@@ -378,6 +396,33 @@ export function ConversationColumn({
           document.body,
         )}
 
+      {/* Barra de seleção em massa — "selecionar todas" + ações (Encerrar/Reabrir/Cancelar). */}
+      {selectionMode && (
+        <div className="mb-2.5 flex items-center justify-between gap-2 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2">
+          <label className="flex min-w-0 items-center gap-2 cursor-pointer">
+            <CheckboxGlass
+              checked={displayed.length > 0 && displayed.every((c) => selectedIds?.has(c.id))}
+              indeterminate={
+                !!selectedIds?.size &&
+                selectedIds.size < displayed.length &&
+                displayed.some((c) => selectedIds?.has(c.id))
+              }
+              onChange={() => {
+                const allSelected = displayed.length > 0 && displayed.every((c) => selectedIds?.has(c.id))
+                onSelectAllChange?.(allSelected ? [] : displayed.map((c) => c.id))
+              }}
+              aria-label="Selecionar todas as conversas"
+            />
+            <span className="truncate font-display text-[12px] font-semibold text-[var(--text-secondary)]">
+              {selectedIds?.size
+                ? `${selectedIds.size} selecionada${selectedIds.size > 1 ? "s" : ""}`
+                : "Selecionar todas"}
+            </span>
+          </label>
+          {bulkActionsSlot}
+        </div>
+      )}
+
       {/* Lista */}
       <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
         {displayed.map((conversation) => {
@@ -391,11 +436,14 @@ export function ConversationColumn({
               }}
               onClick={() => onSelectConversation?.(conversation.id)}
               assigneeSlot={slots?.assigneeSlot}
+              selectionMode={selectionMode}
+              selected={selectedIds?.has(conversation.id) ?? false}
+              onToggleSelect={() => onToggleSelectOne?.(conversation.id)}
             />
           )
         })}
         {displayed.length === 0 && !isLoadingMore && (
-          <div className="px-2 py-6 text-center text-[12px] text-[var(--text-muted)]">
+          <div className="px-2 py-6 text-center text-xs text-[var(--text-muted)]">
             Nenhuma conversa encontrada.
           </div>
         )}

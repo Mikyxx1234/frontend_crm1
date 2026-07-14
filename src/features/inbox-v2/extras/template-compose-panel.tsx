@@ -31,6 +31,10 @@ export interface PendingTemplate {
   content: string;
   /** Id na Graph (Cloud API). */
   metaTemplateId?: string | null;
+  /** Categoria WABA (MARKETING / UTILITY / AUTHENTICATION) — informativa. */
+  category?: string | null;
+  /** Idioma do template (ex.: pt_BR). */
+  language?: string | null;
   /** Metadados das variáveis (rótulos/exemplos). */
   operatorVariables?: OperatorVariableMeta[] | null;
 }
@@ -42,8 +46,19 @@ export function whatsappTemplateToPending(tpl: WhatsappTemplate): PendingTemplat
     label: tpl.name,
     content: tpl.body ?? "",
     metaTemplateId: tpl.metaTemplateId ?? null,
+    category: tpl.category ?? null,
+    language: tpl.language ?? null,
     operatorVariables: tpl.operatorVariables ?? null,
   };
+}
+
+/** Metadados visuais da categoria WABA — mesma paleta do picker. */
+function categoryMeta(category?: string | null): { label: string; color: string } | null {
+  const c = (category ?? "").toUpperCase();
+  if (c === "MARKETING") return { label: "Marketing", color: "#a855f7" };
+  if (c === "UTILITY") return { label: "Utility", color: "#0ea5e9" };
+  if (c === "AUTHENTICATION") return { label: "Autenticação", color: "#f59e0b" };
+  return null;
 }
 
 function extractPlaceholders(content: string, vars: OperatorVariableMeta[] | null | undefined): string[] {
@@ -132,14 +147,37 @@ export function TemplateComposePanel({
   return (
     <div className="absolute bottom-full left-0 mb-2 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--dropdown-solid-bg)] p-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
       <div className="flex items-start gap-2">
-        <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/12 text-emerald-600">
+        <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-success)]/12 text-[var(--color-success-text)]">
           <IconLock size={13} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
-            {template.label || template.name}
-          </p>
-          <p className="font-mono text-[10.5px] text-[var(--text-muted)]">
+          <div className="flex items-center gap-1.5">
+            <p className="min-w-0 flex-1 truncate font-display text-[13px] font-bold text-[var(--text-primary)]">
+              {template.label || template.name}
+            </p>
+            {(() => {
+              const meta = categoryMeta(template.category);
+              return meta ? (
+                <span
+                  className="inline-flex shrink-0 items-center rounded-full border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wide"
+                  style={{
+                    background: `color-mix(in srgb, ${meta.color} 14%, white)`,
+                    color: `color-mix(in srgb, ${meta.color} 78%, black)`,
+                    borderColor: `color-mix(in srgb, ${meta.color} 38%, transparent)`,
+                  }}
+                  title={`Categoria WhatsApp: ${meta.label}`}
+                >
+                  {meta.label}
+                </span>
+              ) : null;
+            })()}
+            {template.language && (
+              <span className="shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                {template.language}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-[10.5px] text-[var(--text-muted)]">
             Template do WhatsApp — corpo não editável
           </p>
 

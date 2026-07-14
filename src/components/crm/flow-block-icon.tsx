@@ -56,15 +56,15 @@ interface BlockMeta {
 
 /** Paleta de acentos: cor sólida do ícone + fundo suave do chip */
 export const blockPalette: Record<BlockColor, { fg: string; bg: string }> = {
-  indigo: { fg: "#5b6ff5", bg: "rgba(91,111,245,0.12)" },
+  indigo: { fg: "var(--color-primary)", bg: "rgba(91,111,245,0.12)" },
   blue: { fg: "#2f6df6", bg: "rgba(47,109,246,0.12)" },
   teal: { fg: "#0d9488", bg: "rgba(13,148,136,0.12)" },
   green: { fg: "#16a34a", bg: "rgba(22,163,74,0.12)" },
-  red: { fg: "#ef4444", bg: "rgba(239,68,68,0.12)" },
+  red: { fg: "var(--color-destructive)", bg: "rgba(239,68,68,0.12)" },
   amber: { fg: "#d97706", bg: "rgba(217,119,6,0.14)" },
   violet: { fg: "#7c3aed", bg: "rgba(124,58,237,0.12)" },
   pink: { fg: "#db2777", bg: "rgba(219,39,119,0.12)" },
-  orange: { fg: "#f97316", bg: "rgba(249,115,22,0.13)" },
+  orange: { fg: "var(--color-orange)", bg: "rgba(249,115,22,0.13)" },
   slate: { fg: "#475569", bg: "rgba(71,85,105,0.12)" },
 }
 
@@ -210,7 +210,7 @@ export const blockCategories: { id: BlockCategory; label: string; types: string[
 
 /** Classes do "chip" de ícone por tom — mantido para componentes legados (mini-flow, etc.) */
 export const toneIconClasses: Record<BlockMeta["tone"], string> = {
-  trigger: "bg-white/25 text-white",
+  trigger: "bg-[var(--glass-bg)] text-white",
   action: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
   salesbot: "bg-[rgba(167,139,250,0.18)] text-[var(--brand-secondary)]",
   final: "bg-[rgba(239,68,68,0.14)] text-[var(--color-danger)]",

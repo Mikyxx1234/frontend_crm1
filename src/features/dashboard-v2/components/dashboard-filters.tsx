@@ -254,7 +254,7 @@ export function DashboardFilters({
               return (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1 rounded-[6px] px-2 py-0.5 font-display text-[11px] font-semibold"
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-2 py-0.5 font-display text-[11px] font-semibold"
                   style={tagPillStyle(tag?.label ?? "", tag?.color)}
                 >
                   {tag?.label ?? id}

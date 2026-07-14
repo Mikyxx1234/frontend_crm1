@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Loader2, Send } from "lucide-react";
+import { IconFileText as FileText, IconLoader2 as Loader2, IconSend as Send } from "@tabler/icons-react";
 
+import { Textarea } from "@/components/ui/textarea";
 import { cn, formatDateTime } from "@/lib/utils";
 
 import type { DealDetailNote } from "../shared";
@@ -69,7 +70,7 @@ export function NotesPanel({ dealId, contactId, onCreated }: NotesPanelProps) {
           </div>
         ) : notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <FileText className="mb-3 size-12 text-slate-300" />
+            <FileText className="mb-3 size-12 text-[var(--text-faint)]" />
             <p className="text-[13px] font-medium tracking-tight text-[var(--color-ink-muted)]">
               Nenhuma nota ainda.
             </p>
@@ -84,10 +85,10 @@ export function NotesPanel({ dealId, contactId, onCreated }: NotesPanelProps) {
                   "shadow-[var(--shadow-sm)]",
                 )}
               >
-                <p className="whitespace-pre-wrap text-[14px] leading-relaxed tracking-tight text-slate-800">
+                <p className="whitespace-pre-wrap text-[14px] leading-relaxed tracking-tight text-[var(--text-primary)]">
                   {n.content}
                 </p>
-                <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] tracking-tight text-[var(--color-ink-muted)]">
+                <p className="mt-3 border-t border-[var(--glass-border-subtle)] pt-2 text-[11px] tracking-tight text-[var(--color-ink-muted)]">
                   <span className="font-bold text-[var(--color-ink-soft)]">{n.user.name}</span>
                   {" · "}
                   {formatDateTime(n.createdAt)}
@@ -110,17 +111,12 @@ export function NotesPanel({ dealId, contactId, onCreated }: NotesPanelProps) {
         )}
       >
         <div className="flex items-end gap-2">
-          <textarea
+          <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Escreva uma nota..."
             rows={2}
-            className={cn(
-              "min-h-[44px] flex-1 resize-none rounded-2xl border border-border bg-white",
-              "px-3.5 py-2.5 text-[14px] tracking-tight text-slate-800 outline-none",
-              "placeholder:text-[var(--color-ink-muted)]",
-              "focus-visible:border-[var(--color-primary)]/50 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20",
-            )}
+            className="min-h-[44px] flex-1 resize-none"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

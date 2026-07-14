@@ -4,22 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  CalendarDays,
-  CheckCircle2,
-  DollarSign,
-  Download,
-  FileBarChart,
-  Loader2,
-  Megaphone,
-  MessageCircle,
-  RefreshCw,
-  Shield,
-  Wrench,
-  Workflow,
-} from "lucide-react";
+import { IconArrowDownRight as ArrowDownRight, IconArrowUpRight as ArrowUpRight, IconCalendar as CalendarDays, IconCircleCheck as CheckCircle2, IconCurrencyDollar as DollarSign, IconDownload as Download, IconFileChart as FileBarChart, IconLoader2 as Loader2, IconSpeakerphone as Megaphone, IconMessageCircle as MessageCircle, IconRefresh as RefreshCw, IconShield as Shield, IconTool as Wrench, IconHierarchy as Workflow } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -259,7 +244,7 @@ export default function ReportsClientPage() {
       {summary && (
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
           {hasMetaData ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-success-subtle)] bg-[var(--color-success-subtle)] px-3 py-1 font-medium text-emerald-700">
               <CheckCircle2 className="size-3" />
               Última sincronização Meta:{" "}
               {metaSection?.lastSyncAt
@@ -273,7 +258,7 @@ export default function ReportsClientPage() {
                 : "—"}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-medium text-amber-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-amber-soft)] bg-[var(--color-amber-soft)] px-3 py-1 font-medium text-[var(--color-amber-text)]">
               <RefreshCw className="size-3" />
               Custo Meta não sincronizado — clique em &quot;Sincronizar Meta&quot; para puxar o valor oficial.
             </span>
@@ -298,7 +283,7 @@ export default function ReportsClientPage() {
               label="Total de mensagens"
               value={summary.totalMessages.toLocaleString("pt-BR")}
               color="text-[var(--color-ink-soft)]"
-              bg="bg-slate-100"
+              bg="bg-[var(--color-bg-muted)]"
             />
             <KpiCard
               icon={DollarSign}
@@ -309,24 +294,24 @@ export default function ReportsClientPage() {
                   ? "Cobrado pela Meta (pricing_analytics)"
                   : "Estimativa local — sincronize com a Meta para o valor oficial"
               }
-              color={usingMetaCost ? "text-emerald-600" : "text-amber-600"}
-              bg={usingMetaCost ? "bg-emerald-100" : "bg-amber-100"}
+              color={usingMetaCost ? "text-[var(--color-success)]" : "text-[var(--color-warning)]"}
+              bg={usingMetaCost ? "bg-[var(--color-success-subtle)]" : "bg-[var(--color-amber-soft)]"}
             />
             <KpiCard
               icon={ArrowDownRight}
               label="Entrada (serviço)"
               value={summary.serviceInbound.toLocaleString("pt-BR")}
               subtitle={`Grátis (${FREE_SERVICE_QUOTA.toLocaleString("pt-BR")}/mês por WABA)`}
-              color="text-blue-600"
-              bg="bg-blue-100"
+              color="text-[var(--color-brand-primary)]"
+              bg="bg-[var(--color-indigo-soft)]"
             />
             <KpiCard
               icon={ArrowUpRight}
               label="Saída (agente)"
               value={summary.serviceOutbound.toLocaleString("pt-BR")}
               subtitle="Grátis (sessão aberta pelo cliente)"
-              color="text-indigo-600"
-              bg="bg-indigo-100"
+              color="text-[var(--color-brand-primary)]"
+              bg="bg-[var(--color-indigo-soft)]"
             />
           </div>
 
@@ -338,9 +323,9 @@ export default function ReportsClientPage() {
               count={summary.templateMarketing}
               cost={summary.templateMarketing * COST_PER_MSG.templateMarketing.usd}
               unitCost={COST_PER_MSG.templateMarketing.usd}
-              color="text-amber-700"
-              bg="bg-amber-50"
-              border="border-amber-200"
+              color="text-[var(--color-amber-text)]"
+              bg="bg-[var(--color-amber-soft)]"
+              border="border-[var(--color-amber-soft)]"
             />
             <TypeCard
               icon={Wrench}
@@ -349,8 +334,8 @@ export default function ReportsClientPage() {
               cost={summary.templateUtility * COST_PER_MSG.templateUtility.usd}
               unitCost={COST_PER_MSG.templateUtility.usd}
               color="text-sky-700"
-              bg="bg-sky-50"
-              border="border-sky-200"
+              bg="bg-[var(--color-sky-soft)]"
+              border="border-[var(--color-sky-soft)]"
               extra={summary.templateUtilityFree > 0 ? `${summary.templateUtilityFree} grátis (sessão aberta)` : undefined}
             />
             <TypeCard
@@ -359,9 +344,9 @@ export default function ReportsClientPage() {
               count={summary.templateAuth}
               cost={summary.templateAuth * COST_PER_MSG.templateAuth.usd}
               unitCost={COST_PER_MSG.templateAuth.usd}
-              color="text-violet-700"
-              bg="bg-violet-50"
-              border="border-violet-200"
+              color="text-[var(--color-purple-text)]"
+              bg="bg-[var(--color-lavender-soft)]"
+              border="border-[var(--color-lavender-soft)]"
             />
             <TypeCard
               icon={Workflow}
@@ -412,9 +397,9 @@ export default function ReportsClientPage() {
                       {daily.length <= 31 && (
                         <span className="mt-1 text-[9px] tabular-nums text-muted-foreground">{d.date.slice(8)}</span>
                       )}
-                      <div className="pointer-events-none absolute bottom-full z-20 mb-2 hidden w-max rounded-lg border border-border bg-white px-3 py-2 text-[11px] shadow-lg group-hover:block">
+                      <div className="pointer-events-none absolute bottom-full z-20 mb-2 hidden w-max rounded-lg border border-border bg-[var(--color-bg-card)] px-3 py-2 text-[11px] shadow-lg group-hover:block">
                         <p className="font-semibold text-foreground">{new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR")}</p>
-                        <p className="text-muted-foreground">Total: {total}</p>
+                        <p className="text-[var(--color-text-secondary)]">Total: {total}</p>
                         {d.inbound > 0 && <p>Entrada: {d.inbound}</p>}
                         {d.outbound > 0 && <p>Saída: {d.outbound}</p>}
                         {d.marketing > 0 && <p>Marketing: {d.marketing}</p>}
@@ -432,10 +417,10 @@ export default function ReportsClientPage() {
 
           {/* Meta official breakdown — só aparece quando ja sincronizou */}
           {hasMetaData && metaSection && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40">
-              <div className="border-b border-emerald-200/70 px-5 py-3">
+            <div className="rounded-xl border border-[var(--color-success-subtle)] bg-[var(--color-success-subtle)]/40">
+              <div className="border-b border-[var(--color-success-subtle)]/70 px-5 py-3">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  <CheckCircle2 className="size-4 text-[var(--color-success)]" />
                   Custos oficiais Meta (pricing_analytics)
                 </h2>
                 <p className="mt-0.5 text-[11px] text-emerald-800/80">
@@ -444,7 +429,7 @@ export default function ReportsClientPage() {
                 </p>
               </div>
               <table className="w-full text-sm">
-                <thead className="border-b border-emerald-200/70 bg-emerald-100/50">
+                <thead className="border-b border-[var(--color-success-subtle)]/70 bg-[var(--color-success-subtle)]/50">
                   <tr>
                     <th className="px-5 py-2.5 text-left font-medium text-emerald-900">Categoria</th>
                     <th className="px-5 py-2.5 text-right font-medium text-emerald-900">Mensagens</th>
@@ -455,7 +440,7 @@ export default function ReportsClientPage() {
                   {Object.entries(metaSection.byCategory)
                     .sort(([, a], [, b]) => b.cost - a.cost)
                     .map(([category, vals]) => (
-                      <tr key={category} className="border-b border-emerald-200/50 last:border-0">
+                      <tr key={category} className="border-b border-[var(--color-success-subtle)]/50 last:border-0">
                         <td className="px-5 py-2.5 font-medium text-emerald-950">
                           {category.replace(/_/g, " ")}
                         </td>
@@ -467,7 +452,7 @@ export default function ReportsClientPage() {
                         </td>
                       </tr>
                     ))}
-                  <tr className="bg-emerald-100/60 font-semibold">
+                  <tr className="bg-[var(--color-success-subtle)]/60 font-semibold">
                     <td className="px-5 py-3 text-emerald-950">Total cobrado pela Meta</td>
                     <td className="px-5 py-3 text-right tabular-nums text-emerald-900">
                       {metaSection.totalVolume.toLocaleString("pt-BR")}

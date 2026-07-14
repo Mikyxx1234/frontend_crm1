@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { IconX as X } from "@tabler/icons-react";
 
 import { TooltipHost } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -21,8 +21,8 @@ import { cn } from "@/lib/utils";
 //  - Foco inicial no botao Fechar (focus-trap leve — nao prendemos foco
 //    porque o conteudo interno tem inputs/menus de portal que precisariam
 //    sair do escopo);
-//  - z-[60] cobre <aside> da dashboard-shell (z-40), mas portais Radix
-//    (Tooltip, Dialog, Confirm) ficam acima (z-[70]+ por default).
+//  - z-(--z-sheet) [60] cobre <aside> da dashboard-shell (z-40), mas portais Radix
+//    (Tooltip, Dialog, Confirm) ficam acima (--z-radix: 90 por default).
 // ─────────────────────────────────────────────────────────────────────────────
 
 type WorkspaceShellProps = {
@@ -89,13 +89,13 @@ export function WorkspaceShell({
           exit={{ opacity: 0, x: 16 }}
           transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
           className={cn(
-            "fixed inset-0 z-[60] flex flex-col overflow-hidden",
+            "fixed inset-0 z-(--z-sheet) flex flex-col overflow-hidden",
             "font-display text-foreground",
           )}
           style={{ background: "var(--bg-gradient)" }}
         >
           {!hideFloatingClose ? (
-            <div className="pointer-events-none absolute right-4 top-3 z-[70] sm:right-6 sm:top-4">
+            <div className="pointer-events-none absolute right-4 top-3 z-(--z-modal) sm:right-6 sm:top-4">
               <TooltipHost label="Fechar (Esc)" side="bottom">
                 <button
                   ref={closeRef}
@@ -104,8 +104,8 @@ export function WorkspaceShell({
                   aria-label={closeLabel}
                   className={cn(
                     "pointer-events-auto inline-flex size-8 items-center justify-center rounded-full",
-                    "border border-white/55 bg-white/70 text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur",
-                    "transition-all hover:bg-white/85 hover:text-foreground hover:shadow-[var(--glass-shadow)]",
+                    "border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] shadow-[var(--glass-shadow-sm)] backdrop-blur",
+                    "transition-all hover:bg-[var(--glass-bg-base)] hover:text-foreground hover:shadow-[var(--glass-shadow)]",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                     "active:scale-95",
                   )}

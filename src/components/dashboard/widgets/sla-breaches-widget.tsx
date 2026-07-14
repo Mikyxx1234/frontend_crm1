@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCircleCheck as CheckCircle2 } from "@tabler/icons-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInboxMetrics } from "@/hooks/use-inbox-metrics";
@@ -38,7 +38,7 @@ export function SlaBreachesWidget() {
       <div className="text-center">
         <p className={cn(
           "text-4xl font-extrabold tabular-nums",
-          withinSla ? "text-emerald-600" : "text-rose-600",
+          withinSla ? "text-[var(--color-success-text)]" : "text-[var(--color-danger-text)]",
         )}>
           {avg > 0 ? formatted : "—"}
         </p>
@@ -48,13 +48,13 @@ export function SlaBreachesWidget() {
       <div className={cn(
         "flex items-center gap-2 rounded-xl border px-3 py-2.5",
         withinSla
-          ? "border-emerald-500/30 bg-emerald-500/5"
-          : "border-rose-500/30 bg-rose-500/5",
+          ? "border-[var(--color-success)]/30 bg-[var(--color-success)]/5"
+          : "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5",
       )}>
         {withinSla ? (
-          <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
+          <CheckCircle2 className="size-5 shrink-0 text-[var(--color-success)]" />
         ) : (
-          <AlertTriangle className="size-5 shrink-0 text-rose-500" />
+          <AlertTriangle className="size-5 shrink-0 text-[var(--color-danger)]" />
         )}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-foreground">

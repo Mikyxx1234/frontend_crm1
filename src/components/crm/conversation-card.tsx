@@ -23,6 +23,7 @@ import {
   IconForms,
 } from "@tabler/icons-react"
 import { Chip } from "./chip"
+import { CheckboxGlass } from "./checkbox-glass"
 
 export type ConversationAvatarColor = "sunset" | "forest" | "ocean" | "dusk"
 
@@ -78,6 +79,8 @@ export interface Conversation {
   lastMessageType?: LastMessageType
   /** Direcao da ultima mensagem — quando "out", prefixa "Você:". */
   lastMessageDirection?: "in" | "out"
+  /** Conversa finalizada/resolvida — exibe badge visual no card. */
+  resolved?: boolean
 }
 
 interface ConversationCardProps {
@@ -88,9 +91,18 @@ interface ConversationCardProps {
    * presente, substitui o chip de assignee na linha inferior do card.
    */
   assigneeSlot?: React.ReactNode
+  /**
+   * Modo de seleção múltipla (ações em massa). Quando ativo, mostra um
+   * checkbox no lugar do avatar-click e o `onClick` de abrir a conversa
+   * fica desativado — só o checkbox alterna a seleção (evita abrir a
+   * conversa por engano ao tentar marcar várias).
+   */
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
 }
 
-const avatarGradients: Record<string, string> = {
+export const avatarGradients: Record<string, string> = {
   sunset: "linear-gradient(135deg, #FFD580 0%, #FF8FA3 50%, #FF6B9D 100%)",
   forest: "linear-gradient(135deg, #5CC7A9 0%, #2C8A6B 60%, #1F5D49 100%)",
   ocean: "linear-gradient(135deg, #6FA8DC 0%, #3D5A80 60%, #293f5d 100%)",
@@ -135,7 +147,7 @@ const typeLabelMap: Record<LastMessageType, string | null> = {
  * marca (mantidas em alta saturação porque o badge é minúsculo).
  * Retorna `null` para canais desconhecidos — caller cai no status dot.
  */
-function channelBadge(channel: string | null | undefined): {
+export function channelBadge(channel: string | null | undefined): {
   Icon: React.ComponentType<{ size?: number; stroke?: number; className?: string }>;
   bg: string;
   fg: string;
@@ -144,7 +156,7 @@ function channelBadge(channel: string | null | undefined): {
   const c = (channel ?? "").toLowerCase().trim();
   if (!c) return null;
   if (c === "whatsapp" || c === "wa")
-    return { Icon: IconBrandWhatsapp, bg: "#25D366", fg: "#FFFFFF", title: "WhatsApp" };
+    return { Icon: IconBrandWhatsapp, bg: "var(--channel-whatsapp)", fg: "#FFFFFF", title: "WhatsApp" };
   if (c === "instagram" || c === "ig")
     return {
       Icon: IconBrandInstagram,
@@ -153,15 +165,15 @@ function channelBadge(channel: string | null | undefined): {
       title: "Instagram",
     };
   if (c === "facebook" || c === "fb")
-    return { Icon: IconBrandFacebook, bg: "#1877F2", fg: "#FFFFFF", title: "Facebook" };
+    return { Icon: IconBrandFacebook, bg: "var(--channel-facebook)", fg: "#FFFFFF", title: "Facebook" };
   if (c === "meta" || c === "messenger")
-    return { Icon: IconBrandMessenger, bg: "#0084FF", fg: "#FFFFFF", title: "Messenger" };
+    return { Icon: IconBrandMessenger, bg: "var(--channel-messenger)", fg: "#FFFFFF", title: "Messenger" };
   if (c === "telegram" || c === "tg")
-    return { Icon: IconBrandTelegram, bg: "#229ED9", fg: "#FFFFFF", title: "Telegram" };
+    return { Icon: IconBrandTelegram, bg: "var(--channel-telegram)", fg: "#FFFFFF", title: "Telegram" };
   if (c === "email" || c === "mail")
-    return { Icon: IconMail, bg: "#6B7280", fg: "#FFFFFF", title: "E-mail" };
+    return { Icon: IconMail, bg: "var(--channel-email)", fg: "#FFFFFF", title: "E-mail" };
   if (c === "webchat" || c === "form" || c === "site" || c === "landing")
-    return { Icon: IconForms, bg: "#5b6ff5", fg: "#FFFFFF", title: "Formulário" };
+    return { Icon: IconForms, bg: "var(--channel-webchat)", fg: "#FFFFFF", title: "Formulário" };
   return null;
 }
 
@@ -170,6 +182,9 @@ export function ConversationCard({
   conversation,
   onClick,
   assigneeSlot,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: ConversationCardProps) {
   const TypeIcon =
     conversation.lastMessageType && conversation.lastMessageType !== "text"
@@ -184,23 +199,39 @@ export function ConversationCard({
 
   return (
     <article
-      onClick={onClick}
+      onClick={selectionMode ? undefined : onClick}
       className={cn(
         // Borda trocada para `--glass-border-subtle` (0.30 alpha vs 0.55):
         // alinha com a referência v0 que tem cards "flutuando" sem
         // contorno explícito.
-        "cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3.5 py-3 backdrop-blur-md shadow-[var(--glass-shadow-sm)] transition-all duration-200",
-        "hover:bg-[var(--glass-bg-base)]",
+        "relative cursor-pointer rounded-[var(--radius-lg)] border border-transparent px-3.5 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-200",
+        // Nao-selecionado: fundo cinza clarinho (mais opaco / menos "branco puro")
+        // pra contrastar com o card selecionado. Hover intensifica levemente.
+        "bg-[color-mix(in_srgb,var(--glass-bg-overlay)_60%,rgba(148,163,184,0.10))]",
+        "hover:bg-[var(--glass-bg-overlay)]",
+        // Selecionado: fundo BRANCO puro + anel do brand + sombra suave —
+        // vira o card "flutuante" do print, evidente sem ser agressivo.
         conversation.active &&
-          "border-[var(--brand-primary)]/40 bg-[var(--glass-bg-base)] shadow-[0_6px_20px_rgba(91,111,245,0.18)]",
+          "bg-white border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/20 shadow-[0_6px_18px_rgba(91,111,245,0.15)] hover:bg-white",
         conversation.inactive && "opacity-70",
+        // Marcada (modo seleção): mesmo anel do brand, sem exigir foco/hover.
+        selectionMode && selected &&
+          "bg-white border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/20 hover:bg-white",
       )}
     >
-      {/* Linha 1: avatar + (nome + tempo + preview ao lado).
+      {/* Linha 1: checkbox (modo seleção) + avatar + (nome + tempo + preview ao lado).
           items-start alinha o nome no topo do avatar; o preview de 2
           linhas ocupa o espaço ao lado da metade inferior do avatar —
           card mais preenchido/organizado (estilo kanban). */}
       <div className="flex items-start gap-3">
+        {selectionMode && (
+          <CheckboxGlass
+            checked={selected}
+            onChange={() => onToggleSelect?.()}
+            aria-label={`Selecionar conversa de ${conversation.name}`}
+            className="mt-1.5"
+          />
+        )}
         <div className="relative shrink-0">
           <div
             className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white font-display text-sm font-bold text-white"
@@ -270,7 +301,7 @@ export function ConversationCard({
             {TypeIcon ? (
               <TypeIcon size={13} className="shrink-0 text-[var(--brand-primary)]" />
             ) : (
-              <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+              <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
                 <IconMessage size={9} />
               </span>
             )}
@@ -303,7 +334,7 @@ export function ConversationCard({
             return (
               <span
                 key={t.id}
-                className="inline-flex max-w-[90px] truncate rounded-full border px-2 py-px font-display text-[10px] font-semibold"
+                className="inline-flex whitespace-nowrap rounded-full border px-2 py-px font-display text-[10px] font-semibold"
                 style={{ background: bg, color: fg, borderColor: border }}
                 title={t.name}
               >
@@ -348,23 +379,32 @@ export function ConversationCard({
             ))}
         </span>
 
-        {conversation.sessionExpiresIn && (
-          <TooltipGlass
-            label={conversation.sessionExpired ? "Sessão de 24h da Meta expirada" : "Tempo até expirar a sessão de 24h"}
-            side="top"
-          >
-            <span
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-[1px] font-display text-[10px] font-bold",
-                conversation.sessionExpired
-                  ? "border-[var(--color-danger)]/25 bg-[var(--color-danger)]/[0.10] text-[var(--color-danger-text)]"
-                  : "border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-warning-text)]",
-              )}
-            >
-              <IconClock size={10} />
-              {conversation.sessionExpiresIn}
+        {conversation.resolved ? (
+          <TooltipGlass label="Conversa encerrada" side="top">
+            <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-px font-display text-[10px] font-bold text-emerald-700 v2-dark:text-emerald-300">
+              <IconCheck size={10} stroke={3} />
+              Resolvida
             </span>
           </TooltipGlass>
+        ) : (
+          conversation.sessionExpiresIn && (
+            <TooltipGlass
+              label={conversation.sessionExpired ? "Sessão de 24h da Meta expirada" : "Tempo até expirar a sessão de 24h"}
+              side="top"
+            >
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px font-display text-[10px] font-bold",
+                  conversation.sessionExpired
+                    ? "border-[var(--color-danger)]/25 bg-[var(--color-danger)]/[0.10] text-[var(--color-danger-text)]"
+                    : "border-[var(--color-lead)]/25 bg-[var(--color-lead-bg)] text-[var(--color-warning-text)]",
+                )}
+              >
+                <IconClock size={10} />
+                {conversation.sessionExpiresIn}
+              </span>
+            </TooltipGlass>
+          )
         )}
       </div>
     </article>

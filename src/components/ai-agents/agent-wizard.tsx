@@ -16,7 +16,7 @@ import { apiUrl } from "@/lib/api";
  * escolhido (tools + prompt + modelo sugerido).
  */
 
-import { Loader2 } from "lucide-react";
+import { IconLoader2 as Loader2 } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import {
   ARCHETYPES,
@@ -566,13 +567,13 @@ function PersonalityStep({
 
       <div className="grid gap-2">
         <Label htmlFor="w-override">Instruções adicionais (opcional)</Label>
-        <textarea
+        <Textarea
           id="w-override"
           value={override}
           onChange={(e) => setOverride(e.target.value)}
           rows={4}
           placeholder="Ex.: Nunca mencione nosso concorrente X. Sempre ofereça desconto de 10% pra alunos."
-          className="resize-none rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
+          className="resize-none"
         />
         <p className="text-[11px] text-[var(--text-muted)]">
           Essas instruções são somadas ao prompt do arquétipo no final.

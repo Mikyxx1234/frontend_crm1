@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
+import { ImageLightbox } from "@/components/crm/image-lightbox"
 import {
   Tooltip,
   TooltipContent,
@@ -193,7 +194,7 @@ function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
     return <IconClock size={12} className="shrink-0 text-white/70" aria-label="Enviando" />
   }
   if (status === "failed") {
-    return <IconAlertCircle size={13} className="shrink-0 text-[#fca5a5]" aria-label="Falha no envio" />
+    return <IconAlertCircle size={13} className="shrink-0 text-[var(--wa-tick-fail)]" aria-label="Falha no envio" />
   }
   if (status === "sent") {
     return <IconCheck size={14} className="shrink-0 text-white/75" aria-label="Enviada" />
@@ -202,7 +203,7 @@ function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
   return (
     <IconChecks
       size={15}
-      className={cn("shrink-0", status === "read" ? "text-[#7fd4ff]" : "text-white/75")}
+      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read)]" : "text-white/75")}
       aria-label={status === "read" ? "Lida" : "Entregue"}
     />
   )
@@ -227,7 +228,7 @@ function StatusIndicator({
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="pointer-events-auto inline-flex cursor-help items-center">
-          <IconAlertCircle size={13} className="shrink-0 text-[#fca5a5]" aria-label="Falha no envio" />
+          <IconAlertCircle size={13} className="shrink-0 text-[var(--wa-tick-fail)]" aria-label="Falha no envio" />
         </span>
       </TooltipTrigger>
       <TooltipContent
@@ -289,7 +290,7 @@ function FormBubble({ message, className }: { message: Message; className?: stri
   return (
     <div className={cn("flex max-w-[72%] flex-col gap-1", className)}>
       <div
-        className="overflow-hidden rounded-[var(--radius-lg)] rounded-bl-[4px] border border-[var(--glass-border)] shadow-[0_2px_8px_rgba(100,130,180,0.08)]"
+        className="overflow-hidden rounded-[var(--radius-lg)] rounded-bl border border-[var(--glass-border)] shadow-[0_2px_8px_rgba(100,130,180,0.08)]"
         style={{ background: "var(--chat-bubble-received-bg)" }}
       >
         {/* Cabeçalho clicável — sempre visível */}
@@ -348,7 +349,7 @@ function FormBubble({ message, className }: { message: Message; className?: stri
                   </p>
                   {/* No último campo, o timestamp flutua no canto inferior direito — padrão WhatsApp */}
                   <div className="relative">
-                    <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)] pr-[42px]">
+                    <p className="font-body text-[12.5px] leading-snug text-[var(--text-primary)] pr-11">
                       {f.value}
                     </p>
                     {isLast && (
@@ -464,11 +465,11 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
   const timeColor    = isOutgoing ? "text-white/70"          : "text-[var(--text-muted)]"
   const micColor     = isOutgoing ? "text-white/50"          : "text-[var(--text-muted)]"
   const transcriptBg = isOutgoing
-    ? "bg-white/10 text-white/90 border-white/20"
+    ? "bg-[var(--glass-bg-subtle)] text-white/90 border-[var(--glass-border-subtle)]"
     : "bg-[var(--brand-primary)]/5 text-[var(--text-secondary)] border-[var(--glass-border-subtle)]"
   // Botão "Transcrever": pill com fundo sólido para garantir contraste em qualquer cor de bolha.
   const btnBase = isOutgoing
-    ? "bg-white/20 text-white hover:bg-white/30"
+    ? "bg-[var(--glass-bg-subtle)] text-white hover:bg-[var(--glass-bg-panel)]"
     : "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/20"
 
   return (
@@ -498,7 +499,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-opacity",
-            isOutgoing ? "bg-white/20 hover:bg-white/30" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
+            isOutgoing ? "bg-[var(--glass-bg-subtle)] hover:bg-[var(--glass-bg-panel)]" : "bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20",
             !url && "opacity-40 cursor-not-allowed",
           )}
         >
@@ -543,7 +544,7 @@ function AudioPlayer({ url, isOutgoing }: { url: string | null; isOutgoing: bool
           disabled={transcript.status === "loading"}
           onClick={handleTranscribe}
           className={cn(
-            "ml-[25px] flex items-center gap-1 self-start rounded-full px-2 py-0.5 transition-colors",
+            "ml-6 flex items-center gap-1 self-start rounded-full px-2 py-0.5 transition-colors",
             btnBase,
             transcript.status === "loading" && "cursor-wait",
           )}
@@ -610,20 +611,7 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
 
   // ── Imagem / sticker ───────────────────────────────────────────
   if (kind === "image" && url) {
-    return (
-      <div className="flex flex-col gap-1.5">
-        <a href={url} target="_blank" rel="noopener noreferrer" className="group block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={url}
-            alt={caption || "Imagem recebida"}
-            className="max-h-[320px] w-auto max-w-full rounded-[var(--radius-md)] object-cover transition-opacity group-hover:opacity-[0.97]"
-            loading="lazy"
-          />
-        </a>
-        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
-      </div>
-    )
+    return <ImageMedia url={url} caption={caption} isOutgoing={isOutgoing} />
   }
 
   // ── Vídeo ──────────────────────────────────────────────────────
@@ -652,12 +640,12 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
         download
         className={cn(
           "flex min-w-[200px] max-w-[280px] items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 transition-colors",
-          isOutgoing ? "bg-white/15 hover:bg-white/25" : "bg-[var(--glass-bg-strong)] hover:bg-[var(--glass-bg-overlay)]",
+          isOutgoing ? "bg-[var(--glass-bg-subtle)] hover:bg-[var(--glass-bg)]" : "bg-[var(--glass-bg-strong)] hover:bg-[var(--glass-bg-overlay)]",
         )}
       >
         <div className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)]",
-          isOutgoing ? "bg-white/20" : "bg-[var(--brand-primary)]/10",
+          isOutgoing ? "bg-[var(--glass-bg-subtle)]" : "bg-[var(--brand-primary)]/10",
         )}>
           <IconFile size={18} className={isOutgoing ? "text-white" : "text-[var(--brand-primary)]"} />
         </div>
@@ -699,6 +687,44 @@ function MessageContent({ message, isOutgoing }: { message: Message; isOutgoing:
         className={cn("ml-1 inline-block align-baseline", isOutgoing ? "w-[54px]" : "w-[36px]")}
       />
     </span>
+  )
+}
+
+/**
+ * Renderiza imagem do chat com clique-para-abrir-lightbox (em vez de abrir
+ * em nova aba do navegador — tira o operador do CRM).
+ */
+function ImageMedia({
+  url,
+  caption,
+  isOutgoing,
+}: {
+  url: string
+  caption: string
+  isOutgoing: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <div className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="group block cursor-zoom-in overflow-hidden rounded-[var(--radius-md)] text-left"
+          aria-label="Ampliar imagem"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt={caption || "Imagem recebida"}
+            className="max-h-[320px] w-auto max-w-full rounded-[var(--radius-md)] object-cover transition-opacity group-hover:opacity-[0.97]"
+            loading="lazy"
+          />
+        </button>
+        {caption && <CaptionText caption={caption} isOutgoing={isOutgoing} />}
+      </div>
+      <ImageLightbox src={url} alt={caption} open={open} onOpenChange={setOpen} />
+    </>
   )
 }
 
@@ -763,7 +789,8 @@ export function MessageBubble({
     )
   }
 
-  // Nota interna: barra horizontal full-width com gradiente âmbar.
+  // Nota interna: card neutro (cinza claro) com acento indigo no rótulo
+  // "NOTA" — modelo alinhado ao screenshot (antes era gradiente âmbar).
   // Layout: [🔒 NOTA] [texto flex-1] [ações hover] [agente] [hora]
   if (isNote) {
     const hasNoteActions = !!(onPinNote || onAddToLog)
@@ -772,16 +799,16 @@ export function MessageBubble({
         className={cn(
           "group relative flex w-full items-center gap-2.5 rounded-[var(--radius-lg)] border px-3.5 py-2 text-sm leading-[1.45] transition-colors",
           isPinned
-            ? "border-warning/60 bg-[linear-gradient(135deg,rgba(251,191,36,0.14)_0%,rgba(245,158,11,0.10)_100%)]"
-            : "border-warning/30 bg-[linear-gradient(135deg,rgba(251,191,36,0.08)_0%,rgba(245,158,11,0.06)_100%)]",
+            ? "border-[color-mix(in_srgb,var(--brand-primary)_35%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_8%,white)]"
+            : "border-[color-mix(in_srgb,var(--text-muted)_18%,transparent)] bg-[color-mix(in_srgb,var(--text-muted)_7%,white)]",
           className,
         )}
       >
         {/* Indicador de nota fixada */}
         {isPinned && (
-          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-warning/15 px-1.5 py-0.5">
-            <IconPinFilled size={9} className="text-warning" />
-            <span className="font-display text-[8px] font-bold uppercase tracking-wider text-warning">
+          <span className="absolute -top-1.5 right-8 flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_15%,white)] px-1.5 py-0.5">
+            <IconPinFilled size={9} className="text-[var(--brand-primary)]" />
+            <span className="font-display text-[8px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
               fixada
             </span>
           </span>
@@ -789,14 +816,14 @@ export function MessageBubble({
 
         {/* Ícone + badge "NOTA" */}
         <span className="flex shrink-0 items-center gap-1.5">
-          <IconLock size={13} className="text-warning" />
-          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-warning">
+          <IconLock size={13} className="text-[var(--brand-primary)]" />
+          <span className="font-display text-[10px] font-bold uppercase tracking-widest text-[var(--brand-primary)]">
             Nota
           </span>
         </span>
 
         {/* Separador */}
-        <span className="h-3.5 w-px shrink-0 bg-warning/30" />
+        <span className="h-3.5 w-px shrink-0 bg-[color-mix(in_srgb,var(--text-muted)_25%,transparent)]" />
 
         {/* Conteúdo da mensagem */}
         <span className="min-w-0 flex-1 text-[var(--text-primary)]">
@@ -814,7 +841,7 @@ export function MessageBubble({
                     onClick={() =>
                       isPinned ? onPinNote(null) : onPinNote(message.id)
                     }
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-warning/60 transition-colors hover:bg-warning/15 hover:text-warning"
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] hover:text-[var(--brand-primary)]"
                     aria-label={isPinned ? "Desafixar nota" : "Fixar nota"}
                   >
                     {isPinned ? (
@@ -835,7 +862,7 @@ export function MessageBubble({
                   <button
                     type="button"
                     onClick={() => onAddToLog(message.content)}
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-warning/60 transition-colors hover:bg-warning/15 hover:text-warning"
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] hover:text-[var(--brand-primary)]"
                     aria-label="Adicionar ao log do negócio"
                   >
                     <IconListCheck size={13} />
@@ -852,11 +879,11 @@ export function MessageBubble({
         {/* Agente + hora */}
         <span className="ml-auto flex shrink-0 items-center gap-2">
           {senderName && (
-            <span className="font-display text-[11px] font-semibold text-warning/70">
+            <span className="font-display text-[11px] font-semibold text-[var(--text-secondary)]">
               {senderName}
             </span>
           )}
-          <span className="font-body text-[10.5px] text-warning/50">
+          <span className="font-body text-[10.5px] text-[var(--text-muted)]">
             {message.time}
           </span>
         </span>
@@ -880,7 +907,7 @@ export function MessageBubble({
               <div className={cn(
                 "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
                 isBot
-                  ? "bg-[#475569]"
+                  ? "bg-[var(--text-muted)]"
                   : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
               )}>
                 {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
@@ -895,19 +922,36 @@ export function MessageBubble({
         )}
         <div
           className={cn(
-            "relative min-w-0 rounded-[var(--radius-lg)] px-[14px] py-2 text-sm leading-[1.45]",
+            "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
-                ? "rounded-br-[4px] bg-[#1e293b] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
-                : "rounded-br-[4px] bg-[var(--brand-primary)] text-white shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
-              : "rounded-bl-[4px] text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
+                ? "rounded-br bg-[var(--brand-gradient-end)] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
+                : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
+              : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
-          style={!isOutgoing ? { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" } : undefined}
+          style={
+            isOutgoing
+              ? isBot
+                ? undefined
+                : {
+                    background: "var(--chat-bubble-sent-bg)",
+                    color: "var(--chat-bubble-sent-text)",
+                  }
+              : { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" }
+          }
         >
-          {/* Badge AUTOMAÇÃO */}
+          {/* Badge AUTOMAÇÃO — pill petróleo/slate escuro pra ficar
+              legível tanto sobre bolha outgoing (dark navy) quanto
+              sobre bolha inbound (clara). Exibe o nome da automação
+              (senderName) quando o backend envia; caso contrário cai
+              no rótulo genérico "Automação". */}
           {isBot && (
             <div className="mb-1.5 flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white/90">
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white"
+                style={{ background: "#334155" /* slate-700 / petróleo */ }}
+                title={senderName || "Automação"}
+              >
                 <IconRobot size={10} />
                 {senderName || "Automação"}
               </span>
@@ -918,8 +962,15 @@ export function MessageBubble({
           <span
             className={cn(
               "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
-              isOutgoing ? "text-white/80" : "text-[var(--text-muted)]",
+              isOutgoing ? "" : "text-[var(--text-muted)]",
             )}
+            style={
+              isOutgoing && !isBot
+                ? { color: "var(--chat-bubble-sent-time)" }
+                : isOutgoing
+                  ? { color: "rgba(255,255,255,0.8)" }
+                  : undefined
+            }
           >
             {message.time}
             {isOutgoing && message.status && (

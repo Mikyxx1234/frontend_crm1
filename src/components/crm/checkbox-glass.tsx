@@ -32,7 +32,7 @@ export function CheckboxGlass({
         onChange?.(!checked);
       }}
       className={cn(
-        "flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[5px] border transition-all",
+        "flex h-[18px] w-[18px] shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border transition-all",
         active
           ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-transparent hover:border-[var(--brand-primary)]",

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Bell, MessageSquare, Sparkles, Zap } from "lucide-react";
+import { IconArrowRight as ArrowRight, IconBell as Bell, IconMessage as MessageSquare, IconSparkles as Sparkles, IconBolt as Zap } from "@tabler/icons-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -95,7 +95,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 px-3 pb-3 backdrop-blur-sm md:items-center md:p-6"
+      className="fixed inset-0 z-(--z-above) flex items-end justify-center bg-black/40 px-3 pb-3 backdrop-blur-sm md:items-center md:p-6"
       role="presentation"
       onClick={dismiss}
       onKeyDown={(e) => {
@@ -108,7 +108,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
         aria-label={current.title}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-[var(--shadow-lg)] ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800",
+          "relative w-full max-w-md overflow-hidden rounded-3xl bg-[var(--color-bg-card)] shadow-[var(--shadow-lg)] ring-1 ring-[var(--color-border)] dark:bg-[var(--glass-bg-modal)] dark:ring-slate-800",
           "animate-in fade-in slide-in-from-bottom-6 duration-300",
         )}
       >
@@ -116,15 +116,15 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
           <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20 dark:bg-primary/20">
             <Icon className="size-7" strokeWidth={2.2} />
           </div>
-          <h2 className="font-display text-[20px] font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
+          <h2 className="font-display text-[20px] font-extrabold tracking-tight text-[var(--text-primary)] dark:text-slate-50">
             {current.title}
           </h2>
-          <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-ink-soft)] dark:text-slate-300">
+          <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-ink-soft)] dark:text-[var(--text-faint)]">
             {current.body}
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-[var(--color-bg-subtle)]/50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--glass-border-subtle)] bg-[var(--color-bg-subtle)]/50 px-5 py-4 dark:border-[var(--glass-border)] dark:bg-[var(--glass-bg-modal)]/40">
           <div className="flex items-center gap-1.5">
             {STEPS.map((_, i) => (
               <span
@@ -135,7 +135,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
                     ? "w-6 bg-primary"
                     : i < step
                       ? "w-1.5 bg-primary/50"
-                      : "w-1.5 bg-slate-300 dark:bg-slate-700",
+                      : "w-1.5 bg-[var(--glass-border-subtle)] dark:bg-slate-700",
                 )}
               />
             ))}
@@ -145,7 +145,7 @@ export function OnboardingTour({ open: openProp, onOpenChange }: OnboardingTourP
               <button
                 type="button"
                 onClick={dismiss}
-                className="text-[12px] font-semibold text-slate-500 transition-colors hover:text-foreground dark:text-[var(--color-ink-muted)] dark:hover:text-slate-200"
+                className="text-[12px] font-semibold text-[var(--text-muted)] transition-colors hover:text-foreground dark:text-[var(--color-ink-muted)] dark:hover:text-[var(--color-text-muted)]"
               >
                 Pular
               </button>

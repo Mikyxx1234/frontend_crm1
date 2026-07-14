@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Share, X } from "lucide-react";
+import { IconDownload as Download, IconShare as Share, IconX as X } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { usePwaInstall } from "@/hooks/use-pwa-install";
@@ -68,7 +68,7 @@ export function InstallPrompt() {
     <div
       className={cn(
         "fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+5rem)] z-40",
-        "rounded-[20px] border border-border bg-white p-4 shadow-[var(--shadow-lg)]",
+        "rounded-2xl border border-border bg-[var(--color-bg-card)] p-4 shadow-[var(--shadow-lg)]",
         "md:hidden",
       )}
       role="dialog"
@@ -78,7 +78,7 @@ export function InstallPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Dispensar"
-        className="absolute right-2 top-2 rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
+        className="absolute right-2 top-2 rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--color-ink-soft)]"
       >
         <X className="size-4" />
       </button>
@@ -88,10 +88,10 @@ export function InstallPrompt() {
           <span className="text-lg font-bold">E</span>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[14px] font-extrabold tracking-tight text-slate-900">
+          <p className="font-display text-[14px] font-extrabold tracking-tight text-[var(--text-primary)]">
             Instale o EduIT
           </p>
-          <p className="mt-0.5 text-[12px] font-medium leading-tight text-slate-500">
+          <p className="mt-0.5 text-[12px] font-medium leading-tight text-[var(--text-muted)]">
             {isIOS
               ? "Toque em Compartilhar e depois em \"Adicionar a Tela de Início\" para abrir como app."
               : "Tenha acesso rápido às conversas direto da tela inicial, mesmo offline."}
@@ -104,7 +104,7 @@ export function InstallPrompt() {
               className={cn(
                 "mt-3 inline-flex h-9 items-center gap-1.5 rounded-full px-4",
                 "bg-primary text-[12px] font-bold text-white",
-                "shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6] active:scale-[0.97]",
+                "shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--brand-primary-hover)] active:scale-[0.97]",
               )}
             >
               <Download className="size-3.5" strokeWidth={2.5} />
@@ -113,7 +113,7 @@ export function InstallPrompt() {
           )}
 
           {isIOS && (
-            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-[var(--color-ink-soft)]">
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--glass-bg-base)] px-3 py-1.5 text-[11px] font-bold text-[var(--color-ink-soft)]">
               <Share className="size-3.5" strokeWidth={2.5} />
               Use o botão Compartilhar
             </div>

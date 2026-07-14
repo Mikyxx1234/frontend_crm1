@@ -5,10 +5,10 @@ import { useInboxMetrics } from "@/hooks/use-inbox-metrics";
 import { cn } from "@/lib/utils";
 
 const CHANNEL_META: Record<string, { label: string; dot: string; bar: string }> = {
-  WHATSAPP: { label: "WhatsApp", dot: "bg-emerald-500", bar: "bg-emerald-500" },
+  WHATSAPP: { label: "WhatsApp", dot: "bg-[var(--color-success)]", bar: "bg-[var(--color-success)]" },
   INSTAGRAM: { label: "Instagram", dot: "bg-pink-500", bar: "bg-pink-500" },
-  FACEBOOK: { label: "Facebook", dot: "bg-blue-500", bar: "bg-blue-500" },
-  EMAIL: { label: "E-mail", dot: "bg-amber-500", bar: "bg-amber-500" },
+  FACEBOOK: { label: "Facebook", dot: "bg-[var(--color-info)]", bar: "bg-[var(--color-info)]" },
+  EMAIL: { label: "E-mail", dot: "bg-[var(--color-warning)]", bar: "bg-[var(--color-warning)]" },
   DEFAULT: { label: "Outros", dot: "bg-muted-foreground", bar: "bg-muted-foreground" },
 };
 

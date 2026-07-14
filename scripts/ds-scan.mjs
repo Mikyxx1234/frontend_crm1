@@ -36,15 +36,18 @@ const SKIP_DIRS = new Set([
   "coverage",
   "generated",
 ]);
-// Caminhos relativos a `src/` que são ignorados (legado v1 + mocks de preview).
+// Caminhos relativos a `src/` que são ignorados (legado v1 + mocks de preview + showcase DS).
 const SKIP_REL = [
   join("features", "legacy-v1"),
   join("lib", "preview-mocks.ts"),
+  // showcase/ é rota de preview do DS (similar a Storybook) — não é código de produção.
+  join("app", "(app)", "showcase"),
 ];
 
 const EXTS = [".tsx", ".ts"];
 
 const PATTERNS = {
+  // ── Cores ────────────────────────────────────────────────────────────────
   // Cores nativas Tailwind que NÃO devem aparecer em código v2.
   // Lista canônica baseada em tailwindcss/colors (sem white/black/transparent/current/inherit).
   tailwindNativePalette: (() => {
@@ -72,6 +75,30 @@ const PATTERNS = {
   bgWhiteAlpha: /\bbg-white\/\d+\b/g,
   borderWhiteAlpha: /\bborder-white\/\d+\b/g,
   rawRoundedPx: /\brounded(?:-[trblxy]{1,2})?-\[\d+(?:\.\d+)?px\]/g,
+
+  // ── DS-001: Ícones — lucide-react não deve crescer fora do legado ─────────
+  // Conta imports de lucide-react em arquivos não-legados (legado é excluído via
+  // SKIP_REL). O ratchet garante que a contagem só diminui.
+  lucideImports: /from\s+['"]lucide-react['"]/g,
+
+  // ── DS-009: confirm() nativo — deve ser zero no codebase ─────────────────
+  // Rastreia somente `window.confirm(` — a chamada nativa inequívoca.
+  // Bare `confirm(` não é rastreado aqui porque o hook useConfirm() devolve
+  // uma função local de mesmo nome (falso-positivo). O ESLint no-restricted-globals
+  // cobre o caso global com entendimento de escopo.
+  windowConfirm: /\bwindow\.confirm\s*\(/g,
+
+  // ── DS-008: z-index arbitrário — deve usar tokens --z-* ──────────────────
+  // Captura `z-[<número>]` em className (Tailwind JIT). Tokens aceitos são
+  // z-(--z-overlay), z-(--z-popover), z-(--z-radix) — esses NÃO batem neste
+  // padrão pois usam --z-* em vez de número literal.
+  arbitraryZIndex: /\bz-\[\d+\]/g,
+
+  // ── DS-004: valores px arbitrários em espaçamento/tamanho ────────────────
+  // Captura utilitários de layout com px literais: p-[16px], gap-[8px], etc.
+  // Não inclui rounded (já coberto por rawRoundedPx) nem text (font-size teria
+  // padrão próprio). Heurística regex; consulte DECISOES-PENDENTES para exceções.
+  arbitrarySpacingPx: /\b(?:p|px|py|pl|pr|pt|pb|m|mx|my|ml|mr|mt|mb|gap|gap-x|gap-y|space-x|space-y)-\[\d+(?:\.\d+)?px\]/g,
 };
 
 async function* walk(dir) {

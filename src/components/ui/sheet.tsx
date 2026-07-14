@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { cva, type VariantProps } from "class-variance-authority";
-import { X } from "lucide-react";
+import { IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconAlertTriangle, IconX } from "@tabler/icons-react";
+import { IconAlertTriangle, IconBrandWhatsapp, IconX } from "@tabler/icons-react";
 
 import {
   listAgentEnabledTemplates,
@@ -75,6 +75,38 @@ function usePriorSend(
   }, [data?.messages, templateName]);
 }
 
+/**
+ * Metadados visuais da categoria WABA (MARKETING / UTILITY / AUTHENTICATION).
+ * A categoria define regras de cobrança/janela da Meta, então é informação
+ * relevante pro operador na hora de escolher o template.
+ */
+function categoryMeta(category?: string | null): { label: string; color: string } | null {
+  const c = (category ?? "").toUpperCase();
+  if (c === "MARKETING") return { label: "Marketing", color: "#a855f7" };
+  if (c === "UTILITY") return { label: "Utility", color: "#0ea5e9" };
+  if (c === "AUTHENTICATION") return { label: "Autenticação", color: "#f59e0b" };
+  return null;
+}
+
+/** Chip da categoria — cor derivada via color-mix pra manter o padrão glass. */
+function CategoryChip({ category }: { category?: string | null }) {
+  const meta = categoryMeta(category);
+  if (!meta) return null;
+  return (
+    <span
+      className="inline-flex shrink-0 items-center rounded-full border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wide"
+      style={{
+        background: `color-mix(in srgb, ${meta.color} 14%, white)`,
+        color: `color-mix(in srgb, ${meta.color} 78%, black)`,
+        borderColor: `color-mix(in srgb, ${meta.color} 38%, transparent)`,
+      }}
+      title={`Categoria WhatsApp: ${meta.label}`}
+    >
+      {meta.label}
+    </span>
+  );
+}
+
 /** Formata data ISO para "dd/MM HH:mm" (horário local). */
 function fmtDate(iso: string): string {
   try {
@@ -116,9 +148,9 @@ function TemplateItemWithConfirm({
 
   if (confirming && prior) {
     return (
-      <div className="rounded-[var(--radius-sm)] border border-amber-400/40 bg-amber-400/8 px-2.5 py-2.5">
+      <div className="rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--color-warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_8%,transparent)] px-2.5 py-2.5">
         <div className="mb-2 flex items-start gap-1.5">
-          <IconAlertTriangle size={14} className="mt-px shrink-0 text-amber-500" />
+          <IconAlertTriangle size={14} className="mt-px shrink-0 text-[var(--color-warn)]" />
           <p className="text-[11.5px] leading-snug text-[var(--text-primary)]">
             <span className="font-semibold">&ldquo;{tpl.name}&rdquo;</span> já
             foi enviado por{" "}
@@ -145,7 +177,7 @@ function TemplateItemWithConfirm({
               setConfirming(false);
               onSend();
             }}
-            className="rounded-full bg-amber-500 px-3 py-1 text-[11.5px] font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+            className="rounded-full bg-[var(--color-warning)] px-3 py-1 text-[11.5px] font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
           >
             Reenviar
           </button>
@@ -176,25 +208,31 @@ function TemplateItemWithConfirm({
           onSend();
         }
       }}
-      className="block w-full rounded-[var(--radius-sm)] px-2 py-2 text-left text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
+      className="block w-full rounded-[var(--radius-md)] border border-transparent px-2.5 py-2 text-left transition-colors hover:border-[var(--glass-border-subtle)] hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
     >
       <div className="flex items-center gap-1.5">
-        <span className="font-display text-[12px] font-bold text-[var(--text-primary)]">
+        <span className="min-w-0 flex-1 truncate font-display text-[12.5px] font-bold text-[var(--text-primary)]">
           {tpl.name}
         </span>
+        <CategoryChip category={tpl.category} />
+        {tpl.language && (
+          <span className="shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            {tpl.language}
+          </span>
+        )}
         {prior && (
           <TooltipGlass
             label={`Enviado por ${prior.author} em ${fmtDate(prior.sentAt)}${prior.repliedAt ? " · Respondido" : ""}`}
             side="top"
           >
-            <span className="shrink-0 rounded-full bg-amber-400/20 px-1.5 py-px text-[9.5px] font-semibold text-amber-600">
+            <span className="shrink-0 rounded-full bg-[color-mix(in_srgb,var(--color-warning)_20%,transparent)] px-1.5 py-px text-[9.5px] font-semibold text-[var(--color-warning)]">
               {prior.repliedAt ? "respondido" : "enviado"}
             </span>
           </TooltipGlass>
         )}
       </div>
       {tpl.body ? (
-        <div className="mt-0.5 line-clamp-2 text-[11.5px] text-[var(--text-muted)]">
+        <div className="mt-1 line-clamp-2 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
           {tpl.body}
         </div>
       ) : null}
@@ -286,7 +324,7 @@ export function InternalTemplatePickerList({
           <button
             type="button"
             onClick={onClose}
-            className="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
             Fechar
           </button>
@@ -294,11 +332,11 @@ export function InternalTemplatePickerList({
       </div>
 
       {isLoading ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Carregando...
         </div>
       ) : !data?.length ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Nenhum modelo interno cadastrado.
         </div>
       ) : (
@@ -325,7 +363,7 @@ export function InternalTemplatePickerList({
                   }}
                   className="block w-full rounded-[var(--radius-sm)] px-2 py-2 text-left hover:bg-[var(--glass-bg-strong)] disabled:opacity-60"
                 >
-                  <div className="text-[12px] font-semibold text-[var(--text-primary)]">
+                  <div className="text-xs font-semibold text-[var(--text-primary)]">
                     {tpl.name}
                   </div>
                   <div className="mt-0.5 line-clamp-2 text-[11.5px] text-[var(--text-muted)]">
@@ -405,35 +443,48 @@ export function TemplatePickerList({
   return (
     <div
       style={{ backgroundColor: "var(--dropdown-solid-bg)" }}
-      className="w-80 max-h-96 overflow-y-auto rounded-[var(--radius-lg)] border border-border p-2 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
+      className="flex max-h-[70vh] w-[400px] max-w-[92vw] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
     >
-      <div className="mb-2 flex items-center justify-between px-1">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-          Templates WhatsApp
+      {/* Header padronizado: ícone WhatsApp + título + contador + fechar */}
+      <div className="flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] px-4 py-3">
+        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,#25d366_16%,white)] text-[#128c4a]">
+          <IconBrandWhatsapp size={17} stroke={2} />
         </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[13px] font-bold text-[var(--text-primary)]">
+            Templates do WhatsApp
+          </p>
+          <p className="text-[11px] text-[var(--text-muted)]">
+            {data?.length
+              ? `${data.length} ${data.length === 1 ? "modelo aprovado" : "modelos aprovados"}`
+              : "Modelos aprovados pela Meta"}
+          </p>
+        </div>
         {onClose ? (
           <button
             type="button"
             onClick={onClose}
-            className="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            aria-label="Fechar"
+            className="grid size-7 shrink-0 place-items-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
           >
-            Fechar
+            <IconX size={15} />
           </button>
         ) : null}
       </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
       {isLoading ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Carregando...
         </div>
       ) : isError ? (
-        <div className="px-2 py-3 text-center text-[12px] text-rose-600 dark:text-rose-400">
+        <div className="px-2 py-3 text-center text-xs text-[var(--color-danger)]">
           Falha ao carregar templates
           <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
             {(error as Error)?.message ?? "Tente novamente."}
           </div>
         </div>
       ) : !data?.length ? (
-        <div className="px-2 py-3 text-center text-[12px] text-[var(--text-muted)]">
+        <div className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
           Nenhum template habilitado para este agente.
           <div className="mt-1 text-[11px] text-[var(--text-muted)]/70">
             Habilite em Configurações &gt; Templates do WhatsApp.
@@ -460,6 +511,7 @@ export function TemplatePickerList({
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

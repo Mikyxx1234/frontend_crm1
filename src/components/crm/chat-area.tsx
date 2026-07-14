@@ -7,6 +7,7 @@ import { TooltipGlass } from "@/components/crm/tooltip-glass"
 import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
 import { BadgeGlass } from "./badge-glass"
+import { avatarGradients, channelBadge } from "./conversation-card"
 import { MessageBubble, DaySeparator, ConnectionDivider, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
@@ -26,11 +27,11 @@ import {
   IconClock,
 } from "@tabler/icons-react"
 
-type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
+export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
 
 const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle },
-  { id: "atividades", label: "Atividades", icon: IconChecklist },
+  { id: "atividades", label: "Tarefas", icon: IconChecklist },
   { id: "notas", label: "Notas", icon: IconNote },
   { id: "timeline", label: "Timeline", icon: IconClock },
   // IB8: nova aba "Chamadas" no topo do inbox, espelhando a aba
@@ -50,10 +51,19 @@ interface ChatContact {
   badge?: "enterprise" | "lead" | "success"
   badgeLabel?: string
   initials?: string
+  /** Chave do gradiente (sunset/forest/ocean/dusk/blue/teal/orange/purple/pink/coral)
+      OU string CSS raw (compat com chamadores legados). Quando bater
+      com uma chave do `avatarGradients`, renderiza o mesmo gradiente
+      da conversation-card — mantendo identidade visual entre a lista
+      de conversas e o header do chat. */
   avatarColor?: string
   status?: string
   phone?: string
   contactId?: string
+  /** Canal (whatsapp/instagram/facebook/email/…) — quando presente,
+      renderiza o badge do canal no canto inferior direito do avatar,
+      idêntico ao card da lista de conversas. */
+  channel?: string | null
 }
 
 interface ChatAreaProps {
@@ -113,6 +123,8 @@ interface ChatAreaProps {
   /** IB8: conteudo da aba "Chamadas" (logs de telefonia). Quando ausente,
    *  a aba "Chamadas" nao aparece. */
   callsSlot?: React.ReactNode
+  /** Contagens opcionais exibidas como badge em cada aba. */
+  tabCounts?: Partial<Record<ChatTabId, number>>
 }
 
 export function ChatArea({
@@ -142,6 +154,7 @@ export function ChatArea({
   activitiesSlot,
   timelineSlot,
   callsSlot,
+  tabCounts,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
@@ -182,65 +195,80 @@ export function ChatArea({
         className,
       )}
     >
-      {/* HEADER — minimalista (nome + abas inline + acoes) */}
-      <header className="flex items-center gap-3.5 border-b border-[var(--glass-border-subtle)] px-6 py-3.5">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2.5">
-            <h2 className="font-display text-[18px] font-bold text-[var(--text-primary)]">
-              {contact.name}
-            </h2>
-            {contact.badge && (
-              <BadgeGlass variant={contact.badge}>
-                {contact.badgeLabel ??
-                  (contact.badge === "enterprise"
-                    ? "ENTERPRISE"
-                    : contact.badge === "lead"
-                      ? "LEAD"
-                      : "CLIENTE")}
-              </BadgeGlass>
+      <header className="shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)]">
+        <div className="flex items-center gap-3 px-4 py-2">
+          <TooltipGlass label={contact.name} side="bottom">
+            {(() => {
+              const bg =
+                (contact.avatarColor && avatarGradients[contact.avatarColor]) ||
+                contact.avatarColor ||
+                "var(--brand-primary)"
+              const ch =
+                (contact.channel ?? connection?.type ?? null) as string | null
+              const badge = channelBadge(ch)
+              return (
+                <span
+                  className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-[12px] font-bold text-white shadow-[0_2px_8px_rgba(15,20,40,0.18)]"
+                  style={{ background: bg }}
+                  aria-label={contact.name}
+                >
+                  {contact.initials || contact.name.slice(0, 2).toUpperCase()}
+                  {badge && (
+                    <span
+                      title={badge.title}
+                      aria-label={badge.title}
+                      className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full ring-2 ring-[var(--glass-bg-overlay)]"
+                      style={{ background: badge.bg, color: badge.fg }}
+                    >
+                      <badge.Icon size={9} stroke={2.5} />
+                    </span>
+                  )}
+                </span>
+              )
+            })()}
+          </TooltipGlass>
+
+          {contact.badge && (
+            <BadgeGlass variant={contact.badge}>
+              {contact.badgeLabel ??
+                (contact.badge === "enterprise"
+                  ? "ENTERPRISE"
+                  : contact.badge === "lead"
+                    ? "LEAD"
+                    : "CLIENTE")}
+            </BadgeGlass>
+          )}
+
+          {tabsEnabled && (
+            <ChatTabsBar
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              hiddenTabs={{
+                notas: !notesSlot,
+                atividades: !activitiesSlot,
+                timeline: !timelineSlot,
+                chamadas: !callsSlot,
+              }}
+            />
+          )}
+
+          <div className="ml-auto flex items-center gap-1">
+            {headerActionsSlot ?? (
+              <>
+                {contact.phone && (
+                  <IconBtn title={`Ligar para ${contact.phone}`} onClick={onPhoneClick}>
+                    <IconPhone size={17} />
+                  </IconBtn>
+                )}
+                <IconBtn title="Vídeo chamada" onClick={onVideoClick}>
+                  <IconVideo size={17} />
+                </IconBtn>
+                <IconBtn title="Mais opções" onClick={onMoreClick}>
+                  <IconDotsVertical size={17} />
+                </IconBtn>
+              </>
             )}
           </div>
-          {/* Chip de canal removido daqui: a informação já fica visível no
-              ContactAside (row "Canal" em Detalhes de Contato) tanto no inbox
-              quanto no deal detail (ver DD3 em `deal-detail-panel.tsx`). A
-              duplicação acima do chat poluía o header e foi removida a pedido
-              do operador. A prop `connection` segue sendo recebida e ignorada
-              aqui para manter compat com chamadores existentes. */}
-        </div>
-
-        {tabsEnabled && (
-          <ChatTabsBar
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            hiddenTabs={{
-              notas: !notesSlot,
-              atividades: !activitiesSlot,
-              timeline: !timelineSlot,
-              chamadas: !callsSlot,
-            }}
-          />
-        )}
-
-        <div className="ml-auto flex items-center gap-1.5">
-          {/* Acao de ligar entra via headerActionsSlot (DealCallButton do
-              softphone, integrado com useDealDial). Nao renderizamos chip
-              com o numero aqui — o numero fica no ContactAside pra manter
-              o header enxuto. */}
-          {headerActionsSlot ?? (
-            <>
-              {contact.phone && (
-                <IconBtn title={`Ligar para ${contact.phone}`} onClick={onPhoneClick}>
-                  <IconPhone size={18} />
-                </IconBtn>
-              )}
-              <IconBtn title="Vídeo chamada" onClick={onVideoClick}>
-                <IconVideo size={18} />
-              </IconBtn>
-              <IconBtn title="Mais opções" onClick={onMoreClick}>
-                <IconDotsVertical size={18} />
-              </IconBtn>
-            </>
-          )}
         </div>
       </header>
 
@@ -316,7 +344,7 @@ export function ChatArea({
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-[18px] pr-2 shadow-[var(--glass-shadow-sm)]"
+          className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-4.5 pr-2 shadow-[var(--glass-shadow-sm)]"
         >
           <TooltipGlass label="Anexar" side="top">
             <button
@@ -373,8 +401,7 @@ export function ChatArea({
 }
 
 /**
- * Barra de abas do card de conversa (Conversa / Atividades / Notas /
- * Timeline). Mesmo visual do DealDetailPanel para consistencia.
+ * Barra de abas do card de conversa (Conversa / Atividades / Notas / Timeline).
  */
 function ChatTabsBar({
   activeTab,
@@ -383,7 +410,6 @@ function ChatTabsBar({
 }: {
   activeTab: ChatTabId
   onChange: (id: ChatTabId) => void
-  /** Map de tabs ocultos. "conversa" e' sempre visivel. */
   hiddenTabs?: Partial<Record<ChatTabId, boolean>>
 }) {
   return (
@@ -397,13 +423,13 @@ function ChatTabsBar({
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-[12px] font-bold transition-all",
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all",
               isActive
                 ? "bg-[var(--brand-primary)] text-white shadow-[var(--glass-shadow-sm)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
             )}
           >
-            <Icon size={14} />
+            <Icon size={13} strokeWidth={isActive ? 2.4 : 2} />
             {tab.label}
           </button>
         )

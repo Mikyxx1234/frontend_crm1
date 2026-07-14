@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Search } from "lucide-react";
+import { IconSearch as Search } from "@tabler/icons-react";
 
+import { GlassCard } from "@/components/crm/glass-card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -172,18 +173,35 @@ export function HubToolbar({
   );
 }
 
+/**
+ * Tom do chip quando ATIVO: cada canal preenche a pill com sua própria cor
+ * sólida (em vez de todos ficarem azul-marca), pra identificar o canal de
+ * cara na barra de filtros — igual ao badge de tipo na tabela abaixo.
+ */
+type HubChipTone = "brand" | "neutral" | "success" | "info";
+
+const CHIP_ACTIVE_TONE: Record<HubChipTone, string> = {
+  brand: "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-[0_4px_14px_rgba(91,111,245,0.30)]",
+  neutral: "border-[var(--text-primary)] bg-[var(--text-primary)] text-white shadow-[var(--glass-shadow-sm)]",
+  success: "border-[var(--color-success)] bg-[var(--color-success)] text-white shadow-[0_4px_14px_rgba(16,185,129,0.30)]",
+  info: "border-[var(--color-info)] bg-[var(--color-info)] text-white shadow-[0_4px_14px_rgba(59,130,246,0.30)]",
+};
+
 export function HubChip({
   active,
   onClick,
   children,
   dot,
   count,
+  tone = "brand",
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
   dot?: string;
   count?: number;
+  /** Cor do preenchimento quando ativo. Default `brand` (comportamento antigo). */
+  tone?: HubChipTone;
 }) {
   return (
     <button
@@ -192,11 +210,16 @@ export function HubChip({
       className={cn(
         "inline-flex items-center gap-2 rounded-[var(--radius-full)] border px-3.5 py-2 text-[12.5px] font-bold transition-colors",
         active
-          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+          ? CHIP_ACTIVE_TONE[tone]
           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:border-[var(--input-border-focus)] hover:text-[var(--brand-primary)]",
       )}
     >
-      {dot ? <span className="size-2 rounded-full" style={{ background: dot }} /> : null}
+      {dot ? (
+        <span
+          className={cn("size-2 rounded-full", active && "bg-current opacity-80")}
+          style={active ? undefined : { background: dot }}
+        />
+      ) : null}
       {children}
       {typeof count === "number" ? (
         <span
@@ -215,14 +238,9 @@ export function HubChip({
 /** Painel glass (lista/tabela) — base das abas. */
 export function HubPanel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md",
-        className,
-      )}
-    >
+    <GlassCard variant="panel" className={cn("overflow-hidden", className)}>
       {children}
-    </div>
+    </GlassCard>
   );
 }
 
@@ -241,7 +259,7 @@ export function HubSubHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-wrap items-start gap-3.5 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-5 py-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+    <GlassCard variant="base" className="flex flex-wrap items-start gap-3.5 px-5 py-4 shadow-[var(--glass-shadow-sm)]">
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)]",
@@ -259,6 +277,6 @@ export function HubSubHeader({
         ) : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2.5">{actions}</div> : null}
-    </section>
+    </GlassCard>
   );
 }

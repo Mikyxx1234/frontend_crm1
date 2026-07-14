@@ -34,7 +34,7 @@ export function LossesWidget() {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Total Perdido
           </p>
-          <p className="text-2xl font-extrabold tabular-nums text-red-600">
+          <p className="text-2xl font-extrabold tabular-nums text-[var(--color-danger-text)]">
             {totalLost}
           </p>
         </div>
@@ -42,7 +42,7 @@ export function LossesWidget() {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Valor Perdido
           </p>
-          <p className="text-lg font-bold tabular-nums text-red-500">
+          <p className="text-lg font-bold tabular-nums text-[var(--color-danger)]">
             {formatCurrency(totalValue)}
           </p>
         </div>
@@ -65,7 +65,7 @@ export function LossesWidget() {
                   </span>
                 </div>
               </div>
-              <div className="h-4 w-full overflow-hidden rounded bg-red-50">
+              <div className="h-4 w-full overflow-hidden rounded bg-[var(--color-danger-bg)]">
                 <div
                   className="h-full rounded transition-all duration-500"
                   style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: color }}

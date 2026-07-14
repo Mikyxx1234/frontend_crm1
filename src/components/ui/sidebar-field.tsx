@@ -1,18 +1,5 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  Activity,
-  Building2,
-  Calendar,
-  Clock,
-  Heart,
-  Mail,
-  MapPin,
-  Monitor,
-  Phone,
-  ShoppingBag,
-  Tag,
-  User,
-} from "lucide-react";
+import type { Icon as LucideIcon } from "@tabler/icons-react";
+import { IconActivity as Activity, IconBuilding as Building2, IconCalendar as Calendar, IconClock as Clock, IconHeart as Heart, IconMail as Mail, IconMapPin as MapPin, IconDeviceDesktop as Monitor, IconPhone as Phone, IconShoppingBag as ShoppingBag, IconTag as Tag, IconUser as User } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -63,7 +50,7 @@ export function SidebarField({
   return (
     <div className={cn(row, className)}>
       <div className="flex min-w-0 shrink-0 items-center gap-1.5">
-        {Icon ? <Icon className="size-3 shrink-0 text-slate-400" aria-hidden /> : null}
+        {Icon ? <Icon className="size-3 shrink-0 text-[var(--text-muted)]" aria-hidden /> : null}
         <span className={dt.text.label}>{label}</span>
       </div>
       {children ? (
@@ -79,7 +66,7 @@ export function SidebarField({
       ) : editable ? (
         <span className={cn(dt.text.value, "cursor-pointer")}>
           {value || "—"}{" "}
-          <span className="text-[11px] text-slate-300">▾</span>
+          <span className="text-[11px] text-[var(--text-faint)]">▾</span>
         </span>
       ) : (
         <span className={cn(dt.text.value, !value && dt.text.muted, "truncate")}>{value || "—"}</span>

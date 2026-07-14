@@ -11,19 +11,11 @@
 import * as React from "react";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
 import { createPortal } from "react-dom";
-import {
-  Copy,
-  Star,
-  StarOff,
-  Trash2,
-  Users as UsersIcon,
-  Lock,
-  Loader as Loader2,
-  Bookmark,
-} from "lucide-react";
+import { IconCopy as Copy, IconStar as Star, IconStarOff as StarOff, IconTrash as Trash2, IconUsers as UsersIcon, IconLock as Lock, IconLoader as Loader2, IconBookmark as Bookmark } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 import type { SavedFilter } from "./types";
 
@@ -57,6 +49,7 @@ export function SavedFiltersMenu({
     null,
   );
   const [isDark, setIsDark] = React.useState(false);
+  const { confirm: confirmDelete, dialog: confirmDialog } = useConfirm();
 
   React.useEffect(() => {
     if (typeof document === "undefined") return;
@@ -89,6 +82,8 @@ export function SavedFiltersMenu({
       const target = e.target as Node;
       if (ref.current?.contains(target)) return;
       if (anchorRef?.current?.contains(target)) return;
+      // Cliques dentro do confirm dialog (portal Radix no body) não fecham o menu
+      if (target instanceof Element && target.closest('[role="alertdialog"]')) return;
       onOpenChange(false);
     }
     function onEsc(e: KeyboardEvent) {
@@ -104,7 +99,7 @@ export function SavedFiltersMenu({
 
   if (!open || !pos || typeof document === "undefined") return null;
 
-  return createPortal(
+  const menu = createPortal(
     // Portal no <body> + posição fixed + cor literal inline: blindagem
     // total contra stacking/backdrop-filter de ancestrais.
     <div
@@ -114,11 +109,11 @@ export function SavedFiltersMenu({
         top: pos.top,
         right: pos.right,
         width: 288,
-        zIndex: 9999,
+        zIndex: "var(--z-popover)",
         backgroundColor: isDark ? "#1a2238" : "#ffffff",
         isolation: "isolate",
       }}
-      className="rounded-[18px] border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-slate-700"
+      className="rounded-2xl border border-[var(--glass-border)] shadow-[var(--glass-shadow-lg)] dark:border-[var(--glass-border)]"
     >
       <div className="flex items-center justify-between border-b border-[var(--glass-border-subtle)] px-3 py-2">
         <span className="font-display text-[12px] font-bold text-foreground">Filtros salvos</span>
@@ -147,12 +142,12 @@ export function SavedFiltersMenu({
                 className="flex-1 text-left"
               >
                 <div className="flex items-center gap-1.5">
-                  <Bookmark className="size-3 text-blue-500 dark:text-blue-400" />
+                  <Bookmark className="size-3 text-[var(--color-info)] dark:text-[var(--color-info)]" />
                   <span className="truncate text-[12px] font-semibold text-foreground">
                     {f.name}
                   </span>
                   {f.isDefault && (
-                    <Star className="size-3 fill-amber-400 text-amber-500" aria-label="Padrão" />
+                    <Star className="size-3 fill-amber-400 text-[var(--color-warn)]" aria-label="Padrão" />
                   )}
                 </div>
                 <div className="mt-0.5 flex items-center gap-2 text-[10px] text-[var(--color-ink-muted)]">
@@ -174,8 +169,8 @@ export function SavedFiltersMenu({
                     type="button"
                     onClick={() => onToggleDefault(f)}
                     className={cn(
-                      "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-amber-600 dark:hover:text-amber-400",
-                      f.isDefault && "text-amber-500",
+                      "rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-warn)] dark:hover:text-[var(--color-warning)]/80",
+                      f.isDefault && "text-[var(--color-warn)]",
                     )}
                   >
                     {f.isDefault ? <StarOff className="size-3" /> : <Star className="size-3" />}
@@ -194,10 +189,15 @@ export function SavedFiltersMenu({
                   <TooltipGlass label="Excluir" side="top">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (confirm(`Excluir filtro "${f.name}"?`)) onDelete(f);
+                      onClick={async () => {
+                        const ok = await confirmDelete({
+                          title: `Excluir filtro "${f.name}"?`,
+                          confirmLabel: "Excluir",
+                          destructive: true,
+                        });
+                        if (ok) onDelete(f);
                       }}
-                      className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-red-600 dark:hover:text-red-400"
+                      className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-danger-text)] dark:hover:text-[var(--color-danger)]"
                     >
                       <Trash2 className="size-3" />
                     </button>
@@ -210,6 +210,13 @@ export function SavedFiltersMenu({
       </div>
     </div>,
     document.body,
+  );
+
+  return (
+    <>
+      {menu}
+      {confirmDialog}
+    </>
   );
 }
 
@@ -245,7 +252,7 @@ export function SaveFilterDialog({
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/30 p-4 backdrop-blur-md">
-      <div className="w-full max-w-sm rounded-[22px] border border-[var(--glass-border)] bg-[var(--color-popover)] p-5 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
+      <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-[var(--glass-border)] bg-[var(--color-popover)] p-5 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl">
         <h2 className="font-display text-base font-bold text-foreground">Salvar filtro</h2>
         <p className="mt-0.5 text-[12px] text-[var(--color-ink-muted)]">
           Reutilize esse conjunto de critérios depois.

@@ -1,8 +1,12 @@
 {
-  "tailwindNativePalette": 1992,
-  "hexInClassName": 200,
-  "hexInStyle": 369,
-  "bgWhiteAlpha": 146,
-  "borderWhiteAlpha": 69,
-  "rawRoundedPx": 84
+  "tailwindNativePalette": 161,
+  "hexInClassName": 23,
+  "hexInStyle": 286,
+  "bgWhiteAlpha": 0,
+  "borderWhiteAlpha": 0,
+  "rawRoundedPx": 0,
+  "lucideImports": 0,
+  "windowConfirm": 0,
+  "arbitraryZIndex": 0,
+  "arbitrarySpacingPx": 0
 }

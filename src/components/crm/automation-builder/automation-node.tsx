@@ -1,3 +1,8 @@
+/**
+ * @deprecated DS-012 - componente legado sem rota ativa. O canônico é
+ * components/automations/*. Não adicionar novos imports.
+ * Remoção física quando nenhuma rota o referenciar.
+ */
 "use client"
 
 import { memo } from "react"
@@ -29,7 +34,7 @@ const kickerByCategory: Record<string, string> = {
 const toneColor: Record<NonNullable<FlowOption["tone"]>, string> = {
   default: "#94a3b8",
   success: "#16a34a",
-  danger: "#ef4444",
+  danger: "var(--color-destructive)",
 }
 
 /** Dot de conexÃ£o (handle) estilizado conforme o DS */

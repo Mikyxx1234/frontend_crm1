@@ -1,3 +1,8 @@
+/**
+ * @deprecated DS-012 — componente legado (v1). O canônico é
+ * `components/crm/kanban-column.tsx` (usado pelo pipeline-v2).
+ * Não adicionar novos imports. Remoção física após aposentadoria do kanban v1.
+ */
 "use client";
 
 import * as React from "react";
@@ -9,7 +14,7 @@ import {
   type DroppableProvided,
   type DroppableStateSnapshot,
 } from "@hello-pangea/dnd";
-import { CheckSquare, MessageCircle, Plus, Square } from "lucide-react";
+import { IconSquareCheck as CheckSquare, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSquare as Square } from "@tabler/icons-react";
 
 import type { CardVisibleFields } from "@/components/pipeline/card-fields-config";
 import { KanbanCard } from "@/components/pipeline/kanban-card";
@@ -125,10 +130,10 @@ export function KanbanColumn({
   );
   return (
     <div className="flex h-full min-h-0 w-[280px] shrink-0 flex-col self-stretch sm:w-[300px]">
-      {/* Surface da coluna: tokens de glass do tema (substituem `bg-white/30`
+      {/* Surface da coluna: tokens de glass do tema (substituem `bg-[var(--glass-bg-panel)]`
           que ficava esbranquiçado em dark). Listras laterais suavizadas com
           borda única usando `--glass-border-subtle`. */}
-      <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[22px] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+      <div className="relative flex h-full min-h-0 max-h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
         <header className="relative shrink-0 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2.5 backdrop-blur">
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -178,14 +183,14 @@ export function KanbanColumn({
             <div className="flex shrink-0 items-center gap-1">
               {attentionInColumn > 0 ? (
                 <TooltipHost label={`${attentionInColumn} negócio(s) precisam de atenção`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center rounded-full border border-amber-300/40 bg-amber-100/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-200">
+                  <span className="flex min-w-5 items-center justify-center rounded-full border border-[var(--color-warning)]/40 bg-[var(--color-warn-bg)]/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-warn-text)] dark:border-[var(--color-warning)]/30 dark:bg-[var(--color-warning)]/15 dark:text-[var(--color-warning)]/70">
                     {attentionInColumn}
                   </span>
                 </TooltipHost>
               ) : null}
               {unreadInColumn > 0 ? (
                 <TooltipHost label={`${unreadInColumn} mensagem(ns) não lida(s) nesta etapa`} side="bottom">
-                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-emerald-50/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-200">
+                  <span className="flex min-w-5 items-center justify-center gap-0.5 rounded-full border border-emerald-300/30 bg-[var(--color-success-bg)]/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--color-success-text)] dark:border-emerald-400/30 dark:bg-[var(--color-success)]/15 dark:text-[var(--color-success)]/50">
                     <MessageCircle className="size-3" />
                     {unreadInColumn}
                   </span>
@@ -236,12 +241,21 @@ export function KanbanColumn({
                       ref={dragProvided.innerRef}
                       {...dragProvided.draggableProps}
                       className={cn(
-                        "transition-all duration-150",
-                        dragSnapshot.isDragging && "opacity-95",
+                        // Nunca usar transition-all aqui: o @hello-pangea/dnd
+                        // aplica transform frame-a-frame via style inline —
+                        // qualquer transition interceptaria cada atualização
+                        // causando o efeito "lag pixelizado". Só transição de
+                        // opacidade é segura (não compete com transform).
+                        dragSnapshot.isDragging
+                          ? "opacity-[0.97]"
+                          : "transition-opacity duration-150",
                       )}
                       style={{
                         ...dragProvided.draggableProps.style,
-                        ...(dragSnapshot.isDragging ? { willChange: "transform" } : {}),
+                        // Pre-promover todos os cards para camada GPU desde
+                        // o início evita o "jank" do primeiro frame de drag
+                        // (onde o browser precisa compositar o layer).
+                        willChange: "transform",
                       }}
                     >
                       <KanbanCard

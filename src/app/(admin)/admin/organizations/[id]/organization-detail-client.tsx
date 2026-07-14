@@ -3,12 +3,14 @@
 import { apiUrl } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Check, Copy, Loader2, Power, ShieldCheck, Trash2 } from "lucide-react";
+import { IconCheck as Check, IconCopy as Copy, IconLoader2 as Loader2, IconPower as Power, IconShieldCheck as ShieldCheck, IconTrash as Trash2 } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
+import { SelectNative } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Role = "ADMIN" | "MANAGER" | "MEMBER";
 type Status = "ACTIVE" | "SUSPENDED" | "ARCHIVED";
@@ -73,6 +75,7 @@ export default function OrganizationDetailClient({
   organization,
 }: OrganizationDetailProps) {
   const router = useRouter();
+  const { confirm, dialog } = useConfirm();
   const [status, setStatus] = useState<Status>(organization.status);
   const [invites, setInvites] = useState<Invite[]>(organization.invites);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -147,13 +150,15 @@ export default function OrganizationDetailClient({
   }
 
   async function removeUser(user: User) {
-    const ok = confirm(
-      `Excluir o usuario ${user.name} (${user.email})?\n\n` +
-        "Essa operacao anonimiza os dados do usuario e bloqueia o " +
-        "login. Os registros historicos (deals, conversas, notas) " +
-        "sao mantidos com atribuicao 'Usuario removido' para preservar " +
-        "a auditoria. Operacao irreversivel.",
-    );
+    const ok = await confirm({
+      title: `Excluir o usuário ${user.name}?`,
+      description:
+        `Essa operação anonimiza os dados de ${user.email} e bloqueia o login. ` +
+        "Os registros históricos (deals, conversas, notas) são mantidos com " +
+        "atribuição 'Usuário removido' para preservar a auditoria. Operação irreversível.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
     if (!ok) return;
     setError(null);
     setBusy(`user:${user.id}`);
@@ -271,9 +276,14 @@ export default function OrganizationDetailClient({
             <Button
               variant="destructive"
               disabled={busy !== null}
-              onClick={() => {
-                if (!confirm("Arquivar essa organização? Usuários perdem acesso.")) return;
-                updateStatus("ARCHIVED");
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Arquivar essa organização?",
+                  description: "Usuários perdem acesso.",
+                  confirmLabel: "Arquivar",
+                  destructive: true,
+                });
+                if (ok) updateStatus("ARCHIVED");
               }}
             >
               {busy === "status:ARCHIVED" ? (
@@ -334,16 +344,16 @@ export default function OrganizationDetailClient({
             <Label htmlFor="invite-role" className="text-xs">
               Papel
             </Label>
-            <select
+            <SelectNative
               id="invite-role"
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as Role)}
-              className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-sm"
+              className="h-10 text-sm"
             >
               <option value="ADMIN">Admin (abre wizard)</option>
               <option value="MANAGER">Gestor</option>
               <option value="MEMBER">Membro</option>
-            </select>
+            </SelectNative>
           </div>
           <div className="flex items-end">
             <Button type="submit" disabled={busy === "invite"}>
@@ -466,6 +476,7 @@ export default function OrganizationDetailClient({
           </ul>
         )}
       </section>
+      {dialog}
     </div>
   );
 }

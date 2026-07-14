@@ -47,7 +47,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
   return (
     <article
       className={cn(
-        "group relative flex cursor-pointer items-center gap-[18px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-[22px] py-[18px] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
+        "group relative flex cursor-pointer items-center gap-4.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-5.5 py-4.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
       )}
     >
       <Link
@@ -93,7 +93,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
         <MiniFlow steps={steps} max={5} size="sm" connected={false} />
       </div>
 
-      <div className="relative z-10 hidden shrink-0 items-center gap-[26px] md:flex">
+      <div className="relative z-10 hidden shrink-0 items-center gap-6.5 md:flex">
         <RowMetric
           icon={<IconCircleCheck size={13} />}
           value={`${automation.successRate}%`}

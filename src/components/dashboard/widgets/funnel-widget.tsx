@@ -9,7 +9,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 
 const STAGE_COLORS = [
   "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7",
-  "#d946ef", "#ec4899", "#f43f5e", "#f97316",
+  "var(--color-fuchsia)", "#ec4899", "var(--color-rose)", "var(--color-orange)",
 ];
 
 export function FunnelWidget() {
@@ -72,10 +72,10 @@ export function FunnelWidget() {
                   <span className={cn(
                     "rounded-md px-1.5 py-0.5 text-[10px] font-bold",
                     stage.conversionFromPrevious >= 50
-                      ? "bg-emerald-50 text-emerald-700"
+                      ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
                       : stage.conversionFromPrevious >= 25
-                        ? "bg-amber-50 text-amber-700"
-                        : "bg-red-50 text-red-600",
+                        ? "bg-[var(--color-warn-bg)] text-[var(--color-warn)]"
+                        : "bg-[var(--color-danger-bg)] text-[var(--color-danger-text)]",
                   )}>
                     {stage.conversionFromPrevious.toFixed(0)}%
                   </span>

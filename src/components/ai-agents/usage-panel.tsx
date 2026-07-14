@@ -2,14 +2,7 @@
 
 import { apiUrl } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  ArrowRight,
-  Clock,
-  DollarSign,
-  Hash,
-  Loader2,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconArrowRight as ArrowRight, IconClock as Clock, IconCurrencyDollar as DollarSign, IconHash as Hash, IconLoader2 as Loader2 } from "@tabler/icons-react";
 import * as React from "react";
 
 type Stats = {
@@ -120,7 +113,7 @@ export function UsagePanel({ agentId }: { agentId: string }) {
                   className="group flex flex-1 flex-col items-center gap-1"
                 >
                   <div
-                    className="w-full rounded-t bg-indigo-400/70 transition-colors group-hover:bg-indigo-500"
+                    className="w-full rounded-t bg-[var(--color-brand-primary)]/70 transition-colors group-hover:bg-[var(--color-brand-primary)]"
                     style={{ height: `${pct}%` }}
                     title={`${new Date(d.day).toLocaleDateString("pt-BR")}: ${d.tokens.toLocaleString("pt-BR")} tokens, US$ ${d.cost.toFixed(4)}`}
                   />
@@ -189,8 +182,8 @@ function RunRow({ run }: { run: Stats["lastRuns"][number] }) {
           isError
             ? "bg-destructive/15 text-destructive"
             : run.status === "HANDOFF"
-              ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-200"
-              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200"
+              ? "bg-[var(--color-warn-bg)] text-[var(--color-warn)] dark:bg-amber-950 dark:text-[var(--color-warning)]/70"
+              : "bg-[var(--color-success-bg)] text-[var(--color-success-text)] dark:bg-emerald-950 dark:text-[var(--color-success)]/50"
         }`}
       >
         {isError ? (

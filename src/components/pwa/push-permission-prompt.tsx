@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BellOff, X } from "lucide-react";
+import { IconBell as Bell, IconBellOff as BellOff, IconX as X } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { usePushSubscription } from "@/hooks/use-push-subscription";
@@ -83,7 +83,7 @@ export function PushPermissionPrompt() {
     <div
       className={cn(
         "fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+4.25rem)] z-40",
-        "rounded-[20px] border border-border bg-white p-4 shadow-[var(--shadow-lg)]",
+        "rounded-2xl border border-border bg-[var(--color-bg-card)] p-4 shadow-[var(--shadow-lg)]",
         "md:hidden",
       )}
       role="dialog"
@@ -93,20 +93,20 @@ export function PushPermissionPrompt() {
         type="button"
         onClick={dismiss}
         aria-label="Dispensar"
-        className="absolute right-2 top-2 rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--color-ink-soft)]"
+        className="absolute right-2 top-2 rounded-full p-1.5 text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--color-ink-soft)]"
       >
         <X className="size-4" />
       </button>
 
       <div className="flex items-start gap-3 pr-6">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#06b6d4] text-white shadow-[var(--shadow-lavender-glow)]">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-500 text-white shadow-[var(--shadow-lavender-glow)]">
           <Bell className="size-5" strokeWidth={2.4} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[14px] font-extrabold tracking-tight text-slate-900">
+          <p className="font-display text-[14px] font-extrabold tracking-tight text-[var(--text-primary)]">
             Receba mensagens em tempo real
           </p>
-          <p className="mt-0.5 text-[12px] font-medium leading-tight text-slate-500">
+          <p className="mt-0.5 text-[12px] font-medium leading-tight text-[var(--text-muted)]">
             Avisamos no celular quando um cliente responder, mesmo com o
             app fechado.
           </p>
@@ -119,7 +119,7 @@ export function PushPermissionPrompt() {
               className={cn(
                 "inline-flex h-9 items-center gap-1.5 rounded-full px-4",
                 "bg-primary text-[12px] font-bold text-white",
-                "shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6] active:scale-[0.97]",
+                "shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--brand-primary-hover)] active:scale-[0.97]",
                 "disabled:cursor-not-allowed disabled:opacity-60",
               )}
             >
@@ -128,7 +128,7 @@ export function PushPermissionPrompt() {
             <button
               type="button"
               onClick={dismiss}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-foreground"
             >
               <BellOff className="size-3.5" strokeWidth={2.4} />
               Agora não

@@ -54,6 +54,17 @@ export interface DealContactWithConversations {
   tags?: { id: string; name: string; color: string | null }[];
 }
 
+export type DealPanelField = {
+  fieldId: string;
+  name: string;
+  label: string;
+  type: string;
+  options: string[];
+  value: string | null;
+  highlightRules: unknown[];
+  highlight: { severity: string; label: string } | null;
+};
+
 /** GET /api/deals/:id — detail panel */
 export async function getDeal(dealId: string): Promise<BoardDealDto & {
   notes?: string | null;
@@ -64,6 +75,8 @@ export async function getDeal(dealId: string): Promise<BoardDealDto & {
   expectedCloseAt?: string | null;
   customFields?: Record<string, unknown> | null;
   contact?: DealContactWithConversations | null;
+  /** Campos de negócio marcados para exibição no painel Deal Detail (showInDealPanel). */
+  dealPanelFields?: DealPanelField[];
 }> {
   const res = await fetch(apiUrl(`/api/deals/${dealId}`));
   const data = await res.json().catch(() => ({}));
@@ -116,7 +129,8 @@ export async function updateDeal(
  * aceita opcionalmente.
  */
 export interface CreateDealPayload {
-  title: string;
+  /** Opcional: sem título o backend gera "Negócio - #<number>". */
+  title?: string;
   stageId: string;
   value?: number;
   ownerId?: string | null;

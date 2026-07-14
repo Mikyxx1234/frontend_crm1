@@ -45,7 +45,7 @@ export function MessageVolumeWidget() {
         </div>
         <div className="flex gap-3 text-[11px]">
           <div className="text-right">
-            <p className="font-bold tabular-nums text-cyan-600">
+            <p className="font-bold tabular-nums text-[var(--color-cyan)]">
               {formatCompact(inbound)}
             </p>
             <p className="uppercase tracking-wider text-muted-foreground">in</p>

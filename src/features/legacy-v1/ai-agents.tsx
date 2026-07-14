@@ -3,18 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  Bot,
-  CircleAlert,
-  Loader2,
-  Pencil,
-  Play,
-  Plus,
-  Power,
-  Settings2,
-  Trash2,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconRobot as Bot, IconAlertCircle as CircleAlert, IconLoader2 as Loader2, IconPencil as Pencil, IconPlayerPlay as Play, IconPlus as Plus, IconPower as Power, IconAdjustments as Settings2, IconTrash as Trash2 } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,6 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectNative } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader, pageHeaderPrimaryCtaClass } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentPlayground } from "@/components/ai-agents/agent-playground";
@@ -51,6 +42,7 @@ import {
 import { ARCHETYPES } from "@/lib/ai-agents/archetypes";
 import { TOOLS_CATALOG } from "@/lib/ai-agents/tools-catalog";
 import { cn, getInitials } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type AgentRow = {
   id: string;
@@ -101,6 +93,7 @@ export default function AIAgentsPage() {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [testing, setTesting] = React.useState<{ id: string; name: string } | null>(null);
   const [creating, setCreating] = React.useState(false);
+  const { confirm, dialog } = useConfirm();
 
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ["ai-agents"],
@@ -138,10 +131,14 @@ export default function AIAgentsPage() {
     },
   });
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Excluir agente "${name}"?\n\nAtenção: essa ação é definitiva.`))
-      return;
-    deleteMutation.mutate(id);
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: `Excluir agente "${name}"?`,
+      description: "Atenção: essa ação é definitiva.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (ok) deleteMutation.mutate(id);
   };
 
   return (
@@ -163,7 +160,7 @@ export default function AIAgentsPage() {
       />
 
       {aiDisabled ? (
-        <div className="rounded-xl border border-amber-300/70 bg-amber-50/60 p-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="rounded-xl border border-[var(--color-warning)]/70 bg-[var(--color-amber-soft)]/60 p-4 text-sm text-[var(--color-amber-text)] dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-[var(--color-amber-muted)]">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" />
             <div className="min-w-0 flex-1">
@@ -185,7 +182,7 @@ export default function AIAgentsPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-amber-300/60 bg-amber-50/40 p-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="rounded-xl border border-dashed border-[var(--color-warning)]/60 bg-[var(--color-amber-soft)]/40 p-4 text-sm text-[var(--color-amber-text)] dark:border-amber-700/60 dark:bg-amber-950/20 dark:text-[var(--color-amber-muted)]">
           <div className="flex items-start gap-2">
             <CircleAlert className="mt-0.5 size-4 shrink-0" />
             <div>
@@ -224,7 +221,7 @@ export default function AIAgentsPage() {
                 <div className="flex items-start gap-3">
                   <Avatar className="size-11">
                     <AvatarImage src={a.avatarUrl ?? undefined} />
-                    <AvatarFallback className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200">
+                    <AvatarFallback className="bg-[var(--color-indigo-soft)] text-[var(--color-purple-text)] dark:bg-indigo-950 dark:text-indigo-200">
                       {getInitials(a.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -234,7 +231,7 @@ export default function AIAgentsPage() {
                       {a.active ? (
                         <Badge
                           variant="secondary"
-                          className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+                          className="bg-[var(--color-success-subtle)] text-emerald-700 hover:bg-[var(--color-success-subtle)] dark:bg-emerald-950 dark:text-emerald-200"
                         >
                           Ativo
                         </Badge>
@@ -288,7 +285,7 @@ export default function AIAgentsPage() {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-8 text-indigo-600 hover:text-indigo-700 dark:text-indigo-300"
+                      className="size-8 text-[var(--color-brand-primary)] hover:text-[var(--color-purple-text)] dark:text-[var(--color-brand-primary)]"
                       title={
                         aiDisabled
                           ? "IA desativada — configure a chave da OpenAI em Configurações → IA"
@@ -367,6 +364,7 @@ export default function AIAgentsPage() {
           queryClient.invalidateQueries({ queryKey: ["ai-agents"] });
         }}
       />
+      {dialog}
     </div>
   );
 }
@@ -374,7 +372,7 @@ export default function AIAgentsPage() {
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="rounded-xl border border-dashed border-border/80 py-16 text-center">
-      <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-[var(--color-indigo-soft)] text-[var(--color-brand-primary)] dark:bg-indigo-950 dark:text-[var(--color-brand-primary)]">
         <Bot className="size-8" />
       </div>
       <h3 className="mt-4 text-base font-semibold">Nenhum agente IA ainda</h3>
@@ -584,16 +582,16 @@ function QuickEditDialog({
 
               <div className="grid gap-2">
                 <Label htmlFor="ed-model">Modelo</Label>
-                <select
+                <SelectNative
                   id="ed-model"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                  className="rounded-xl text-sm"
                 >
                   <option value="gpt-4o-mini">gpt-4o-mini</option>
                   <option value="gpt-4o">gpt-4o</option>
                   <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                </select>
+                </SelectNative>
               </div>
 
               <div className="grid gap-2">
@@ -643,7 +641,7 @@ function QuickEditDialog({
                   className={cn(
                     "rounded-xl border p-3 text-left text-sm transition-colors",
                     autonomyMode === "DRAFT"
-                      ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+                      ? "border-indigo-500 bg-[var(--color-indigo-soft)] dark:border-indigo-400 dark:bg-indigo-950/30"
                       : "border-border hover:bg-muted/40",
                   )}
                 >
@@ -658,7 +656,7 @@ function QuickEditDialog({
                   className={cn(
                     "rounded-xl border p-3 text-left text-sm transition-colors",
                     autonomyMode === "AUTONOMOUS"
-                      ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+                      ? "border-indigo-500 bg-[var(--color-indigo-soft)] dark:border-indigo-400 dark:bg-indigo-950/30"
                       : "border-border hover:bg-muted/40",
                   )}
                 >
@@ -683,7 +681,7 @@ function QuickEditDialog({
                       className={cn(
                         "flex items-start gap-2 rounded-lg border p-2 text-left text-[13px] transition-colors",
                         active
-                          ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+                          ? "border-indigo-500 bg-[var(--color-indigo-soft)] dark:border-indigo-400 dark:bg-indigo-950/30"
                           : "border-border hover:bg-muted/40",
                       )}
                     >
@@ -711,13 +709,13 @@ function QuickEditDialog({
 
             <div className="grid gap-2">
               <Label htmlFor="ed-override">Instruções adicionais (opcional)</Label>
-              <textarea
+              <Textarea
                 id="ed-override"
                 value={override}
                 onChange={(e) => setOverride(e.target.value)}
                 rows={5}
                 placeholder="Regras específicas do seu negócio. Será somado ao prompt do arquétipo."
-                className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                className="resize-none rounded-xl text-sm"
               />
             </div>
 

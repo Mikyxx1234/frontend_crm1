@@ -18,27 +18,13 @@ import { apiUrl } from "@/lib/api";
  */
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  Ban,
-  Bot,
-  CalendarClock,
-  CheckCheck,
-  Clock,
-  Eye,
-  Handshake,
-  Keyboard,
-  MessageCircle,
-  Plus,
-  Sparkles,
-  Trash2,
-  UserCheck,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconBan as Ban, IconRobot as Bot, IconCalendarClock as CalendarClock, IconChecks as CheckCheck, IconClock as Clock, IconEye as Eye, IconHeartHandshake as Handshake, IconKeyboard as Keyboard, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSparkles as Sparkles, IconTrash as Trash2, IconUserCheck as UserCheck } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import type {
   BusinessHoursConfig,
@@ -120,11 +106,11 @@ export function PilotingPanel({ value, onChange }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50/50 p-3 dark:border-indigo-900 dark:bg-indigo-950/20">
-        <Bot className="mt-0.5 size-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
-        <div className="text-[12px] leading-relaxed text-indigo-900 dark:text-indigo-200">
+      <div className="flex items-start gap-3 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-3">
+        <Bot className="mt-0.5 size-4 shrink-0 text-[var(--color-info)]" />
+        <div className="text-[12px] leading-relaxed text-[var(--text-primary)]">
           <div className="font-semibold">Pilotagem do agente</div>
-          <div className="mt-0.5 text-indigo-800/80 dark:text-indigo-300/80">
+          <div className="mt-0.5 text-[var(--text-secondary)]">
             Controles operacionais que funcionam fora do prompt — saudação,
             timers de inatividade, palavras-chave de handoff, qualificação
             obrigatória e horário de atendimento. Use isso pra garantir
@@ -251,7 +237,7 @@ function OpeningSection({
       title="Saudação inicial"
       description="Mensagem enviada UMA vez, na primeira vez que o agente fala com o cliente."
     >
-      <div className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+      <div className="flex items-start gap-2 rounded-xl border border-[var(--color-warning)]/60 bg-[var(--color-warn-bg)] p-3 text-[var(--color-warning)]">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" />
         <div className="text-[12px] leading-relaxed">
           Este texto é enviado <strong>palavra por palavra</strong> ao cliente.
@@ -263,17 +249,15 @@ function OpeningSection({
 
       <div className="grid gap-2">
         <Label htmlFor="pilot-opening">Texto da saudação</Label>
-        <textarea
+        <Textarea
           id="pilot-opening"
           rows={3}
           value={value.openingMessage}
           onChange={(e) => patch({ openingMessage: e.target.value })}
           placeholder="Ex.: Oi {{contact.firstName}}! Tudo bem? Sou o agente virtual. Como posso te ajudar hoje?"
           className={cn(
-            "resize-none rounded-xl border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2",
-            signals.length > 0
-              ? "border-amber-400 focus-visible:ring-amber-500/40"
-              : "border-border focus-visible:ring-indigo-500/40",
+            "resize-none",
+            signals.length > 0 && "border-[var(--color-warning)] focus-visible:ring-[var(--color-warning)]/40",
           )}
         />
         <p className="text-[11px] text-muted-foreground">
@@ -284,7 +268,7 @@ function OpeningSection({
       </div>
 
       {signals.length > 0 && (
-        <div className="flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+        <div className="flex items-start gap-2 rounded-xl border border-[var(--color-danger)] bg-[var(--color-danger-bg)] p-3 text-[var(--color-danger-text)]">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <div className="text-[12px] leading-relaxed">
             Este texto parece uma{" "}
@@ -315,7 +299,7 @@ function OpeningSection({
           </button>
           {showPreview && (
             <div className="border-t border-border/60 bg-background/50 p-3">
-              <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-[#e7ffdb] px-3 py-2 text-[13px] leading-relaxed text-slate-800 whitespace-pre-wrap dark:bg-emerald-500/15 dark:text-emerald-100">
+              <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-[var(--color-success-bg)] px-3 py-2 text-[13px] leading-relaxed text-[var(--text-primary)] whitespace-pre-wrap">
                 {preview}
               </div>
               <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -374,7 +358,7 @@ function StyleSection({
           className={cn(
             "rounded-xl border p-3 text-left text-sm transition-colors",
             value.outputStyle === "conversational"
-              ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10"
               : "border-border hover:bg-muted/40",
           )}
         >
@@ -390,7 +374,7 @@ function StyleSection({
           className={cn(
             "rounded-xl border p-3 text-left text-sm transition-colors",
             value.outputStyle === "structured"
-              ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10"
               : "border-border hover:bg-muted/40",
           )}
         >
@@ -499,7 +483,7 @@ function ToggleCard({
       className={cn(
         "flex items-start gap-3 rounded-xl border p-3 text-left text-sm transition-colors",
         checked
-          ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10"
           : "border-border hover:bg-muted/40",
       )}
     >
@@ -507,7 +491,7 @@ function ToggleCard({
         className={cn(
           "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
           checked
-            ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300"
+            ? "bg-[var(--brand-primary)]/15 text-[var(--brand-primary)]"
             : "bg-muted text-muted-foreground",
         )}
       >
@@ -519,7 +503,7 @@ function ToggleCard({
           <span
             className={cn(
               "inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
-              checked ? "bg-indigo-500" : "bg-muted-foreground/30",
+              checked ? "bg-[var(--brand-primary)]" : "bg-muted-foreground/30",
             )}
           >
             <span
@@ -629,7 +613,7 @@ function InactivitySection({
             <Label htmlFor="pilot-farewell">
               Mensagem de despedida (opcional)
             </Label>
-            <textarea
+            <Textarea
               id="pilot-farewell"
               rows={2}
               value={value.inactivityFarewellMessage}
@@ -637,7 +621,7 @@ function InactivitySection({
                 patch({ inactivityFarewellMessage: e.target.value })
               }
               placeholder="Ex.: Vou passar a conversa pra um consultor humano pra te dar continuidade, tá?"
-              className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="resize-none"
             />
             <p className="text-[11px] text-muted-foreground">
               Enviada antes do handoff. Aceita as mesmas variáveis da saudação.
@@ -667,13 +651,13 @@ function HandoffCard({
       className={cn(
         "rounded-xl border p-3 text-left text-sm transition-colors",
         active
-          ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/30"
+          ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10"
           : "border-border hover:bg-muted/40",
       )}
     >
       <div className="flex items-center gap-2 font-medium">
         {active ? (
-          <UserCheck className="size-3.5 text-indigo-600" />
+          <UserCheck className="size-3.5 text-[var(--brand-primary)]" />
         ) : (
           <Handshake className="size-3.5 text-muted-foreground" />
         )}
@@ -1040,7 +1024,7 @@ function BusinessHoursSection({
             <Label htmlFor="pilot-offhours">
               Mensagem fora do horário (opcional)
             </Label>
-            <textarea
+            <Textarea
               id="pilot-offhours"
               rows={2}
               value={bh.offHoursMessage ?? ""}
@@ -1050,7 +1034,7 @@ function BusinessHoursSection({
                 })
               }
               placeholder="Ex.: Oi {{contact.firstName}}! Já recebemos sua mensagem. Nosso time responde de segunda a sexta, 9h às 18h."
-              className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="resize-none"
             />
           </div>
         </>

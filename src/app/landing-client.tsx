@@ -5,15 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import * as React from "react";
-import {
-  ArrowRight,
-  CheckCircle2,
-  KanbanSquare,
-  Loader2,
-  MessageCircle,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { IconArrowRight as ArrowRight, IconCircleCheck as CheckCircle2, IconLayoutKanban as KanbanSquare, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconSparkles as Sparkles, IconUsers as Users } from "@tabler/icons-react";
 
 import { BlurText } from "@/components/ui/blur-text";
 import { Button } from "@/components/ui/button";
@@ -37,17 +29,17 @@ export function LandingClient() {
         <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <div className="flex flex-col justify-center">
             <div className="mb-5 flex items-center gap-2">
-              <Sparkles className="size-4 shrink-0 text-sky-300" />
+              <Sparkles className="size-4 shrink-0 text-[var(--color-sky-muted)]" />
               <BlurText
                 text="Feito para vender mais"
                 delay={90}
-                className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-200"
+                className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-sky-muted)]"
               />
             </div>
             <h1 className="font-heading text-4xl font-bold leading-[1.05] tracking-tight text-white md:text-5xl lg:text-6xl">
               Seu CRM, seu funil,<br />seu time — em um lugar só.
             </h1>
-            <p className="mt-5 max-w-xl text-base text-zinc-200 md:text-lg">
+            <p className="mt-5 max-w-xl text-base text-[var(--color-text-muted)] md:text-lg">
               Cadastre sua empresa em 30 segundos e comece a centralizar
               conversas de WhatsApp, pipeline de vendas e equipe no mesmo
               dashboard.
@@ -80,8 +72,8 @@ export function LandingClient() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-zinc-300 md:flex-row md:justify-between md:text-left">
+      <footer className="border-t border-[var(--glass-border-subtle)] py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-xs text-[var(--color-text-muted)] md:flex-row md:justify-between md:text-left">
           <span>© {new Date().getFullYear()} EduIT CRM. Todos os direitos reservados.</span>
           <span>
             Já tem conta?{" "}
@@ -109,7 +101,7 @@ function Header() {
       </div>
       <Link
         href="/login"
-        className="text-sm font-semibold text-zinc-300 hover:text-white"
+        className="text-sm font-semibold text-[var(--color-text-muted)] hover:text-white"
       >
         Entrar →
       </Link>
@@ -133,7 +125,7 @@ function Feature({
       </div>
       <div>
         <div className="font-semibold text-white">{label}</div>
-        <div className="text-xs text-zinc-300">{desc}</div>
+        <div className="text-xs text-[var(--color-text-muted)]">{desc}</div>
       </div>
     </li>
   );

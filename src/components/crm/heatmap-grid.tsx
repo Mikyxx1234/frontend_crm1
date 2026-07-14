@@ -69,7 +69,7 @@ export function HeatmapGrid({
                     >
                       <div
                         className={cn(
-                          "aspect-square w-full rounded-[5px] border transition-all duration-150",
+                          "aspect-square w-full rounded-[var(--radius-sm)] border transition-all duration-150",
                           isHover ? "border-[var(--brand-primary)] scale-[1.08]" : "border-transparent",
                         )}
                         style={{

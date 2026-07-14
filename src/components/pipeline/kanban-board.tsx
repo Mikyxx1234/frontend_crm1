@@ -11,7 +11,7 @@ import {
 } from "@hello-pangea/dnd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { IconTrash as Trash2 } from "@tabler/icons-react";
 
 import type { CardVisibleFields } from "@/components/pipeline/card-fields-config";
 import { KanbanColumn } from "@/components/pipeline/kanban-column";
@@ -561,8 +561,8 @@ export function KanbanBoard({
                 className={cn(
                   "flex w-full max-w-xl items-center justify-center gap-3 rounded-2xl border px-5 py-4 text-[13px] font-semibold transition-all sm:text-[14px]",
                   snapshot.isDraggingOver
-                    ? "scale-105 border-rose-400 bg-rose-500 text-white shadow-[0_8px_24px_-8px_rgba(244,63,94,0.6)]"
-                    : "border-rose-200 bg-[var(--glass-bg-overlay)] text-rose-600 shadow-[0_4px_16px_-4px_rgba(15,23,42,0.18)] backdrop-blur-sm dark:border-rose-500/40 dark:text-rose-300",
+                    ? "scale-105 border-[var(--color-danger)] bg-[var(--color-danger)] text-white shadow-[0_8px_24px_-8px_rgba(244,63,94,0.6)]"
+                    : "border-[var(--color-danger)]/30 bg-[var(--glass-bg-overlay)] text-[var(--color-danger-text)] shadow-[0_4px_16px_-4px_rgba(15,23,42,0.18)] backdrop-blur-sm dark:border-rose-500/40 dark:text-[var(--color-rose-muted)]",
                 )}
                 aria-label="Solte aqui para excluir o negócio"
               >

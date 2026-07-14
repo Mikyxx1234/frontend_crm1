@@ -51,6 +51,11 @@ function Slot({
   } as never);
 }
 
+// DS-003: classes canônicas do botão glass (fonte única).
+// `secondary` é um alias @deprecated para `glass` — use `glass` em código novo.
+const _GLASS_BTN =
+  "bg-[var(--glass-bg-overlay)] backdrop-blur border border-[var(--glass-border)] text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)] hover:-translate-y-px hover:shadow-[var(--glass-shadow)]";
+
 const buttonVariants = cva(
   // Base glassmorphism: fonte display, peso 600, radius full, transição suave
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-display text-sm font-semibold transition-all duration-200 outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
@@ -65,9 +70,8 @@ const buttonVariants = cva(
         // Outline limpo
         outline:
           "border border-primary/60 bg-transparent text-primary hover:bg-primary/10",
-        // Glass — fundo translúcido com blur, padrão do design system
-        secondary:
-          "bg-[var(--glass-bg-overlay)] backdrop-blur border border-[var(--glass-border)] text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)] hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
+        /** @deprecated DS-003 — use `glass`. Mantido para retrocompatibilidade; será removido em onda futura. */
+        secondary: _GLASS_BTN,
         // Fantasma sem fundo
         ghost: "border border-[var(--glass-border-subtle)] text-[var(--color-ink-soft)] hover:bg-[var(--glass-bg-overlay)] hover:text-foreground",
         // Link
@@ -75,9 +79,8 @@ const buttonVariants = cva(
         // Lavanda — IA / Copilot
         ai:
           "bg-lavender text-lavender-foreground shadow-[0_4px_14px_rgba(167,139,250,0.35)] hover:opacity-95 hover:-translate-y-px hover:shadow-[var(--shadow-lavender-glow)]",
-        // Glass puro — superfície translúcida no plano da UI
-        glass:
-          "bg-[var(--glass-bg-overlay)] backdrop-blur border border-[var(--glass-border)] text-foreground shadow-[var(--glass-shadow-sm)] hover:bg-[var(--glass-bg-strong)] hover:-translate-y-px hover:shadow-[var(--glass-shadow)]",
+        // Glass — superfície translúcida (padrão DS v2)
+        glass: _GLASS_BTN,
       },
       size: {
         default: "h-9 px-5 py-2",

@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-import {
-  Settings2,
-  ChevronRight,
-  ChevronDown,
-  ChevronsDownUp,
-  ChevronsUpDown,
-} from "lucide-react";
+import { IconAdjustments as Settings2, IconChevronRight as ChevronRight, IconChevronDown as ChevronDown, IconSelector as ChevronsDownUp, IconSelector as ChevronsUpDown } from "@tabler/icons-react";
 
 import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { PageHeader } from "@/components/crm/page-header";
@@ -59,7 +53,7 @@ export default function SettingsClientPageV2() {
     setCollapsed(allCollapsed ? new Set() : new Set(allIds));
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
       <main className="flex min-w-0 flex-col gap-3.5 overflow-hidden">

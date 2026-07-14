@@ -27,6 +27,9 @@ export interface InlineNativeEditorProps {
   invalidateKeys?: unknown[][];
   onSaved?: (newValue: string) => void;
   textClassName?: string;
+  /** Classe do estado vazio (placeholder). Default: muted+italic. Útil para
+   *  sobrepor a cor em fundos escuros (ex.: hero do aside). */
+  emptyClassName?: string;
   placeholder?: string;
   /** Formata o valor para exibição (ex.: moeda, data) */
   formatDisplay?: (raw: string) => string;
@@ -38,6 +41,8 @@ export interface InlineNativeEditorProps {
    * ao deal). Recebe o valor já com trim aplicado.
    */
   customSave?: (trimmedValue: string) => Promise<void>;
+  /** Quando informado, exibe lista de sugestões ao editar (ex.: origem do contato). */
+  suggestions?: string[];
 }
 
 async function putNativeField(
@@ -79,15 +84,18 @@ export function InlineNativeEditor({
   invalidateKeys,
   onSaved,
   textClassName,
+  emptyClassName,
   placeholder = "Adicionar",
   formatDisplay,
   editMode = false,
   customSave,
+  suggestions,
 }: InlineNativeEditorProps) {
   const qc = useQueryClient();
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value ?? "");
   const [saving, setSaving] = React.useState(false);
+  const [pickingSuggestion, setPickingSuggestion] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
@@ -130,6 +138,9 @@ export function InlineNativeEditor({
           qc.invalidateQueries({ queryKey: key });
         }
       }
+      if (fieldKey === "source") {
+        qc.invalidateQueries({ queryKey: ["contact-sources"] });
+      }
       setEditing(false);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
@@ -145,6 +156,25 @@ export function InlineNativeEditor({
     }
     if (e.key === "Escape") cancel();
   };
+
+  const filteredSuggestions = React.useMemo(() => {
+    if (!suggestions?.length) return [];
+    const q = draft.trim().toLowerCase();
+    const seen = new Set<string>();
+    const out: string[] = [];
+    const push = (s: string) => {
+      const key = s.toLowerCase();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      out.push(s);
+    };
+    for (const s of suggestions) {
+      if (!q || s.toLowerCase().includes(q)) push(s);
+    }
+    const cur = value?.trim();
+    if (cur) push(cur);
+    return out.slice(0, 15);
+  }, [suggestions, draft, value]);
 
   /* ── Modo exibição ── */
   if (!editing) {
@@ -162,7 +192,7 @@ export function InlineNativeEditor({
         className={cn(
           "group flex min-w-0 items-center gap-1.5 text-right transition-colors",
           isEmpty
-            ? "font-display text-[11px] italic text-[var(--text-muted)] opacity-60"
+            ? (emptyClassName ?? "font-display text-[11px] italic text-[var(--text-muted)] opacity-60")
             : (textClassName ?? "font-display text-[13px] font-bold text-[var(--text-primary)]"),
         )}
         aria-label={`Editar ${fieldKey}`}
@@ -184,43 +214,79 @@ export function InlineNativeEditor({
     "h-7 min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--brand-primary)] bg-[var(--glass-bg-strong)] px-2 font-display text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]";
 
   return (
-    <div className="flex w-full items-center justify-end gap-1">
-      <input
-        ref={inputRef}
-        type={inputType}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={onKeyDown}
-        onBlur={() => {
-          setTimeout(() => {
-            if (editing && !saving) void save();
-          }, 150);
-        }}
-        className={inputBase}
-      />
-      <div className="flex shrink-0 items-center gap-0.5">
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={saving}
-          aria-label="Salvar"
-          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--brand-primary)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] disabled:opacity-50"
-        >
-          {saving ? (
-            <IconLoader2 size={12} className="animate-spin" />
-          ) : (
-            <IconCheck size={12} />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={cancel}
-          aria-label="Cancelar"
-          className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-        >
-          <IconX size={12} />
-        </button>
+    <div className="relative flex w-full flex-col items-end">
+      <div className="flex w-full items-center justify-end gap-1">
+        <input
+          ref={inputRef}
+          type={inputType}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={onKeyDown}
+          onBlur={() => {
+            setTimeout(() => {
+              if (pickingSuggestion) {
+                setPickingSuggestion(false);
+                return;
+              }
+              if (editing && !saving) void save();
+            }, 150);
+          }}
+          className={inputBase}
+          placeholder={placeholder}
+        />
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => void save()}
+            disabled={saving}
+            aria-label="Salvar"
+            className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--brand-primary)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] disabled:opacity-50"
+          >
+            {saving ? (
+              <IconLoader2 size={12} className="animate-spin" />
+            ) : (
+              <IconCheck size={12} />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={cancel}
+            aria-label="Cancelar"
+            className="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+          >
+            <IconX size={12} />
+          </button>
+        </div>
       </div>
+      {filteredSuggestions.length > 0 ? (
+        <ul
+          className="absolute right-0 top-full z-50 mt-1 max-h-44 w-full min-w-[180px] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] py-1 shadow-[var(--glass-shadow-md)]"
+          role="listbox"
+        >
+          {filteredSuggestions.map((s) => (
+            <li key={s}>
+              <button
+                type="button"
+                role="option"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setPickingSuggestion(true);
+                  setDraft(s);
+                  inputRef.current?.focus();
+                }}
+                className={cn(
+                  "flex w-full px-2.5 py-1.5 text-left font-display text-[12px] transition-colors hover:bg-[var(--glass-bg-overlay)]",
+                  draft.trim().toLowerCase() === s.toLowerCase()
+                    ? "bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)] font-semibold text-[var(--brand-primary)]"
+                    : "text-[var(--text-primary)]",
+                )}
+              >
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

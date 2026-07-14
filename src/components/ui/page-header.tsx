@@ -99,7 +99,7 @@ export function PageHeader({
     <div
       className={cn(
         "flex items-center justify-between gap-3",
-        bordered && "border-b border-white/40 pb-3",
+        bordered && "border-b border-[var(--glass-border)] pb-3",
         className,
       )}
     >

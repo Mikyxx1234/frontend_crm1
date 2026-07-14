@@ -4,16 +4,7 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  Check,
-  ChevronDown,
-  Mail,
-  Package,
-  Pencil,
-  Phone,
-  Plus,
-  X,
-} from "lucide-react";
+import { IconCheck as Check, IconChevronDown as ChevronDown, IconMail as Mail, IconPackage as Package, IconPencil as Pencil, IconPhone as Phone, IconPlus as Plus, IconX as X } from "@tabler/icons-react";
 
 import { useConfirm } from "@/hooks/use-confirm";
 import { useFieldLayout } from "@/hooks/use-field-layout";
@@ -134,8 +125,8 @@ export function WorkspaceCompactDealLeader({
             onChange={onStageChange}
             isPending={stagePending}
             petroleumHeader
-            chevronClassName="text-sky-400/60"
-            className="text-[12px] font-semibold text-sky-300 transition-colors hover:text-sky-200"
+            chevronClassName="text-[var(--color-sky)]/60"
+            className="text-[12px] font-semibold text-[var(--color-sky-muted)] transition-colors hover:text-[var(--color-sky-muted)]"
           />
           {numVal > 0 ? (
             <span className={dt.workspace.leaderValue}>{formatCurrency(numVal)}</span>
@@ -287,7 +278,7 @@ export function WorkspaceSidebar({
       : undefined;
 
     const kommoRow =
-      "flex items-center justify-between border-b border-white/30 px-4 py-2.5 transition-colors hover:bg-white/30";
+      "flex items-center justify-between border-b border-[var(--glass-border)] px-4 py-2.5 transition-colors hover:bg-[var(--glass-bg-panel)]";
 
     const renderSection = (section: SectionConfig) => {
       switch (section.id) {
@@ -359,7 +350,7 @@ export function WorkspaceSidebar({
           );
         case "produtos":
           return (
-            <div key="produtos" className="border-b border-white/30">
+            <div key="produtos" className="border-b border-[var(--glass-border)]">
               <div className="flex items-center justify-between px-4 pt-2">
                 <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Produtos</span>
                 <TooltipHost label={compactProductsAddOpen ? "Fechar" : "Adicionar produto"} side="left">
@@ -376,7 +367,7 @@ export function WorkspaceSidebar({
         case "contato":
           return (
             <div key="contato">
-              <div className="mt-1 border-t border-white/30">
+              <div className="mt-1 border-t border-[var(--glass-border)]">
                 <div className="flex items-center justify-between px-4 pt-3 pb-1">
                   <span className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Contato</span>
                   <button type="button" onClick={(e) => { e.stopPropagation(); editingBasic ? saveBasic() : startEdit(); }} className="text-[var(--color-ink-muted)] transition-colors hover:text-primary">
@@ -408,7 +399,7 @@ export function WorkspaceSidebar({
         case "campos_contato":
           return (
             <div key="campos_contato">
-              <SidebarSectionHeading className="mt-1 border-t border-white/30">Campos do contato</SidebarSectionHeading>
+              <SidebarSectionHeading className="mt-1 border-t border-[var(--glass-border)]">Campos do contato</SidebarSectionHeading>
               <CustomFieldsSection contactId={contact.id} variant="kompact" />
             </div>
           );
@@ -628,7 +619,7 @@ export function WorkspaceSidebar({
             {contact.company ? (
               <span
                 className={cn(
-                  "mt-1 inline-flex items-center rounded-[4px] border border-border bg-[var(--color-bg-subtle)]",
+                  "mt-1 inline-flex items-center rounded border border-border bg-[var(--color-bg-subtle)]",
                   "px-2 py-0.5 text-[12px] font-bold tracking-tight text-[var(--color-ink-soft)]",
                 )}
               >
@@ -844,7 +835,7 @@ function StageDropdown({
             <ChevronDown
               className={cn(
                 "size-3 shrink-0 transition-transform",
-                chevronClassName ?? "text-sky-400/60",
+                chevronClassName ?? "text-[var(--color-sky)]/60",
                 open && "rotate-180",
               )}
               strokeWidth={2.5}
@@ -903,7 +894,7 @@ function StageDropdown({
       {open ? (
         <div
           className={cn(
-            "absolute left-0 top-[calc(100%+6px)] z-[100] min-w-[220px] w-max max-w-[min(100vw-2rem,320px)]",
+            "absolute left-0 top-[calc(100%+6px)] z-(--z-above) min-w-[220px] w-max max-w-[min(100vw-2rem,320px)]",
             ds.popover.base,
           )}
         >
@@ -1146,9 +1137,9 @@ function PresenceDot({
       className={cn(
         "absolute -bottom-0.5 -right-0.5 inline-flex rounded-full ring-white",
         size === "sm" ? "size-1.5 ring-[1.5px]" : "size-2.5 ring-2",
-        status === "ONLINE" && "bg-[#22c55e]",
+        status === "ONLINE" && "bg-[var(--color-success)]",
         status === "AWAY" && "bg-warning",
-        status === "OFFLINE" && "bg-slate-400",
+        status === "OFFLINE" && "bg-[var(--color-status-offline)]",
       )}
       aria-hidden
     />
@@ -1184,7 +1175,7 @@ function TagPill({
       )}
       style={tagPillStyle(tag.name, tag.color)}
     >
-      <span className="max-w-[120px] truncate">{tag.name}</span>
+      <span className="whitespace-nowrap">{tag.name}</span>
       <button
         type="button"
         onClick={onRemove}

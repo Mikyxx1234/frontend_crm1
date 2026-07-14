@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 interface GlassCardProps {
   children: React.ReactNode
   className?: string
-  variant?: 'default' | 'strong' | 'subtle' | 'overlay'
+  variant?: 'default' | 'strong' | 'subtle' | 'overlay' | 'panel' | 'base'
 }
 
 const variantClasses = {
@@ -11,6 +11,8 @@ const variantClasses = {
   strong: 'bg-[var(--glass-bg-strong)]',
   subtle: 'bg-[var(--glass-bg-subtle)]',
   overlay: 'bg-[var(--glass-bg-overlay)]',
+  panel: 'bg-[var(--glass-bg-panel)]',
+  base: 'bg-[var(--glass-bg-base)]',
 }
 
 export function GlassCard({ children, className, variant = 'strong' }: GlassCardProps) {

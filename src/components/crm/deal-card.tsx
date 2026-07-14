@@ -75,12 +75,12 @@ interface DealCardProps {
 }
 
 const tagStyles: Record<TagType, string> = {
-  hot: "bg-[rgba(239,68,68,0.12)] text-[#991b1b] border-[rgba(239,68,68,0.20)]",
+  hot: "bg-[rgba(239,68,68,0.12)] text-[var(--color-danger-text)] border-[rgba(239,68,68,0.20)]",
   warm: "bg-[var(--color-lead-bg)] text-[var(--color-warning-text)] border-[rgba(245,158,11,0.25)]",
   cold: "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)] border-[rgba(91,111,245,0.25)]",
-  vip: "bg-[rgba(167,139,250,0.15)] text-[#6d28d9] border-[rgba(167,139,250,0.25)]",
+  vip: "bg-[rgba(167,139,250,0.15)] text-violet-800 border-[rgba(167,139,250,0.25)]",
   partner: "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border-[rgba(16,185,129,0.25)]",
-  ref: "bg-[rgba(244,114,182,0.12)] text-[#be185d] border-[rgba(244,114,182,0.25)]",
+  ref: "bg-[rgba(244,114,182,0.12)] text-pink-700 border-[rgba(244,114,182,0.25)]",
 }
 
 export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isSelected, onToggleSelect, selectionMode }: DealCardProps) {
@@ -93,8 +93,8 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
     <article
       onClick={onClick}
       className={cn(
-        "group relative cursor-pointer rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-1.5 shadow-[var(--glass-shadow-sm)] transition-all",
-        "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-base)] hover:shadow-[var(--glass-shadow)]",
+        "group relative cursor-pointer rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] py-1.5 backdrop-blur-sm shadow-[var(--glass-shadow-sm)] transition-all",
+        "hover:-translate-y-0.5 hover:bg-[var(--glass-bg-overlay)] hover:shadow-[var(--glass-shadow)]",
         isSelected && "border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/40",
         "active:cursor-grabbing",
         // Em modo seleção o conteúdo desloca para a direita para abrir
@@ -163,7 +163,7 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
         <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 text-[11.5px] italic leading-[1.35] text-[var(--text-secondary)]">
           {/* Ícone de conversa com borda azul — mesmo do card de
               conversa do inbox, para padronizar a leitura visual. */}
-          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
+          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[rgba(91,111,245,0.40)] text-[var(--brand-primary)]">
             <IconMessage size={9} />
           </span>
           <span className="line-clamp-2 flex-1 overflow-hidden">{deal.message.text}</span>
@@ -184,14 +184,14 @@ export function DealCard({ deal, onClick, tagsSlot, ownerSlot, moveMenuSlot, isS
           permite bater o olho e saber por que o negócio foi perdido. */}
       {deal.lostReason && (
         <div className="mt-1 flex items-start gap-1.5 rounded-[var(--radius-md)] border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.08)] px-2.5 py-1 text-[11px] leading-[1.35]">
-          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[#dc2626]">
+          <span className="mt-px inline-flex h-4 w-4 shrink-0 items-center justify-center text-[var(--color-danger-dark)]">
             <IconCircleX size={12} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="font-display text-[9.5px] font-bold uppercase tracking-wide text-[#dc2626]">
+            <span className="font-display text-[9.5px] font-bold uppercase tracking-wide text-[var(--color-danger-dark)]">
               Motivo da perda
             </span>
-            <span className="line-clamp-2 block text-[#991b1b]">{deal.lostReason}</span>
+            <span className="line-clamp-2 block text-[var(--color-danger-text)]">{deal.lostReason}</span>
           </span>
         </div>
       )}

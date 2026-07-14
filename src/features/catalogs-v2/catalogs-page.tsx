@@ -15,7 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 import { ProductDialog } from "@/features/products-v2/product-dialog";
 import { useSettingsHeaderSlots } from "@/app/(app)/settings/_v2-shell";
@@ -220,9 +221,16 @@ export function CatalogsManager() {
   const [editing, setEditing] = React.useState<CatalogView | null>(null);
   const [newProductCatalogId, setNewProductCatalogId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
+  const { confirm, dialog } = useConfirm();
 
-  function handleDelete(id: string, name: string) {
-    if (!confirm(`Excluir o catálogo "${name}"? Os produtos ficarão sem catálogo.`)) return;
+  async function handleDelete(id: string, name: string) {
+    const ok = await confirm({
+      title: `Excluir o catálogo "${name}"?`,
+      description: "Os produtos ficarão sem catálogo.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
     deleteMutation.mutate(id, {
       onSuccess: () => toast.success("Catálogo excluído."),
       onError: (err) => toast.error(err instanceof Error ? err.message : "Erro ao excluir"),
@@ -290,9 +298,9 @@ export function CatalogsManager() {
       </label>,
     );
     slots.setActions(
-      <Button onClick={() => setWizardOpen(true)}>
+      <ButtonGlass variant="primary" onClick={() => setWizardOpen(true)}>
         <IconPlus size={16} /> Novo catálogo
-      </Button>,
+      </ButtonGlass>,
     );
     return () => {
       slots.setCenter(null);
@@ -335,7 +343,7 @@ export function CatalogsManager() {
         aria-label="Catálogos da organização"
         className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]"
       >
-        <header className="sticky top-0 z-[1] flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3.5 v2-dark:bg-[var(--glass-bg-modal)]">
+        <header className="sticky top-0 z-10 flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3.5 v2-dark:bg-[var(--glass-bg-modal)]">
           <span
             aria-hidden
             className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
@@ -345,7 +353,7 @@ export function CatalogsManager() {
           <span className="font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
             Catálogos da organização
           </span>
-          <span className="rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-[1px] text-[11px] font-bold text-[var(--text-muted)]">
+          <span className="rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px text-[11px] font-bold text-[var(--text-muted)]">
             {filtered.length}
           </span>
           {query && (
@@ -455,6 +463,7 @@ export function CatalogsManager() {
           )}
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   );
 }

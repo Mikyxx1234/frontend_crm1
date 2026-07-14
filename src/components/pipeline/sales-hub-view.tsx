@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { MessageSquareOff, Search, X } from "lucide-react";
+import { IconMessageOff as MessageSquareOff, IconSearch as Search, IconX as X } from "@tabler/icons-react";
 
 import type { BoardStage } from "@/components/pipeline/kanban-board";
 import type { BoardDeal } from "@/components/pipeline/kanban-types";
@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn, pipelineDealMatchesSearch } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 /**
  * ConversationItem mínimo que o SalesHub precisa pra resolver a conversa
@@ -75,9 +76,9 @@ function SalesHubChatEmptyState({
   // Surface neutra usando tokens do tema — `bg-white` virava placa
   // branca destoante em dark mode. Agora segue o background do app.
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-white p-8 dark:bg-slate-900">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[var(--color-bg-card)] p-8 dark:bg-[var(--glass-bg-modal)]">
       <MessageSquareOff
-        className="size-7 text-slate-300 dark:text-slate-600"
+        className="size-7 text-[var(--text-faint)] dark:text-[var(--text-secondary)]"
         strokeWidth={1.5}
       />
       <p className="text-[16px] font-semibold tracking-tight text-foreground">
@@ -419,15 +420,17 @@ export function SalesHubView({
     return () => clearTimeout(t);
   }, []);
 
+  const { confirm: confirmDelete, dialog: confirmDeleteDialog } = useConfirm();
+
   const handleDeleteDealFromHub = useCallback(async () => {
     if (!activeDeal) return;
-    if (
-      !window.confirm(
-        "Excluir este negócio? Esta ação não pode ser desfeita.",
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDelete({
+      title: "Excluir negócio?",
+      description: "Esta ação não pode ser desfeita.",
+      confirmLabel: "Excluir",
+      destructive: true,
+    });
+    if (!ok) return;
     const res = await fetch(apiUrl(`/api/deals/${activeDeal.id}`), {
       method: "DELETE",
     });
@@ -444,7 +447,7 @@ export function SalesHubView({
     handleDeselectDeal();
     queryClient.invalidateQueries({ queryKey: ["pipeline-board", pipelineId] });
     queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-  }, [activeDeal, handleDeselectDeal, pipelineId, queryClient]);
+  }, [activeDeal, confirmDelete, handleDeselectDeal, pipelineId, queryClient]);
 
   const funnelStages = useMemo(
     () =>
@@ -542,10 +545,10 @@ export function SalesHubView({
   const hubChromeCompact = false;
 
   return (
-    // Root usa `bg-white dark:bg-slate-900` em vez de `bg-white` cravado —
+    // Root usa `bg-white dark:bg-[var(--glass-bg-modal)]` em vez de `bg-white` cravado —
     // antes o Sales Hub continuava claro mesmo com tema dark ativo.
     // Estrutura "split view" preservada (sidebar | chat).
-    <div ref={rootRef} className="flex h-full flex-col bg-white dark:bg-slate-900" tabIndex={-1}>
+    <div ref={rootRef} className="flex h-full flex-col bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]" tabIndex={-1}>
       <StageRibbon
         stages={funnelStages}
         selectedStageId={selectedStageId}
@@ -570,7 +573,7 @@ export function SalesHubView({
             Mobile: idem em ambos os modos. */}
         <div
           className={cn(
-            "flex min-h-0 flex-col overflow-hidden bg-white dark:bg-slate-900",
+            "flex min-h-0 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
             activeDeal
               ? "hidden min-w-0 shrink-0 border-r border-border md:flex"
               : "w-full",
@@ -632,7 +635,7 @@ export function SalesHubView({
             o grid acima vira [fila estreita | chat]. */}
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-slate-900",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-bg-card)] dark:bg-[var(--glass-bg-modal)]",
             !activeDeal && "hidden",
           )}
         >
@@ -735,7 +738,7 @@ export function SalesHubView({
                 onClose={handleDeselectDeal}
                 tabs={[
                   { key: "conversations", label: "Conversa" },
-                  { key: "activities", label: "Atividades" },
+                  { key: "activities", label: "Tarefas" },
                   { key: "notes", label: "Notas" },
                   { key: "timeline", label: "Timeline" },
                 ]}
@@ -810,6 +813,7 @@ export function SalesHubView({
           </ul>
         </DialogContent>
       </Dialog>
+      {confirmDeleteDialog}
     </div>
   );
 }

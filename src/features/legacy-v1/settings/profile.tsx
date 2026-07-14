@@ -26,22 +26,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import {
-  AlertTriangle,
-  Camera,
-  Check,
-  Copy,
-  Info,
-  Key,
-  Loader2,
-  Plus,
-  RefreshCw,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { IconAlertTriangle as AlertTriangle, IconCamera as Camera, IconCheck as Check, IconCopy as Copy, IconInfoCircle as Info, IconKey as Key, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCw, IconSparkles as Sparkles, IconTrash as Trash2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import { GlassCard } from "@/components/crm/glass-card";
 import {
   Dialog,
   DialogContent,
@@ -50,9 +39,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { SwitchGlass } from "@/components/crm/switch-glass";
+import { Textarea } from "@/components/ui/textarea";
 import { TooltipHost } from "@/components/ui/tooltip";
 import { useConfirm } from "@/hooks/use-confirm";
 import type { ChatThemeKey } from "@/lib/chat-theme";
@@ -184,7 +174,7 @@ function ChatThemeField({
               >
                 <div className="flex justify-end p-1.5">
                   <div
-                    className="rounded-[6px] rounded-br-[1px] px-2 py-1"
+                    className="rounded-md rounded-br-[1px] px-2 py-1"
                     style={{ background: theme.preview.bubbleBg }}
                   >
                     <p
@@ -196,7 +186,7 @@ function ChatThemeField({
                   </div>
                 </div>
                 <div className="flex justify-start p-1.5">
-                  <div className="rounded-[6px] rounded-bl-[1px] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 shadow-[var(--shadow-sm)]">
+                  <div className="rounded-md rounded-bl-[1px] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2 py-1 shadow-[var(--shadow-sm)]">
                     <p className="text-[8px] font-medium text-[color:var(--chat-bubble-received-text)]">
                       Olá!
                     </p>
@@ -296,8 +286,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="w-full space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
+    <div className="w-full space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <ProfileCard profile={profile} queryClient={queryClient} update={update} />
         <TokensCard />
       </div>
@@ -407,7 +397,7 @@ function ProfileCard({
   });
 
   return (
-    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+    <GlassCard variant="overlay" className="p-8">
       <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
         Dados do seu perfil
       </h2>
@@ -420,7 +410,7 @@ function ProfileCard({
           real só ao clicar em "Salvar" abaixo (evita registro inconsistente).
         */}
         <div className="relative shrink-0">
-          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-[#fbcfe8] to-[#f9a8d4] ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]">
+          <div className="flex size-[96px] items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-pink-200 to-pink-300 ring-4 ring-[var(--glass-bg-modal)] shadow-[var(--shadow-sm)]">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -439,12 +429,13 @@ function ProfileCard({
             side="right"
             className="absolute -bottom-1 -right-1"
           >
-            <button
+            <ButtonGlass
+              variant="icon"
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className={cn(
-                "inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-md transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]",
+                "size-8 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] shadow-md hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--text-primary)]",
                 uploading && "cursor-wait opacity-80",
               )}
               aria-label="Alterar foto de perfil"
@@ -454,7 +445,7 @@ function ProfileCard({
               ) : (
                 <Camera className="size-3.5" />
               )}
-            </button>
+            </ButtonGlass>
           </TooltipHost>
           <input
             ref={fileInputRef}
@@ -492,13 +483,12 @@ function ProfileCard({
         }}
       >
         <Field id="name" label="Nome" required>
-          <Input
+          <InputGlass
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             autoComplete="name"
-            className="h-11 rounded-xl border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-sm focus-visible:ring-[var(--color-primary)]/30"
           />
         </Field>
 
@@ -507,12 +497,11 @@ function ProfileCard({
           label="Assinatura"
           hint="Aparece no final das suas mensagens. Vazio = usa seu nome."
         >
-          <Input
+          <InputGlass
             id="signature"
             value={signature}
             onChange={(e) => setSignature(e.target.value)}
             placeholder="Ex.: Marcelo · EduIT"
-            className="h-11 rounded-xl border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-sm focus-visible:ring-[var(--color-primary)]/30"
           />
         </Field>
 
@@ -524,7 +513,7 @@ function ProfileCard({
             >
               <span className="text-sm leading-none">🇧🇷</span>
             </span>
-            <Input
+            <InputGlass
               id="phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -539,24 +528,20 @@ function ProfileCard({
 
         {/* ── Toggle de mensagem de finalização ── */}
         <div className="space-y-3 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <Switch
-              id="closing-toggle"
+          <label className="flex cursor-pointer items-center gap-3">
+            <SwitchGlass
               checked={closingEnabled}
-              onCheckedChange={setClosingEnabled}
+              onChange={setClosingEnabled}
               aria-label="Mensagem de finalização de conversa"
             />
-            <Label
-              htmlFor="closing-toggle"
-              className="cursor-pointer text-sm font-medium text-[var(--text-primary)]"
-            >
+            <span className="text-sm font-medium text-[var(--text-primary)]">
               Mensagem de finalização de conversa
-            </Label>
-          </div>
+            </span>
+          </label>
 
           {closingEnabled && (
             <>
-              <div className="flex items-start gap-2 rounded-xl bg-[#eef2ff] px-3 py-2.5 text-[12px] leading-snug text-[#3730a3]">
+              <div className="flex items-start gap-2 rounded-xl bg-[var(--color-primary-soft)] px-3 py-2.5 text-[12px] leading-snug text-[var(--color-primary-dark)]">
                 <Info className="mt-0.5 size-3.5 shrink-0" />
                 <span>
                   Se definida, tem precedência sobre a mensagem de finalização
@@ -568,25 +553,24 @@ function ProfileCard({
                 id="closing-message"
                 label="Sua mensagem de encerramento"
               >
-                <textarea
+                <Textarea
                   id="closing-message"
                   value={closingMessage}
                   onChange={(e) => setClosingMessage(e.target.value)}
                   placeholder="Sua mensagem de encerramento"
                   rows={4}
-                  className="w-full resize-y rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--color-ink-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/30"
+                  className="w-full resize-y rounded-xl text-sm placeholder:text-[var(--color-ink-muted)]"
                 />
               </Field>
             </>
           )}
         </div>
 
-        <button
+        <ButtonGlass
           type="submit"
+          variant="primary"
           disabled={saveMutation.isPending}
-          className={cn(
-            "mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors duration-150 hover:bg-[#4466d6] disabled:opacity-60",
-          )}
+          className="mt-4 h-11 w-full text-sm disabled:opacity-60"
         >
           {saveMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />
@@ -594,7 +578,7 @@ function ProfileCard({
             <Check className="size-4" />
           )}
           Salvar
-        </button>
+        </ButtonGlass>
       </form>
 
       {/*
@@ -608,7 +592,7 @@ function ProfileCard({
         onCancel={() => setPendingFile(null)}
         onApply={(cropped) => uploadAvatar(cropped)}
       />
-    </section>
+    </GlassCard>
   );
 }
 
@@ -731,7 +715,7 @@ function TokensCard() {
   const hasTokens = tokens.length > 0;
 
   return (
-    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
+    <GlassCard variant="overlay" className="p-8">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
@@ -743,17 +727,19 @@ function TokensCard() {
           </p>
         </div>
         {hasTokens && (
-          <button
+          <ButtonGlass
             type="button"
+            variant="primary"
+            size="sm"
             onClick={() => {
               setJustCreated(null);
               setCreateOpen(true);
             }}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[#4466d6]"
+            className="shrink-0"
           >
             <Plus className="size-3.5" />
             Novo token
-          </button>
+          </ButtonGlass>
         )}
       </div>
 
@@ -768,7 +754,7 @@ function TokensCard() {
               key={t.id}
               className="flex items-center gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-4 py-3"
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-primary">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary">
                 <Key className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -783,15 +769,17 @@ function TokensCard() {
                 </p>
               </div>
               <TooltipHost label="Revogar" side="left">
-                <button
+                <ButtonGlass
+                  variant="icon"
                   type="button"
                   onClick={() => handleRevoke(t)}
                   disabled={revokeMutation.isPending}
-                  className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--color-ink-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                  tooltipSide="left"
+                  className="size-8 rounded-lg text-[var(--color-ink-muted)] hover:bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] hover:text-[var(--color-danger)] disabled:opacity-50"
                   aria-label={`Revogar token ${t.name}`}
                 >
                   <Trash2 className="size-4" />
-                </button>
+                </ButtonGlass>
               </TooltipHost>
             </li>
           ))}
@@ -826,14 +814,15 @@ function TokensCard() {
                   <code className="flex-1 truncate font-mono text-xs text-[var(--text-secondary)]">
                     {justCreated.token}
                   </code>
-                  <button
+                  <ButtonGlass
+                    variant="icon"
                     type="button"
                     onClick={() => copyToken(justCreated.token)}
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+                    className="size-8 rounded-lg text-[var(--text-muted)] hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
                     aria-label="Copiar token"
                   >
                     <Copy className="size-4" />
-                  </button>
+                  </ButtonGlass>
                 </div>
                 <div className="flex items-start gap-2 rounded-xl bg-[color-mix(in_srgb,var(--color-warning)_10%,transparent)] px-3 py-2 text-[12px] leading-snug text-[var(--color-warning)]">
                   <Info className="mt-0.5 size-3.5 shrink-0" />
@@ -845,7 +834,7 @@ function TokensCard() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={() => setCreateOpen(false)}>Concluído</Button>
+                <ButtonGlass variant="primary" onClick={() => setCreateOpen(false)}>Concluído</ButtonGlass>
               </DialogFooter>
             </>
           ) : (
@@ -868,51 +857,49 @@ function TokensCard() {
                   <Label htmlFor="token-name" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Nome
                   </Label>
-                  <Input
+                  <InputGlass
                     id="token-name"
                     value={newTokenName}
                     onChange={(e) => setNewTokenName(e.target.value)}
                     placeholder="Ex.: Integração N8N"
                     required
                     autoFocus
-                    className="h-11 rounded-xl"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="token-expires" className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Expira em (opcional)
                   </Label>
-                  <Input
+                  <InputGlass
                     id="token-expires"
                     type="date"
                     value={newTokenExpires}
                     onChange={(e) => setNewTokenExpires(e.target.value)}
-                    className="h-11 rounded-xl"
                   />
                 </div>
                 <DialogFooter>
-                  <Button
+                  <ButtonGlass
                     type="button"
-                    variant="outline"
+                    variant="glass"
                     onClick={() => setCreateOpen(false)}
                   >
                     Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending || !newTokenName.trim()}>
+                  </ButtonGlass>
+                  <ButtonGlass type="submit" variant="primary" disabled={createMutation.isPending || !newTokenName.trim()}>
                     {createMutation.isPending ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <Plus className="size-4" />
                     )}
                     Gerar token
-                  </Button>
+                  </ButtonGlass>
                 </DialogFooter>
               </form>
             </>
           )}
         </DialogContent>
       </Dialog>
-    </section>
+    </GlassCard>
   );
 }
 
@@ -926,7 +913,7 @@ function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
         */}
         <div className="absolute -left-3 -top-2 size-14 -rotate-12 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-sm" />
         <div className="absolute -right-3 -top-1 size-14 rotate-12 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-sm" />
-        <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[#eef2ff]">
+          <div className="relative flex size-16 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)]">
           <button
             type="button"
             onClick={onCreate}
@@ -937,11 +924,11 @@ function TokensEmptyState({ onCreate }: { onCreate: () => void }) {
           </button>
         </div>
         <Sparkles
-          className="absolute -right-6 top-0 size-3 text-slate-300"
+          className="absolute -right-6 top-0 size-3 text-[var(--color-text-muted)]"
           aria-hidden
         />
         <Sparkles
-          className="absolute -left-5 bottom-0 size-4 text-slate-300"
+          className="absolute -left-5 bottom-0 size-4 text-[var(--color-text-muted)]"
           aria-hidden
         />
       </div>

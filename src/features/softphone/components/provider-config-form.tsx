@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconLoader2, IconPlus, IconWebhook } from "@tabler/icons-react";
+import { DropdownGlass } from "@/components/crm/dropdown-glass";
+import { InputGlass } from "@/components/crm/input-glass";
+import { Label } from "@/components/ui/label";
+import { ButtonGlass } from "@/components/crm/button-glass";
 
 const BASE = "/api";
 
@@ -33,6 +37,22 @@ async function createConfig(body: Record<string, unknown>) {
   }
   return res.json();
 }
+
+const PROVIDER_OPTIONS = [
+  { value: "api4com", label: "Api4Com" },
+  { value: "generic_sip", label: "PBX Genérico" },
+];
+
+const AUTH_MODE_OPTIONS = [
+  { value: "TOKEN", label: "Token" },
+  { value: "HMAC", label: "HMAC" },
+];
+
+const RECORDING_OPTIONS = [
+  { value: "URL", label: "URL (mp3)" },
+  { value: "INLINE", label: "Inline" },
+  { value: "FETCH_LATER", label: "Buscar depois" },
+];
 
 export function ProviderConfigForm() {
   const queryClient = useQueryClient();
@@ -70,7 +90,7 @@ export function ProviderConfigForm() {
             <span className="text-xs text-[var(--text-muted)] truncate">{c.webhookUrl}</span>
           </div>
           <span
-            className={`text-xs ${c.isActive ? "text-emerald-400" : "text-[var(--text-muted)]"}`}
+            className={`text-xs ${c.isActive ? "text-[var(--color-success)]/80" : "text-[var(--text-muted)]"}`}
           >
             {c.isActive ? "Ativo" : "Inativo"}
           </span>
@@ -78,89 +98,81 @@ export function ProviderConfigForm() {
       ))}
 
       {!showForm ? (
-        <button
+        <ButtonGlass
           type="button"
+          variant="glass"
           onClick={() => setShowForm(true)}
-          className="flex h-9 items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-dashed border-[var(--glass-border)] text-sm text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="w-full border-dashed"
         >
           <IconPlus size={14} /> Adicionar Provedor
-        </button>
+        </ButtonGlass>
       ) : (
         <form
           onSubmit={(e) => {
             e.preventDefault();
             mutation.mutate();
           }}
-          className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[var(--glass-border)] p-3"
+          className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4"
         >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">Provedor</label>
-            <select
+          <div className="flex flex-col gap-1.5">
+            <Label>Provedor</Label>
+            <DropdownGlass
+              options={PROVIDER_OPTIONS}
               value={providerKey}
-              onChange={(e) => setProviderKey(e.target.value)}
-              className="h-8 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-transparent px-2 text-sm"
-            >
-              <option value="api4com">Api4Com</option>
-              <option value="generic_sip">PBX Genérico</option>
-            </select>
+              onValueChange={setProviderKey}
+            />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">Auth Mode</label>
-            <select
+          <div className="flex flex-col gap-1.5">
+            <Label>Auth Mode</Label>
+            <DropdownGlass
+              options={AUTH_MODE_OPTIONS}
               value={authMode}
-              onChange={(e) => setAuthMode(e.target.value)}
-              className="h-8 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-transparent px-2 text-sm"
-            >
-              <option value="TOKEN">Token</option>
-              <option value="HMAC">HMAC</option>
-            </select>
+              onValueChange={setAuthMode}
+            />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">Webhook Secret</label>
-            <input
+          <div className="flex flex-col gap-1.5">
+            <Label>Webhook Secret</Label>
+            <InputGlass
               type="text"
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
               placeholder="Token secreto para validar webhooks"
-              className="h-9 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none"
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-[var(--text-muted)]">Recording Delivery</label>
-            <select
+          <div className="flex flex-col gap-1.5">
+            <Label>Recording Delivery</Label>
+            <DropdownGlass
+              options={RECORDING_OPTIONS}
               value={recordingDelivery}
-              onChange={(e) => setRecordingDelivery(e.target.value)}
-              className="h-8 rounded-[var(--radius-sm)] border border-[var(--glass-border)] bg-transparent px-2 text-sm"
-            >
-              <option value="URL">URL (mp3)</option>
-              <option value="INLINE">Inline</option>
-              <option value="FETCH_LATER">Buscar depois</option>
-            </select>
+              onValueChange={setRecordingDelivery}
+            />
           </div>
 
           {mutation.isError && (
-            <p className="text-xs text-red-400">{(mutation.error as Error)?.message}</p>
+            <p className="text-xs text-[var(--color-danger)]">{(mutation.error as Error)?.message}</p>
           )}
 
           <div className="flex gap-2">
-            <button
+            <ButtonGlass
               type="submit"
+              variant="primary"
+              size="sm"
               disabled={!webhookSecret || mutation.isPending}
-              className="flex h-8 items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 text-xs font-medium text-white disabled:opacity-50"
             >
               {mutation.isPending && <IconLoader2 size={12} className="animate-spin" />}
               Salvar
-            </button>
-            <button
+            </ButtonGlass>
+            <ButtonGlass
               type="button"
+              variant="glass"
+              size="sm"
               onClick={() => setShowForm(false)}
-              className="h-8 rounded-[var(--radius-sm)] px-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             >
               Cancelar
-            </button>
+            </ButtonGlass>
           </div>
         </form>
       )}

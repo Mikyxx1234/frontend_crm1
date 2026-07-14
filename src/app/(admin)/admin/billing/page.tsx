@@ -1,4 +1,4 @@
-import { CreditCard, AlertTriangle, TrendingUp } from "lucide-react";
+import { IconCreditCard as CreditCard, IconAlertTriangle as AlertTriangle, IconTrendingUp as TrendingUp } from "@tabler/icons-react";
 
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";

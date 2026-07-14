@@ -5,7 +5,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, X } from "lucide-react";
+import { IconLoader2 as Loader2, IconX as X } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { useConfirm } from "@/hooks/use-confirm";
@@ -308,7 +308,7 @@ export function DealWorkspace({
   const isLoading = dealLoading || (!!contactId && contactLoading);
   const workspaceTabs: ConversationHeaderTab[] = [
     { key: "conversations", label: "Conversa", count: contact?.conversations.length ?? 0 },
-    { key: "activities", label: "Atividades", count: deal?.activities?.length ?? 0 },
+    { key: "activities", label: "Tarefas", count: deal?.activities?.length ?? 0 },
     { key: "notes", label: "Notas", count: deal?.notes?.length ?? 0 },
     { key: "timeline", label: "Timeline" },
   ];
@@ -326,7 +326,7 @@ export function DealWorkspace({
           <Loader2 className="size-8 animate-spin text-[var(--color-ink-muted)]" />
         </div>
       ) : !deal ? (
-        <div className="flex h-full items-center justify-center text-[14px] tracking-tight text-slate-500">
+        <div className="flex h-full items-center justify-center text-[14px] tracking-tight text-[var(--text-muted)]">
           Negocio nao encontrado.
         </div>
       ) : (
@@ -399,7 +399,7 @@ export function DealWorkspace({
           />
 
           {contact && contact.conversations.length > 1 ? (
-            <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-white/40 bg-white/40 px-2 py-1.5 backdrop-blur-md lg:hidden">
+            <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-[var(--glass-border)] bg-[var(--glass-bg-panel)] px-2 py-1.5 backdrop-blur-md lg:hidden">
               {contact.conversations.map((c) => {
                 const active = selectedConv?.id === c.id;
                 return (
@@ -414,7 +414,7 @@ export function DealWorkspace({
                       "shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium transition-all backdrop-blur",
                       active
                         ? "border-primary/30 bg-[var(--color-primary-soft)] text-primary shadow-[var(--glass-shadow-sm)]"
-                        : "border-white/55 bg-white/55 text-[var(--color-ink-soft)] hover:bg-white/75",
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] hover:bg-[var(--glass-bg-overlay)]",
                     )}
                   >
                     {c.inboxName?.trim() || "Conversa"}
@@ -426,7 +426,7 @@ export function DealWorkspace({
 
           {/* Layout 2 colunas (lg+): painel do negócio | chat fluido */}
           <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
-            <aside className="hidden min-h-0 min-w-0 flex-col overflow-hidden border-r border-white/40 bg-white/35 backdrop-blur-xl lg:flex">
+            <aside className="hidden min-h-0 min-w-0 flex-col overflow-hidden border-r border-[var(--glass-border)] bg-[var(--glass-bg-panel)] backdrop-blur-xl lg:flex">
               <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
                 {rightTab === "conversations" && contact ? (
                   // Modo compacto é o único que tem SortableSidebar
@@ -505,7 +505,7 @@ export function DealWorkspace({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18 }}
                   onClick={() => setConvListOpen(false)}
-                  className="fixed inset-0 z-[65] bg-slate-900/30 backdrop-blur-sm"
+                  className="fixed inset-0 z-(--z-sheet) bg-[var(--glass-bg-modal)]/30 backdrop-blur-sm"
                 />
                 <motion.aside
                   key="conv-list-panel"
@@ -514,11 +514,11 @@ export function DealWorkspace({
                   exit={{ x: "-100%" }}
                   transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
-                    "fixed inset-y-0 left-0 z-[66] flex w-[88vw] max-w-sm flex-col",
-                    "border-r border-white/40 bg-white/65 shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
+                    "fixed inset-y-0 left-0 z-(--z-modal) flex w-[88vw] max-w-sm flex-col",
+                    "border-r border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl",
                   )}
                 >
-                  <div className="flex shrink-0 items-center justify-between border-b border-white/40 bg-white/45 px-4 py-3 backdrop-blur">
+                  <div className="flex shrink-0 items-center justify-between border-b border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-4 py-3 backdrop-blur">
                     <span className="font-display text-[11px] font-bold uppercase tracking-wide text-[var(--color-ink-muted)]">
                       Conversas
                     </span>
@@ -527,7 +527,7 @@ export function DealWorkspace({
                         type="button"
                         onClick={() => setConvListOpen(false)}
                         aria-label="Fechar"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-white/55 bg-white/70 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/85 hover:text-foreground active:scale-95"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-[var(--glass-bg-base)] hover:text-foreground active:scale-95"
                       >
                         <X className="size-4" />
                       </button>
@@ -558,7 +558,7 @@ export function DealWorkspace({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                className="absolute inset-0 z-[55] flex items-start justify-center overflow-y-auto bg-black/25 px-4 py-10 backdrop-blur-md"
+                className="absolute inset-0 z-(--z-overlay) flex items-start justify-center overflow-y-auto bg-black/25 px-4 py-10 backdrop-blur-md"
                 onClick={(e: React.MouseEvent) => { if (e.target === e.currentTarget) setEditing(false); }}
               >
                 <motion.div
@@ -567,7 +567,7 @@ export function DealWorkspace({
                   exit={{ y: 8, opacity: 0 }}
                   transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
-                    "w-full max-w-xl rounded-[28px] border border-white/55 bg-white/80 p-6 sm:p-8 backdrop-blur-xl",
+                    "w-full max-w-xl rounded-3xl border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-6 sm:p-8 backdrop-blur-xl",
                     "shadow-[var(--glass-shadow-lg)]",
                   )}
                 >
@@ -579,7 +579,7 @@ export function DealWorkspace({
                       type="button"
                       onClick={() => setEditing(false)}
                       aria-label="Fechar edição"
-                      className="inline-flex size-8 items-center justify-center rounded-full border border-white/55 bg-white/70 text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-white/85 hover:text-foreground active:scale-95"
+                      className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--color-ink-soft)] backdrop-blur transition-all hover:bg-[var(--glass-bg-base)] hover:text-foreground active:scale-95"
                     >
                       <X className="size-4" />
                     </button>

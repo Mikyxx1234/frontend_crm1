@@ -3,6 +3,8 @@ export { AvatarGlass } from './avatar-glass'
 export { BadgeGlass } from './badge-glass'
 export { ButtonGlass } from './button-glass'
 export { Chip } from './chip'
+// GlassModal (deprecated, DS-002): usar Dialog de @/components/ui/dialog.
+// Re-export mantido só até a remoção do arquivo; não adicionar novos usos.
 export {
   GlassModal,
   GlassModalPanel,

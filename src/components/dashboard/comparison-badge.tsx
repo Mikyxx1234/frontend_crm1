@@ -1,6 +1,6 @@
 "use client";
 
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { IconTrendingDown as TrendingDown, IconTrendingUp as TrendingUp, IconMinus as Minus } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -31,8 +31,8 @@ export function ComparisonBadge({ current, previous, format, invertColors }: Pro
   const colorClass = isNeutral
     ? "text-muted-foreground"
     : (isPositive === greenIsGood)
-      ? "text-emerald-600"
-      : "text-red-500";
+      ? "text-[var(--color-success-text)]"
+      : "text-[var(--color-danger)]";
 
   const Icon = isNeutral ? Minus : isPositive ? TrendingUp : TrendingDown;
 

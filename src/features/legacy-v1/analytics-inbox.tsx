@@ -3,15 +3,7 @@
 import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Clock,
-  Headphones,
-  Loader2,
-  MessageSquare,
-  MessagesSquare,
-  Timer,
-  Users,
-} from "lucide-react";
+import { IconClock as Clock, IconHeadphones as Headphones, IconLoader2 as Loader2, IconMessage as MessageSquare, IconMessages as MessagesSquare, IconClock as Timer, IconUsers as Users } from "@tabler/icons-react";
 import {
   Bar,
   BarChart,
@@ -127,10 +119,10 @@ export default function InboxAnalyticsPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="size-8 animate-spin text-gray-400" />
+          <Loader2 className="size-8 animate-spin text-[var(--color-text-secondary)]" />
         </div>
       ) : !data ? (
-        <p className="py-20 text-center text-sm text-gray-400">Sem dados</p>
+        <p className="py-20 text-center text-sm text-[var(--color-text-secondary)]">Sem dados</p>
       ) : (
         <>
           {/* Metric Cards */}
@@ -253,9 +245,9 @@ export default function InboxAnalyticsPage() {
                             className="size-2.5 rounded-full"
                             style={{ backgroundColor: CHANNEL_COLORS[i % CHANNEL_COLORS.length] }}
                           />
-                          <span className="text-gray-600 dark:text-gray-400">{ch.channel}</span>
+                          <span className="text-[var(--color-text-secondary)]">{ch.channel}</span>
                         </div>
-                        <span className="font-semibold tabular-nums text-gray-900 dark:text-gray-100">
+                        <span className="font-semibold tabular-nums text-[var(--color-text-primary)]">
                           {ch.count}
                         </span>
                       </div>
@@ -301,7 +293,7 @@ export default function InboxAnalyticsPage() {
               {data.byAgent.length > 0 ? (
                 <div className="space-y-0">
                   {/* Header */}
-                  <div className="grid grid-cols-4 gap-2 border-b border-gray-100 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:border-gray-800">
+                  <div className="grid grid-cols-4 gap-2 border-b border-[var(--color-border-soft)] pb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] dark:border-gray-800">
                     <span>Agente</span>
                     <span className="text-center">Conversas</span>
                     <span className="text-center">Msgs Env.</span>
@@ -321,24 +313,24 @@ export default function InboxAnalyticsPage() {
                             .slice(0, 2)
                             .toUpperCase()}
                         </div>
-                        <span className="truncate font-medium text-gray-700 dark:text-gray-300">
+                        <span className="truncate font-medium text-[var(--color-text-primary)]">
                           {agent.userName}
                         </span>
                       </div>
-                      <span className="text-center font-semibold tabular-nums text-gray-900 dark:text-gray-100">
+                      <span className="text-center font-semibold tabular-nums text-[var(--color-text-primary)]">
                         {agent.conversations}
                       </span>
-                      <span className="text-center tabular-nums text-gray-600 dark:text-gray-400">
+                      <span className="text-center tabular-nums text-[var(--color-text-secondary)]">
                         {agent.messagesSent}
                       </span>
                       <span
                         className={cn(
                           "text-center tabular-nums font-medium",
                           agent.avgResponseMinutes <= 5
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : agent.avgResponseMinutes <= 30
-                              ? "text-amber-600 dark:text-amber-400"
-                              : "text-red-600 dark:text-red-400"
+            ? "text-[var(--color-success)] dark:text-[var(--color-success)]"
+            : agent.avgResponseMinutes <= 30
+              ? "text-[var(--color-warning)] dark:text-[var(--color-warning)]"
+              : "text-[var(--color-destructive)] dark:text-[var(--color-destructive)]"
                         )}
                       >
                         {formatMinutes(agent.avgResponseMinutes)}
@@ -348,8 +340,8 @@ export default function InboxAnalyticsPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <Users className="mb-2 size-8 text-gray-200 dark:text-gray-700" />
-                  <p className="text-xs text-gray-400">
+                  <Users className="mb-2 size-8 text-[var(--color-text-muted)] dark:text-[var(--color-text-primary)]" />
+                  <p className="text-xs text-[var(--color-text-secondary)]">
                     Nenhum agente com atendimento no periodo
                   </p>
                 </div>
@@ -367,7 +359,7 @@ export default function InboxAnalyticsPage() {
                 {data.totalMessages > 0 ? (
                   <>
                     <div
-                      className="flex items-center justify-center bg-blue-500 text-[9px] font-bold text-white transition-all duration-500"
+                      className="flex items-center justify-center bg-[var(--color-primary)] text-[9px] font-bold text-[var(--color-text-inverse)] transition-all duration-500"
                       style={{
                         width: `${(data.inboundMessages / data.totalMessages) * 100}%`,
                       }}
@@ -375,7 +367,7 @@ export default function InboxAnalyticsPage() {
                       {Math.round((data.inboundMessages / data.totalMessages) * 100)}%
                     </div>
                     <div
-                      className="flex items-center justify-center bg-emerald-500 text-[9px] font-bold text-white transition-all duration-500"
+                      className="flex items-center justify-center bg-emerald-500 text-[9px] font-bold text-[var(--color-text-inverse)] transition-all duration-500"
                       style={{
                         width: `${(data.outboundMessages / data.totalMessages) * 100}%`,
                       }}
@@ -384,17 +376,17 @@ export default function InboxAnalyticsPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="h-full w-full bg-gray-100 dark:bg-gray-800" />
+                  <div className="h-full w-full bg-[var(--color-bg-muted)]" />
                 )}
               </div>
               <div className="flex shrink-0 gap-4 text-xs">
                 <span className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-full bg-blue-500" />
-                  <span className="text-gray-500">Recebidas</span>
+                  <span className="size-2.5 rounded-full bg-[var(--color-primary)]" />
+                  <span className="text-[var(--color-text-secondary)]">Recebidas</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="size-2.5 rounded-full bg-emerald-500" />
-                  <span className="text-gray-500">Enviadas</span>
+                  <span className="text-[var(--color-text-secondary)]">Enviadas</span>
                 </span>
               </div>
             </div>
@@ -421,13 +413,13 @@ function MetricCard({
   isText?: boolean;
 }) {
   const colors = {
-    blue: "from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/20 text-blue-600 dark:text-blue-400",
+    blue: "from-blue-50 to-blue-100/50 dark:from-blue-950/40 dark:to-blue-900/20 text-[var(--color-brand-primary)] dark:text-[var(--color-brand-primary)]",
     emerald:
-      "from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-emerald-900/20 text-emerald-600 dark:text-emerald-400",
+      "from-emerald-50 to-emerald-100/50 dark:from-emerald-950/40 dark:to-emerald-900/20 text-[var(--color-success)] dark:text-[var(--color-success)]",
     amber:
-      "from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-amber-900/20 text-amber-600 dark:text-amber-400",
+      "from-amber-50 to-amber-100/50 dark:from-amber-950/40 dark:to-amber-900/20 text-[var(--color-warning)] dark:text-[var(--color-warning)]",
     purple:
-      "from-purple-50 to-purple-100/50 dark:from-purple-950/40 dark:to-purple-900/20 text-purple-600 dark:text-purple-400",
+      "from-purple-50 to-purple-100/50 dark:from-purple-950/40 dark:to-purple-900/20 text-[var(--color-lavender)] dark:text-[var(--color-lavender)]",
   };
 
   return (

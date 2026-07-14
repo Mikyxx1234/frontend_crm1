@@ -1,19 +1,7 @@
 "use client";
 
-import {
-  Activity,
-  BarChart3,
-  Building2,
-  CheckSquare,
-  Kanban,
-  Megaphone,
-  MessageSquare,
-  Settings,
-  UserCircle2,
-  Users,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { IconActivity as Activity, IconChartBar as BarChart3, IconBuilding as Building2, IconSquareCheck as CheckSquare, IconLayoutKanban as Kanban, IconSpeakerphone as Megaphone, IconMessage as MessageSquare, IconSettings as Settings, IconUserCircle as UserCircle2, IconUsers as Users, IconBolt as Zap } from "@tabler/icons-react"
+import type { Icon as LucideIcon } from "@tabler/icons-react";
 
 /**
  * Resolvedor de iconName (string PascalCase) -> componente.

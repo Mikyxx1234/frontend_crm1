@@ -20,6 +20,7 @@ import { NavRailV2 } from "@/components/crm/nav-rail-v2";
 import { RestrictedScreen } from "@/components/crm/restricted-screen";
 import { useRequireManager } from "@/hooks/use-user-role";
 import { PageHeader } from "@/components/crm/page-header";
+import { PagePrimaryButton } from "@/components/crm/page-toolbar";
 import { PageDemoBanner } from "@/components/crm/page-demo-banner";
 import { ListColumnLabel, listTableHeadRowClass } from "@/components/crm/sortable-header";
 import { cn } from "@/lib/utils";
@@ -135,7 +136,7 @@ export default function DistributionClientPage({
   if (roleReady && !isManagerUp) return <RestrictedScreen />;
 
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       {navRail ?? <NavRailV2 />}
 
       <main className="flex min-w-0 flex-col gap-4 overflow-y-auto pr-1">
@@ -145,11 +146,9 @@ export default function DistributionClientPage({
           description="Distribua leads entre consultores com regras de disponibilidade, fila e equilíbrio"
           actions={
             smartInstalled ? (
-              <button
-                type="button"
+              <PagePrimaryButton
                 onClick={handleTest}
                 disabled={simulateMut.isPending}
-                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--brand-primary)] px-4 py-2 font-display text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)] transition-all hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {simulateMut.isPending ? (
                   <IconLoader2 size={16} className="animate-spin" />
@@ -157,7 +156,7 @@ export default function DistributionClientPage({
                   <IconPlayerPlay size={16} />
                 )}
                 Testar distribuição
-              </button>
+              </PagePrimaryButton>
             ) : undefined
           }
         />
@@ -507,7 +506,7 @@ function PendingQueueBlock({
         "overflow-hidden rounded-[var(--radius-xl)] border backdrop-blur-md",
         isEmpty
           ? "border-[var(--glass-border)] bg-[var(--glass-bg-base,rgba(255,255,255,0.82))] shadow-[var(--glass-shadow)]"
-          : "border-amber-300/40 bg-amber-50/80 shadow-[var(--glass-shadow)]",
+          : "border-[var(--color-warn)]/40 bg-[var(--color-warn-bg)]/80 shadow-[var(--glass-shadow)]",
       )}
     >
       <div className="flex items-start gap-3 p-4">
@@ -517,7 +516,7 @@ function PendingQueueBlock({
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
             isEmpty
               ? "bg-[var(--color-success-bg)] text-[var(--color-success)]"
-              : "bg-amber-100 text-amber-600",
+              : "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
           )}
         >
           {isEmpty ? (
@@ -541,7 +540,7 @@ function PendingQueueBlock({
             type="button"
             onClick={onRetry}
             disabled={retrying}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-amber-300/50 bg-amber-50 px-3 py-1.5 font-display text-[12px] font-bold text-amber-600 transition-colors hover:bg-amber-100 disabled:opacity-50"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--color-warn)]/50 bg-[var(--color-warn-bg)] px-3 py-1.5 font-display text-[12px] font-bold text-[var(--color-warn)] transition-colors hover:bg-[var(--color-warn-bg)] disabled:opacity-50"
           >
             {retrying ? (
               <IconLoader2 size={14} className="animate-spin" />

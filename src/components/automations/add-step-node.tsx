@@ -2,38 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import {
-  ArrowRightLeft,
-  Bot,
-  BotMessageSquare,
-  Briefcase,
-  CalendarPlus,
-  CheckCircle2,
-  Clock,
-  CornerDownRight,
-  FileText,
-  GitBranch,
-  Globe,
-  Image,
-  Mail,
-  MessageCircleQuestion,
-  MessageSquare,
-  MousePointerClick,
-  PackageMinus,
-  Pause,
-  Pencil,
-  Plus,
-  Repeat,
-  Route,
-  ShoppingBag,
-  Square,
-  StopCircle,
-  Tag,
-  Timer,
-  TrendingUp,
-  UserPlus,
-  Variable,
-} from "lucide-react";
+import { IconArrowsLeftRight as ArrowRightLeft, IconRobot as Bot, IconRobotFace as BotMessageSquare, IconBriefcase as Briefcase, IconCalendarPlus as CalendarPlus, IconCircleCheck as CheckCircle2, IconClock as Clock, IconCornerDownRight as CornerDownRight, IconFileText as FileText, IconGitBranch as GitBranch, IconGlobe as Globe, IconPhoto as Image, IconMail as Mail, IconMessageQuestion as MessageCircleQuestion, IconMessage as MessageSquare, IconClick as MousePointerClick, IconPackageOff as PackageMinus, IconPlayerPause as Pause, IconPencil as Pencil, IconPlus as Plus, IconRepeat as Repeat, IconRoute as Route, IconShoppingBag as ShoppingBag, IconSquare as Square, IconPlayerStop as StopCircle, IconTag as Tag, IconClock as Timer, IconTrendingUp as TrendingUp, IconUserPlus as UserPlus, IconVariable as Variable } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 
 import { cn } from "@/lib/utils";
@@ -113,36 +82,36 @@ export const stepDescription: Record<string, string> = {
 };
 
 export const stepColor: Record<string, string> = {
-  send_email: "text-blue-600",
-  move_stage: "text-indigo-500",
-  assign_owner: "text-teal-500",
-  add_tag: "text-emerald-500",
-  remove_tag: "text-red-400",
-  update_field: "text-amber-500",
-  create_activity: "text-violet-500",
-  send_whatsapp_message: "text-green-600",
-  send_whatsapp_template: "text-green-500",
-  send_whatsapp_media: "text-green-500",
-  send_whatsapp_interactive: "text-violet-500",
-  send_product: "text-emerald-600",
-  webhook: "text-gray-500",
-  delay: "text-orange-400",
-  condition: "text-cyan-500",
-  update_lead_score: "text-pink-500",
-  question: "text-blue-500",
-  wait_for_reply: "text-orange-500",
-  set_variable: "text-fuchsia-500",
-  goto: "text-sky-500",
-  transfer_automation: "text-indigo-500",
-  stop_automation: "text-rose-500",
-  finish: "text-red-500",
-  create_deal: "text-emerald-600",
-  finish_conversation: "text-green-500",
-  business_hours: "text-amber-600",
-  ask_ai_agent: "text-violet-500",
-  transfer_to_ai_agent: "text-violet-600",
-  consume_stock: "text-orange-600",
-  execute_distribution: "text-indigo-500",
+  send_email: "text-[var(--color-info)]",
+  move_stage: "text-[var(--brand-primary)]",
+  assign_owner: "text-[var(--color-success)]",
+  add_tag: "text-[var(--color-success)]",
+  remove_tag: "text-[var(--color-danger)]",
+  update_field: "text-[var(--color-warn)]",
+  create_activity: "text-[var(--color-lavender)]",
+  send_whatsapp_message: "text-[var(--color-success)]",
+  send_whatsapp_template: "text-[var(--color-success)]",
+  send_whatsapp_media: "text-[var(--color-success)]",
+  send_whatsapp_interactive: "text-[var(--color-lavender)]",
+  send_product: "text-[var(--color-success-text)]",
+  webhook: "text-[var(--text-muted)]",
+  delay: "text-[var(--color-orange)]",
+  condition: "text-[var(--color-cyan)]",
+  update_lead_score: "text-[var(--color-pink)]",
+  question: "text-[var(--color-info)]",
+  wait_for_reply: "text-[var(--color-warning)]",
+  set_variable: "text-[var(--color-fuchsia)]",
+  goto: "text-[var(--color-sky)]",
+  transfer_automation: "text-[var(--brand-primary)]",
+  stop_automation: "text-[var(--color-danger)]",
+  finish: "text-[var(--color-danger)]",
+  create_deal: "text-[var(--color-success-text)]",
+  finish_conversation: "text-[var(--color-success)]",
+  business_hours: "text-[var(--color-warn)]",
+  ask_ai_agent: "text-[var(--color-lavender)]",
+  transfer_to_ai_agent: "text-[var(--color-lavender)]",
+  consume_stock: "text-[var(--color-warning)]",
+  execute_distribution: "text-[var(--brand-primary)]",
 };
 
 export type StepGroup = { title: string; items: ActionStepType[] };
@@ -235,8 +204,8 @@ export function AddStepNode({ data }: NodeProps<AddStepNodeData>) {
         className={cn(
           "flex cursor-grab items-center gap-2 rounded-full border-2 border-dashed px-4 py-2 text-[12px] font-bold tracking-tight transition-all duration-200 active:cursor-grabbing",
           open
-            ? "border-primary bg-[#eef4ff] text-primary shadow-[var(--shadow-indigo-glow)]"
-            : "animate-pulse-soft border-primary/40 bg-white/80 text-slate-500 backdrop-blur-sm hover:-translate-y-px hover:border-primary hover:bg-[#eef4ff] hover:text-primary hover:shadow-[var(--shadow-indigo-glow)]"
+            ? "border-primary bg-[var(--color-primary-soft)] text-primary shadow-[var(--shadow-indigo-glow)]"
+            : "animate-pulse-soft border-primary/40 bg-[var(--glass-bg-base)] text-[var(--text-muted)] backdrop-blur-sm hover:-translate-y-px hover:border-primary hover:bg-[var(--color-primary-soft)] hover:text-primary hover:shadow-[var(--shadow-indigo-glow)]"
         )}
       >
         <Plus className="size-3.5" strokeWidth={2.6} />

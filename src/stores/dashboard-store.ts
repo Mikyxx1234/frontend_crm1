@@ -274,7 +274,7 @@ export const WIDGET_REGISTRY: Record<WidgetId, WidgetDescriptor> = {
   },
   activities: {
     id: "activities",
-    label: "Atividades",
+    label: "Tarefas",
     description: "Tarefas e compromissos da equipe.",
     category: "team",
     defaults: { x: 6, y: 0, w: 6, h: 6, minW: 4, minH: 4 },

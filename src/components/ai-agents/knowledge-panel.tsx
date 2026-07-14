@@ -2,21 +2,15 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  CheckCircle2,
-  FileText,
-  Loader2,
-  Plus,
-  RefreshCcw,
-  Trash2,
-} from "lucide-react";
+import { IconAlertCircle as AlertCircle, IconCircleCheck as CheckCircle2, IconFileText as FileText, IconLoader2 as Loader2, IconPlus as Plus, IconRefresh as RefreshCcw, IconTrash as Trash2 } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type KnowledgeDoc = {
   id: string;
@@ -42,6 +36,7 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
   const [title, setTitle] = React.useState("");
   const [content, setContent] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const { confirm, dialog } = useConfirm();
 
   const { data: docs = [], isLoading } = useQuery({
     queryKey: ["ai-agent-knowledge", agentId],
@@ -136,13 +131,13 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
             <Label htmlFor="kb-content" className="text-xs">
               Conteúdo (texto plano, markdown)
             </Label>
-            <textarea
+            <Textarea
               id="kb-content"
               rows={8}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Cole aqui o conteúdo do documento..."
-              className="resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+              className="resize-none"
             />
             <div className="text-[11px] text-muted-foreground">
               {content.length.toLocaleString("pt-BR")} caracteres • limite 500k
@@ -193,7 +188,7 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
               key={d.id}
               className="flex items-start gap-3 rounded-xl border bg-card p-3"
             >
-              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-300">
+              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-info-bg)] text-[var(--brand-primary)] dark:bg-indigo-950 dark:text-[var(--color-brand-primary)]">
                 <FileText className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -216,9 +211,13 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
                 size="icon"
                 variant="ghost"
                 className="size-8 text-destructive/70 hover:text-destructive"
-                onClick={() => {
-                  if (confirm(`Excluir documento "${d.title}"?`))
-                    deleteMut.mutate(d.id);
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: `Excluir documento "${d.title}"?`,
+                    confirmLabel: "Excluir",
+                    destructive: true,
+                  });
+                  if (ok) deleteMut.mutate(d.id);
                 }}
                 disabled={deleteMut.isPending}
               >
@@ -228,6 +227,7 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
           ))}
         </div>
       )}
+      {dialog}
     </div>
   );
 }
@@ -238,7 +238,7 @@ function StatusBadge({ status }: { status: KnowledgeDoc["status"] }) {
       return (
         <Badge
           variant="secondary"
-          className="gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+          className="gap-1 bg-[var(--color-success-bg)] text-[var(--color-success-text)] hover:bg-[var(--color-success-bg)] dark:bg-emerald-950 dark:text-[var(--color-success)]/50"
         >
           <CheckCircle2 className="size-3" /> Pronto
         </Badge>

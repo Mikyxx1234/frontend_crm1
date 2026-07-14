@@ -1,7 +1,7 @@
 "use client";
 
 import { apiUrl } from "@/lib/api";
-import { Bell, BellPlus } from "lucide-react";
+import { IconBell as Bell, IconBellPlus as BellPlus } from "@tabler/icons-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -141,8 +141,8 @@ export function RemindButton({
           aria-label="Criar lembrete"
           aria-expanded={open}
           className={cn(
-            "flex size-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-slate-800 dark:hover:text-slate-100",
-            open && "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+            "flex size-9 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-base)] hover:text-[var(--text-primary)] active:scale-95 dark:text-[var(--color-ink-muted)] dark:hover:bg-[var(--glass-bg-base)] dark:hover:text-slate-100",
+            open && "bg-[var(--glass-bg-base)] text-[var(--text-primary)] dark:bg-[var(--glass-bg-base)] dark:text-slate-100",
           )}
         >
           <BellPlus size={18} strokeWidth={2.2} />
@@ -161,7 +161,7 @@ export function RemindButton({
             className={cn(
               "z-50",
               // Mobile: sheet de baixo.
-              "fixed inset-x-3 bottom-3 rounded-3xl bg-white p-4 shadow-[var(--shadow-lg)] ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-slate-800",
+              "fixed inset-x-3 bottom-3 rounded-3xl bg-[var(--color-bg-card)] p-4 shadow-[var(--shadow-lg)] ring-1 ring-[var(--color-border)] dark:bg-[var(--glass-bg-modal)] dark:ring-slate-800",
               // Desktop: popover ancorado embaixo do botão.
               "md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-full md:mt-2 md:w-[300px] md:rounded-2xl md:p-3",
             )}
@@ -170,7 +170,7 @@ export function RemindButton({
           >
             <div className="mb-2 flex items-center gap-2 px-1">
               <Bell className="size-4 text-primary" strokeWidth={2.2} />
-              <h3 className="text-[13px] font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+              <h3 className="text-[13px] font-extrabold tracking-tight text-[var(--text-primary)] dark:text-slate-100">
                 Lembrar de {contactName}
               </h3>
             </div>
@@ -186,15 +186,15 @@ export function RemindButton({
                     onClick={() => createReminder(p)}
                     className={cn(
                       "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                      "hover:bg-[var(--color-bg-subtle)] dark:hover:bg-slate-800/60",
+                      "hover:bg-[var(--color-bg-subtle)] dark:hover:bg-[var(--glass-bg-base)]/60",
                       "disabled:cursor-not-allowed disabled:opacity-50",
                     )}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="text-[13px] font-bold text-slate-800 dark:text-slate-100">
+                      <div className="text-[13px] font-bold text-[var(--text-primary)] dark:text-slate-100">
                         {p.label}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-[var(--color-ink-muted)]">
+                      <div className="text-[11px] text-[var(--text-muted)] dark:text-[var(--color-ink-muted)]">
                         {p.description}
                       </div>
                     </div>
@@ -206,7 +206,7 @@ export function RemindButton({
               })}
             </div>
 
-            <p className="mt-2 px-3 text-[10px] font-medium text-[var(--color-ink-muted)] dark:text-slate-500">
+            <p className="mt-2 px-3 text-[10px] font-medium text-[var(--color-ink-muted)] dark:text-[var(--text-muted)]">
               Aparece em <span className="font-bold">Tarefas</span> e na timeline do contato.
             </p>
           </div>

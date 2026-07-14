@@ -107,7 +107,7 @@ export function ContactEditDialog({ contactId, initial, trigger, onSaved }: Cont
       {open && typeof document !== "undefined"
         ? createPortal(
             <div
-              className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
+              className="fixed inset-0 z-(--z-popover) flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
               onClick={() => setOpen(false)}
             >
               <form

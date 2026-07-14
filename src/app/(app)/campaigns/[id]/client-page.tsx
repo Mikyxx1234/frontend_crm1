@@ -185,13 +185,13 @@ export default function CampaignDetailClientPage() {
           icon={<IconSend size={18} />}
           label="Enviados"
           value={sent}
-          tone="text-emerald-600"
+          tone="text-[var(--color-success-text)]"
         />
         <StatCard
           icon={<IconCircleCheck size={18} />}
           label="Entregues"
           value={stats?.deliveredCount ?? campaign.deliveredCount}
-          tone="text-emerald-600"
+          tone="text-[var(--color-success-text)]"
           rate={stats?.deliveryRate}
         />
         <StatCard
@@ -205,14 +205,14 @@ export default function CampaignDetailClientPage() {
           icon={<IconMessage2 size={18} />}
           label="Responderam"
           value={stats?.repliedCount ?? campaign.repliedCount ?? 0}
-          tone="text-sky-600"
+          tone="text-[var(--color-sky)]"
           rate={stats?.replyRate}
         />
         <StatCard
           icon={<IconAlertTriangle size={18} />}
           label="Falhas"
           value={failed}
-          tone="text-red-600"
+          tone="text-[var(--color-danger-text)]"
         />
       </div>
 
@@ -220,11 +220,11 @@ export default function CampaignDetailClientPage() {
         <div className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] p-4 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
           <div className="flex h-3 overflow-hidden rounded-full bg-[var(--glass-bg-subtle)]">
             <div
-              className="bg-emerald-500 transition-all duration-500"
+              className="bg-[var(--color-success)] transition-all duration-500"
               style={{ width: `${pctSent}%` }}
             />
             <div
-              className="bg-red-500 transition-all duration-500"
+              className="bg-[var(--color-danger)] transition-all duration-500"
               style={{ width: `${pctFailed}%` }}
             />
           </div>
@@ -248,7 +248,7 @@ export default function CampaignDetailClientPage() {
                 className="flex items-center justify-between gap-3 font-body text-[12px]"
               >
                 <span className="truncate text-[var(--text-secondary)]">{r.reason}</span>
-                <span className="shrink-0 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 font-display text-[11px] font-bold text-red-600">
+                <span className="shrink-0 rounded-full border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-2 py-0.5 font-display text-[11px] font-bold text-[var(--color-danger-text)]">
                   {r.count}
                 </span>
               </div>
@@ -322,13 +322,13 @@ export default function CampaignDetailClientPage() {
                               type="button"
                               onClick={() => toggleError(r.id)}
                               title={r.errorMessage}
-                              className="max-w-[180px] truncate font-body text-[10.5px] text-red-600 underline-offset-2 hover:underline"
+                              className="max-w-[180px] truncate font-body text-[10.5px] text-[var(--color-danger-text)] underline-offset-2 hover:underline"
                             >
                               {r.errorMessage}
                             </button>
                           ) : null}
                           {r.repliedAt ? (
-                            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-display text-[10px] font-bold text-sky-600">
+                            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 font-display text-[10px] font-bold text-[var(--color-sky)]">
                               Respondeu
                             </span>
                           ) : null}
@@ -340,7 +340,7 @@ export default function CampaignDetailClientPage() {
                         </div>
                       </div>
                       {r.errorMessage && expandedErrors.has(r.id) ? (
-                        <p className="mt-1.5 whitespace-pre-wrap break-words rounded-[var(--radius-md)] border border-red-500/20 bg-red-500/5 px-2.5 py-1.5 font-body text-[11px] leading-relaxed text-red-600">
+                        <p className="mt-1.5 whitespace-pre-wrap break-words rounded-[var(--radius-md)] border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/5 px-2.5 py-1.5 font-body text-[11px] leading-relaxed text-[var(--color-danger-text)]">
                           {r.errorMessage}
                         </p>
                       ) : null}
@@ -405,7 +405,7 @@ function Shell({
   badge?: React.ReactNode;
 }) {
   return (
-    <div className="v2-screen grid grid-cols-[72px_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
       <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
         <PageHeader
@@ -473,7 +473,7 @@ function HeaderBtn({
       disabled={disabled}
       className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 font-display text-[12.5px] font-semibold transition-colors disabled:opacity-50 ${
         danger
-          ? "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20"
+          ? "border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 text-[var(--color-danger-text)] hover:bg-[var(--color-danger)]/20"
           : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/35"
       }`}
     >

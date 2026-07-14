@@ -3,7 +3,7 @@
 import * as React from "react";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, isValid, parseISO, startOfMonth, startOfWeek, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { IconCalendar as CalendarDays, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 
@@ -30,12 +30,18 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
-  const selectedDate = parseValue(value);
+  const selectedDate = React.useMemo(() => parseValue(value), [value]);
   const [visibleMonth, setVisibleMonth] = React.useState<Date>(selectedDate ?? new Date());
 
+  // Sync visibleMonth only when the string value changes — using `value` (string)
+  // avoids the bug where parseISO creates a new Date reference on every render,
+  // which caused the useEffect to fire on every render and reset visibleMonth,
+  // making the prev/next navigation buttons appear to do nothing.
   React.useEffect(() => {
-    if (selectedDate) setVisibleMonth(selectedDate);
-  }, [selectedDate]);
+    const parsed = parseValue(value);
+    if (parsed) setVisibleMonth(parsed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -59,8 +65,8 @@ export function DatePicker({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "flex h-8 w-full items-center justify-between rounded-lg border border-border bg-white px-2.5 text-left text-[13px] text-foreground transition",
-          "hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200",
+          "flex h-8 w-full items-center justify-between rounded-lg border border-border bg-[var(--color-bg-card)] px-2.5 text-left text-[13px] text-foreground transition",
+          "hover:border-[var(--glass-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-border)]",
           disabled && "cursor-not-allowed opacity-60",
         )}
       >
@@ -71,23 +77,23 @@ export function DatePicker({
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[280px] rounded-2xl border border-border bg-white p-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+        <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-[280px] rounded-2xl border border-border bg-[var(--color-bg-card)] p-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => setVisibleMonth((current) => subMonths(current, 1))}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--glass-bg-base)] hover:text-foreground"
               aria-label="Mês anterior"
             >
               <ChevronLeft className="size-4" />
             </button>
-            <div className="text-sm font-semibold text-slate-900">
+            <div className="text-sm font-semibold text-[var(--text-primary)]">
               {format(visibleMonth, "MMMM yyyy", { locale: ptBR })}
             </div>
             <button
               type="button"
               onClick={() => setVisibleMonth((current) => addMonths(current, 1))}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition hover:bg-[var(--glass-bg-base)] hover:text-foreground"
               aria-label="Próximo mês"
             >
               <ChevronRight className="size-4" />
@@ -115,9 +121,9 @@ export function DatePicker({
                   }}
                   className={cn(
                     "flex h-8 items-center justify-center rounded-lg text-xs font-medium transition",
-                    isSelected && "bg-slate-900 text-white",
-                    !isSelected && inMonth && "text-foreground hover:bg-slate-100",
-                    !inMonth && "text-slate-300 hover:bg-[var(--color-bg-subtle)]",
+                    isSelected && "bg-[var(--brand-primary)] text-white shadow-sm",
+                    !isSelected && inMonth && "text-foreground hover:bg-[var(--glass-bg-overlay)]",
+                    !inMonth && "text-[var(--text-muted)] opacity-40 hover:bg-[var(--glass-bg-overlay)]",
                   )}
                 >
                   {format(day, "d")}
@@ -133,7 +139,7 @@ export function DatePicker({
                 onChange("");
                 setOpen(false);
               }}
-              className="text-xs font-medium text-slate-500 transition hover:text-foreground"
+              className="text-xs font-medium text-[var(--text-muted)] transition hover:text-foreground"
             >
               Limpar
             </button>
@@ -145,7 +151,7 @@ export function DatePicker({
                 setVisibleMonth(today);
                 setOpen(false);
               }}
-              className="text-xs font-medium text-slate-900 transition hover:text-foreground"
+              className="text-xs font-medium text-[var(--text-primary)] transition hover:text-foreground"
             >
               Hoje
             </button>

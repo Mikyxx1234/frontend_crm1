@@ -2,10 +2,11 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bot, Check, Loader2, Pencil, X } from "lucide-react";
+import { IconRobot as Bot, IconCheck as Check, IconLoader2 as Loader2, IconPencil as Pencil, IconX as X } from "@tabler/icons-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * Balão de rascunho gerado por um agente de IA em modo DRAFT.
@@ -74,17 +75,17 @@ export function AIDraftCard({
 
   return (
     <div className="flex w-full justify-end px-2">
-      <div className="w-full max-w-[92%] rounded-xl border border-indigo-300/60 bg-indigo-50/60 p-3 text-sm shadow-sm dark:border-indigo-700/60 dark:bg-indigo-950/30 md:max-w-[85%]">
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+      <div className="w-full max-w-[92%] rounded-xl border border-[var(--color-brand-primary)]/60 bg-[var(--color-info-bg)]/60 p-3 text-sm shadow-sm dark:border-indigo-700/60 dark:bg-indigo-950/30 md:max-w-[85%]">
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-[var(--brand-primary)] dark:text-[var(--color-brand-primary)]">
           <Bot className="size-3.5" />
           Rascunho do agente IA
           {senderName && (
-            <span className="text-indigo-500/80 dark:text-indigo-400/70 normal-case">
+            <span className="text-[var(--brand-primary)]/80 dark:text-[var(--color-brand-primary)]/70 normal-case">
               • {senderName}
             </span>
           )}
           {createdAt && (
-            <span className="ml-auto font-normal text-indigo-500/70 dark:text-indigo-400/70 normal-case">
+            <span className="ml-auto font-normal text-[var(--brand-primary)]/70 dark:text-[var(--color-brand-primary)]/70 normal-case">
               {new Date(createdAt).toLocaleTimeString("pt-BR", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -94,11 +95,11 @@ export function AIDraftCard({
         </div>
 
         {editing ? (
-          <textarea
+            <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={Math.min(8, Math.max(3, draft.split("\n").length))}
-            className="w-full resize-none rounded-lg border border-indigo-200 bg-background px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 dark:border-indigo-800"
+            className="w-full resize-none"
           />
         ) : (
           <p className="whitespace-pre-wrap text-foreground/90">{draft}</p>
@@ -136,7 +137,7 @@ export function AIDraftCard({
             size="sm"
             onClick={() => approveMut.mutate()}
             disabled={busy || !draft.trim()}
-            className="gap-1 bg-indigo-600 hover:bg-indigo-700"
+            className="gap-1 bg-[var(--color-brand-primary)] hover:bg-[var(--color-purple-text)]"
           >
             {approveMut.isPending ? (
               <Loader2 className="size-3.5 animate-spin" />

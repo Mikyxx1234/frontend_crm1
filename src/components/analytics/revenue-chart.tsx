@@ -5,14 +5,14 @@ import { apiUrl } from "@/lib/api";
  * RevenueChart (Bento / Linear-Stripe)
  * ─────────────────────────────────────
  * Área da receita repaginada para o DNA Studioia: fundo branco, cartão
- * `rounded-[24px]/[32px]`, grid horizontal muito sutil (`#f1f5f9`), paleta
+ * `rounded-3xl`, grid horizontal muito sutil (`#f1f5f9`), paleta
  * `primary` com gradiente linear descendente para transparente. Tooltip
  * `rounded-2xl` com sombra suave e tipografia `slate-900`.
  */
 
 import { useId, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MoreVertical } from "lucide-react";
+import { IconDotsVertical as MoreVertical } from "@tabler/icons-react";
 import {
   Area,
   AreaChart,
@@ -77,15 +77,15 @@ function RevenueTooltip({
         ? String(label)
         : "";
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-2.5 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.2)]">
+    <div className="rounded-2xl border border-[var(--glass-border-subtle)] bg-[var(--color-bg-card)] px-3.5 py-2.5 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.2)]">
       <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-ink-muted)]">
         {labelStr}
       </p>
-      <p className="mt-0.5 text-[14px] font-bold tracking-tight text-slate-900">
+      <p className="mt-0.5 text-[14px] font-bold tracking-tight text-[var(--text-primary)]">
         {formatCurrency(revenue)}
       </p>
       {count != null && (
-        <p className="text-[11px] font-semibold text-slate-500">
+        <p className="text-[11px] font-semibold text-[var(--text-muted)]">
           {count} negócio{count === 1 ? "" : "s"}
         </p>
       )}
@@ -117,12 +117,12 @@ export function RevenueChart({
   const height = compact ? 220 : 320;
 
   return (
-    <div className={cn("bg-white p-6 md:p-8", className)}>
+    <div className={cn("bg-[var(--color-bg-card)] p-6 md:p-8", className)}>
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <span className={bentoLabelClass}>Projeção de Receita</span>
-          <h3 className="mt-1 text-[18px] font-bold tracking-tight text-slate-900">
+          <h3 className="mt-1 text-[18px] font-bold tracking-tight text-[var(--text-primary)]">
             {compact ? "Receita no período" : "Performance do período"}
           </h3>
         </div>
@@ -144,8 +144,8 @@ export function RevenueChart({
                   className={cn(
                     "rounded-full px-3 py-1 text-[11px] font-bold transition-all",
                     active
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-foreground",
+                      ? "bg-[var(--color-bg-card)] text-[var(--text-primary)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-foreground",
                   )}
                 >
                   {g.label}
@@ -171,11 +171,11 @@ export function RevenueChart({
           style={{ height }}
         />
       ) : isError ? (
-        <p className="py-12 text-center text-[13px] font-medium text-slate-500">
+        <p className="py-12 text-center text-[13px] font-medium text-[var(--text-muted)]">
           Não foi possível carregar o gráfico de receita.
         </p>
       ) : chartData.length === 0 ? (
-        <p className="py-12 text-center text-[13px] font-medium text-slate-500">
+        <p className="py-12 text-center text-[13px] font-medium text-[var(--text-muted)]">
           Sem receita fechada neste intervalo.
         </p>
       ) : (

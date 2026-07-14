@@ -2,11 +2,19 @@
 
 import { apiUrl, getApiBaseUrl } from "@/lib/api";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
-import { Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, ShieldCheck, ShieldOff, Webhook } from "lucide-react";
+import { IconCheck as Check, IconCopy as Copy, IconExternalLink as ExternalLink, IconEye as Eye, IconEyeOff as EyeOff, IconLoader2 as Loader2, IconRefresh as RefreshCw, IconShieldCheck as ShieldCheck, IconWebhook as Webhook } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -100,10 +108,10 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   const [esError, setEsError] = useState<string | null>(null);
   const [esSuccess, setEsSuccess] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  // "Avancado (app proprio)": revela o bloco legacy de Verify Token / Callback
-  // URL / App Secret para canais que nasceram no modelo antigo (App Meta do
-  // cliente). Default: revelado apenas para canais legacy.
-  const [showAdvanced, setShowAdvanced] = useState(!isGlobalApp);
+  // Modal de webhook (Callback URL / Verify Token / docs Meta). Antes esse
+  // bloco ficava inline e deixava a config verbosa — agora vive atras de um
+  // botao "Webhook".
+  const [webhookOpen, setWebhookOpen] = useState(false);
   const [manualReconnecting, setManualReconnecting] = useState(false);
   const [manualReconnectError, setManualReconnectError] = useState<string | null>(null);
   const [manualReconnectSuccess, setManualReconnectSuccess] = useState(false);
@@ -191,282 +199,131 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
   const statusOk = testQuery.data?.status === "CONNECTED";
   const statusBad = testQuery.data?.status === "FAILED";
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-          Meta Cloud API
-        </h3>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Credenciais do WhatsApp Business Platform. Os tokens são armazenados de
-          forma segura; valores atuais aparecem mascarados.
-        </p>
-      </div>
+  const handleManualReconnect = () => {
+    setManualReconnectError(null);
+    setManualReconnectSuccess(false);
+    setManualReconnecting(true);
+    const tokenToUse = accessToken.trim() || initialToken;
+    if (!tokenToUse) {
+      setManualReconnectError(
+        "Informe o Token de acesso abaixo para reconectar.",
+      );
+      setManualReconnecting(false);
+      return;
+    }
+    fetch(apiUrl("/api/channels/manual-cloud"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        channelId: channel.id,
+        name: channelName.trim() || channel.name,
+        accessToken: tokenToUse,
+        phoneNumberId: phoneNumberId.trim(),
+        wabaId: businessAccountId.trim(),
+      }),
+    })
+      .then(async (res) => {
+        const data = (await res.json()) as { message?: string };
+        if (!res.ok) {
+          throw new Error(data.message ?? "Erro ao reconectar.");
+        }
+        setManualReconnectSuccess(true);
+        setAccessToken("");
+        void queryClient.invalidateQueries({ queryKey: ["channels"] });
+        void queryClient.invalidateQueries({
+          queryKey: ["channel", channel.id],
+        });
+        onSaved?.();
+      })
+      .catch((err: unknown) => {
+        setManualReconnectError(
+          err instanceof Error ? err.message : "Erro ao reconectar.",
+        );
+      })
+      .finally(() => setManualReconnecting(false));
+  };
 
-      <div className="rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-4 text-sm">
-        <p className="font-medium text-[var(--text-primary)]">Configuração atual</p>
-        <ul className="mt-3 space-y-2 text-[var(--text-muted)]">
-          <li className="flex justify-between gap-2">
-            <span>Access Token</span>
-            <span className="font-mono text-xs text-[var(--text-primary)]">
-              {initialToken ? maskSecret(initialToken) : "—"}
-            </span>
-          </li>
-          <li className="flex justify-between gap-2">
-            <span>Phone Number ID</span>
-            <span className="font-mono text-xs text-[var(--text-primary)]">
-              {initialPnId || "—"}
-            </span>
-          </li>
-          <li className="flex justify-between gap-2">
-            <span>Business Account ID</span>
-            <span className="font-mono text-xs text-[var(--text-primary)]">
-              {initialWaba || "—"}
-            </span>
-          </li>
-          {!isGlobalApp && (
-            <li className="flex justify-between gap-2">
-              <span>App Secret</span>
-              <span className="font-mono text-xs text-[var(--text-primary)]">
-                {initialAppSecret ? maskSecret(initialAppSecret) : "—"}
-              </span>
-            </li>
+  return (
+    <div className="space-y-5">
+      {/* Header compacto: origem/status ao inves do "Configuração atual" que
+          duplicava os inputs do formulario abaixo. Origem = badge visual. */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+            Meta Cloud API
+          </h3>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+            Credenciais do WhatsApp Business Platform. Valores atuais ficam
+            mascarados.
+          </p>
+        </div>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+            isGlobalApp
+              ? "border-[var(--color-success)]/30 bg-[var(--color-success)]/10 text-[var(--color-success)]"
+              : "border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]",
           )}
-          {isGlobalApp && (
-            <li className="flex justify-between gap-2">
-              <span>Origem</span>
-              <span className="text-xs text-[var(--text-primary)]">
-                {wasEmbeddedSignup
-                  ? "Embedded Signup (App global do CRM)"
-                  : "Conexão manual (App global do CRM)"}
-              </span>
-            </li>
-          )}
-        </ul>
+        >
+          <ShieldCheck className="size-3" />
+          {isGlobalApp
+            ? wasEmbeddedSignup
+              ? "Embedded Signup"
+              : "App CRM (global)"
+            : "App próprio"}
+        </span>
       </div>
 
       {isGlobalApp ? (
-        <div className="rounded-[var(--radius-lg)] border border-[var(--color-success)]/30 bg-[var(--color-success)]/[0.06] p-4 text-sm">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="size-5 shrink-0 text-[var(--color-success)]" />
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-success)]/25 bg-[var(--color-success)]/[0.04] p-3 text-xs">
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="size-4 shrink-0 text-[var(--color-success)]" />
             <div className="flex-1 space-y-2">
-              <div>
-                <p className="font-semibold text-[var(--text-primary)]">Webhook automático ativo</p>
-                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                  Esta conexão usa o App Meta do CRM. O webhook foi assinado automaticamente no seu WABA — nenhuma configuração no painel Meta é necessária.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 pt-1">
+              <p className="text-[var(--text-primary)]">
+                <span className="font-semibold">Webhook automático ativo.</span>{" "}
+                Assinatura gerenciada pelo App do CRM — nada precisa ser
+                configurado no painel Meta.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
+                  className="h-7 gap-1.5 text-xs"
                   disabled={manualReconnecting}
-                  onClick={() => {
-                    setManualReconnectError(null);
-                    setManualReconnectSuccess(false);
-                    setManualReconnecting(true);
-                    const tokenToUse = accessToken.trim() || initialToken;
-                    if (!tokenToUse) {
-                      setManualReconnectError(
-                        "Informe o Token de acesso abaixo para reconectar.",
-                      );
-                      setManualReconnecting(false);
-                      return;
-                    }
-                    fetch(apiUrl("/api/channels/manual-cloud"), {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        channelId: channel.id,
-                        name: channelName.trim() || channel.name,
-                        accessToken: tokenToUse,
-                        phoneNumberId: phoneNumberId.trim(),
-                        wabaId: businessAccountId.trim(),
-                      }),
-                    })
-                      .then(async (res) => {
-                        const data = (await res.json()) as { message?: string };
-                        if (!res.ok) {
-                          throw new Error(data.message ?? "Erro ao reconectar.");
-                        }
-                        setManualReconnectSuccess(true);
-                        setAccessToken("");
-                        void queryClient.invalidateQueries({ queryKey: ["channels"] });
-                        void queryClient.invalidateQueries({
-                          queryKey: ["channel", channel.id],
-                        });
-                        onSaved?.();
-                      })
-                      .catch((err: unknown) => {
-                        setManualReconnectError(
-                          err instanceof Error ? err.message : "Erro ao reconectar.",
-                        );
-                      })
-                      .finally(() => setManualReconnecting(false));
-                  }}
+                  onClick={handleManualReconnect}
                 >
                   {manualReconnecting ? (
-                    <Loader2 className="size-3.5 animate-spin" />
+                    <Loader2 className="size-3 animate-spin" />
                   ) : (
-                    <RefreshCw className="size-3.5" />
+                    <RefreshCw className="size-3" />
                   )}
-                  Reconectar / atualizar webhook
+                  Reassinar webhook
                 </Button>
-                <button
+                <Button
                   type="button"
-                  className="text-xs text-[var(--text-muted)] underline-offset-2 hover:underline"
-                  onClick={() => setShowAdvanced((v) => !v)}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => setWebhookOpen(true)}
                 >
-                  {showAdvanced ? "Ocultar configuração avançada" : "Configuração avançada (app próprio)"}
-                </button>
-              </div>
-              {manualReconnectError ? (
-                <p className="text-xs text-[var(--color-danger-text)]">{manualReconnectError}</p>
-              ) : null}
-              {manualReconnectSuccess ? (
-                <p className="text-xs text-[var(--color-success)]">
-                  Webhook reassinado e credenciais atualizadas.
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {showAdvanced ? (
-      <div className="rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-4 text-sm">
-        <div className="flex items-start gap-3">
-          <Webhook className="size-5 shrink-0 text-[var(--brand-primary)]" />
-          <div className="flex-1 space-y-3">
-            <div>
-              <p className="font-semibold text-[var(--text-primary)]">Webhook desta organizacao (app próprio)</p>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                Use este bloco somente se você mantém um App Meta próprio. Configure a URL e o token abaixo no painel Meta (developers.facebook.com → seu app → WhatsApp → Configuracao).
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
-                Callback URL
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={webhookUrl}
-                  className="font-mono text-xs"
-                  onFocus={(e) => e.currentTarget.select()}
-                />
-                <TooltipGlass label="Copiar URL" side="top">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 px-3"
-                    onClick={() => copyToClipboard(webhookUrl, "url")}
-                  >
-                    {copiedField === "url" ? (
-                      <Check className="size-3.5 text-[var(--color-success)]" />
-                    ) : (
-                      <Copy className="size-3.5" />
-                    )}
-                  </Button>
-                </TooltipGlass>
-              </div>
-              {!channel.organizationSlug ? (
-                <p className="text-xs text-[var(--color-warning)]">
-                  Organization slug ausente — recarregue a pagina.
-                </p>
-              ) : null}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
-                Verify Token
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={verifyToken}
-                  onChange={(e) => setVerifyToken(e.target.value)}
-                  placeholder="Clique em 'Gerar' pra criar um token aleatorio"
-                  className="font-mono text-xs"
-                />
-                <TooltipGlass label="Gerar token aleatório" side="top">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="px-3 text-xs"
-                    onClick={() => setVerifyToken(generateVerifyToken())}
-                  >
-                    Gerar
-                  </Button>
-                </TooltipGlass>
-                <TooltipGlass label="Copiar token" side="top">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 px-3"
-                    disabled={!verifyToken.trim()}
-                    onClick={() => copyToClipboard(verifyToken, "token")}
-                  >
-                    {copiedField === "token" ? (
-                      <Check className="size-3.5 text-[var(--color-success)]" />
-                    ) : (
-                      <Copy className="size-3.5" />
-                    )}
-                  </Button>
-                </TooltipGlass>
-              </div>
-              <p className="text-xs text-[var(--text-muted)]">
-                Cole o mesmo valor no campo &quot;Verify Token&quot; do painel Meta. Salve o canal aqui ANTES de clicar em &quot;Verify and save&quot; no painel da Meta.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Button
-                type="button"
-                size="sm"
-                className="gap-1.5"
-                disabled={saveMutation.isPending || !channel.organizationSlug}
-                onClick={() => saveMutation.mutate()}
-              >
-                {saveMutation.isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Webhook className="size-3.5" />
+                  <Webhook className="size-3" />
+                  Webhook manual
+                </Button>
+                {manualReconnectSuccess && (
+                  <span className="text-[11px] font-medium text-[var(--color-success)]">
+                    ✓ Webhook reassinado
+                  </span>
                 )}
-                Salvar e ativar URL de callback
-              </Button>
-              {saveMutation.isSuccess ? (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-success)]">
-                  <Check className="size-3.5" />
-                  URL de callback ativa — verifique no painel Meta.
-                </span>
-              ) : (
-                <span className="text-xs text-[var(--text-muted)]">
-                  Grava o verifyToken/credenciais para a Meta validar esta URL.
-                </span>
+              </div>
+              {manualReconnectError && (
+                <p className="text-[11px] text-[var(--color-danger-text)]">
+                  {manualReconnectError}
+                </p>
               )}
             </div>
-
-            <details className="text-xs text-[var(--text-muted)]">
-              <summary className="cursor-pointer font-medium hover:text-[var(--text-primary)]">
-                Como configurar no painel Meta?
-              </summary>
-              <ol className="mt-2 ml-4 list-decimal space-y-1">
-                <li>Salve o canal aqui (botao &quot;Salvar&quot; abaixo) — verifyToken e appSecret precisam estar gravados no banco antes da Meta tentar verificar.</li>
-                <li>No painel Meta: <span className="font-mono">developers.facebook.com</span> → seu app → WhatsApp → Configuracao.</li>
-                <li>Em &quot;Webhook&quot; clique em &quot;Editar&quot;, cole a URL e o token acima e clique em &quot;Verify and save&quot;.</li>
-                <li>Subscreva o campo <span className="font-mono">messages</span> (e <span className="font-mono">calls</span> se usar ligacoes).</li>
-              </ol>
-            </details>
           </div>
         </div>
-      </div>
       ) : null}
 
       {embeddedSignup.isConfigured ? (
@@ -543,38 +400,98 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
 
       <Separator />
 
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="meta-channel-name">Nome do Canal</Label>
-          <Input
-            id="meta-channel-name"
-            value={channelName}
-            onChange={(e) => setChannelName(e.target.value)}
-            placeholder="Ex: WhatsApp Marketing, WhatsApp Vendas"
-          />
-          <p className="text-xs text-[var(--text-muted)]">
-            Identificação interna do canal. Exibido nas conversas para o agente saber a origem.
-          </p>
+      {/* Grupo 1: Identificação (Nome do canal, Pipeline, App name).
+          Antes cada campo tinha 3 linhas de descrição — agora agrupados
+          numa seção enxuta com header uma vez, sem descricao redundante. */}
+      <section className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          Identificação
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="meta-channel-name" className="text-xs">
+              Nome do canal
+            </Label>
+            <Input
+              id="meta-channel-name"
+              value={channelName}
+              onChange={(e) => setChannelName(e.target.value)}
+              placeholder="Ex: WhatsApp Vendas"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="meta-app-name" className="text-xs">
+              Fonte do contato
+            </Label>
+            <Input
+              id="meta-app-name"
+              value={appName}
+              onChange={(e) => setAppName(e.target.value)}
+              placeholder="Ex: WhatsApp Eduit"
+            />
+          </div>
         </div>
         <ChannelPipelineSelect
           id="meta-default-pipeline"
           value={defaultPipelineId}
           onChange={setDefaultPipelineId}
         />
-        <div className="space-y-2">
-          <Label htmlFor="meta-app-name">Nome do App (fonte do contato)</Label>
-          <Input
-            id="meta-app-name"
-            value={appName}
-            onChange={(e) => setAppName(e.target.value)}
-            placeholder="Ex: WhatsApp Eduit, WhatsApp Comercial"
-          />
-          <p className="text-xs text-[var(--text-muted)]">
-            Nome exibido como &quot;Fonte&quot; no contato quando criado por esta conexão.
+      </section>
+
+      <Separator />
+
+      {/* Grupo 2: Credenciais Meta. Header com botão "Testar" inline
+          (antes ficava numa linha isolada abaixo do bloco todo).
+          Phone Number ID e WABA ID em grid — sao IDs curtos, cabem lado a lado. */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Credenciais
           </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs"
+              onClick={() => setWebhookOpen(true)}
+            >
+              <Webhook className="size-3" />
+              Webhook
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs"
+              onClick={() => void testQuery.refetch()}
+              disabled={testQuery.isFetching}
+            >
+              {testQuery.isFetching ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <ShieldCheck className="size-3" />
+              )}
+              Testar conexão
+              {testQuery.data && (
+                <span
+                  className={cn(
+                    "ml-1",
+                    statusOk && "text-[var(--color-success)]",
+                    statusBad && "text-[var(--color-danger-text)]",
+                  )}
+                >
+                  {statusOk ? "· OK" : statusBad ? "· Falha" : `· ${testQuery.data.status}`}
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="meta-access-token">Access Token</Label>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="meta-access-token" className="text-xs">
+            Access Token
+          </Label>
           <div className="flex gap-2">
             <Input
               id="meta-access-token"
@@ -589,12 +506,14 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
               onChange={(e) => setAccessToken(e.target.value)}
               placeholder={
                 showTokenHint
-                  ? "Deixe em branco para manter o token atual"
-                  : "Cole o token (começa com EAA...)"
+                  ? initialToken
+                    ? `Salvo: ${maskSecret(initialToken)} — deixe em branco para manter`
+                    : "Cole o token (EAA...)"
+                  : "Cole o token (EAA...)"
               }
               className="font-mono text-xs"
             />
-            <TooltipGlass label={revealAccessToken ? "Ocultar token" : "Mostrar token"} side="top">
+            <TooltipGlass label={revealAccessToken ? "Ocultar" : "Mostrar"} side="top">
               <Button
                 type="button"
                 variant="outline"
@@ -603,54 +522,48 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                 onClick={() => setRevealAccessToken((v) => !v)}
                 aria-label={revealAccessToken ? "Ocultar token" : "Mostrar token"}
               >
-                {revealAccessToken ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
+                {revealAccessToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </Button>
             </TooltipGlass>
           </div>
           {accessToken && accessToken.length < 50 ? (
             <p className="text-xs text-[var(--color-warning)]">
-              Atenção: token muito curto ({accessToken.length} caracteres). Tokens válidos da Meta começam com <span className="font-mono">EAA</span> e têm 200+ caracteres.
-            </p>
-          ) : null}
-          {showTokenHint && initialToken ? (
-            <p className="text-xs text-[var(--text-muted)]">
-              Valor salvo: <span className="font-mono">{maskSecret(initialToken)}</span>
+              Token muito curto ({accessToken.length}). Tokens válidos começam com{" "}
+              <span className="font-mono">EAA</span> e têm 200+ caracteres.
             </p>
           ) : null}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="meta-pnid">Phone Number ID</Label>
-          <Input
-            id="meta-pnid"
-            value={phoneNumberId}
-            onChange={(e) => setPhoneNumberId(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="meta-waba">Business Account ID</Label>
-          <Input
-            id="meta-waba"
-            value={businessAccountId}
-            onChange={(e) => setBusinessAccountId(e.target.value)}
-          />
-        </div>
-        {isGlobalApp ? (
-          <div className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-2">
-            <p className="text-xs text-[var(--text-muted)]">
-              {wasEmbeddedSignup
-                ? "Este canal foi conectado via Embedded Signup."
-                : "Este canal usa o App Meta global do CRM."}{" "}
-              A assinatura do webhook é validada com o App Secret global — não é
-              necessário informar o App Secret aqui.
-            </p>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="meta-pnid" className="text-xs">
+              Phone Number ID
+            </Label>
+            <Input
+              id="meta-pnid"
+              value={phoneNumberId}
+              onChange={(e) => setPhoneNumberId(e.target.value)}
+              className="font-mono text-xs"
+            />
           </div>
-        ) : (
-          <div className="space-y-2">
-            <Label htmlFor="meta-app-secret">App Secret do seu App</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="meta-waba" className="text-xs">
+              Business Account ID
+            </Label>
+            <Input
+              id="meta-waba"
+              value={businessAccountId}
+              onChange={(e) => setBusinessAccountId(e.target.value)}
+              className="font-mono text-xs"
+            />
+          </div>
+        </div>
+
+        {!isGlobalApp && (
+          <div className="space-y-1.5">
+            <Label htmlFor="meta-app-secret" className="text-xs">
+              App Secret
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="meta-app-secret"
@@ -665,12 +578,12 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                 onChange={(e) => setAppSecret(e.target.value)}
                 placeholder={
                   initialAppSecret
-                    ? "Deixe em branco para manter o valor atual"
-                    : "Chave secreta do seu app Meta (32 chars hex)"
+                    ? `Salvo: ${maskSecret(initialAppSecret)} — deixe em branco para manter`
+                    : "32 chars hex (Configurações → Básico no seu app Meta)"
                 }
                 className="font-mono text-xs"
               />
-              <TooltipGlass label={revealAppSecret ? "Ocultar app secret" : "Mostrar app secret"} side="top">
+              <TooltipGlass label={revealAppSecret ? "Ocultar" : "Mostrar"} side="top">
                 <Button
                   type="button"
                   variant="outline"
@@ -679,120 +592,290 @@ export function MetaConfigPanel({ channel, onSaved }: MetaConfigPanelProps) {
                   onClick={() => setRevealAppSecret((v) => !v)}
                   aria-label={revealAppSecret ? "Ocultar app secret" : "Mostrar app secret"}
                 >
-                  {revealAppSecret ? (
-                    <EyeOff className="size-4" />
+                  {revealAppSecret ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </Button>
+              </TooltipGlass>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {embeddedSignup.isConfigured && (
+        <>
+          <Separator />
+          <section className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                {wasEmbeddedSignup ? "Reconectar via Facebook" : "Conectar via Facebook"}
+              </p>
+              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                {wasEmbeddedSignup
+                  ? "Atualiza token e credenciais automaticamente."
+                  : "Obtém credenciais via Embedded Signup."}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={esReconnecting}
+              onClick={() => {
+                setEsError(null);
+                setEsSuccess(false);
+                setEsReconnecting(true);
+                embeddedSignup
+                  .launchSignup()
+                  .then(async (result) => {
+                    const res = await fetch(apiUrl("/api/channels/embedded-signup"), {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        code: result.code,
+                        phoneNumberId: result.phoneNumberId,
+                        wabaId: result.wabaId,
+                        channelId: channel.id,
+                      }),
+                    });
+                    const data = (await res.json()) as { message?: string };
+                    if (!res.ok) throw new Error(data.message ?? "Erro.");
+                    setEsSuccess(true);
+                    void queryClient.invalidateQueries({ queryKey: ["channels"] });
+                    void queryClient.invalidateQueries({
+                      queryKey: ["channel", channel.id],
+                    });
+                    onSaved?.();
+                  })
+                  .catch((err: unknown) => {
+                    setEsError(
+                      err instanceof Error ? err.message : "Erro no Embedded Signup.",
+                    );
+                  })
+                  .finally(() => setEsReconnecting(false));
+              }}
+            >
+              {esReconnecting ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3.5" />
+              )}
+              {wasEmbeddedSignup ? "Reconectar" : "Conectar"}
+            </Button>
+            {(esError || esSuccess) && (
+              <p
+                className={cn(
+                  "w-full text-xs",
+                  esError && "text-[var(--color-danger-text)]",
+                  esSuccess && "text-[var(--color-success)]",
+                )}
+              >
+                {esError ?? "Credenciais atualizadas com sucesso."}
+              </p>
+            )}
+          </section>
+        </>
+      )}
+
+      {/* Docs colapsado num details compacto — antes era um card grande sobre
+          WhatsApp Calling API que ninguém precisa ler sempre. */}
+      <details className="rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-3 py-2 text-xs">
+        <summary className="cursor-pointer font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+          Ajuda e documentação
+        </summary>
+        <div className="mt-2 space-y-1.5 text-[var(--text-muted)]">
+          <p>
+            Para chamadas de voz, subscreva o webhook{" "}
+            <code className="rounded bg-[var(--glass-bg-strong)] px-1">calls</code> além de{" "}
+            <code className="rounded bg-[var(--glass-bg-strong)] px-1">messages</code> no painel
+            Meta.
+          </p>
+          <div className="flex flex-wrap gap-3 pt-1">
+            <a
+              href={META_DOCS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[var(--brand-primary)] hover:underline"
+            >
+              Cloud API <ExternalLink className="size-3" />
+            </a>
+            <a
+              href="https://developers.facebook.com/docs/whatsapp/cloud-api/calling"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[var(--brand-primary)] hover:underline"
+            >
+              Calling API <ExternalLink className="size-3" />
+            </a>
+          </div>
+        </div>
+      </details>
+
+      {/* Footer sticky-ish: unico botao salvar (antes tinha dois — este e o
+          "Salvar e ativar URL de callback" dentro do bloco avancado; o
+          avancado agora chama o mesmo saveMutation, ok manter la porque so
+          aparece em canais legacy com app proprio). */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--glass-border)] pt-4">
+        {saveMutation.isError ? (
+          <p className="text-xs text-[var(--color-danger-text)]">
+            {saveMutation.error instanceof Error
+              ? saveMutation.error.message
+              : "Erro ao salvar."}
+          </p>
+        ) : saveMutation.isSuccess ? (
+          <p className="text-xs text-[var(--color-success)]">
+            ✓ Alterações salvas
+          </p>
+        ) : (
+          <span className="text-[11px] text-[var(--text-muted)]">
+            Tokens são armazenados de forma segura.
+          </span>
+        )}
+        <Button
+          type="button"
+          disabled={saveMutation.isPending}
+          onClick={() => saveMutation.mutate()}
+          className="gap-2"
+        >
+          {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+          Salvar alterações
+        </Button>
+      </div>
+
+      <Dialog open={webhookOpen} onOpenChange={setWebhookOpen}>
+        <DialogContent size="md" className="z-(--z-sheet)">
+          <DialogClose />
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Webhook className="size-4 text-[var(--brand-primary)]" />
+              Webhook
+            </DialogTitle>
+            <DialogDescription>
+              {isGlobalApp
+                ? "A assinatura do webhook é gerenciada pelo App do CRM. Use os dados abaixo apenas se mantém um App Meta próprio."
+                : "Configure a URL e o token abaixo no painel Meta (developers.facebook.com → seu app → WhatsApp → Configuração)."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              Callback URL
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={webhookUrl}
+                className="font-mono text-xs"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <TooltipGlass label="Copiar URL" side="top">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 px-3"
+                  onClick={() => copyToClipboard(webhookUrl, "url")}
+                >
+                  {copiedField === "url" ? (
+                    <Check className="size-3.5 text-[var(--color-success)]" />
                   ) : (
-                    <Eye className="size-4" />
+                    <Copy className="size-3.5" />
                   )}
                 </Button>
               </TooltipGlass>
             </div>
-            {initialAppSecret ? (
-              <p className="text-xs text-[var(--text-muted)]">
-                Valor salvo: <span className="font-mono">{maskSecret(initialAppSecret)}</span>
+            {!channel.organizationSlug ? (
+              <p className="text-xs text-[var(--color-warning)]">
+                Organization slug ausente — recarregue a página.
               </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              Verify Token
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={verifyToken}
+                onChange={(e) => setVerifyToken(e.target.value)}
+                placeholder="Clique em 'Gerar' pra criar um token aleatório"
+                className="font-mono text-xs"
+              />
+              <TooltipGlass label="Gerar token aleatório" side="top">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="px-3 text-xs"
+                  onClick={() => setVerifyToken(generateVerifyToken())}
+                >
+                  Gerar
+                </Button>
+              </TooltipGlass>
+              <TooltipGlass label="Copiar token" side="top">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 px-3"
+                  disabled={!verifyToken.trim()}
+                  onClick={() => copyToClipboard(verifyToken, "token")}
+                >
+                  {copiedField === "token" ? (
+                    <Check className="size-3.5 text-[var(--color-success)]" />
+                  ) : (
+                    <Copy className="size-3.5" />
+                  )}
+                </Button>
+              </TooltipGlass>
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              Cole o mesmo valor no campo &quot;Verify Token&quot; do painel Meta.
+              Salve aqui ANTES de clicar em &quot;Verify and save&quot; no painel da Meta.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5"
+              disabled={saveMutation.isPending || !channel.organizationSlug}
+              onClick={() => saveMutation.mutate()}
+            >
+              {saveMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Webhook className="size-3.5" />
+              )}
+              Salvar e ativar URL de callback
+            </Button>
+            {saveMutation.isSuccess ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-success)]">
+                <Check className="size-3.5" />
+                URL ativa — verifique no painel Meta.
+              </span>
             ) : (
-              <p className="text-xs text-[var(--text-muted)]">
-                Configurações → Básico no painel do seu app Meta. Necessário para verificar webhooks vindos do seu app.
-              </p>
+              <span className="text-xs text-[var(--text-muted)]">
+                Grava o verifyToken/credenciais para a Meta validar a URL.
+              </span>
             )}
           </div>
-        )}
-      </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          className="gap-2"
-          onClick={() => void testQuery.refetch()}
-          disabled={testQuery.isFetching}
-        >
-          {testQuery.isFetching ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <ShieldCheck className="size-4" />
-          )}
-          Testar Conexão
-        </Button>
-        {testQuery.data ? (
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 text-sm font-medium",
-              statusOk && "text-[var(--color-success)]",
-              statusBad && "text-[var(--color-danger-text)]",
-              !statusOk && !statusBad && "text-[var(--text-muted)]"
-            )}
-          >
-            {statusOk ? (
-              <>
-                <ShieldCheck className="size-4" />
-                Conexão OK
-              </>
-            ) : statusBad ? (
-              <>
-                <ShieldOff className="size-4" />
-                Falha na verificação
-              </>
-            ) : (
-              <>Status: {testQuery.data.status}</>
-            )}
-          </span>
-        ) : null}
-      </div>
-
-      <Separator />
-
-      <div className="rounded-[var(--radius-lg)] border border-[var(--brand-primary)]/25 bg-[var(--brand-primary)]/[0.06] p-4 text-sm">
-        <p className="font-medium text-[var(--text-primary)]">WhatsApp Calling API</p>
-        <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
-          No Meta App, subscreva o webhook <code className="rounded bg-[var(--glass-bg-strong)] px-1">calls</code> além de{" "}
-          <code className="rounded bg-[var(--glass-bg-strong)] px-1">messages</code>. Ative chamadas nas configurações do número de
-          negócio e use um token com os escopos exigidos pela Meta para Calling. Este CRM grava eventos na conversa
-          WhatsApp e oferece{" "}
-          <code className="rounded bg-[var(--glass-bg-strong)] px-1">POST /api/conversations/{"{id}"}/whatsapp-calls</code> para o fluxo
-          WebRTC (SDP offer / pre_accept / accept / reject / terminate).
-        </p>
-        <a
-          href="https://developers.facebook.com/docs/whatsapp/cloud-api/calling"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[var(--brand-primary)] hover:underline"
-        >
-          Documentação oficial — Calling
-          <ExternalLink className="size-3" />
-        </a>
-      </div>
-
-      <a
-        href={META_DOCS_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-primary)] hover:underline"
-      >
-        Documentação Meta Business / Cloud API
-        <ExternalLink className="size-3.5" />
-      </a>
-
-      <Button
-        type="button"
-        className="w-full sm:w-auto"
-        disabled={saveMutation.isPending}
-        onClick={() => saveMutation.mutate()}
-      >
-        {saveMutation.isPending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : null}
-        Salvar alterações
-      </Button>
-
-      {saveMutation.isError ? (
-        <p className="text-sm text-[var(--color-danger-text)]">
-          {saveMutation.error instanceof Error
-            ? saveMutation.error.message
-            : "Erro ao salvar."}
-        </p>
-      ) : null}
+          <details className="text-xs text-[var(--text-muted)]">
+            <summary className="cursor-pointer font-medium hover:text-[var(--text-primary)]">
+              Como configurar no painel Meta?
+            </summary>
+            <ol className="mt-2 ml-4 list-decimal space-y-1">
+              <li>Salve o canal aqui — verifyToken e appSecret precisam estar gravados no banco antes da Meta tentar verificar.</li>
+              <li>No painel Meta: <span className="font-mono">developers.facebook.com</span> → seu app → WhatsApp → Configuração.</li>
+              <li>Em &quot;Webhook&quot; clique em &quot;Editar&quot;, cole a URL e o token acima e clique em &quot;Verify and save&quot;.</li>
+              <li>Subscreva o campo <span className="font-mono">messages</span> (e <span className="font-mono">calls</span> se usar ligações).</li>
+            </ol>
+          </details>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

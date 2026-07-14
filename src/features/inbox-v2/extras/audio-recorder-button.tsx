@@ -227,7 +227,7 @@ export function AudioRecorderButton({
         </div>
 
         {/* Animated waveform */}
-        <div className="flex flex-1 items-center justify-center gap-[3px] overflow-hidden" aria-hidden>
+        <div className="flex flex-1 items-center justify-center gap-1 overflow-hidden" aria-hidden>
           {BAR_PATTERN.map((h, i) => (
             <span
               key={i}
@@ -300,7 +300,7 @@ export function AudioRecorderButton({
         </span>
 
         {/* Static waveform */}
-        <div className="flex flex-1 items-center justify-center gap-[3px] overflow-hidden" aria-hidden>
+        <div className="flex flex-1 items-center justify-center gap-1 overflow-hidden" aria-hidden>
           {BAR_PATTERN.map((h, i) => (
             <span
               key={i}
@@ -322,7 +322,7 @@ export function AudioRecorderButton({
           aria-label="Enviar áudio"
         >
           {sendAttachment.isPending ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--glass-border)] border-t-white" />
           ) : (
             <IconSend size={16} />
           )}

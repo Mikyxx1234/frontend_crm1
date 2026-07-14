@@ -17,7 +17,7 @@ import { apiUrl } from "@/lib/api";
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Smile, X } from "lucide-react";
+import { IconCheck as Check, IconLoader2 as Loader2, IconMoodSmile as Smile, IconX as X } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { dt } from "@/lib/design-tokens";
 import { cn, tagPillStyle } from "@/lib/utils";

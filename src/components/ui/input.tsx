@@ -13,7 +13,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          "flex h-9 w-full min-w-0 rounded-[10px] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 text-sm text-foreground shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-all outline-none",
+          "flex h-9 w-full min-w-0 rounded-[var(--radius-input)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2 text-sm text-foreground shadow-[var(--glass-shadow-sm)] backdrop-blur-sm transition-all outline-none",
           "placeholder:text-[var(--color-ink-muted)]",
           "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
           "hover:border-primary/40",

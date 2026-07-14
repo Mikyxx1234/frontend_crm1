@@ -163,7 +163,7 @@ export function TagsPopover({
                 width: 256,
                 isolation: "isolate",
               }}
-              className="z-[10000] rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+              className="z-(--z-popover) rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
             >
               <input
                 autoFocus

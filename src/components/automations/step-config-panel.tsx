@@ -297,7 +297,7 @@ function VariableShortcutTextarea({
         placeholder={placeholder}
       />
       {open && filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-border bg-white p-1 shadow-[var(--shadow-lg)]">
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-border bg-[var(--color-bg-card)] p-1 shadow-[var(--shadow-lg)]">
           {filtered.map((opt) => (
             <button
               key={`${opt.label}-${opt.token}`}
@@ -306,13 +306,13 @@ function VariableShortcutTextarea({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => applyToken(opt.token)}
             >
-              <span className="mt-0.5 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+              <span className="mt-0.5 rounded bg-[var(--glass-bg-base)] px-1.5 py-0.5 font-mono text-[10px] text-foreground">
                 {opt.token}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[12px] font-semibold text-foreground">{opt.label}</span>
                 {opt.hint ? (
-                  <span className="block truncate text-[10px] text-slate-500">{opt.hint}</span>
+                  <span className="block truncate text-[10px] text-[var(--text-muted)]">{opt.hint}</span>
                 ) : null}
               </span>
             </button>
@@ -1590,11 +1590,11 @@ export function StepConfigPanel({ open, onOpenChange, step, onSave, allSteps = [
                 </p>
                 <ul className="space-y-1">
                   <li>
-                    <span className="font-semibold text-emerald-600">Distribuído</span>{" "}
+                    <span className="font-semibold text-[var(--color-success-text)]">Distribuído</span>{" "}
                     (saída verde) — havia agente disponível e o lead foi atribuído.
                   </li>
                   <li>
-                    <span className="font-semibold text-rose-600">Sem agente</span>{" "}
+                    <span className="font-semibold text-[var(--color-danger-text)]">Sem agente</span>{" "}
                     (saída vermelha) — ninguém elegível no momento; o lead entra na
                     fila de espera e você escolhe o que fazer aqui.
                   </li>
@@ -2589,11 +2589,11 @@ function ConditionStepConfig({
 
   return (
     <>
-      <div className="rounded-lg border border-cyan-100 bg-cyan-50/40 p-3">
-        <p className="text-[12px] font-semibold text-slate-800">
+      <div className="rounded-lg border border-[var(--color-cyan)]/15 bg-[var(--color-cyan-soft)] p-3">
+        <p className="text-[12px] font-semibold text-[var(--text-primary)]">
           Condições em cascata
         </p>
-        <p className="text-[11px] leading-relaxed text-slate-500">
+        <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
           O fluxo avalia cada condição na ordem. A primeira que baterem todas as
           regras (E) dispara seu caminho. Se nenhuma baterem, segue o caminho{" "}
           <span className="font-semibold">Nenhuma das condições</span>.
@@ -2603,11 +2603,11 @@ function ConditionStepConfig({
       {branches.map((branch, bIdx) => (
         <div
           key={branch.id}
-          className="space-y-3 rounded-lg border border-border bg-white p-3"
+          className="space-y-3 rounded-lg border border-border bg-[var(--color-bg-card)] p-3"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded bg-cyan-50 text-[11px] font-bold text-cyan-600 ring-1 ring-cyan-100">
+              <span className="flex size-6 items-center justify-center rounded bg-[var(--color-cyan-soft)] text-[11px] font-bold text-[var(--color-cyan)] ring-1 ring-[var(--color-cyan)]/15">
                 {bIdx + 1}
               </span>
               <Input
@@ -2622,7 +2622,7 @@ function ConditionStepConfig({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-destructive hover:bg-rose-50"
+                className="h-7 px-2 text-destructive hover:bg-[var(--color-danger-bg)]"
                 onClick={() => removeBranch(bIdx)}
               >
                 Remover
@@ -2745,8 +2745,8 @@ function ConditionStepConfig({
         + Adicionar próxima condição (OU)
       </Button>
 
-      <div className="space-y-1.5 rounded-lg border border-rose-100 bg-rose-50/40 p-3">
-        <Label className="text-[11px] text-rose-700">
+      <div className="space-y-1.5 rounded-lg border border-[var(--color-danger)]/20 bg-[var(--color-danger-bg)]/40 p-3">
+        <Label className="text-[11px] text-[var(--color-danger-text)]">
           Nenhuma das condições → ir para
         </Label>
         <DropdownGlass
@@ -2917,7 +2917,7 @@ function AssignOwnerStepConfig({
       </div>
 
       {selectedType === "AI" && selectedId && (
-        <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-[12px] leading-relaxed text-violet-900">
+        <div className="rounded-lg border border-[var(--color-lavender)]/30 bg-[var(--color-lavender-soft)] p-3 text-[12px] leading-relaxed text-[var(--color-text-primary)]">
           <p className="mb-1 font-semibold">
             🤖 Handoff pra agente IA
           </p>
@@ -2985,7 +2985,7 @@ function TransferToAIAgentStepConfig({
 
   return (
     <>
-      <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-[11px] leading-relaxed text-violet-900">
+      <div className="rounded-lg border border-[var(--color-lavender)]/30 bg-[var(--color-lavender-soft)] p-3 text-[11px] leading-relaxed text-[var(--color-text-primary)]">
         <p className="mb-1 font-semibold">Como funciona</p>
         <p>
           Este passo atribui a conversa a um <b>agente de IA</b>. A partir
@@ -3389,14 +3389,14 @@ function MediaStepConfig({
           </Button>
 
           {hasFile && uploadedFileName && (
-            <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
-              <svg className="size-4 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <span className="flex-1 truncate text-xs font-medium text-emerald-800">
+            <div className="flex items-center gap-2 rounded-md border border-[var(--color-success)]/30 bg-[var(--color-success-bg)] px-2.5 py-1.5">
+              <svg className="size-4 shrink-0 text-[var(--color-success-text)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span className="flex-1 truncate text-xs font-medium text-[var(--color-success-text)]">
                 {uploadedFileName}
               </span>
               <button
                 type="button"
-                className="text-xs text-emerald-600 underline hover:text-emerald-800"
+                className="text-xs text-[var(--color-success-text)] underline hover:text-[var(--color-success-text)]"
                 onClick={() => {
                   setDraft((d) => ({ ...d, mediaUrl: "", uploadedFileName: "" }));
                 }}
@@ -3420,7 +3420,7 @@ function MediaStepConfig({
 
         <div className="relative">
           <div className="absolute inset-x-0 top-1/2 border-t border-border/60" />
-          <p className="relative mx-auto w-fit bg-white px-2 text-[10px] text-muted-foreground">
+          <p className="relative mx-auto w-fit bg-[var(--color-bg-card)] px-2 text-[10px] text-muted-foreground">
             ou cole uma URL
           </p>
         </div>

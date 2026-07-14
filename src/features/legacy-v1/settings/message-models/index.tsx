@@ -4,25 +4,11 @@ import { apiUrl } from "@/lib/api";
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  Download,
-  FileText,
-  Info,
-  LayoutTemplate,
-  Loader2,
-  MessageCircle,
-  Plus,
-  Search,
-  Trash2,
-  Workflow,
-} from "lucide-react";
+import { IconCircleCheck as CheckCircle2, IconChevronRight as ChevronRight, IconClock as Clock, IconDownload as Download, IconFileText as FileText, IconInfoCircle as Info, IconTemplate as LayoutTemplate, IconLoader2 as Loader2, IconMessageCircle as MessageCircle, IconPlus as Plus, IconSearch as Search, IconTrash as Trash2, IconHierarchy as Workflow } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 
-import { Button } from "@/components/ui/button";
+import { ButtonGlass } from "@/components/crm/button-glass";
 import {
   Dialog,
   DialogContent,
@@ -377,10 +363,10 @@ export default function MessageModelsHubPage() {
   const actionNode = React.useMemo(
     () =>
       safeTab === "overview" ? (
-        <Button type="button" size="sm" onClick={() => setNewOpen(true)}>
+        <ButtonGlass type="button" variant="primary" size="sm" onClick={() => setNewOpen(true)}>
           <Plus className="size-4" />
           <span className="ml-2">Novo modelo</span>
-        </Button>
+        </ButtonGlass>
       ) : null,
     [safeTab],
   );
@@ -416,34 +402,37 @@ export default function MessageModelsHubPage() {
             <HubStat tone="warn" icon={<Clock className="size-5" />} value={metaPending} label="Aguardando revisão Meta" />
           </HubStatGrid>
 
-          <HubCallout icon={<Info className="size-[18px]" />}>
-            As rotas antigas{" "}
-            <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
-              /settings/templates
-            </code>{" "}
-            e{" "}
-            <code className="rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--color-warn)_12%,transparent)] px-1.5 py-0.5 font-mono text-[12px] text-[var(--color-warn)]">
-              /settings/whatsapp-templates
-            </code>{" "}
-            redirecionam para este hub.
-          </HubCallout>
-
           <HubPanel>
             <HubToolbar
               searchValue={ovQuery}
               onSearchChange={setOvQuery}
               placeholder="Buscar por nome, conteúdo ou variável..."
             >
-              <HubChip active={ovFilter === "all"} onClick={() => setOvFilter("all")}>
+              <HubChip active={ovFilter === "all"} onClick={() => setOvFilter("all")} tone="brand">
                 Todos os canais
               </HubChip>
-              <HubChip active={ovFilter === "interno"} onClick={() => setOvFilter("interno")} dot="var(--text-muted)">
+              <HubChip
+                active={ovFilter === "interno"}
+                onClick={() => setOvFilter("interno")}
+                dot="var(--text-muted)"
+                tone="neutral"
+              >
                 Interno
               </HubChip>
-              <HubChip active={ovFilter === "waba"} onClick={() => setOvFilter("waba")} dot="var(--color-online)">
+              <HubChip
+                active={ovFilter === "waba"}
+                onClick={() => setOvFilter("waba")}
+                dot="var(--color-success)"
+                tone="success"
+              >
                 WhatsApp
               </HubChip>
-              <HubChip active={ovFilter === "flow"} onClick={() => setOvFilter("flow")} dot="var(--brand-primary)">
+              <HubChip
+                active={ovFilter === "flow"}
+                onClick={() => setOvFilter("flow")}
+                dot="var(--color-info)"
+                tone="info"
+              >
                 Flow
               </HubChip>
             </HubToolbar>
@@ -547,10 +536,10 @@ export default function MessageModelsHubPage() {
             title="Flows interativos"
             actions={
               <>
-                <Button
+                <ButtonGlass
                   type="button"
                   size="sm"
-                  variant="outline"
+                  variant="glass"
                   onClick={() => {
                     setImportOpen(true);
                     void refetchMetaFlows();
@@ -558,9 +547,10 @@ export default function MessageModelsHubPage() {
                 >
                   <Download className="size-4" />
                   <span className="ml-2">Importar da Meta</span>
-                </Button>
-                <Button
+                </ButtonGlass>
+                <ButtonGlass
                   type="button"
+                  variant="primary"
                   size="sm"
                   disabled={createFlowMutation.isPending}
                   onClick={() => createFlowMutation.mutate()}
@@ -571,7 +561,7 @@ export default function MessageModelsHubPage() {
                     <Workflow className="size-4" />
                   )}
                   <span className="ml-2">Novo flow</span>
-                </Button>
+                </ButtonGlass>
               </>
             }
           >
@@ -788,10 +778,10 @@ export default function MessageModelsHubPage() {
                     </p>
                   </div>
                   {mf.alreadyImported ? (
-                    <Button
+                    <ButtonGlass
                       type="button"
                       size="sm"
-                      variant="outline"
+                      variant="glass"
                       onClick={() => {
                         if (mf.crmFlowDefinitionId) {
                           setImportOpen(false);
@@ -800,10 +790,11 @@ export default function MessageModelsHubPage() {
                       }}
                     >
                       Abrir no CRM
-                    </Button>
+                    </ButtonGlass>
                   ) : (
-                    <Button
+                    <ButtonGlass
                       type="button"
+                      variant="primary"
                       size="sm"
                       disabled={importFlowMutation.isPending}
                       onClick={() => importFlowMutation.mutate(mf.id)}
@@ -813,7 +804,7 @@ export default function MessageModelsHubPage() {
                       ) : (
                         "Importar"
                       )}
-                    </Button>
+                    </ButtonGlass>
                   )}
                 </li>
               ))}
@@ -840,7 +831,7 @@ function OverviewTypeBadge({ type }: { type: "interno" | "waba" | "flow" }) {
     flow: {
       label: "Flow",
       icon: <Workflow className="size-3.5" />,
-      cls: "border-[var(--input-border-focus)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary-dark)]",
+      cls: "border-[var(--color-info-border)] bg-[var(--color-info-bg)] text-[var(--color-info)]",
     },
   } as const;
   const m = map[type];

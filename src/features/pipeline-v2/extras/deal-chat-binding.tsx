@@ -353,7 +353,7 @@ export function useDealChatBinding(params: {
   // ── session alert (opcional) ────────────────────────────────
   const sessionAlertNode = sessionExpired
     ? (
-        <div className="mx-[22px] mb-3">
+        <div className="mx-5.5 mb-3">
           <SessionAlert onUseTemplate={() => setTemplateOpen(true)} />
         </div>
       )
@@ -363,7 +363,7 @@ export function useDealChatBinding(params: {
   const templateModal =
     templateOpen && effectiveConversationId ? (
       <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
         onClick={() => setTemplateOpen(false)}
       >
         <div onClick={(e) => e.stopPropagation()}>

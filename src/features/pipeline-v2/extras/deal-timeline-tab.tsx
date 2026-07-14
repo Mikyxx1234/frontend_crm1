@@ -14,11 +14,13 @@ import {
   IconMessage,
   IconMessagePlus,
   IconNote,
+  IconPackage,
   IconPlus,
   IconRefresh,
   IconRobot,
   IconSend,
   IconTag,
+  IconTagOff,
   IconTrendingUp,
   IconUser,
 } from "@tabler/icons-react";
@@ -59,7 +61,16 @@ const TYPE_META: Record<
   ASSIGNEE_CHANGED: { label: "Responsavel da conversa", icon: IconUser, color: "var(--brand-primary)" },
   NOTE_ADDED: { label: "Nota adicionada", icon: IconNote, color: "var(--color-warning)" },
   TAG_ADDED: { label: "Tag adicionada", icon: IconTag, color: "var(--color-info)" },
-  TAG_REMOVED: { label: "Tag removida", icon: IconTag, color: "var(--color-danger)" },
+  TAG_REMOVED: { label: "Tag removida", icon: IconTagOff, color: "var(--color-danger)" },
+  // Tags do CONTATO (logadas com contactId) — antes caíam no fallback com
+  // ícone de relógio. Agora têm ícone/label/cor próprios.
+  CONTACT_TAG_ADDED: { label: "Tag adicionada ao contato", icon: IconTag, color: "var(--color-info)" },
+  CONTACT_TAG_REMOVED: { label: "Tag removida do contato", icon: IconTagOff, color: "var(--color-danger)" },
+  CONTACT_FIELD_CHANGED: { label: "Campo do contato alterado", icon: IconEdit, color: "var(--text-muted)" },
+  // Produtos do negócio — antes caíam no fallback (relógio). Ícone de pacote.
+  PRODUCT_ADDED: { label: "Produto adicionado", icon: IconPackage, color: "var(--color-success)" },
+  PRODUCT_REMOVED: { label: "Produto removido", icon: IconPackage, color: "var(--color-warning)" },
+  PRODUCT_UPDATED: { label: "Produto atualizado", icon: IconPackage, color: "var(--color-info)" },
   AUTOMATION_EXECUTED: { label: "Automacao executada", icon: IconBolt, color: "var(--color-info)" },
   AI_AGENT_ACTION: { label: "Acao do agente IA", icon: IconRobot, color: "var(--color-info)" },
 };
@@ -104,7 +115,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
 
   if (isLoading) {
     return (
-      <div className="p-[22px] text-[12.5px] text-[var(--text-muted,#718096)]">
+      <div className="p-5.5 text-[12.5px] text-[var(--text-muted)]">
         Carregando timeline...
       </div>
     );
@@ -112,7 +123,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
 
   if (isError) {
     return (
-      <div className="p-[22px] text-[12.5px] text-[var(--color-danger,#ef4444)]">
+      <div className="p-5.5 text-[12.5px] text-[var(--color-danger)]">
         Erro ao carregar timeline.
       </div>
     );
@@ -120,7 +131,7 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
 
   if (events.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-[var(--text-muted,#718096)]">
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-[var(--text-muted)]">
         <IconClock size={36} className="opacity-40" />
         <div className="font-display text-[13px] font-semibold">
           Sem eventos ainda
@@ -133,14 +144,15 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
   }
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto p-[22px]">
+    <div className="flex h-full flex-col gap-3 overflow-y-auto p-5.5">
       {events.map((ev) => {
         const meta = TYPE_META[ev.type] ?? {
-          // Fallback: tipos não mapeados localmente ainda recebem o rótulo
-          // PT-BR canônico do EVENT_CONFIG; só caem no prettify se forem
-          // realmente desconhecidos.
+          // Fallback: tipos não mapeados localmente herdam rótulo E ícone
+          // canônicos do EVENT_CONFIG; só caem em prettify + relógio quando
+          // realmente desconhecidos. (Antes o ícone era sempre relógio, o
+          // que fazia "Produto adicionado" aparecer com ícone errado.)
           label: EVENT_CONFIG[ev.type]?.label ?? prettifyType(ev.type),
-          icon: IconClock,
+          icon: EVENT_CONFIG[ev.type]?.Icon ?? IconClock,
           color: "var(--text-muted)",
         };
         const Icon = meta.icon;
@@ -165,20 +177,20 @@ export function DealTimelineTab({ dealId }: DealTimelineTabProps) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-display text-[12.5px] font-semibold text-[var(--text-primary,#1a202c)]">
+                <span className="font-display text-[12.5px] font-semibold text-[var(--text-primary)]">
                   {meta.label}
                 </span>
-                <span className="text-[10.5px] text-[var(--text-muted,#718096)]">
+                <span className="text-[10.5px] text-[var(--text-muted)]">
                   {fmtDate(ev.createdAt)}
                 </span>
               </div>
               {desc ? (
-                <div className="mt-0.5 text-[12px] text-[var(--text-secondary,#4a5568)]">
+                <div className="mt-0.5 text-[12px] text-[var(--text-secondary)]">
                   {desc}
                 </div>
               ) : null}
               {ev.user?.name ? (
-                <div className="mt-0.5 text-[11px] text-[var(--text-muted,#718096)]">
+                <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">
                   por {ev.user.name}
                 </div>
               ) : null}

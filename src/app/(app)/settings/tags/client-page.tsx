@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { InputGlass } from "@/components/crm/input-glass";
 import { toast } from "sonner";
 import {
   IconBriefcase,
@@ -15,8 +16,18 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { apiUrl } from "@/lib/api";
-import { SETTINGS_HUB_BACK, SettingsV2Shell } from "../_v2-shell";
+import {
+  SETTINGS_HUB_BACK,
+  SettingsV2Shell,
+  useSettingsHeaderSlots,
+} from "../_v2-shell";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { GlassCard } from "@/components/crm/glass-card";
+import { ButtonGlass } from "@/components/crm/button-glass";
+import {
+  PageSegmentedControl,
+  type PageSegmentItem,
+} from "@/components/crm/page-toolbar";
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -66,6 +77,7 @@ export default function TagsV2ClientPage() {
 
 function TagsPage() {
   const queryClient = useQueryClient();
+  const slots = useSettingsHeaderSlots();
   const [filter, setFilter] = React.useState<FilterTab>("todos");
   const [newName, setNewName] = React.useState("");
   const [newColor, setNewColor] = React.useState(TAG_COLORS[0]);
@@ -155,15 +167,67 @@ function TagsPage() {
     return tags;
   }, [tags, filter]);
 
-  const TABS: { id: FilterTab; label: string; count?: number }[] = [
+  const TABS: { id: FilterTab; label: string; count: number }[] = [
     { id: "todos", label: "Todos", count: tags.length },
     { id: "deals", label: "Deals", count: tags.filter((t) => t.dealCount > 0).length },
     { id: "contatos", label: "Contatos", count: tags.filter((t) => t.contactCount > 0).length },
     { id: "sem-uso", label: "Sem uso", count: unusedCount },
   ];
 
+  const filterItems: readonly PageSegmentItem[] = TABS.map((tab) => ({
+    value: tab.id,
+    label: (
+      <span className="inline-flex items-center gap-1.5">
+        {tab.label}
+        <span
+          className={cn(
+            "min-w-[16px] rounded-full px-1 text-center text-[10px] font-bold",
+            filter === tab.id
+              ? "bg-[color-mix(in_srgb,var(--brand-primary)_16%,transparent)] text-[var(--brand-primary)]"
+              : tab.id === "sem-uso" && tab.count > 0
+                ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
+                : "bg-[var(--glass-bg-strong)] text-[var(--text-secondary)]",
+          )}
+        >
+          {tab.count}
+        </span>
+      </span>
+    ),
+  }));
+
+  /* Injeta filtros (pills) + limpar-sem-uso no PageHeader — padrão /contacts. */
+  React.useEffect(() => {
+    if (!slots) return;
+    slots.setActions(
+      <div className="flex items-center gap-2">
+        <PageSegmentedControl
+          items={filterItems}
+          value={filter}
+          onChange={(v) => setFilter(v as FilterTab)}
+          size="compact"
+          aria-label="Filtrar tags por uso"
+        />
+        {unusedCount > 0 && (
+          <TooltipGlass label={`Remover ${unusedCount} tag(s) sem nenhum uso`} side="bottom">
+            <ButtonGlass
+              variant="glass"
+              size="sm"
+              onClick={() => bulkDeleteUnused.mutate()}
+              disabled={bulkDeleteUnused.isPending}
+              className="!text-[var(--color-danger)]"
+            >
+              <IconTrash size={14} /> Limpar sem uso ({unusedCount})
+            </ButtonGlass>
+          </TooltipGlass>
+        )}
+      </div>,
+    );
+    return () => slots.setActions(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots, filter, unusedCount, tags.length, bulkDeleteUnused.isPending]);
+
   return (
-    <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] backdrop-blur-md">
+    <GlassCard variant="panel" className="overflow-hidden">
       {/* ── Criar nova tag ── */}
       <div className="border-b border-[var(--glass-border-subtle)] p-4">
         <p className="mb-3 font-display text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
@@ -190,11 +254,11 @@ function TagsPage() {
           </div>
 
           {/* Name input */}
-          <input
+          <InputGlass
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nome da tag…"
-            className="h-9 flex-1 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 font-display text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
+            className="flex-1"
             onKeyDown={(e) => {
               if (e.key === "Enter" && newName.trim()) {
                 e.preventDefault();
@@ -217,67 +281,18 @@ function TagsPage() {
             </span>
           )}
 
-          <button
-            type="button"
+          <ButtonGlass
+            variant="primary"
             onClick={() =>
               newName.trim() && createMutation.mutate({ name: newName.trim(), color: newColor })
             }
             disabled={!newName.trim() || createMutation.isPending}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--brand-primary)] px-4 font-display text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="shrink-0"
           >
             <IconPlus size={15} />
             Criar
-          </button>
+          </ButtonGlass>
         </div>
-      </div>
-
-      {/* ── Filtros + ação bulk ── */}
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3">
-        <div className="flex items-center gap-1 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setFilter(tab.id)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-[var(--radius-md)] px-3 py-1.5 font-display text-[12px] font-semibold transition-colors",
-                filter === tab.id
-                  ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                  : "text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]",
-              )}
-            >
-              {tab.label}
-              {tab.count !== undefined && (
-                <span
-                  className={cn(
-                    "min-w-[18px] rounded-full px-1 text-center text-[10px] font-bold",
-                    filter === tab.id
-                      ? "bg-[color-mix(in_srgb,white_20%,transparent)] text-white"
-                      : tab.id === "sem-uso" && (tab.count ?? 0) > 0
-                        ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
-                        : "bg-[var(--glass-bg-strong)] text-[var(--text-secondary)]",
-                  )}
-                >
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {unusedCount > 0 && (
-          <TooltipGlass label={`Remover ${unusedCount} tag(s) sem nenhum uso`} side="top">
-            <button
-              type="button"
-              onClick={() => bulkDeleteUnused.mutate()}
-              disabled={bulkDeleteUnused.isPending}
-              className="flex h-8 items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-danger)]/30 px-3 font-display text-[12px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/8 disabled:opacity-50"
-            >
-              <IconTrash size={13} />
-              Limpar sem uso ({unusedCount})
-            </button>
-          </TooltipGlass>
-        )}
       </div>
 
       {/* ── Lista de tags ── */}
@@ -331,7 +346,7 @@ function TagsPage() {
           isPending={deleteMutation.isPending}
         />
       )}
-    </div>
+    </GlassCard>
   );
 }
 
@@ -411,7 +426,7 @@ function TagRowItem({
 
       {/* Name (editable) */}
       {editing ? (
-        <input
+        <InputGlass
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={save}
@@ -419,7 +434,7 @@ function TagRowItem({
             if (e.key === "Enter") save();
             if (e.key === "Escape") { setName(tag.name); setEditing(false); }
           }}
-          className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--brand-primary)]/30 bg-[var(--glass-bg-overlay)] px-2 py-1 font-display text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+          className="min-w-0 flex-1"
           autoFocus
         />
       ) : (
@@ -509,7 +524,7 @@ function DeleteConfirmDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-6 shadow-[var(--glass-shadow)] backdrop-blur-md">
+      <GlassCard variant="panel" className="w-full max-w-sm p-6">
         <div className="mb-1 flex items-center gap-2">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-danger)]/12">
             <IconTrash size={18} className="text-[var(--color-danger)]" />
@@ -553,7 +568,7 @@ function DeleteConfirmDialog({
         >
           <IconX size={16} />
         </button>
-      </div>
+      </GlassCard>
     </div>
   );
 }

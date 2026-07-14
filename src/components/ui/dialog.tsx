@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { IconX as X } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { ModalPortalContext } from "@/components/ui/modal-portal-context";
@@ -87,13 +87,17 @@ export interface DialogContentProps
    * sobrescrever via `panelClassName="max-w-..."` — o twMerge no `cn`
    * garante que a última classe vence. */
   size?: DialogSize;
-  /** Classes extras no painel interno (conteúdo branco centralizado).
-   * Útil pra ajustes pontuais de padding ou overflow. */
+  /** Classes extras no painel (shell arredondado: borda, bg, tamanho,
+   * shadow). Útil pra sobrescrever largura/cor de fundo por modal. */
   panelClassName?: string;
+  /** Classes extras no wrapper de scroll interno (padding, gap, overflow).
+   * Modais full-bleed que gerenciam o próprio padding/scroll passam
+   * `bodyClassName="p-0 gap-0"` aqui. Default: `grid gap-4 p-6`. */
+  bodyClassName?: string;
 }
 
 const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
-  ({ className, children, size = "md", panelClassName, ...props }, ref) => {
+  ({ className, children, size = "md", panelClassName, bodyClassName, ...props }, ref) => {
     const { open, onOpenChange } = useDialogContext("DialogContent");
     const internalRef = React.useRef<HTMLDialogElement | null>(null);
     // Nó publicado no contexto de portal: popovers/menus (DropdownGlass) portam
@@ -170,14 +174,34 @@ const DialogContent = React.forwardRef<HTMLDialogElement, DialogContentProps>(
             // - radius via token --radius-2xl
             // - superfície via --glass-bg-modal (dark automático)
             // - max-h dinâmico acompanha o viewport mobile (100dvh)
-            "relative z-50 mx-auto my-auto grid max-h-[calc(100dvh-2rem)] w-full gap-4 overflow-y-auto overflow-x-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] p-6 text-[var(--text-primary)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[opacity,transform] duration-200",
+            //
+            // IMPORTANTE: `overflow-hidden` (nao auto) fica NESTE nivel pra
+            // recortar a scrollbar do wrapper interno no formato dos cantos
+            // arredondados. Se o scroll ficasse aqui (elemento arredondado),
+            // a scrollbar — que e um retangulo reto — vazaria pelos cantos
+            // superior/inferior direito, parecendo estar "fora" da modal.
+            // O scroll real acontece no wrapper interno abaixo.
+            "relative z-50 mx-auto my-auto flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] text-[var(--text-primary)] shadow-[var(--glass-shadow-lg)] backdrop-blur-xl transition-[opacity,transform] duration-200",
             DIALOG_SIZE_CLASS[size],
             panelClassName
           )}
           onClick={(e) => e.stopPropagation()}
         >
           <ModalPortalContext.Provider value={portalNode}>
-            {children}
+            {/* Wrapper de scroll: aqui vive o overflow-y-auto + padding. Como
+                o pai tem overflow-hidden + rounded, a scrollbar deste wrapper
+                fica recortada no formato dos cantos (nunca "fora"). O `p-6`
+                garante que o conteudo respira e a scrollbar fica encostada
+                na borda interna, nao no canto arredondado. Modais full-bleed
+                sobrescrevem via bodyClassName (ex: p-0 gap-0). */}
+            <div
+              className={cn(
+                "grid min-h-0 flex-1 gap-4 overflow-y-auto overflow-x-hidden p-6",
+                bodyClassName
+              )}
+            >
+              {children}
+            </div>
           </ModalPortalContext.Provider>
         </div>
       </dialog>,

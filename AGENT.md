@@ -5,6 +5,48 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-07-14 — Sidebar por Papel (não mais per-user)
+
+**Decisão.** A personalização do menu lateral (`SidebarCustomizationCard`)
+sai da tela `/settings/profile` e vira uma configuração de **Papel (Role)**
+dentro de `/settings/permissions`. Cada Role passa a ter uma coluna
+`sidebarItems JSON?` no Prisma; o usuário não escolhe mais o próprio menu.
+`getSidebarPreferences(userId)` deixa de ler `UserPreference.sidebar` e
+passa a fazer **união** dos `sidebarItems` de todos os Roles atribuídos
+ao usuário (item habilitado se qualquer role habilitou; ordem = primeira
+ocorrência estável entre os roles). Roles sem `sidebarItems` definido
+caem no catálogo padrão (todos habilitados) para não travar o rollout.
+
+**Contexto.** O usuário reportou que "personalização de sidebar" não deveria
+ser preferência individual — a organização precisa controlar o que cada
+papel vê. Além disso, `Group.sidebarRoutes` já existia no schema mas nunca
+foi ligado ao rendering (código morto); a decisão consolida a fonte em
+Role, que é o eixo canônico de autorização hoje (todo usuário tem role,
+nem todo está em grupo).
+
+**Alternativas descartadas.**
+
+- **Setting global da organização.** Simples, mas tira a chance de dar
+  layouts diferentes por papel (SDR vê inbox, gerente vê analytics etc.).
+- **Continuar per-user, mas com admin editando a sidebar dos outros.**
+  Mantinha a estrutura atual mas apenas movia quem clica no botão. Rejeitada
+  porque não simplifica governança (admin teria que reconfigurar N vezes
+  para cada contratado novo).
+- **Intersecção entre roles (mais restritivo).** Descartada por gerar
+  surpresas negativas — usuário com 2 roles perderia acesso a itens que
+  um dos roles habilita. União segue o mesmo padrão aditivo já usado em
+  `RoleScopeGrants` de canais.
+
+**Impacto / operação.** Nova migration SQL aditiva
+`prisma/migrations/20260714120000_add_role_sidebar_items` adiciona a
+coluna `sidebarItems JSONB` (nullable) em `Role`. Deploy exige rodar a
+migration antes de subir o novo backend (padrão do repo — `SKIP_PRISMA_MIGRATE=1`
+no runtime). Endpoint `PATCH /api/profile/preferences/sidebar` passa a
+retornar `403` (deprecated) — a coluna `UserPreference.sidebar` é mantida
+no banco por compatibilidade histórica mas não é mais lida nem escrita.
+
+---
+
 ### 2026-06-26 — Aviso de ligação no chat + botão de ligar no inbox
 
 **Decisão.**

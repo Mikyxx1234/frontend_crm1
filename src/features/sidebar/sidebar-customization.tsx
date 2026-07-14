@@ -1,8 +1,24 @@
 "use client";
 
+/*
+ * Editor visual dos itens da sidebar (drag/drop + toggle + reset).
+ *
+ * Contexto (14/jul/26): a personalizacao de sidebar deixou de ser per-user
+ * e passou a ser configuracao de Papel (Role). Ver AGENT.md ("Sidebar por
+ * Papel"). Este arquivo agora exporta um COMPONENTE CONTROLADO
+ * (`SidebarItemsEditor`) que o `RoleEditor` (features/permissions) reutiliza.
+ * A UI (drag handle, toggle, botoes de ordenacao, badge "Obrigatorio") e' a
+ * mesma; o que muda e a fonte do estado — o pai controla `items` + `onChange`.
+ */
+
 import * as React from "react";
-import { IconAlertTriangle as AlertTriangle, IconCheck as Check, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconGripVertical as GripVertical, IconLoader2 as Loader2, IconLock as Lock, IconRotate2 as RotateCcw } from "@tabler/icons-react";
-import { toast } from "sonner";
+import {
+  IconChevronDown as ChevronDown,
+  IconChevronUp as ChevronUp,
+  IconGripVertical as GripVertical,
+  IconLock as Lock,
+  IconRotate2 as RotateCcw,
+} from "@tabler/icons-react";
 
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -13,229 +29,188 @@ import {
   type SidebarItemPreference,
 } from "@/lib/sidebar-catalog";
 
-import { useSaveSidebarPreferences, useSidebarPreferences } from "./hooks";
-
 /** Item do estado local: ordem implicita pela posicao no array. */
-interface LocalItem {
+export interface SidebarEditorItem {
   key: string;
   enabled: boolean;
 }
 
-function toLocalItems(pref: SidebarItemPreference[] | undefined): LocalItem[] {
-  return resolveSidebarItems(pref).map((i) => ({ key: i.key, enabled: i.enabled }));
+/**
+ * Converte SidebarItemPreference[] (com order) para o shape do editor
+ * (order implicito). Aceita `null`/undefined -> catalogo padrao completo.
+ */
+export function toEditorItems(
+  pref: SidebarItemPreference[] | null | undefined,
+): SidebarEditorItem[] {
+  return resolveSidebarItems(pref ?? undefined).map((i) => ({
+    key: i.key,
+    enabled: i.enabled,
+  }));
 }
 
-function signature(items: LocalItem[]): string {
-  return items.map((i) => `${i.key}:${i.enabled ? 1 : 0}`).join("|");
+/**
+ * Serializa itens do editor para o payload persistivel — reescreve `order`
+ * sequencialmente a partir da posicao no array.
+ */
+export function toPersistItems(
+  items: SidebarEditorItem[],
+): SidebarItemPreference[] {
+  return items.map((it, idx) => ({
+    key: it.key,
+    enabled: it.enabled,
+    order: idx + 1,
+  }));
 }
 
-export function SidebarCustomizationCard() {
-  const { data, isLoading, isError, error } = useSidebarPreferences();
-  const saveMutation = useSaveSidebarPreferences();
+interface SidebarItemsEditorProps {
+  items: SidebarEditorItem[];
+  onChange: (items: SidebarEditorItem[]) => void;
+  /** Bloqueia edicao (drag/toggle/reset) — mostra o layout em read-only. */
+  disabled?: boolean;
+  /** Handler opcional do botao "Restaurar padrao" (catalogo completo). */
+  onReset?: () => void;
+  className?: string;
+}
 
-  const prefItems = data?.sidebar.items;
-
-  const [items, setItems] = React.useState<LocalItem[]>(() => toLocalItems(prefItems));
-  const [baseline, setBaseline] = React.useState<string>(() => signature(toLocalItems(prefItems)));
+/**
+ * Editor CONTROLADO da lista de itens da sidebar. Nao faz fetch nem save —
+ * o pai (RoleEditor) e o dono do estado e persiste via seu proprio mutation.
+ */
+export function SidebarItemsEditor({
+  items,
+  onChange,
+  disabled,
+  onReset,
+  className,
+}: SidebarItemsEditorProps) {
   const dragIndex = React.useRef<number | null>(null);
 
-  // Sincroniza o estado local quando a preferencia carrega/muda — mas so
-  // quando nao ha alteracoes nao salvas (evita sobrescrever edicoes do user).
-  React.useEffect(() => {
-    if (prefItems === undefined) return;
-    const next = toLocalItems(prefItems);
-    const nextSig = signature(next);
-    setItems((current) =>
-      signature(current) === baseline ? next : current,
-    );
-    setBaseline(nextSig);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
-
-  const dirty = signature(items) !== baseline;
-
   const move = (from: number, to: number) => {
+    if (disabled) return;
     if (to < 0 || to >= items.length) return;
-    setItems((curr) => {
-      const next = [...curr];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      return next;
-    });
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
   };
 
   const toggle = (key: string) => {
-    setItems((curr) =>
-      curr.map((it) => (it.key === key ? { ...it, enabled: !it.enabled } : it)),
-    );
-  };
-
-  const handleSave = () => {
-    const payload: SidebarItemPreference[] = items.map((it, idx) => ({
-      key: it.key,
-      enabled: it.enabled,
-      order: idx + 1,
-    }));
-    saveMutation.mutate(payload, {
-      onSuccess: () => toast.success("Preferências salvas com sucesso."),
-      onError: (e) =>
-        toast.error(e.message || "Não foi possível salvar suas preferências."),
-    });
+    if (disabled) return;
+    onChange(items.map((it) => (it.key === key ? { ...it, enabled: !it.enabled } : it)));
   };
 
   const handleReset = () => {
-    // Ordem do catalogo, todos habilitados — marca como nao-salvo.
-    setItems(SIDEBAR_CATALOG.map((i) => ({ key: i.key, enabled: true })));
-    toast.message("Padrão restaurado — clique em Salvar para aplicar.");
+    if (disabled) return;
+    if (onReset) {
+      onReset();
+    } else {
+      onChange(SIDEBAR_CATALOG.map((i) => ({ key: i.key, enabled: true })));
+    }
   };
 
   return (
-    <section className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-8 shadow-[var(--glass-shadow)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
-            Personalização da Sidebar
-          </h2>
-          <p className="mt-1 max-w-xl text-sm leading-snug text-[var(--text-muted)]">
-            Escolha quais atalhos aparecem no seu menu lateral e organize a ordem
-            conforme sua rotina. Essa configuração vale só para você.
-          </p>
-        </div>
-        {dirty && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-warning)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-warn)]">
-            Alterações não salvas
-          </span>
-        )}
-      </div>
-
-      <div className="mt-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="size-6 animate-spin text-[var(--color-ink-muted)]" />
-          </div>
-        ) : isError ? (
-          <div className="flex items-start gap-2 rounded-2xl border border-[var(--color-danger-subtle)] bg-[var(--color-danger-bg)]/60 px-4 py-3 text-sm text-[var(--color-danger-text)]">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-            <span>
-              {error instanceof Error
-                ? error.message
-                : "Não foi possível carregar suas preferências."}
-            </span>
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {items.map((it, idx) => {
-              const meta = getSidebarCatalogItem(it.key);
-              if (!meta) return null;
-              const Icon = meta.icon;
-              return (
-                <li
-                  key={it.key}
-                  draggable
-                  onDragStart={() => {
-                    dragIndex.current = idx;
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (dragIndex.current !== null && dragIndex.current !== idx) {
-                      move(dragIndex.current, idx);
-                    }
-                    dragIndex.current = null;
-                  }}
-                  className={cn(
-                    "flex items-center gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-3 py-2.5 transition-opacity",
-                    !it.enabled && "opacity-60",
-                  )}
+    <div className={className}>
+      <ul className="space-y-2">
+        {items.map((it, idx) => {
+          const meta = getSidebarCatalogItem(it.key);
+          if (!meta) return null;
+          const Icon = meta.icon;
+          return (
+            <li
+              key={it.key}
+              draggable={!disabled}
+              onDragStart={() => {
+                dragIndex.current = idx;
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragIndex.current !== null && dragIndex.current !== idx) {
+                  move(dragIndex.current, idx);
+                }
+                dragIndex.current = null;
+              }}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 px-3 py-2.5 transition-opacity",
+                !it.enabled && "opacity-60",
+                disabled && "cursor-not-allowed",
+              )}
+            >
+              {/* Drag handle + botoes de ordenacao (fallback mobile/a11y) */}
+              <div className="flex shrink-0 items-center gap-0.5">
+                <span
+                  className="hidden cursor-grab text-[var(--text-faint)] active:cursor-grabbing sm:block"
+                  aria-hidden
                 >
-                  {/* Drag handle + botoes de ordenacao (fallback mobile/a11y) */}
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <span
-                      className="hidden cursor-grab text-[var(--text-faint)] active:cursor-grabbing sm:block"
-                      aria-hidden
-                    >
-                      <GripVertical className="size-4" />
+                  <GripVertical className="size-4" />
+                </span>
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => move(idx, idx - 1)}
+                    disabled={disabled || idx === 0}
+                    aria-label={`Mover ${meta.title} para cima`}
+                    className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] disabled:opacity-30"
+                  >
+                    <ChevronUp className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(idx, idx + 1)}
+                    disabled={disabled || idx === items.length - 1}
+                    aria-label={`Mover ${meta.title} para baixo`}
+                    className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] disabled:opacity-30"
+                  >
+                    <ChevronDown className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary">
+                <Icon size={18} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                    {meta.title}
+                  </p>
+                  {meta.locked && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg-base)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                      <Lock className="size-2.5" />
+                      Obrigatório
                     </span>
-                    <div className="flex flex-col">
-                      <button
-                        type="button"
-                        onClick={() => move(idx, idx - 1)}
-                        disabled={idx === 0}
-                        aria-label={`Mover ${meta.title} para cima`}
-                        className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] disabled:opacity-30"
-                      >
-                        <ChevronUp className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => move(idx, idx + 1)}
-                        disabled={idx === items.length - 1}
-                        aria-label={`Mover ${meta.title} para baixo`}
-                        className="text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] disabled:opacity-30"
-                      >
-                        <ChevronDown className="size-4" />
-                      </button>
-                    </div>
-                  </div>
+                  )}
+                </div>
+                <p className="truncate text-[12px] text-[var(--color-ink-muted)]">
+                  {meta.description}
+                </p>
+              </div>
 
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-primary">
-                    <Icon size={18} />
-                  </div>
+              <Switch
+                checked={it.enabled}
+                disabled={disabled || meta.locked}
+                onCheckedChange={() => toggle(it.key)}
+                aria-label={`Mostrar ${meta.title} no menu lateral`}
+              />
+            </li>
+          );
+        })}
+      </ul>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                        {meta.title}
-                      </p>
-                      {meta.locked && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--glass-bg-base)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                          <Lock className="size-2.5" />
-                          Obrigatório
-                        </span>
-                      )}
-                    </div>
-                    <p className="truncate text-[12px] text-[var(--color-ink-muted)]">
-                      {meta.description}
-                    </p>
-                  </div>
-
-                  <Switch
-                    checked={it.enabled}
-                    disabled={meta.locked}
-                    onCheckedChange={() => toggle(it.key)}
-                    aria-label={`Mostrar ${meta.title} no menu lateral`}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={isLoading || isError || saveMutation.isPending}
-          className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 text-sm font-semibold text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
-        >
-          <RotateCcw className="size-4" />
-          Restaurar padrão
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!dirty || saveMutation.isPending || isLoading || isError}
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-[var(--shadow-indigo-glow)] transition-colors hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
-        >
-          {saveMutation.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Check className="size-4" />
-          )}
-          Salvar alterações
-        </button>
-      </div>
-    </section>
+      {(onReset || !disabled) && (
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={disabled}
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 text-xs font-semibold text-[var(--color-ink-soft)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:opacity-50"
+          >
+            <RotateCcw className="size-3.5" />
+            Restaurar padrão
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

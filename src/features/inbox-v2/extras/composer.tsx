@@ -12,6 +12,7 @@ import {
   IconPencil,
   IconCheck,
   IconX,
+  IconCornerUpLeft,
 } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
@@ -69,6 +70,8 @@ export function Composer({
   selectedChannelId,
   conversationChannelId,
   onSelectChannel,
+  replyTo,
+  onCancelReply,
 }: {
   conversationId: string | null;
   value: string;
@@ -105,6 +108,19 @@ export function Composer({
   conversationChannelId?: string | null;
   /** Callback quando o agente troca o canal de envio. */
   onSelectChannel?: (channelId: string) => void;
+  /**
+   * Mensagem selecionada para "responder" (estilo WhatsApp). Quando não
+   * nula, o composer renderiza uma barra de preview acima do input com o
+   * remetente citado + preview do texto. O caller é responsável por incluir
+   * `replyToId: replyTo.id` no payload de `sendMessage` e limpar após o envio.
+   */
+  replyTo?: {
+    id: string;
+    preview: string;
+    senderName?: string | null;
+  } | null;
+  /** Handler do X para cancelar a resposta. */
+  onCancelReply?: () => void;
 }) {
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
@@ -223,6 +239,14 @@ export function Composer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalTemplate]);
 
+  // Foca o textarea quando o agente clica "Responder" numa mensagem — evita
+  // um clique extra pra começar a digitar a resposta.
+  useEffect(() => {
+    if (replyTo?.id) {
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    }
+  }, [replyTo?.id]);
+
   // Insere o texto de um modelo interno no campo (editável) e foca o cursor.
   function insertTemplateText(text: string) {
     const base = value;
@@ -328,6 +352,35 @@ export function Composer({
           onSent={() => setPendingTemplate(null)}
         />
       ) : null}
+
+      {/* Barra de preview do reply (estilo WhatsApp) — logo acima do input.
+          Aparece quando o agente clicou "Responder" numa mensagem. O X limpa
+          o estado no caller; o envio já inclui replyToId no payload. */}
+      {replyTo && (
+        <div className="mb-2 flex items-stretch gap-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] px-3 py-2 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+          <div className="flex shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/12 p-1.5 text-[var(--brand-primary)]">
+            <IconCornerUpLeft size={14} />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 border-l-[3px] border-[var(--brand-primary)] pl-2">
+            <span className="font-display text-[10.5px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+              Respondendo {replyTo.senderName?.trim() ? `a ${replyTo.senderName.trim()}` : "mensagem"}
+            </span>
+            <span className="line-clamp-2 break-words font-body text-[12px] leading-snug text-[var(--text-secondary)]">
+              {replyTo.preview}
+            </span>
+          </div>
+          {onCancelReply && (
+            <button
+              type="button"
+              onClick={onCancelReply}
+              aria-label="Cancelar resposta"
+              className="shrink-0 self-start rounded-full p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--text-primary)]"
+            >
+              <IconX size={14} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Slash command menu — flutua acima do composer */}
       {!pendingTemplate && slash.state.open && (

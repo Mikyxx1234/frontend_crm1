@@ -1,9 +1,19 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+/*
+ * Hook de leitura das preferencias efetivas de sidebar do usuario autenticado.
+ *
+ * 14/jul/26: `useSaveSidebarPreferences` foi removido. A edicao da sidebar
+ * saiu de /settings/profile (per-user) e virou config de Papel em
+ * /settings/permissions — usa `useUpdateRole` diretamente. Ver AGENT.md
+ * "Sidebar por Papel". A rota antiga `PATCH /api/profile/preferences/sidebar`
+ * agora retorna 410 Gone.
+ */
 
-import { fetchSidebarPreferences, saveSidebarPreferences } from "./api";
-import type { SidebarItemPreference, SidebarPreferencesResponse } from "./types";
+import { useQuery } from "@tanstack/react-query";
+
+import { fetchSidebarPreferences } from "./api";
+import type { SidebarPreferencesResponse } from "./types";
 
 import { isPreviewMode } from "@/lib/preview-mode";
 
@@ -19,16 +29,5 @@ export function useSidebarPreferences(enabled?: boolean) {
     queryFn: fetchSidebarPreferences,
     enabled: resolveEnabled(enabled),
     staleTime: 60_000,
-  });
-}
-
-export function useSaveSidebarPreferences() {
-  const qc = useQueryClient();
-  return useMutation<SidebarPreferencesResponse, Error, SidebarItemPreference[]>({
-    mutationFn: saveSidebarPreferences,
-    onSuccess: (data) => {
-      // Atualiza o cache imediatamente para a nav refletir sem refetch.
-      qc.setQueryData(SIDEBAR_PREFS_KEY, data);
-    },
   });
 }

@@ -7,6 +7,7 @@ import {
   IconBan,
   IconEye,
   IconKey,
+  IconLayoutSidebar,
   IconLoader2,
   IconMessagePlus,
   IconSend,
@@ -31,11 +32,18 @@ import {
   useUpdateRole,
   useUpdateRoleScopeGrants,
 } from "./hooks";
+import type { RoleSidebarItem } from "./types";
 import {
   RolePermissionsEditor,
   type PermissionsEditorMode,
 } from "./role-permissions-editor";
 import { ScopeMultiSelect, normalizeScope } from "./user-permissions-view";
+import {
+  SidebarItemsEditor,
+  toEditorItems,
+  toPersistItems,
+  type SidebarEditorItem,
+} from "@/features/sidebar/sidebar-customization";
 
 interface RoleEditorProps {
   roleId: string | null;
@@ -58,6 +66,12 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
   const [mode, setMode] = useState<PermissionsEditorMode>("levels");
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  // Menu lateral do papel — controlado localmente e enviado no save. Quando
+  // o admin nunca mexeu, `sidebarOverride` fica false: nao envia `sidebarItems`
+  // no payload (backend mantem `null` = usa catalogo padrao). Ao habilitar o
+  // toggle "Personalizar", carregamos o catalogo completo como ponto de partida.
+  const [sidebarOverride, setSidebarOverride] = useState(false);
+  const [sidebarItems, setSidebarItems] = useState<SidebarEditorItem[]>(() => toEditorItems(null));
 
   const allCatalogKeys = useMemo(
     () =>
@@ -82,6 +96,11 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
       } else {
         setChecked(new Set(role.permissions));
       }
+      // Sidebar: se o papel ja tem override, pre-carrega os items no editor;
+      // senao, deixa desligado (envia null no save == "usa catalogo padrao").
+      const hasOverride = Array.isArray(role.sidebarItems) && role.sidebarItems.length > 0;
+      setSidebarOverride(hasOverride);
+      setSidebarItems(toEditorItems(hasOverride ? role.sidebarItems : null));
     }
   }, [role, allCatalogKeys]);
 
@@ -103,15 +122,26 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
     const permissions = isAdminPreset
       ? ["*"]
       : Array.from(checked);
+    // sidebarItems: null = "sem override" (backend usa catalogo padrao).
+    // Quando o admin ligou o toggle, enviamos a lista serializada.
+    const sidebarPayload: RoleSidebarItem[] | null = sidebarOverride
+      ? toPersistItems(sidebarItems)
+      : null;
     try {
       if (isNew) {
-        const created = await createRole.mutateAsync({ name: name.trim(), description: description.trim(), permissions });
+        const created = await createRole.mutateAsync({
+          name: name.trim(),
+          description: description.trim(),
+          permissions,
+          sidebarItems: sidebarPayload,
+        });
         onSaved?.(created.id);
       } else if (roleId) {
         await updateRole.mutateAsync({
           id: roleId,
           ...(isSystem ? {} : { name: name.trim(), description: description.trim() }),
           permissions,
+          sidebarItems: sidebarPayload,
         });
         onSaved?.(roleId);
       }
@@ -276,7 +306,77 @@ export function RoleEditor({ roleId, onClose, onSaved }: RoleEditorProps) {
         {/* Canais por papel: só faz sentido para papéis não-admin já criados
             (precisa de roleId para persistir o grant). */}
         {!isNew && !isAdminPreset && roleId && <RoleChannelScope roleId={roleId} />}
+
+        {/* Menu lateral do papel — decisão 14/jul/26 (ver AGENT.md). Salvo
+            no mesmo submit do papel; usuários com este papel veem esta config
+            (união com outros papéis que o usuário tiver). */}
+        <RoleSidebarSection
+          override={sidebarOverride}
+          onOverrideChange={setSidebarOverride}
+          items={sidebarItems}
+          onItemsChange={setSidebarItems}
+          disabled={saving}
+        />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Seção do editor de Role que controla o menu lateral (sidebar) que os
+ * usuários deste papel veem. Um toggle "Personalizar" define se o papel
+ * override o catálogo padrão. O `SidebarItemsEditor` só aparece quando
+ * o override está ligado.
+ */
+function RoleSidebarSection({
+  override,
+  onOverrideChange,
+  items,
+  onItemsChange,
+  disabled,
+}: {
+  override: boolean;
+  onOverrideChange: (v: boolean) => void;
+  items: SidebarEditorItem[];
+  onItemsChange: (items: SidebarEditorItem[]) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-1.5">
+          <IconLayoutSidebar size={14} className="mt-0.5 text-[var(--text-muted)]" />
+          <div className="min-w-0">
+            <span className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Menu lateral
+            </span>
+            <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-muted)]">
+              Define quais atalhos aparecem na sidebar e a ordem — vale para todos os
+              usuários com este papel. Sem personalização, o papel usa o catálogo padrão do CRM.
+            </p>
+          </div>
+        </div>
+        <label className="inline-flex shrink-0 cursor-pointer items-center gap-2">
+          <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+            Personalizar
+          </span>
+          <input
+            type="checkbox"
+            checked={override}
+            onChange={(e) => onOverrideChange(e.target.checked)}
+            disabled={disabled}
+            className="size-4 cursor-pointer accent-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </label>
+      </div>
+
+      {override && (
+        <SidebarItemsEditor
+          items={items}
+          onChange={onItemsChange}
+          disabled={disabled}
+        />
+      )}
     </div>
   );
 }

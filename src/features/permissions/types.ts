@@ -29,6 +29,17 @@ export interface RoleUser {
   avatarUrl?: string | null;
 }
 
+/**
+ * Preferência de menu lateral persistida no papel — mesmo shape que o
+ * catálogo da sidebar usa. Ver `@/lib/sidebar-catalog`. `null` = sem
+ * override (o papel cai no catálogo padrão do CRM).
+ */
+export interface RoleSidebarItem {
+  key: string;
+  enabled: boolean;
+  order: number;
+}
+
 export interface RoleSummary {
   id: string;
   name: string;
@@ -42,6 +53,13 @@ export interface RoleSummary {
    * legados. As permissões efetivas continuam em `permissions`.
    */
   inheritsFrom?: string | null;
+  /**
+   * Menu lateral configurado pelo admin para este papel. `null` = sem
+   * override (usuários do papel veem o catálogo padrão). A sidebar EFETIVA
+   * do usuário é a união dos `sidebarItems` de todos os papéis atribuídos
+   * a ele — resolvida no backend em `getSidebarPreferences`.
+   */
+  sidebarItems?: RoleSidebarItem[] | null;
   _count?: { assignments: number; groups: number; groupMembers: number };
   assignments?: { id: string; user: RoleUser }[];
 }

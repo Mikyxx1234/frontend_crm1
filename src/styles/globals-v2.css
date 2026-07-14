@@ -64,8 +64,12 @@
   --color-session-text:     #991b1b;   /* red-800 */
   --color-session-subtext:  #b91c1c;   /* red-700 */
 
-  /* WhatsApp message status ticks */
-  --wa-tick-read:    #7fd4ff;   /* ticks azuis = lido */
+  /* WhatsApp message status ticks. `read` usa o mesmo azul saturado do
+     WhatsApp Web (#53bdeb) — o valor anterior (#7fd4ff) sumia contra
+     bolhas out em tema claro/gradiente, dando a impressão de que a
+     entrega nunca era marcada como lida mesmo quando a Meta entregava
+     o evento read via webhook. */
+  --wa-tick-read:    #53bdeb;   /* ticks azuis = lido */
   --wa-tick-fail:    #fca5a5;   /* ícone de falha = rosa */
 
   /* Toggle unchecked */

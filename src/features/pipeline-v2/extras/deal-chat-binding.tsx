@@ -19,7 +19,7 @@ import { IconLoader2, IconMessageCirclePlus } from "@tabler/icons-react";
 import { apiUrl } from "@/lib/api";
 import { getInitials } from "@/lib/utils";
 
-import { DaySeparator, ConnectionDivider, MessageBubble } from "@/components/crm/message-bubble";
+import { DaySeparator, ConnectionDivider, MessageBubble, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
 import {
@@ -80,6 +80,13 @@ export function useDealChatBinding(params: {
   const { features: convFeatures } = useConversationFeatures();
 
   const [draft, setDraft] = useState("");
+  // Mensagem selecionada para responder (estilo WhatsApp). Reset ao trocar
+  // de deal/conversa e após envio bem-sucedido.
+  const [replyTo, setReplyTo] = useState<{
+    id: string;
+    preview: string;
+    senderName?: string | null;
+  } | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
   // Template escolhido no modal (sessão expirada) → abre o painel no Composer.
   const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
@@ -116,6 +123,7 @@ export function useDealChatBinding(params: {
   useEffect(() => {
     autoEnsuredRef.current = false;
     setEnsuredId(null);
+    setReplyTo(null);
   }, [contactId]);
 
   useEffect(() => {
@@ -216,16 +224,31 @@ export function useDealChatBinding(params: {
     sendMutation.mutate(
       {
         content: t,
+        ...(replyTo ? { replyToId: replyTo.id } : {}),
         // Override só quando o canal escolhido difere do atual da conversa.
         ...(selectedChannelId && selectedChannelId !== conversationChannelId
           ? { channelId: selectedChannelId }
           : {}),
       },
       {
-        onSuccess: () => setDraft(""),
+        onSuccess: () => {
+          setDraft("");
+          setReplyTo(null);
+        },
         onError: (e: Error) => toast.error(e.message || "Falha ao enviar"),
       },
     );
+  }
+
+  // Handler do botão "Responder" — deriva o nome do citado a partir da
+  // própria bolha (o backend não retorna esse campo diretamente).
+  function handleReply(message: BubbleMessage) {
+    const preview = (message.content ?? "").slice(0, 120);
+    const senderName =
+      message.type === "incoming"
+        ? contactName
+        : message.senderName ?? "Você";
+    setReplyTo({ id: message.id, preview, senderName });
   }
 
   function handleSendNote() {
@@ -317,6 +340,7 @@ export function useDealChatBinding(params: {
                     )
                 : undefined
             }
+            onReplyMessage={isNoteBubble ? undefined : handleReply}
           />
         </Fragment>
       );
@@ -347,6 +371,8 @@ export function useDealChatBinding(params: {
       selectedChannelId={selectedChannelId}
       conversationChannelId={conversationChannelId}
       onSelectChannel={setSelectedChannelId}
+      replyTo={replyTo}
+      onCancelReply={() => setReplyTo(null)}
     />
   ) : null;
 

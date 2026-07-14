@@ -19,6 +19,7 @@ import { ButtonGlass } from "@/components/crm/button-glass";
 import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
+import type { Message as BubbleMessage } from "@/components/crm/message-bubble";
 import { ContactAside } from "@/components/crm/contact-aside";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
@@ -370,6 +371,23 @@ export default function InboxV2ClientPage({
       },
     );
   }
+
+  // Reply (estilo WhatsApp): guarda a msg selecionada e o Composer mostra
+  // a barra de preview. senderName é derivado (backend não retorna direto).
+  const [replyTo, setReplyTo] = useState<{
+    id: string;
+    preview: string;
+    senderName?: string | null;
+  } | null>(null);
+
+  function handleReplyMessage(message: BubbleMessage) {
+    const preview = (message.content ?? "").slice(0, 120);
+    const senderName =
+      message.type === "incoming"
+        ? contactName
+        : message.senderName ?? "Você";
+    setReplyTo({ id: message.id, preview, senderName });
+  }
   const { features: convFeatures } = useConversationFeatures();
 
   function handleBulkAction(action: "resolve" | "reopen") {
@@ -407,6 +425,7 @@ export default function InboxV2ClientPage({
   function handleSelect(id: string) {
     setActiveId(id);
     markRead.mutate(id);
+    setReplyTo(null);
   }
 
   function handleSend(value: string) {
@@ -414,6 +433,7 @@ export default function InboxV2ClientPage({
     sendMessage.mutate(
       {
         content: value,
+        ...(replyTo ? { replyToId: replyTo.id } : {}),
         // Só envia override quando o canal escolhido difere do canal
         // atual da conversa — caminho rápido no backend (sem round-trip
         // extra de validação) e nenhum efeito visível pro agente que
@@ -423,7 +443,10 @@ export default function InboxV2ClientPage({
           : {}),
       },
       {
-        onSuccess: () => setDraft(""),
+        onSuccess: () => {
+          setDraft("");
+          setReplyTo(null);
+        },
         onError: (err) => toast.error(err.message || "Falha ao enviar"),
       },
     );
@@ -805,6 +828,7 @@ export default function InboxV2ClientPage({
         connections={messagesData?.channels}
         onUseTemplate={() => setTemplateOpen(true)}
         onReactMessage={handleReactMessage}
+        onReplyMessage={handleReplyMessage}
         headerActionsSlot={
           <>
             {/* DealCallButton volta pro header do chat, ao lado do chip
@@ -843,6 +867,8 @@ export default function InboxV2ClientPage({
             selectedChannelId={selectedChannelId}
             conversationChannelId={conversationChannelId}
             onSelectChannel={setSelectedChannelId}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(null)}
           />
         }
         notesSlot={notesSlot}

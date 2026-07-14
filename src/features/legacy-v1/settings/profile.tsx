@@ -53,7 +53,6 @@ import {
 } from "@/lib/chat-theme";
 import { cn } from "@/lib/utils";
 import { AvatarCropDialog } from "@/components/profile/avatar-crop-dialog";
-import { SidebarCustomizationCard } from "@/features/sidebar/sidebar-customization";
 
 type Profile = {
   id: string;
@@ -291,8 +290,6 @@ export default function ProfilePage() {
         <ProfileCard profile={profile} queryClient={queryClient} update={update} />
         <TokensCard />
       </div>
-
-      <SidebarCustomizationCard />
     </div>
   );
 }

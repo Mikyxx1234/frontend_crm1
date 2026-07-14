@@ -938,17 +938,22 @@ export function MessageBubble({
             isOutgoing
               ? isBot
                 // Bolha de AUTOMAÇÃO: card claro tintado indigo com borda
-                // sutil — destaca da bolha regular sem competir com ela
-                // (antes era navy sólido, ficando indistinguível de outgoing
-                // em temas escuros e "branco" em temas claros).
-                ? "rounded-br border border-[color-mix(in_srgb,var(--brand-primary)_22%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,white)] text-[var(--text-primary)] shadow-[0_2px_10px_rgba(91,111,245,0.14)]"
+                // sutil — destaca da bolha regular sem competir com ela.
+                // Cores hardcoded (não usar --text-primary) porque em v2-dark
+                // o token flipa para cinza claro e some contra o bg branco.
+                ? "rounded-br border border-[rgba(91,111,245,0.28)] shadow-[0_2px_10px_rgba(91,111,245,0.14)]"
                 : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
               : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
           style={
             isOutgoing
               ? isBot
-                ? undefined
+                ? {
+                    // Tint indigo sobre branco puro; texto slate-900 fixo
+                    // — invariante ao data-chat-theme e ao modo dark/light.
+                    background: "#eef0ff",
+                    color: "#0f172a",
+                  }
                 : {
                     background: "var(--chat-bubble-sent-bg)",
                     color: "var(--chat-bubble-sent-text)",

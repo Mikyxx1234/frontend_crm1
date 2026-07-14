@@ -125,6 +125,13 @@ interface ChatAreaProps {
   callsSlot?: React.ReactNode
   /** Contagens opcionais exibidas como badge em cada aba. */
   tabCounts?: Partial<Record<ChatTabId, number>>
+
+  // ── Ações nas mensagens recebidas (menu WhatsApp-like) ───────────
+  // Passa através para MessageBubble. Se nenhum handler for provido,
+  // o menu ainda aparece com "Copiar" (que é interno).
+  onReplyMessage?: (message: Message) => void
+  onForwardMessage?: (message: Message) => void
+  onReactMessage?: (message: Message, emoji: string | null) => void
 }
 
 export function ChatArea({
@@ -155,6 +162,9 @@ export function ChatArea({
   timelineSlot,
   callsSlot,
   tabCounts,
+  onReplyMessage,
+  onForwardMessage,
+  onReactMessage,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
@@ -329,7 +339,13 @@ export function ChatArea({
               <Fragment key={message.id || index}>
                 {separator && <DaySeparator date={separator} />}
                 {connLabel && <ConnectionDivider label={connLabel} />}
-                <MessageBubble message={message} agentInitials={agentInitials} />
+                <MessageBubble
+                  message={message}
+                  agentInitials={agentInitials}
+                  onReplyMessage={onReplyMessage}
+                  onForwardMessage={onForwardMessage}
+                  onReactMessage={onReactMessage}
+                />
               </Fragment>
             )
           })

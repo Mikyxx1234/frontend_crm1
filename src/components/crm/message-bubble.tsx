@@ -31,6 +31,9 @@ import {
   IconPhoneIncoming,
   IconPhoneOutgoing,
   IconPhoneOff,
+  IconArrowBackUp,
+  IconShare2,
+  IconMoodPlus,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -292,7 +295,21 @@ export interface MessageBubbleProps {
   onPinNote?: (messageId: string | null) => void
   /** Callback para adicionar conteúdo da nota ao log/timeline do deal. */
   onAddToLog?: (content: string) => void
+
+  // ── Ações de mensagem recebida (menu estilo WhatsApp) ────────────
+  // Todos opcionais: se não passados, o item some do menu. "Copiar" é
+  // interno (usa navigator.clipboard) e sempre aparece p/ mensagens
+  // com conteúdo textual — não depende de callback.
+  /** Ao clicar em "Responder": abre citação da mensagem no composer. */
+  onReplyMessage?: (message: Message) => void
+  /** Ao clicar em "Encaminhar": abre modal de seleção de conversa. */
+  onForwardMessage?: (message: Message) => void
+  /** Ao clicar em uma reação rápida (👍/❤️/…) ou "Reagir". */
+  onReactMessage?: (message: Message, emoji: string | null) => void
 }
+
+/** Emojis exibidos na barra rápida de reações — padrão WhatsApp. */
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const
 
 function FormBubble({ message, className }: { message: Message; className?: string }) {
   const [open, setOpen] = useState(false)
@@ -753,6 +770,188 @@ function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boo
   )
 }
 
+/**
+ * Menu de contexto estilo WhatsApp para mensagens RECEBIDAS.
+ *
+ * Layout: barra horizontal de reações rápidas (6 emojis) + lista vertical
+ * de ações (Responder / Encaminhar / Copiar / Reagir). Aparece via
+ * chevron no canto sup. direito da bolha, visível no hover.
+ *
+ * "Copiar" é sempre disponível (independente de callback) e usa
+ * `navigator.clipboard`. As demais ações só aparecem quando o consumidor
+ * (ChatArea / DealChatBinding) passa o handler correspondente.
+ */
+function ReceivedMessageMenu({
+  message,
+  onReply,
+  onForward,
+  onReact,
+}: {
+  message: Message
+  onReply?: (message: Message) => void
+  onForward?: (message: Message) => void
+  onReact?: (message: Message, emoji: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Click fora / Esc fecham o popover.
+  useEffect(() => {
+    if (!open) return
+    function onDocClick(e: MouseEvent) {
+      if (!containerRef.current) return
+      if (!containerRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", onDocClick)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDocClick)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  const canCopy = !!(message.content && message.content.trim())
+
+  const handleCopy = useCallback(async () => {
+    if (!canCopy) return
+    try {
+      await navigator.clipboard.writeText(message.content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1200)
+    } catch {
+      // navegador antigo / sem HTTPS: silencioso — usuário reabre menu
+    }
+    setOpen(false)
+  }, [canCopy, message.content])
+
+  const handleReact = useCallback(
+    (emoji: string) => {
+      onReact?.(message, emoji)
+      setOpen(false)
+    },
+    [message, onReact],
+  )
+
+  return (
+    <div ref={containerRef} className="absolute right-1 top-1 z-10">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        aria-label="Ações da mensagem"
+        aria-expanded={open}
+        className={cn(
+          "flex h-5 w-5 items-center justify-center rounded-full bg-white/85 text-[var(--text-secondary)] shadow-[0_1px_4px_rgba(15,20,40,0.18)] backdrop-blur-sm transition-opacity",
+          "hover:bg-white hover:text-[var(--text-primary)]",
+          // some por padrão; só aparece com hover na bolha ou quando aberto
+          open ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
+      >
+        <IconChevronDown size={13} stroke={2.2} />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-6 min-w-[220px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white shadow-[0_12px_32px_rgba(15,20,40,0.18)]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Barra de reações rápidas (só aparece quando há callback) */}
+          {onReact && (
+            <div className="flex items-center gap-0.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-subtle)] px-1.5 py-1">
+              {QUICK_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleReact(emoji)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 hover:bg-white"
+                  aria-label={`Reagir com ${emoji}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Itens do menu */}
+          <ul className="py-1">
+            {onReply && (
+              <MenuItem
+                icon={<IconArrowBackUp size={15} />}
+                label="Responder"
+                onClick={() => {
+                  onReply(message)
+                  setOpen(false)
+                }}
+              />
+            )}
+            {onForward && (
+              <MenuItem
+                icon={<IconShare2 size={15} />}
+                label="Encaminhar"
+                onClick={() => {
+                  onForward(message)
+                  setOpen(false)
+                }}
+              />
+            )}
+            {canCopy && (
+              <MenuItem
+                icon={<IconCopy size={15} />}
+                label={copied ? "Copiado!" : "Copiar"}
+                onClick={handleCopy}
+              />
+            )}
+            {onReact && (
+              <MenuItem
+                icon={<IconMoodPlus size={15} />}
+                label="Reagir"
+                onClick={() => {
+                  // callback com null => consumidor abre picker completo
+                  onReact(message, null)
+                  setOpen(false)
+                }}
+              />
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MenuItem({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: ReactNode
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        role="menuitem"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-body text-[13px] text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-subtle)]"
+      >
+        <span className="flex h-5 w-5 items-center justify-center text-[var(--text-secondary)]">
+          {icon}
+        </span>
+        {label}
+      </button>
+    </li>
+  )
+}
+
 export function MessageBubble({
   message,
   agentInitials,
@@ -760,12 +959,27 @@ export function MessageBubble({
   isPinned,
   onPinNote,
   onAddToLog,
+  onReplyMessage,
+  onForwardMessage,
+  onReactMessage,
 }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
   const isNote = message.isNote === true
   const hasForm = !!(message.formFields && message.formFields.length > 0)
   const senderName = message.senderName
+
+  // Menu WhatsApp-like só entra nas RECEBIDAS. Nas outgoing/notas/forms
+  // o layout já é usado por outras ações (avatar, badges, ações de nota).
+  const hasReceivedMenu =
+    !isOutgoing &&
+    !isNote &&
+    !hasForm &&
+    message.messageType !== "sip_call" &&
+    (!!onReplyMessage ||
+      !!onForwardMessage ||
+      !!onReactMessage ||
+      !!(message.content && message.content.trim()))
 
   if (hasForm) {
     return <FormBubble message={message} className={className} />
@@ -911,7 +1125,7 @@ export function MessageBubble({
         className,
       )}
     >
-      <div className={cn("flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
+      <div className={cn("group flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
         {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome */}
         {isOutgoing && (
           <Tooltip>
@@ -997,6 +1211,17 @@ export function MessageBubble({
                 Template
               </span>
             </div>
+          )}
+          {/* Menu WhatsApp-like nas mensagens recebidas: chevron que
+              expande com reações rápidas + Responder/Encaminhar/Copiar/Reagir.
+              Só monta quando há pelo menos uma ação (senão o hover fica vazio). */}
+          {hasReceivedMenu && (
+            <ReceivedMessageMenu
+              message={message}
+              onReply={onReplyMessage}
+              onForward={onForwardMessage}
+              onReact={onReactMessage}
+            />
           )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
           <MessageContent message={message} isOutgoing={isOutgoing} />

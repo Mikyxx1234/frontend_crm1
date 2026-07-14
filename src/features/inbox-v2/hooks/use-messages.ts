@@ -8,8 +8,10 @@ import {
   pinNote,
   sendAttachment,
   sendMessage,
+  sendReaction,
   type InboxMessageDto,
   type MessagesResponse,
+  type ReactionDto,
 } from "../api";
 
 export function messagesKey(conversationId: string | null | undefined) {
@@ -71,6 +73,32 @@ export function useAddNoteToLog(dealId: string | null) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["deal-timeline"] });
       qc.invalidateQueries({ queryKey: ["deal-notes", dealId] });
+    },
+  });
+}
+
+/**
+ * Mutation: reagir a uma mensagem (agente → cliente).
+ *
+ * `emoji` vazio (`""`) = remover a reação anterior deste agente
+ * (toggle-off segue o comportamento oficial do WhatsApp Cloud API).
+ *
+ * O backend atualiza `Message.reactions` no DB e propaga a reação
+ * para o cliente via Meta Graph (quando o canal é Cloud API e a
+ * mensagem tem `wamid`).
+ */
+export function useReactMessage(conversationId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<
+    { reactions: ReactionDto[]; metaError?: string },
+    Error,
+    { messageId: string; emoji: string }
+  >({
+    mutationFn: ({ messageId, emoji }) => sendReaction(messageId, emoji),
+    onSuccess: () => {
+      // Reação altera `Message.reactions` — refetch da conversa ativa
+      // pra refletir o badge no bubble sem esperar o SSE.
+      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
     },
   });
 }

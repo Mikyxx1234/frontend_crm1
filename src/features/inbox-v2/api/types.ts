@@ -131,11 +131,16 @@ export function hasInboxServerFilters(
   );
 }
 
+/**
+ * Entrada individual do JSON `Message.reactions` — espelha o formato
+ * gravado pelo webhook Meta (`applyIncomingReaction`). Uma linha por
+ * reator. WhatsApp 1:1 permite apenas uma reação por pessoa por
+ * mensagem; em canais 1:N (futuros) o array pode ter múltiplas entradas.
+ */
 export interface ReactionDto {
   emoji: string;
-  count: number;
-  byMe: boolean;
-  users?: { id: string; name: string }[];
+  from: string;
+  at?: string;
 }
 
 export interface InboxMessageDto {
@@ -152,6 +157,10 @@ export interface InboxMessageDto {
   createdAt: string;
   readAt?: string | null;
   replyToId?: string | null;
+  /** Snapshot curto (~120 chars) da mensagem citada. Backend popula
+   *  via `resolveReplyContext` no webhook Meta. Renderiza como cabeçalho
+   *  de citação (linha vertical + trecho) na bolha do reply. */
+  replyToPreview?: string | null;
   reactions?: ReactionDto[];
   /** Campo plano enviado diretamente pelo backend (ex: "/uploads/audio.ogg"). */
   mediaUrl?: string | null;

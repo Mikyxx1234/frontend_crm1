@@ -188,6 +188,23 @@ export interface Message {
    * WhatsApps). `null`/undefined = herda a conexão anterior (sem marcador).
    */
   channelId?: string | null
+  /**
+   * Citação (reply): quando o cliente responde uma mensagem específica,
+   * mostramos o snippet da mensagem citada no topo da bolha. `snippet` é
+   * um preview curto (~120 chars); `direction` orienta a cor da barra
+   * lateral (verde p/ nossa mensagem, cinza p/ mensagem do cliente).
+   */
+  replyTo?: {
+    snippet: string
+    direction?: "in" | "out"
+    senderName?: string | null
+  } | null
+  /**
+   * Reações do cliente nesta mensagem (WhatsApp permite uma reação por
+   * pessoa, mas persistimos como array para suportar múltiplos reatores
+   * em grupos futuramente). Renderiza como badge flutuante na base.
+   */
+  reactions?: Array<{ emoji: string; from: string; at?: string }>
 }
 
 
@@ -1239,6 +1256,16 @@ export function MessageBubble({
               onReact={onReactMessage}
             />
           )}
+          {/* Citação: cliente respondeu uma mensagem específica.
+              Barra vertical + trecho curto, estilo WhatsApp. */}
+          {message.replyTo?.snippet && (
+            <QuotedPreview
+              snippet={message.replyTo.snippet}
+              direction={message.replyTo.direction ?? "out"}
+              senderName={message.replyTo.senderName ?? null}
+              onLightBg={!isOutgoing || isBot}
+            />
+          )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
           <MessageContent message={message} isOutgoing={isOutgoing} />
           <span
@@ -1262,10 +1289,108 @@ export function MessageBubble({
               />
             )}
           </span>
+          {/* Badge de reação flutuante: emoji do cliente sobre o canto
+              inferior da bolha (padrão WhatsApp Web). Quando há múltiplas
+              reações distintas, exibe as duas primeiras + contador. */}
+          {message.reactions && message.reactions.length > 0 && (
+            <ReactionBadge
+              reactions={message.reactions}
+              anchor={isOutgoing ? "left" : "right"}
+            />
+          )}
         </div>
       </div>
 
       {/* Nome do remetente apenas no tooltip do avatar (acima) */}
+    </div>
+  )
+}
+
+/**
+ * Cabeçalho de citação (reply) — aparece dentro da bolha, acima do
+ * conteúdo. Renderiza barra vertical colorida à esquerda + trecho curto.
+ * A cor da barra e do texto dependem do fundo da bolha para garantir
+ * contraste em qualquer variação (azul, indigo, cinza claro).
+ */
+function QuotedPreview({
+  snippet,
+  direction,
+  senderName,
+  onLightBg,
+}: {
+  snippet: string
+  direction: "in" | "out"
+  senderName: string | null
+  onLightBg: boolean
+}) {
+  const label = senderName || (direction === "out" ? "Você" : "Cliente")
+  // Cores hardcoded p/ atravessar dark/light sem depender de --text-*.
+  const bg = onLightBg ? "#f1f5f9" : "rgba(255,255,255,0.14)"
+  const border = onLightBg ? "#5b6ff5" : "#ffffff"
+  const labelColor = onLightBg ? "#4338ca" : "#e0e7ff"
+  const textColor = onLightBg ? "#334155" : "rgba(255,255,255,0.88)"
+  return (
+    <div
+      className="mb-1.5 overflow-hidden rounded-md pl-2"
+      style={{ background: bg, borderLeft: `3px solid ${border}` }}
+    >
+      <div className="px-2 py-1">
+        <div
+          className="font-display text-[10.5px] font-bold leading-none"
+          style={{ color: labelColor }}
+        >
+          {label}
+        </div>
+        <div
+          className="mt-0.5 line-clamp-2 font-body text-[11.5px] leading-snug"
+          style={{ color: textColor }}
+        >
+          {snippet}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Badge circular com o(s) emoji(s) de reação, ancorado no canto inferior
+ * da bolha. WhatsApp Web mostra até 2 emojis distintos + "+N" se houver
+ * mais tipos. Sempre fundo branco com sombra para destacar sobre a bolha.
+ */
+function ReactionBadge({
+  reactions,
+  anchor,
+}: {
+  reactions: NonNullable<Message["reactions"]>
+  anchor: "left" | "right"
+}) {
+  // Agrupa por emoji (contagem). WhatsApp 1:1 quase sempre entrega
+  // apenas uma reação por bolha; a agregação é defensiva para grupos
+  // futuros ou histórico duplicado.
+  const groups = new Map<string, number>()
+  for (const r of reactions) {
+    groups.set(r.emoji, (groups.get(r.emoji) ?? 0) + 1)
+  }
+  const entries = Array.from(groups.entries())
+  const total = reactions.length
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute -bottom-2 flex items-center gap-0.5 rounded-full border border-black/5 bg-white px-1.5 py-0.5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]",
+        anchor === "left" ? "left-1" : "right-1",
+      )}
+      title={reactions.map((r) => r.emoji).join(" ")}
+    >
+      {entries.slice(0, 2).map(([emoji]) => (
+        <span key={emoji} className="text-[13px] leading-none">
+          {emoji}
+        </span>
+      ))}
+      {total > 1 && (
+        <span className="ml-0.5 font-display text-[10px] font-semibold text-slate-600">
+          {total}
+        </span>
+      )}
     </div>
   )
 }

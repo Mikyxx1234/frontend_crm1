@@ -422,6 +422,29 @@ export function toMessageBubble(
     // Conexão por onde a mensagem trafegou — alimenta o marcador de troca
     // de conexão na timeline (ChatArea / deal-chat-binding).
     channelId: dto.channelId ?? null,
+    // Citação (reply do cliente numa mensagem específica). Backend popula
+    // `replyToPreview` no webhook Meta via `resolveReplyContext`. Se
+    // veio vazio/null, não renderiza cabeçalho de citação.
+    replyTo: dto.replyToPreview
+      ? {
+          snippet: dto.replyToPreview,
+          // Sem `dto.replyToDirection` explícito no DTO por ora; heurística:
+          // se a mensagem atual é inbound (cliente respondeu), o alvo é
+          // provavelmente uma out nossa. Facilita a cor do bar lateral.
+          direction: isInbound ? "out" : "in",
+        }
+      : null,
+    // Reações do cliente. Backend grava {emoji, from, at}[]. Filtra
+    // entradas inválidas defensivamente (JSON pode conter lixo antigo).
+    reactions:
+      Array.isArray(dto.reactions) && dto.reactions.length > 0
+        ? dto.reactions
+            .filter(
+              (r): r is { emoji: string; from: string; at?: string } =>
+                !!r && typeof r === "object" && typeof (r as { emoji?: unknown }).emoji === "string",
+            )
+            .map((r) => ({ emoji: r.emoji, from: r.from, at: r.at }))
+        : undefined,
   };
 }
 

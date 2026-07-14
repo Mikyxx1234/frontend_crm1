@@ -188,22 +188,32 @@ export interface Message {
 }
 
 
-/** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing). */
-function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
+/** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing).
+ *  `onLightBg` = true quando a bolha tem fundo claro (ex.: bolha de
+ *  automação com tint indigo sobre branco). Sem isso os ticks brancos
+ *  ficam invisíveis. */
+function StatusTicks({
+  status,
+  onLightBg,
+}: {
+  status: NonNullable<Message["status"]>
+  onLightBg?: boolean
+}) {
+  const dim = onLightBg ? "text-[var(--text-muted)]" : "text-white/70"
+  const solid = onLightBg ? "text-[var(--text-secondary)]" : "text-white/75"
   if (status === "pending") {
-    return <IconClock size={12} className="shrink-0 text-white/70" aria-label="Enviando" />
+    return <IconClock size={12} className={cn("shrink-0", dim)} aria-label="Enviando" />
   }
   if (status === "failed") {
     return <IconAlertCircle size={13} className="shrink-0 text-[var(--wa-tick-fail)]" aria-label="Falha no envio" />
   }
   if (status === "sent") {
-    return <IconCheck size={14} className="shrink-0 text-white/75" aria-label="Enviada" />
+    return <IconCheck size={14} className={cn("shrink-0", solid)} aria-label="Enviada" />
   }
-  // delivered | read — duplo tick; azul quando lida.
   return (
     <IconChecks
       size={15}
-      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read)]" : "text-white/75")}
+      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read)]" : solid)}
       aria-label={status === "read" ? "Lida" : "Entregue"}
     />
   )
@@ -217,12 +227,14 @@ function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
 function StatusIndicator({
   status,
   sendError,
+  onLightBg,
 }: {
   status: NonNullable<Message["status"]>
   sendError?: string
+  onLightBg?: boolean
 }) {
   if (status !== "failed") {
-    return <StatusTicks status={status} />
+    return <StatusTicks status={status} onLightBg={onLightBg} />
   }
   return (
     <Tooltip>
@@ -925,7 +937,11 @@ export function MessageBubble({
             "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
-                ? "rounded-br bg-[var(--brand-gradient-end)] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
+                // Bolha de AUTOMAÇÃO: card claro tintado indigo com borda
+                // sutil — destaca da bolha regular sem competir com ela
+                // (antes era navy sólido, ficando indistinguível de outgoing
+                // em temas escuros e "branco" em temas claros).
+                ? "rounded-br border border-[color-mix(in_srgb,var(--brand-primary)_22%,transparent)] bg-[color-mix(in_srgb,var(--brand-primary)_10%,white)] text-[var(--text-primary)] shadow-[0_2px_10px_rgba(91,111,245,0.14)]"
                 : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
               : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
@@ -940,11 +956,9 @@ export function MessageBubble({
               : { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" }
           }
         >
-          {/* Badge AUTOMAÇÃO — pill petróleo/slate escuro pra ficar
-              legível tanto sobre bolha outgoing (dark navy) quanto
-              sobre bolha inbound (clara). Exibe o nome da automação
-              (senderName) quando o backend envia; caso contrário cai
-              no rótulo genérico "Automação". */}
+          {/* Badge AUTOMAÇÃO — pill escuro em cima do card claro tintado.
+              Exibe o nome da automação (senderName) quando o backend envia;
+              caso contrário cai no rótulo genérico "Automação". */}
           {isBot && (
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
@@ -957,24 +971,49 @@ export function MessageBubble({
               </span>
             </div>
           )}
+          {/* Badge TEMPLATE — identifica visualmente quando a mensagem
+              foi enviada usando um template pré-aprovado da Meta. Pode
+              coexistir com o badge AUTOMAÇÃO (automação disparando um
+              template) ou aparecer sozinho (agente enviando template
+              manualmente). Usa cor accent que contrasta com ambos os
+              fundos (bolha azul regular e bolha automação tintada). */}
+          {message.messageType === "template" && (
+            <div className={cn("mb-1.5 flex items-center gap-1.5", isBot && "-mt-0.5")}>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest",
+                  isOutgoing && !isBot
+                    ? "bg-white/22 text-white ring-1 ring-inset ring-white/25"
+                    : "bg-[color-mix(in_srgb,#0ea5e9_14%,white)] text-[#0369a1] ring-1 ring-inset ring-[color-mix(in_srgb,#0ea5e9_35%,transparent)]",
+                )}
+                title="Mensagem enviada usando um template aprovado da Meta"
+              >
+                <IconClipboardList size={10} />
+                Template
+              </span>
+            </div>
+          )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
           <MessageContent message={message} isOutgoing={isOutgoing} />
           <span
             className={cn(
               "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
-              isOutgoing ? "" : "text-[var(--text-muted)]",
+              isOutgoing && isBot && "text-[var(--text-muted)]",
+              !isOutgoing && "text-[var(--text-muted)]",
             )}
             style={
               isOutgoing && !isBot
                 ? { color: "var(--chat-bubble-sent-time)" }
-                : isOutgoing
-                  ? { color: "rgba(255,255,255,0.8)" }
-                  : undefined
+                : undefined
             }
           >
             {message.time}
             {isOutgoing && message.status && (
-              <StatusIndicator status={message.status} sendError={message.sendError} />
+              <StatusIndicator
+                status={message.status}
+                sendError={message.sendError}
+                onLightBg={isBot}
+              />
             )}
           </span>
         </div>

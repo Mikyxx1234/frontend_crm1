@@ -132,6 +132,8 @@ interface ChatAreaProps {
   onReplyMessage?: (message: Message) => void
   onForwardMessage?: (message: Message) => void
   onReactMessage?: (message: Message, emoji: string | null) => void
+  onPinMessage?: (message: Message) => void
+  onFavoriteMessage?: (message: Message) => void
 }
 
 export function ChatArea({
@@ -165,6 +167,8 @@ export function ChatArea({
   onReplyMessage,
   onForwardMessage,
   onReactMessage,
+  onPinMessage,
+  onFavoriteMessage,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
@@ -345,6 +349,8 @@ export function ChatArea({
                   onReplyMessage={onReplyMessage}
                   onForwardMessage={onForwardMessage}
                   onReactMessage={onReactMessage}
+                  onPinMessage={onPinMessage}
+                  onFavoriteMessage={onFavoriteMessage}
                 />
               </Fragment>
             )

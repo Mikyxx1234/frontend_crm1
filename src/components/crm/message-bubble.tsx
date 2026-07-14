@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
+import { useState, useRef, useEffect, useCallback, useLayoutEffect, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
 import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
 import { ImageLightbox } from "@/components/crm/image-lightbox"
@@ -34,6 +35,7 @@ import {
   IconArrowBackUp,
   IconShare2,
   IconMoodPlus,
+  IconStar,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -323,6 +325,10 @@ export interface MessageBubbleProps {
   onForwardMessage?: (message: Message) => void
   /** Ao clicar em uma reação rápida (👍/❤️/…) ou "Reagir". */
   onReactMessage?: (message: Message, emoji: string | null) => void
+  /** Ao clicar em "Fixar": fixa a mensagem no topo da conversa. */
+  onPinMessage?: (message: Message) => void
+  /** Ao clicar em "Favoritar": adiciona à lista de favoritas do agente. */
+  onFavoriteMessage?: (message: Message) => void
 }
 
 /** Emojis exibidos na barra rápida de reações — padrão WhatsApp. */
@@ -791,34 +797,94 @@ function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boo
  * Menu de contexto estilo WhatsApp para mensagens RECEBIDAS.
  *
  * Layout: barra horizontal de reações rápidas (6 emojis) + lista vertical
- * de ações (Responder / Encaminhar / Copiar / Reagir). Aparece via
- * chevron no canto sup. direito da bolha, visível no hover.
+ * de ações (Responder / Reagir / Encaminhar / Fixar / Favoritar / Copiar).
+ * Aparece via chevron no canto sup. direito da bolha (hover).
  *
- * "Copiar" é sempre disponível (independente de callback) e usa
- * `navigator.clipboard`. As demais ações só aparecem quando o consumidor
- * (ChatArea / DealChatBinding) passa o handler correspondente.
+ * Renderização: `createPortal` no <body> com `position: fixed`, para
+ * escapar de qualquer ancestral com `overflow: hidden` (o chat-area e a
+ * lista de mensagens são scrollables e clipam popovers absolutamente
+ * posicionados). O `useLayoutEffect` computa o rect do chevron e aplica
+ * auto-flip vertical (abre pra cima quando não cabe abaixo) e horizontal
+ * (clampa à borda da viewport pra nunca cortar).
+ *
+ * Callbacks são opcionais. Sem handler, o item ainda aparece na UI para
+ * manter o layout consistente entre todas as bolhas — só que fica como
+ * stub "em breve". Copiar é sempre funcional (`navigator.clipboard`).
  */
 function ReceivedMessageMenu({
   message,
   onReply,
   onForward,
   onReact,
+  onPin,
+  onFavorite,
 }: {
   message: Message
   onReply?: (message: Message) => void
   onForward?: (message: Message) => void
   onReact?: (message: Message, emoji: string | null) => void
+  onPin?: (message: Message) => void
+  onFavorite?: (message: Message) => void
 }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
-  // Click fora / Esc fecham o popover.
+  // Posicionamento responsivo: calcula o rect do chevron e escolhe se
+  // abre pra baixo/cima + clampa horizontalmente pra não vazar viewport.
+  // Duas passadas — a 1ª antes do content medir, a 2ª (rAF) já com a
+  // dimensão real. Reposiciona em resize/scroll pra acompanhar o layout.
+  useLayoutEffect(() => {
+    if (!open) {
+      setCoords(null)
+      return
+    }
+    const trigger = triggerRef.current
+    if (!trigger) return
+
+    const update = () => {
+      const r = trigger.getBoundingClientRect()
+      const content = contentRef.current
+      const ch = content?.offsetHeight ?? 280
+      const cw = content?.offsetWidth ?? 240
+      const margin = 6
+
+      const spaceBelow = window.innerHeight - r.bottom
+      const spaceAbove = r.top
+      const openUp = spaceBelow < ch + margin && spaceAbove > spaceBelow
+      const top = openUp
+        ? Math.max(8, r.top - ch - margin)
+        : r.bottom + margin
+
+      // Ancora à direita do chevron por padrão, mas clampa se estourar.
+      const desiredLeft = r.right - cw
+      const maxLeft = window.innerWidth - cw - 8
+      const left = Math.min(Math.max(8, desiredLeft), Math.max(8, maxLeft))
+
+      setCoords({ top, left })
+    }
+    update()
+    const raf = requestAnimationFrame(update)
+    window.addEventListener("resize", update)
+    window.addEventListener("scroll", update, true)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("resize", update)
+      window.removeEventListener("scroll", update, true)
+    }
+  }, [open])
+
+  // Click fora / Esc fecham. O contentRef está no portal (fora do DOM
+  // do trigger), então checamos os dois.
   useEffect(() => {
     if (!open) return
     function onDocClick(e: MouseEvent) {
-      if (!containerRef.current) return
-      if (!containerRef.current.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (triggerRef.current?.contains(t)) return
+      if (contentRef.current?.contains(t)) return
+      setOpen(false)
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false)
@@ -840,7 +906,7 @@ function ReceivedMessageMenu({
       setCopied(true)
       setTimeout(() => setCopied(false), 1200)
     } catch {
-      // navegador antigo / sem HTTPS: silencioso — usuário reabre menu
+      /* navegador antigo / sem HTTPS: silencioso */
     }
     setOpen(false)
   }, [canCopy, message.content])
@@ -853,14 +919,15 @@ function ReceivedMessageMenu({
     [message, onReact],
   )
 
+  // Fallback comum para itens ainda não plugados no container. Fecha o
+  // menu silenciosamente — em vez de sumir com o botão, mantemos o
+  // layout previsível e ativamos quando o backend/UX estiver pronto.
+  const stub = useCallback(() => setOpen(false), [])
+
   return (
-    <div
-      ref={containerRef}
-      // Chevron fica FORA da bolha (canto sup-direito, deslocado ~8px)
-      // pra nao sobrepor conteudo do texto. Padrao WhatsApp Web.
-      className="absolute -right-2 -top-2 z-10"
-    >
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={(e) => {
           e.stopPropagation()
@@ -869,8 +936,7 @@ function ReceivedMessageMenu({
         aria-label="Ações da mensagem"
         aria-expanded={open}
         className={cn(
-          "flex h-6 w-6 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.22)] transition-opacity",
-          // some por padrão; só aparece com hover na bolha ou quando aberto
+          "absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.22)] transition-opacity",
           open ? "opacity-100" : "opacity-0 group-hover:opacity-100",
         )}
         style={{ background: "#ffffff", color: "#334155" }}
@@ -878,77 +944,95 @@ function ReceivedMessageMenu({
         <IconChevronDown size={14} stroke={2.2} />
       </button>
 
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-7 min-w-[220px] overflow-hidden rounded-[var(--radius-lg)] border border-black/5 shadow-[0_12px_32px_rgba(15,20,40,0.22)]"
-          style={{ background: "#ffffff", color: "#0f172a" }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Barra de reações rápidas (só aparece quando há callback) */}
-          {onReact && (
+      {open && coords && typeof document !== "undefined"
+        ? createPortal(
             <div
-              className="flex items-center gap-0.5 border-b px-1.5 py-1"
-              style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}
+              ref={contentRef}
+              role="menu"
+              style={{
+                position: "fixed",
+                top: coords.top,
+                left: coords.left,
+                background: "#ffffff",
+                color: "#0f172a",
+              }}
+              className="z-[100] w-[224px] max-w-[calc(100vw-16px)] overflow-hidden rounded-[var(--radius-lg)] border border-black/5 shadow-[0_12px_32px_rgba(15,20,40,0.22)]"
+              onClick={(e) => e.stopPropagation()}
             >
-              {QUICK_REACTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleReact(emoji)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 hover:bg-white"
-                  aria-label={`Reagir com ${emoji}`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
+              {/* Barra de reações rápidas — sempre visível. Se onReact
+                  não estiver plugado, ainda mostramos, mas emoji clica
+                  no stub (fecha menu) até o container implementar. */}
+              <div
+                className="flex items-center gap-0.5 border-b px-1.5 py-1"
+                style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}
+              >
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleReact(emoji)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 hover:bg-white"
+                    aria-label={`Reagir com ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
 
-          {/* Itens do menu */}
-          <ul className="py-1">
-            {onReply && (
-              <MenuItem
-                icon={<IconArrowBackUp size={15} />}
-                label="Responder"
-                onClick={() => {
-                  onReply(message)
-                  setOpen(false)
-                }}
-              />
-            )}
-            {onForward && (
-              <MenuItem
-                icon={<IconShare2 size={15} />}
-                label="Encaminhar"
-                onClick={() => {
-                  onForward(message)
-                  setOpen(false)
-                }}
-              />
-            )}
-            {canCopy && (
-              <MenuItem
-                icon={<IconCopy size={15} />}
-                label={copied ? "Copiado!" : "Copiar"}
-                onClick={handleCopy}
-              />
-            )}
-            {onReact && (
-              <MenuItem
-                icon={<IconMoodPlus size={15} />}
-                label="Reagir"
-                onClick={() => {
-                  // callback com null => consumidor abre picker completo
-                  onReact(message, null)
-                  setOpen(false)
-                }}
-              />
-            )}
-          </ul>
-        </div>
-      )}
-    </div>
+              <ul className="py-1">
+                <MenuItem
+                  icon={<IconArrowBackUp size={15} />}
+                  label="Responder"
+                  onClick={() => {
+                    onReply ? onReply(message) : stub()
+                    setOpen(false)
+                  }}
+                />
+                <MenuItem
+                  icon={<IconMoodPlus size={15} />}
+                  label="Reagir"
+                  onClick={() => {
+                    onReact ? onReact(message, null) : stub()
+                    setOpen(false)
+                  }}
+                />
+                <MenuItem
+                  icon={<IconShare2 size={15} />}
+                  label="Encaminhar"
+                  onClick={() => {
+                    onForward ? onForward(message) : stub()
+                    setOpen(false)
+                  }}
+                />
+                <MenuItem
+                  icon={<IconPin size={15} />}
+                  label="Fixar"
+                  onClick={() => {
+                    onPin ? onPin(message) : stub()
+                    setOpen(false)
+                  }}
+                />
+                <MenuItem
+                  icon={<IconStar size={15} />}
+                  label="Favoritar"
+                  onClick={() => {
+                    onFavorite ? onFavorite(message) : stub()
+                    setOpen(false)
+                  }}
+                />
+                {canCopy && (
+                  <MenuItem
+                    icon={<IconCopy size={15} />}
+                    label={copied ? "Copiado!" : "Copiar"}
+                    onClick={handleCopy}
+                  />
+                )}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   )
 }
 
@@ -995,6 +1079,8 @@ export function MessageBubble({
   onReplyMessage,
   onForwardMessage,
   onReactMessage,
+  onPinMessage,
+  onFavoriteMessage,
 }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
@@ -1009,10 +1095,10 @@ export function MessageBubble({
     !isNote &&
     !hasForm &&
     message.messageType !== "sip_call" &&
-    (!!onReplyMessage ||
-      !!onForwardMessage ||
-      !!onReactMessage ||
-      !!(message.content && message.content.trim()))
+    // Sempre monta em mensagens recebidas de texto/mídia. Mesmo sem
+    // callbacks plugados, o menu ainda oferece "Copiar" e mostra os
+    // demais itens como stubs — melhor UX que sumir o chevron todo.
+    !!(message.content && message.content.trim() || message.mediaUrl)
 
   if (hasForm) {
     return <FormBubble message={message} className={className} />
@@ -1254,6 +1340,8 @@ export function MessageBubble({
               onReply={onReplyMessage}
               onForward={onForwardMessage}
               onReact={onReactMessage}
+              onPin={onPinMessage}
+              onFavorite={onFavoriteMessage}
             />
           )}
           {/* Citação: cliente respondeu uma mensagem específica.

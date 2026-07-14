@@ -48,6 +48,7 @@ import { RequirePermission } from "@/components/auth/require-permission"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
 import { useContactSources } from "@/hooks/use-contact-sources"
+import { useIsDesktop } from "@/hooks/use-media-query"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
 // Mudancas (DD4 + DD5 do questionario):
@@ -332,6 +333,11 @@ export function DealDetailPanel({
   // Toggle foco ↔ compacto (compartilhado com contact-aside via localStorage).
   const [viewMode, setViewMode] = useAsideViewMode()
 
+  // Detecção de viewport: < lg (1024px) ativa o layout mobile (painel único +
+  // switcher Conversa | Detalhes). Desktop mantém o grid 2-colunas com resize.
+  const isDesktop = useIsDesktop()
+  const [mobilePane, setMobilePane] = useState<"conversa" | "detalhes">("conversa")
+
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
   // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
   // Antes o painel era estatico e ignorava qualquer toggle de "olho" feito
@@ -456,6 +462,11 @@ export function DealDetailPanel({
     return () => window.removeEventListener("keydown", onKey)
   }, [isOpen, onClose])
 
+  // Ao abrir o painel no mobile, volta para Conversa (tab primária).
+  useEffect(() => {
+    if (isOpen) setMobilePane("conversa")
+  }, [isOpen])
+
   // Cleanup defensivo: se o componente desmontar (painel fechado) durante
   // um drag em andamento, removemos listeners pra evitar memory leak e
   // restauramos o cursor/seleção globais.
@@ -567,18 +578,54 @@ export function DealDetailPanel({
             "ENTERPRISE" hardcoded (dado falso). Os controles essenciais (voltar,
             editar contato, chip de conexão) foram realocados para o hero. */}
 
-        {/* 2 COLS: SIDEBAR + CONTENT — largura da sidebar é dinâmica
-            (drag horizontal na handle entre as colunas). Min/max bounds
-            evitam quebrar layouts em telas pequenas / coluna direita ficar
-            espremida. */}
+        {/* 2 COLS (desktop lg+): SIDEBAR + CONTENT com resize horizontal.
+            Mobile (< lg): painel único + switcher Conversa | Detalhes. */}
         <div
-          className="grid min-h-0 flex-1 gap-1 overflow-hidden"
-          style={{ gridTemplateColumns: `${sidebarWidth}px 8px 1fr` }}
+          className={cn(
+            "min-h-0 flex-1 overflow-hidden",
+            isDesktop ? "grid gap-1" : "flex flex-col gap-2",
+          )}
+          style={isDesktop ? { gridTemplateColumns: `${sidebarWidth}px 8px 1fr` } : undefined}
         >
-          {/* SIDEBAR — painel funcional estilo Kommo (DS glass) */}
+          {/* Switcher mobile — visível apenas em viewports < lg */}
+          {!isDesktop && (
+            <div className="shrink-0 flex rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
+              <button
+                type="button"
+                onClick={() => setMobilePane("conversa")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 py-2.5 font-display text-[13px] font-bold transition-all",
+                  mobilePane === "conversa"
+                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
+              >
+                <IconMessageCircle size={14} />
+                Conversa
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobilePane("detalhes")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 py-2.5 font-display text-[13px] font-bold transition-all",
+                  mobilePane === "detalhes"
+                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
+              >
+                <IconLayoutList size={14} />
+                Detalhes
+              </button>
+            </div>
+          )}
+          {/* SIDEBAR — desktop sempre visível; mobile só no pane "Detalhes" */}
+          {(isDesktop || mobilePane === "detalhes") && (
           <aside
             aria-label="Detalhes do negócio"
-            className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md"
+            className={cn(
+              "flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+              !isDesktop && "flex-1",
+            )}
           >
             {/* Cabeçalho fixo: hero do negócio — paridade visual com o
                 contact-aside do inbox (fundo brand + anel de progresso).
@@ -1127,11 +1174,10 @@ export function DealDetailPanel({
                   ContactAside do inbox, que ja tinha produtos arrastaveis. */}
             </div>
           </aside>
+          )}
 
-          {/* Handle de resize — divisor entre sidebar e content. Coluna
-              fina (8px) no grid pra ficar fácil de pegar com o mouse.
-              role="separator" + aria-* descrevem o controle pra leitores
-              de tela; setas left/right ajustam de 16 em 16px via teclado. */}
+          {/* Handle de resize — desktop only */}
+          {isDesktop && (
           <div
             role="separator"
             aria-label="Redimensionar painel de detalhes"
@@ -1184,12 +1230,16 @@ export function DealDetailPanel({
               className="h-10 w-[3px] rounded-full bg-[var(--glass-border)] transition-colors group-hover/handle:bg-[var(--brand-primary)] group-focus-visible/handle:bg-[var(--brand-primary)]"
             />
           </div>
+          )}
 
-          {/* CONTENT */}
-          {tabContentOverride?.[activeTab] ? (
+          {/* CONTENT — desktop sempre; mobile só no pane "Conversa" */}
+          {(isDesktop || mobilePane === "conversa") && (tabContentOverride?.[activeTab] ? (
             <main
               aria-label={activeTab}
-              className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+              className={cn(
+                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                !isDesktop && "min-h-0 flex-1",
+              )}
             >
               <TabsBar activeTab={activeTab} onChange={setActiveTab} />
               {tabContentOverride[activeTab]}
@@ -1200,7 +1250,10 @@ export function DealDetailPanel({
             // composer) mas plugado nos slots externos.
             <main
               aria-label="Conversa"
-              className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+              className={cn(
+                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                !isDesktop && "min-h-0 flex-1",
+              )}
             >
               <TabsBar
                 activeTab={activeTab}
@@ -1226,7 +1279,10 @@ export function DealDetailPanel({
             // Default: container com header de tabs + ChatArea mock.
             <main
               aria-label="Conversa"
-              className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+              className={cn(
+                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                !isDesktop && "min-h-0 flex-1",
+              )}
             >
               <TabsBar activeTab={activeTab} onChange={setActiveTab} />
               <div className="min-h-0 flex-1">
@@ -1238,7 +1294,7 @@ export function DealDetailPanel({
                 />
               </div>
             </main>
-          )}
+          ))}
         </div>
       </div>
     </div>

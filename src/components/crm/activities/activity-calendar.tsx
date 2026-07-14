@@ -44,12 +44,12 @@ export function ActivityCalendar({
   const goMonth = (delta: number) => onChangeMonth(new Date(year, month + delta, 1))
 
   return (
-    <div className={cn("flex flex-col", className)}>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="font-display text-[14px] font-extrabold capitalize text-[var(--text-primary)]">
+    <div className={cn("flex w-full min-w-0 flex-col", className)}>
+      <div className="mb-3 flex min-w-0 items-center justify-between gap-2">
+        <p className="min-w-0 truncate font-display text-[14px] font-extrabold capitalize text-[var(--text-primary)]">
           {monthLabel(year, month)}
         </p>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             aria-label="Mês anterior"
@@ -64,7 +64,7 @@ export function ActivityCalendar({
               onChangeMonth(new Date(today.getFullYear(), today.getMonth(), 1))
               onSelectDate(today)
             }}
-            className="cursor-pointer rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)]"
+            className="cursor-pointer rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[12px] font-bold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--brand-primary)] sm:px-3"
           >
             Hoje
           </button>
@@ -79,13 +79,14 @@ export function ActivityCalendar({
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid w-full min-w-0 grid-cols-7 gap-0.5 sm:gap-1">
         {WEEKDAYS_SHORT.map((w) => (
           <div
             key={w}
-            className="py-1 text-center font-display text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--text-faint,var(--text-muted))]"
+            className="min-w-0 py-1 text-center font-display text-[9.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--text-faint,var(--text-muted))]"
           >
-            {w}
+            <span className="sm:hidden">{w.charAt(0)}</span>
+            <span className="hidden sm:inline">{w}</span>
           </div>
         ))}
         {grid.map((d) => {
@@ -103,7 +104,7 @@ export function ActivityCalendar({
               aria-label={`Dia ${d.getDate()}`}
               aria-current={isSelected ? "date" : undefined}
               className={cn(
-                "relative flex aspect-square cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[12.5px] font-semibold transition-colors",
+                "relative flex aspect-square min-w-0 cursor-pointer items-center justify-center rounded-[var(--radius-md)] text-[11.5px] font-semibold transition-colors sm:text-[12.5px]",
                 isSelected
                   ? "bg-[var(--brand-primary)] font-extrabold text-white shadow-[0_4px_14px_rgba(91,111,245,0.35)]"
                   : "text-[var(--text-secondary)] hover:bg-[var(--glass-bg-overlay)]",
@@ -114,7 +115,7 @@ export function ActivityCalendar({
               {hasDot && (
                 <span
                   className={cn(
-                    "absolute bottom-1 h-1 w-1 rounded-full",
+                    "absolute bottom-0.5 h-1 w-1 rounded-full sm:bottom-1",
                     isSelected ? "bg-white" : "bg-[var(--brand-primary)]",
                   )}
                 />

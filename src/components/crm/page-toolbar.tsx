@@ -172,7 +172,7 @@ export function PageSegmentedControl({
   return (
     <div
       className={cn(
-        "flex shrink-0 flex-wrap gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1",
+        "flex shrink-0 flex-nowrap gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1",
         className,
       )}
       role="tablist"

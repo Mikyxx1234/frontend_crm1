@@ -134,68 +134,69 @@ export function PipelineHeader({
   ]
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
+      {/* Title row — icon + title + description, full-width on all breakpoints */}
       <PageHeader
         icon={<IconLayoutKanban size={22} stroke={2.2} />}
         title="Pipeline"
         description="Acompanhe e mova seus negócios pelas etapas do funil."
-        center={
-          onSearchChange ? (
+        className="[&_p]:hidden sm:[&_p]:block"
+      />
+
+      {/* Actions strip — single scrollable row; overflow-x kicks in only when
+          content exceeds container width (mobile), natural on wider screens. */}
+      {!hideActions && (
+        <div className="toolbar-hscroll flex flex-nowrap items-center gap-2 px-1">
+          {onSearchChange && (
             <SearchInput
               value={search ?? ""}
               onChange={onSearchChange}
               placeholder={searchPlaceholder}
+              className="!w-[min(220px,70vw)] shrink-0 max-w-none"
             />
-          ) : undefined
-        }
-        actions={
-          hideActions ? undefined : (
-            <div className="flex items-center gap-2">
-              <PageGhostButton
-                ref={filtersButtonRef}
-                type="button"
-                onClick={onFiltersClick}
-                active={activeFiltersCount > 0}
-                className={activeFiltersCount > 0 ? "px-3.5" : undefined}
-              >
-                <IconFilter size={15} /> Filtros
-                {activeFiltersCount > 0 && (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-[10px] font-bold tabular-nums text-white">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </PageGhostButton>
-              <PageGhostButton type="button" className="px-3.5">
-                <IconBookmark size={15} /> Salvos
-              </PageGhostButton>
+          )}
+          <PageGhostButton
+            ref={filtersButtonRef}
+            type="button"
+            onClick={onFiltersClick}
+            active={activeFiltersCount > 0}
+            className={cn("shrink-0", activeFiltersCount > 0 ? "px-3.5" : undefined)}
+          >
+            <IconFilter size={15} /> Filtros
+            {activeFiltersCount > 0 && (
+              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] px-1 text-[10px] font-bold tabular-nums text-white">
+                {activeFiltersCount}
+              </span>
+            )}
+          </PageGhostButton>
+          <PageGhostButton type="button" className="shrink-0 px-3.5">
+            <IconBookmark size={15} /> Salvos
+          </PageGhostButton>
+          <PageSegmentedControl
+            items={VIEW_ITEMS}
+            value={view}
+            onChange={(v) => handleViewChange(v as ViewType)}
+            aria-label="Modo de visualização"
+            size="compact"
+            className="shrink-0"
+          />
+          <PagePrimaryButton type="button" onClick={onNewDeal} disabled={!onNewDeal} className="shrink-0">
+            <IconPlus size={15} stroke={2.4} /> Novo
+          </PagePrimaryButton>
+        </div>
+      )}
 
-              <PageSegmentedControl
-                items={VIEW_ITEMS}
-                value={view}
-                onChange={(v) => handleViewChange(v as ViewType)}
-                aria-label="Modo de visualização"
-                size="compact"
-              />
-
-              <PagePrimaryButton type="button" onClick={onNewDeal} disabled={!onNewDeal}>
-                <IconPlus size={15} stroke={2.4} /> Novo
-              </PagePrimaryButton>
-            </div>
-          )
-        }
-      />
-
-      {/* Abas de status + seletor de pipeline + filtros rápidos */}
-      <div className="flex items-center gap-2 px-1">
+      {/* Secondary row: pipeline switcher + status tabs — horizontally scrollable */}
+      <div className="toolbar-hscroll flex flex-nowrap items-center gap-2 px-1">
         {pipelineNameSlot && (
-          <div className="mr-1.5 flex items-center gap-1.5 border-r border-black/[0.06] pr-2.5">
+          <div className="mr-1.5 flex shrink-0 items-center gap-1.5 border-r border-black/[0.06] pr-2.5">
             {pipelineNameSlot}
             {settingsSlot}
           </div>
         )}
 
         {tabsOverride ?? (
-          <div className="flex items-center gap-0.5">
+          <div className="flex shrink-0 items-center gap-0.5">
             {tabs.map((t) => {
               const isActive = tab === t.id
               return (
@@ -229,8 +230,6 @@ export function PipelineHeader({
             })}
           </div>
         )}
-
-
       </div>
     </div>
   )

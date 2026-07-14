@@ -37,14 +37,23 @@ export function PaginationGlass({
   const showPerPage = perPage !== undefined && onPerPageChange !== undefined;
 
   return (
-    <div className={cn("flex items-center justify-between gap-4", className)}>
-      <div className="flex items-center gap-3">
+    <div
+      className={cn(
+        "flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3",
+        className,
+      )}
+    >
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         {label && (
-          <span className="font-body text-[13px] text-[var(--text-muted)]">{label}</span>
+          <span className="shrink-0 font-body text-[12px] leading-snug text-[var(--text-muted)] sm:text-[13px]">
+            {label}
+          </span>
         )}
         {showPerPage && (
-          <div className="flex items-center gap-1.5">
-            <span className="font-body text-[12px] text-[var(--text-muted)]">Por página</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="shrink-0 font-body text-[12px] text-[var(--text-muted)]">
+              Por página
+            </span>
             <div className="inline-flex items-center gap-0.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
               {perPageOptions.map((opt) => {
                 const active = opt === perPage;
@@ -69,23 +78,26 @@ export function PaginationGlass({
           </div>
         )}
       </div>
+
       {showNav && (
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
           <button
             type="button"
             onClick={onPrev}
             disabled={!canPrev}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-xs font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed disabled:text-[var(--text-muted)] disabled:opacity-60"
+            className="inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-xs font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed disabled:text-[var(--text-muted)] disabled:opacity-60 sm:flex-none sm:px-3.5"
           >
-            <IconChevronLeft size={14} /> Anterior
+            <IconChevronLeft size={14} className="shrink-0" />
+            Anterior
           </button>
           <button
             type="button"
             onClick={onNext}
             disabled={!canNext}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-1.5 font-display text-xs font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed disabled:text-[var(--text-muted)] disabled:opacity-60"
+            className="inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 font-display text-xs font-bold text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)] transition-colors hover:bg-[var(--glass-bg-strong)] disabled:cursor-not-allowed disabled:text-[var(--text-muted)] disabled:opacity-60 sm:flex-none sm:px-3.5"
           >
-            Próxima <IconChevronRight size={14} />
+            Próxima
+            <IconChevronRight size={14} className="shrink-0" />
           </button>
         </div>
       )}

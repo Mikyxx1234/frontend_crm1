@@ -23,6 +23,13 @@ interface ConversationActionsMenuProps {
   onSearchInConversation?: () => void;
   /** Abre o painel "Mensagens favoritas" (estrelas do agente logado). */
   onOpenFavorites?: () => void;
+  /**
+   * Callback disparado quando "Reabrir" cria um novo ticket (modelo de ticket).
+   * O caller (ex.: inbox) usa isso para selecionar/navegar para a nova conversa.
+   * Recebe o id da nova conversa gerada; o id previo continua acessivel via
+   * `conversationId` (que era o anterior).
+   */
+  onReopenNewConversation?: (newConversationId: string) => void;
 }
 
 export function ConversationActionsMenu({
@@ -31,10 +38,15 @@ export function ConversationActionsMenu({
   disabled,
   onSearchInConversation,
   onOpenFavorites,
+  onReopenNewConversation,
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const toggleResolve = useToggleConversationResolve();
+  const toggleResolve = useToggleConversationResolve({
+    onNewConversation: (newId) => {
+      onReopenNewConversation?.(newId);
+    },
+  });
 
   useEffect(() => {
     if (!open) return;

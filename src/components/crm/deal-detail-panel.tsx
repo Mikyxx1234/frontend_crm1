@@ -36,6 +36,7 @@ import {
   IconPackage,
   IconUser,
   IconStarFilled,
+  IconLock,
 } from "@tabler/icons-react"
 import { useAsideViewMode, type AsideViewMode } from "@/hooks/use-aside-view-mode"
 import {
@@ -240,6 +241,16 @@ interface DealDetailPanelProps {
   /** Estado de resolução da conversa — para mostrar "Encerrar" ou "Reabrir". */
   isResolved?: boolean
   /**
+   * ID amigavel sequencial da conversa (#N por organizacao). Quando
+   * presente, renderiza um chip mono minimalista no TabsBar da conversa,
+   * dentro do proprio container do chat — sem card lateral. Mesma
+   * filosofia do `conversationNumber` do `ChatArea` (inbox). Opcional
+   * pra manter compat com callers sem conversa ativa.
+   */
+  conversationNumber?: number | null
+  /** ISO do `closedAt` da conversa — usado no chip "Encerrada" do TabsBar. */
+  conversationClosedAt?: string | null
+  /**
    * Conexão (Channel) por onde o contato está conversando (qual WhatsApp).
    * Exibida como chip no header do contato — distingue quando a pessoa fala
    * por contas/fontes diferentes.
@@ -308,6 +319,8 @@ export function DealDetailPanel({
   funnelSegments,
   conversationId,
   isResolved,
+  conversationNumber,
+  conversationClosedAt,
   connection,
 }: DealDetailPanelProps) {
   // Retrocompatibilidade: split slots sobrepõem o legado fieldConfigSlot
@@ -1270,6 +1283,8 @@ export function DealDetailPanel({
                 onSearchChange={setSearchQuery}
                 conversationId={conversationId}
                 isResolved={isResolved}
+                conversationNumber={conversationNumber}
+                conversationClosedAt={conversationClosedAt}
                 callButtonSlot={callButtonSlot}
               />
 
@@ -1325,6 +1340,8 @@ function TabsBar({
   onSearchChange,
   conversationId,
   isResolved,
+  conversationNumber,
+  conversationClosedAt,
   callButtonSlot,
 }: {
   activeTab: TabId
@@ -1335,6 +1352,10 @@ function TabsBar({
   onSearchChange?: (q: string) => void
   conversationId?: string | null
   isResolved?: boolean
+  /** #N sequencial da conversa — chip minimalista no header do container. */
+  conversationNumber?: number | null
+  /** ISO de encerramento — vira tooltip no chip "Encerrada". */
+  conversationClosedAt?: string | null
   /** Botao "Ligar" (softphone) — renderizado no canto direito, ao lado do
    *  kebab de acoes da conversa. Antes vivia no header do card do deal. */
   callButtonSlot?: React.ReactNode
@@ -1399,6 +1420,36 @@ function TabsBar({
               )
             })}
           </div>
+        )}
+
+        {/* Chip minimalista com o "ticket number" da conversa. Fica logo
+            apos os pills de aba, dentro do proprio TabsBar — sem card
+            lateral. Padrao Contact.number / Deal.number (#N por org).
+            Ver AGENT.md "ID de conversa + logs + gatilho". */}
+        {!(searchOpen && activeTab === "conversa") && typeof conversationNumber === "number" && (
+          <span
+            title={`Conversa #${conversationNumber}`}
+            aria-label={`Conversa numero ${conversationNumber}`}
+            className="shrink-0 font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
+          >
+            #{conversationNumber}
+          </span>
+        )}
+
+        {/* Chip "Encerrada" — indica de relance o status resolvido, sem
+            depender de abrir o kebab. Fica em linha com o #N no TabsBar. */}
+        {!(searchOpen && activeTab === "conversa") && isResolved && (
+          <span
+            title={
+              conversationClosedAt
+                ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
+                : "Conversa encerrada"
+            }
+            className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+          >
+            <IconLock size={10} />
+            Encerrada
+          </span>
         )}
 
         {/* Busca inline — ocupa o flex-1 quando aberta */}

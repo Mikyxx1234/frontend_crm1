@@ -63,6 +63,7 @@ import {
   AssigneePopover,
   Composer,
   ConversationActionsMenu,
+  ConversationTimelineTab,
   InboxFilterButton,
   TagsPopover,
   TemplatePickerList,
@@ -81,10 +82,7 @@ import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popo
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
-import {
-  DealNotesTab,
-  DealTimelineTab,
-} from "@/features/pipeline-v2/extras";
+import { DealNotesTab } from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 // ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
@@ -885,10 +883,13 @@ export default function InboxV2ClientPage({
   ) : (
     <NoDealTab message="Vincule um negocio a este contato para registrar notas." />
   );
-  const timelineSlot = firstDealId ? (
-    <DealTimelineTab dealId={firstDealId} />
+  // Timeline da CONVERSA (nao do deal) — sempre disponivel quando ha
+  // conversa ativa, mesmo sem deal vinculado. Ver AGENT.md "ID de
+  // conversa + logs + gatilho".
+  const timelineSlot = activeId ? (
+    <ConversationTimelineTab conversationId={activeId} />
   ) : (
-    <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
+    <NoDealTab message="Selecione uma conversa para ver a timeline." />
   );
   const activitiesSlot = firstDealId ? (
     <div className="flex-1 overflow-auto">
@@ -915,6 +916,9 @@ export default function InboxV2ClientPage({
         showSessionAlert={sessionExpired}
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
+        conversationNumber={activeRow?.number ?? null}
+        conversationResolved={activeRow?.status === "RESOLVED"}
+        conversationClosedAt={activeRow?.closedAt ?? null}
         onUseTemplate={() => setTemplateOpen(true)}
         onReactMessage={handleReactMessage}
         onPinMessage={handlePinMessage}
@@ -938,6 +942,7 @@ export default function InboxV2ClientPage({
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
               onOpenFavorites={() => setFavoritesOpen(true)}
+              onReopenNewConversation={(newId) => setActiveId(newId)}
             />
           </>
         }

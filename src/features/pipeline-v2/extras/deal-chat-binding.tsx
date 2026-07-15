@@ -19,7 +19,7 @@ import { IconLoader2, IconMessageCirclePlus, IconPinFilled, IconX } from "@table
 import { apiUrl } from "@/lib/api";
 import { getInitials } from "@/lib/utils";
 
-import { DaySeparator, ConnectionDivider, MessageBubble, type Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { DaySeparator, ConnectionDivider, ConversationClosedMarker, MessageBubble, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
 import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
@@ -77,8 +77,13 @@ export function useDealChatBinding(params: {
    * com fallback heurístico em `lastInboundAt` se o backend ficar silente.
    */
   sessionExpired?: boolean;
+  /** Conversa encerrada (`status = RESOLVED`) — renderiza marcador ao fim
+   *  da lista de mensagens, mesmo padrao visual do inbox (ChatArea). */
+  isResolved?: boolean;
+  /** ISO do encerramento — quando presente, o marcador exibe data/hora. */
+  closedAt?: string | null;
 }): DealChatBindingResult {
-  const { conversationId, contactName, contactId, dealId, sessionExpired: sessionExpiredOverride } = params;
+  const { conversationId, contactName, contactId, dealId, sessionExpired: sessionExpiredOverride, isResolved, closedAt } = params;
 
   const { data: session } = useSession();
   // Fallback para o avatar das bolhas outgoing quando a mensagem não traz
@@ -412,9 +417,12 @@ export function useDealChatBinding(params: {
     );
   } else if (bubbles.length === 0) {
     messagesNode = (
-      <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-muted,#718096)]">
-        Nenhuma mensagem ainda.
-      </div>
+      <>
+        <div className="flex h-full items-center justify-center text-[12px] text-[var(--text-muted,#718096)]">
+          Nenhuma mensagem ainda.
+        </div>
+        {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+      </>
     );
   } else {
     let lastDayLabel: string | null = null;
@@ -425,7 +433,7 @@ export function useDealChatBinding(params: {
     );
     const showConnSwitches = distinctChannels.size >= 2;
     let lastChannelId: string | null = null;
-    messagesNode = bubbles.map((b) => {
+    const bubbleNodes = bubbles.map((b) => {
       const dayLabel = formatDayLabel(b.createdAt);
       const showSeparator = dayLabel && dayLabel !== lastDayLabel;
       if (showSeparator) lastDayLabel = dayLabel;
@@ -475,6 +483,12 @@ export function useDealChatBinding(params: {
         </Fragment>
       );
     });
+    messagesNode = (
+      <>
+        {bubbleNodes}
+        {isResolved && <ConversationClosedMarker closedAt={closedAt ?? null} />}
+      </>
+    );
   }
 
   // ── composer ────────────────────────────────────────────────

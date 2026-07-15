@@ -8,7 +8,7 @@ import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
 import { BadgeGlass } from "./badge-glass"
 import { avatarGradients, channelBadge } from "./conversation-card"
-import { MessageBubble, DaySeparator, ConnectionDivider, type Message } from "./message-bubble"
+import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
@@ -27,6 +27,7 @@ import {
   IconClock,
   IconPinFilled,
   IconX,
+  IconLock,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
@@ -145,6 +146,24 @@ interface ChatAreaProps {
    */
   pinnedMessages?: Array<{ id: string; content: string; senderName?: string | null }>
   onUnpinMessage?: (id: string) => void
+
+  /**
+   * ID amigavel sequencial da conversa (Contact/Deal-like #N por
+   * organizacao). Quando presente, renderiza um chip mono minimalista
+   * no header (ao lado do nome), sem alterar o layout — o operador
+   * consegue referenciar o "ticket" em conversa/log sem sair do chat.
+   * Numero e' opcional pra manter compat com callers antigos.
+   */
+  conversationNumber?: number | null
+
+  /**
+   * Sinaliza que a conversa foi encerrada (`status = RESOLVED`). Quando
+   * true, renderiza um `ConversationClosedMarker` no fim da lista de
+   * mensagens — mesmo padrao visual do DaySeparator/ConnectionDivider,
+   * bem discreto. `conversationClosedAt` complementa com data/hora.
+   */
+  conversationResolved?: boolean
+  conversationClosedAt?: string | null
 }
 
 export function ChatArea({
@@ -182,6 +201,9 @@ export function ChatArea({
   onFavoriteMessage,
   pinnedMessages,
   onUnpinMessage,
+  conversationNumber,
+  conversationResolved,
+  conversationClosedAt,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
@@ -299,6 +321,39 @@ export function ChatArea({
                     ? "LEAD"
                     : "CLIENTE")}
             </BadgeGlass>
+          )}
+
+          {/* Chip minimalista com o "ticket number" da conversa. Fica em
+              linha com o avatar e o BadgeGlass, sem card lateral: assim o
+              operador enxerga o #N dentro do proprio chat, referenciavel
+              em logs/handoff. Padrao Contact.number / Deal.number (#N por
+              organizacao). Ver AGENT.md "ID de conversa + logs + gatilho". */}
+          {typeof conversationNumber === "number" && (
+            <span
+              title={`Conversa #${conversationNumber}`}
+              aria-label={`Conversa numero ${conversationNumber}`}
+              className="font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
+            >
+              #{conversationNumber}
+            </span>
+          )}
+
+          {/* Chip "Encerrada" no header — indica status resolvido de
+              relance, sem depender do usuario abrir o kebab. Mesmo padrao
+              tipografico do #N (mono/muted) pra nao competir com o nome
+              do contato. Renderiza mesmo quando #N ausente (backend legado). */}
+          {conversationResolved && (
+            <span
+              title={
+                conversationClosedAt
+                  ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
+                  : "Conversa encerrada"
+              }
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+            >
+              <IconLock size={10} />
+              Encerrada
+            </span>
           )}
 
           {tabsEnabled && (
@@ -453,6 +508,14 @@ export function ChatArea({
             )
           })
         })()}
+
+        {/* Marcador de encerramento — ultimo item da lista, alinhado com
+            o padrao visual do DaySeparator/ConnectionDivider. Fica visivel
+            de dentro do proprio chat, sem card lateral, atendendo ao
+            pedido "simples/minimalista dentro do chat". */}
+        {conversationResolved && (
+          <ConversationClosedMarker closedAt={conversationClosedAt ?? null} />
+        )}
       </div>
 
       {/* SESSION ALERT */}

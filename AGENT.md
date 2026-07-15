@@ -5,6 +5,163 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-07-15 — Modelo de ticket: nova conversa após RESOLVED
+
+**Decisão.** Conversas WhatsApp passam a operar em modelo de **ticket**: o
+matching "1 conversa por contato" agora exclui `status = RESOLVED`. Consequências:
+
+1. **Inbound (Meta webhook, Baileys, worker campanhas):** ao chegar mensagem
+   de contato cuja última conversa está `RESOLVED`, o backend cria uma **nova
+   conversa** com `#N+1` ao invés de reabrir a existente. `findOrCreateConversation`
+   nos 3 caminhos (`services/whatsapp-conversation.ts`, `lib/meta-webhook/handler.ts`,
+   `workers/baileys/message-handler.ts`) e o endpoint `POST /api/conversations/create`
+   ganharam `where: { status: { not: "RESOLVED" } }`.
+
+2. **Reopen manual (kebab da conversa):** `POST /api/conversations/:id/actions`
+   com `action=reopen` não mais promove `RESOLVED → OPEN`. Cria uma nova
+   conversa clone (mesmo contato/canal/inbox/assignee), dispara
+   `fireTrigger("conversation_created", …)` e retorna
+   `{ conversation: <nova>, previousConversationId: <antiga> }`. O frontend
+   navega para a nova (`useToggleConversationResolve` expõe callback
+   `onNewConversation`; `ConversationActionsMenu`/`ComposerMenu` propagam para
+   o caller — o inbox faz `setActiveId(newId)`; o pipeline confia na
+   invalidação de `deal-detail-v2`, que traz `contact.conversations[0]`
+   ordenado por `updatedAt desc`).
+
+3. **Reopen em massa (`POST /api/conversations/bulk` com `action=reopen`):**
+   removido. Retorna HTTP 400 com mensagem instruindo a reabrir 1 a 1 pelo
+   kebab, pois cada reabertura vira um ticket distinto e o operador precisa
+   ver o novo `#N` para navegar.
+
+4. **`toggle_status` bloqueado pós-RESOLVED:** o endpoint singular rejeita
+   qualquer transição `RESOLVED → outro` via `toggle_status` (retorna 400
+   "use `reopen` para abrir novo ticket"). Impede que consumidores driblem
+   o modelo de ticket enviando payloads legados.
+
+**Contexto.** O usuário reportou que encerrar uma conversa e receber nova
+mensagem mantinha o mesmo `#N` (a conversa era reaberta). Isso descaracteriza
+o conceito de encerramento e polui a timeline única com múltiplos ciclos de
+atendimento — dificulta relatórios de SLA/TMA por ticket, gatilhos de
+boas-vindas por atendimento e histórico auditável de encerramentos.
+
+**Alternativas descartadas.**
+
+- **Janela de reabertura (24h)**: reabre se `closedAt < 24h`, cria nova
+  senão. Casaria com a janela de 24h da API do WhatsApp Cloud, mas o
+  cutoff "24h" é mágico — cliente que responde 25h após tópico ativo cai
+  em ticket novo sem razão semântica. Complica lógica sem ganho claro.
+- **Sempre nova + agrupamento visual por contato na lista**: idem A + UI
+  agrupa conversas do mesmo contato num colapsável. Muito mais trabalho de
+  UI para um problema que ainda não foi reportado; deixado como evolução
+  futura se a lista ficar poluída na prática.
+- **Manter comportamento atual (reabrir mesmo `#N`)**: mais simples, mas
+  não atende ao pedido do operador nem viabiliza relatórios por ticket.
+
+**Impacto operacional.**
+
+- Automação `conversation_created` passa a disparar **por ticket** (não
+  por contato). Se houver automação de "boas-vindas" ligada, ela reenviará
+  a cada ciclo de encerramento+retomada. Verificado no painel de
+  automações antes do deploy — se indesejado, ativar um filtro no gatilho
+  (`data.previousConversationId != null` → skip).
+- `ensure-deal-conversations.ts` (script one-shot) continua garantindo "1
+  conversa" para deals antigos; não altera o modelo pois só cria quando o
+  contato não tem nenhuma. Sem regressão.
+- Mensagens de tickets encerrados ficam encapsuladas na conversa anterior
+  — acessíveis via perfil do contato / lista filtrada por RESOLVED, mas
+  não aparecem "na mesma tela" do novo ticket. O `ConversationClosedMarker`
+  no fim do chat encerrado sinaliza o corte visualmente.
+- Automações em `services/automation-executor.ts` que fazem
+  `findFirst({ contactId, channel: "whatsapp" })` NÃO foram alteradas
+  neste PR — se uma automação tentar enviar para contato cuja última
+  conversa está RESOLVED, ela vai encontrar a conversa RESOLVED e tentar
+  usá-la. Auditar caso a caso quando alguma automação real precisar
+  reagir a contato com ticket encerrado (issue backlog).
+
+**Arquivos.** Backend: `src/services/whatsapp-conversation.ts`,
+`src/lib/meta-webhook/handler.ts`, `src/workers/baileys/message-handler.ts`,
+`src/app/api/conversations/create/route.ts`,
+`src/app/api/conversations/[id]/actions/route.ts`,
+`src/app/api/conversations/bulk/route.ts`. Frontend:
+`src/features/inbox-v2/api/conversations.ts`,
+`src/features/inbox-v2/hooks/use-conversation-actions.ts`,
+`src/features/inbox-v2/extras/conversation-actions-menu.tsx`,
+`src/features/inbox-v2/extras/composer-menu.tsx`,
+`src/app/(app)/inbox/_v2-client.tsx`.
+
+---
+
+### 2026-07-15 — ID de conversa + logs + gatilho de nova conversa
+
+**Decisão.** `Conversation` ganha campo `number Int` sequencial por
+organização (`@@unique([organizationId, number])`), atribuído em todos os
+pontos de criação via `nextConversationNumber()` + retry P2002 — mesmo
+padrão já usado por `Contact.number` e `Deal.number`. O "ticket number"
+(#N) passa a ser o identificador visível da conversa no Inbox e no
+Pipeline, através do novo componente compartilhado `ConversationIdCard`.
+
+Junto disso: (a) `updateConversationStatusInDb` passa a preencher/limpar
+`closedAt` em sync com o status (`RESOLVED` → now, `OPEN` → null), corrigindo
+bug pré-existente onde a coluna nunca era populada; (b) o gatilho de automação
+`conversation_created` — que existia registrado em `automations.ts` e era
+configurável na UI, mas nunca disparava em runtime — passa a ser chamado via
+`fireTrigger("conversation_created", ...)` nos mesmos pontos que já logam
+`CONVERSATION_CREATED` no ActivityFeed (create route + auto-ensure em
+`whatsapp-conversation.ts`); (c) novo endpoint `GET
+/api/conversations/[id]/timeline` (autorizado por `requireConversationAccess`,
+não `requireManager`) devolve `ActivityEvent[]` filtrados por
+`conversationId` — a Inbox v2 troca o antigo `timelineSlot` (que dependia
+de deal vinculado e mostrava "Vincule um negócio…" caso contrário) pelo novo
+`ConversationTimelineTab`, que funciona para qualquer conversa.
+
+**Contexto.** O operador precisava de um identificador estável e curto para
+referenciar uma conversa (ex.: passar #123 em suporte interno, alinhar com
+o cliente), e o `Conversation.id` cuid não serve. Já tínhamos o padrão
+resolvido em `Contact`/`Deal` — só faltava espelhar. Aproveitou-se o mesmo
+PR para fechar dois gaps operacionais adjacentes: `closedAt` nunca era
+gravado (impossível filtrar "conversas encerradas em maio" sem varrer log
+de eventos) e o gatilho `conversation_created` da automação não disparava
+(usuário configurava, nada acontecia — falha silenciosa).
+
+**Alternativas descartadas.**
+
+- **Usar `Conversation.id` truncado (últimos 6 chars).** Não é sequencial
+  nem previsível; conflita com o mental model já criado por `#{deal.number}`
+  no `DealInline`. Só ficou como fallback visual quando o backend legado
+  ainda não populou `number` durante o rollout.
+- **`hashids` (id numérico derivado do cuid).** Colide com potencial em
+  larga escala e não deixa o operador procurar por "#123" no banco. Descartada.
+- **Criar tipo novo de gatilho em vez de disparar o existente.** Pior — a UI
+  já lista `conversation_created` e clientes já configuraram automações;
+  criar um `conversation_new_v2` fragmenta o catálogo sem ganho.
+- **Reaproveitar o `DealTimelineTab` no Inbox filtrando por `conversationId`.**
+  Não dá — `DealTimelineTab` bate em `/api/deals/:id/timeline` (filtro por
+  deal). Além disso, a timeline de deal e a de conversa têm semânticas
+  diferentes (mudanças de estágio × mudanças de status), por isso o
+  `ConversationTimelineTab` é um componente novo, mesmo reaproveitando
+  `EVENT_CONFIG` + `eventDescription` canônicos.
+
+**Impacto / operação.**
+
+- Migration `20260715120500_add_conversation_number/migration.sql` adiciona
+  a coluna, faz backfill idempotente por `ROW_NUMBER() OVER (PARTITION BY
+  organizationId ORDER BY createdAt, id)`, torna `NOT NULL` e cria o unique
+  index. Aplicar via `prisma migrate deploy` (dev primeiro, prod depois —
+  mesmo fluxo que fizemos no PR de sidebar por role).
+- Ativar `fireTrigger("conversation_created")` em prod dispara automações
+  que estavam configuradas mas nunca rodaram. **Auditar em dev antes de
+  subir pra prod** — rodar `SELECT DISTINCT organizationId FROM automations
+  WHERE trigger_type = 'conversation_created'` e conferir com quais orgs
+  temos automations configuradas desse tipo.
+- Frontend: novo hook `useConversationTimeline(conversationId)`, novo card
+  compartilhado `ConversationIdCard`, novo slot `conversationCardSlot` em
+  `ContactAside` e `DealDetailPanel`. Compat mantida via campos opcionais
+  (`number?`, `closedAt?`) em `ConversationListRow` — clientes antigos
+  continuam funcionando; card cai em fallback `#<últimos-6-do-id>` até o
+  backend re-deployar.
+
+---
+
 ### 2026-07-14 — Sidebar por Papel (não mais per-user)
 
 **Decisão.** A personalização do menu lateral (`SidebarCustomizationCard`)

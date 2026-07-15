@@ -645,9 +645,13 @@ export default function KanbanV2ClientPage({
   // Pega a conversa mais recente do contato (o backend ja ordena por
   // updatedAt desc em getDealById). Quando o deal nao tem contato
   // vinculado ou nao ha conversa, o binding retorna nodes de "vazio".
-  const dealConversationId =
-    (dealDetail?.contact as { conversations?: { id: string }[] } | null | undefined)
-      ?.conversations?.[0]?.id ?? null;
+  const dealConversation =
+    (dealDetail?.contact as
+      | { conversations?: { id: string; status?: string | null; closedAt?: string | null }[] }
+      | null
+      | undefined
+    )?.conversations?.[0] ?? null;
+  const dealConversationId = dealConversation?.id ?? null;
   const dealContactName =
     dealDetail?.contact?.name?.trim() || dealDetail?.title || "Contato";
   const { messagesNode, composerNode, sessionAlertNode, templateModal, pinnedNote, pinnedMessageSlot, connection: dealConnection } =
@@ -656,6 +660,8 @@ export default function KanbanV2ClientPage({
       contactName: dealContactName,
       contactId: dealContactId,
       dealId: activeDealId,
+      isResolved: dealConversation?.status === "RESOLVED",
+      closedAt: dealConversation?.closedAt ?? null,
       // sessionExpired derivado dentro do hook a partir do session retornado
       // por useMessages (backend = source of truth) com fallback heurístico
       // em lastInboundAt. Não passar override manual aqui.
@@ -1020,6 +1026,14 @@ export default function KanbanV2ClientPage({
         isResolved={
           (dealDetail?.contact as { conversations?: { status?: string }[] } | null | undefined)
             ?.conversations?.[0]?.status === "RESOLVED"
+        }
+        conversationNumber={
+          (dealDetail?.contact as { conversations?: { number?: number | null }[] } | null | undefined)
+            ?.conversations?.[0]?.number ?? null
+        }
+        conversationClosedAt={
+          (dealDetail?.contact as { conversations?: { closedAt?: string | null }[] } | null | undefined)
+            ?.conversations?.[0]?.closedAt ?? null
         }
         tabContentOverride={
           activeDealId

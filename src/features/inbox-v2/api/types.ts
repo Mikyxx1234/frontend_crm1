@@ -47,8 +47,20 @@ export type MessageStatus =
 
 export interface ConversationListRow {
   id: string;
+  /**
+   * ID amigavel sequencial por organizacao (comeca em 1 em cada org).
+   * Usado como "ticket number" na UI (ex.: #1234). Padrao Contact/Deal.
+   * Opcional aqui por compat: o backend legado pode ainda nao devolver
+   * — nesse caso o card lateral esconde o "#N".
+   */
+  number?: number | null;
   channel: Channel;
   status: ConversationStatus;
+  /**
+   * Preenchido quando status = RESOLVED. Usado no card lateral para
+   * exibir "Encerrada em ..." e no filtro de finalizados por data.
+   */
+  closedAt?: string | null;
   contact: {
     id: string;
     name: string;
@@ -80,6 +92,10 @@ export interface ConversationListRow {
   tags?: { id: string; name: string; color: string | null }[];
   hasError?: boolean;
   pinnedNoteId?: string | null;
+  /** Timestamp de criacao da conversa. Backend sempre serializa. */
+  createdAt?: string | null;
+  /** Ultima atualizacao (mensagem/status/atribuicao). */
+  updatedAt?: string | null;
 }
 
 export interface ConversationListResponse {

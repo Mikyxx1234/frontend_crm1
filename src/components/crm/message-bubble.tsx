@@ -1625,3 +1625,39 @@ export function ConnectionDivider({ label }: ConnectionDividerProps) {
     </div>
   )
 }
+
+interface ConversationClosedMarkerProps {
+  /** ISO da data de encerramento — quando ausente, mostra so "Conversa encerrada". */
+  closedAt?: string | null
+}
+
+/**
+ * Marcador no fim da timeline indicando que a conversa foi encerrada.
+ * Mesmo padrao visual do `ConnectionDivider`/`DaySeparator` (chip pill
+ * centralizado com bordas hairline) — minimalista, dentro do proprio
+ * chat, sem card lateral. Usado no inbox (via ChatArea) e no pipeline
+ * (via messagesSlot do DealDetailPanel).
+ */
+export function ConversationClosedMarker({ closedAt }: ConversationClosedMarkerProps) {
+  let label: string | null = null
+  if (closedAt) {
+    const d = new Date(closedAt)
+    if (!Number.isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, "0")
+      const mm = String(d.getMonth() + 1).padStart(2, "0")
+      const hh = String(d.getHours()).padStart(2, "0")
+      const mi = String(d.getMinutes()).padStart(2, "0")
+      label = `${dd}/${mm} às ${hh}:${mi}`
+    }
+  }
+  return (
+    <div className="my-2 flex items-center justify-center gap-2 self-center">
+      <span className="h-px w-6 bg-[var(--glass-border)]" />
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+        <IconLock size={12} className="text-[var(--text-muted)]" />
+        Conversa encerrada{label ? ` · ${label}` : ""}
+      </span>
+      <span className="h-px w-6 bg-[var(--glass-border)]" />
+    </div>
+  )
+}

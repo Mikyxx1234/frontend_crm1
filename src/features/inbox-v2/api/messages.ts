@@ -25,6 +25,10 @@ export async function getMessages(
   return {
     messages: Array.isArray(data.messages) ? data.messages : [],
     pinnedNoteId: data.pinnedNoteId ?? null,
+    // Sem isto, o banner "Mensagem fixada" nunca aparecia: o backend
+    // devolve `pinnedMessageId`, mas o mapeamento manual aqui o dropava,
+    // deixando `messagesResp.pinnedMessageId` sempre undefined.
+    pinnedMessageId: data.pinnedMessageId ?? null,
     channelProvider: data.channelProvider ?? null,
     channel: data.channel ?? null,
     channels:

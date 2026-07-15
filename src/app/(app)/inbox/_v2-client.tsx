@@ -52,6 +52,7 @@ import {
   useMarkConversationRead,
   useMessages,
   usePinMessage,
+  useUnpinMessage,
   useReactMessage,
   useSelectedOutboundChannel,
   useSendMessage,
@@ -371,6 +372,7 @@ export default function InboxV2ClientPage({
   const sendMessage = useSendMessage(activeId);
   const reactMessage = useReactMessage(activeId);
   const pinMessage = usePinMessage(activeId);
+  const unpinMessage = useUnpinMessage(activeId);
   const favoriteMessageMutation = useFavoriteMessage(activeId);
   const markRead = useMarkConversationRead();
   const bulkAction = useBulkConversationAction();
@@ -391,15 +393,14 @@ export default function InboxV2ClientPage({
     );
   }
 
-  // Fixar: toggle — clicar na mesma mensagem já fixada desafixa direto
-  // (igual WhatsApp). Fixar uma NOVA mensagem abre o picker de duração
-  // (24h/7d/30d) antes de confirmar; fixar outra substitui a anterior
-  // automaticamente (slot único).
+  // Fixar: toggle — clicar numa mensagem já fixada desafixa direto (igual
+  // WhatsApp). Fixar uma NOVA abre o picker de duração (24h/7d/30d) antes
+  // de confirmar. Várias podem ficar fixadas ao mesmo tempo (máx. 3).
   async function handlePinMessage(msg: { id: string; isPinnedMessage?: boolean }) {
     if (!activeId) return;
     if (msg.isPinnedMessage) {
-      pinMessage.mutate(
-        { messageId: null },
+      unpinMessage.mutate(
+        { messageId: msg.id },
         {
           onSuccess: () => toast.success("Mensagem desafixada"),
           onError: (err) => toast.error(err.message || "Falha ao desafixar"),
@@ -418,10 +419,10 @@ export default function InboxV2ClientPage({
     );
   }
 
-  function handleUnpinMessage() {
+  function handleUnpinMessage(messageId: string) {
     if (!activeId) return;
-    pinMessage.mutate(
-      { messageId: null },
+    unpinMessage.mutate(
+      { messageId },
       { onError: (err) => toast.error(err.message || "Falha ao desafixar") },
     );
   }
@@ -540,26 +541,27 @@ export default function InboxV2ClientPage({
     [rows, activeId],
   );
   const contactName = activeRow?.contact?.name ?? "";
-  const pinnedMessageId = messagesData?.pinnedMessageId ?? null;
+  const pinnedMessageIds = useMemo(
+    () => messagesData?.pinnedMessageIds ?? [],
+    [messagesData?.pinnedMessageIds],
+  );
+  const pinnedIdSet = useMemo(() => new Set(pinnedMessageIds), [pinnedMessageIds]);
   const messageBubbles = useMemo(
     () =>
       messages.map((m) => {
         const bubble = toMessageBubble(m, contactName);
-        return pinnedMessageId && m.id === pinnedMessageId
-          ? { ...bubble, isPinnedMessage: true }
-          : bubble;
+        return pinnedIdSet.has(m.id) ? { ...bubble, isPinnedMessage: true } : bubble;
       }),
-    [messages, contactName, pinnedMessageId],
+    [messages, contactName, pinnedIdSet],
   );
-  // Preview do banner "fixada" — deriva do próprio array já carregado,
-  // mesmo padrão do `pinnedNote` em deal-chat-binding.tsx (evita round-trip
-  // extra: o backend só devolve o id, não o conteúdo).
-  const pinnedMessagePreview = useMemo(() => {
-    if (!pinnedMessageId) return null;
-    const raw = messageBubbles.find((m) => m.id === pinnedMessageId);
-    if (!raw) return null;
-    return { id: raw.id, content: raw.content, senderName: raw.senderName ?? null };
-  }, [pinnedMessageId, messageBubbles]);
+  // Previews do banner "fixadas" (várias, estilo WhatsApp) — derivados do
+  // próprio array já carregado, na ordem em que o backend os retorna.
+  const pinnedMessagesPreview = useMemo(() => {
+    return pinnedMessageIds
+      .map((pid) => messageBubbles.find((m) => m.id === pid))
+      .filter((m): m is NonNullable<typeof m> => !!m)
+      .map((m) => ({ id: m.id, content: m.content, senderName: m.senderName ?? null }));
+  }, [pinnedMessageIds, messageBubbles]);
   const chatContact = activeRow ? toChatContact(activeRow) : null;
   // Backend é source of truth quando disponível (`session.active`).
   // Fallback heurístico: se o backend não enviou `session`, calculamos a
@@ -917,7 +919,7 @@ export default function InboxV2ClientPage({
         onReactMessage={handleReactMessage}
         onPinMessage={handlePinMessage}
         onFavoriteMessage={handleFavoriteMessage}
-        pinnedMessage={pinnedMessagePreview}
+        pinnedMessages={pinnedMessagesPreview}
         onUnpinMessage={handleUnpinMessage}
         onReplyMessage={handleReplyMessage}
         headerActionsSlot={

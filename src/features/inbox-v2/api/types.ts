@@ -231,9 +231,10 @@ export interface SessionInfo {
 export interface MessagesResponse {
   messages: InboxMessageDto[];
   pinnedNoteId: string | null;
-  /** Mensagem fixada no topo da conversa (banner estilo WhatsApp) —
-   *  aceita qualquer mensagem, diferente de `pinnedNoteId` (só notas). */
-  pinnedMessageId?: string | null;
+  /** Mensagens fixadas no topo da conversa (banner estilo WhatsApp) —
+   *  várias por conversa (máx. 3), diferente de `pinnedNoteId` (só notas).
+   *  Cada id já vem no formato de bolha (`externalId ?? id`). */
+  pinnedMessageIds?: string[];
   channelProvider: string | null;
   /** Conexão ATUAL da conversa (último canal usado). Null se sem canal. */
   channel?: ConnectionRef | null;

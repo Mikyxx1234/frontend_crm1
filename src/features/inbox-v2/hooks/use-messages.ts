@@ -8,6 +8,7 @@ import {
   getFavoriteMessages,
   getMessages,
   pinMessage,
+  unpinMessage,
   pinNote,
   sendAttachment,
   sendMessage,
@@ -108,20 +109,35 @@ export function useReactMessage(conversationId: string | null) {
 }
 
 /**
- * Mutation: fixar / desafixar mensagem no topo da conversa (banner
- * estilo WhatsApp). Diferente de `usePinNote` — aceita qualquer
- * mensagem, não só notas internas. Slot único: fixar substitui a
- * anterior automaticamente (mesmo comportamento do WhatsApp).
+ * Mutation: fixar mensagem no topo da conversa (banner estilo WhatsApp).
+ * Diferente de `usePinNote` — aceita qualquer mensagem, não só notas.
+ * Várias fixadas por conversa (máx. 3); fixar a mesma renova só o prazo.
  */
 export function usePinMessage(conversationId: string | null) {
   const qc = useQueryClient();
   return useMutation<
-    { id: string; pinnedMessageId: string | null },
+    { ok: true },
     Error,
-    { messageId: string | null; durationHours?: number }
+    { messageId: string; durationHours?: number }
   >({
     mutationFn: ({ messageId, durationHours }) =>
       pinMessage(conversationId as string, messageId, durationHours),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+    },
+  });
+}
+
+/**
+ * Mutation: desafixar uma mensagem específica do banner (estilo WhatsApp).
+ * Recebe o `messageId` (id de bolha) — obrigatório, já que há várias
+ * fixadas possíveis.
+ */
+export function useUnpinMessage(conversationId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<{ ok: true }, Error, { messageId: string }>({
+    mutationFn: ({ messageId }) =>
+      unpinMessage(conversationId as string, messageId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
     },

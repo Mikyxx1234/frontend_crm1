@@ -9,7 +9,7 @@
  * pra serem plugados nas props correspondentes do DealDetailPanel.
  */
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +36,7 @@ import {
   useInboxRealtime,
   useMessages,
   usePinMessage,
+  useUnpinMessage,
   usePinNote,
   useReactMessage,
   useSelectedOutboundChannel,
@@ -150,6 +151,7 @@ export function useDealChatBinding(params: {
   const reactMutation = useReactMessage(effectiveConversationId);
   const pinNoteMutation = usePinNote(effectiveConversationId);
   const pinMessageMutation = usePinMessage(effectiveConversationId);
+  const unpinMessageMutation = useUnpinMessage(effectiveConversationId);
   const favoriteMutation = useFavoriteMessage(effectiveConversationId);
   const addToLogMutation = useAddNoteToLog(dealId ?? null);
   const { requestDuration: requestPinDuration, dialog: pinDurationDialog } = usePinDurationDialog();
@@ -207,17 +209,19 @@ export function useDealChatBinding(params: {
   });
 
   const pinnedNoteId = messagesResp?.pinnedNoteId ?? null;
-  const pinnedMessageId = messagesResp?.pinnedMessageId ?? null;
+  const pinnedMessageIds = useMemo(
+    () => messagesResp?.pinnedMessageIds ?? [],
+    [messagesResp?.pinnedMessageIds],
+  );
+  const pinnedIdSet = useMemo(() => new Set(pinnedMessageIds), [pinnedMessageIds]);
 
   const bubbles = useMemo(
     () =>
       (messagesResp?.messages ?? []).map((m) => {
         const bubble = toMessageBubble(m, contactName);
-        return pinnedMessageId && m.id === pinnedMessageId
-          ? { ...bubble, isPinnedMessage: true }
-          : bubble;
+        return pinnedIdSet.has(m.id) ? { ...bubble, isPinnedMessage: true } : bubble;
       }),
-    [messagesResp, contactName, pinnedMessageId],
+    [messagesResp, contactName, pinnedIdSet],
   );
 
   // Nota fixada — usada pela tab Notas do deal.
@@ -233,14 +237,47 @@ export function useDealChatBinding(params: {
     };
   }, [pinnedNoteId, messagesResp]);
 
-  // Mensagem fixada no topo da conversa — banner estilo WhatsApp exibido
+  // Mensagens fixadas no topo (várias, estilo WhatsApp) — banner exibido
   // via `pinnedMessageSlot` no DealDetailPanel.
-  const pinnedMessagePreview = useMemo(() => {
-    if (!pinnedMessageId) return null;
-    const raw = bubbles.find((m) => m.id === pinnedMessageId);
-    if (!raw) return null;
-    return { id: raw.id, content: raw.content, senderName: raw.senderName ?? null };
-  }, [pinnedMessageId, bubbles]);
+  const pinnedMessagesPreview = useMemo(() => {
+    return pinnedMessageIds
+      .map((pid) => bubbles.find((m) => m.id === pid))
+      .filter((m): m is NonNullable<typeof m> => !!m)
+      .map((m) => ({ id: m.id, content: m.content, senderName: m.senderName ?? null }));
+  }, [pinnedMessageIds, bubbles]);
+
+  // Banner cicla entre as fixadas e rola até a mensagem (+ highlight).
+  const [activePinIndex, setActivePinIndex] = useState(0);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  useEffect(() => {
+    if (activePinIndex >= pinnedMessagesPreview.length && pinnedMessagesPreview.length > 0) {
+      setActivePinIndex(0);
+    }
+  }, [pinnedMessagesPreview.length, activePinIndex]);
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    // O chat do deal fica num drawer; pode haver a mesma âncora montada no
+    // inbox por baixo. Pega a ÚLTIMA ocorrência no DOM (o drawer é renderizado
+    // depois) pra rolar dentro do painel certo.
+    const els = document.querySelectorAll<HTMLElement>(
+      `[data-message-id="${CSS.escape(messageId)}"]`,
+    );
+    const el = els[els.length - 1];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(messageId);
+    window.setTimeout(() => setHighlightId((cur) => (cur === messageId ? null : cur)), 1600);
+  }, []);
+
+  const handleBannerClick = useCallback(() => {
+    if (pinnedMessagesPreview.length === 0) return;
+    const idx = Math.min(activePinIndex, pinnedMessagesPreview.length - 1);
+    const current = pinnedMessagesPreview[idx];
+    if (current) scrollToMessage(current.id);
+    if (pinnedMessagesPreview.length > 1) {
+      setActivePinIndex((i) => (i + 1) % pinnedMessagesPreview.length);
+    }
+  }, [pinnedMessagesPreview, activePinIndex, scrollToMessage]);
 
   function handleSend() {
     const t = draft.trim();
@@ -288,12 +325,13 @@ export function useDealChatBinding(params: {
     );
   }
 
-  // Fixar: mesma rota/mutation do /inbox. Clicar na já fixada desafixa.
+  // Fixar: mesma rota/mutation do /inbox. Clicar numa já fixada desafixa.
+  // Várias podem ficar fixadas ao mesmo tempo (máx. 3).
   async function handlePinMessage(message: BubbleMessage) {
     if (!effectiveConversationId) return;
     if (message.isPinnedMessage) {
-      pinMessageMutation.mutate(
-        { messageId: null },
+      unpinMessageMutation.mutate(
+        { messageId: message.id },
         {
           onSuccess: () => toast.success("Mensagem desafixada"),
           onError: (err) => toast.error(err.message || "Falha ao desafixar"),
@@ -312,10 +350,10 @@ export function useDealChatBinding(params: {
     );
   }
 
-  function handleUnpinMessage() {
+  function handleUnpinMessage(messageId: string) {
     if (!effectiveConversationId) return;
-    pinMessageMutation.mutate(
-      { messageId: null },
+    unpinMessageMutation.mutate(
+      { messageId },
       { onError: (err) => toast.error(err.message || "Falha ao desafixar") },
     );
   }
@@ -402,6 +440,14 @@ export function useDealChatBinding(params: {
         <Fragment key={b.id}>
           {showSeparator && <DaySeparator date={dayLabel} />}
           {connLabel && <ConnectionDivider label={connLabel} />}
+          <div
+            data-message-id={b.id}
+            className={
+              highlightId === b.id
+                ? "flex flex-col scroll-mt-24 rounded-[var(--radius-lg)] bg-[var(--brand-primary)]/10 shadow-[0_0_0_2px_var(--brand-primary)] transition-[background-color,box-shadow] duration-500"
+                : "flex flex-col scroll-mt-24 rounded-[var(--radius-lg)] transition-[background-color,box-shadow] duration-500"
+            }
+          >
           <MessageBubble
             message={b}
             agentInitials={agentInitials}
@@ -425,6 +471,7 @@ export function useDealChatBinding(params: {
             onPinMessage={isNoteBubble ? undefined : handlePinMessage}
             onFavoriteMessage={isNoteBubble ? undefined : handleFavorite}
           />
+          </div>
         </Fragment>
       );
     });
@@ -491,29 +538,43 @@ export function useDealChatBinding(params: {
     </>
   );
 
-  // ── banner de mensagem fixada ────────────────────────────────
-  const pinnedMessageSlot = pinnedMessagePreview ? (
-    <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.06] px-3 py-2">
-      <IconPinFilled size={14} className="shrink-0 text-[var(--brand-primary)]" />
-      <div className="min-w-0 flex-1">
-        <p className="font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-          Mensagem fixada
-        </p>
-        <p className="truncate text-[12.5px] text-[var(--text-secondary)]">
-          {pinnedMessagePreview.senderName ? `${pinnedMessagePreview.senderName}: ` : ""}
-          {pinnedMessagePreview.content}
-        </p>
+  // ── banner de mensagens fixadas (várias, estilo WhatsApp) ─────
+  const pinnedMessageSlot = pinnedMessagesPreview.length > 0 ? (() => {
+    const idx = Math.min(activePinIndex, pinnedMessagesPreview.length - 1);
+    const current = pinnedMessagesPreview[idx];
+    return (
+      <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.06] px-3 py-2">
+        <IconPinFilled size={14} className="shrink-0 text-[var(--brand-primary)]" />
+        <button
+          type="button"
+          onClick={handleBannerClick}
+          className="min-w-0 flex-1 cursor-pointer text-left"
+          aria-label="Ir para a mensagem fixada"
+        >
+          <p className="flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+            Mensagem fixada
+            {pinnedMessagesPreview.length > 1 && (
+              <span className="rounded-full bg-[var(--brand-primary)]/15 px-1.5 py-px text-[9px] tabular-nums">
+                {idx + 1}/{pinnedMessagesPreview.length}
+              </span>
+            )}
+          </p>
+          <p className="truncate text-[12.5px] text-[var(--text-secondary)]">
+            {current.senderName ? `${current.senderName}: ` : ""}
+            {current.content}
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleUnpinMessage(current.id)}
+          aria-label="Desafixar mensagem"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+        >
+          <IconX size={14} />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={handleUnpinMessage}
-        aria-label="Desafixar mensagem"
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
-      >
-        <IconX size={14} />
-      </button>
-    </div>
-  ) : null;
+    );
+  })() : null;
 
   return {
     messagesNode,

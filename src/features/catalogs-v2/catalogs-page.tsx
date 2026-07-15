@@ -66,7 +66,7 @@ function StatCard({
   }[tone];
 
   return (
-    <div className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md">
+    <div className="flex min-w-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3 py-3 shadow-[var(--glass-shadow-sm)] backdrop-blur-md sm:px-4 sm:py-3.5">
       <div
         aria-hidden
         className={cn(
@@ -111,7 +111,7 @@ function CatalogCard({
   const productCount = cat._count?.products ?? 0;
 
   return (
-    <article className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-4 shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]">
+    <article className="flex min-w-0 flex-col gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] p-3 shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)] sm:p-4">
       <div className="flex items-start gap-3">
         <div
           aria-hidden
@@ -124,23 +124,23 @@ function CatalogCard({
             <button
               type="button"
               onClick={onEdit}
-              className="font-display text-[15px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
+              className="min-w-0 max-w-full truncate font-display text-[15px] font-bold text-[var(--text-primary)] transition-colors hover:text-[var(--brand-primary)]"
             >
               {cat.name}
             </button>
             {cat.isDefault && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--brand-primary)]">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-enterprise-bg)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--brand-primary)]">
                 <IconStar size={11} /> Padrão
               </span>
             )}
             {cat.isTemplate && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border-subtle)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-secondary)]">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--glass-border-subtle)] px-2 py-0.5 font-display text-[11px] font-bold text-[var(--text-secondary)]">
                 <IconBookmark size={11} /> Template
               </span>
             )}
           </div>
           {cat.description && (
-            <p className="mt-1 text-[12.5px] leading-snug text-[var(--text-muted)]">
+            <p className="mt-1 text-pretty break-words text-[12.5px] leading-snug text-[var(--text-muted)]">
               {cat.description}
             </p>
           )}
@@ -200,7 +200,7 @@ function CatalogCard({
             );
           })
         )}
-        <span className="ml-auto text-[12px] font-semibold text-[var(--text-muted)]">
+        <span className="w-full text-[12px] font-semibold text-[var(--text-muted)] sm:ml-auto sm:w-auto">
           · {productCount} produto{productCount === 1 ? "" : "s"}
         </span>
       </div>
@@ -280,36 +280,30 @@ export function CatalogsManager() {
     );
   }, [catalogs, query]);
 
-  /* Injeta busca + ação no PageHeader do SettingsV2Shell. O effect é
-     reativo a `query` pra manter o input controlado no centro. */
+  /* Injeta apenas a ação no PageHeader do SettingsV2Shell — compacta pra
+     não competir com o título no mobile. A busca fica no corpo da página
+     (ver abaixo), então o effect não depende de `query`. */
   React.useEffect(() => {
     if (!slots) return;
-    slots.setCenter(
-      <label className="flex h-[42px] w-full max-w-[440px] items-center gap-2.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 text-[var(--text-muted)] transition-shadow focus-within:border-[var(--input-border-focus)] focus-within:shadow-[0_0_0_3px_var(--input-ring-focus)]">
-        <IconSearch size={16} className="shrink-0" />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar catálogo..."
-          aria-label="Buscar catálogo"
-          className="min-w-0 flex-1 border-none bg-transparent text-[14px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
-        />
-      </label>,
-    );
     slots.setActions(
-      <ButtonGlass variant="primary" onClick={() => setWizardOpen(true)}>
-        <IconPlus size={16} /> Novo catálogo
+      <ButtonGlass
+        variant="primary"
+        size="sm"
+        onClick={() => setWizardOpen(true)}
+        className="shrink-0 gap-1.5 whitespace-nowrap"
+      >
+        <IconPlus size={16} />
+        <span className="sm:hidden">Novo</span>
+        <span className="hidden sm:inline">Novo catálogo</span>
       </ButtonGlass>,
     );
     return () => {
-      slots.setCenter(null);
       slots.setActions(null);
     };
-  }, [slots, query]);
+  }, [slots]);
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex min-w-0 w-full flex-col gap-3.5">
       {/* MÉTRICAS */}
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -338,32 +332,58 @@ export function CatalogsManager() {
         />
       </div>
 
+      {/* BUSCA — no corpo (não no PageHeader) pra não disputar espaço com o
+          título/botão no mobile. Fallback com botão "Novo" quando não há
+          slots de header (ex.: rota standalone). */}
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex h-10 w-full min-w-0 items-center gap-2.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 text-[var(--text-muted)] transition-shadow focus-within:border-[var(--input-border-focus)] focus-within:shadow-[0_0_0_3px_var(--input-ring-focus)] sm:h-[42px] sm:max-w-[440px] sm:px-4">
+          <IconSearch size={16} className="shrink-0" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar catálogo..."
+            aria-label="Buscar catálogo"
+            className="min-w-0 flex-1 border-none bg-transparent text-[14px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+          />
+        </label>
+        {!slots && (
+          <ButtonGlass
+            variant="primary"
+            onClick={() => setWizardOpen(true)}
+            className="w-full shrink-0 sm:w-auto"
+          >
+            <IconPlus size={16} /> Novo catálogo
+          </ButtonGlass>
+        )}
+      </div>
+
       {/* PAINEL — lista de catálogos */}
       <section
         aria-label="Catálogos da organização"
         className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-panel)] shadow-[var(--glass-shadow)] v2-dark:bg-[var(--glass-bg-modal)]"
       >
-        <header className="sticky top-0 z-10 flex items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-4 py-3.5 v2-dark:bg-[var(--glass-bg-modal)]">
+        <header className="sticky top-0 z-10 flex min-w-0 items-center gap-2.5 border-b border-[var(--glass-border-subtle)] bg-[var(--glass-bg-panel)] px-3 py-3 v2-dark:bg-[var(--glass-bg-modal)] sm:px-4 sm:py-3.5">
           <span
             aria-hidden
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
           >
             <IconBoxMultiple size={16} />
           </span>
-          <span className="font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
+          <span className="min-w-0 truncate font-display text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
             Catálogos da organização
           </span>
-          <span className="rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px text-[11px] font-bold text-[var(--text-muted)]">
+          <span className="shrink-0 rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px text-[11px] font-bold text-[var(--text-muted)]">
             {filtered.length}
           </span>
           {query && (
-            <span className="text-[11.5px] text-[var(--text-muted)]">
+            <span className="shrink-0 text-[11.5px] text-[var(--text-muted)]">
               de {stats.total}
             </span>
           )}
         </header>
 
-        <div className="grid gap-3.5 p-4 [grid-template-columns:repeat(auto-fill,minmax(380px,1fr))]">
+        <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:gap-3.5 sm:p-4">
           {isLoading && (
             <div className="col-span-full flex items-center justify-center gap-2 py-12 text-[13px] text-[var(--text-muted)]">
               <IconLoader2 size={16} className="animate-spin" />

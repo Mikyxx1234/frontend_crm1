@@ -226,7 +226,7 @@ function FilterRow({
     <button
       type="button"
       onClick={onToggle}
-      className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left hover:bg-black/5"
+      className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left hover:bg-[var(--glass-bg-strong)]"
     >
       <span
         className="flex h-4 w-4 shrink-0 items-center justify-center rounded border"

@@ -47,7 +47,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
   return (
     <article
       className={cn(
-        "group relative flex cursor-pointer items-center gap-4.5 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-5.5 py-4.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]",
+        "group relative flex min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] px-3.5 py-3.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-all duration-150 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)] sm:gap-4.5 sm:px-5.5 sm:py-4.5",
       )}
     >
       <Link
@@ -66,8 +66,9 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
         aria-hidden
       />
 
-      <div className="relative z-10 min-w-[240px] shrink-0 pl-2.5">
-        <div className="flex items-center gap-2">
+      {/* Nome flexível: trunca no mobile para o switch não ser cortado */}
+      <div className="relative z-10 min-w-0 flex-1 pl-2 sm:pl-2.5 lg:min-w-[200px] lg:flex-none lg:shrink-0">
+        <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
               "h-2 w-2 shrink-0 rounded-full",
@@ -77,13 +78,13 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
             )}
             aria-hidden
           />
-          <h3 className="truncate font-display text-[16px] font-bold text-[var(--text-primary)]">
+          <h3 className="min-w-0 truncate font-display text-[14px] font-bold text-[var(--text-primary)] sm:text-[16px]">
             {automation.name}
           </h3>
         </div>
-        <div className="mt-1 flex items-center gap-1.5 pl-4">
+        <div className="mt-1 flex min-w-0 items-center gap-1.5 pl-4">
           <IconBolt size={13} stroke={2.2} className="shrink-0 text-[var(--brand-primary)]" />
-          <span className="truncate font-body text-[12.5px] text-[var(--text-muted)]">
+          <span className="min-w-0 truncate font-body text-[12px] text-[var(--text-muted)] sm:text-[12.5px]">
             {automation.trigger}
           </span>
         </div>
@@ -134,7 +135,7 @@ export function AutomationCard({ automation, onToggle, onDelete }: AutomationCar
           className={cn(
             "relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full",
             "border border-transparent text-[var(--text-muted)] transition-all duration-150",
-            "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+            "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
             "hover:border-[var(--color-danger)]/30 hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-danger)]/40",
           )}

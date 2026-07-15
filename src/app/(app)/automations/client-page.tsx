@@ -293,10 +293,10 @@ export default function V2AutomationsClientPage() {
   if (ready && !isManagerUp) return <RestrictedScreen />
 
   return (
-    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_1fr] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
       <NavRailV2 />
 
-      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
+      <main className="flex min-w-0 flex-col gap-3 overflow-hidden sm:gap-4">
         <PageHeader
           icon={<IconBolt size={22} stroke={2.2} />}
           title="Automações"
@@ -311,10 +311,11 @@ export default function V2AutomationsClientPage() {
             />
           }
           actions={
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex shrink-0 flex-nowrap items-center gap-2">
               <PageSegmentedControl
                 size="compact"
                 aria-label="Filtrar automações"
+                className="w-max shrink-0"
                 items={FILTERS.map((label, index) => ({
                   value: String(index),
                   label,
@@ -333,11 +334,12 @@ export default function V2AutomationsClientPage() {
                 type="button"
                 onClick={handleImportClick}
                 disabled={isImporting}
+                className="shrink-0"
               >
                 <IconUpload size={15} />
                 {isImporting ? "Importando..." : "Importar .json"}
               </PageGhostButton>
-              <PagePrimaryButton href="/automations/new">
+              <PagePrimaryButton href="/automations/new" className="shrink-0">
                 <IconPlus size={15} stroke={2.4} /> Nova automação
               </PagePrimaryButton>
             </div>
@@ -345,7 +347,7 @@ export default function V2AutomationsClientPage() {
         />
 
         <section
-          className="grid shrink-0 grid-cols-2 gap-3.5 lg:grid-cols-4"
+          className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4"
           aria-label="Indicadores"
         >
           <KpiCard

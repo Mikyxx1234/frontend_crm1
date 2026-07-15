@@ -2,13 +2,12 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { IconArrowDown as ArrowDown, IconArrowUp as ArrowUp, IconCheck as Check, IconLoader2 as Loader2, IconLock as Lock, IconRotate2 as RotateCcw, IconDeviceFloppy as Save, IconDeviceMobile as Smartphone } from "@tabler/icons-react";
+import { IconArrowDown as ArrowDown, IconArrowUp as ArrowUp, IconCheck as Check, IconLoader2 as Loader2, IconLock as Lock, IconRotate2 as RotateCcw, IconDeviceFloppy as Save } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import { MobileModuleIcon } from "@/components/layout/mobile-module-icon";
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { GlassCard } from "@/components/crm/glass-card";
-import { pageHeaderDescriptionClass, pageHeaderTitleClass } from "@/components/ui/page-header";
 import {
   MOBILE_LAYOUT_QUERY_KEY,
   useMobileLayout,
@@ -193,27 +192,15 @@ export function MobileLayoutClientPage() {
     });
 
   return (
-    <div className="w-full space-y-4">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <Smartphone className="size-5 text-primary" />
-          <h1 className={pageHeaderTitleClass}>
-            Layout do app mobile
-          </h1>
-        </div>
-        <p className={pageHeaderDescriptionClass}>
-          Personalize quais módulos aparecem na barra inferior do app instalável (PWA). Os operadores
-          verão essa configuração na próxima vez que abrirem o app.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="w-full min-w-0 space-y-4">
+      {/* Título/descrição já vêm do PageHeader do SettingsV2Shell — evita duplicar aqui. */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-[1fr_360px]">
         {/* COLUNA ESQUERDA — Catalogo de modulos */}
         <div className="space-y-6">
           {/* Bottom nav editor */}
-          <GlassCard variant="overlay" className="p-6">
-            <div className="mb-4 flex items-end justify-between gap-2">
-              <div>
+          <GlassCard variant="overlay" className="min-w-0 p-4 sm:p-6">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
                 <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
                   Barra inferior do app
                 </h2>
@@ -226,7 +213,7 @@ export function MobileLayoutClientPage() {
                 variant="icon"
                 size="sm"
                 onClick={resetDefaults}
-                className="gap-1.5"
+                className="gap-1.5 self-start sm:self-auto"
               >
                 <RotateCcw className="size-3.5" />
                 Restaurar padrão
@@ -239,16 +226,18 @@ export function MobileLayoutClientPage() {
                 return (
                   <li
                     key={d.id}
-                    className="flex items-center gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 p-3"
+                    className="flex min-w-0 flex-col gap-2 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)]/40 p-3 sm:flex-row sm:items-center sm:gap-3"
                   >
-                    <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                      <MobileModuleIcon name={desc.iconName} className="size-[18px]" strokeWidth={2.2} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display text-sm font-bold text-[var(--text-primary)]">{desc.label}</p>
-                      <p className="truncate text-[12px] text-[var(--text-muted)]">{desc.description}</p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <MobileModuleIcon name={desc.iconName} className="size-[18px]" strokeWidth={2.2} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display text-sm font-bold text-[var(--text-primary)]">{desc.label}</p>
+                        <p className="truncate text-[12px] text-[var(--text-muted)]">{desc.description}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 self-end sm:self-auto sm:ml-auto">
                       <ButtonGlass
                         type="button"
                         variant="icon"
@@ -298,7 +287,7 @@ export function MobileLayoutClientPage() {
           </GlassCard>
 
           {/* Catalogo completo */}
-          <GlassCard variant="overlay" className="p-6">
+          <GlassCard variant="overlay" className="min-w-0 p-4 sm:p-6">
             <div className="mb-4">
               <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">Todos os módulos</h2>
               <p className="text-sm text-[var(--text-muted)]">
@@ -315,7 +304,7 @@ export function MobileLayoutClientPage() {
                   <div
                     key={d.id}
                     className={cn(
-                      "flex items-center gap-3 rounded-2xl border p-3 transition-colors",
+                      "flex min-w-0 items-center gap-3 rounded-2xl border p-3 transition-colors",
                       d.enabled ? "border-border bg-[var(--glass-bg-overlay)]" : "border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] opacity-70",
                     )}
                   >
@@ -373,7 +362,7 @@ export function MobileLayoutClientPage() {
           {/* Save bar (sticky) */}
           <GlassCard
             variant="overlay"
-            className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-2xl p-4 backdrop-blur"
+            className="sticky bottom-4 z-10 flex min-w-0 flex-wrap items-center justify-end gap-3 rounded-2xl p-4 backdrop-blur"
           >
             {saved && (
               <span className="flex items-center gap-1.5 text-sm font-bold text-[var(--color-success)]">

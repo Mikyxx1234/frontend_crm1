@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -97,6 +97,7 @@ import {
   useDealChatBinding,
 } from "@/features/pipeline-v2/extras";
 import { PipelineChannelsModal } from "@/features/pipeline-v2/extras/pipeline-channels-modal";
+import { computePopoverPosition } from "@/features/pipeline-v2/extras/use-portal-popover";
 import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popover";
 import { FilterModalThreeCol } from "@/components/pipeline/kanban-filters/v2";
 import { fetchFilterOptions } from "@/components/pipeline/kanban-filters/api";
@@ -697,7 +698,7 @@ export default function KanbanV2ClientPage({
             />
           }
           settingsSlot={
-            <div className="relative">
+            <div>
               <TooltipGlass label="Ordenar, importar e exportar" side="bottom">
                 <button
                   ref={kebabBtnRef}
@@ -1218,87 +1219,109 @@ function StageDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const current = stages.find((s) => s.id === currentStageId);
 
-  // Fecha ao clicar fora
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      const menu = document.getElementById("pipeline-stage-dropdown-menu");
+      if (menu?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
+  // Portal + fixed: evita clip por overflow-hidden do painel; ancora a
+  // direita do trigger quando o menu vazaria da viewport.
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const b = triggerRef.current.getBoundingClientRect();
+    const longest = stages.reduce((n, s) => Math.max(n, s.name.length), 0);
+    // Largura suficiente para nomes longos (+ espaco p/ badge "Atual")
+    const menuWidth = Math.min(
+      Math.max(240, longest * 9 + 72),
+      Math.min(340, window.innerWidth - 16),
+    );
+    const wouldOverflow = b.left + menuWidth > window.innerWidth - 8;
+    const left = wouldOverflow ? Math.max(8, b.right - menuWidth) : b.left;
+    setPos({ top: b.bottom + 6, left, width: menuWidth });
+  }, [open, stages]);
+
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         disabled={isPending}
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 font-display text-[15px] font-bold text-[var(--text-primary)] transition-opacity hover:opacity-70 disabled:cursor-wait disabled:opacity-50"
+        className="flex max-w-[min(100%,14rem)] items-center gap-1.5 font-display text-[15px] font-bold text-[var(--text-primary)] transition-opacity hover:opacity-70 disabled:cursor-wait disabled:opacity-50"
       >
         <span
-          className="inline-block h-2 w-2 rounded-full"
+          className="inline-block h-2 w-2 shrink-0 rounded-full"
           style={{ background: current?.color ?? "var(--brand-primary)" }}
         />
-        {current?.name ?? "Selecionar fase"}
+        <span className="truncate">{current?.name ?? "Selecionar fase"}</span>
         <IconChevronDown
           size={14}
           className={cn(
-            "text-[var(--text-muted)] transition-transform duration-150",
+            "shrink-0 text-[var(--text-muted)] transition-transform duration-150",
             open && "rotate-180",
           )}
         />
       </button>
 
-      {open && (
-        // Opacidade: usar `--glass-bg-modal` (~97% opaco) em vez de
-        // `--glass-bg-strong` (~32% opaco). O strong fica legível só sobre
-        // fundos uniformes; este dropdown abre sobre o kanban com cards
-        // coloridos, ficava muito transparente e dificultava a leitura.
-        // Padrão casado com o `InboxStageDropdown`: opaco real (`bg-white`)
-        // em vez de `--glass-bg-modal` + blur. O token tem 0.97 alpha e o
-        // backdrop-blur dava sensacao de translucidez por cima de cards e
-        // texto do header (DD2 - jun/26).
-        <div
-          className="absolute left-0 top-full z-50 mt-1.5 min-w-[200px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
-        >
-          {[...stages]
-            .sort((a, b) => a.position - b.position)
-            .map((s) => {
-              const isActive = s.id === currentStageId;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => {
-                    onSelect(s.id);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 px-3.5 py-2 font-display text-[13px] font-semibold transition-colors",
-                    isActive
-                      ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                      : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
-                  )}
-                >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: s.color ?? "var(--brand-primary)" }}
-                  />
-                  {s.name}
-                  {isActive && (
-                    <span className="ml-auto font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
-                      Atual
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-        </div>
-      )}
+      {open &&
+        pos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          // Opaco real (bg-white / dark solid) — mesmo criterio do inbox:
+          // evita translucidez sobre o kanban (DD2 - jun/26).
+          <div
+            id="pipeline-stage-dropdown-menu"
+            style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width }}
+            className="z-(--z-popover) overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-white py-1 shadow-[0_8px_24px_rgba(15,20,40,0.14)] v2-dark:bg-[#1a1f2e] v2-dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+          >
+            {[...stages]
+              .sort((a, b) => a.position - b.position)
+              .map((s) => {
+                const isActive = s.id === currentStageId;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => {
+                      onSelect(s.id);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 px-3.5 py-2 text-left font-display text-[13px] font-semibold transition-colors",
+                      isActive
+                        ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
+                        : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
+                    )}
+                  >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: s.color ?? "var(--brand-primary)" }}
+                    />
+                    <span className="min-w-0 flex-1 whitespace-nowrap">{s.name}</span>
+                    {isActive && (
+                      <span className="shrink-0 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                        Atual
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -1787,29 +1810,66 @@ function PipelineKebabMenu({
   onClose,
 }: PipelineKebabMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  // useLayoutEffect: mede o anchor antes do paint para não piscar em (0,0).
+  useLayoutEffect(() => {
+    if (!open) {
+      setRect(null);
+      return;
+    }
+    function updateRect() {
+      if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect());
+    }
+    updateRect();
+    window.addEventListener("scroll", updateRect, true);
+    window.addEventListener("resize", updateRect);
+    return () => {
+      window.removeEventListener("scroll", updateRect, true);
+      window.removeEventListener("resize", updateRect);
+    };
+  }, [open, anchorRef]);
 
   useEffect(() => {
     if (!open) return;
     const fn = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!document.contains(t)) return;
       if (
         menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
+        !menuRef.current.contains(t) &&
         anchorRef.current &&
-        !anchorRef.current.contains(e.target as Node)
+        !anchorRef.current.contains(t)
       ) {
         onClose();
       }
     };
-    document.addEventListener("mousedown", fn);
-    return () => document.removeEventListener("mousedown", fn);
+    document.addEventListener("mousedown", fn, true);
+    return () => document.removeEventListener("mousedown", fn, true);
   }, [open, onClose, anchorRef]);
 
-  if (!open) return null;
+  if (!open || !rect) return null;
 
-  return (
+  // Altura disponível no viewport — menu rola internamente se passar disso.
+  const margin = 8;
+  const viewportH =
+    typeof window !== "undefined" ? window.innerHeight : 800;
+  const spaceBelow = viewportH - rect.bottom - margin;
+  const spaceAbove = rect.top - margin;
+  const idealH = 420;
+  const preferBelow = spaceBelow >= Math.min(240, idealH) || spaceBelow >= spaceAbove;
+  const available = preferBelow ? spaceBelow : spaceAbove;
+  const maxHeight = Math.max(160, Math.min(idealH, available));
+  const { left } = computePopoverPosition(rect, maxHeight, 208, margin);
+  const top = preferBelow
+    ? rect.bottom + 4
+    : Math.max(margin, rect.top - maxHeight - 4);
+
+  return createPortal(
     <div
       ref={menuRef}
-      className="absolute right-0 top-full z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_8px_28px_rgba(15,23,42,0.13)] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
+      style={{ top, left, maxHeight }}
+      className="scrollbar-thin fixed z-[60] w-52 overflow-y-auto overscroll-contain rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg-modal)] shadow-[0_8px_28px_rgba(15,23,42,0.13)] [-webkit-overflow-scrolling:touch] v2-dark:shadow-[0_8px_28px_rgba(0,0,0,0.55)]"
     >
       {/* Seção: ordenar */}
       <div className="px-3 pb-1 pt-2.5">
@@ -1904,7 +1964,8 @@ function PipelineKebabMenu({
         <IconSettings size={13} className="shrink-0" />
         Configurar pipeline
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

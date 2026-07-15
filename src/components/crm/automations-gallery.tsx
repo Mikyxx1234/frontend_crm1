@@ -25,7 +25,7 @@ export function AutomationsGallery({ automations, onToggle, onDelete }: Automati
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-0.5 pb-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto px-0.5 pb-2">
       {automations.map((a) => (
         <AutomationCard
           key={a.id}

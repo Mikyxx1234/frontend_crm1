@@ -705,6 +705,7 @@ export default function InboxV2ClientPage({
       }}
       hasMore={hasNextPage}
       isLoadingMore={isFetchingNextPage}
+      className="h-full min-h-0"
       renderCardSlots={(c) => ({
         assigneeSlot: (
           <RequirePermission
@@ -1054,72 +1055,75 @@ export default function InboxV2ClientPage({
     // ── Mobile: layout de painel único (lista → chat/negócio) ──────
     if (!isDesktop) {
       return (
-        <div className="v2-screen flex flex-col overflow-hidden">
-          <PageHeader
-            icon={pageHeader.icon}
-            title={pageHeader.title}
-            description={pageHeader.description}
-            center={
-              <PageSearchBar
-                variant="compact"
-                value={searchInput}
-                onChange={setSearchInput}
-                placeholder="Buscar conversa, contato, telefone..."
-                aria-label="Buscar conversas"
-              />
-            }
-            actions={null}
-          />
-          {!activeId ? (
-            <div className="min-h-0 flex-1">
-              {conversationColumnNode}
-            </div>
-          ) : (
-            <div className="flex min-h-0 flex-1 flex-col">
-              {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
-              <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveId(null)}
-                  className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
-                >
-                  <IconArrowLeft size={16} stroke={2} />
-                  Voltar
-                </button>
-                <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+        <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+          {navRailNode}
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
+            <PageHeader
+              icon={pageHeader.icon}
+              title={pageHeader.title}
+              description={pageHeader.description}
+              center={
+                <PageSearchBar
+                  variant="compact"
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  placeholder="Buscar conversa, contato, telefone..."
+                  aria-label="Buscar conversas"
+                />
+              }
+              actions={null}
+            />
+            {!activeId ? (
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {conversationColumnNode}
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
+                <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
                   <button
                     type="button"
-                    onClick={() => setMobilePaneTab("chat")}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                      mobilePaneTab === "chat"
-                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                    )}
+                    onClick={() => setActiveId(null)}
+                    className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
                   >
-                    <IconMessageCircle size={14} stroke={2} />
-                    Chat
+                    <IconArrowLeft size={16} stroke={2} />
+                    Voltar
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobilePaneTab("negocio")}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                      mobilePaneTab === "negocio"
-                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                    )}
-                  >
-                    <IconBriefcase size={14} stroke={2} />
-                    Negócio
-                  </button>
+                  <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setMobilePaneTab("chat")}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                        mobilePaneTab === "chat"
+                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      <IconMessageCircle size={14} stroke={2} />
+                      Chat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobilePaneTab("negocio")}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                        mobilePaneTab === "negocio"
+                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      <IconBriefcase size={14} stroke={2} />
+                      Negócio
+                    </button>
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  {mobilePaneTab === "chat" ? chatNode : asideNode}
                 </div>
               </div>
-              <div className="min-h-0 flex-1">
-                {mobilePaneTab === "chat" ? chatNode : asideNode}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
           {templateModalNode}
           {extraDialogsNode}
         </div>
@@ -1180,57 +1184,60 @@ export default function InboxV2ClientPage({
   // ── Mobile: layout de painel único (lista → chat/negócio) ──────
   if (!isDesktop) {
     return (
-      <div className="v2-screen flex flex-col overflow-hidden">
-        {!activeId ? (
-          <div className="min-h-0 flex-1">
-            {conversationColumnNode}
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
-            <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
-              <button
-                type="button"
-                onClick={() => setActiveId(null)}
-                className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
-              >
-                <IconArrowLeft size={16} stroke={2} />
-                Voltar
-              </button>
-              <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+        {navRailNode}
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
+          {!activeId ? (
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {conversationColumnNode}
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
+              <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
                 <button
                   type="button"
-                  onClick={() => setMobilePaneTab("chat")}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                    mobilePaneTab === "chat"
-                      ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                  )}
+                  onClick={() => setActiveId(null)}
+                  className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
                 >
-                  <IconMessageCircle size={14} stroke={2} />
-                  Chat
+                  <IconArrowLeft size={16} stroke={2} />
+                  Voltar
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setMobilePaneTab("negocio")}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                    mobilePaneTab === "negocio"
-                      ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
-                  )}
-                >
-                  <IconBriefcase size={14} stroke={2} />
-                  Negócio
-                </button>
+                <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaneTab("chat")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      mobilePaneTab === "chat"
+                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
+                  >
+                    <IconMessageCircle size={14} stroke={2} />
+                    Chat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaneTab("negocio")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      mobilePaneTab === "negocio"
+                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
+                  >
+                    <IconBriefcase size={14} stroke={2} />
+                    Negócio
+                  </button>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {mobilePaneTab === "chat" ? chatNode : asideNode}
               </div>
             </div>
-            <div className="min-h-0 flex-1">
-              {mobilePaneTab === "chat" ? chatNode : asideNode}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
         {templateModalNode}
         {extraDialogsNode}
       </div>
@@ -1347,13 +1354,15 @@ function InboxStageDropdown({
   useEffect(() => {
     if (!open || !triggerRef.current) return;
     const b = triggerRef.current.getBoundingClientRect();
-    const menuWidth = 200;
-    // Se caber a partir de left, mantem alinhamento a esquerda; se vazar
-    // pela direita da viewport, ancora pela direita do trigger.
+    const longest = stages.reduce((n, s) => Math.max(n, s.name.length), 0);
+    const menuWidth = Math.min(
+      Math.max(220, longest * 8 + 48),
+      Math.min(320, window.innerWidth - 16),
+    );
     const wouldOverflow = b.left + menuWidth > window.innerWidth - 8;
     const left = wouldOverflow ? Math.max(8, b.right - menuWidth) : b.left;
     setPos({ top: b.bottom + 4, left, width: menuWidth });
-  }, [open]);
+  }, [open, stages]);
 
   return (
     <div ref={ref} className="relative">
@@ -1362,18 +1371,18 @@ function InboxStageDropdown({
         type="button"
         disabled={isPending}
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+        className="flex max-w-[min(100%,11rem)] items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
       >
         {current?.color && (
           <span
-            className="inline-block h-1.5 w-1.5 rounded-full"
+            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
             style={{ background: current.color }}
           />
         )}
-        {current?.name ?? "Sem estagio"}
+        <span className="truncate">{current?.name ?? "Sem estagio"}</span>
         <IconChevronDown
           size={11}
-          className={cn("transition-transform duration-150", open && "rotate-180")}
+          className={cn("shrink-0 transition-transform duration-150", open && "rotate-180")}
         />
       </button>
 
@@ -1395,7 +1404,7 @@ function InboxStageDropdown({
                     disabled={isPending}
                     onClick={() => { onSelect(s.id); setOpen(false); }}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 font-display text-[12px] font-semibold transition-colors",
+                      "flex w-full items-center gap-2 px-3 py-2 text-left font-display text-[12px] font-semibold transition-colors",
                       isActive
                         ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
                         : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
@@ -1405,7 +1414,7 @@ function InboxStageDropdown({
                       className="h-1.5 w-1.5 shrink-0 rounded-full"
                       style={{ background: s.color ?? "var(--brand-primary)" }}
                     />
-                    {s.name}
+                    <span className="whitespace-nowrap">{s.name}</span>
                     {isActive && (
                       <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
                         Atual

@@ -445,6 +445,7 @@ export function toMessageBubble(
             )
             .map((r) => ({ emoji: r.emoji, from: r.from, at: r.at }))
         : undefined,
+    isFavorited: dto.favoritedByMe || undefined,
   };
 }
 

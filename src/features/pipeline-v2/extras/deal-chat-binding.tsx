@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { IconLoader2, IconMessageCirclePlus } from "@tabler/icons-react";
+import { IconLoader2, IconMessageCirclePlus, IconPinFilled, IconX } from "@tabler/icons-react";
 
 import { apiUrl } from "@/lib/api";
 import { getInitials } from "@/lib/utils";
@@ -31,8 +31,10 @@ import {
 import {
   useAddNoteToLog,
   useConversationFeatures,
+  useFavoriteMessage,
   useInboxRealtime,
   useMessages,
+  usePinMessage,
   usePinNote,
   useReactMessage,
   useSelectedOutboundChannel,
@@ -53,6 +55,9 @@ interface DealChatBindingResult {
   templateModal: React.ReactNode;
   /** Nota fixada na conversa, caso exista, para exibir na tab Notas. */
   pinnedNote: { id: string; content: string; senderName?: string | null; time?: string | null } | null;
+  /** Banner de mensagem fixada (estilo WhatsApp) — plugar em `pinnedMessageSlot`
+   *  do DealDetailPanel, entre o header de tabs e a lista de mensagens. */
+  pinnedMessageSlot: React.ReactNode;
   /** Conexão atual da conversa (qual WhatsApp/conta) — para exibir no header. */
   connection: ConnectionRef | null;
 }
@@ -142,7 +147,9 @@ export function useDealChatBinding(params: {
   const { data: messagesResp } = useMessages(effectiveConversationId);
   const sendMutation = useSendMessage(effectiveConversationId);
   const reactMutation = useReactMessage(effectiveConversationId);
-  const pinMutation = usePinNote(effectiveConversationId);
+  const pinNoteMutation = usePinNote(effectiveConversationId);
+  const pinMessageMutation = usePinMessage(effectiveConversationId);
+  const favoriteMutation = useFavoriteMessage(effectiveConversationId);
   const addToLogMutation = useAddNoteToLog(dealId ?? null);
 
   // Seletor de canal — mesmo widget/hook do /inbox. Aparece só quando a
@@ -198,13 +205,17 @@ export function useDealChatBinding(params: {
   });
 
   const pinnedNoteId = messagesResp?.pinnedNoteId ?? null;
+  const pinnedMessageId = messagesResp?.pinnedMessageId ?? null;
 
   const bubbles = useMemo(
     () =>
-      (messagesResp?.messages ?? []).map((m) =>
-        toMessageBubble(m, contactName),
-      ),
-    [messagesResp, contactName],
+      (messagesResp?.messages ?? []).map((m) => {
+        const bubble = toMessageBubble(m, contactName);
+        return pinnedMessageId && m.id === pinnedMessageId
+          ? { ...bubble, isPinnedMessage: true }
+          : bubble;
+      }),
+    [messagesResp, contactName, pinnedMessageId],
   );
 
   // Nota fixada — usada pela tab Notas do deal.
@@ -219,6 +230,15 @@ export function useDealChatBinding(params: {
       time: raw.createdAt ? new Date(raw.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null,
     };
   }, [pinnedNoteId, messagesResp]);
+
+  // Mensagem fixada no topo da conversa — banner estilo WhatsApp exibido
+  // via `pinnedMessageSlot` no DealDetailPanel.
+  const pinnedMessagePreview = useMemo(() => {
+    if (!pinnedMessageId) return null;
+    const raw = bubbles.find((m) => m.id === pinnedMessageId);
+    if (!raw) return null;
+    return { id: raw.id, content: raw.content, senderName: raw.senderName ?? null };
+  }, [pinnedMessageId, bubbles]);
 
   function handleSend() {
     const t = draft.trim();
@@ -262,6 +282,39 @@ export function useDealChatBinding(params: {
       { messageId: message.id, emoji: emoji ?? "" },
       {
         onError: (err) => toast.error(err.message || "Falha ao reagir"),
+      },
+    );
+  }
+
+  // Fixar: mesma rota/mutation do /inbox. Clicar na já fixada desafixa.
+  function handlePinMessage(message: BubbleMessage) {
+    if (!effectiveConversationId) return;
+    const nextId = message.isPinnedMessage ? null : message.id;
+    pinMessageMutation.mutate(
+      { messageId: nextId },
+      {
+        onSuccess: () =>
+          toast.success(nextId ? "Mensagem fixada" : "Mensagem desafixada"),
+        onError: (err) => toast.error(err.message || "Falha ao fixar"),
+      },
+    );
+  }
+
+  function handleUnpinMessage() {
+    if (!effectiveConversationId) return;
+    pinMessageMutation.mutate(
+      { messageId: null },
+      { onError: (err) => toast.error(err.message || "Falha ao desafixar") },
+    );
+  }
+
+  function handleFavorite(message: BubbleMessage) {
+    favoriteMutation.mutate(
+      { messageId: message.id, favorite: !message.isFavorited },
+      {
+        onSuccess: (res) =>
+          toast.success(res.favorited ? "Mensagem favoritada" : "Removida dos favoritos"),
+        onError: (err) => toast.error(err.message || "Falha ao favoritar"),
       },
     );
   }
@@ -343,7 +396,7 @@ export function useDealChatBinding(params: {
             isPinned={isNoteBubble && b.id === pinnedNoteId}
             onPinNote={
               isNoteBubble && effectiveConversationId
-                ? (noteId) => pinMutation.mutate({ noteId })
+                ? (noteId) => pinNoteMutation.mutate({ noteId })
                 : undefined
             }
             onAddToLog={
@@ -357,6 +410,8 @@ export function useDealChatBinding(params: {
             }
             onReplyMessage={isNoteBubble ? undefined : handleReply}
             onReactMessage={isNoteBubble ? undefined : handleReact}
+            onPinMessage={isNoteBubble ? undefined : handlePinMessage}
+            onFavoriteMessage={isNoteBubble ? undefined : handleFavorite}
           />
         </Fragment>
       );
@@ -417,12 +472,37 @@ export function useDealChatBinding(params: {
       </div>
     ) : null;
 
+  // ── banner de mensagem fixada ────────────────────────────────
+  const pinnedMessageSlot = pinnedMessagePreview ? (
+    <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.06] px-3 py-2">
+      <IconPinFilled size={14} className="shrink-0 text-[var(--brand-primary)]" />
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+          Mensagem fixada
+        </p>
+        <p className="truncate text-[12.5px] text-[var(--text-secondary)]">
+          {pinnedMessagePreview.senderName ? `${pinnedMessagePreview.senderName}: ` : ""}
+          {pinnedMessagePreview.content}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={handleUnpinMessage}
+        aria-label="Desafixar mensagem"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+      >
+        <IconX size={14} />
+      </button>
+    </div>
+  ) : null;
+
   return {
     messagesNode,
     composerNode,
     sessionAlertNode,
     templateModal,
     pinnedNote,
+    pinnedMessageSlot,
     connection: messagesResp?.channel ?? null,
   };
 }

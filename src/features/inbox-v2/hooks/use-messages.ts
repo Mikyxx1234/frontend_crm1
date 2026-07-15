@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   addNoteToLog,
+  favoriteMessage,
   getMessages,
+  pinMessage,
   pinNote,
   sendAttachment,
   sendMessage,
@@ -90,7 +92,7 @@ export function useAddNoteToLog(dealId: string | null) {
 export function useReactMessage(conversationId: string | null) {
   const qc = useQueryClient();
   return useMutation<
-    { reactions: ReactionDto[]; metaError?: string },
+    { reactions?: ReactionDto[]; metaError?: string },
     Error,
     { messageId: string; emoji: string }
   >({
@@ -98,6 +100,45 @@ export function useReactMessage(conversationId: string | null) {
     onSuccess: () => {
       // Reação altera `Message.reactions` — refetch da conversa ativa
       // pra refletir o badge no bubble sem esperar o SSE.
+      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+    },
+  });
+}
+
+/**
+ * Mutation: fixar / desafixar mensagem no topo da conversa (banner
+ * estilo WhatsApp). Diferente de `usePinNote` — aceita qualquer
+ * mensagem, não só notas internas. Slot único: fixar substitui a
+ * anterior automaticamente (mesmo comportamento do WhatsApp).
+ */
+export function usePinMessage(conversationId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<
+    { id: string; pinnedMessageId: string | null },
+    Error,
+    { messageId: string | null }
+  >({
+    mutationFn: ({ messageId }) => pinMessage(conversationId as string, messageId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+    },
+  });
+}
+
+/**
+ * Mutation: favoritar / desfavoritar mensagem — marcador PESSOAL do
+ * agente logado (não aparece pra outros agentes). Sem `favorite`
+ * explícito, o backend alterna o estado atual.
+ */
+export function useFavoriteMessage(conversationId: string | null) {
+  const qc = useQueryClient();
+  return useMutation<
+    { favorited: boolean },
+    Error,
+    { messageId: string; favorite?: boolean }
+  >({
+    mutationFn: ({ messageId, favorite }) => favoriteMessage(messageId, favorite),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
     },
   });

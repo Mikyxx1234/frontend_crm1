@@ -46,8 +46,10 @@ import {
   useConversations,
   useContactSidebar,
   useInboxRealtime,
+  useFavoriteMessage,
   useMarkConversationRead,
   useMessages,
+  usePinMessage,
   useReactMessage,
   useSelectedOutboundChannel,
   useSendMessage,
@@ -366,6 +368,8 @@ export default function InboxV2ClientPage({
   // ── Mutations ───────────────────────────────────────────────────
   const sendMessage = useSendMessage(activeId);
   const reactMessage = useReactMessage(activeId);
+  const pinMessage = usePinMessage(activeId);
+  const favoriteMessageMutation = useFavoriteMessage(activeId);
   const markRead = useMarkConversationRead();
   const bulkAction = useBulkConversationAction();
 
@@ -379,6 +383,43 @@ export default function InboxV2ClientPage({
       { messageId: msg.id, emoji: emoji ?? "" },
       {
         onError: (err) => toast.error(err.message || "Falha ao reagir"),
+      },
+    );
+  }
+
+  // Fixar: toggle — clicar na mesma mensagem já fixada desafixa (igual
+  // WhatsApp). Fixar outra substitui automaticamente (slot único).
+  function handlePinMessage(msg: { id: string; isPinnedMessage?: boolean }) {
+    if (!activeId) return;
+    const nextId = msg.isPinnedMessage ? null : msg.id;
+    pinMessage.mutate(
+      { messageId: nextId },
+      {
+        onSuccess: () =>
+          toast.success(nextId ? "Mensagem fixada" : "Mensagem desafixada"),
+        onError: (err) => toast.error(err.message || "Falha ao fixar"),
+      },
+    );
+  }
+
+  function handleUnpinMessage() {
+    if (!activeId) return;
+    pinMessage.mutate(
+      { messageId: null },
+      { onError: (err) => toast.error(err.message || "Falha ao desafixar") },
+    );
+  }
+
+  // Favoritar: marcador pessoal — sem `favorite` explícito, o backend
+  // alterna o estado atual (evita round-trip extra pra saber o estado
+  // prévio, que o front já tem local via `msg.isFavorited`).
+  function handleFavoriteMessage(msg: { id: string; isFavorited?: boolean }) {
+    favoriteMessageMutation.mutate(
+      { messageId: msg.id, favorite: !msg.isFavorited },
+      {
+        onSuccess: (res) =>
+          toast.success(res.favorited ? "Mensagem favoritada" : "Removida dos favoritos"),
+        onError: (err) => toast.error(err.message || "Falha ao favoritar"),
       },
     );
   }
@@ -483,10 +524,26 @@ export default function InboxV2ClientPage({
     [rows, activeId],
   );
   const contactName = activeRow?.contact?.name ?? "";
+  const pinnedMessageId = messagesData?.pinnedMessageId ?? null;
   const messageBubbles = useMemo(
-    () => messages.map((m) => toMessageBubble(m, contactName)),
-    [messages, contactName],
+    () =>
+      messages.map((m) => {
+        const bubble = toMessageBubble(m, contactName);
+        return pinnedMessageId && m.id === pinnedMessageId
+          ? { ...bubble, isPinnedMessage: true }
+          : bubble;
+      }),
+    [messages, contactName, pinnedMessageId],
   );
+  // Preview do banner "fixada" — deriva do próprio array já carregado,
+  // mesmo padrão do `pinnedNote` em deal-chat-binding.tsx (evita round-trip
+  // extra: o backend só devolve o id, não o conteúdo).
+  const pinnedMessagePreview = useMemo(() => {
+    if (!pinnedMessageId) return null;
+    const raw = messageBubbles.find((m) => m.id === pinnedMessageId);
+    if (!raw) return null;
+    return { id: raw.id, content: raw.content, senderName: raw.senderName ?? null };
+  }, [pinnedMessageId, messageBubbles]);
   const chatContact = activeRow ? toChatContact(activeRow) : null;
   // Backend é source of truth quando disponível (`session.active`).
   // Fallback heurístico: se o backend não enviou `session`, calculamos a
@@ -841,6 +898,10 @@ export default function InboxV2ClientPage({
         connections={messagesData?.channels}
         onUseTemplate={() => setTemplateOpen(true)}
         onReactMessage={handleReactMessage}
+        onPinMessage={handlePinMessage}
+        onFavoriteMessage={handleFavoriteMessage}
+        pinnedMessage={pinnedMessagePreview}
+        onUnpinMessage={handleUnpinMessage}
         onReplyMessage={handleReplyMessage}
         headerActionsSlot={
           <>

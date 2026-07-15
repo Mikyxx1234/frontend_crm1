@@ -37,6 +37,7 @@ import {
   IconShare2,
   IconMoodPlus,
   IconStar,
+  IconStarFilled,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -208,6 +209,18 @@ export interface Message {
    * em grupos futuramente). Renderiza como badge flutuante na base.
    */
   reactions?: Array<{ emoji: string; from: string; at?: string }>
+  /**
+   * Favoritada pelo agente LOGADO (marcador pessoal — outros agentes não
+   * veem essa marcação). Alimenta a estrela preenchida no menu e o label
+   * dinâmico "Favoritar"/"Desfavoritar".
+   */
+  isFavorited?: boolean
+  /**
+   * Mensagem atualmente fixada no topo da conversa (banner estilo
+   * WhatsApp). Vem de `Conversation.pinnedMessageId` — diferente de
+   * `isPinned` (usado só para notas na aba "Notas").
+   */
+  isPinnedMessage?: boolean
 }
 
 
@@ -1018,8 +1031,14 @@ function ReceivedMessageMenu({
                     tiver UI real; a prop e o handler seguem intactos
                     no componente pra minimizar o diff quando reativar. */}
                 <MenuItem
-                  icon={<IconPin size={15} />}
-                  label="Fixar"
+                  icon={
+                    message.isPinnedMessage ? (
+                      <IconPinFilled size={15} className="text-[var(--brand-primary)]" />
+                    ) : (
+                      <IconPin size={15} />
+                    )
+                  }
+                  label={message.isPinnedMessage ? "Desafixar" : "Fixar"}
                   onClick={() => {
                     if (onPin) {
                       onPin(message)
@@ -1030,8 +1049,14 @@ function ReceivedMessageMenu({
                   }}
                 />
                 <MenuItem
-                  icon={<IconStar size={15} />}
-                  label="Favoritar"
+                  icon={
+                    message.isFavorited ? (
+                      <IconStarFilled size={15} className="text-amber-500" />
+                    ) : (
+                      <IconStar size={15} />
+                    )
+                  }
+                  label={message.isFavorited ? "Desfavoritar" : "Favoritar"}
                   onClick={() => {
                     if (onFavorite) {
                       onFavorite(message)
@@ -1315,6 +1340,18 @@ export function MessageBubble({
               : { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" }
           }
         >
+          {/* Indicador de mensagem fixada — banner no topo da conversa
+              (Conversation.pinnedMessageId). Canto oposto ao chevron do
+              menu (que fica em -right-2 nas recebidas) pra não colidir. */}
+          {message.isPinnedMessage && (
+            <span
+              className="absolute -left-1.5 -top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]"
+              style={{ background: "#ffffff" }}
+              title="Mensagem fixada"
+            >
+              <IconPinFilled size={10} className="text-[var(--brand-primary)]" />
+            </span>
+          )}
           {/* Badge AUTOMAÇÃO — pill escuro em cima do card claro tintado.
               Exibe o nome da automação (senderName) quando o backend envia;
               caso contrário cai no rótulo genérico "Automação". */}
@@ -1389,6 +1426,9 @@ export function MessageBubble({
                 : undefined
             }
           >
+            {message.isFavorited && (
+              <IconStarFilled size={10} className="text-amber-400" aria-label="Favoritada" />
+            )}
             {message.time}
             {isOutgoing && message.status && (
               <StatusIndicator

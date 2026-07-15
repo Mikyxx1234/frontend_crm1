@@ -171,6 +171,9 @@ interface DealDetailPanelProps {
   messagesSlot?: React.ReactNode
   composerSlot?: React.ReactNode
   sessionAlertSlot?: React.ReactNode
+  /** Banner de mensagem fixada (estilo WhatsApp) — renderizado entre o
+   *  header de tabs e a lista de mensagens, na tab "Conversa". */
+  pinnedMessageSlot?: React.ReactNode
   /**
    * Override por tab. Quando definido para a tab atual, substitui o
    * painel <main> inteiro pelo node. Util para Atividades/Notas/
@@ -293,6 +296,7 @@ export function DealDetailPanel({
   messagesSlot,
   composerSlot,
   sessionAlertSlot,
+  pinnedMessageSlot,
   tabContentOverride,
   customFieldsSlot,
   fieldConfigSlot,
@@ -1266,6 +1270,8 @@ export function DealDetailPanel({
                 isResolved={isResolved}
                 callButtonSlot={callButtonSlot}
               />
+
+              {pinnedMessageSlot}
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}

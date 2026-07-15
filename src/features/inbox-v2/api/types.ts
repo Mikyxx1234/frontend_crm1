@@ -208,6 +208,10 @@ export interface InboxMessageDto {
    * `MessagesResponse.channels[channelId]`.
    */
   channelId?: string | null;
+  /** Mensagem favoritada pelo agente LOGADO (marcador pessoal — não
+   *  compartilhado entre agentes). Alimenta a estrela preenchida no
+   *  menu contextual e no bubble. */
+  favoritedByMe?: boolean;
 }
 
 /** Resumo de uma conexão (Channel) — mesmo shape do ConnectionRefDto do backend. */
@@ -227,6 +231,9 @@ export interface SessionInfo {
 export interface MessagesResponse {
   messages: InboxMessageDto[];
   pinnedNoteId: string | null;
+  /** Mensagem fixada no topo da conversa (banner estilo WhatsApp) —
+   *  aceita qualquer mensagem, diferente de `pinnedNoteId` (só notas). */
+  pinnedMessageId?: string | null;
   channelProvider: string | null;
   /** Conexão ATUAL da conversa (último canal usado). Null se sem canal. */
   channel?: ConnectionRef | null;

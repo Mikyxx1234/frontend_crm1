@@ -25,6 +25,8 @@ import {
   IconChecklist,
   IconNote,
   IconClock,
+  IconPinFilled,
+  IconX,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
@@ -134,6 +136,14 @@ interface ChatAreaProps {
   onReactMessage?: (message: Message, emoji: string | null) => void
   onPinMessage?: (message: Message) => void
   onFavoriteMessage?: (message: Message) => void
+
+  /**
+   * Mensagem atualmente fixada no topo da conversa (banner estilo
+   * WhatsApp). Quando presente, renderiza uma faixa clicável entre o
+   * header e a lista de mensagens. `onUnpinMessage` desafixa.
+   */
+  pinnedMessage?: { id: string; content: string; senderName?: string | null } | null
+  onUnpinMessage?: () => void
 }
 
 export function ChatArea({
@@ -169,6 +179,8 @@ export function ChatArea({
   onReactMessage,
   onPinMessage,
   onFavoriteMessage,
+  pinnedMessage,
+  onUnpinMessage,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
   const isControlled = onSendMessage !== undefined
@@ -298,6 +310,31 @@ export function ChatArea({
         </div>
       ) : (
         <>
+      {/* PINNED MESSAGE BANNER — estilo WhatsApp, entre header e mensagens */}
+      {pinnedMessage && (
+        <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.06] px-3 py-2">
+          <IconPinFilled size={14} className="shrink-0 text-[var(--brand-primary)]" />
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+              Mensagem fixada
+            </p>
+            <p className="truncate text-[12.5px] text-[var(--text-secondary)]">
+              {pinnedMessage.senderName ? `${pinnedMessage.senderName}: ` : ""}
+              {pinnedMessage.content}
+            </p>
+          </div>
+          {onUnpinMessage && (
+            <button
+              type="button"
+              onClick={onUnpinMessage}
+              aria-label="Desafixar mensagem"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+            >
+              <IconX size={14} />
+            </button>
+          )}
+        </div>
+      )}
       {/* MESSAGES */}
       <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
         {(() => {

@@ -239,6 +239,61 @@ export async function pinNote(
 }
 
 /**
+ * PUT /api/conversations/:id/pin-message
+ * messageId = null para desafixar. Diferente de `pinNote` — aceita
+ * qualquer mensagem, não só notas internas.
+ */
+export async function pinMessage(
+  conversationId: string,
+  messageId: string | null,
+): Promise<{ id: string; pinnedMessageId: string | null }> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/pin-message`),
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId }),
+    },
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof (data as { message?: unknown })?.message === "string"
+        ? (data as { message: string }).message
+        : "Falha ao fixar mensagem",
+    );
+  }
+  return data as { id: string; pinnedMessageId: string | null };
+}
+
+/**
+ * POST /api/messages/:id/favorite
+ * Marcador PESSOAL do agente logado. `favorite` omitido = toggle.
+ */
+export async function favoriteMessage(
+  messageId: string,
+  favorite?: boolean,
+): Promise<{ favorited: boolean }> {
+  const res = await fetch(
+    apiUrl(`/api/messages/${encodeURIComponent(messageId)}/favorite`),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(favorite === undefined ? {} : { favorite }),
+    },
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof (data as { message?: unknown })?.message === "string"
+        ? (data as { message: string }).message
+        : "Falha ao favoritar mensagem",
+    );
+  }
+  return data as { favorited: boolean };
+}
+
+/**
  * POST /api/deals/:id/notes
  * Cria uma nota vinculada ao deal E dispara evento NOTE_ADDED na timeline.
  */

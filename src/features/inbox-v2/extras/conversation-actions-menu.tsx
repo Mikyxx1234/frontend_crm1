@@ -8,6 +8,7 @@ import {
   IconSearch,
   IconCircleCheck,
   IconRotateClockwise,
+  IconStarFilled,
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
@@ -20,6 +21,8 @@ interface ConversationActionsMenuProps {
   disabled?: boolean;
   /** Handler opcional pra "Buscar na conversa". Quando ausente, mostra toast "em breve". */
   onSearchInConversation?: () => void;
+  /** Abre o painel "Mensagens favoritas" (estrelas do agente logado). */
+  onOpenFavorites?: () => void;
 }
 
 export function ConversationActionsMenu({
@@ -27,6 +30,7 @@ export function ConversationActionsMenu({
   isResolved,
   disabled,
   onSearchInConversation,
+  onOpenFavorites,
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -91,6 +95,20 @@ export function ConversationActionsMenu({
             <IconSearch size={16} className="shrink-0 text-[var(--text-muted)]" stroke={2} />
             <span>Buscar na conversa</span>
           </button>
+
+          {onOpenFavorites && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onOpenFavorites();
+              }}
+              className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-[13px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+            >
+              <IconStarFilled size={16} className="shrink-0 text-amber-500" />
+              <span>Mensagens favoritas</span>
+            </button>
+          )}
 
           <RequirePermission permission="conversation:close">
             <button

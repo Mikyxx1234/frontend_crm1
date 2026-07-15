@@ -35,6 +35,7 @@ import {
   IconAffiliate,
   IconPackage,
   IconUser,
+  IconStarFilled,
 } from "@tabler/icons-react"
 import { useAsideViewMode, type AsideViewMode } from "@/hooks/use-aside-view-mode"
 import {
@@ -45,6 +46,7 @@ import {
 } from "@/lib/connection-label"
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
+import { FavoritesPanel } from "@/components/crm/favorites-panel"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
 import { useContactSources } from "@/hooks/use-contact-sources"
@@ -1339,6 +1341,7 @@ function TabsBar({
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const toggleResolve = useToggleConversationResolve()
 
@@ -1473,6 +1476,21 @@ function TabsBar({
                   </button>
                 )}
 
+                {/* Mensagens favoritas — marcador pessoal, estilo WhatsApp */}
+                {conversationId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFavoritesOpen(true)
+                      setMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)]"
+                  >
+                    <IconStarFilled size={14} className="shrink-0 text-amber-500" />
+                    Mensagens favoritas
+                  </button>
+                )}
+
                 {/* Encerrar / Reabrir conversa */}
                 {conversationId && (
                   <RequirePermission permission="conversation:close">
@@ -1500,6 +1518,11 @@ function TabsBar({
           </div>
         )}
       </header>
+      <FavoritesPanel
+        open={favoritesOpen}
+        onOpenChange={setFavoritesOpen}
+        conversationId={conversationId ?? null}
+      />
     </div>
   )
 }

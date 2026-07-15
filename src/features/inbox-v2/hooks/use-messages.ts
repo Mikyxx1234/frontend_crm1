@@ -5,12 +5,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addNoteToLog,
   favoriteMessage,
+  getFavoriteMessages,
   getMessages,
   pinMessage,
   pinNote,
   sendAttachment,
   sendMessage,
   sendReaction,
+  type FavoriteMessageDto,
   type InboxMessageDto,
   type MessagesResponse,
   type ReactionDto,
@@ -116,9 +118,10 @@ export function usePinMessage(conversationId: string | null) {
   return useMutation<
     { id: string; pinnedMessageId: string | null },
     Error,
-    { messageId: string | null }
+    { messageId: string | null; durationHours?: number }
   >({
-    mutationFn: ({ messageId }) => pinMessage(conversationId as string, messageId),
+    mutationFn: ({ messageId, durationHours }) =>
+      pinMessage(conversationId as string, messageId, durationHours),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
     },
@@ -140,7 +143,29 @@ export function useFavoriteMessage(conversationId: string | null) {
     mutationFn: ({ messageId, favorite }) => favoriteMessage(messageId, favorite),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: messagesKey(conversationId) });
+      qc.invalidateQueries({ queryKey: favoritesKey(conversationId) });
     },
+  });
+}
+
+export function favoritesKey(conversationId: string | null | undefined) {
+  return ["favorites", conversationId ?? "__none__"] as const;
+}
+
+/**
+ * Lista de mensagens favoritadas (marcador pessoal do agente logado)
+ * nesta conversa — alimenta o painel "Mensagens favoritas" do menu (⋮).
+ * `enabled` controlado externamente: só busca quando o painel abre.
+ */
+export function useFavoriteMessagesList(
+  conversationId: string | null,
+  enabled: boolean,
+) {
+  return useQuery<FavoriteMessageDto[]>({
+    queryKey: favoritesKey(conversationId),
+    queryFn: () => getFavoriteMessages(conversationId as string),
+    enabled: !!conversationId && enabled,
+    staleTime: 5_000,
   });
 }
 

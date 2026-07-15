@@ -23,6 +23,8 @@ import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
 import type { Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
+import { FavoritesPanel } from "@/components/crm/favorites-panel";
 import { ContactAside } from "@/components/crm/contact-aside";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
@@ -372,6 +374,8 @@ export default function InboxV2ClientPage({
   const favoriteMessageMutation = useFavoriteMessage(activeId);
   const markRead = useMarkConversationRead();
   const bulkAction = useBulkConversationAction();
+  const { requestDuration: requestPinDuration, dialog: pinDurationDialog } = usePinDurationDialog();
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
 
   // Handler de reação disparado pelo menu contextual de cada bubble.
   // WhatsApp: apertar o mesmo emoji novamente remove; escolher outro
@@ -387,16 +391,28 @@ export default function InboxV2ClientPage({
     );
   }
 
-  // Fixar: toggle — clicar na mesma mensagem já fixada desafixa (igual
-  // WhatsApp). Fixar outra substitui automaticamente (slot único).
-  function handlePinMessage(msg: { id: string; isPinnedMessage?: boolean }) {
+  // Fixar: toggle — clicar na mesma mensagem já fixada desafixa direto
+  // (igual WhatsApp). Fixar uma NOVA mensagem abre o picker de duração
+  // (24h/7d/30d) antes de confirmar; fixar outra substitui a anterior
+  // automaticamente (slot único).
+  async function handlePinMessage(msg: { id: string; isPinnedMessage?: boolean }) {
     if (!activeId) return;
-    const nextId = msg.isPinnedMessage ? null : msg.id;
+    if (msg.isPinnedMessage) {
+      pinMessage.mutate(
+        { messageId: null },
+        {
+          onSuccess: () => toast.success("Mensagem desafixada"),
+          onError: (err) => toast.error(err.message || "Falha ao desafixar"),
+        },
+      );
+      return;
+    }
+    const durationHours = await requestPinDuration();
+    if (durationHours == null) return;
     pinMessage.mutate(
-      { messageId: nextId },
+      { messageId: msg.id, durationHours },
       {
-        onSuccess: () =>
-          toast.success(nextId ? "Mensagem fixada" : "Mensagem desafixada"),
+        onSuccess: () => toast.success("Mensagem fixada"),
         onError: (err) => toast.error(err.message || "Falha ao fixar"),
       },
     );
@@ -918,6 +934,7 @@ export default function InboxV2ClientPage({
             <ConversationActionsMenu
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
+              onOpenFavorites={() => setFavoritesOpen(true)}
             />
           </>
         }
@@ -1016,6 +1033,20 @@ export default function InboxV2ClientPage({
       </div>
     ) : null;
 
+  // Picker de duração do "Fixar" (24h/7d/30d) + painel "Mensagens
+  // favoritas" — self-contained, plugados nos 4 pontos de retorno
+  // (mobile/desktop × com/sem pageHeader) junto do templateModalNode.
+  const extraDialogsNode = (
+    <>
+      {pinDurationDialog}
+      <FavoritesPanel
+        open={favoritesOpen}
+        onOpenChange={setFavoritesOpen}
+        conversationId={activeId}
+      />
+    </>
+  );
+
   // Layout COM cabeçalho de página (estilo "Caixa de entrada" da
   // referência): NavRail fixo à esquerda; à direita o header no topo e
   // as 3 colunas (lista/chat/contato) numa grade abaixo.
@@ -1090,6 +1121,7 @@ export default function InboxV2ClientPage({
             </div>
           )}
           {templateModalNode}
+          {extraDialogsNode}
         </div>
       );
     }
@@ -1138,6 +1170,7 @@ export default function InboxV2ClientPage({
           </div>
         </div>
         {templateModalNode}
+        {extraDialogsNode}
       </div>
     );
   }
@@ -1199,6 +1232,7 @@ export default function InboxV2ClientPage({
           </div>
         )}
         {templateModalNode}
+        {extraDialogsNode}
       </div>
     );
   }
@@ -1226,6 +1260,7 @@ export default function InboxV2ClientPage({
         {asideNode}
       </div>
       {templateModalNode}
+      {extraDialogsNode}
     </div>
   );
 }

@@ -21,6 +21,7 @@ import { getInitials } from "@/lib/utils";
 
 import { DaySeparator, ConnectionDivider, MessageBubble, type Message as BubbleMessage } from "@/components/crm/message-bubble";
 import { SessionAlert } from "@/components/crm/session-alert";
+import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
 import { formatConnectionLabel, type ConnectionRef } from "@/lib/connection-label";
 import {
   Composer,
@@ -151,6 +152,7 @@ export function useDealChatBinding(params: {
   const pinMessageMutation = usePinMessage(effectiveConversationId);
   const favoriteMutation = useFavoriteMessage(effectiveConversationId);
   const addToLogMutation = useAddNoteToLog(dealId ?? null);
+  const { requestDuration: requestPinDuration, dialog: pinDurationDialog } = usePinDurationDialog();
 
   // Seletor de canal — mesmo widget/hook do /inbox. Aparece só quando a
   // org tem >1 WhatsApp CONNECTED. Default = canal "atual" da conversa.
@@ -287,14 +289,24 @@ export function useDealChatBinding(params: {
   }
 
   // Fixar: mesma rota/mutation do /inbox. Clicar na já fixada desafixa.
-  function handlePinMessage(message: BubbleMessage) {
+  async function handlePinMessage(message: BubbleMessage) {
     if (!effectiveConversationId) return;
-    const nextId = message.isPinnedMessage ? null : message.id;
+    if (message.isPinnedMessage) {
+      pinMessageMutation.mutate(
+        { messageId: null },
+        {
+          onSuccess: () => toast.success("Mensagem desafixada"),
+          onError: (err) => toast.error(err.message || "Falha ao desafixar"),
+        },
+      );
+      return;
+    }
+    const durationHours = await requestPinDuration();
+    if (durationHours == null) return;
     pinMessageMutation.mutate(
-      { messageId: nextId },
+      { messageId: message.id, durationHours },
       {
-        onSuccess: () =>
-          toast.success(nextId ? "Mensagem fixada" : "Mensagem desafixada"),
+        onSuccess: () => toast.success("Mensagem fixada"),
         onError: (err) => toast.error(err.message || "Falha ao fixar"),
       },
     );
@@ -453,24 +465,31 @@ export function useDealChatBinding(params: {
     : null;
 
   // ── template picker modal ───────────────────────────────────
-  const templateModal =
-    templateOpen && effectiveConversationId ? (
-      <div
-        className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
-        onClick={() => setTemplateOpen(false)}
-      >
-        <div onClick={(e) => e.stopPropagation()}>
-          <TemplatePickerList
-            conversationId={effectiveConversationId}
-            onClose={() => setTemplateOpen(false)}
-            onPick={(tpl) => {
-              setExternalTemplate(whatsappTemplateToPending(tpl));
-              setTemplateOpen(false);
-            }}
-          />
+  const templateModal = (
+    <>
+      {templateOpen && effectiveConversationId ? (
+        <div
+          className="fixed inset-0 z-(--z-popover) flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setTemplateOpen(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <TemplatePickerList
+              conversationId={effectiveConversationId}
+              onClose={() => setTemplateOpen(false)}
+              onPick={(tpl) => {
+                setExternalTemplate(whatsappTemplateToPending(tpl));
+                setTemplateOpen(false);
+              }}
+            />
+          </div>
         </div>
-      </div>
-    ) : null;
+      ) : null}
+      {/* Picker de duração do "Fixar" (24h/7d/30d, estilo WhatsApp) —
+          o painel "Mensagens favoritas" fica no kebab do DealDetailPanel
+          (TabsBar), que já tem `conversationId` disponível. */}
+      {pinDurationDialog}
+    </>
+  );
 
   // ── banner de mensagem fixada ────────────────────────────────
   const pinnedMessageSlot = pinnedMessagePreview ? (

@@ -240,19 +240,23 @@ export async function pinNote(
 
 /**
  * PUT /api/conversations/:id/pin-message
- * messageId = null para desafixar. Diferente de `pinNote` — aceita
- * qualquer mensagem, não só notas internas.
+ * messageId = null para desafixar. `durationHours` (24/168/720) define
+ * o prazo estilo WhatsApp — omitido = fixado sem prazo. Diferente de
+ * `pinNote` — aceita qualquer mensagem, não só notas internas.
  */
 export async function pinMessage(
   conversationId: string,
   messageId: string | null,
+  durationHours?: number,
 ): Promise<{ id: string; pinnedMessageId: string | null }> {
   const res = await fetch(
     apiUrl(`/api/conversations/${conversationId}/pin-message`),
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageId }),
+      body: JSON.stringify(
+        durationHours ? { messageId, durationHours } : { messageId },
+      ),
     },
   );
   const data = await res.json().catch(() => ({}));
@@ -264,6 +268,38 @@ export async function pinMessage(
     );
   }
   return data as { id: string; pinnedMessageId: string | null };
+}
+
+/**
+ * GET /api/conversations/:id/favorites
+ * Lista as mensagens favoritadas pelo agente logado nesta conversa —
+ * alimenta o painel "Mensagens favoritas" no menu (⋮) do chat.
+ */
+export interface FavoriteMessageDto {
+  id: string;
+  content: string;
+  createdAt: string;
+  direction: "in" | "out" | "system";
+  senderName: string | null;
+}
+
+export async function getFavoriteMessages(
+  conversationId: string,
+): Promise<FavoriteMessageDto[]> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/favorites`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof (data as { message?: unknown })?.message === "string"
+        ? (data as { message: string }).message
+        : "Falha ao carregar favoritas",
+    );
+  }
+  return Array.isArray((data as { items?: unknown })?.items)
+    ? (data as { items: FavoriteMessageDto[] }).items
+    : [];
 }
 
 /**

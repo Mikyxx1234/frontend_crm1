@@ -1012,18 +1012,11 @@ function ReceivedMessageMenu({
                     }
                   }}
                 />
-                <MenuItem
-                  icon={<IconShare2 size={15} />}
-                  label="Encaminhar"
-                  onClick={() => {
-                    if (onForward) {
-                      onForward(message)
-                      setOpen(false)
-                    } else {
-                      stub("Encaminhar")
-                    }
-                  }}
-                />
+                {/* "Encaminhar" removido do menu — o fluxo ainda nao tem
+                    modal de selecao de conversa alvo (feature pendente
+                    da lista original). Voltar aqui quando `onForward`
+                    tiver UI real; a prop e o handler seguem intactos
+                    no componente pra minimizar o diff quando reativar. */}
                 <MenuItem
                   icon={<IconPin size={15} />}
                   label="Fixar"

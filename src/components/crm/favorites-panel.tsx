@@ -26,7 +26,7 @@ export function FavoritesPanel({
   onOpenChange: (open: boolean) => void
   conversationId: string | null
 }) {
-  const { data, isLoading } = useFavoriteMessagesList(conversationId, open)
+  const { data, isLoading, isError, error } = useFavoriteMessagesList(conversationId, open)
   const unfavorite = useFavoriteMessage(conversationId)
 
   return (
@@ -43,7 +43,14 @@ export function FavoritesPanel({
           {isLoading && (
             <p className="py-6 text-center text-sm text-[var(--text-muted)]">Carregando…</p>
           )}
-          {!isLoading && (!data || data.length === 0) && (
+          {/* Erro explícito (rota fora do ar, 404, etc.) — antes isso caía
+              silenciosamente no estado "vazio" e mascarava o problema real. */}
+          {!isLoading && isError && (
+            <p className="py-6 text-center text-sm text-red-500">
+              {error?.message || "Falha ao carregar mensagens favoritadas."}
+            </p>
+          )}
+          {!isLoading && !isError && (!data || data.length === 0) && (
             <p className="py-6 text-center text-sm text-[var(--text-muted)]">
               Nenhuma mensagem favoritada ainda.
             </p>

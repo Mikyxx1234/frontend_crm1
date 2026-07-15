@@ -34,6 +34,7 @@ import {
   useInboxRealtime,
   useMessages,
   usePinNote,
+  useReactMessage,
   useSelectedOutboundChannel,
   useSendMessage,
   useWhatsappChannels,
@@ -140,6 +141,7 @@ export function useDealChatBinding(params: {
 
   const { data: messagesResp } = useMessages(effectiveConversationId);
   const sendMutation = useSendMessage(effectiveConversationId);
+  const reactMutation = useReactMessage(effectiveConversationId);
   const pinMutation = usePinNote(effectiveConversationId);
   const addToLogMutation = useAddNoteToLog(dealId ?? null);
 
@@ -251,6 +253,19 @@ export function useDealChatBinding(params: {
     setReplyTo({ id: message.id, preview, senderName });
   }
 
+  // Reagir dispara no /inbox e tambem aqui (drawer do pipeline). Mesma
+  // rota de backend (`/api/messages/:ref/reactions`), mesma mutation.
+  // `emoji` vazio = remocao (toggle-off).
+  function handleReact(message: BubbleMessage, emoji: string | null) {
+    if (!effectiveConversationId) return;
+    reactMutation.mutate(
+      { messageId: message.id, emoji: emoji ?? "" },
+      {
+        onError: (err) => toast.error(err.message || "Falha ao reagir"),
+      },
+    );
+  }
+
   function handleSendNote() {
     const t = draft.trim();
     if (!t || !effectiveConversationId) return;
@@ -341,6 +356,7 @@ export function useDealChatBinding(params: {
                 : undefined
             }
             onReplyMessage={isNoteBubble ? undefined : handleReply}
+            onReactMessage={isNoteBubble ? undefined : handleReact}
           />
         </Fragment>
       );

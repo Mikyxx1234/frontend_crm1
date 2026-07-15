@@ -378,11 +378,7 @@ export function useDealChatBinding(params: {
 
   // ── session alert (opcional) ────────────────────────────────
   const sessionAlertNode = sessionExpired
-    ? (
-        <div className="mx-5.5 mb-3">
-          <SessionAlert onUseTemplate={() => setTemplateOpen(true)} />
-        </div>
-      )
+    ? <SessionAlert onUseTemplate={() => setTemplateOpen(true)} />
     : null;
 
   // ── template picker modal ───────────────────────────────────

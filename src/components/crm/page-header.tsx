@@ -3,6 +3,8 @@
  * `components/ui/page-header.tsx`. Não adicionar novos imports.
  * Remoção física após aposentadoria das rotas que ainda o usam.
  */
+"use client"
+
 import Link from "next/link"
 import { IconChevronLeft } from "@tabler/icons-react"
 
@@ -17,14 +19,9 @@ export type PageHeaderBack = {
 /**
  * Cabeçalho de página DS v2 — identidade (ícone tile 44px + título 22px bold).
  *
- * Controles de busca/filtro/ação:
- *   - Busca → `center` com `PageSearchBar variant="compact"` (uma linha, sem toolbar extra)
- *   - Tabs/segmented → `PageHeader.actions` (`PageSegmentedControl size="compact"`) ou
- *     topo do painel de conteúdo quando não couber no header
- *   - Dropdowns estruturais → `PageFilterBar`
- *
- * Rotas drill-down: prop `back` — botão quadrado ghost à esquerda do ícone
- * (mesmo padrão do BuilderTopbar de automações).
+ * Mobile (< lg): título numa linha; busca + ações numa faixa
+ * `toolbar-hscroll` (mesmo padrão do Pipeline / kanban).
+ * Desktop (lg+): grid de 3 colunas (identidade | busca | ações).
  */
 interface PageHeaderProps {
   icon: React.ReactNode
@@ -33,63 +30,110 @@ interface PageHeaderProps {
   /** Voltar à lista pai — botão quadrado ghost à esquerda do ícone. */
   back?: PageHeaderBack
   /**
-   * Busca — renderizada no CENTRO absoluto do header.
+   * Busca — renderizada no CENTRO em desktop; na faixa rolável no mobile.
    * Tipicamente um `<SearchInput />`.
    */
   center?: React.ReactNode
   /**
-   * Outros controles — renderizados à DIREITA.
+   * Outros controles — à DIREITA em desktop; na faixa rolável no mobile.
    * Filtros, switchers de view, botões de ação.
    */
   actions?: React.ReactNode
   className?: string
 }
 
-export function PageHeader({ icon, title, description, back, center, actions, className }: PageHeaderProps) {
+function Identity({
+  icon,
+  title,
+  description,
+  back,
+}: {
+  icon: React.ReactNode
+  title: string
+  description?: string
+  back?: PageHeaderBack
+}) {
   return (
-    <div className={cn("grid items-center gap-4 px-1", actions || center ? "grid-cols-[auto_1fr_auto]" : "grid-cols-[auto_1fr]", className)}>
-      {/* Esquerda: voltar (opcional) + ícone + título */}
-      <div className="flex min-w-0 shrink-0 items-center gap-3">
-        {back ? (
-          <Link
-            href={back.href}
-            aria-label={`Voltar para ${back.label}`}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
-          >
-            <IconChevronLeft size={20} stroke={2.2} />
-          </Link>
-        ) : null}
+    <div className="flex min-w-0 shrink-0 items-center gap-3">
+      {back ? (
+        <Link
+          href={back.href}
+          aria-label={`Voltar para ${back.label}`}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+        >
+          <IconChevronLeft size={20} stroke={2.2} />
+        </Link>
+      ) : null}
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]">
-          {icon}
-        </div>
-
-        <div className="flex min-w-0 flex-col">
-          <h1 className="font-display text-[22px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
-            {title}
-          </h1>
-          {description && (
-            <p className="truncate font-body text-[13px] text-[var(--text-muted)]">{description}</p>
-          )}
-        </div>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]">
+        {icon}
       </div>
 
-      {/* Centro: busca — ocupa o espaço restante entre esquerda e direita */}
-      {center ? (
-        <div className="flex min-w-0 flex-1 items-center justify-end px-4">
-          {center}
-        </div>
-      ) : (
-        /* Spacer quando não há center mas há actions */
-        <div />
-      )}
+      <div className="flex min-w-0 flex-col">
+        <h1 className="font-display text-[22px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
+          {title}
+        </h1>
+        {description ? (
+          <p className="hidden truncate font-body text-[13px] text-[var(--text-muted)] sm:block">
+            {description}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  )
+}
 
-      {/* Direita: outros controles */}
-      {actions && (
-        <div className="flex shrink-0 items-center gap-2">
-          {actions}
-        </div>
-      )}
+export function PageHeader({
+  icon,
+  title,
+  description,
+  back,
+  center,
+  actions,
+  className,
+}: PageHeaderProps) {
+  const hasControls = Boolean(center || actions)
+
+  return (
+    <div className={cn("flex flex-col gap-2 px-1", className)}>
+      {/* Desktop: grid clássico */}
+      <div
+        className={cn(
+          "hidden items-center gap-4 lg:grid",
+          hasControls ? "grid-cols-[auto_1fr_auto]" : "grid-cols-[auto_1fr]",
+        )}
+      >
+        <Identity icon={icon} title={title} description={description} back={back} />
+        {center ? (
+          <div className="flex min-w-0 flex-1 items-center justify-end px-4">
+            {center}
+          </div>
+        ) : (
+          <div />
+        )}
+        {actions ? (
+          <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        ) : null}
+      </div>
+
+      {/* Mobile / tablet: título + faixa horizontal rolável */}
+      <div className="flex flex-col gap-2 lg:hidden">
+        <Identity icon={icon} title={title} description={description} back={back} />
+        {hasControls ? (
+          <div className="toolbar-hscroll flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
+            {center ? (
+              <div className="shrink-0 [&_.relative]:!w-[min(220px,70vw)] [&_.relative]:!max-w-none">
+                {center}
+              </div>
+            ) : null}
+            {actions ? (
+              <div className="flex shrink-0 flex-nowrap items-center gap-2">
+                {actions}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

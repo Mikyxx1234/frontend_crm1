@@ -391,6 +391,24 @@ html[data-nav-expanded="true"] {
   width: 0 !important;
 }
 
+/* toolbar-hscroll: faixa horizontal (header de ações, abas) que rola
+   lateralmente quando o conteúdo excede a largura — scrollbar oculta. */
+.v2-screen .toolbar-hscroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.v2-root .v2-screen .toolbar-hscroll::-webkit-scrollbar,
+.v2-root .v2-screen .toolbar-hscroll::-webkit-scrollbar-track,
+.v2-root .v2-screen .toolbar-hscroll::-webkit-scrollbar-thumb {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
 /* Cada .kanban-col ocupa a altura TOTAL do .kanban-board-hscroll
    (stretch do flex cross-axis). Isso evita que o fundo do app
    apareça abaixo de colunas curtas. Quando o conteúdo ultrapassa

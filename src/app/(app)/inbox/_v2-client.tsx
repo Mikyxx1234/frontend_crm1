@@ -6,8 +6,11 @@ import { useSession } from "next-auth/react";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
 import {
+  IconArrowLeft,
+  IconBriefcase,
   IconChevronDown,
   IconCircleCheck,
+  IconMessageCircle,
   IconRotateClockwise,
   IconSquareCheck,
   IconX,
@@ -28,6 +31,7 @@ import {
   ColumnResizer,
   usePersistentWidth,
 } from "@/components/crm/column-resizer";
+import { useIsDesktop } from "@/hooks/use-media-query";
 
 import {
   isSessionExpired,
@@ -212,6 +216,7 @@ export default function InboxV2ClientPage({
 }: InboxV2ClientPageProps = {}) {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
+  const isDesktop = useIsDesktop();
 
   // ── Largura das colunas (persistidas) ─────────────────────────
   const [convWidth, setConvWidth] = usePersistentWidth(
@@ -236,6 +241,7 @@ export default function InboxV2ClientPage({
   // Template escolhido no modal (sessão expirada) → abre o painel no Composer.
   const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
+  const [mobilePaneTab, setMobilePaneTab] = useState<"chat" | "negocio">("chat");
 
   // ── Seleção múltipla + ações em massa (encerrar/reabrir) ────────
   // Modo explícito (como o legado): entrar em "seleção" desativa o clique
@@ -263,6 +269,11 @@ export default function InboxV2ClientPage({
   useEffect(() => {
     setSelectedIds(new Set());
   }, [tab]);
+
+  // Ao abrir uma nova conversa no mobile, volta sempre para o painel Chat.
+  useEffect(() => {
+    setMobilePaneTab("chat");
+  }, [activeId]);
 
   // Debounce do search (300ms). Evita refetch a cada tecla.
   useEffect(() => {
@@ -607,12 +618,14 @@ export default function InboxV2ClientPage({
         if (next) setTab(next);
       }}
       resizerSlot={
-        <ColumnResizer
-          value={convWidth}
-          onChange={setConvWidth}
-          min={280}
-          max={440}
-        />
+        isDesktop ? (
+          <ColumnResizer
+            value={convWidth}
+            onChange={setConvWidth}
+            min={280}
+            max={440}
+          />
+        ) : undefined
       }
       onLoadMore={() => {
         if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -946,6 +959,81 @@ export default function InboxV2ClientPage({
   // referência): NavRail fixo à esquerda; à direita o header no topo e
   // as 3 colunas (lista/chat/contato) numa grade abaixo.
   if (pageHeader) {
+    // ── Mobile: layout de painel único (lista → chat/negócio) ──────
+    if (!isDesktop) {
+      return (
+        <div className="v2-screen flex flex-col overflow-hidden">
+          <PageHeader
+            icon={pageHeader.icon}
+            title={pageHeader.title}
+            description={pageHeader.description}
+            center={
+              <PageSearchBar
+                variant="compact"
+                value={searchInput}
+                onChange={setSearchInput}
+                placeholder="Buscar conversa, contato, telefone..."
+                aria-label="Buscar conversas"
+              />
+            }
+            actions={null}
+          />
+          {!activeId ? (
+            <div className="min-h-0 flex-1">
+              {conversationColumnNode}
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col">
+              {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
+              <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveId(null)}
+                  className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                >
+                  <IconArrowLeft size={16} stroke={2} />
+                  Voltar
+                </button>
+                <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaneTab("chat")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      mobilePaneTab === "chat"
+                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
+                  >
+                    <IconMessageCircle size={14} stroke={2} />
+                    Chat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaneTab("negocio")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      mobilePaneTab === "negocio"
+                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
+                  >
+                    <IconBriefcase size={14} stroke={2} />
+                    Negócio
+                  </button>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1">
+                {mobilePaneTab === "chat" ? chatNode : asideNode}
+              </div>
+            </div>
+          )}
+          {templateModalNode}
+        </div>
+      );
+    }
+
+    // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
         className="v2-screen grid gap-4 p-4"
@@ -994,6 +1082,67 @@ export default function InboxV2ClientPage({
   }
 
   // Layout legado (linha única, sem topo) — usado por `(v2)/inbox-v2`.
+
+  // ── Mobile: layout de painel único (lista → chat/negócio) ──────
+  if (!isDesktop) {
+    return (
+      <div className="v2-screen flex flex-col overflow-hidden">
+        {!activeId ? (
+          <div className="min-h-0 flex-1">
+            {conversationColumnNode}
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">
+            {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
+            <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+              <button
+                type="button"
+                onClick={() => setActiveId(null)}
+                className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+              >
+                <IconArrowLeft size={16} stroke={2} />
+                Voltar
+              </button>
+              <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setMobilePaneTab("chat")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                    mobilePaneTab === "chat"
+                      ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                  )}
+                >
+                  <IconMessageCircle size={14} stroke={2} />
+                  Chat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobilePaneTab("negocio")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                    mobilePaneTab === "negocio"
+                      ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                  )}
+                >
+                  <IconBriefcase size={14} stroke={2} />
+                  Negócio
+                </button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1">
+              {mobilePaneTab === "chat" ? chatNode : asideNode}
+            </div>
+          </div>
+        )}
+        {templateModalNode}
+      </div>
+    );
+  }
+
+  // ── Desktop: layout original de 4 colunas ─────────────────────
   return (
     <div
       className="v2-screen grid gap-4 p-4"

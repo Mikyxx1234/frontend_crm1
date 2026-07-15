@@ -94,9 +94,9 @@ export function WidgetCard({
     "flex size-[42px] shrink-0 items-center justify-center rounded-full border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-base)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger-text)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)] disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <article className="relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]">
+    <article className="relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] backdrop-blur-md transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-[var(--brand-primary)] hover:shadow-[var(--glass-shadow)]">
       {/* Topo: ícone + badge de status */}
-      <div className="flex items-start justify-between gap-3 px-5 pt-5">
+      <div className="flex items-start justify-between gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
           <WidgetIcon widget={widget} className="size-6" />
         </span>
@@ -111,22 +111,22 @@ export function WidgetCard({
       </div>
 
       {/* Título + categoria */}
-      <div className="px-5 pt-4">
+      <div className="px-4 pt-3.5 sm:px-5 sm:pt-4">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.6px] text-[var(--text-muted)]">
           {widget.category}
         </p>
-        <h3 className="mt-0.5 font-display text-[18px] font-extrabold tracking-[-0.3px] text-[var(--text-primary)]">
+        <h3 className="mt-0.5 min-w-0 break-words font-display text-[18px] font-extrabold tracking-[-0.3px] text-[var(--text-primary)]">
           {widget.name}
         </h3>
       </div>
 
-      <p className="text-pretty px-5 pt-2.5 font-body text-[13.5px] leading-[1.55] text-[var(--text-secondary)]">
+      <p className="min-w-0 break-words text-pretty px-4 pt-2 font-body text-[13.5px] leading-[1.55] text-[var(--text-secondary)] sm:px-5 sm:pt-2.5">
         {widget.description}
       </p>
 
       {/* Recursos */}
       {widget.features.length > 0 && (
-        <ul className="flex flex-col gap-2 px-5 pt-3.5">
+        <ul className="flex flex-col gap-2 px-4 pt-3 sm:px-5 sm:pt-3.5">
           {widget.features.map((feature) => (
             <li
               key={feature}
@@ -142,7 +142,7 @@ export function WidgetCard({
       )}
 
       {/* Rodapé: ação primária + excluir */}
-      <div className="mt-auto px-5 pb-5 pt-4">
+      <div className="mt-auto px-4 pb-4 pt-3.5 sm:px-5 sm:pb-5 sm:pt-4">
         {disabled && widget.disabledReason && (
           <div className="mb-2 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2.5 py-1.5 text-[11px] text-[var(--text-muted)]">
             {widget.disabledReason}

@@ -104,7 +104,9 @@ const ACTOR_BADGE: Record<
 };
 
 // 6 colunas: Evento | Detalhe | Entidade | Origem | Responsável | Data.
-const FEED_GRID = "grid-cols-[1.4fr_1.7fr_1.5fr_1.5fr_0.9fr_0.7fr]";
+// minmax garante largura mínima legível mesmo ao rolar lateralmente.
+const FEED_GRID =
+  "grid-cols-[minmax(160px,1.4fr)_minmax(180px,1.7fr)_minmax(150px,1.5fr)_minmax(150px,1.5fr)_minmax(120px,0.9fr)_minmax(90px,0.7fr)]";
 
 type SortColumn = "evento" | "detalhe" | "entidade" | "origem" | "ator" | "data";
 
@@ -321,10 +323,10 @@ export default function LogsClientPage() {
   if (ready && !isManagerUp) return <RestrictedScreen />;
 
   return (
-    <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
+    <div className="v2-screen grid min-w-0 grid-cols-[var(--nav-rail-w,72px)_1fr] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4">
       <NavRailV2 />
 
-      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
+      <main className="flex min-w-0 flex-col gap-3 overflow-hidden sm:gap-4">
         <PageHeader
           icon={<IconClipboardList size={22} stroke={2.2} />}
           title="Logs"
@@ -358,7 +360,7 @@ export default function LogsClientPage() {
 
         {isFeed ? (
           <>
-            <PageFilterBar>
+            <PageFilterBar className="toolbar-hscroll max-w-full flex-nowrap overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
               <DropdownGlass
                 options={ENTITY_OPTIONS}
                 value={entity}
@@ -417,78 +419,85 @@ export default function LogsClientPage() {
                 />
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
-                <div className={listTableHeadRowClass(FEED_GRID)}>
-                  <SortableHeader
-                    label="Evento"
-                    sort={sort.column === "evento" ? sort.dir : null}
-                    onSort={() => toggleSort("evento")}
-                  />
-                  <SortableHeader
-                    label="Detalhe"
-                    sort={sort.column === "detalhe" ? sort.dir : null}
-                    onSort={() => toggleSort("detalhe")}
-                  />
-                  <SortableHeader
-                    label="Entidade"
-                    sort={sort.column === "entidade" ? sort.dir : null}
-                    onSort={() => toggleSort("entidade")}
-                  />
-                  <SortableHeader
-                    label="Origem"
-                    sort={sort.column === "origem" ? sort.dir : null}
-                    onSort={() => toggleSort("origem")}
-                  />
-                  <SortableHeader
-                    label="Responsável"
-                    sort={sort.column === "ator" ? sort.dir : null}
-                    onSort={() => toggleSort("ator")}
-                  />
-                  <SortableHeader
-                    label="Data"
-                    sort={sort.column === "data" ? sort.dir : null}
-                    onSort={() => toggleSort("data")}
-                    align="right"
-                  />
-                </div>
+              /* Outer card: ocupa largura disponível sem vazar da viewport */
+              <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+                {/* Scroll horizontal: ativa quando viewport < 960px */}
+                <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+                  {/* Conteúdo interno com largura mínima — header + linhas rolam juntos */}
+                  <div className="flex min-h-0 min-w-[960px] flex-1 flex-col">
+                    <div className={listTableHeadRowClass(FEED_GRID)}>
+                      <SortableHeader
+                        label="Evento"
+                        sort={sort.column === "evento" ? sort.dir : null}
+                        onSort={() => toggleSort("evento")}
+                      />
+                      <SortableHeader
+                        label="Detalhe"
+                        sort={sort.column === "detalhe" ? sort.dir : null}
+                        onSort={() => toggleSort("detalhe")}
+                      />
+                      <SortableHeader
+                        label="Entidade"
+                        sort={sort.column === "entidade" ? sort.dir : null}
+                        onSort={() => toggleSort("entidade")}
+                      />
+                      <SortableHeader
+                        label="Origem"
+                        sort={sort.column === "origem" ? sort.dir : null}
+                        onSort={() => toggleSort("origem")}
+                      />
+                      <SortableHeader
+                        label="Responsável"
+                        sort={sort.column === "ator" ? sort.dir : null}
+                        onSort={() => toggleSort("ator")}
+                      />
+                      <SortableHeader
+                        label="Data"
+                        sort={sort.column === "data" ? sort.dir : null}
+                        onSort={() => toggleSort("data")}
+                        align="right"
+                      />
+                    </div>
 
-                {!isDefaultSort && hasNextPage && (
-                  <div className="mb-2 px-1 font-body text-[11px] italic text-[var(--text-muted)]">
-                    Ordenando eventos carregados — role para carregar mais.
-                  </div>
-                )}
+                    {!isDefaultSort && hasNextPage && (
+                      <div className="mb-2 px-1 font-body text-[11px] italic text-[var(--text-muted)]">
+                        Ordenando eventos carregados — role para carregar mais.
+                      </div>
+                    )}
 
-                <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
-                  {isDefaultSort
-                    ? groups.map(([dayKey, dayItems]) => (
-                        <React.Fragment key={dayKey}>
-                          <div className="flex items-center gap-2.5 px-1 pb-1 pt-3 first:pt-1">
-                            <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                              {dayLabel(dayItems[0].occurredAt)}
-                            </span>
-                            <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
-                          </div>
-                          {dayItems.map((ev) => (
+                    <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
+                      {isDefaultSort
+                        ? groups.map(([dayKey, dayItems]) => (
+                            <React.Fragment key={dayKey}>
+                              <div className="flex items-center gap-2.5 px-1 pb-1 pt-3 first:pt-1">
+                                <span className="shrink-0 font-display text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                                  {dayLabel(dayItems[0].occurredAt)}
+                                </span>
+                                <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
+                              </div>
+                              {dayItems.map((ev) => (
+                                <EventCard key={ev.id} event={ev} />
+                              ))}
+                            </React.Fragment>
+                          ))
+                        : sortedFlat.map((ev) => (
                             <EventCard key={ev.id} event={ev} />
                           ))}
-                        </React.Fragment>
-                      ))
-                    : sortedFlat.map((ev) => (
-                        <EventCard key={ev.id} event={ev} />
-                      ))}
 
-                  <div ref={sentinelRef} className="h-1" />
-                  {isFetchingNextPage && (
-                    <div className="flex items-center justify-center py-4 text-[13px] text-[var(--text-muted)]">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Carregando mais...
+                      <div ref={sentinelRef} className="h-1" />
+                      {isFetchingNextPage && (
+                        <div className="flex items-center justify-center py-4 text-[13px] text-[var(--text-muted)]">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Carregando mais...
+                        </div>
+                      )}
+                      {!hasNextPage && allItems.length > 0 && (
+                        <p className="pb-2 pt-2 text-center text-[11px] text-[var(--text-muted)]/70">
+                          Fim do histórico.
+                        </p>
+                      )}
                     </div>
-                  )}
-                  {!hasNextPage && allItems.length > 0 && (
-                    <p className="pb-2 pt-2 text-center text-[11px] text-[var(--text-muted)]/70">
-                      Fim do histórico.
-                    </p>
-                  )}
+                  </div>
                 </div>
               </div>
             )}

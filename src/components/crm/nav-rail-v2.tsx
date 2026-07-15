@@ -292,6 +292,8 @@ export function NavRailV2({ className }: { className?: string }) {
         // e o main renderiza normalmente (evita o bug do `fixed` que
         // deixava o miolo aparentemente "sumido").
         "relative flex h-full w-full flex-col gap-2 bg-[var(--nav-bg)] backdrop-blur-[16px] border border-[var(--nav-border)] rounded-[var(--radius-xl)] py-4 shadow-[var(--glass-shadow)] transition-[width] duration-200",
+        // Mobile: rail lateral some — navegação vai para MobileBottomNav.
+        "max-md:hidden",
         expanded ? "items-stretch" : "items-center",
         className,
       )}

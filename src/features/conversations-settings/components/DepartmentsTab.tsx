@@ -281,9 +281,18 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   }, [dept?.id]);
 
   // Hidrata a seleção com os membros atuais quando carregam.
+  //
+  // IMPORTANTE: dependemos de uma CHAVE STRING estável (ids ordenados),
+  // não do array `currentMembers`. Como `useDepartmentMembers` retorna
+  // `data` = undefined enquanto a query está desabilitada (dept=null) ou
+  // carregando, o fallback `= []` cria uma NOVA referência a cada render.
+  // Depender do array faria o efeito rodar em todo render → setState →
+  // re-render → loop infinito (congela a tela toda). A chave string só
+  // muda quando o conjunto de membros realmente muda.
+  const membersKey = currentMembers.map((m) => m.user.id).sort().join(",");
   React.useEffect(() => {
-    setMemberIds(new Set(currentMembers.map((m) => m.user.id)));
-  }, [currentMembers]);
+    setMemberIds(new Set(membersKey ? membersKey.split(",") : []));
+  }, [membersKey]);
 
   const filteredUsers = React.useMemo(() => {
     const q = memberSearch.trim().toLowerCase();

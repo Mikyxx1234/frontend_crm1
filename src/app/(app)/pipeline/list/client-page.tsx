@@ -111,7 +111,7 @@ export default function V2PipelineListClientPage() {
               variant="compact"
               value={search}
               onChange={setSearch}
-              placeholder="Buscar por título, contato..."
+              placeholder="Buscar por título, contato, CPF, RGM…"
               aria-label="Buscar negócios"
             />
           }

@@ -112,7 +112,7 @@ export function PipelineHeader({
   activeFiltersCount = 0,
   search,
   onSearchChange,
-  searchPlaceholder = "Buscar por título, contato...",
+  searchPlaceholder = "Buscar por título, contato, CPF, RGM…",
   tabsOverride,
   settingsSlot,
   hideActions = false,

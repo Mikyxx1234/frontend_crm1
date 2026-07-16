@@ -48,7 +48,11 @@ import {
   useDeleteDepartment,
   type Department,
 } from "../hooks/use-departments";
-import { useAgentList } from "../hooks/use-agent-permissions";
+import {
+  useDepartmentMembers,
+  useSetDepartmentMembers,
+} from "../hooks/use-department-members";
+import { useTeamUsers } from "@/features/pipeline-v2/hooks/use-deal-mutations";
 
 // ─── Icon registry ────────────────────────────────────────────────────────────
 
@@ -263,23 +267,57 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
   const [icon, setIcon] = React.useState(dept?.icon ?? "IconBuilding");
   const [color, setColor] = React.useState(dept?.color ?? "#6366f1");
   const updateMutation = useUpdateDepartment();
-  const { data: allAgents = [] } = useAgentList();
+  const setMembersMutation = useSetDepartmentMembers();
+
+  const { data: orgUsers = [] } = useTeamUsers(!!dept);
+  const { data: currentMembers = [] } = useDepartmentMembers(dept?.id ?? null);
+
+  const [memberIds, setMemberIds] = React.useState<Set<string>>(new Set());
+  const [memberSearch, setMemberSearch] = React.useState("");
 
   // Sync fields when dept changes
   React.useEffect(() => {
-    if (dept) { setName(dept.name); setIcon(dept.icon); setColor(dept.color); }
+    if (dept) { setName(dept.name); setIcon(dept.icon); setColor(dept.color); setMemberSearch(""); }
   }, [dept?.id]);
 
-  const members = React.useMemo(
-    () => allAgents.filter((a) => a.permissions?.allowedDepartmentIds?.includes(dept?.id ?? "")),
-    [allAgents, dept?.id],
-  );
+  // Hidrata a seleção com os membros atuais quando carregam.
+  React.useEffect(() => {
+    setMemberIds(new Set(currentMembers.map((m) => m.user.id)));
+  }, [currentMembers]);
+
+  const filteredUsers = React.useMemo(() => {
+    const q = memberSearch.trim().toLowerCase();
+    const list = [...orgUsers].sort((a, b) => a.name.localeCompare(b.name));
+    if (!q) return list;
+    return list.filter(
+      (u) => u.name.toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q),
+    );
+  }, [orgUsers, memberSearch]);
+
+  function toggleMember(id: string) {
+    setMemberIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const saving = updateMutation.isPending || setMembersMutation.isPending;
 
   function handleSave() {
     if (!dept) return;
+    const deptId = dept.id;
     updateMutation.mutate(
-      { id: dept.id, name: name.trim(), icon, color },
-      { onSuccess: () => onClose() },
+      { id: deptId, name: name.trim(), icon, color },
+      {
+        onSuccess: () => {
+          setMembersMutation.mutate(
+            { departmentId: deptId, userIds: [...memberIds] },
+            { onSuccess: () => onClose(), onError: () => onClose() },
+          );
+        },
+      },
     );
   }
 
@@ -343,55 +381,95 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
 
           {/* Membros */}
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="mb-2 flex items-center gap-2">
               <label className="font-display text-[12px] font-semibold text-[var(--text-muted)]">Membros</label>
-              {members.length > 0 && (
+              {memberIds.size > 0 && (
                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-primary)]/10 px-1.5 font-display text-[10px] font-bold text-[var(--brand-primary)]">
-                  {members.length}
+                  {memberIds.size}
                 </span>
               )}
             </div>
 
-            {members.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-4 text-center">
-                <IconUsers size={16} className="mx-auto text-[var(--text-muted)] opacity-40" />
-                <p className="font-body text-[12px] text-[var(--text-muted)]">Nenhum atendente vinculado a este departamento.</p>
+            <div className="mb-2">
+              <InputGlass
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                placeholder="Buscar usuário por nome ou e-mail…"
+                withSearch
+              />
+            </div>
+
+            {orgUsers.length === 0 ? (
+              <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-4 text-center">
+                <IconUsers size={16} className="mx-auto mb-1 text-[var(--text-muted)] opacity-40" />
+                <p className="font-body text-[12px] text-[var(--text-muted)]">Nenhum usuário na organização.</p>
               </div>
             ) : (
-              <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)] rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] overflow-hidden">
-                {members.map((agent) => (
-                  <div key={agent.id} className="flex items-center gap-2.5 px-3 py-2.5">
-                    <div className="relative h-8 w-8 shrink-0">
-                      {agent.avatarUrl ? (
-                        <img src={agent.avatarUrl} alt={agent.name} className="h-8 w-8 rounded-full object-cover" />
-                      ) : (
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 font-display text-[12px] font-bold text-[var(--brand-primary)]">
-                          {agent.name.slice(0, 2).toUpperCase()}
+              <div className="max-h-[240px] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)]">
+                <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)]">
+                  {filteredUsers.map((u) => {
+                    const selected = memberIds.has(u.id);
+                    const roleLabel =
+                      u.role === "ADMIN" ? "Admin" : u.role === "MANAGER" ? "Gerente" : "Atendente";
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => toggleMember(u.id)}
+                        className={cn(
+                          "flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors",
+                          selected ? "bg-[var(--brand-primary)]/8" : "hover:bg-[var(--glass-bg-strong)]",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex size-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border transition-colors",
+                            selected
+                              ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                              : "border-[var(--glass-border)] bg-white",
+                          )}
+                        >
+                          {selected && <IconCheck size={13} />}
                         </span>
-                      )}
-                      <span className={cn(
-                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white",
-                        agent.isOnline ? "bg-emerald-400" : "bg-slate-300",
-                      )} />
+                        {u.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={u.avatarUrl} alt={u.name} className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                        ) : (
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)]/15 font-display text-[12px] font-bold text-[var(--brand-primary)]">
+                            {u.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">{u.name}</span>
+                          <span className="block truncate font-body text-[11px] text-[var(--text-muted)]">{u.email}</span>
+                        </span>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-semibold",
+                            u.role === "ADMIN"
+                              ? "bg-violet-100 text-violet-700"
+                              : u.role === "MANAGER"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-100 text-slate-600",
+                          )}
+                        >
+                          {roleLabel}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {filteredUsers.length === 0 && (
+                    <div className="px-3 py-4 text-center font-body text-[12px] text-[var(--text-muted)]">
+                      Nenhum usuário encontrado.
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-display text-[13px] font-semibold text-[var(--text-primary)]">{agent.name}</p>
-                      <p className="truncate font-body text-[11px] text-[var(--text-muted)]">{agent.email}</p>
-                    </div>
-                    <span className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-semibold",
-                      agent.role === "ADMIN"
-                        ? "bg-violet-100 text-violet-700"
-                        : agent.role === "MANAGER"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-slate-100 text-slate-600",
-                    )}>
-                      {agent.role === "ADMIN" ? "Admin" : agent.role === "MANAGER" ? "Gerente" : "Atendente"}
-                    </span>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             )}
+            <p className="mt-1.5 font-body text-[11px] text-[var(--text-muted)]">
+              O vínculo define a composição do time. Não altera o acesso à caixa de entrada (isso é
+              configurado em Permissões).
+            </p>
           </div>
         </div>
 
@@ -401,8 +479,8 @@ function EditDepartmentModal({ dept, onClose }: { dept: Department | null; onClo
             className="rounded-[var(--radius-md)] border border-[var(--glass-border)] px-4 py-1.5 font-display text-[13px] font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)]">
             Cancelar
           </button>
-          <ButtonGlass type="button" variant="primary" disabled={!name.trim() || updateMutation.isPending} onClick={handleSave}>
-            {updateMutation.isPending ? "Salvando…" : "Salvar"}
+          <ButtonGlass type="button" variant="primary" disabled={!name.trim() || saving} onClick={handleSave}>
+            {saving ? "Salvando…" : "Salvar"}
           </ButtonGlass>
         </div>
         <DialogClose />
@@ -423,7 +501,12 @@ function CompactaRow({ dept, onDelete, onEdit }: { dept: Department; onDelete: (
 
       <div className="min-w-0 flex-1">
         <p className="font-display text-[13.5px] font-bold text-[var(--text-primary)]">{dept.name}</p>
-        <p className="font-body text-[12px] text-[var(--text-muted)]">Criado em {formatDate(dept.createdAt)}</p>
+        <p className="font-body text-[12px] text-[var(--text-muted)]">
+          {typeof dept._count?.members === "number"
+            ? `${dept._count.members} ${dept._count.members === 1 ? "membro" : "membros"} · `
+            : ""}
+          Criado em {formatDate(dept.createdAt)}
+        </p>
       </div>
 
       <span className="shrink-0 rounded-full bg-[var(--color-success)]/12 px-2.5 py-0.5 font-display text-[11.5px] font-semibold text-[var(--color-success)]">
@@ -478,7 +561,11 @@ function CardView({ dept, onDelete, onEdit }: { dept: Department; onDelete: () =
       <DeptIconBadge dept={dept} size={52} />
       <div>
         <p className="font-display text-[14px] font-bold text-[var(--text-primary)]">{dept.name}</p>
-        <p className="mt-0.5 font-body text-[11.5px] text-[var(--text-muted)]">{formatDate(dept.createdAt)}</p>
+        <p className="mt-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
+          {typeof dept._count?.members === "number"
+            ? `${dept._count.members} ${dept._count.members === 1 ? "membro" : "membros"}`
+            : formatDate(dept.createdAt)}
+        </p>
       </div>
       <span className="rounded-full bg-[var(--color-success)]/12 px-3 py-0.5 font-display text-[11px] font-semibold text-[var(--color-success)]">
         Ativo

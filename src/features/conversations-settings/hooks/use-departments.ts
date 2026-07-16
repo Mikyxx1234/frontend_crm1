@@ -9,6 +9,8 @@ export interface Department {
   color: string;
   icon: string;
   createdAt: string;
+  requireTabulationOnClose?: boolean;
+  _count?: { conversations?: number; members?: number };
 }
 
 const QUERY_KEY = ["settings", "departments"];

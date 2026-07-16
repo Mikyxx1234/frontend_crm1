@@ -35,6 +35,12 @@ import { useAutomations } from "@/features/automations-v2/hooks";
 import { apiUrl } from "@/lib/api";
 import { SETTINGS_HUB_BACK } from "../_v2-shell";
 import { AddAutomationDrawer } from "./add-automation-drawer";
+import {
+  conditionsEqual,
+  parseConditions,
+  sanitizeConditions,
+  type TriggerCondition,
+} from "./trigger-conditions";
 
 // ─── Constantes ───────────────────────────────────────────────────
 
@@ -138,6 +144,11 @@ interface Automation {
    * direto do backend, vale o próprio `id`.
    */
   baseAutomationId?: string;
+  /**
+   * Condições extras (Tag/Campo/Canal) — salvas em `triggerConfig.conditions`
+   * e avaliadas com semântica E pelo backend. `undefined`/[] = sem condições.
+   */
+  conditions?: TriggerCondition[];
 }
 
 /**
@@ -150,24 +161,32 @@ function triggerFromLabel(
   label: string,
   pipelineId: string,
   stageId: string,
+  conditions?: TriggerCondition[],
 ): { triggerType: string; triggerConfig: Record<string, unknown> } | null {
+  // Condições sanitizadas são mescladas no triggerConfig como `conditions`.
+  // Vazio → chave omitida (mantém o config limpo pra automações sem condição).
+  const clean = sanitizeConditions(conditions ?? []);
+  const withConditions = (
+    cfg: Record<string, unknown>,
+  ): Record<string, unknown> => (clean.length > 0 ? { ...cfg, conditions: clean } : cfg);
+
   switch (label) {
     case "Quando criado nesta etapa":
     case "Quando negócio for criado":
-      return { triggerType: "deal_created", triggerConfig: { pipelineId, stageId } };
+      return { triggerType: "deal_created", triggerConfig: withConditions({ pipelineId, stageId }) };
     case "Quando entra nesta etapa":
     case "Quando movido para esta etapa":
-      return { triggerType: "stage_changed", triggerConfig: { pipelineId, toStageId: stageId } };
+      return { triggerType: "stage_changed", triggerConfig: withConditions({ pipelineId, toStageId: stageId }) };
     case "Quando sair desta etapa":
-      return { triggerType: "stage_changed", triggerConfig: { pipelineId, fromStageId: stageId } };
+      return { triggerType: "stage_changed", triggerConfig: withConditions({ pipelineId, fromStageId: stageId }) };
     case "Quando negócio for ganho":
-      return { triggerType: "deal_won", triggerConfig: { pipelineId } };
+      return { triggerType: "deal_won", triggerConfig: withConditions({ pipelineId }) };
     case "Quando negócio for perdido":
-      return { triggerType: "deal_lost", triggerConfig: { pipelineId } };
+      return { triggerType: "deal_lost", triggerConfig: withConditions({ pipelineId }) };
     case "Quando mensagem for recebida":
-      return { triggerType: "message_received", triggerConfig: { pipelineId, stageId } };
+      return { triggerType: "message_received", triggerConfig: withConditions({ pipelineId, stageId }) };
     case "Execução manual":
-      return { triggerType: "manual", triggerConfig: { pipelineId } };
+      return { triggerType: "manual", triggerConfig: withConditions({ pipelineId }) };
     default:
       return null;
   }
@@ -1260,7 +1279,13 @@ export default function PipelineSettingsClientPage() {
   const automationsBaselineRef = useRef<
     Map<
       string,
-      { stageId: string; trigger: string; triggerType: string; triggerConfig: Record<string, unknown> | null }
+      {
+        stageId: string;
+        trigger: string;
+        triggerType: string;
+        triggerConfig: Record<string, unknown> | null;
+        conditions: TriggerCondition[];
+      }
     >
   >(new Map());
 
@@ -1300,7 +1325,13 @@ export default function PipelineSettingsClientPage() {
     const map: Record<string, Automation[]> = {};
     const baselineNext = new Map<
       string,
-      { stageId: string; trigger: string; triggerType: string; triggerConfig: Record<string, unknown> | null }
+      {
+        stageId: string;
+        trigger: string;
+        triggerType: string;
+        triggerConfig: Record<string, unknown> | null;
+        conditions: TriggerCondition[];
+      }
     >();
     for (const stage of board) {
       const matches: Automation[] = [];
@@ -1310,12 +1341,14 @@ export default function PipelineSettingsClientPage() {
           continue;
         }
         const label = labelForBackendTrigger(dto.triggerType, cfg, stage.id);
+        const conditions = parseConditions(cfg);
         matches.push({
           id: dto.id,
           baseAutomationId: dto.id,
           name: dto.name,
           description: dto.description ?? undefined,
           stageTrigger: label,
+          conditions,
         });
         // Cada automação real só pode estar em 1 estágio (1 triggerConfig).
         // Se já entrou aqui, ignora repetição em outros estágios — defensivo
@@ -1326,6 +1359,7 @@ export default function PipelineSettingsClientPage() {
             trigger: label,
             triggerType: dto.triggerType,
             triggerConfig: cfg,
+            conditions,
           });
         }
       }
@@ -1373,6 +1407,7 @@ export default function PipelineSettingsClientPage() {
         if (!prev) return true; // ID real que não existia no baseline (defensivo)
         if (prev.stageId !== stageId) return true;
         if (prev.trigger !== auto.stageTrigger) return true;
+        if (!conditionsEqual(prev.conditions, auto.conditions)) return true;
       }
     }
     for (const id of automationsBaseline.keys()) {
@@ -1460,8 +1495,8 @@ export default function PipelineSettingsClientPage() {
       const realIdsSeen = new Set<string>();
 
       type AutomationOp =
-        | { kind: "create"; stageRealId: string; baseId: string; label: string }
-        | { kind: "update"; id: string; stageRealId: string; label: string }
+        | { kind: "create"; stageRealId: string; baseId: string; label: string; conditions?: TriggerCondition[] }
+        | { kind: "update"; id: string; stageRealId: string; label: string; conditions?: TriggerCondition[] }
         | { kind: "unbind"; id: string };
 
       const ops: AutomationOp[] = [];
@@ -1472,14 +1507,18 @@ export default function PipelineSettingsClientPage() {
           if (auto.id.startsWith("local-auto-")) {
             const baseId = auto.baseAutomationId;
             if (!baseId) continue; // defensivo — não deveria acontecer
-            ops.push({ kind: "create", stageRealId, baseId, label: auto.stageTrigger });
+            ops.push({ kind: "create", stageRealId, baseId, label: auto.stageTrigger, conditions: auto.conditions });
             continue;
           }
           realIdsSeen.add(auto.id);
           const prev = automationsBaseline.get(auto.id);
           if (!prev) continue; // ID real sem baseline — ignorado (defensivo)
-          if (prev.stageId !== stageRealId || prev.trigger !== auto.stageTrigger) {
-            ops.push({ kind: "update", id: auto.id, stageRealId, label: auto.stageTrigger });
+          if (
+            prev.stageId !== stageRealId ||
+            prev.trigger !== auto.stageTrigger ||
+            !conditionsEqual(prev.conditions, auto.conditions)
+          ) {
+            ops.push({ kind: "update", id: auto.id, stageRealId, label: auto.stageTrigger, conditions: auto.conditions });
           }
         }
       }
@@ -1508,7 +1547,7 @@ export default function PipelineSettingsClientPage() {
             steps?: { type: string; config: unknown }[];
           };
 
-          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId);
+          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId, op.conditions);
           if (!tr) {
             throw new Error(`Gatilho desconhecido: "${op.label}".`);
           }
@@ -1536,7 +1575,7 @@ export default function PipelineSettingsClientPage() {
             throw new Error(body?.message ?? "Falha ao criar automação no estágio.");
           }
         } else if (op.kind === "update") {
-          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId);
+          const tr = triggerFromLabel(op.label, pipelineId, op.stageRealId, op.conditions);
           if (!tr) {
             throw new Error(`Gatilho desconhecido: "${op.label}".`);
           }
@@ -1785,11 +1824,13 @@ export default function PipelineSettingsClientPage() {
       automationId,
       trigger,
       targetStageId,
+      conditions,
     }: {
       automationId: string;
       trigger: string;
       applyToExisting: boolean;
       targetStageId?: string;
+      conditions?: TriggerCondition[];
     }) => {
       if (!addAutomationStageId) return;
       const autoDto = automationsData?.items.find((a) => a.id === automationId);
@@ -1804,6 +1845,7 @@ export default function PipelineSettingsClientPage() {
         stageTrigger: STAGE_TRIGGER_LABELS[trigger] ?? trigger,
         name: autoDto.name,
         description: autoDto.description ?? undefined,
+        conditions: sanitizeConditions(conditions ?? []),
       };
 
       // Gatilho "movido para etapa": a automação pertence à etapa de DESTINO
@@ -1833,11 +1875,13 @@ export default function PipelineSettingsClientPage() {
       automationId,
       trigger,
       targetStageId,
+      conditions,
     }: {
       automationId: string;
       trigger: string;
       applyToExisting: boolean;
       targetStageId?: string;
+      conditions?: TriggerCondition[];
     }) => {
       if (!editingAutomation) return;
       const { automation, stageId } = editingAutomation;
@@ -1851,6 +1895,7 @@ export default function PipelineSettingsClientPage() {
         stageTrigger: STAGE_TRIGGER_LABELS[trigger] ?? trigger,
         name: autoDto?.name ?? automation.name,
         description: autoDto?.description ?? automation.description,
+        conditions: sanitizeConditions(conditions ?? []),
       };
       // "Movido para etapa" pode ter destino diferente da etapa atual do card:
       // move a automação para a chave da etapa-alvo (remove da origem).
@@ -2088,6 +2133,7 @@ export default function PipelineSettingsClientPage() {
         stages={stages}
         currentStageId={editingAutomation?.stageId ?? undefined}
         initialTargetStageId={editingAutomation?.stageId ?? undefined}
+        initialConditions={editingAutomation?.automation.conditions ?? []}
         initialAutomationId={editingAutomation?.automation.id ?? null}
         initialTrigger={
           // Reverter label para value

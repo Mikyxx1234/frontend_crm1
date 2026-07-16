@@ -17,7 +17,10 @@ import {
 import { ChatWindow } from "@/components/inbox/chat-window";
 
 import { useBoard, useDealDetail } from "@/features/pipeline-v2/hooks";
-import type { DealContactConversation } from "@/features/pipeline-v2/api/deals";
+import type {
+  DealContactConversation,
+  DealPanelField,
+} from "@/features/pipeline-v2/api/deals";
 
 /**
  * /v2/pipeline/[id] — detalhe do negócio (página inteira).
@@ -58,6 +61,34 @@ function fmtDateBR(iso: string | null | undefined): string {
 }
 
 /**
+ * Formata o valor cru (string) de um campo personalizado conforme o tipo
+ * (CustomFieldType do backend). Mesma fonte usada pelo slide-over v2
+ * (`dealPanelFields`), garantindo consistência entre as duas telas.
+ */
+function fmtCustomFieldValue(
+  value: string | null | undefined,
+  type: string | null | undefined,
+): string | undefined {
+  if (value == null || value === "") return undefined;
+  switch ((type ?? "").toUpperCase()) {
+    case "DATE": {
+      const formatted = fmtDateBR(value);
+      return formatted || value;
+    }
+    case "BOOLEAN":
+      return ["true", "1", "sim", "yes"].includes(value.trim().toLowerCase())
+        ? "Sim"
+        : "Não";
+    case "NUMBER": {
+      const n = Number.parseFloat(value.replace(",", "."));
+      return Number.isFinite(n) ? n.toLocaleString("pt-BR") : value;
+    }
+    default:
+      return value;
+  }
+}
+
+/**
  * Shape "estendido" do payload de `/api/deals/:id` — o tipo de retorno
  * exportado em `features/pipeline-v2/api` (BoardDealDto) ainda não
  * descreve `stage`/`stageId`/`createdAt`. Aqui declaramos só o que esta
@@ -70,6 +101,10 @@ interface DealDetailExtra {
   expectedClose?: string | null;
   value?: number | string | null;
   number?: number;
+  /** Campos de negócio marcados para o painel (showInDealPanel) — a API
+   *  os retorna em `dealPanelFields`; o legado `deal.customFields` nunca
+   *  era populado por `GET /api/deals/:id`. */
+  dealPanelFields?: DealPanelField[];
   contact?: {
     id?: string;
     name?: string | null;
@@ -156,14 +191,23 @@ export default function V2DealDetailClientPage({ dealId }: V2DealDetailClientPag
       { label: "Telefone", value: contact?.phone ?? undefined },
     ];
 
-    // Campos personalizados — se houver
-    const cfRaw = deal.customFields;
-    const customFields: DealField[] = cfRaw
-      ? Object.entries(cfRaw).map(([k, v]) => ({
-          label: k,
-          value: v == null ? undefined : String(v),
-        }))
-      : [];
+    // Campos personalizados — consome `dealPanelFields` (filtrados por
+    // showInDealPanel no backend), mesma fonte do slide-over v2. Só exibe
+    // os que têm valor preenchido para não poluir a página read-only.
+    const customFields: DealField[] = (deal.dealPanelFields ?? [])
+      .map((f) => {
+        const formatted = fmtCustomFieldValue(f.value, f.type);
+        if (formatted === undefined) return null;
+        const isChip = ["SELECT", "MULTI_SELECT"].includes(
+          (f.type ?? "").toUpperCase(),
+        );
+        return {
+          label: f.label || f.name,
+          value: formatted,
+          ...(isChip ? { type: "chip" as const } : {}),
+        } satisfies DealField;
+      })
+      .filter((f): f is DealField => f !== null);
 
     const groups: DealFieldGroup[] = [
       { title: "Informações do negócio", fields: dealFields },

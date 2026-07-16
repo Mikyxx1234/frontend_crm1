@@ -8,13 +8,7 @@ import { InputGlass } from "@/components/crm/input-glass";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { SwitchGlass } from "@/components/crm/switch-glass";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { connectEmailAccount, testEmailConnection } from "../api/accounts";
 import type { ConnectEmailInput, EmailEncryption, EmailVisibility } from "../api/types";
 
@@ -85,59 +79,64 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
     }
   }
 
-  return (
-    <Sheet open={open} onOpenChange={(o) => { if (!loading) { if (!o) resetAndClose(); else onOpenChange(true); } }}>
-      <SheetContent
-        side="right"
-        className="flex h-full w-[min(100vw,560px)] max-w-none flex-col gap-0 rounded-none border-l p-0"
-      >
-        {step === "email" ? (
+  if (step === "email") {
+    return (
+      <FormSheet
+        open={open}
+        onOpenChange={(o) => { if (!o) resetAndClose(); else onOpenChange(true); }}
+        busy={loading}
+        icon={<IconMail size={20} />}
+        title="Conecte seu endereço de e-mail"
+        description="Conecte uma conta de e-mail para enviar, receber e vincular mensagens automaticamente aos seus contatos no CRM."
+        footer={
           <>
-            <SheetHeader className="border-b border-[var(--glass-border-subtle)] px-6 py-5">
-              <div className="flex items-center gap-2">
-                <IconMail size={20} className="text-[var(--text-secondary)]" />
-                <SheetTitle>Conecte seu endereço de e-mail</SheetTitle>
-              </div>
-              <p className="text-sm text-[var(--text-muted)]">
-                Conecte uma conta de e-mail para enviar, receber e vincular mensagens
-                automaticamente aos seus contatos no CRM.
-              </p>
-            </SheetHeader>
-
-            <div className="flex-1 space-y-3 overflow-y-auto px-6 py-5">
-              <div>
-                <Label htmlFor="email-input">Endereço de e-mail</Label>
-                <InputGlass
-                  id="email-input"
-                  type="email"
-                  placeholder="voce@empresa.com"
-                  value={form.email}
-                  onChange={(e) => setField("email", e.target.value)}
-                  className="mt-1"
-                  autoFocus
-                />
-                {errors.email && (
-                  <p className="text-xs text-destructive mt-1">{errors.email}</p>
-                )}
-              </div>
-            </div>
-
-            <SheetFooter className="border-t border-[var(--glass-border-subtle)] px-6 py-4">
-              <ButtonGlass variant="glass" onClick={resetAndClose}>Cancelar</ButtonGlass>
-              <ButtonGlass variant="primary" onClick={handleStep1Continue}>Continuar</ButtonGlass>
-            </SheetFooter>
+            <ButtonGlass variant="glass" onClick={resetAndClose}>Cancelar</ButtonGlass>
+            <ButtonGlass variant="primary" onClick={handleStep1Continue}>Continuar</ButtonGlass>
           </>
-        ) : (
-          <>
-            <SheetHeader className="border-b border-[var(--glass-border-subtle)] px-6 py-5">
-              <SheetTitle className="text-base">{form.email}</SheetTitle>
-              <p className="text-sm text-[var(--text-muted)]">
-                Mensagens enviadas desse endereço serão vinculadas automaticamente
-                ao contato correspondente no CRM.
-              </p>
-            </SheetHeader>
+        }
+      >
+        <div>
+          <Label htmlFor="email-input">Endereço de e-mail</Label>
+          <InputGlass
+            id="email-input"
+            type="email"
+            placeholder="voce@empresa.com"
+            value={form.email}
+            onChange={(e) => setField("email", e.target.value)}
+            className="mt-1"
+            autoFocus
+          />
+          {errors.email && (
+            <p className="text-xs text-destructive mt-1">{errors.email}</p>
+          )}
+        </div>
+      </FormSheet>
+    );
+  }
 
-            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { if (!o) resetAndClose(); else onOpenChange(true); }}
+      busy={loading}
+      title={form.email}
+      description="Mensagens enviadas desse endereço serão vinculadas automaticamente ao contato correspondente no CRM."
+      footer={
+        <>
+          <ButtonGlass variant="glass" onClick={() => setStep("email")}>Voltar</ButtonGlass>
+          <ButtonGlass variant="primary" onClick={handleConnect} disabled={loading}>
+            {loading ? (
+              <><IconLoader2 size={14} className="animate-spin mr-1" /> Conectando…</>
+            ) : (
+              <><IconCheck size={14} className="mr-1" /> Conectar</>
+            )}
+          </ButtonGlass>
+        </>
+      }
+    >
+      <>
+        {/* Wrapper para preservar o mesmo espacamento interno original */}
+        <div className="flex flex-col gap-4">
               {/* Senha */}
               <FieldRow label="Senha do e-mail" error={errors.password}>
                 <InputGlass
@@ -258,22 +257,9 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
                   </span>
                 </label>
               </div>
-            </div>
-
-            <SheetFooter className="border-t border-[var(--glass-border-subtle)] px-6 py-4">
-              <ButtonGlass variant="glass" onClick={() => setStep("email")}>Voltar</ButtonGlass>
-              <ButtonGlass variant="primary" onClick={handleConnect} disabled={loading}>
-                {loading ? (
-                  <><IconLoader2 size={14} className="animate-spin mr-1" /> Conectando…</>
-                ) : (
-                  <><IconCheck size={14} className="mr-1" /> Conectar</>
-                )}
-              </ButtonGlass>
-            </SheetFooter>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+        </div>
+      </>
+    </FormSheet>
   );
 }
 

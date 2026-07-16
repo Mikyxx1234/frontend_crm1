@@ -16,14 +16,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormSheet } from "@/components/ui/form-sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownGlass, type DropdownOption } from "@/components/crm/dropdown-glass";
@@ -251,17 +244,25 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
   }, [catalogs, catalogId]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="xl">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Editar produto" : "Novo produto"}</DialogTitle>
-          <DialogDescription>
-            Escolha Produto ou Serviço. As especializações (vaga, curso…) vêm das
-            capacidades do catálogo.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      size="xl"
+      title={isEdit ? "Editar produto" : "Novo produto"}
+      description="Escolha Produto ou Serviço. As especializações (vaga, curso…) vêm das capacidades do catálogo."
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {isEdit ? "Fechar" : "Cancelar"}
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+            {saving && <IconLoader2 size={14} className="mr-1.5 animate-spin" />}
+            {isEdit ? "Salvar" : "Criar"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
           {/* Seletor de tipo */}
           <div className={sectionClass}>
             <p className={sectionTitleClass}>Tipo de produto</p>
@@ -672,16 +673,7 @@ export function ProductDialog({ open, onOpenChange, productId, initialCatalogId,
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {isEdit ? "Fechar" : "Cancelar"}
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !name.trim()}>
-            {saving && <IconLoader2 size={14} className="mr-1.5 animate-spin" />}
-            {isEdit ? "Salvar" : "Criar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FormSheet>
   );
 }

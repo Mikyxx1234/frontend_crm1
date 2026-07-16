@@ -40,6 +40,7 @@ import { AddAutomationDrawer } from "./add-automation-drawer";
 
 const STAGE_TRIGGER_LABELS: Record<string, string> = {
   STAGE_ENTERED: "Quando criado nesta etapa",
+  STAGE_MOVED_IN: "Quando movido para esta etapa",
   STAGE_EXITED: "Quando sair desta etapa",
   DEAL_CREATED: "Quando negócio for criado",
   MESSAGE_RECEIVED: "Quando mensagem for recebida",
@@ -100,6 +101,10 @@ function labelForBackendTrigger(
   ) {
     return "Quando sair desta etapa";
   }
+  // Entrar/ser movido para esta etapa (toStageId aponta pro estágio).
+  if (triggerType === "stage_changed" && cfg?.toStageId === stageId) {
+    return "Quando movido para esta etapa";
+  }
   return BACKEND_TRIGGER_LABELS[triggerType] ?? triggerType;
 }
 
@@ -151,6 +156,7 @@ function triggerFromLabel(
     case "Quando negócio for criado":
       return { triggerType: "deal_created", triggerConfig: { pipelineId, stageId } };
     case "Quando entra nesta etapa":
+    case "Quando movido para esta etapa":
       return { triggerType: "stage_changed", triggerConfig: { pipelineId, toStageId: stageId } };
     case "Quando sair desta etapa":
       return { triggerType: "stage_changed", triggerConfig: { pipelineId, fromStageId: stageId } };
@@ -1778,10 +1784,12 @@ export default function PipelineSettingsClientPage() {
     ({
       automationId,
       trigger,
+      targetStageId,
     }: {
       automationId: string;
       trigger: string;
       applyToExisting: boolean;
+      targetStageId?: string;
     }) => {
       if (!addAutomationStageId) return;
       const autoDto = automationsData?.items.find((a) => a.id === automationId);
@@ -1798,9 +1806,15 @@ export default function PipelineSettingsClientPage() {
         description: autoDto.description ?? undefined,
       };
 
+      // Gatilho "movido para etapa": a automação pertence à etapa de DESTINO
+      // escolhida no seletor inline (pode diferir do card onde foi aberto).
+      // O `handleSaveAll` converte o label → triggerConfig.toStageId usando a
+      // chave do mapa, então basta arquivar sob a etapa-alvo.
+      const fileStageId = targetStageId ?? addAutomationStageId;
+
       setStageAutomationsMap((prev) => ({
         ...prev,
-        [addAutomationStageId]: [...(prev[addAutomationStageId] ?? []), newAuto],
+        [fileStageId]: [...(prev[fileStageId] ?? []), newAuto],
       }));
       setAddAutomationStageId(null);
     },
@@ -1818,10 +1832,12 @@ export default function PipelineSettingsClientPage() {
     ({
       automationId,
       trigger,
+      targetStageId,
     }: {
       automationId: string;
       trigger: string;
       applyToExisting: boolean;
+      targetStageId?: string;
     }) => {
       if (!editingAutomation) return;
       const { automation, stageId } = editingAutomation;
@@ -1836,12 +1852,21 @@ export default function PipelineSettingsClientPage() {
         name: autoDto?.name ?? automation.name,
         description: autoDto?.description ?? automation.description,
       };
-      setStageAutomationsMap((prev) => ({
-        ...prev,
-        [stageId]: (prev[stageId] ?? []).map((a) =>
-          a.id === automation.id ? updatedAuto : a,
-        ),
-      }));
+      // "Movido para etapa" pode ter destino diferente da etapa atual do card:
+      // move a automação para a chave da etapa-alvo (remove da origem).
+      const destStageId = targetStageId ?? stageId;
+      setStageAutomationsMap((prev) => {
+        const next = { ...prev };
+        if (destStageId !== stageId) {
+          next[stageId] = (prev[stageId] ?? []).filter((a) => a.id !== automation.id);
+          next[destStageId] = [...(prev[destStageId] ?? []), updatedAuto];
+        } else {
+          next[stageId] = (prev[stageId] ?? []).map((a) =>
+            a.id === automation.id ? updatedAuto : a,
+          );
+        }
+        return next;
+      });
       setEditingAutomation(null);
     },
     [editingAutomation, automationsData?.items],
@@ -2046,6 +2071,8 @@ export default function PipelineSettingsClientPage() {
       <AddAutomationDrawer
         open={!!addAutomationStageId}
         stageName={addAutomationStageName}
+        stages={stages}
+        currentStageId={addAutomationStageId ?? undefined}
         onClose={() => setAddAutomationStageId(null)}
         onConfirm={handleDrawerConfirm}
       />
@@ -2058,6 +2085,9 @@ export default function PipelineSettingsClientPage() {
             ? (stages.find((s) => s.id === editingAutomation.stageId)?.name ?? "")
             : ""
         }
+        stages={stages}
+        currentStageId={editingAutomation?.stageId ?? undefined}
+        initialTargetStageId={editingAutomation?.stageId ?? undefined}
         initialAutomationId={editingAutomation?.automation.id ?? null}
         initialTrigger={
           // Reverter label para value

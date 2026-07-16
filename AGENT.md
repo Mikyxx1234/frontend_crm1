@@ -5,6 +5,59 @@ documenta **por que** algo foi feito, não **o que**.
 
 ---
 
+### 2026-07-16 — Vídeos WhatsApp: HTTP Range no `/api/storage`
+
+**Decisão.** `GET /api/storage/[...path]` passa a suportar HTTP Range
+requests (`RFC 7233` bytes ranges, formato `bytes=<start>-<end?>`). Quando
+o header vem no request, o endpoint responde `206 Partial Content` com
+apenas a fatia solicitada (via `fs.open().read(buffer, 0, size, start)`).
+Sem `Range`, mantém o comportamento anterior (200 + body inteiro).
+
+**Contexto.** Org DNA (prod) reportou que vídeos recebidos por WhatsApp
+não abrem no player do chat (contato `+5511985958365`). Diagnóstico: o
+elemento `<video controls>` do HTML5 exige `206 Partial Content` — Safari
+(iOS/macOS) recusa iniciar reprodução sem isso, e Chrome desktop tolera
+apenas arquivos pequenos (~poucos MB) antes de travar. O código anunciava
+`Accept-Ranges: bytes` no header (que faz o browser mandar `Range` esperando
+206) mas ignorava o request header e devolvia sempre 200 com o buffer
+inteiro. Áudio, imagem e documento não sofriam porque browsers baixam
+esses inteiros e o comportamento full-body funciona.
+
+**Alternativas descartadas.**
+
+- **Servir vídeos via redirect pra storage externo (S3-like presigned URL)**:
+  resolveria escala, mas requer nova infra (S3/CloudFront), migração
+  dos arquivos existentes e retrabalho de auth (URL assinada). Over-engineering
+  pro problema imediato.
+- **Streaming via `ReadableStream` do Node**: mais elegante, mas exige
+  wrapping do Node `Readable` em `Web ReadableStream` (App Router). O
+  padrão `open()+read()` cobre o caso (`<video>` pede fatias pequenas,
+  não o arquivo inteiro de uma vez), sem inflar memória. Podemos evoluir
+  pra streaming se aparecer vídeo >100MB.
+- **Cachear o Content-Range no CDN**: Easypanel não tem CDN nativo; ignora.
+
+**Impacto operacional.**
+
+- **Backward-compat garantido:** requests sem `Range` continuam recebendo
+  200 + full body. Imagens/áudio/PDF/etc. inalterados.
+- **Consumo de memória cai** em vídeos grandes: antes carregava o buffer
+  inteiro na RAM do worker por request; agora aloca só `chunkSize` bytes.
+- **Fallback upstream (`tryUpstreamFallback`)** não propaga o `Range` — só
+  é usado em dev quando o container remoto tem o arquivo e o local não.
+  Em prod DNA o arquivo está no disco do próprio container, então o
+  fluxo 206 é atingido no primeiro branch. Se aparecer bug em dev com
+  vídeo do container remoto, propagar `Range` na `fetch(upstreamUrl)`.
+- **Range malformado** (fora do padrão `bytes=X-Y?`) cai no fallback 200.
+  Comportamento permissivo — alguns crawlers/proxies mandam ranges esquisitos.
+
+**Arquivos.** `backend_crm1/src/app/api/storage/[...path]/route.ts`.
+
+**Deploy.** Merge `DEV_BRANCH → main` para atualizar imagem `latest` no
+GHCR e forçar redeploy no Easypanel da DNA. Nenhuma migração de dados —
+o layout do storage não muda.
+
+---
+
 ### 2026-07-15 — Modelo de ticket: nova conversa após RESOLVED
 
 **Decisão.** Conversas WhatsApp passam a operar em modelo de **ticket**: o

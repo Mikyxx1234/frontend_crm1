@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { IconBuilding as Building2, IconCreditCard as CreditCard, IconLayoutDashboard as LayoutDashboard, IconShieldCheck as ShieldCheck } from "@tabler/icons-react";
+import { IconActivity as Activity, IconBuilding as Building2, IconCreditCard as CreditCard, IconLayoutDashboard as LayoutDashboard, IconShieldCheck as ShieldCheck } from "@tabler/icons-react";
 
 import { auth } from "@/lib/auth-public";
 
@@ -57,6 +57,13 @@ export default async function AdminLayout({
             >
               <CreditCard className="size-4" />
               Billing
+            </Link>
+            <Link
+              href="/admin/monitoring"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-[var(--glass-bg-panel)]"
+            >
+              <Activity className="size-4" />
+              Monitoring
             </Link>
             <Link
               href="/dashboard"

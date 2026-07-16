@@ -212,6 +212,7 @@ export function useActivities(params: {
   completed?: boolean;
   page?: number;
   perPage?: number;
+  scope?: "mine" | "department" | "all";
   enabled?: boolean;
 }) {
   const page = params.page ?? 1;
@@ -221,6 +222,7 @@ export function useActivities(params: {
       "v2-activities",
       params.type ?? "__any__",
       params.completed === undefined ? "__any__" : params.completed,
+      params.scope ?? "all",
       page,
       perPage,
     ],
@@ -228,6 +230,7 @@ export function useActivities(params: {
       fetchActivities({
         type: params.type,
         completed: params.completed,
+        scope: params.scope,
         page,
         perPage,
       }),

@@ -55,6 +55,7 @@ export function localDateTimeToIso(localDt: string): string {
 
 export function dtoToActivity(dto: ActivityListItemDto): Activity {
   const start = isoToLocalDateTime(dto.scheduledAt) || isoToLocalDateTime(dto.createdAt) || "";
+  const isDept = !!dto.department;
   return {
     id: dto.id,
     kind: TYPE_TO_KIND[dto.type] ?? "tarefa",
@@ -63,6 +64,10 @@ export function dtoToActivity(dto: ActivityListItemDto): Activity {
     status: dto.completed ? "concluida" : "pendente",
     withWhom: dto.contact?.name ?? dto.deal?.title ?? undefined,
     notes: dto.description ?? undefined,
+    assigneeType: isDept ? "department" : "user",
+    assigneeUserId: dto.user?.id ?? null,
+    departmentId: dto.department?.id ?? null,
+    assigneeLabel: dto.department?.name ?? dto.user?.name ?? null,
   };
 }
 

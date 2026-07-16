@@ -24,6 +24,12 @@ export interface Activity {
   withWhom?: string
   notes?: string
   location?: string
+  /** Responsável: usuário específico ou departamento (compartilhada). */
+  assigneeType?: "user" | "department"
+  assigneeUserId?: string | null
+  departmentId?: string | null
+  /** Rótulo pronto para exibição do responsável (nome do user/depto). */
+  assigneeLabel?: string | null
 }
 
 export interface ActivityKindMeta {

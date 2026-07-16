@@ -361,6 +361,7 @@ export interface ActivityListItemDto {
   completedAt: string | null;
   createdAt: string;
   user: { id: string; name: string; email: string | null; avatarUrl: string | null } | null;
+  department?: { id: string; name: string; color: string | null; icon: string | null } | null;
   contact: { id: string; name: string; email: string | null } | null;
   deal: { id: string; title: string; stageId: string } | null;
 }
@@ -372,11 +373,14 @@ export interface ActivityListPage {
   perPage: number;
 }
 
+export type ActivityScope = "mine" | "department" | "all";
+
 export interface FetchActivitiesParams {
   type?: ActivityTypeDto;
   completed?: boolean;
   page?: number;
   perPage?: number;
+  scope?: ActivityScope;
 }
 
 export function fetchActivities(
@@ -390,6 +394,7 @@ export function fetchActivities(
   if (params.completed !== undefined) sp.set("completed", String(params.completed));
   if (params.page) sp.set("page", String(params.page));
   if (params.perPage) sp.set("perPage", String(params.perPage));
+  if (params.scope) sp.set("scope", params.scope);
   const qs = sp.toString();
   return getJson<ActivityListPage>(
     `/api/activities${qs ? `?${qs}` : ""}`,
@@ -409,6 +414,10 @@ export interface CreateActivityPayload {
   scheduledAt?: string | null;
   contactId?: string | null;
   dealId?: string | null;
+  /** Responsável usuário (opcional se atribuída a departamento). */
+  userId?: string | null;
+  /** Responsável departamento (tarefa compartilhada). */
+  departmentId?: string | null;
 }
 
 export function createActivity(payload: CreateActivityPayload): Promise<ActivityListItemDto> {
@@ -429,6 +438,8 @@ export interface UpdateActivityPayload {
   completedAt?: string | null;
   contactId?: string | null;
   dealId?: string | null;
+  userId?: string | null;
+  departmentId?: string | null;
 }
 
 export function updateActivity(

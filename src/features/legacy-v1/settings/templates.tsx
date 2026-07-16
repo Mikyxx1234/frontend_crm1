@@ -224,7 +224,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
           onSearchChange={setQuery}
           placeholder="Buscar por nome ou conteúdo..."
         >
-          <HubChip active={catFilter === "all"} onClick={() => setCatFilter("all")} count={templates.length}>
+          <HubChip active={catFilter === "all"} onClick={() => setCatFilter("all")} count={templates.length} tone="selected">
             Todos
           </HubChip>
           {categories.map((c) => (
@@ -233,6 +233,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
               active={catFilter === c}
               onClick={() => setCatFilter(c)}
               count={templates.filter((t) => (t.category?.trim() || "Sem categoria") === c).length}
+              tone="selected"
             >
               {c}
             </HubChip>
@@ -240,8 +241,16 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
         </HubToolbar>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:gap-3.5 sm:p-[18px]">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 rounded-[var(--radius-lg)]" />)}
+          <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)] border-t border-[var(--glass-border-subtle)]">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-3.5 py-2.5 sm:px-[18px]">
+                <Skeleton className="size-8 shrink-0 rounded-[var(--radius-md)]" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-40 max-w-full rounded-[var(--radius-sm)]" />
+                  <Skeleton className="h-3 w-64 max-w-full rounded-[var(--radius-sm)]" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : grouped.length === 0 ? (
           <div className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
@@ -265,27 +274,16 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
                 </span>
                 <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
               </div>
-              <div className="grid grid-cols-1 gap-3 px-3 pb-3 pt-1.5 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:gap-3.5 sm:px-[18px] sm:pb-[18px]">
+              <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)] border-t border-[var(--glass-border-subtle)]">
                 {items.map((t) => (
-                  <InternalTemplateCard
+                  <InternalTemplateRow
                     key={t.id}
                     template={t}
-                    category={cat}
                     onEdit={() => { setEditing(t); setFormOpen(true); }}
                     onDelete={() => deleteMutation.mutate(t.id)}
                     deleting={deleteMutation.isPending}
                   />
                 ))}
-                <button
-                  type="button"
-                  onClick={() => { setEditing(null); setFormOpen(true); }}
-                  className="flex min-h-[170px] flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border-[1.5px] border-dashed border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[13px] font-bold text-[var(--text-muted)] transition-colors hover:border-[var(--brand-primary)] hover:bg-[var(--color-enterprise-bg)] hover:text-[var(--brand-primary)]"
-                >
-                  <span className="flex size-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] text-[var(--brand-primary)]">
-                    <Plus className="size-5" />
-                  </span>
-                  Novo em {cat}
-                </button>
               </div>
             </div>
           ))
@@ -518,15 +516,19 @@ function highlightVars(content: string): React.ReactNode {
   );
 }
 
-function InternalTemplateCard({
+/**
+ * Linha compacta (~52px) de um modelo interno. Um único container por
+ * categoria separa as linhas por borda hairline (sem card/sombra por item).
+ * Metadados de canal ficam à direita em repouso; as ações (Copiar, Editar,
+ * Excluir) surgem no hover. Chips de variável {{...}} preservados.
+ */
+function InternalTemplateRow({
   template,
-  category,
   onEdit,
   onDelete,
   deleting,
 }: {
   template: TemplateRow;
-  category: string;
   onEdit: () => void;
   onDelete: () => void;
   deleting: boolean;
@@ -538,21 +540,53 @@ function InternalTemplateCard({
   const channel = template.channelType ? CHANNEL_LABELS[template.channelType] ?? template.channelType : null;
 
   return (
-    <div className="group flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)]">
-      <div className="flex items-start gap-2.5 px-3.5 pt-3.5">
-        <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
-          <FileText className="size-[17px]" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[14px] font-bold leading-tight text-[var(--text-primary)]">{template.name}</div>
-          <div className="mt-0.5 truncate text-[11px] font-semibold text-[var(--text-muted)]">{category}</div>
+    <div className="group flex min-h-[52px] min-w-0 items-center gap-3 px-3.5 py-2 transition-colors hover:bg-[var(--glass-bg-overlay)] sm:px-[18px]">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
+        <FileText className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-[13px] font-bold leading-tight text-[var(--text-primary)]">{template.name}</span>
+          {vars.length ? (
+            <span className="hidden shrink-0 items-center gap-1 sm:flex">
+              {vars.slice(0, 3).map((v) => (
+                <span
+                  key={v}
+                  className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]"
+                >
+                  {v}
+                </span>
+              ))}
+              {vars.length > 3 ? (
+                <span className="text-[10.5px] font-semibold text-[var(--text-muted)]">+{vars.length - 3}</span>
+              ) : null}
+            </span>
+          ) : null}
         </div>
-        <div className="flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="mt-0.5 truncate text-[12px] leading-tight text-[var(--text-muted)]">
+          {highlightVars(template.content ?? "")}
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center">
+        <span className="truncate text-[11.5px] font-semibold text-[var(--text-muted)] group-hover:hidden">
+          {channel ?? "Todos os canais"}
+        </span>
+        <div className="hidden items-center gap-1.5 group-hover:flex">
+          <button
+            type="button"
+            aria-label="Copiar"
+            onClick={() => {
+              void navigator.clipboard.writeText(template.content ?? "");
+            }}
+            className="flex size-7 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
+          >
+            <Copy className="size-[15px]" />
+          </button>
           <button
             type="button"
             aria-label="Editar"
             onClick={onEdit}
-            className="flex size-[30px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:text-[var(--brand-primary)]"
+            className="flex size-7 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:text-[var(--brand-primary)]"
           >
             <Pencil className="size-[15px]" />
           </button>
@@ -561,42 +595,11 @@ function InternalTemplateCard({
             aria-label="Excluir"
             onClick={onDelete}
             disabled={deleting}
-            className="flex size-[30px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+            className="flex size-7 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
           >
             <Trash2 className="size-[15px]" />
           </button>
         </div>
-      </div>
-      <div className="px-3.5 pt-2.5">
-        <p className="line-clamp-3 whitespace-pre-line rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-3 py-2.5 text-[13px] leading-relaxed text-[var(--text-secondary)]">
-          {highlightVars(template.content ?? "")}
-        </p>
-      </div>
-      {vars.length ? (
-        <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-2.5">
-          {vars.map((v) => (
-            <span
-              key={v}
-              className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]"
-            >
-              {v}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-2 px-3.5 py-3 pt-3">
-        <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[11.5px] font-semibold text-[var(--text-muted)]">
-          {channel ?? "Todos os canais"}
-        </span>
-        <button
-          type="button"
-          onClick={() => {
-            void navigator.clipboard.writeText(template.content ?? "");
-          }}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
-        >
-          <Copy className="size-3.5" /> Copiar
-        </button>
       </div>
     </div>
   );

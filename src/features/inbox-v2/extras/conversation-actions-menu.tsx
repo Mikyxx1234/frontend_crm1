@@ -14,6 +14,7 @@ import {
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
 import { RequirePermission } from "@/components/auth/require-permission";
+import { TabulationDialog } from "./tabulation-dialog";
 
 interface ConversationActionsMenuProps {
   conversationId: string | null;
@@ -30,6 +31,10 @@ interface ConversationActionsMenuProps {
    * `conversationId` (que era o anterior).
    */
   onReopenNewConversation?: (newConversationId: string) => void;
+  /** Departamento vinculado a conversa — usado para o modal de tabulacao. */
+  departmentId?: string | null;
+  /** Se true, o botao "Encerrar" abre um modal exigindo folha da arvore. */
+  requireTabulationOnClose?: boolean;
 }
 
 export function ConversationActionsMenu({
@@ -39,8 +44,11 @@ export function ConversationActionsMenu({
   onSearchInConversation,
   onOpenFavorites,
   onReopenNewConversation,
+  departmentId,
+  requireTabulationOnClose,
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
+  const [tabulationOpen, setTabulationOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const toggleResolve = useToggleConversationResolve({
     onNewConversation: (newId) => {
@@ -64,12 +72,26 @@ export function ConversationActionsMenu({
 
   function handleToggleResolve() {
     if (!conversationId) return;
+    // Encerramento com departamento que exige tabulacao -> abre modal.
+    if (!isResolved && requireTabulationOnClose && departmentId) {
+      setOpen(false);
+      setTabulationOpen(true);
+      return;
+    }
     toggleResolve.mutate(
       {
         conversationId,
         action: isResolved ? "reopen" : "resolve",
       },
       { onSuccess: () => setOpen(false) },
+    );
+  }
+
+  function handleConfirmTabulation(tabulationId: string) {
+    if (!conversationId) return;
+    toggleResolve.mutate(
+      { conversationId, action: "resolve", tabulationId },
+      { onSuccess: () => setTabulationOpen(false) },
     );
   }
 
@@ -139,6 +161,13 @@ export function ConversationActionsMenu({
           </RequirePermission>
         </div>
       )}
+      <TabulationDialog
+        open={tabulationOpen}
+        onOpenChange={setTabulationOpen}
+        departmentId={departmentId ?? null}
+        submitting={toggleResolve.isPending}
+        onConfirm={handleConfirmTabulation}
+      />
     </div>
   );
 }

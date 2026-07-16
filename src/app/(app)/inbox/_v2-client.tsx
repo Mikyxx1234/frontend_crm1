@@ -943,6 +943,10 @@ export default function InboxV2ClientPage({
               isResolved={activeRow.status === "RESOLVED"}
               onOpenFavorites={() => setFavoritesOpen(true)}
               onReopenNewConversation={(newId) => setActiveId(newId)}
+              departmentId={activeRow.departmentId ?? activeRow.department?.id ?? null}
+              requireTabulationOnClose={
+                activeRow.department?.requireTabulationOnClose ?? false
+              }
             />
           </>
         }
@@ -968,6 +972,10 @@ export default function InboxV2ClientPage({
             onSelectChannel={setSelectedChannelId}
             replyTo={replyTo}
             onCancelReply={() => setReplyTo(null)}
+            departmentId={activeRow.departmentId ?? activeRow.department?.id ?? null}
+            requireTabulationOnClose={
+              activeRow.department?.requireTabulationOnClose ?? false
+            }
           />
         }
         notesSlot={notesSlot}

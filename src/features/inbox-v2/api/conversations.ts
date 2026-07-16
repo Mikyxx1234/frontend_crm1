@@ -88,9 +88,41 @@ export async function listConversationsForForwardPicker(): Promise<ConversationL
 }
 
 export type ConversationActionPayload =
-  | { action: "resolve" }
+  | { action: "resolve"; tabulationId?: string | null }
   | { action: "reopen" }
   | { action: "assign"; assignedToId: string | null };
+
+export type TabulationNode = {
+  id: string;
+  parentId: string | null;
+  name: string;
+  color: string | null;
+  position: number;
+  active: boolean;
+  children: TabulationNode[];
+};
+
+export interface TabulationsResponse {
+  departmentId: string;
+  requireTabulationOnClose: boolean;
+  tree: TabulationNode[];
+}
+
+/** GET /api/tabulations?departmentId=xxx — leitura para agentes */
+export async function getTabulations(
+  departmentId: string,
+): Promise<TabulationsResponse> {
+  const res = await fetch(
+    apiUrl(`/api/tabulations?departmentId=${encodeURIComponent(departmentId)}`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Erro ao carregar tabulacoes",
+    );
+  }
+  return data as TabulationsResponse;
+}
 
 /**
  * Retorno de POST /api/conversations/:id/actions.
@@ -155,18 +187,30 @@ export async function pinConversationNote(
 
 export type BulkAction = "resolve" | "reopen" | "delete" | "assign";
 
+export interface BulkActionResult {
+  updated?: number;
+  /** IDs pulados por regra do backend (ex.: dept exige tabulacao). */
+  skipped?: string[];
+}
+
 /** POST /api/conversations/bulk */
 export async function postBulkAction(
   ids: string[],
   action: BulkAction,
   extra?: Record<string, unknown>,
-): Promise<void> {
+): Promise<BulkActionResult> {
   const res = await fetch(apiUrl("/api/conversations/bulk"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids, action, ...extra }),
   });
-  if (!res.ok) throw new Error("Falha em acao em lote");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data?.message === "string" ? data.message : "Falha em acao em lote",
+    );
+  }
+  return (data ?? {}) as BulkActionResult;
 }
 
 /** POST /api/conversations/create */

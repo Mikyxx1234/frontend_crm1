@@ -98,6 +98,15 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         requiredPermission: "settings:permissions",
       },
       {
+        id: "tabulations",
+        label: "Tabulações",
+        description: "Motivos hierárquicos ao encerrar",
+        icon: LayoutList,
+        href: "/settings/tabulations",
+        allowedRoles: GESTAO,
+        eyebrow: "Novo",
+      },
+      {
         id: "notifications",
         label: "Notificações",
         description: "Push, e-mail e alertas por canal",

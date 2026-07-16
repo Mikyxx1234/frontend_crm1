@@ -96,6 +96,18 @@ export interface ConversationListRow {
   createdAt?: string | null;
   /** Ultima atualizacao (mensagem/status/atribuicao). */
   updatedAt?: string | null;
+  /**
+   * Departamento vinculado a conversa. Usado para checar
+   * `requireTabulationOnClose` antes de encerrar.
+   */
+  departmentId?: string | null;
+  department?: {
+    id: string;
+    name: string;
+    requireTabulationOnClose: boolean;
+  } | null;
+  /** Tabulacao final escolhida ao encerrar (folha). Null enquanto OPEN. */
+  tabulationId?: string | null;
 }
 
 export interface ConversationListResponse {

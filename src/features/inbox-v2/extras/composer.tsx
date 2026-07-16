@@ -72,6 +72,8 @@ export function Composer({
   onSelectChannel,
   replyTo,
   onCancelReply,
+  departmentId,
+  requireTabulationOnClose,
 }: {
   conversationId: string | null;
   value: string;
@@ -121,6 +123,10 @@ export function Composer({
   } | null;
   /** Handler do X para cancelar a resposta. */
   onCancelReply?: () => void;
+  /** Departamento da conversa — propagado ao ComposerMenu para abrir
+   *  modal de tabulacao ao encerrar quando o dept exige. */
+  departmentId?: string | null;
+  requireTabulationOnClose?: boolean;
 }) {
   const [noteMode, setNoteMode] = useState(false);
   const [audioRecState, setAudioRecState] = useState<AudioRecordState>("idle");
@@ -565,6 +571,8 @@ export function Composer({
               templateContext={templateContext}
               onPickInternal={insertTemplateText}
               onPickTemplate={(tpl) => setPendingTemplate(whatsappTemplateToPending(tpl))}
+              departmentId={departmentId ?? null}
+              requireTabulationOnClose={requireTabulationOnClose}
             />
             <ButtonGlass
               type="button"

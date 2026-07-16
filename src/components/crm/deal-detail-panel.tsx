@@ -48,6 +48,7 @@ import {
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
 import { FavoritesPanel } from "@/components/crm/favorites-panel"
+import { TabulationDialog } from "@/features/inbox-v2/extras/tabulation-dialog"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
 import { useContactSources } from "@/hooks/use-contact-sources"
@@ -1343,6 +1344,8 @@ function TabsBar({
   conversationNumber,
   conversationClosedAt,
   callButtonSlot,
+  conversationDepartmentId,
+  conversationRequiresTabulation,
 }: {
   activeTab: TabId
   onChange: (id: TabId) => void
@@ -1359,10 +1362,14 @@ function TabsBar({
   /** Botao "Ligar" (softphone) — renderizado no canto direito, ao lado do
    *  kebab de acoes da conversa. Antes vivia no header do card do deal. */
   callButtonSlot?: React.ReactNode
+  /** Departamento da conversa — abre modal de tabulacao no encerrar quando exige. */
+  conversationDepartmentId?: string | null
+  conversationRequiresTabulation?: boolean
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
+  const [tabulationOpen, setTabulationOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const toggleResolve = useToggleConversationResolve()
 
@@ -1549,6 +1556,15 @@ function TabsBar({
                       type="button"
                       disabled={toggleResolve.isPending}
                       onClick={() => {
+                        if (
+                          !isResolved &&
+                          conversationRequiresTabulation &&
+                          conversationDepartmentId
+                        ) {
+                          setMenuOpen(false)
+                          setTabulationOpen(true)
+                          return
+                        }
                         toggleResolve.mutate(
                           { conversationId, action: isResolved ? "reopen" : "resolve" },
                           { onSuccess: () => setMenuOpen(false) },
@@ -1573,6 +1589,19 @@ function TabsBar({
         open={favoritesOpen}
         onOpenChange={setFavoritesOpen}
         conversationId={conversationId ?? null}
+      />
+      <TabulationDialog
+        open={tabulationOpen}
+        onOpenChange={setTabulationOpen}
+        departmentId={conversationDepartmentId ?? null}
+        submitting={toggleResolve.isPending}
+        onConfirm={(tabulationId) => {
+          if (!conversationId) return
+          toggleResolve.mutate(
+            { conversationId, action: "resolve", tabulationId },
+            { onSuccess: () => setTabulationOpen(false) },
+          )
+        }}
       />
     </div>
   )

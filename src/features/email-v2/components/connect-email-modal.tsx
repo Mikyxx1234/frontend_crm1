@@ -9,12 +9,12 @@ import { Label } from "@/components/ui/label";
 import { DropdownGlass } from "@/components/crm/dropdown-glass";
 import { SwitchGlass } from "@/components/crm/switch-glass";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { connectEmailAccount, testEmailConnection } from "../api/accounts";
 import type { ConnectEmailInput, EmailEncryption, EmailVisibility } from "../api/types";
 
@@ -86,22 +86,25 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!loading) { if (!o) resetAndClose(); else onOpenChange(true); } }}>
-      <DialogContent className="max-w-lg">
+    <Sheet open={open} onOpenChange={(o) => { if (!loading) { if (!o) resetAndClose(); else onOpenChange(true); } }}>
+      <SheetContent
+        side="right"
+        className="flex h-full w-[min(100vw,560px)] max-w-none flex-col gap-0 rounded-none border-l p-0"
+      >
         {step === "email" ? (
           <>
-            <DialogHeader>
-              <div className="flex items-center gap-2 mb-1">
+            <SheetHeader className="border-b border-[var(--glass-border-subtle)] px-6 py-5">
+              <div className="flex items-center gap-2">
                 <IconMail size={20} className="text-[var(--text-secondary)]" />
-                <DialogTitle>Conecte seu endereço de e-mail</DialogTitle>
+                <SheetTitle>Conecte seu endereço de e-mail</SheetTitle>
               </div>
-              <p className="text-sm text-[var(--text-muted)] mt-1">
+              <p className="text-sm text-[var(--text-muted)]">
                 Conecte uma conta de e-mail para enviar, receber e vincular mensagens
                 automaticamente aos seus contatos no CRM.
               </p>
-            </DialogHeader>
+            </SheetHeader>
 
-            <div className="space-y-3 py-2">
+            <div className="flex-1 space-y-3 overflow-y-auto px-6 py-5">
               <div>
                 <Label htmlFor="email-input">Endereço de e-mail</Label>
                 <InputGlass
@@ -119,22 +122,22 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
               </div>
             </div>
 
-            <DialogFooter>
+            <SheetFooter className="border-t border-[var(--glass-border-subtle)] px-6 py-4">
               <ButtonGlass variant="glass" onClick={resetAndClose}>Cancelar</ButtonGlass>
               <ButtonGlass variant="primary" onClick={handleStep1Continue}>Continuar</ButtonGlass>
-            </DialogFooter>
+            </SheetFooter>
           </>
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle className="text-base">{form.email}</DialogTitle>
-              <p className="text-sm text-[var(--text-muted)] mt-1">
+            <SheetHeader className="border-b border-[var(--glass-border-subtle)] px-6 py-5">
+              <SheetTitle className="text-base">{form.email}</SheetTitle>
+              <p className="text-sm text-[var(--text-muted)]">
                 Mensagens enviadas desse endereço serão vinculadas automaticamente
                 ao contato correspondente no CRM.
               </p>
-            </DialogHeader>
+            </SheetHeader>
 
-            <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
               {/* Senha */}
               <FieldRow label="Senha do e-mail" error={errors.password}>
                 <InputGlass
@@ -257,7 +260,7 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
               </div>
             </div>
 
-            <DialogFooter>
+            <SheetFooter className="border-t border-[var(--glass-border-subtle)] px-6 py-4">
               <ButtonGlass variant="glass" onClick={() => setStep("email")}>Voltar</ButtonGlass>
               <ButtonGlass variant="primary" onClick={handleConnect} disabled={loading}>
                 {loading ? (
@@ -266,11 +269,11 @@ export function ConnectEmailModal({ open, onOpenChange, onSuccess }: Props) {
                   <><IconCheck size={14} className="mr-1" /> Conectar</>
                 )}
               </ButtonGlass>
-            </DialogFooter>
+            </SheetFooter>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 

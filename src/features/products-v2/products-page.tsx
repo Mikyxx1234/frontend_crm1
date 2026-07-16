@@ -60,9 +60,9 @@ const KIND_FILTER_ITEMS: readonly PageSegmentItem[] = [
   })),
 ];
 
-/** Colunas da tabela glass (mesmo padrão de /contacts): grid CSS. */
+/** Colunas da tabela glass — minmax garante legibilidade ao rolar lateralmente. */
 const TABELA_COLS =
-  "grid-cols-[minmax(0,1fr)_130px_150px_140px_120px_72px]";
+  "grid-cols-[minmax(200px,1fr)_minmax(120px,120px)_minmax(120px,120px)_minmax(120px,120px)_minmax(100px,100px)_72px]";
 
 async function fetchProducts(search: string): Promise<ProductRow[]> {
   const params = new URLSearchParams();
@@ -132,7 +132,7 @@ export function ProductsV2Page() {
   }, [slots, search, kindFilter]);
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <IconLoader2 size={24} className="animate-spin text-[var(--text-muted)]" />
@@ -146,66 +146,73 @@ export function ProductsV2Page() {
           </ButtonGlass>
         </div>
       ) : (
-        <div className="flex flex-col rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
-          <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
-            <ListColumnLabel>Nome</ListColumnLabel>
-            <ListColumnLabel>Tipo</ListColumnLabel>
-            <ListColumnLabel>SKU</ListColumnLabel>
-            <ListColumnLabel align="right">Preço base</ListColumnLabel>
-            <ListColumnLabel className="text-center">Status</ListColumnLabel>
-            <ListColumnLabel align="right">Ações</ListColumnLabel>
-          </div>
-
-          <div className="flex flex-col">
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                className={cn(
-                  "grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-0 hover:bg-[var(--glass-bg-overlay)]",
-                  TABELA_COLS,
-                  !p.isActive && "opacity-55",
-                )}
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
-                    {p.name}
-                  </p>
-                  {p.description && (
-                    <p className="mt-0.5 truncate text-[12px] text-[var(--text-muted)]">
-                      {p.description}
-                    </p>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <Chip variant="ghost">
-                    {KIND_ICON[p.kind]} {KIND_LABEL[p.kind]}
-                  </Chip>
-                </div>
-                <div className="truncate font-mono text-[12px] text-[var(--text-muted)]">
-                  {p.sku || "—"}
-                </div>
-                <div className="text-right font-display text-[13px] font-bold tabular-nums text-[var(--text-primary)]">
-                  {formatCurrency(Number(p.price))}
-                </div>
-                <div className="flex justify-center">
-                  {p.isActive ? (
-                    <StatusPill variant="success">Ativo</StatusPill>
-                  ) : (
-                    <Chip variant="ghost">Inativo</Chip>
-                  )}
-                </div>
-                <div className="flex justify-end">
-                  <ButtonGlass
-                    variant="icon"
-                    size="icon"
-                    onClick={() => openEdit(p.id)}
-                    aria-label={`Editar ${p.name}`}
-                  >
-                    <IconPencil size={14} />
-                  </ButtonGlass>
-                </div>
+        /* Outer card: ocupa largura disponível sem vazar da viewport */
+        <div className="w-full min-w-0 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow)] backdrop-blur-md">
+          {/* Scroll horizontal touch-friendly: ativa quando viewport < min-w interno */}
+          <div className="scrollbar-thin overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+            {/* Conteúdo interno com largura mínima — header + linhas rolam juntos */}
+            <div className="flex min-w-[900px] flex-col">
+              <div className={listTableHeadRowClass(`grid ${TABELA_COLS} gap-3 px-3 py-2`)}>
+                <ListColumnLabel>Nome</ListColumnLabel>
+                <ListColumnLabel>Tipo</ListColumnLabel>
+                <ListColumnLabel>SKU</ListColumnLabel>
+                <ListColumnLabel align="right">Preço base</ListColumnLabel>
+                <ListColumnLabel className="text-center">Status</ListColumnLabel>
+                <ListColumnLabel align="right">Ações</ListColumnLabel>
               </div>
-            ))}
+
+              <div className="flex flex-col">
+                {filtered.map((p) => (
+                  <div
+                    key={p.id}
+                    className={cn(
+                      "grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-0 hover:bg-[var(--glass-bg-overlay)]",
+                      TABELA_COLS,
+                      !p.isActive && "opacity-55",
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+                        {p.name}
+                      </p>
+                      {p.description && (
+                        <p className="mt-0.5 truncate text-[12px] text-[var(--text-muted)]">
+                          {p.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <Chip variant="ghost">
+                        {KIND_ICON[p.kind]} {KIND_LABEL[p.kind]}
+                      </Chip>
+                    </div>
+                    <div className="truncate font-mono text-[12px] text-[var(--text-muted)]">
+                      {p.sku || "—"}
+                    </div>
+                    <div className="text-right font-display text-[13px] font-bold tabular-nums text-[var(--text-primary)]">
+                      {formatCurrency(Number(p.price))}
+                    </div>
+                    <div className="flex justify-center">
+                      {p.isActive ? (
+                        <StatusPill variant="success">Ativo</StatusPill>
+                      ) : (
+                        <Chip variant="ghost">Inativo</Chip>
+                      )}
+                    </div>
+                    <div className="flex justify-end">
+                      <ButtonGlass
+                        variant="icon"
+                        size="icon"
+                        onClick={() => openEdit(p.id)}
+                        aria-label={`Editar ${p.name}`}
+                      >
+                        <IconPencil size={14} />
+                      </ButtonGlass>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

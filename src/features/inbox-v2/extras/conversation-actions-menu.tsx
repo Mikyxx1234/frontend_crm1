@@ -8,11 +8,13 @@ import {
   IconSearch,
   IconCircleCheck,
   IconRotateClockwise,
+  IconStarFilled,
 } from "@tabler/icons-react";
 
 import { ButtonGlass } from "@/components/crm/button-glass";
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks";
 import { RequirePermission } from "@/components/auth/require-permission";
+import { TabulationDialog } from "./tabulation-dialog";
 
 interface ConversationActionsMenuProps {
   conversationId: string | null;
@@ -20,6 +22,19 @@ interface ConversationActionsMenuProps {
   disabled?: boolean;
   /** Handler opcional pra "Buscar na conversa". Quando ausente, mostra toast "em breve". */
   onSearchInConversation?: () => void;
+  /** Abre o painel "Mensagens favoritas" (estrelas do agente logado). */
+  onOpenFavorites?: () => void;
+  /**
+   * Callback disparado quando "Reabrir" cria um novo ticket (modelo de ticket).
+   * O caller (ex.: inbox) usa isso para selecionar/navegar para a nova conversa.
+   * Recebe o id da nova conversa gerada; o id previo continua acessivel via
+   * `conversationId` (que era o anterior).
+   */
+  onReopenNewConversation?: (newConversationId: string) => void;
+  /** Departamento vinculado a conversa — usado para o modal de tabulacao. */
+  departmentId?: string | null;
+  /** Se true, o botao "Encerrar" abre um modal exigindo folha da arvore. */
+  requireTabulationOnClose?: boolean;
 }
 
 export function ConversationActionsMenu({
@@ -27,10 +42,19 @@ export function ConversationActionsMenu({
   isResolved,
   disabled,
   onSearchInConversation,
+  onOpenFavorites,
+  onReopenNewConversation,
+  departmentId,
+  requireTabulationOnClose,
 }: ConversationActionsMenuProps) {
   const [open, setOpen] = useState(false);
+  const [tabulationOpen, setTabulationOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const toggleResolve = useToggleConversationResolve();
+  const toggleResolve = useToggleConversationResolve({
+    onNewConversation: (newId) => {
+      onReopenNewConversation?.(newId);
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -48,12 +72,26 @@ export function ConversationActionsMenu({
 
   function handleToggleResolve() {
     if (!conversationId) return;
+    // Encerramento com departamento que exige tabulacao -> abre modal.
+    if (!isResolved && requireTabulationOnClose && departmentId) {
+      setOpen(false);
+      setTabulationOpen(true);
+      return;
+    }
     toggleResolve.mutate(
       {
         conversationId,
         action: isResolved ? "reopen" : "resolve",
       },
       { onSuccess: () => setOpen(false) },
+    );
+  }
+
+  function handleConfirmTabulation(tabulationId: string) {
+    if (!conversationId) return;
+    toggleResolve.mutate(
+      { conversationId, action: "resolve", tabulationId },
+      { onSuccess: () => setTabulationOpen(false) },
     );
   }
 
@@ -92,6 +130,20 @@ export function ConversationActionsMenu({
             <span>Buscar na conversa</span>
           </button>
 
+          {onOpenFavorites && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onOpenFavorites();
+              }}
+              className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left text-[13px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+            >
+              <IconStarFilled size={16} className="shrink-0 text-amber-500" />
+              <span>Mensagens favoritas</span>
+            </button>
+          )}
+
           <RequirePermission permission="conversation:close">
             <button
               type="button"
@@ -109,6 +161,13 @@ export function ConversationActionsMenu({
           </RequirePermission>
         </div>
       )}
+      <TabulationDialog
+        open={tabulationOpen}
+        onOpenChange={setTabulationOpen}
+        departmentId={departmentId ?? null}
+        submitting={toggleResolve.isPending}
+        onConfirm={handleConfirmTabulation}
+      />
     </div>
   );
 }

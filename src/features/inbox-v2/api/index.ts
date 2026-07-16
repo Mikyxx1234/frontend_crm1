@@ -8,3 +8,4 @@ export * from "./conversations";
 export * from "./messages";
 export * from "./scheduled";
 export * from "./misc";
+export * from "./timeline";

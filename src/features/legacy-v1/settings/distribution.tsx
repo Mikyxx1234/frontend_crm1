@@ -160,7 +160,7 @@ export default function DistributionSettingsPage() {
   const canSubmitCreate = newName.trim().length > 0 && !createMutation.isPending;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full min-w-0 shrink-0 space-y-4">
       <div className="flex justify-end">
         <ButtonGlass type="button" variant="primary" className={`gap-2 ${pageHeaderPrimaryCtaClass}`} onClick={openCreate}>
           <Plus className="size-4" />
@@ -217,12 +217,27 @@ export default function DistributionSettingsPage() {
                       ? `Pipeline: ${rule.pipeline.name}`
                       : "Todos os pipelines"}
                   </p>
-                  <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Users className="size-3.5" />
-                    {rule.members.length === 0
-                      ? "Nenhum membro"
-                      : `${rule.members.length} membro(s): ${rule.members.map((m) => m.user.name).join(", ")}`}
-                  </p>
+                  {rule.members.length === 0 ? (
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Users className="size-3.5" />
+                      Nenhum membro
+                    </p>
+                  ) : (
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      <Users className="size-3.5 shrink-0" />
+                      <span className="shrink-0">{rule.members.length} membro(s):</span>
+                      <div className="flex min-w-0 flex-wrap gap-1">
+                        {rule.members.map((m) => (
+                          <span
+                            key={m.user.id}
+                            className="break-words rounded-full bg-muted px-2 py-0.5"
+                          >
+                            {m.user.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 gap-1 self-end sm:self-start">

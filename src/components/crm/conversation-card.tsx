@@ -23,6 +23,7 @@ import {
   IconForms,
 } from "@tabler/icons-react"
 import { Chip } from "./chip"
+import { CheckboxGlass } from "./checkbox-glass"
 
 export type ConversationAvatarColor = "sunset" | "forest" | "ocean" | "dusk"
 
@@ -90,6 +91,15 @@ interface ConversationCardProps {
    * presente, substitui o chip de assignee na linha inferior do card.
    */
   assigneeSlot?: React.ReactNode
+  /**
+   * Modo de seleção múltipla (ações em massa). Quando ativo, mostra um
+   * checkbox no lugar do avatar-click e o `onClick` de abrir a conversa
+   * fica desativado — só o checkbox alterna a seleção (evita abrir a
+   * conversa por engano ao tentar marcar várias).
+   */
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
 }
 
 export const avatarGradients: Record<string, string> = {
@@ -172,6 +182,9 @@ export function ConversationCard({
   conversation,
   onClick,
   assigneeSlot,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: ConversationCardProps) {
   const TypeIcon =
     conversation.lastMessageType && conversation.lastMessageType !== "text"
@@ -186,7 +199,7 @@ export function ConversationCard({
 
   return (
     <article
-      onClick={onClick}
+      onClick={selectionMode ? undefined : onClick}
       className={cn(
         // Borda trocada para `--glass-border-subtle` (0.30 alpha vs 0.55):
         // alinha com a referência v0 que tem cards "flutuando" sem
@@ -201,13 +214,24 @@ export function ConversationCard({
         conversation.active &&
           "bg-white border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/20 shadow-[0_6px_18px_rgba(91,111,245,0.15)] hover:bg-white",
         conversation.inactive && "opacity-70",
+        // Marcada (modo seleção): mesmo anel do brand, sem exigir foco/hover.
+        selectionMode && selected &&
+          "bg-white border-[var(--brand-primary)]/50 ring-2 ring-[var(--brand-primary)]/20 hover:bg-white",
       )}
     >
-      {/* Linha 1: avatar + (nome + tempo + preview ao lado).
+      {/* Linha 1: checkbox (modo seleção) + avatar + (nome + tempo + preview ao lado).
           items-start alinha o nome no topo do avatar; o preview de 2
           linhas ocupa o espaço ao lado da metade inferior do avatar —
           card mais preenchido/organizado (estilo kanban). */}
       <div className="flex items-start gap-3">
+        {selectionMode && (
+          <CheckboxGlass
+            checked={selected}
+            onChange={() => onToggleSelect?.()}
+            aria-label={`Selecionar conversa de ${conversation.name}`}
+            className="mt-1.5"
+          />
+        )}
         <div className="relative shrink-0">
           <div
             className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white font-display text-sm font-bold text-white"

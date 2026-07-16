@@ -180,30 +180,32 @@ export default function CustomFieldsPage() {
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className="min-w-0 w-full max-w-full space-y-3 sm:space-y-4">
       {/* ── Toolbar ── */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Entity pill tabs */}
-        <div className="flex items-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1">
-          {(["deal", "contact"] as const).map((entity, i) => (
-            <button
-              key={entity}
-              type="button"
-              onClick={() => { setActiveEntity(entity); setSearch(""); }}
-              className={cn(
-                "rounded-[var(--radius-md)] px-4 py-1.5 font-display text-[13px] font-semibold transition-all",
-                activeEntity === entity
-                  ? "bg-[var(--glass-bg-panel)] text-[var(--text-primary)] shadow-sm"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-              )}
-            >
-              {i === 0 ? "Negócio" : "Contato"}
-            </button>
-          ))}
+        <div className="toolbar-hscroll max-w-full">
+          <div className="flex w-max items-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1">
+            {(["deal", "contact"] as const).map((entity, i) => (
+              <button
+                key={entity}
+                type="button"
+                onClick={() => { setActiveEntity(entity); setSearch(""); }}
+                className={cn(
+                  "shrink-0 whitespace-nowrap rounded-[var(--radius-md)] px-4 py-1.5 font-display text-[13px] font-semibold transition-all",
+                  activeEntity === entity
+                    ? "bg-[var(--glass-bg-panel)] text-[var(--text-primary)] shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
+              >
+                {i === 0 ? "Negócio" : "Contato"}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search */}
-        <div className="relative min-w-[180px] max-w-xs flex-1">
+        <div className="relative min-w-0 w-full sm:min-w-[180px] sm:max-w-xs sm:flex-1">
           <IconSearch size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             value={search}
@@ -213,9 +215,7 @@ export default function CustomFieldsPage() {
           />
         </div>
 
-        <div className="flex-1" />
-
-        <ButtonGlass variant="primary" onClick={() => setCreateOpen(true)} className="gap-1.5 rounded-[var(--radius-lg)]">
+        <ButtonGlass variant="primary" onClick={() => setCreateOpen(true)} className="w-full gap-1.5 rounded-[var(--radius-lg)] sm:ml-auto sm:w-auto">
           <IconPlus size={15} />
           Novo campo
         </ButtonGlass>
@@ -223,7 +223,7 @@ export default function CustomFieldsPage() {
 
       {/* ── Counter ── */}
       {!isLoading && (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="font-body text-[12.5px] text-[var(--text-muted)]">
             {fields.length} campo{fields.length !== 1 ? "s" : ""}
           </span>
@@ -270,141 +270,145 @@ export default function CustomFieldsPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
-          {/* Header */}
-          <div className={cn(
-            "grid items-center gap-3 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3 py-2.5",
-            "grid-cols-[20px_minmax(160px,2fr)_minmax(90px,1fr)_minmax(80px,0.8fr)_70px_70px_60px]",
-          )}>
-            <span />
-            <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Campo</span>
-            <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Slug</span>
-            <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Tipo</span>
-            <span className="font-display text-[13px] font-semibold tracking-normal text-emerald-600">Inbox</span>
-            <span className="font-display text-[13px] font-semibold tracking-normal text-violet-600">Negócio</span>
-            <span />
-          </div>
+        <div className="min-w-0 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 backdrop-blur-md shadow-[var(--glass-shadow)]">
+          <div className="overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+            <div className="min-w-[720px]">
+              {/* Header */}
+              <div className={cn(
+                "grid items-center gap-3 rounded-[var(--radius-md)] border-b border-[var(--glass-border-subtle)] bg-[color-mix(in_srgb,var(--brand-primary)_7%,transparent)] px-3 py-2.5",
+                "grid-cols-[20px_minmax(160px,2fr)_minmax(90px,1fr)_minmax(80px,0.8fr)_70px_70px_60px]",
+              )}>
+                <span />
+                <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Campo</span>
+                <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Slug</span>
+                <span className="font-display text-[13px] font-semibold tracking-normal text-[var(--text-muted)]">Tipo</span>
+                <span className="font-display text-[13px] font-semibold tracking-normal text-emerald-600">Inbox</span>
+                <span className="font-display text-[13px] font-semibold tracking-normal text-violet-600">Negócio</span>
+                <span />
+              </div>
 
-          {/* Rows */}
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="custom-fields-list">
-              {(provided) => (
-                <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col">
-                  {filtered.map((field, index) => (
-                    <Draggable key={field.id} draggableId={field.id} index={index}>
-                      {(drag, snapshot) => (
-                        <div
-                          ref={drag.innerRef}
-                          {...drag.draggableProps}
-                          className={cn(
-                            "group grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]",
-                            "grid-cols-[20px_minmax(160px,2fr)_minmax(90px,1fr)_minmax(80px,0.8fr)_70px_70px_60px]",
-                            snapshot.isDragging && "opacity-90 shadow-lg rounded-[var(--radius-md)]",
-                          )}
-                        >
-                          {/* Drag handle */}
-                          <div
-                            {...drag.dragHandleProps}
-                            className="cursor-grab text-[var(--text-muted)]/30 transition-colors hover:text-[var(--text-muted)] active:cursor-grabbing"
-                          >
-                            <IconGripVertical size={14} />
-                          </div>
+              {/* Rows */}
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="custom-fields-list">
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col">
+                      {filtered.map((field, index) => (
+                        <Draggable key={field.id} draggableId={field.id} index={index}>
+                          {(drag, snapshot) => (
+                            <div
+                              ref={drag.innerRef}
+                              {...drag.draggableProps}
+                              className={cn(
+                                "group grid items-center gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-2.5 transition-colors last:border-b-0 hover:bg-[var(--glass-bg-overlay)]",
+                                "grid-cols-[20px_minmax(160px,2fr)_minmax(90px,1fr)_minmax(80px,0.8fr)_70px_70px_60px]",
+                                snapshot.isDragging && "opacity-90 shadow-lg rounded-[var(--radius-md)]",
+                              )}
+                            >
+                              {/* Drag handle */}
+                              <div
+                                {...drag.dragHandleProps}
+                                className="cursor-grab text-[var(--text-muted)]/30 transition-colors hover:text-[var(--text-muted)] active:cursor-grabbing"
+                              >
+                                <IconGripVertical size={14} />
+                              </div>
 
-                          {/* Campo: ícone + nome + obrigatório */}
-                          <div className="flex min-w-0 items-center gap-2.5">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
-                              {TYPE_ICONS[field.type] ?? <IconLetterT size={13} strokeWidth={2.5} />}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
-                                  {field.label}
-                                </span>
-                                {field.required && (
-                                  <span className="shrink-0 rounded-[4px] bg-red-50 px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-red-500">
-                                    Obrigatório
+                              {/* Campo: ícone + nome + obrigatório */}
+                              <div className="flex min-w-0 items-center gap-2.5">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]">
+                                  {TYPE_ICONS[field.type] ?? <IconLetterT size={13} strokeWidth={2.5} />}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="truncate font-display text-[13.5px] font-semibold text-[var(--text-primary)]">
+                                      {field.label}
+                                    </span>
+                                    {field.required && (
+                                      <span className="shrink-0 rounded-[4px] bg-red-50 px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-red-500">
+                                        Obrigatório
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Slug */}
+                              <span className="inline-block max-w-full truncate rounded-[4px] bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
+                                {field.name}
+                              </span>
+
+                              {/* Tipo */}
+                              <span className="truncate font-display text-[13px] text-[var(--text-secondary)]">
+                                {TYPES.find((t) => t.value === field.type)?.label ?? field.type}
+                              </span>
+
+                              {/* Inbox */}
+                              <div>
+                                {(field.entity === "contact" || field.entity === "deal") && (
+                                  <span className={cn(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+                                    field.showInInboxLeadPanel
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                                  )}>
+                                    {field.showInInboxLeadPanel ? <IconEye size={11} /> : <IconEyeOff size={11} />}
+                                    {field.showInInboxLeadPanel ? "Sim" : "Não"}
                                   </span>
                                 )}
                               </div>
+
+                              {/* Negócio (deal panel) */}
+                              <div>
+                                {field.entity === "deal" && (
+                                  <span className={cn(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
+                                    field.showInDealPanel
+                                      ? "bg-violet-100 text-violet-700"
+                                      : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
+                                  )}>
+                                    {field.showInDealPanel ? <IconEye size={11} /> : <IconEyeOff size={11} />}
+                                    {field.showInDealPanel ? "Sim" : "Não"}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditItem(field)}
+                                  className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                                  title="Editar"
+                                >
+                                  <IconPencil size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const ok = await confirm({
+                                      title: "Excluir campo",
+                                      description: `Excluir o campo "${field.label}"? Todos os valores serão perdidos.`,
+                                      confirmLabel: "Excluir",
+                                      variant: "destructive",
+                                    });
+                                    if (ok) deleteMutation.mutate(field.id);
+                                  }}
+                                  className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
+                                  title="Excluir"
+                                >
+                                  <IconTrash size={13} />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-
-                          {/* Slug */}
-                          <span className="inline-block max-w-full truncate rounded-[4px] bg-[var(--glass-bg-strong)] px-1.5 py-0.5 font-body text-[11.5px] text-[var(--text-muted)]">
-                            {field.name}
-                          </span>
-
-                          {/* Tipo */}
-                          <span className="truncate font-display text-[13px] text-[var(--text-secondary)]">
-                            {TYPES.find((t) => t.value === field.type)?.label ?? field.type}
-                          </span>
-
-                          {/* Inbox */}
-                          <div>
-                            {(field.entity === "contact" || field.entity === "deal") && (
-                              <span className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
-                                field.showInInboxLeadPanel
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
-                              )}>
-                                {field.showInInboxLeadPanel ? <IconEye size={11} /> : <IconEyeOff size={11} />}
-                                {field.showInInboxLeadPanel ? "Sim" : "Não"}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Negócio (deal panel) */}
-                          <div>
-                            {field.entity === "deal" && (
-                              <span className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[11px] font-semibold",
-                                field.showInDealPanel
-                                  ? "bg-violet-100 text-violet-700"
-                                  : "bg-[var(--glass-bg-strong)] text-[var(--text-muted)]",
-                              )}>
-                                {field.showInDealPanel ? <IconEye size={11} /> : <IconEyeOff size={11} />}
-                                {field.showInDealPanel ? "Sim" : "Não"}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                            <button
-                              type="button"
-                              onClick={() => setEditItem(field)}
-                              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
-                              title="Editar"
-                            >
-                              <IconPencil size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const ok = await confirm({
-                                  title: "Excluir campo",
-                                  description: `Excluir o campo "${field.label}"? Todos os valores serão perdidos.`,
-                                  confirmLabel: "Excluir",
-                                  variant: "destructive",
-                                });
-                                if (ok) deleteMutation.mutate(field.id);
-                              }}
-                              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500"
-                              title="Excluir"
-                            >
-                              <IconTrash size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            </div>
+          </div>
         </div>
       )}
 

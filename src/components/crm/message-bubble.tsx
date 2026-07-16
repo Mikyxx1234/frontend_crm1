@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect, useCallback, type ReactNode } from "react"
+import { useState, useRef, useEffect, useCallback, useLayoutEffect, type ReactNode } from "react"
+import { createPortal } from "react-dom"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { summarizeSendError, translateSendError } from "@/lib/meta-error-catalog"
 import { ImageLightbox } from "@/components/crm/image-lightbox"
@@ -31,6 +33,11 @@ import {
   IconPhoneIncoming,
   IconPhoneOutgoing,
   IconPhoneOff,
+  IconArrowBackUp,
+  IconShare2,
+  IconMoodPlus,
+  IconStar,
+  IconStarFilled,
 } from "@tabler/icons-react"
 
 type MediaKind = "image" | "audio" | "video" | "document" | null
@@ -158,6 +165,12 @@ export interface Message {
   formFields?: FormField[]
   /** Título do formulário (ex: "form_estag") */
   formTitle?: string
+  /**
+   * Botões de resposta rápida enviados numa mensagem interativa/template
+   * (WhatsApp). Renderizados como cards empilhados abaixo do corpo —
+   * separados do texto pelo adapter (marcador `[Botões: ...]` do backend).
+   */
+  buttons?: string[]
   /** Tipo de mídia: "audio", "image", "document", "video", "text" etc. */
   messageType?: string
   /**
@@ -185,25 +198,64 @@ export interface Message {
    * WhatsApps). `null`/undefined = herda a conexão anterior (sem marcador).
    */
   channelId?: string | null
+  /**
+   * Citação (reply): quando o cliente responde uma mensagem específica,
+   * mostramos o snippet da mensagem citada no topo da bolha. `snippet` é
+   * um preview curto (~120 chars); `direction` orienta a cor da barra
+   * lateral (verde p/ nossa mensagem, cinza p/ mensagem do cliente).
+   */
+  replyTo?: {
+    snippet: string
+    direction?: "in" | "out"
+    senderName?: string | null
+  } | null
+  /**
+   * Reações do cliente nesta mensagem (WhatsApp permite uma reação por
+   * pessoa, mas persistimos como array para suportar múltiplos reatores
+   * em grupos futuramente). Renderiza como badge flutuante na base.
+   */
+  reactions?: Array<{ emoji: string; from: string; at?: string }>
+  /**
+   * Favoritada pelo agente LOGADO (marcador pessoal — outros agentes não
+   * veem essa marcação). Alimenta a estrela preenchida no menu e o label
+   * dinâmico "Favoritar"/"Desfavoritar".
+   */
+  isFavorited?: boolean
+  /**
+   * Mensagem atualmente fixada no topo da conversa (banner estilo
+   * WhatsApp). Vem de `Conversation.pinnedMessageId` — diferente de
+   * `isPinned` (usado só para notas na aba "Notas").
+   */
+  isPinnedMessage?: boolean
 }
 
 
-/** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing). */
-function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
+/** Ticks de status estilo WhatsApp, exibidos ao lado do horário (outgoing).
+ *  `onLightBg` = true quando a bolha tem fundo claro (ex.: bolha de
+ *  automação com tint indigo sobre branco). Sem isso os ticks brancos
+ *  ficam invisíveis. */
+function StatusTicks({
+  status,
+  onLightBg,
+}: {
+  status: NonNullable<Message["status"]>
+  onLightBg?: boolean
+}) {
+  const dim = onLightBg ? "text-[var(--text-muted)]" : "text-white/70"
+  const solid = onLightBg ? "text-[var(--text-secondary)]" : "text-white/75"
   if (status === "pending") {
-    return <IconClock size={12} className="shrink-0 text-white/70" aria-label="Enviando" />
+    return <IconClock size={12} className={cn("shrink-0", dim)} aria-label="Enviando" />
   }
   if (status === "failed") {
     return <IconAlertCircle size={13} className="shrink-0 text-[var(--wa-tick-fail)]" aria-label="Falha no envio" />
   }
   if (status === "sent") {
-    return <IconCheck size={14} className="shrink-0 text-white/75" aria-label="Enviada" />
+    return <IconCheck size={14} className={cn("shrink-0", solid)} aria-label="Enviada" />
   }
-  // delivered | read — duplo tick; azul quando lida.
   return (
     <IconChecks
       size={15}
-      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read)]" : "text-white/75")}
+      className={cn("shrink-0", status === "read" ? "text-[var(--wa-tick-read)]" : solid)}
       aria-label={status === "read" ? "Lida" : "Entregue"}
     />
   )
@@ -217,12 +269,14 @@ function StatusTicks({ status }: { status: NonNullable<Message["status"]> }) {
 function StatusIndicator({
   status,
   sendError,
+  onLightBg,
 }: {
   status: NonNullable<Message["status"]>
   sendError?: string
+  onLightBg?: boolean
 }) {
   if (status !== "failed") {
-    return <StatusTicks status={status} />
+    return <StatusTicks status={status} onLightBg={onLightBg} />
   }
   return (
     <Tooltip>
@@ -280,6 +334,58 @@ export interface MessageBubbleProps {
   onPinNote?: (messageId: string | null) => void
   /** Callback para adicionar conteúdo da nota ao log/timeline do deal. */
   onAddToLog?: (content: string) => void
+
+  // ── Ações de mensagem recebida (menu estilo WhatsApp) ────────────
+  // Todos opcionais: se não passados, o item some do menu. "Copiar" é
+  // interno (usa navigator.clipboard) e sempre aparece p/ mensagens
+  // com conteúdo textual — não depende de callback.
+  /** Ao clicar em "Responder": abre citação da mensagem no composer. */
+  onReplyMessage?: (message: Message) => void
+  /** Ao clicar em "Encaminhar": abre modal de seleção de conversa. */
+  onForwardMessage?: (message: Message) => void
+  /** Ao clicar em uma reação rápida (👍/❤️/…) ou "Reagir". */
+  onReactMessage?: (message: Message, emoji: string | null) => void
+  /** Ao clicar em "Fixar": fixa a mensagem no topo da conversa. */
+  onPinMessage?: (message: Message) => void
+  /** Ao clicar em "Favoritar": adiciona à lista de favoritas do agente. */
+  onFavoriteMessage?: (message: Message) => void
+}
+
+/** Emojis exibidos na barra rápida de reações — padrão WhatsApp. */
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const
+
+/**
+ * Paleta da bolha de AUTOMAÇÃO (referência V0): lavanda com acento
+ * violeta. Hardcoded — em v2-dark os tokens de tema flipam para claro e
+ * perdem o contraste contra o fundo claro fixo desta bolha.
+ */
+const AUTOMATION_BG = "#efedfd"
+const AUTOMATION_TEXT = "#1e1b39"
+const AUTOMATION_ACCENT = "#6c5ce7"
+
+/**
+ * Botões de resposta rápida (interactive/template) renderizados como
+ * cards empilhados abaixo do corpo — igual ao WhatsApp e à referência V0.
+ * `onLightBg` = bolha clara (automação): card branco com acento violeta.
+ */
+function MessageButtons({ buttons, onLightBg }: { buttons: string[]; onLightBg: boolean }) {
+  return (
+    <div className="mt-2.5 grid gap-1.5">
+      {buttons.map((b, i) => (
+        <span
+          key={`${b}-${i}`}
+          className="rounded-lg border px-3 py-1.5 text-center font-display text-[12.5px] font-semibold"
+          style={
+            onLightBg
+              ? { borderColor: `${AUTOMATION_ACCENT}4d`, background: "#ffffff", color: AUTOMATION_ACCENT }
+              : { borderColor: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.14)", color: "#ffffff" }
+          }
+        >
+          {b}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 function FormBubble({ message, className }: { message: Message; className?: string }) {
@@ -306,16 +412,17 @@ function FormBubble({ message, className }: { message: Message; className?: stri
             <p className="font-display text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-primary)]/70 leading-none mb-0.5">
               Formulário
             </p>
-            <div className="flex items-baseline gap-1.5 min-w-0">
-              <p className="truncate font-display text-[12px] font-bold leading-tight text-[var(--text-primary)]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className="truncate font-display text-[13px] font-bold leading-tight text-[var(--text-primary)]">
                 {message.formTitle || "Resposta"}
-                <span className="ml-1.5 font-normal text-[var(--text-muted)]">
-                  · {count} {count === 1 ? "campo" : "campos"}
-                </span>
               </p>
+              {/* Contador de campos como pill preenchida (ref. V0) */}
+              <span className="shrink-0 rounded-md bg-[var(--brand-primary)]/12 px-2 py-0.5 font-display text-[10.5px] font-semibold text-[var(--brand-primary)]">
+                {count} {count === 1 ? "campo" : "campos"}
+              </span>
               {/* Timestamp inline no estado recolhido — padrão WhatsApp */}
               {!open && (
-                <span className="shrink-0 font-body text-[10px] leading-none text-[var(--text-muted)]">
+                <span className="ml-auto shrink-0 font-body text-[10px] leading-none text-[var(--text-muted)]">
                   {message.time}
                 </span>
               )}
@@ -741,6 +848,314 @@ function CaptionText({ caption, isOutgoing }: { caption: string; isOutgoing: boo
   )
 }
 
+/**
+ * Menu de contexto estilo WhatsApp para mensagens RECEBIDAS.
+ *
+ * Layout: barra horizontal de reações rápidas (6 emojis) + lista vertical
+ * de ações (Responder / Reagir / Encaminhar / Fixar / Favoritar / Copiar).
+ * Aparece via chevron no canto sup. direito da bolha (hover).
+ *
+ * Renderização: `createPortal` no <body> com `position: fixed`, para
+ * escapar de qualquer ancestral com `overflow: hidden` (o chat-area e a
+ * lista de mensagens são scrollables e clipam popovers absolutamente
+ * posicionados). O `useLayoutEffect` computa o rect do chevron e aplica
+ * auto-flip vertical (abre pra cima quando não cabe abaixo) e horizontal
+ * (clampa à borda da viewport pra nunca cortar).
+ *
+ * Callbacks são opcionais. Sem handler, o item ainda aparece na UI para
+ * manter o layout consistente entre todas as bolhas — só que fica como
+ * stub "em breve". Copiar é sempre funcional (`navigator.clipboard`).
+ */
+function ReceivedMessageMenu({
+  message,
+  onReply,
+  onForward,
+  onReact,
+  onPin,
+  onFavorite,
+}: {
+  message: Message
+  onReply?: (message: Message) => void
+  onForward?: (message: Message) => void
+  onReact?: (message: Message, emoji: string | null) => void
+  onPin?: (message: Message) => void
+  onFavorite?: (message: Message) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // Posicionamento responsivo: calcula o rect do chevron e escolhe se
+  // abre pra baixo/cima + clampa horizontalmente pra não vazar viewport.
+  // Duas passadas — a 1ª antes do content medir, a 2ª (rAF) já com a
+  // dimensão real. Reposiciona em resize/scroll pra acompanhar o layout.
+  useLayoutEffect(() => {
+    if (!open) {
+      setCoords(null)
+      return
+    }
+    const trigger = triggerRef.current
+    if (!trigger) return
+
+    const update = () => {
+      const r = trigger.getBoundingClientRect()
+      const content = contentRef.current
+      const ch = content?.offsetHeight ?? 280
+      const cw = content?.offsetWidth ?? 240
+      const margin = 6
+
+      const spaceBelow = window.innerHeight - r.bottom
+      const spaceAbove = r.top
+      const openUp = spaceBelow < ch + margin && spaceAbove > spaceBelow
+      const top = openUp
+        ? Math.max(8, r.top - ch - margin)
+        : r.bottom + margin
+
+      // Ancora à direita do chevron por padrão, mas clampa se estourar.
+      const desiredLeft = r.right - cw
+      const maxLeft = window.innerWidth - cw - 8
+      const left = Math.min(Math.max(8, desiredLeft), Math.max(8, maxLeft))
+
+      setCoords({ top, left })
+    }
+    update()
+    const raf = requestAnimationFrame(update)
+    window.addEventListener("resize", update)
+    window.addEventListener("scroll", update, true)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("resize", update)
+      window.removeEventListener("scroll", update, true)
+    }
+  }, [open])
+
+  // Click fora / Esc fecham. O contentRef está no portal (fora do DOM
+  // do trigger), então checamos os dois.
+  useEffect(() => {
+    if (!open) return
+    function onDocClick(e: MouseEvent) {
+      const t = e.target as Node
+      if (triggerRef.current?.contains(t)) return
+      if (contentRef.current?.contains(t)) return
+      setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", onDocClick)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDocClick)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  const canCopy = !!(message.content && message.content.trim())
+
+  const handleCopy = useCallback(async () => {
+    if (!canCopy) return
+    try {
+      await navigator.clipboard.writeText(message.content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1200)
+    } catch {
+      /* navegador antigo / sem HTTPS: silencioso */
+    }
+    setOpen(false)
+  }, [canCopy, message.content])
+
+  const handleReact = useCallback(
+    (emoji: string) => {
+      onReact?.(message, emoji)
+      setOpen(false)
+    },
+    [message, onReact],
+  )
+
+  // Fallback comum para itens ainda não plugados. Sinaliza ao usuário
+  // que o botão foi reconhecido mas a ação ainda não está disponível,
+  // em vez de parecer bugado. Toast substituí quando o container
+  // implementar o handler correspondente.
+  const stub = useCallback((label: string) => {
+    toast.info(`${label} — em breve`, {
+      description: "Essa ação ainda não foi ativada nesta versão.",
+      duration: 2200,
+    })
+    setOpen(false)
+  }, [])
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+        aria-label="Ações da mensagem"
+        aria-expanded={open}
+        className={cn(
+          "absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.22)] transition-opacity",
+          open ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
+        style={{ background: "#ffffff", color: "#334155" }}
+      >
+        <IconChevronDown size={14} stroke={2.2} />
+      </button>
+
+      {open && coords && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={contentRef}
+              role="menu"
+              style={{
+                position: "fixed",
+                top: coords.top,
+                left: coords.left,
+                background: "#ffffff",
+                color: "#0f172a",
+              }}
+              className="z-[100] w-[224px] max-w-[calc(100vw-16px)] overflow-hidden rounded-[var(--radius-lg)] border border-black/5 shadow-[0_12px_32px_rgba(15,20,40,0.22)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Barra de reações rápidas — sempre visível. Se onReact
+                  não estiver plugado, ainda mostramos, mas emoji clica
+                  no stub (fecha menu) até o container implementar. */}
+              <div
+                className="flex items-center gap-0.5 border-b px-1.5 py-1"
+                style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}
+              >
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleReact(emoji)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 hover:bg-white"
+                    aria-label={`Reagir com ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+
+              <ul className="py-1">
+                <MenuItem
+                  icon={<IconArrowBackUp size={15} />}
+                  label="Responder"
+                  onClick={() => {
+                    if (onReply) {
+                      onReply(message)
+                      setOpen(false)
+                    } else {
+                      stub("Responder")
+                    }
+                  }}
+                />
+                <MenuItem
+                  icon={<IconMoodPlus size={15} />}
+                  label="Reagir"
+                  onClick={() => {
+                    if (onReact) {
+                      onReact(message, null)
+                      setOpen(false)
+                    } else {
+                      stub("Reagir")
+                    }
+                  }}
+                />
+                {/* "Encaminhar" removido do menu — o fluxo ainda nao tem
+                    modal de selecao de conversa alvo (feature pendente
+                    da lista original). Voltar aqui quando `onForward`
+                    tiver UI real; a prop e o handler seguem intactos
+                    no componente pra minimizar o diff quando reativar. */}
+                <MenuItem
+                  icon={
+                    message.isPinnedMessage ? (
+                      <IconPinFilled size={15} className="text-[var(--brand-primary)]" />
+                    ) : (
+                      <IconPin size={15} />
+                    )
+                  }
+                  label={message.isPinnedMessage ? "Desafixar" : "Fixar"}
+                  onClick={() => {
+                    if (onPin) {
+                      onPin(message)
+                      setOpen(false)
+                    } else {
+                      stub("Fixar")
+                    }
+                  }}
+                />
+                <MenuItem
+                  icon={
+                    message.isFavorited ? (
+                      <IconStarFilled size={15} className="text-amber-500" />
+                    ) : (
+                      <IconStar size={15} />
+                    )
+                  }
+                  label={message.isFavorited ? "Desfavoritar" : "Favoritar"}
+                  onClick={() => {
+                    if (onFavorite) {
+                      onFavorite(message)
+                      setOpen(false)
+                    } else {
+                      stub("Favoritar")
+                    }
+                  }}
+                />
+                {canCopy && (
+                  <MenuItem
+                    icon={<IconCopy size={15} />}
+                    label={copied ? "Copiado!" : "Copiar"}
+                    onClick={handleCopy}
+                  />
+                )}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  )
+}
+
+function MenuItem({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: ReactNode
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        role="menuitem"
+        // Cores hardcoded: em v2-dark, --text-primary flipa pra claro
+        // e o item fica branco-sobre-branco (invisivel). Popover sempre
+        // fundo branco + texto slate-900 pra manter contraste.
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left font-body text-[13px] transition-colors hover:bg-slate-50"
+        style={{ color: "#0f172a" }}
+      >
+        <span
+          className="flex h-5 w-5 items-center justify-center"
+          style={{ color: "#475569" }}
+        >
+          {icon}
+        </span>
+        {label}
+      </button>
+    </li>
+  )
+}
+
 export function MessageBubble({
   message,
   agentInitials,
@@ -748,12 +1163,29 @@ export function MessageBubble({
   isPinned,
   onPinNote,
   onAddToLog,
+  onReplyMessage,
+  onForwardMessage,
+  onReactMessage,
+  onPinMessage,
+  onFavoriteMessage,
 }: MessageBubbleProps) {
   const isOutgoing = message.type === "outgoing"
   const isBot = message.isBot ?? false
   const isNote = message.isNote === true
   const hasForm = !!(message.formFields && message.formFields.length > 0)
   const senderName = message.senderName
+
+  // Menu WhatsApp-like só entra nas RECEBIDAS. Nas outgoing/notas/forms
+  // o layout já é usado por outras ações (avatar, badges, ações de nota).
+  const hasReceivedMenu =
+    !isOutgoing &&
+    !isNote &&
+    !hasForm &&
+    message.messageType !== "sip_call" &&
+    // Sempre monta em mensagens recebidas de texto/mídia. Mesmo sem
+    // callbacks plugados, o menu ainda oferece "Copiar" e mostra os
+    // demais itens como stubs — melhor UX que sumir o chevron todo.
+    !!(message.content && message.content.trim() || message.mediaUrl)
 
   if (hasForm) {
     return <FormBubble message={message} className={className} />
@@ -899,17 +1331,18 @@ export function MessageBubble({
         className,
       )}
     >
-      <div className={cn("flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
+      <div className={cn("group flex items-end gap-2.5", isOutgoing && "flex-row-reverse")}>
         {/* Avatar: robô para bot, iniciais para agente — com tooltip do nome */}
         {isOutgoing && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className={cn(
-                "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
-                isBot
-                  ? "bg-[var(--text-muted)]"
-                  : "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
-              )}>
+              <div
+                className={cn(
+                  "flex h-7 w-7 shrink-0 cursor-default items-center justify-center rounded-full font-display text-[10px] font-bold text-white",
+                  !isBot && "bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-secondary)]",
+                )}
+                style={isBot ? { background: AUTOMATION_ACCENT } : undefined}
+              >
                 {isBot ? <IconRobot size={14} /> : (message.senderInitials || agentInitials || "?")}
               </div>
             </TooltipTrigger>
@@ -925,14 +1358,22 @@ export function MessageBubble({
             "relative min-w-0 rounded-[var(--radius-lg)] px-3.5 py-2 text-sm leading-[1.45]",
             isOutgoing
               ? isBot
-                ? "rounded-br bg-[var(--brand-gradient-end)] text-white shadow-[0_4px_16px_rgba(30,41,59,0.35)]"
+                // Bolha de AUTOMAÇÃO: lavanda com acento violeta (ref. V0).
+                // Cores hardcoded (não usar --text-primary) porque em v2-dark
+                // o token flipa para cinza claro e some contra o bg claro.
+                ? "rounded-br border border-[rgba(108,92,231,0.22)] shadow-[0_2px_10px_rgba(108,92,231,0.14)]"
                 : "rounded-br shadow-[0_4px_16px_rgba(91,111,245,0.30)]"
               : "rounded-bl text-[var(--text-primary)] shadow-[0_2px_12px_rgba(100,130,180,0.10)]",
           )}
           style={
             isOutgoing
               ? isBot
-                ? undefined
+                ? {
+                    // Lavanda com texto violeta-escuro fixo — invariante ao
+                    // data-chat-theme e ao modo dark/light (ref. V0).
+                    background: AUTOMATION_BG,
+                    color: AUTOMATION_TEXT,
+                  }
                 : {
                     background: "var(--chat-bubble-sent-bg)",
                     color: "var(--chat-bubble-sent-text)",
@@ -940,16 +1381,26 @@ export function MessageBubble({
               : { background: "var(--chat-bubble-received-bg)", color: "var(--chat-bubble-received-text)" }
           }
         >
-          {/* Badge AUTOMAÇÃO — pill petróleo/slate escuro pra ficar
-              legível tanto sobre bolha outgoing (dark navy) quanto
-              sobre bolha inbound (clara). Exibe o nome da automação
-              (senderName) quando o backend envia; caso contrário cai
-              no rótulo genérico "Automação". */}
+          {/* Indicador de mensagem fixada — banner no topo da conversa
+              (Conversation.pinnedMessageId). Canto oposto ao chevron do
+              menu (que fica em -right-2 nas recebidas) pra não colidir. */}
+          {message.isPinnedMessage && (
+            <span
+              className="absolute -left-1.5 -top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-black/5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]"
+              style={{ background: "#ffffff" }}
+              title="Mensagem fixada"
+            >
+              <IconPinFilled size={10} className="text-[var(--brand-primary)]" />
+            </span>
+          )}
+          {/* Badge AUTOMAÇÃO — pill escuro em cima do card claro tintado.
+              Exibe o nome da automação (senderName) quando o backend envia;
+              caso contrário cai no rótulo genérico "Automação". */}
           {isBot && (
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest text-white"
-                style={{ background: "#334155" /* slate-700 / petróleo */ }}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest"
+                style={{ background: `${AUTOMATION_ACCENT}1f`, color: AUTOMATION_ACCENT }}
                 title={senderName || "Automação"}
               >
                 <IconRobot size={10} />
@@ -957,30 +1408,184 @@ export function MessageBubble({
               </span>
             </div>
           )}
+          {/* Badge TEMPLATE — identifica visualmente quando a mensagem
+              foi enviada usando um template pré-aprovado da Meta. Pode
+              coexistir com o badge AUTOMAÇÃO (automação disparando um
+              template) ou aparecer sozinho (agente enviando template
+              manualmente). Usa cor accent que contrasta com ambos os
+              fundos (bolha azul regular e bolha automação tintada). */}
+          {message.messageType === "template" && (
+            <div className={cn("mb-1.5 flex items-center gap-1.5", isBot && "-mt-0.5")}>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-display text-[9.5px] font-bold uppercase tracking-widest",
+                  isOutgoing && !isBot
+                    ? "bg-white/22 text-white ring-1 ring-inset ring-white/25"
+                    : "bg-[color-mix(in_srgb,#0ea5e9_14%,white)] text-[#0369a1] ring-1 ring-inset ring-[color-mix(in_srgb,#0ea5e9_35%,transparent)]",
+                )}
+                title="Mensagem enviada usando um template aprovado da Meta"
+              >
+                <IconFile size={10} />
+                Template
+              </span>
+            </div>
+          )}
+          {/* Menu WhatsApp-like nas mensagens recebidas: chevron que
+              expande com reações rápidas + Responder/Encaminhar/Copiar/Reagir.
+              Só monta quando há pelo menos uma ação (senão o hover fica vazio). */}
+          {hasReceivedMenu && (
+            <ReceivedMessageMenu
+              message={message}
+              onReply={onReplyMessage}
+              onForward={onForwardMessage}
+              onReact={onReactMessage}
+              onPin={onPinMessage}
+              onFavorite={onFavoriteMessage}
+            />
+          )}
+          {/* Citação: cliente respondeu uma mensagem específica.
+              Barra vertical + trecho curto, estilo WhatsApp. */}
+          {message.replyTo?.snippet && (
+            <QuotedPreview
+              snippet={message.replyTo.snippet}
+              direction={message.replyTo.direction ?? "out"}
+              senderName={message.replyTo.senderName ?? null}
+              onLightBg={!isOutgoing || isBot}
+            />
+          )}
           {/* Conteúdo: mídia (áudio/imagem/vídeo/documento) ou texto */}
           <MessageContent message={message} isOutgoing={isOutgoing} />
+          {/* Botões de resposta rápida (interactive/template) — cards
+              empilhados abaixo do corpo, estilo WhatsApp/V0. */}
+          {message.buttons && message.buttons.length > 0 && (
+            <MessageButtons buttons={message.buttons} onLightBg={!isOutgoing || isBot} />
+          )}
           <span
             className={cn(
               "pointer-events-none absolute bottom-1.5 right-2.5 inline-flex select-none items-center gap-0.5 whitespace-nowrap text-[10.5px] leading-none",
-              isOutgoing ? "" : "text-[var(--text-muted)]",
+              isOutgoing && isBot && "text-[var(--text-muted)]",
+              !isOutgoing && "text-[var(--text-muted)]",
             )}
             style={
               isOutgoing && !isBot
                 ? { color: "var(--chat-bubble-sent-time)" }
-                : isOutgoing
-                  ? { color: "rgba(255,255,255,0.8)" }
-                  : undefined
+                : undefined
             }
           >
+            {message.isFavorited && (
+              <IconStarFilled size={10} className="text-amber-400" aria-label="Favoritada" />
+            )}
             {message.time}
             {isOutgoing && message.status && (
-              <StatusIndicator status={message.status} sendError={message.sendError} />
+              <StatusIndicator
+                status={message.status}
+                sendError={message.sendError}
+                onLightBg={isBot}
+              />
             )}
           </span>
+          {/* Badge de reação flutuante: emoji do cliente sobre o canto
+              inferior da bolha (padrão WhatsApp Web). Quando há múltiplas
+              reações distintas, exibe as duas primeiras + contador. */}
+          {message.reactions && message.reactions.length > 0 && (
+            <ReactionBadge
+              reactions={message.reactions}
+              anchor={isOutgoing ? "left" : "right"}
+            />
+          )}
         </div>
       </div>
 
       {/* Nome do remetente apenas no tooltip do avatar (acima) */}
+    </div>
+  )
+}
+
+/**
+ * Cabeçalho de citação (reply) — aparece dentro da bolha, acima do
+ * conteúdo. Renderiza barra vertical colorida à esquerda + trecho curto.
+ * A cor da barra e do texto dependem do fundo da bolha para garantir
+ * contraste em qualquer variação (azul, indigo, cinza claro).
+ */
+function QuotedPreview({
+  snippet,
+  direction,
+  senderName,
+  onLightBg,
+}: {
+  snippet: string
+  direction: "in" | "out"
+  senderName: string | null
+  onLightBg: boolean
+}) {
+  const label = senderName || (direction === "out" ? "Você" : "Cliente")
+  // Cores hardcoded p/ atravessar dark/light sem depender de --text-*.
+  const bg = onLightBg ? "#f1f5f9" : "rgba(255,255,255,0.14)"
+  const border = onLightBg ? "#5b6ff5" : "#ffffff"
+  const labelColor = onLightBg ? "#4338ca" : "#e0e7ff"
+  const textColor = onLightBg ? "#334155" : "rgba(255,255,255,0.88)"
+  return (
+    <div
+      className="mb-1.5 overflow-hidden rounded-md pl-2"
+      style={{ background: bg, borderLeft: `3px solid ${border}` }}
+    >
+      <div className="px-2 py-1">
+        <div
+          className="font-display text-[10.5px] font-bold leading-none"
+          style={{ color: labelColor }}
+        >
+          {label}
+        </div>
+        <div
+          className="mt-0.5 line-clamp-2 font-body text-[11.5px] leading-snug"
+          style={{ color: textColor }}
+        >
+          {snippet}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Badge circular com o(s) emoji(s) de reação, ancorado no canto inferior
+ * da bolha. WhatsApp Web mostra até 2 emojis distintos + "+N" se houver
+ * mais tipos. Sempre fundo branco com sombra para destacar sobre a bolha.
+ */
+function ReactionBadge({
+  reactions,
+  anchor,
+}: {
+  reactions: NonNullable<Message["reactions"]>
+  anchor: "left" | "right"
+}) {
+  // Agrupa por emoji (contagem). WhatsApp 1:1 quase sempre entrega
+  // apenas uma reação por bolha; a agregação é defensiva para grupos
+  // futuros ou histórico duplicado.
+  const groups = new Map<string, number>()
+  for (const r of reactions) {
+    groups.set(r.emoji, (groups.get(r.emoji) ?? 0) + 1)
+  }
+  const entries = Array.from(groups.entries())
+  const total = reactions.length
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute -bottom-2 flex items-center gap-0.5 rounded-full border border-black/5 bg-white px-1.5 py-0.5 shadow-[0_2px_6px_rgba(15,20,40,0.18)]",
+        anchor === "left" ? "left-1" : "right-1",
+      )}
+      title={reactions.map((r) => r.emoji).join(" ")}
+    >
+      {entries.slice(0, 2).map(([emoji]) => (
+        <span key={emoji} className="text-[13px] leading-none">
+          {emoji}
+        </span>
+      ))}
+      {total > 1 && (
+        <span className="ml-0.5 font-display text-[10px] font-semibold text-slate-600">
+          {total}
+        </span>
+      )}
     </div>
   )
 }
@@ -1015,6 +1620,42 @@ export function ConnectionDivider({ label }: ConnectionDividerProps) {
       <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
         <IconArrowsExchange size={12} className="text-[var(--brand-primary)]" />
         via {label}
+      </span>
+      <span className="h-px w-6 bg-[var(--glass-border)]" />
+    </div>
+  )
+}
+
+interface ConversationClosedMarkerProps {
+  /** ISO da data de encerramento — quando ausente, mostra so "Conversa encerrada". */
+  closedAt?: string | null
+}
+
+/**
+ * Marcador no fim da timeline indicando que a conversa foi encerrada.
+ * Mesmo padrao visual do `ConnectionDivider`/`DaySeparator` (chip pill
+ * centralizado com bordas hairline) — minimalista, dentro do proprio
+ * chat, sem card lateral. Usado no inbox (via ChatArea) e no pipeline
+ * (via messagesSlot do DealDetailPanel).
+ */
+export function ConversationClosedMarker({ closedAt }: ConversationClosedMarkerProps) {
+  let label: string | null = null
+  if (closedAt) {
+    const d = new Date(closedAt)
+    if (!Number.isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, "0")
+      const mm = String(d.getMonth() + 1).padStart(2, "0")
+      const hh = String(d.getHours()).padStart(2, "0")
+      const mi = String(d.getMinutes()).padStart(2, "0")
+      label = `${dd}/${mm} às ${hh}:${mi}`
+    }
+  }
+  return (
+    <div className="my-2 flex items-center justify-center gap-2 self-center">
+      <span className="h-px w-6 bg-[var(--glass-border)]" />
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-2.5 py-1 font-display text-[10.5px] font-semibold text-[var(--text-secondary)]">
+        <IconLock size={12} className="text-[var(--text-muted)]" />
+        Conversa encerrada{label ? ` · ${label}` : ""}
       </span>
       <span className="h-px w-6 bg-[var(--glass-border)]" />
     </div>

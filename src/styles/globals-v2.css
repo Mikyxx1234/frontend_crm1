@@ -64,8 +64,12 @@
   --color-session-text:     #991b1b;   /* red-800 */
   --color-session-subtext:  #b91c1c;   /* red-700 */
 
-  /* WhatsApp message status ticks */
-  --wa-tick-read:    #7fd4ff;   /* ticks azuis = lido */
+  /* WhatsApp message status ticks. `read` usa o mesmo azul saturado do
+     WhatsApp Web (#53bdeb) — o valor anterior (#7fd4ff) sumia contra
+     bolhas out em tema claro/gradiente, dando a impressão de que a
+     entrega nunca era marcada como lida mesmo quando a Meta entregava
+     o evento read via webhook. */
+  --wa-tick-read:    #53bdeb;   /* ticks azuis = lido */
   --wa-tick-fail:    #fca5a5;   /* ícone de falha = rosa */
 
   /* Toggle unchecked */
@@ -336,9 +340,28 @@
    clica o botão `»`, sem quebrar o layout do grid. */
 :root {
   --nav-rail-w: 72px;
+  --mobile-bottom-nav-h: 0px;
 }
 html[data-nav-expanded="true"] {
   --nav-rail-w: 220px;
+}
+
+/* Mobile (< md / 768px): rail lateral some; bottom nav global assume a navegação.
+   Com NavRail em `display:none`, forçamos 1 coluna pra o main ocupar 100%
+   (senão o item restante cairia na faixa de 72px do grid antigo).
+   A barra inferior é `fixed` e SOBREPPÕE o conteúdo — sem padding-bottom —
+   para, ao ocultar no scroll-down, o usuário recuperar a altura total. */
+@media (max-width: 767px) {
+  :root {
+    --nav-rail-w: 0px;
+    --mobile-bottom-nav-h: 62px;
+  }
+  html[data-nav-expanded="true"] {
+    --nav-rail-w: 0px;
+  }
+  .v2-screen {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }
 
 .v2-root {
@@ -385,6 +408,24 @@ html[data-nav-expanded="true"] {
   display: none !important;
   height: 0 !important;
   width: 0 !important;
+}
+
+/* toolbar-hscroll: faixa horizontal (header de ações, abas) que rola
+   lateralmente quando o conteúdo excede a largura — scrollbar oculta. */
+.v2-screen .toolbar-hscroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.v2-root .v2-screen .toolbar-hscroll::-webkit-scrollbar,
+.v2-root .v2-screen .toolbar-hscroll::-webkit-scrollbar-track,
+.v2-root .v2-screen .toolbar-hscroll::-webkit-scrollbar-thumb {
+  display: none;
+  height: 0;
+  width: 0;
 }
 
 /* Cada .kanban-col ocupa a altura TOTAL do .kanban-board-hscroll

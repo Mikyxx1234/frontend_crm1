@@ -32,7 +32,7 @@ export function ActivitiesUrgentCard({ items, onSelect }: ActivitiesUrgentCardPr
   return (
     <section
       aria-label="Urgentes"
-      className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
+      className="min-w-0 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
     >
       <p className="mb-3 flex items-center gap-2 font-display text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[var(--text-muted)]">
         <IconAlertTriangle size={14} stroke={2.2} className="text-[var(--color-danger)]" />

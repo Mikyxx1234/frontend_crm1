@@ -1,14 +1,17 @@
 /*
- * Camada de API da personalizacao da sidebar (preferencias do usuario).
+ * Camada de API da sidebar EFETIVA do usuario (derivada dos Roles).
+ *
+ * 14/jul/26: `saveSidebarPreferences` foi removido. A gravacao agora e feita
+ * pelo admin em cada Role (via `useUpdateRole` do features/permissions).
+ * Ver AGENT.md "Sidebar por Papel".
  *
  * Endpoints (backend):
- *   GET   /api/profile/preferences           -> { sidebar: { items } }
- *   PATCH /api/profile/preferences/sidebar   -> { sidebar: { items } }
+ *   GET /api/profile/preferences  -> { sidebar: { items } } (uniao dos roles)
  */
 
 import { apiUrl } from "@/lib/api";
 
-import type { SidebarItemPreference, SidebarPreferencesResponse } from "./types";
+import type { SidebarPreferencesResponse } from "./types";
 
 async function getJson<T>(path: string, errLabel: string): Promise<T> {
   const res = await fetch(apiUrl(path));
@@ -33,50 +36,9 @@ async function getJson<T>(path: string, errLabel: string): Promise<T> {
   }
 }
 
-async function sendJson<T>(
-  path: string,
-  method: "POST" | "PUT" | "PATCH" | "DELETE",
-  body: unknown,
-  errLabel: string,
-): Promise<T> {
-  const res = await fetch(apiUrl(path), {
-    method,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    let message = errLabel;
-    try {
-      const parsed = JSON.parse(text) as { message?: unknown };
-      if (typeof parsed?.message === "string") message = parsed.message;
-    } catch {
-      /* corpo nao-JSON */
-    }
-    throw new Error(message);
-  }
-  if (!text.trim()) return undefined as unknown as T;
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return undefined as unknown as T;
-  }
-}
-
 export function fetchSidebarPreferences(): Promise<SidebarPreferencesResponse> {
   return getJson<SidebarPreferencesResponse>(
     "/api/profile/preferences",
     "Erro ao carregar preferências.",
-  );
-}
-
-export function saveSidebarPreferences(
-  items: SidebarItemPreference[],
-): Promise<SidebarPreferencesResponse> {
-  return sendJson<SidebarPreferencesResponse>(
-    "/api/profile/preferences/sidebar",
-    "PATCH",
-    { items },
-    "Erro ao salvar preferências.",
   );
 }

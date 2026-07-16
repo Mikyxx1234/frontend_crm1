@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useRef, useState, useEffect, type FormEvent } from "react"
+import { Fragment, useRef, useState, useEffect, useCallback, type FormEvent } from "react"
 import { useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { TooltipGlass } from "@/components/crm/tooltip-glass"
@@ -8,7 +8,7 @@ import { isPreviewMode, PREVIEW_USER } from "@/lib/preview-mode"
 import { getInitials } from "@/lib/utils"
 import { BadgeGlass } from "./badge-glass"
 import { avatarGradients, channelBadge } from "./conversation-card"
-import { MessageBubble, DaySeparator, ConnectionDivider, type Message } from "./message-bubble"
+import { MessageBubble, DaySeparator, ConnectionDivider, ConversationClosedMarker, type Message } from "./message-bubble"
 import { SessionAlert } from "./session-alert"
 import {
   formatConnectionLabel,
@@ -25,11 +25,14 @@ import {
   IconChecklist,
   IconNote,
   IconClock,
+  IconPinFilled,
+  IconX,
+  IconLock,
 } from "@tabler/icons-react"
 
 export type ChatTabId = "conversa" | "notas" | "atividades" | "timeline" | "chamadas"
 
-const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+const CHAT_TABS: { id: ChatTabId; label: string; icon: React.ComponentType<{ size?: number; stroke?: number }> }[] = [
   { id: "conversa", label: "Conversa", icon: IconMessageCircle },
   { id: "atividades", label: "Tarefas", icon: IconChecklist },
   { id: "notas", label: "Notas", icon: IconNote },
@@ -125,6 +128,42 @@ interface ChatAreaProps {
   callsSlot?: React.ReactNode
   /** Contagens opcionais exibidas como badge em cada aba. */
   tabCounts?: Partial<Record<ChatTabId, number>>
+
+  // ── Ações nas mensagens recebidas (menu WhatsApp-like) ───────────
+  // Passa através para MessageBubble. Se nenhum handler for provido,
+  // o menu ainda aparece com "Copiar" (que é interno).
+  onReplyMessage?: (message: Message) => void
+  onForwardMessage?: (message: Message) => void
+  onReactMessage?: (message: Message, emoji: string | null) => void
+  onPinMessage?: (message: Message) => void
+  onFavoriteMessage?: (message: Message) => void
+
+  /**
+   * Mensagens fixadas no topo da conversa (banner estilo WhatsApp). Podem
+   * ser várias (máx. 3). O banner exibe uma por vez; clicar cicla para a
+   * próxima e ROLA a lista até ela (com highlight). `onUnpinMessage(id)`
+   * desafixa a mensagem exibida no momento.
+   */
+  pinnedMessages?: Array<{ id: string; content: string; senderName?: string | null }>
+  onUnpinMessage?: (id: string) => void
+
+  /**
+   * ID amigavel sequencial da conversa (Contact/Deal-like #N por
+   * organizacao). Quando presente, renderiza um chip mono minimalista
+   * no header (ao lado do nome), sem alterar o layout — o operador
+   * consegue referenciar o "ticket" em conversa/log sem sair do chat.
+   * Numero e' opcional pra manter compat com callers antigos.
+   */
+  conversationNumber?: number | null
+
+  /**
+   * Sinaliza que a conversa foi encerrada (`status = RESOLVED`). Quando
+   * true, renderiza um `ConversationClosedMarker` no fim da lista de
+   * mensagens — mesmo padrao visual do DaySeparator/ConnectionDivider,
+   * bem discreto. `conversationClosedAt` complementa com data/hora.
+   */
+  conversationResolved?: boolean
+  conversationClosedAt?: string | null
 }
 
 export function ChatArea({
@@ -155,8 +194,53 @@ export function ChatArea({
   timelineSlot,
   callsSlot,
   tabCounts,
+  onReplyMessage,
+  onForwardMessage,
+  onReactMessage,
+  onPinMessage,
+  onFavoriteMessage,
+  pinnedMessages,
+  onUnpinMessage,
+  conversationNumber,
+  conversationResolved,
+  conversationClosedAt,
 }: ChatAreaProps) {
   const formRef = useRef<HTMLFormElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
+  // Índice da fixada exibida no banner e id destacado após o scroll.
+  const [activePinIndex, setActivePinIndex] = useState(0)
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+  const pins = pinnedMessages ?? []
+
+  // Mantém o índice válido quando a lista de fixadas muda (desafixar etc.).
+  useEffect(() => {
+    if (activePinIndex >= pins.length && pins.length > 0) {
+      setActivePinIndex(0)
+    }
+  }, [pins.length, activePinIndex])
+
+  // Rola até a mensagem fixada e a destaca por ~1.6s (estilo WhatsApp).
+  const scrollToMessage = useCallback((messageId: string) => {
+    const container = messagesRef.current
+    if (!container) return
+    const el = container.querySelector<HTMLElement>(
+      `[data-message-id="${CSS.escape(messageId)}"]`,
+    )
+    if (!el) return
+    el.scrollIntoView({ behavior: "smooth", block: "center" })
+    setHighlightId(messageId)
+    window.setTimeout(() => setHighlightId((cur) => (cur === messageId ? null : cur)), 1600)
+  }, [])
+
+  // Clique no banner: rola até a fixada atual e avança pra próxima (ciclo).
+  const handleBannerClick = useCallback(() => {
+    if (pins.length === 0) return
+    const current = pins[Math.min(activePinIndex, pins.length - 1)]
+    if (current) scrollToMessage(current.id)
+    if (pins.length > 1) {
+      setActivePinIndex((i) => (i + 1) % pins.length)
+    }
+  }, [pins, activePinIndex, scrollToMessage])
   const isControlled = onSendMessage !== undefined
   const { data: session } = useSession()
 
@@ -239,6 +323,39 @@ export function ChatArea({
             </BadgeGlass>
           )}
 
+          {/* Chip minimalista com o "ticket number" da conversa. Fica em
+              linha com o avatar e o BadgeGlass, sem card lateral: assim o
+              operador enxerga o #N dentro do proprio chat, referenciavel
+              em logs/handoff. Padrao Contact.number / Deal.number (#N por
+              organizacao). Ver AGENT.md "ID de conversa + logs + gatilho". */}
+          {typeof conversationNumber === "number" && (
+            <span
+              title={`Conversa #${conversationNumber}`}
+              aria-label={`Conversa numero ${conversationNumber}`}
+              className="font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
+            >
+              #{conversationNumber}
+            </span>
+          )}
+
+          {/* Chip "Encerrada" no header — indica status resolvido de
+              relance, sem depender do usuario abrir o kebab. Mesmo padrao
+              tipografico do #N (mono/muted) pra nao competir com o nome
+              do contato. Renderiza mesmo quando #N ausente (backend legado). */}
+          {conversationResolved && (
+            <span
+              title={
+                conversationClosedAt
+                  ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
+                  : "Conversa encerrada"
+              }
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+            >
+              <IconLock size={10} />
+              Encerrada
+            </span>
+          )}
+
           {tabsEnabled && (
             <ChatTabsBar
               activeTab={activeTab}
@@ -284,8 +401,48 @@ export function ChatArea({
         </div>
       ) : (
         <>
+      {/* PINNED MESSAGES BANNER — estilo WhatsApp: várias fixadas, clicar
+          cicla e rola até a mensagem. Mostra 1 por vez + contador. */}
+      {pins.length > 0 && (() => {
+        const idx = Math.min(activePinIndex, pins.length - 1)
+        const current = pins[idx]
+        return (
+          <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg border border-[var(--brand-primary)]/20 bg-[var(--brand-primary)]/[0.06] px-3 py-2">
+            <IconPinFilled size={14} className="shrink-0 text-[var(--brand-primary)]" />
+            <button
+              type="button"
+              onClick={handleBannerClick}
+              className="min-w-0 flex-1 cursor-pointer text-left"
+              aria-label="Ir para a mensagem fixada"
+            >
+              <p className="flex items-center gap-1.5 font-display text-[10px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
+                Mensagem fixada
+                {pins.length > 1 && (
+                  <span className="rounded-full bg-[var(--brand-primary)]/15 px-1.5 py-px text-[9px] tabular-nums">
+                    {idx + 1}/{pins.length}
+                  </span>
+                )}
+              </p>
+              <p className="truncate text-[12.5px] text-[var(--text-secondary)]">
+                {current.senderName ? `${current.senderName}: ` : ""}
+                {current.content}
+              </p>
+            </button>
+            {onUnpinMessage && (
+              <button
+                type="button"
+                onClick={() => onUnpinMessage(current.id)}
+                aria-label="Desafixar mensagem"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+              >
+                <IconX size={14} />
+              </button>
+            )}
+          </div>
+        )
+      })()}
       {/* MESSAGES */}
-      <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
+      <div ref={messagesRef} className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
         {(() => {
           // Separador de dia ("Hoje" / "Ontem" / "DD/MM/AAAA") inserido
           // automaticamente sempre que a data muda entre mensagens. Usa o
@@ -329,11 +486,36 @@ export function ChatArea({
               <Fragment key={message.id || index}>
                 {separator && <DaySeparator date={separator} />}
                 {connLabel && <ConnectionDivider label={connLabel} />}
-                <MessageBubble message={message} agentInitials={agentInitials} />
+                <div
+                  data-message-id={message.id}
+                  className={cn(
+                    "flex flex-col scroll-mt-24 rounded-[var(--radius-lg)] transition-[background-color,box-shadow] duration-500",
+                    highlightId === message.id &&
+                      "bg-[var(--brand-primary)]/10 shadow-[0_0_0_2px_var(--brand-primary)]",
+                  )}
+                >
+                  <MessageBubble
+                    message={message}
+                    agentInitials={agentInitials}
+                    onReplyMessage={onReplyMessage}
+                    onForwardMessage={onForwardMessage}
+                    onReactMessage={onReactMessage}
+                    onPinMessage={onPinMessage}
+                    onFavoriteMessage={onFavoriteMessage}
+                  />
+                </div>
               </Fragment>
             )
           })
         })()}
+
+        {/* Marcador de encerramento — ultimo item da lista, alinhado com
+            o padrao visual do DaySeparator/ConnectionDivider. Fica visivel
+            de dentro do proprio chat, sem card lateral, atendendo ao
+            pedido "simples/minimalista dentro do chat". */}
+        {conversationResolved && (
+          <ConversationClosedMarker closedAt={conversationClosedAt ?? null} />
+        )}
       </div>
 
       {/* SESSION ALERT */}
@@ -344,15 +526,15 @@ export function ChatArea({
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="mx-6 mb-6 flex items-center gap-2 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] py-2 pl-4.5 pr-2 shadow-[var(--glass-shadow-sm)]"
+          className="mx-6 mb-6 flex h-11 items-center gap-1.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] pl-3 pr-1.5 shadow-[var(--glass-shadow-sm)]"
         >
           <TooltipGlass label="Anexar" side="top">
             <button
               type="button"
               onClick={onAttachClick}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--brand-primary)]"
             >
-              <IconPaperclip size={18} />
+              <IconPaperclip size={17} />
             </button>
           </TooltipGlass>
           <input
@@ -361,15 +543,15 @@ export function ChatArea({
             disabled={effectiveDisabled || sending}
             value={isControlled ? value : undefined}
             onChange={isControlled ? (e) => onInputChange?.(e.target.value) : undefined}
-            className="flex-1 border-none bg-transparent font-body text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-w-0 flex-1 self-stretch border-none bg-transparent px-1 font-body text-[13.5px] leading-none text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
           />
           <TooltipGlass label="Emoji" side="top">
             <button
               type="button"
               onClick={onEmojiClick}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--brand-primary)]"
             >
-              <IconMoodSmile size={18} />
+              <IconMoodSmile size={17} />
             </button>
           </TooltipGlass>
           {onRecordClick && (
@@ -377,9 +559,9 @@ export function ChatArea({
               <button
                 type="button"
                 onClick={onRecordClick}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-subtle)] hover:text-[var(--brand-primary)]"
               >
-                <IconMoodSmile size={18} />
+                <IconMoodSmile size={17} />
               </button>
             </TooltipGlass>
           )}
@@ -387,9 +569,9 @@ export function ChatArea({
             <button
               type={isControlled ? "submit" : "button"}
               disabled={isControlled && (!value.trim() || sending || effectiveDisabled)}
-              className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_4px_12px_rgba(91,111,245,0.35)] transition-all hover:scale-105 hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_rgba(91,111,245,0.35)] transition-all hover:scale-[1.05] hover:bg-[var(--brand-primary-dark)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
-              <IconSend size={16} />
+              <IconSend size={15} />
             </button>
           </TooltipGlass>
         </form>
@@ -429,7 +611,7 @@ function ChatTabsBar({
                 : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
             )}
           >
-            <Icon size={13} strokeWidth={isActive ? 2.4 : 2} />
+            <Icon size={13} stroke={isActive ? 2.4 : 2} />
             {tab.label}
           </button>
         )

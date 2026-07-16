@@ -35,6 +35,8 @@ import {
   IconAffiliate,
   IconPackage,
   IconUser,
+  IconStarFilled,
+  IconLock,
 } from "@tabler/icons-react"
 import { useAsideViewMode, type AsideViewMode } from "@/hooks/use-aside-view-mode"
 import {
@@ -45,9 +47,12 @@ import {
 } from "@/lib/connection-label"
 import { useToggleConversationResolve } from "@/features/inbox-v2/hooks"
 import { RequirePermission } from "@/components/auth/require-permission"
+import { FavoritesPanel } from "@/components/crm/favorites-panel"
+import { TabulationDialog } from "@/features/inbox-v2/extras/tabulation-dialog"
 import { useSectionOrder } from "@/hooks/use-section-order"
 import { useFieldLayout } from "@/hooks/use-field-layout"
 import { useContactSources } from "@/hooks/use-contact-sources"
+import { useIsDesktop } from "@/hooks/use-media-query"
 
 // ─── Ordem das seções da sidebar ──────────────────────────────────
 // Mudancas (DD4 + DD5 do questionario):
@@ -170,6 +175,9 @@ interface DealDetailPanelProps {
   messagesSlot?: React.ReactNode
   composerSlot?: React.ReactNode
   sessionAlertSlot?: React.ReactNode
+  /** Banner de mensagem fixada (estilo WhatsApp) — renderizado entre o
+   *  header de tabs e a lista de mensagens, na tab "Conversa". */
+  pinnedMessageSlot?: React.ReactNode
   /**
    * Override por tab. Quando definido para a tab atual, substitui o
    * painel <main> inteiro pelo node. Util para Atividades/Notas/
@@ -234,6 +242,16 @@ interface DealDetailPanelProps {
   /** Estado de resolução da conversa — para mostrar "Encerrar" ou "Reabrir". */
   isResolved?: boolean
   /**
+   * ID amigavel sequencial da conversa (#N por organizacao). Quando
+   * presente, renderiza um chip mono minimalista no TabsBar da conversa,
+   * dentro do proprio container do chat — sem card lateral. Mesma
+   * filosofia do `conversationNumber` do `ChatArea` (inbox). Opcional
+   * pra manter compat com callers sem conversa ativa.
+   */
+  conversationNumber?: number | null
+  /** ISO do `closedAt` da conversa — usado no chip "Encerrada" do TabsBar. */
+  conversationClosedAt?: string | null
+  /**
    * Conexão (Channel) por onde o contato está conversando (qual WhatsApp).
    * Exibida como chip no header do contato — distingue quando a pessoa fala
    * por contas/fontes diferentes.
@@ -292,6 +310,7 @@ export function DealDetailPanel({
   messagesSlot,
   composerSlot,
   sessionAlertSlot,
+  pinnedMessageSlot,
   tabContentOverride,
   customFieldsSlot,
   fieldConfigSlot,
@@ -301,6 +320,8 @@ export function DealDetailPanel({
   funnelSegments,
   conversationId,
   isResolved,
+  conversationNumber,
+  conversationClosedAt,
   connection,
 }: DealDetailPanelProps) {
   // Retrocompatibilidade: split slots sobrepõem o legado fieldConfigSlot
@@ -331,6 +352,11 @@ export function DealDetailPanel({
 
   // Toggle foco ↔ compacto (compartilhado com contact-aside via localStorage).
   const [viewMode, setViewMode] = useAsideViewMode()
+
+  // Detecção de viewport: < lg (1024px) ativa o layout mobile (painel único +
+  // switcher Conversa | Detalhes). Desktop mantém o grid 2-colunas com resize.
+  const isDesktop = useIsDesktop()
+  const [mobilePane, setMobilePane] = useState<"conversa" | "detalhes">("conversa")
 
   // DD8 do questionario: respeitar visibilidade de blocos configurada via
   // FieldConfigPanel admin (PUT /api/field-layout, context=deal_panel_v2).
@@ -456,6 +482,11 @@ export function DealDetailPanel({
     return () => window.removeEventListener("keydown", onKey)
   }, [isOpen, onClose])
 
+  // Ao abrir o painel no mobile, volta para Conversa (tab primária).
+  useEffect(() => {
+    if (isOpen) setMobilePane("conversa")
+  }, [isOpen])
+
   // Cleanup defensivo: se o componente desmontar (painel fechado) durante
   // um drag em andamento, removemos listeners pra evitar memory leak e
   // restauramos o cursor/seleção globais.
@@ -567,18 +598,54 @@ export function DealDetailPanel({
             "ENTERPRISE" hardcoded (dado falso). Os controles essenciais (voltar,
             editar contato, chip de conexão) foram realocados para o hero. */}
 
-        {/* 2 COLS: SIDEBAR + CONTENT — largura da sidebar é dinâmica
-            (drag horizontal na handle entre as colunas). Min/max bounds
-            evitam quebrar layouts em telas pequenas / coluna direita ficar
-            espremida. */}
+        {/* 2 COLS (desktop lg+): SIDEBAR + CONTENT com resize horizontal.
+            Mobile (< lg): painel único + switcher Conversa | Detalhes. */}
         <div
-          className="grid min-h-0 flex-1 gap-1 overflow-hidden"
-          style={{ gridTemplateColumns: `${sidebarWidth}px 8px 1fr` }}
+          className={cn(
+            "min-h-0 flex-1 overflow-hidden",
+            isDesktop ? "grid gap-1" : "flex flex-col gap-2",
+          )}
+          style={isDesktop ? { gridTemplateColumns: `${sidebarWidth}px 8px 1fr` } : undefined}
         >
-          {/* SIDEBAR — painel funcional estilo Kommo (DS glass) */}
+          {/* Switcher mobile — visível apenas em viewports < lg */}
+          {!isDesktop && (
+            <div className="shrink-0 flex rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-1 shadow-[var(--glass-shadow-sm)]">
+              <button
+                type="button"
+                onClick={() => setMobilePane("conversa")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 py-2.5 font-display text-[13px] font-bold transition-all",
+                  mobilePane === "conversa"
+                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
+              >
+                <IconMessageCircle size={14} />
+                Conversa
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobilePane("detalhes")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-3 py-2.5 font-display text-[13px] font-bold transition-all",
+                  mobilePane === "detalhes"
+                    ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                )}
+              >
+                <IconLayoutList size={14} />
+                Detalhes
+              </button>
+            </div>
+          )}
+          {/* SIDEBAR — desktop sempre visível; mobile só no pane "Detalhes" */}
+          {(isDesktop || mobilePane === "detalhes") && (
           <aside
             aria-label="Detalhes do negócio"
-            className="flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md"
+            className={cn(
+              "flex min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] shadow-[var(--glass-shadow)] backdrop-blur-md",
+              !isDesktop && "flex-1",
+            )}
           >
             {/* Cabeçalho fixo: hero do negócio — paridade visual com o
                 contact-aside do inbox (fundo brand + anel de progresso).
@@ -1127,11 +1194,10 @@ export function DealDetailPanel({
                   ContactAside do inbox, que ja tinha produtos arrastaveis. */}
             </div>
           </aside>
+          )}
 
-          {/* Handle de resize — divisor entre sidebar e content. Coluna
-              fina (8px) no grid pra ficar fácil de pegar com o mouse.
-              role="separator" + aria-* descrevem o controle pra leitores
-              de tela; setas left/right ajustam de 16 em 16px via teclado. */}
+          {/* Handle de resize — desktop only */}
+          {isDesktop && (
           <div
             role="separator"
             aria-label="Redimensionar painel de detalhes"
@@ -1184,12 +1250,16 @@ export function DealDetailPanel({
               className="h-10 w-[3px] rounded-full bg-[var(--glass-border)] transition-colors group-hover/handle:bg-[var(--brand-primary)] group-focus-visible/handle:bg-[var(--brand-primary)]"
             />
           </div>
+          )}
 
-          {/* CONTENT */}
-          {tabContentOverride?.[activeTab] ? (
+          {/* CONTENT — desktop sempre; mobile só no pane "Conversa" */}
+          {(isDesktop || mobilePane === "conversa") && (tabContentOverride?.[activeTab] ? (
             <main
               aria-label={activeTab}
-              className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+              className={cn(
+                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                !isDesktop && "min-h-0 flex-1",
+              )}
             >
               <TabsBar activeTab={activeTab} onChange={setActiveTab} />
               {tabContentOverride[activeTab]}
@@ -1200,7 +1270,10 @@ export function DealDetailPanel({
             // composer) mas plugado nos slots externos.
             <main
               aria-label="Conversa"
-              className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+              className={cn(
+                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                !isDesktop && "min-h-0 flex-1",
+              )}
             >
               <TabsBar
                 activeTab={activeTab}
@@ -1211,8 +1284,12 @@ export function DealDetailPanel({
                 onSearchChange={setSearchQuery}
                 conversationId={conversationId}
                 isResolved={isResolved}
+                conversationNumber={conversationNumber}
+                conversationClosedAt={conversationClosedAt}
                 callButtonSlot={callButtonSlot}
               />
+
+              {pinnedMessageSlot}
 
               <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-7 py-6">
                 {messagesSlot}
@@ -1226,7 +1303,10 @@ export function DealDetailPanel({
             // Default: container com header de tabs + ChatArea mock.
             <main
               aria-label="Conversa"
-              className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]"
+              className={cn(
+                "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] backdrop-blur-md shadow-[var(--glass-shadow)]",
+                !isDesktop && "min-h-0 flex-1",
+              )}
             >
               <TabsBar activeTab={activeTab} onChange={setActiveTab} />
               <div className="min-h-0 flex-1">
@@ -1238,7 +1318,7 @@ export function DealDetailPanel({
                 />
               </div>
             </main>
-          )}
+          ))}
         </div>
       </div>
     </div>
@@ -1261,7 +1341,11 @@ function TabsBar({
   onSearchChange,
   conversationId,
   isResolved,
+  conversationNumber,
+  conversationClosedAt,
   callButtonSlot,
+  conversationDepartmentId,
+  conversationRequiresTabulation,
 }: {
   activeTab: TabId
   onChange: (id: TabId) => void
@@ -1271,12 +1355,21 @@ function TabsBar({
   onSearchChange?: (q: string) => void
   conversationId?: string | null
   isResolved?: boolean
+  /** #N sequencial da conversa — chip minimalista no header do container. */
+  conversationNumber?: number | null
+  /** ISO de encerramento — vira tooltip no chip "Encerrada". */
+  conversationClosedAt?: string | null
   /** Botao "Ligar" (softphone) — renderizado no canto direito, ao lado do
    *  kebab de acoes da conversa. Antes vivia no header do card do deal. */
   callButtonSlot?: React.ReactNode
+  /** Departamento da conversa — abre modal de tabulacao no encerrar quando exige. */
+  conversationDepartmentId?: string | null
+  conversationRequiresTabulation?: boolean
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
+  const [tabulationOpen, setTabulationOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const toggleResolve = useToggleConversationResolve()
 
@@ -1334,6 +1427,36 @@ function TabsBar({
               )
             })}
           </div>
+        )}
+
+        {/* Chip minimalista com o "ticket number" da conversa. Fica logo
+            apos os pills de aba, dentro do proprio TabsBar — sem card
+            lateral. Padrao Contact.number / Deal.number (#N por org).
+            Ver AGENT.md "ID de conversa + logs + gatilho". */}
+        {!(searchOpen && activeTab === "conversa") && typeof conversationNumber === "number" && (
+          <span
+            title={`Conversa #${conversationNumber}`}
+            aria-label={`Conversa numero ${conversationNumber}`}
+            className="shrink-0 font-mono text-[11px] font-medium tabular-nums text-[var(--text-muted)] select-all"
+          >
+            #{conversationNumber}
+          </span>
+        )}
+
+        {/* Chip "Encerrada" — indica de relance o status resolvido, sem
+            depender de abrir o kebab. Fica em linha com o #N no TabsBar. */}
+        {!(searchOpen && activeTab === "conversa") && isResolved && (
+          <span
+            title={
+              conversationClosedAt
+                ? `Encerrada em ${new Date(conversationClosedAt).toLocaleString("pt-BR")}`
+                : "Conversa encerrada"
+            }
+            className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-subtle)] px-2 py-0.5 font-display text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+          >
+            <IconLock size={10} />
+            Encerrada
+          </span>
         )}
 
         {/* Busca inline — ocupa o flex-1 quando aberta */}
@@ -1411,6 +1534,21 @@ function TabsBar({
                   </button>
                 )}
 
+                {/* Mensagens favoritas — marcador pessoal, estilo WhatsApp */}
+                {conversationId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFavoritesOpen(true)
+                      setMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-left font-display text-[12.5px] text-[var(--text-primary)] hover:bg-[var(--glass-bg-subtle)]"
+                  >
+                    <IconStarFilled size={14} className="shrink-0 text-amber-500" />
+                    Mensagens favoritas
+                  </button>
+                )}
+
                 {/* Encerrar / Reabrir conversa */}
                 {conversationId && (
                   <RequirePermission permission="conversation:close">
@@ -1418,6 +1556,15 @@ function TabsBar({
                       type="button"
                       disabled={toggleResolve.isPending}
                       onClick={() => {
+                        if (
+                          !isResolved &&
+                          conversationRequiresTabulation &&
+                          conversationDepartmentId
+                        ) {
+                          setMenuOpen(false)
+                          setTabulationOpen(true)
+                          return
+                        }
                         toggleResolve.mutate(
                           { conversationId, action: isResolved ? "reopen" : "resolve" },
                           { onSuccess: () => setMenuOpen(false) },
@@ -1438,6 +1585,24 @@ function TabsBar({
           </div>
         )}
       </header>
+      <FavoritesPanel
+        open={favoritesOpen}
+        onOpenChange={setFavoritesOpen}
+        conversationId={conversationId ?? null}
+      />
+      <TabulationDialog
+        open={tabulationOpen}
+        onOpenChange={setTabulationOpen}
+        departmentId={conversationDepartmentId ?? null}
+        submitting={toggleResolve.isPending}
+        onConfirm={(tabulationId) => {
+          if (!conversationId) return
+          toggleResolve.mutate(
+            { conversationId, action: "resolve", tabulationId },
+            { onSuccess: () => setTabulationOpen(false) },
+          )
+        }}
+      />
     </div>
   )
 }

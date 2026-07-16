@@ -5,13 +5,26 @@ import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { RequirePermission } from "@/components/auth/require-permission";
 import { toast } from "sonner";
-import { IconChevronDown } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconBriefcase,
+  IconChevronDown,
+  IconCircleCheck,
+  IconMessageCircle,
+  IconRotateClockwise,
+  IconSquareCheck,
+  IconX,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { TooltipGlass } from "@/components/crm/tooltip-glass";
+import { ButtonGlass } from "@/components/crm/button-glass";
 
 import { NavRail } from "@/components/crm/nav-rail";
 import { ConversationColumn } from "@/components/crm/conversation-column";
 import { ChatArea } from "@/components/crm/chat-area";
+import type { Message as BubbleMessage } from "@/components/crm/message-bubble";
+import { usePinDurationDialog } from "@/components/crm/pin-duration-dialog";
+import { FavoritesPanel } from "@/components/crm/favorites-panel";
 import { ContactAside } from "@/components/crm/contact-aside";
 import { FieldConfigPanel } from "@/components/crm/fields/field-config-panel";
 import { PageHeader } from "@/components/crm/page-header";
@@ -20,6 +33,7 @@ import {
   ColumnResizer,
   usePersistentWidth,
 } from "@/components/crm/column-resizer";
+import { useIsDesktop } from "@/hooks/use-media-query";
 
 import {
   isSessionExpired,
@@ -29,12 +43,17 @@ import {
   toMessageBubble,
 } from "@/features/inbox-v2/adapters";
 import {
+  useBulkConversationAction,
   useConversationFeatures,
   useConversations,
   useContactSidebar,
   useInboxRealtime,
+  useFavoriteMessage,
   useMarkConversationRead,
   useMessages,
+  usePinMessage,
+  useUnpinMessage,
+  useReactMessage,
   useSelectedOutboundChannel,
   useSendMessage,
   useTabCounts,
@@ -44,6 +63,7 @@ import {
   AssigneePopover,
   Composer,
   ConversationActionsMenu,
+  ConversationTimelineTab,
   InboxFilterButton,
   TagsPopover,
   TemplatePickerList,
@@ -62,10 +82,7 @@ import { ContactTagsPopover } from "@/features/inbox-v2/extras/contact-tags-popo
 import { CallHistoryList } from "@/features/softphone/components/call-history-list";
 import { DealCallButton } from "@/features/softphone/components/deal-call-button";
 import { ActivitiesPanel } from "@/components/pipeline/deal-workspace/panels/activities";
-import {
-  DealNotesTab,
-  DealTimelineTab,
-} from "@/features/pipeline-v2/extras";
+import { DealNotesTab } from "@/features/pipeline-v2/extras";
 import type { BoardStageDto } from "@/features/pipeline-v2/api";
 
 // ── DealTagsTray — chips das tags do negócio + botão para adicionar/remover.
@@ -202,6 +219,7 @@ export default function InboxV2ClientPage({
 }: InboxV2ClientPageProps = {}) {
   const { status: sessionStatus } = useSession();
   const isAuthenticated = sessionStatus === "authenticated";
+  const isDesktop = useIsDesktop();
 
   // ── Largura das colunas (persistidas) ─────────────────────────
   const [convWidth, setConvWidth] = usePersistentWidth(
@@ -226,6 +244,39 @@ export default function InboxV2ClientPage({
   // Template escolhido no modal (sessão expirada) → abre o painel no Composer.
   const [externalTemplate, setExternalTemplate] = useState<PendingTemplate | null>(null);
   const [asideCollapsed, setAsideCollapsed] = useState(false);
+  const [mobilePaneTab, setMobilePaneTab] = useState<"chat" | "negocio">("chat");
+
+  // ── Seleção múltipla + ações em massa (encerrar/reabrir) ────────
+  // Modo explícito (como o legado): entrar em "seleção" desativa o clique
+  // de abrir conversa nos cards (só o checkbox alterna), evitando abrir a
+  // conversa errada por engano ao marcar várias.
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelectOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Trocar de aba muda o conjunto de conversas visíveis — limpa a seleção
+  // pra não arrastar ids que já não aparecem na lista atual.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [tab]);
+
+  // Ao abrir uma nova conversa no mobile, volta sempre para o painel Chat.
+  useEffect(() => {
+    setMobilePaneTab("chat");
+  }, [activeId]);
 
   // Debounce do search (300ms). Evita refetch a cada tecla.
   useEffect(() => {
@@ -317,8 +368,113 @@ export default function InboxV2ClientPage({
 
   // ── Mutations ───────────────────────────────────────────────────
   const sendMessage = useSendMessage(activeId);
+  const reactMessage = useReactMessage(activeId);
+  const pinMessage = usePinMessage(activeId);
+  const unpinMessage = useUnpinMessage(activeId);
+  const favoriteMessageMutation = useFavoriteMessage(activeId);
   const markRead = useMarkConversationRead();
+  const bulkAction = useBulkConversationAction();
+  const { requestDuration: requestPinDuration, dialog: pinDurationDialog } = usePinDurationDialog();
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
+
+  // Handler de reação disparado pelo menu contextual de cada bubble.
+  // WhatsApp: apertar o mesmo emoji novamente remove; escolher outro
+  // substitui. Repassamos `""` pra remoção (backend interpreta como
+  // toggle-off + envia reaction vazia à Meta pra limpar no cliente).
+  function handleReactMessage(msg: { id: string }, emoji: string | null) {
+    if (!activeId) return;
+    reactMessage.mutate(
+      { messageId: msg.id, emoji: emoji ?? "" },
+      {
+        onError: (err) => toast.error(err.message || "Falha ao reagir"),
+      },
+    );
+  }
+
+  // Fixar: toggle — clicar numa mensagem já fixada desafixa direto (igual
+  // WhatsApp). Fixar uma NOVA abre o picker de duração (24h/7d/30d) antes
+  // de confirmar. Várias podem ficar fixadas ao mesmo tempo (máx. 3).
+  async function handlePinMessage(msg: { id: string; isPinnedMessage?: boolean }) {
+    if (!activeId) return;
+    if (msg.isPinnedMessage) {
+      unpinMessage.mutate(
+        { messageId: msg.id },
+        {
+          onSuccess: () => toast.success("Mensagem desafixada"),
+          onError: (err) => toast.error(err.message || "Falha ao desafixar"),
+        },
+      );
+      return;
+    }
+    const durationHours = await requestPinDuration();
+    if (durationHours == null) return;
+    pinMessage.mutate(
+      { messageId: msg.id, durationHours },
+      {
+        onSuccess: () => toast.success("Mensagem fixada"),
+        onError: (err) => toast.error(err.message || "Falha ao fixar"),
+      },
+    );
+  }
+
+  function handleUnpinMessage(messageId: string) {
+    if (!activeId) return;
+    unpinMessage.mutate(
+      { messageId },
+      { onError: (err) => toast.error(err.message || "Falha ao desafixar") },
+    );
+  }
+
+  // Favoritar: marcador pessoal — sem `favorite` explícito, o backend
+  // alterna o estado atual (evita round-trip extra pra saber o estado
+  // prévio, que o front já tem local via `msg.isFavorited`).
+  function handleFavoriteMessage(msg: { id: string; isFavorited?: boolean }) {
+    favoriteMessageMutation.mutate(
+      { messageId: msg.id, favorite: !msg.isFavorited },
+      {
+        onSuccess: (res) =>
+          toast.success(res.favorited ? "Mensagem favoritada" : "Removida dos favoritos"),
+        onError: (err) => toast.error(err.message || "Falha ao favoritar"),
+      },
+    );
+  }
+
+  // Reply (estilo WhatsApp): guarda a msg selecionada e o Composer mostra
+  // a barra de preview. senderName é derivado (backend não retorna direto).
+  const [replyTo, setReplyTo] = useState<{
+    id: string;
+    preview: string;
+    senderName?: string | null;
+  } | null>(null);
+
+  function handleReplyMessage(message: BubbleMessage) {
+    const preview = (message.content ?? "").slice(0, 120);
+    const senderName =
+      message.type === "incoming"
+        ? contactName
+        : message.senderName ?? "Você";
+    setReplyTo({ id: message.id, preview, senderName });
+  }
   const { features: convFeatures } = useConversationFeatures();
+
+  function handleBulkAction(action: "resolve" | "reopen") {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    const count = ids.length;
+    bulkAction.mutate(
+      { ids, action },
+      {
+        onSuccess: () => {
+          toast.success(
+            action === "resolve"
+              ? `${count} conversa${count > 1 ? "s" : ""} encerrada${count > 1 ? "s" : ""}`
+              : `${count} conversa${count > 1 ? "s" : ""} reaberta${count > 1 ? "s" : ""}`,
+          );
+          exitSelectionMode();
+        },
+      },
+    );
+  }
 
   // Seletor de canal: lista de WhatsApps CONNECTED da org + estado
   // persistido por conversa. Quando a org tem 1 só canal, o widget não
@@ -336,6 +492,7 @@ export default function InboxV2ClientPage({
   function handleSelect(id: string) {
     setActiveId(id);
     markRead.mutate(id);
+    setReplyTo(null);
   }
 
   function handleSend(value: string) {
@@ -343,6 +500,7 @@ export default function InboxV2ClientPage({
     sendMessage.mutate(
       {
         content: value,
+        ...(replyTo ? { replyToId: replyTo.id } : {}),
         // Só envia override quando o canal escolhido difere do canal
         // atual da conversa — caminho rápido no backend (sem round-trip
         // extra de validação) e nenhum efeito visível pro agente que
@@ -352,7 +510,10 @@ export default function InboxV2ClientPage({
           : {}),
       },
       {
-        onSuccess: () => setDraft(""),
+        onSuccess: () => {
+          setDraft("");
+          setReplyTo(null);
+        },
         onError: (err) => toast.error(err.message || "Falha ao enviar"),
       },
     );
@@ -378,10 +539,27 @@ export default function InboxV2ClientPage({
     [rows, activeId],
   );
   const contactName = activeRow?.contact?.name ?? "";
-  const messageBubbles = useMemo(
-    () => messages.map((m) => toMessageBubble(m, contactName)),
-    [messages, contactName],
+  const pinnedMessageIds = useMemo(
+    () => messagesData?.pinnedMessageIds ?? [],
+    [messagesData?.pinnedMessageIds],
   );
+  const pinnedIdSet = useMemo(() => new Set(pinnedMessageIds), [pinnedMessageIds]);
+  const messageBubbles = useMemo(
+    () =>
+      messages.map((m) => {
+        const bubble = toMessageBubble(m, contactName);
+        return pinnedIdSet.has(m.id) ? { ...bubble, isPinnedMessage: true } : bubble;
+      }),
+    [messages, contactName, pinnedIdSet],
+  );
+  // Previews do banner "fixadas" (várias, estilo WhatsApp) — derivados do
+  // próprio array já carregado, na ordem em que o backend os retorna.
+  const pinnedMessagesPreview = useMemo(() => {
+    return pinnedMessageIds
+      .map((pid) => messageBubbles.find((m) => m.id === pid))
+      .filter((m): m is NonNullable<typeof m> => !!m)
+      .map((m) => ({ id: m.id, content: m.content, senderName: m.senderName ?? null }));
+  }, [pinnedMessageIds, messageBubbles]);
   const chatContact = activeRow ? toChatContact(activeRow) : null;
   // Backend é source of truth quando disponível (`session.active`).
   // Fallback heurístico: se o backend não enviou `session`, calculamos a
@@ -422,6 +600,60 @@ export default function InboxV2ClientPage({
   const useFilteredTabCount =
     hasInboxServerFilters(filters) || debouncedSearch.trim().length > 0;
 
+  // Botão que entra/sai do modo de seleção — vive ao lado do filtro, na
+  // mesma linha do dropdown de status.
+  const selectionToggleNode = (
+    <TooltipGlass label={selectionMode ? "Sair da seleção" : "Selecionar conversas"} side="bottom">
+      <button
+        type="button"
+        onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
+        aria-pressed={selectionMode}
+        className={cn(
+          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border transition-colors",
+          selectionMode
+            ? "border-[var(--brand-primary)]/40 bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]"
+            : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] hover:text-[var(--brand-primary)]",
+        )}
+      >
+        {selectionMode ? <IconX size={17} stroke={2} /> : <IconSquareCheck size={17} stroke={2} />}
+      </button>
+    </TooltipGlass>
+  );
+
+  // Ações da barra de seleção — Encerrar/Reabrir (protegidas por permissão,
+  // mesma regra do menu de ações de uma conversa) + Cancelar (sempre visível).
+  const bulkActionsNode = (
+    <div className="flex shrink-0 items-center gap-1.5">
+      {selectedIds.size > 0 && (
+        <RequirePermission permission="conversation:close">
+          <ButtonGlass
+            type="button"
+            variant="glass"
+            size="sm"
+            disabled={bulkAction.isPending}
+            onClick={() => handleBulkAction("resolve")}
+          >
+            <IconCircleCheck size={14} />
+            <span className="ml-1.5">Encerrar</span>
+          </ButtonGlass>
+          <ButtonGlass
+            type="button"
+            variant="glass"
+            size="sm"
+            disabled={bulkAction.isPending}
+            onClick={() => handleBulkAction("reopen")}
+          >
+            <IconRotateClockwise size={14} />
+            <span className="ml-1.5">Reabrir</span>
+          </ButtonGlass>
+        </RequirePermission>
+      )}
+      <ButtonGlass type="button" variant="glass" size="sm" onClick={exitSelectionMode}>
+        Cancelar
+      </ButtonGlass>
+    </div>
+  );
+
   const conversationColumnNode = (
     <ConversationColumn
       conversations={conversationCards}
@@ -435,7 +667,17 @@ export default function InboxV2ClientPage({
       // busca sobe pro topo mas o filtro **fica** aqui — antes ele migrava
       // pro canto direito superior junto da busca, distante do controle
       // mais relacionado a ele (tabs de status).
-      filterSlot={<InboxFilterButton value={filters} onChange={setFilters} />}
+      filterSlot={
+        <>
+          {selectionToggleNode}
+          <InboxFilterButton value={filters} onChange={setFilters} />
+        </>
+      }
+      selectionMode={selectionMode}
+      selectedIds={selectedIds}
+      onToggleSelectOne={toggleSelectOne}
+      onSelectAllChange={(ids) => setSelectedIds(new Set(ids))}
+      bulkActionsSlot={bulkActionsNode}
       tabsOverride={TABS.map((t) => ({
         label: t.label,
         count:
@@ -449,18 +691,21 @@ export default function InboxV2ClientPage({
         if (next) setTab(next);
       }}
       resizerSlot={
-        <ColumnResizer
-          value={convWidth}
-          onChange={setConvWidth}
-          min={280}
-          max={440}
-        />
+        isDesktop ? (
+          <ColumnResizer
+            value={convWidth}
+            onChange={setConvWidth}
+            min={280}
+            max={440}
+          />
+        ) : undefined
       }
       onLoadMore={() => {
         if (hasNextPage && !isFetchingNextPage) fetchNextPage();
       }}
       hasMore={hasNextPage}
       isLoadingMore={isFetchingNextPage}
+      className="h-full min-h-0"
       renderCardSlots={(c) => ({
         assigneeSlot: (
           <RequirePermission
@@ -638,10 +883,13 @@ export default function InboxV2ClientPage({
   ) : (
     <NoDealTab message="Vincule um negocio a este contato para registrar notas." />
   );
-  const timelineSlot = firstDealId ? (
-    <DealTimelineTab dealId={firstDealId} />
+  // Timeline da CONVERSA (nao do deal) — sempre disponivel quando ha
+  // conversa ativa, mesmo sem deal vinculado. Ver AGENT.md "ID de
+  // conversa + logs + gatilho".
+  const timelineSlot = activeId ? (
+    <ConversationTimelineTab conversationId={activeId} />
   ) : (
-    <NoDealTab message="Vincule um negocio a este contato para ver a timeline." />
+    <NoDealTab message="Selecione uma conversa para ver a timeline." />
   );
   const activitiesSlot = firstDealId ? (
     <div className="flex-1 overflow-auto">
@@ -668,7 +916,16 @@ export default function InboxV2ClientPage({
         showSessionAlert={sessionExpired}
         connection={messagesData?.channel ?? null}
         connections={messagesData?.channels}
+        conversationNumber={activeRow?.number ?? null}
+        conversationResolved={activeRow?.status === "RESOLVED"}
+        conversationClosedAt={activeRow?.closedAt ?? null}
         onUseTemplate={() => setTemplateOpen(true)}
+        onReactMessage={handleReactMessage}
+        onPinMessage={handlePinMessage}
+        onFavoriteMessage={handleFavoriteMessage}
+        pinnedMessages={pinnedMessagesPreview}
+        onUnpinMessage={handleUnpinMessage}
+        onReplyMessage={handleReplyMessage}
         headerActionsSlot={
           <>
             {/* DealCallButton volta pro header do chat, ao lado do chip
@@ -684,6 +941,12 @@ export default function InboxV2ClientPage({
             <ConversationActionsMenu
               conversationId={activeId}
               isResolved={activeRow.status === "RESOLVED"}
+              onOpenFavorites={() => setFavoritesOpen(true)}
+              onReopenNewConversation={(newId) => setActiveId(newId)}
+              departmentId={activeRow.departmentId ?? activeRow.department?.id ?? null}
+              requireTabulationOnClose={
+                activeRow.department?.requireTabulationOnClose ?? false
+              }
             />
           </>
         }
@@ -707,6 +970,12 @@ export default function InboxV2ClientPage({
             selectedChannelId={selectedChannelId}
             conversationChannelId={conversationChannelId}
             onSelectChannel={setSelectedChannelId}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(null)}
+            departmentId={activeRow.departmentId ?? activeRow.department?.id ?? null}
+            requireTabulationOnClose={
+              activeRow.department?.requireTabulationOnClose ?? false
+            }
           />
         }
         notesSlot={notesSlot}
@@ -780,10 +1049,103 @@ export default function InboxV2ClientPage({
       </div>
     ) : null;
 
+  // Picker de duração do "Fixar" (24h/7d/30d) + painel "Mensagens
+  // favoritas" — self-contained, plugados nos 4 pontos de retorno
+  // (mobile/desktop × com/sem pageHeader) junto do templateModalNode.
+  const extraDialogsNode = (
+    <>
+      {pinDurationDialog}
+      <FavoritesPanel
+        open={favoritesOpen}
+        onOpenChange={setFavoritesOpen}
+        conversationId={activeId}
+      />
+    </>
+  );
+
   // Layout COM cabeçalho de página (estilo "Caixa de entrada" da
   // referência): NavRail fixo à esquerda; à direita o header no topo e
   // as 3 colunas (lista/chat/contato) numa grade abaixo.
   if (pageHeader) {
+    // ── Mobile: layout de painel único (lista → chat/negócio) ──────
+    if (!isDesktop) {
+      return (
+        <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+          {navRailNode}
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
+            <PageHeader
+              icon={pageHeader.icon}
+              title={pageHeader.title}
+              description={pageHeader.description}
+              center={
+                <PageSearchBar
+                  variant="compact"
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  placeholder="Buscar conversa, contato, telefone..."
+                  aria-label="Buscar conversas"
+                />
+              }
+              actions={null}
+            />
+            {!activeId ? (
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {conversationColumnNode}
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
+                <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveId(null)}
+                    className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                  >
+                    <IconArrowLeft size={16} stroke={2} />
+                    Voltar
+                  </button>
+                  <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setMobilePaneTab("chat")}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                        mobilePaneTab === "chat"
+                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      <IconMessageCircle size={14} stroke={2} />
+                      Chat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobilePaneTab("negocio")}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                        mobilePaneTab === "negocio"
+                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      <IconBriefcase size={14} stroke={2} />
+                      Negócio
+                    </button>
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  {mobilePaneTab === "chat" ? chatNode : asideNode}
+                </div>
+              </div>
+            )}
+          </div>
+          {templateModalNode}
+          {extraDialogsNode}
+        </div>
+      );
+    }
+
+    // ── Desktop: layout original de 3 colunas ─────────────────────
     return (
       <div
         className="v2-screen grid gap-4 p-4"
@@ -827,11 +1189,77 @@ export default function InboxV2ClientPage({
           </div>
         </div>
         {templateModalNode}
+        {extraDialogsNode}
       </div>
     );
   }
 
   // Layout legado (linha única, sem topo) — usado por `(v2)/inbox-v2`.
+
+  // ── Mobile: layout de painel único (lista → chat/negócio) ──────
+  if (!isDesktop) {
+    return (
+      <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+        {navRailNode}
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
+          {!activeId ? (
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {conversationColumnNode}
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {/* Barra compacta: Voltar + segmentado Chat | Negócio */}
+              <div className="flex shrink-0 items-center gap-2 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveId(null)}
+                  className="flex items-center gap-1.5 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--glass-bg-overlay)]"
+                >
+                  <IconArrowLeft size={16} stroke={2} />
+                  Voltar
+                </button>
+                <div className="ml-auto flex items-center gap-0.5 rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaneTab("chat")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      mobilePaneTab === "chat"
+                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
+                  >
+                    <IconMessageCircle size={14} stroke={2} />
+                    Chat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePaneTab("negocio")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                      mobilePaneTab === "negocio"
+                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                    )}
+                  >
+                    <IconBriefcase size={14} stroke={2} />
+                    Negócio
+                  </button>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {mobilePaneTab === "chat" ? chatNode : asideNode}
+              </div>
+            </div>
+          )}
+        </div>
+        {templateModalNode}
+        {extraDialogsNode}
+      </div>
+    );
+  }
+
+  // ── Desktop: layout original de 4 colunas ─────────────────────
   return (
     <div
       className="v2-screen grid gap-4 p-4"
@@ -854,6 +1282,7 @@ export default function InboxV2ClientPage({
         {asideNode}
       </div>
       {templateModalNode}
+      {extraDialogsNode}
     </div>
   );
 }
@@ -940,13 +1369,15 @@ function InboxStageDropdown({
   useEffect(() => {
     if (!open || !triggerRef.current) return;
     const b = triggerRef.current.getBoundingClientRect();
-    const menuWidth = 200;
-    // Se caber a partir de left, mantem alinhamento a esquerda; se vazar
-    // pela direita da viewport, ancora pela direita do trigger.
+    const longest = stages.reduce((n, s) => Math.max(n, s.name.length), 0);
+    const menuWidth = Math.min(
+      Math.max(220, longest * 8 + 48),
+      Math.min(320, window.innerWidth - 16),
+    );
     const wouldOverflow = b.left + menuWidth > window.innerWidth - 8;
     const left = wouldOverflow ? Math.max(8, b.right - menuWidth) : b.left;
     setPos({ top: b.bottom + 4, left, width: menuWidth });
-  }, [open]);
+  }, [open, stages]);
 
   return (
     <div ref={ref} className="relative">
@@ -955,18 +1386,18 @@ function InboxStageDropdown({
         type="button"
         disabled={isPending}
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
+        className="flex max-w-[min(100%,11rem)] items-center gap-1 font-display text-[11px] font-semibold text-[var(--text-muted)] transition-opacity hover:text-[var(--text-primary)] hover:opacity-80 disabled:cursor-wait disabled:opacity-50"
       >
         {current?.color && (
           <span
-            className="inline-block h-1.5 w-1.5 rounded-full"
+            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
             style={{ background: current.color }}
           />
         )}
-        {current?.name ?? "Sem estagio"}
+        <span className="truncate">{current?.name ?? "Sem estagio"}</span>
         <IconChevronDown
           size={11}
-          className={cn("transition-transform duration-150", open && "rotate-180")}
+          className={cn("shrink-0 transition-transform duration-150", open && "rotate-180")}
         />
       </button>
 
@@ -988,7 +1419,7 @@ function InboxStageDropdown({
                     disabled={isPending}
                     onClick={() => { onSelect(s.id); setOpen(false); }}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 font-display text-[12px] font-semibold transition-colors",
+                      "flex w-full items-center gap-2 px-3 py-2 text-left font-display text-[12px] font-semibold transition-colors",
                       isActive
                         ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
                         : "text-[var(--text-primary)] hover:bg-[var(--glass-bg-overlay)]",
@@ -998,7 +1429,7 @@ function InboxStageDropdown({
                       className="h-1.5 w-1.5 shrink-0 rounded-full"
                       style={{ background: s.color ?? "var(--brand-primary)" }}
                     />
-                    {s.name}
+                    <span className="whitespace-nowrap">{s.name}</span>
                     {isActive && (
                       <span className="ml-auto font-display text-[9px] font-bold uppercase tracking-wider text-[var(--brand-primary)]">
                         Atual

@@ -25,7 +25,7 @@ const STAT_TONE: Record<StatTone, string> = {
 
 export function HubStatGrid({ children }: { children: React.ReactNode }) {
   return (
-    <section className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3.5">
+    <section className="grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
       {children}
     </section>
   );
@@ -108,40 +108,42 @@ export function HubTabBar({
   onChange: (value: string) => void;
 }) {
   return (
-    <div
-      role="tablist"
-      className="flex w-fit max-w-full flex-wrap gap-1 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
-    >
-      {tabs.map((t) => {
-        const isActive = t.value === active;
-        return (
-          <button
-            key={t.value}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onChange(t.value)}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-[var(--radius-full)] px-4 py-2 text-[13px] font-bold transition-colors",
-              isActive
-                ? "bg-[var(--glass-bg-modal)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
-            )}
-          >
-            {t.label}
-            {typeof t.count === "number" ? (
-              <span
-                className={cn(
-                  "min-w-[20px] rounded-[var(--radius-full)] px-1.5 text-center text-[11px] font-bold",
-                  isActive ? "bg-[var(--color-enterprise-bg)]" : "bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)]",
-                )}
-              >
-                {t.count}
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
+    <div className="toolbar-hscroll max-w-full">
+      <div
+        role="tablist"
+        className="inline-flex w-max max-w-none flex-nowrap gap-1 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-1.5 shadow-[var(--glass-shadow-sm)] backdrop-blur-md"
+      >
+        {tabs.map((t) => {
+          const isActive = t.value === active;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onChange(t.value)}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--radius-full)] px-3 py-1.5 text-[12.5px] font-bold transition-colors sm:px-4 sm:py-2 sm:text-[13px]",
+                isActive
+                  ? "bg-[var(--glass-bg-modal)] text-[var(--brand-primary)] shadow-[var(--glass-shadow-sm)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+              )}
+            >
+              {t.label}
+              {typeof t.count === "number" ? (
+                <span
+                  className={cn(
+                    "min-w-[20px] rounded-[var(--radius-full)] px-1.5 text-center text-[11px] font-bold",
+                    isActive ? "bg-[var(--color-enterprise-bg)]" : "bg-[color-mix(in_srgb,var(--text-muted)_15%,transparent)]",
+                  )}
+                >
+                  {t.count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -158,17 +160,21 @@ export function HubToolbar({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--glass-border-subtle)] px-4 py-3.5">
-      <div className="flex min-w-[240px] flex-1 items-center gap-2.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-4 py-2.5 transition-colors focus-within:border-[var(--input-border-focus)] focus-within:bg-[var(--glass-bg-modal)] focus-within:ring-[3px] focus-within:ring-[var(--input-ring-focus)]">
+    <div className="flex min-w-0 flex-col gap-3 border-b border-[var(--glass-border-subtle)] px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-4 sm:py-3.5">
+      <div className="flex min-w-0 w-full flex-1 items-center gap-2.5 rounded-[var(--radius-full)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] px-3.5 py-2.5 transition-colors focus-within:border-[var(--input-border-focus)] focus-within:bg-[var(--glass-bg-modal)] focus-within:ring-[3px] focus-within:ring-[var(--input-ring-focus)] sm:min-w-[200px] sm:px-4">
         <Search className="size-[18px] shrink-0 text-[var(--text-muted)]" />
         <input
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full border-none bg-transparent text-[13.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+          className="min-w-0 w-full border-none bg-transparent text-[13.5px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
         />
       </div>
-      {children ? <div className="flex flex-wrap items-center gap-1.5">{children}</div> : null}
+      {children ? (
+        <div className="toolbar-hscroll max-w-full">
+          <div className="flex w-max flex-nowrap items-center gap-1.5">{children}</div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -259,7 +265,7 @@ export function HubSubHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <GlassCard variant="base" className="flex flex-wrap items-start gap-3.5 px-5 py-4 shadow-[var(--glass-shadow-sm)]">
+    <GlassCard variant="base" className="flex min-w-0 flex-wrap items-start gap-3.5 px-4 py-3.5 shadow-[var(--glass-shadow-sm)] sm:px-5 sm:py-4">
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)]",
@@ -270,13 +276,13 @@ export function HubSubHeader({
       >
         {icon}
       </span>
-      <div className="min-w-[280px] flex-1">
-        <h2 className="text-[17px] font-extrabold tracking-tight text-[var(--text-primary)]">{title}</h2>
+      <div className="min-w-0 flex-1">
+        <h2 className="text-[16px] font-extrabold tracking-tight text-[var(--text-primary)] sm:text-[17px]">{title}</h2>
         {children ? (
-          <div className="mt-1 max-w-[760px] text-[12.5px] leading-relaxed text-[var(--text-muted)]">{children}</div>
+          <div className="mt-1 max-w-full text-pretty break-words text-[12.5px] leading-relaxed text-[var(--text-muted)] sm:max-w-[760px]">{children}</div>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2.5">{actions}</div> : null}
+      {actions ? <div className="flex w-full shrink-0 flex-wrap items-center gap-2.5 sm:w-auto">{actions}</div> : null}
     </GlassCard>
   );
 }

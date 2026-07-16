@@ -869,7 +869,7 @@ export function ImportPanel({
       <BulkOperationProgressDialog
         operationId={etlOperationId}
         optimisticTotal={etlTotal}
-        title={entity === "deals" ? "Importação de negócios" : "Importação de contatos"}
+        title={entity === "contacts" ? "Importação de contatos" : "Importação de negócios"}
         onOpenChange={(open) => {
           if (!open) {
             setEtlOperationId(null);

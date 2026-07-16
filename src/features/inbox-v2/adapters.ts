@@ -357,6 +357,25 @@ function parseFormResponse(content: string): { title: string; fields: FormField[
   return { title, fields };
 }
 
+/**
+ * Extrai os botões de uma mensagem interativa/template.
+ *
+ * O backend (automation-executor `send_whatsapp_interactive`) grava o
+ * conteúdo como `${corpo}\n[Botões: A, B, C]`. Aqui separamos o corpo
+ * real dos rótulos dos botões para o bubble renderizá-los como cards
+ * (estilo WhatsApp), em vez de exibir o marcador cru `[Botões: ...]`.
+ */
+function parseInteractiveButtons(content: string): { text: string; buttons?: string[] } {
+  const m = content.match(/\n?\[Bot[õo]es:\s*([^\]]+)\]\s*$/i);
+  if (!m) return { text: content };
+  const buttons = m[1]
+    .split(",")
+    .map((b) => b.trim())
+    .filter(Boolean);
+  const text = content.slice(0, m.index).trimEnd();
+  return { text, buttons: buttons.length ? buttons : undefined };
+}
+
 /** InboxMessageDto → Message (bolha do chat). */
 export function toMessageBubble(
   dto: InboxMessageDto,
@@ -380,9 +399,14 @@ export function toMessageBubble(
   // Tenta parsear resposta de formulário Meta Flow (sempre inbound)
   const formParsed = isInbound ? parseFormResponse(dto.content ?? "") : null;
 
+  // Botões de mensagem interativa/template (outbound) — separa o corpo
+  // do marcador `[Botões: ...]` gravado pelo backend.
+  const btnParsed = !formParsed ? parseInteractiveButtons(dto.content ?? "") : null;
+
   return {
     id: dto.id,
-    content: formParsed ? "" : (dto.content ?? ""),
+    content: formParsed ? "" : (btnParsed?.text ?? dto.content ?? ""),
+    buttons: btnParsed?.buttons,
     time: formatTime(dto.createdAt),
     createdAt: dto.createdAt ?? undefined,
     type: isInbound ? "incoming" : "outgoing",
@@ -422,6 +446,30 @@ export function toMessageBubble(
     // Conexão por onde a mensagem trafegou — alimenta o marcador de troca
     // de conexão na timeline (ChatArea / deal-chat-binding).
     channelId: dto.channelId ?? null,
+    // Citação (reply do cliente numa mensagem específica). Backend popula
+    // `replyToPreview` no webhook Meta via `resolveReplyContext`. Se
+    // veio vazio/null, não renderiza cabeçalho de citação.
+    replyTo: dto.replyToPreview
+      ? {
+          snippet: dto.replyToPreview,
+          // Sem `dto.replyToDirection` explícito no DTO por ora; heurística:
+          // se a mensagem atual é inbound (cliente respondeu), o alvo é
+          // provavelmente uma out nossa. Facilita a cor do bar lateral.
+          direction: isInbound ? "out" : "in",
+        }
+      : null,
+    // Reações do cliente. Backend grava {emoji, from, at}[]. Filtra
+    // entradas inválidas defensivamente (JSON pode conter lixo antigo).
+    reactions:
+      Array.isArray(dto.reactions) && dto.reactions.length > 0
+        ? dto.reactions
+            .filter(
+              (r): r is { emoji: string; from: string; at?: string } =>
+                !!r && typeof r === "object" && typeof (r as { emoji?: unknown }).emoji === "string",
+            )
+            .map((r) => ({ emoji: r.emoji, from: r.from, at: r.at }))
+        : undefined,
+    isFavorited: dto.favoritedByMe || undefined,
   };
 }
 

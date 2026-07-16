@@ -25,6 +25,14 @@ export async function getMessages(
   return {
     messages: Array.isArray(data.messages) ? data.messages : [],
     pinnedNoteId: data.pinnedNoteId ?? null,
+    // Fixadas da conversa (várias, estilo WhatsApp). Aceita o array novo
+    // (`pinnedMessageIds`) e cai no campo único legado (`pinnedMessageId`)
+    // enquanto o backend não estiver atualizado em todos os ambientes.
+    pinnedMessageIds: Array.isArray(data.pinnedMessageIds)
+      ? data.pinnedMessageIds
+      : data.pinnedMessageId
+        ? [data.pinnedMessageId]
+        : [],
     channelProvider: data.channelProvider ?? null,
     channel: data.channel ?? null,
     channels:
@@ -236,6 +244,125 @@ export async function pinNote(
   );
   if (!res.ok) throw new Error("Falha ao fixar nota");
   return res.json();
+}
+
+/**
+ * PUT /api/conversations/:id/pin-message
+ * FIXA uma mensagem (várias por conversa, máx. 3 — estilo WhatsApp).
+ * `durationHours` (24/168/720) define o prazo — omitido = sem prazo.
+ * Diferente de `pinNote` — aceita qualquer mensagem, não só notas.
+ */
+export async function pinMessage(
+  conversationId: string,
+  messageId: string,
+  durationHours?: number,
+): Promise<{ ok: true }> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/pin-message`),
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        durationHours ? { messageId, durationHours } : { messageId },
+      ),
+    },
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof (data as { message?: unknown })?.message === "string"
+        ? (data as { message: string }).message
+        : "Falha ao fixar mensagem",
+    );
+  }
+  return data as { ok: true };
+}
+
+/**
+ * DELETE /api/conversations/:id/pin-message
+ * DESAFIXA uma mensagem específica (obrigatório o messageId, já que há
+ * várias fixadas possíveis).
+ */
+export async function unpinMessage(
+  conversationId: string,
+  messageId: string,
+): Promise<{ ok: true }> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/pin-message`),
+    {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId }),
+    },
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof (data as { message?: unknown })?.message === "string"
+        ? (data as { message: string }).message
+        : "Falha ao desafixar mensagem",
+    );
+  }
+  return data as { ok: true };
+}
+
+/**
+ * GET /api/conversations/:id/favorites
+ * Lista as mensagens favoritadas pelo agente logado nesta conversa —
+ * alimenta o painel "Mensagens favoritas" no menu (⋮) do chat.
+ */
+export interface FavoriteMessageDto {
+  id: string;
+  content: string;
+  createdAt: string;
+  direction: "in" | "out" | "system";
+  senderName: string | null;
+}
+
+export async function getFavoriteMessages(
+  conversationId: string,
+): Promise<FavoriteMessageDto[]> {
+  const res = await fetch(
+    apiUrl(`/api/conversations/${conversationId}/favorites`),
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof (data as { message?: unknown })?.message === "string"
+        ? (data as { message: string }).message
+        : "Falha ao carregar favoritas",
+    );
+  }
+  return Array.isArray((data as { items?: unknown })?.items)
+    ? (data as { items: FavoriteMessageDto[] }).items
+    : [];
+}
+
+/**
+ * POST /api/messages/:id/favorite
+ * Marcador PESSOAL do agente logado. `favorite` omitido = toggle.
+ */
+export async function favoriteMessage(
+  messageId: string,
+  favorite?: boolean,
+): Promise<{ favorited: boolean }> {
+  const res = await fetch(
+    apiUrl(`/api/messages/${encodeURIComponent(messageId)}/favorite`),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(favorite === undefined ? {} : { favorite }),
+    },
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof (data as { message?: unknown })?.message === "string"
+        ? (data as { message: string }).message
+        : "Falha ao favoritar mensagem",
+    );
+  }
+  return data as { favorited: boolean };
 }
 
 /**

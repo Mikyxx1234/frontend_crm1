@@ -8,6 +8,7 @@ import type {
   GroupSummary,
   GroupWritePayload,
   PermissionsCatalog,
+  RoleSidebarItem,
   RoleSummary,
 } from "./types";
 
@@ -45,6 +46,7 @@ export function useCreateRole() {
       description?: string;
       permissions: string[];
       inheritsFrom?: string | null;
+      sidebarItems?: RoleSidebarItem[] | null;
     }) =>
       apiFetch<RoleSummary>("/api/roles", {
         method: "POST",
@@ -69,6 +71,7 @@ export function useUpdateRole() {
       description?: string;
       permissions?: string[];
       inheritsFrom?: string | null;
+      sidebarItems?: RoleSidebarItem[] | null;
     }) =>
       apiFetch<RoleSummary>(`/api/roles/${id}`, {
         method: "PUT",
@@ -78,6 +81,9 @@ export function useUpdateRole() {
     onSuccess: (_, { id }) => {
       void qc.invalidateQueries({ queryKey: ["roles"] });
       void qc.invalidateQueries({ queryKey: ["roles", id] });
+      // A sidebar do usuario logado deriva dos roles — invalida pra refletir
+      // imediatamente qualquer mudanca sem F5.
+      void qc.invalidateQueries({ queryKey: ["sidebar-preferences"] });
     },
   });
 }

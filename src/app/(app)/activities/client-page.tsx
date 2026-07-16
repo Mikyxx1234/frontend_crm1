@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import * as Dialog from "@radix-ui/react-dialog"
 import { NavRailV2 } from "@/components/crm/nav-rail-v2"
 import { ActivityCalendar } from "@/components/crm/activities/activity-calendar"
 import { ActivityRow } from "@/components/crm/activities/activity-row"
@@ -28,7 +29,7 @@ import {
   PageSegmentedControl,
 } from "@/components/crm/page-toolbar"
 import { cn } from "@/lib/utils"
-import { IconCalendarEvent, IconPlus } from "@tabler/icons-react"
+import { IconCalendarEvent, IconPlus, IconX } from "@tabler/icons-react"
 import {
   useActivities,
   useCreateActivity,
@@ -51,8 +52,6 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "concluidas", label: "Concluídas" },
   { key: "atrasadas", label: "Atrasadas" },
 ]
-
-const AGENDA_LEGEND: ActivityKind[] = ["tarefa", "reuniao", "ligacao", "evento"]
 
 const PANEL =
   "rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] shadow-[var(--glass-shadow)] backdrop-blur-md"
@@ -82,6 +81,7 @@ export default function V2ActivitiesClientPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todas")
   const [kindFilter, setKindFilter] = useState<ActivityKind | "all">("all")
   const [composerOpen, setComposerOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   const activitiesQuery = useActivities({ perPage: 200 })
   const createMutation = useCreateActivity()
@@ -195,7 +195,7 @@ export default function V2ActivitiesClientPage() {
     <div className="v2-screen grid grid-cols-[var(--nav-rail-w,72px)_1fr] gap-4 overflow-hidden p-4">
       <NavRailV2 />
 
-      <main className="flex min-w-0 flex-col gap-4 overflow-hidden">
+      <main className="flex min-h-0 min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto p-0 lg:gap-4 lg:overflow-hidden">
         <PageHeader
           icon={<IconCalendarEvent size={22} stroke={2.2} />}
           title="Tarefas"
@@ -213,11 +213,72 @@ export default function V2ActivitiesClientPage() {
           </PageDemoBanner>
         )}
 
-        {/* Layout 3 colunas */}
-        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_300px]">
-          {/* Coluna esquerda */}
-          <div className="flex min-h-0 flex-col gap-4 overflow-auto">
-            <section aria-label="Calendário" className={cn(PANEL, "p-4")}>
+        {/* Seletor de data compacto — só mobile */}
+        <button
+          type="button"
+          onClick={() => setCalendarOpen(true)}
+          className={cn(
+            PANEL,
+            "flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-[var(--glass-bg-overlay)] lg:hidden",
+          )}
+          aria-label="Abrir calendário"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
+            <IconCalendarEvent size={20} stroke={2.2} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-[13px] font-bold capitalize text-[var(--text-primary)]">
+              {longDateLabel(selectedDate)}
+            </span>
+            <span className="block font-body text-[11.5px] text-[var(--text-muted)]">
+              Toque para escolher outra data
+            </span>
+          </span>
+        </button>
+
+        <Dialog.Root open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+            <Dialog.Content
+              className={cn(
+                PANEL,
+                "fixed left-1/2 top-1/2 z-50 w-[min(360px,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 p-4 outline-none",
+              )}
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <Dialog.Title className="font-display text-[15px] font-bold text-[var(--text-primary)]">
+                  Calendário
+                </Dialog.Title>
+                <Dialog.Close asChild>
+                  <button
+                    type="button"
+                    aria-label="Fechar"
+                    className="flex size-8 items-center justify-center rounded-full text-[var(--text-muted)] hover:bg-[var(--glass-bg-strong)] hover:text-[var(--text-primary)]"
+                  >
+                    <IconX size={16} />
+                  </button>
+                </Dialog.Close>
+              </div>
+              <ActivityCalendar
+                viewDate={viewDate}
+                selectedDate={selectedDate}
+                activities={calendarItems}
+                onSelectDate={(d) => {
+                  setSelectedDate(d)
+                  setViewDate(d)
+                  setCalendarOpen(false)
+                }}
+                onChangeMonth={setViewDate}
+              />
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+
+        {/* Layout 3 colunas no desktop; no mobile empilha sem overflow horizontal. */}
+        <div className="grid min-w-0 gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-[280px_1fr] lg:gap-4 lg:overflow-hidden xl:grid-cols-[280px_1fr_300px]">
+          {/* Coluna esquerda — calendário só no desktop */}
+          <div className="hidden min-w-0 flex-col gap-4 lg:flex lg:min-h-0 lg:overflow-auto">
+            <section aria-label="Calendário" className={cn(PANEL, "min-w-0 p-4")}>
               <ActivityCalendar
                 viewDate={viewDate}
                 selectedDate={selectedDate}
@@ -308,18 +369,69 @@ export default function V2ActivitiesClientPage() {
             </section>
           </div>
 
+          {/* Filtro de tipo compacto — só mobile */}
+          <section
+            aria-label="Tipos de tarefa"
+            className={cn(PANEL, "min-w-0 p-3 lg:hidden")}
+          >
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setKindFilter("all")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-display text-[11.5px] font-bold transition-colors",
+                  kindFilter === "all"
+                    ? "border-transparent bg-[var(--brand-primary)] text-white"
+                    : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+                )}
+              >
+                Todas
+                <span className="tabular-nums opacity-80">{monthTotal}</span>
+              </button>
+              {ACTIVITY_KIND_ORDER.map((kind) => {
+                const meta = ACTIVITY_KINDS[kind]
+                const active = kindFilter === kind
+                return (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => setKindFilter(active ? "all" : kind)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-display text-[11.5px] font-bold transition-colors",
+                      active
+                        ? "border-transparent text-white"
+                        : "border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-secondary)]",
+                    )}
+                    style={
+                      active
+                        ? { backgroundColor: meta.color }
+                        : undefined
+                    }
+                  >
+                    {meta.plural}
+                    <span className="tabular-nums opacity-80">{monthSummary[kind]}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
           {/* Coluna central */}
-          <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
+          <div className="flex min-w-0 flex-col gap-3 lg:min-h-0 lg:gap-4 lg:overflow-hidden">
             <section
               aria-label="Agenda do dia"
-              className={cn(PANEL, "flex min-h-[520px] flex-1 flex-col overflow-hidden p-0")}
+              className={cn(
+                PANEL,
+                "flex min-w-0 flex-col overflow-hidden p-0 lg:min-h-0 lg:flex-1 lg:min-h-[520px]",
+              )}
             >
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--glass-border-subtle)] px-4.5 py-4">
+              <div className="flex flex-col gap-2.5 border-b border-[var(--glass-border-subtle)] px-3.5 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:px-4.5 sm:py-4">
                 <div className="min-w-0">
-                  <h2 className="font-display text-[17px] font-extrabold capitalize tracking-tight text-[var(--text-primary)]">
-                    {longDateLabel(selectedDate)}
+                  <h2 className="font-display text-[15px] font-extrabold capitalize tracking-tight text-[var(--text-primary)] sm:text-[17px]">
+                    <span className="lg:hidden">{dayItems.length} {dayItems.length === 1 ? "tarefa" : "tarefas"}{isToday ? " hoje" : ""}</span>
+                    <span className="hidden lg:inline">{longDateLabel(selectedDate)}</span>
                   </h2>
-                  <p className="mt-px font-body text-[12.5px] text-[var(--text-muted)]">
+                  <p className="mt-px hidden font-body text-[12.5px] text-[var(--text-muted)] lg:block">
                     {dayItems.length}{" "}
                     {dayItems.length === 1 ? "tarefa" : "tarefas"}
                     {isToday ? " para hoje" : ""}
@@ -337,10 +449,11 @@ export default function V2ActivitiesClientPage() {
                     )}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="toolbar-hscroll min-w-0 w-full max-w-full sm:w-auto">
                   <PageSegmentedControl
                     size="compact"
                     aria-label="Filtrar tarefas"
+                    className="w-max shrink-0"
                     items={STATUS_FILTERS.map((f) => ({
                       value: f.key,
                       label: f.label,
@@ -348,29 +461,15 @@ export default function V2ActivitiesClientPage() {
                     value={statusFilter}
                     onChange={(v) => setStatusFilter(v as StatusFilter)}
                   />
-                  <div className="flex flex-wrap items-center gap-2.5 font-body text-[11px] text-[var(--text-muted)]">
-                  {AGENDA_LEGEND.map((kind) => {
-                    const meta = ACTIVITY_KINDS[kind]
-                    return (
-                      <span key={kind} className="inline-flex items-center gap-1">
-                        <i
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{ backgroundColor: meta.color }}
-                        />
-                        {meta.label}
-                      </span>
-                    )
-                  })}
-                  </div>
                 </div>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-4">
+              <div className="flex max-h-[min(360px,50vh)] min-h-[160px] min-w-0 flex-col gap-2 overflow-auto p-3 sm:p-4 lg:max-h-none lg:min-h-0 lg:flex-1">
                 {dayItems.length === 0 ? (
-                  <div className="flex flex-1 items-center justify-center p-10">
+                  <div className="flex flex-1 items-center justify-center p-4 sm:p-10">
                     <div className="max-w-[320px] text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
-                        <IconCalendarEvent size={28} />
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] sm:h-16 sm:w-16">
+                        <IconCalendarEvent size={26} />
                       </div>
                       <h3 className="font-display text-[15px] font-extrabold text-[var(--text-primary)]">
                         Nenhuma tarefa neste dia
@@ -402,16 +501,18 @@ export default function V2ActivitiesClientPage() {
               </div>
             </section>
 
-            <ProductivityTipCard />
+            <div className="hidden lg:block">
+              <ProductivityTipCard />
+            </div>
           </div>
 
           {/* Coluna direita — sidebar xl+ */}
-          <div className="hidden min-h-0 flex-col gap-4 overflow-auto xl:flex">
+          <div className="hidden min-h-0 min-w-0 flex-col gap-4 overflow-auto xl:flex">
             <RightColumn items={items} onSelectDate={selectDate} />
           </div>
 
-          {/* Coluna direita — grid horizontal em telas médias */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:hidden lg:col-span-2">
+          {/* Cards laterais — mobile / tablet */}
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:hidden lg:col-span-2 lg:gap-4">
             <RightColumn items={items} onSelectDate={selectDate} />
           </div>
         </div>

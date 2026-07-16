@@ -62,7 +62,7 @@ export function ActivitiesWeeklySummary({ items }: ActivitiesWeeklySummaryProps)
   return (
     <section
       aria-label="Resumo semanal"
-      className="rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
+      className="min-w-0 rounded-[var(--radius-xl)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] p-4 shadow-[var(--glass-shadow)] backdrop-blur-md"
     >
       <p className="mb-3 flex items-center gap-2 font-display text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[var(--text-muted)]">
         <IconChartBar size={14} stroke={2.2} className="text-[var(--brand-primary)]" />
@@ -70,7 +70,7 @@ export function ActivitiesWeeklySummary({ items }: ActivitiesWeeklySummaryProps)
       </p>
 
       <div
-        className="mb-1.5 grid h-[74px] grid-cols-7 items-end gap-1.5"
+        className="mb-1.5 grid h-[74px] min-w-0 grid-cols-7 items-end gap-1"
         aria-hidden
       >
         {bars.map((b) => (
@@ -89,17 +89,18 @@ export function ActivitiesWeeklySummary({ items }: ActivitiesWeeklySummaryProps)
         ))}
       </div>
 
-      <div className="mb-3.5 grid grid-cols-7 gap-1.5">
+      <div className="mb-3.5 grid min-w-0 grid-cols-7 gap-1">
         {bars.map((b) => (
           <span
             key={b.key}
-            className={`text-center text-[10px] font-semibold ${
+            className={`min-w-0 truncate text-center text-[10px] font-semibold ${
               b.isToday
                 ? "font-extrabold text-[var(--brand-primary)]"
                 : "text-[var(--text-faint,var(--text-muted))]"
             }`}
           >
-            {b.weekday}
+            <span className="sm:hidden">{b.weekday.charAt(0)}</span>
+            <span className="hidden sm:inline">{b.weekday}</span>
           </span>
         ))}
       </div>

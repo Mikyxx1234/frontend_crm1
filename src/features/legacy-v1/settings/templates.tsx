@@ -2,6 +2,8 @@
 
 import { apiUrl } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { IconArrowLeft as ArrowLeft, IconCopy as Copy, IconFileText as FileText, IconStack as Layers, IconLoader2 as Loader2, IconMessage as MessageSquare, IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2, IconVariable as Variable } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -37,6 +39,7 @@ type TemplateRow = {
   language: string;
   status: string;
   channelType: string | null;
+  updatedAt: string;
 };
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -224,7 +227,7 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
           onSearchChange={setQuery}
           placeholder="Buscar por nome ou conteúdo..."
         >
-          <HubChip active={catFilter === "all"} onClick={() => setCatFilter("all")} count={templates.length} tone="selected">
+          <HubChip active={catFilter === "all"} onClick={() => setCatFilter("all")} count={templates.length}>
             Todos
           </HubChip>
           {categories.map((c) => (
@@ -233,52 +236,64 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
               active={catFilter === c}
               onClick={() => setCatFilter(c)}
               count={templates.filter((t) => (t.category?.trim() || "Sem categoria") === c).length}
-              tone="selected"
             >
               {c}
             </HubChip>
           ))}
         </HubToolbar>
+      </HubPanel>
 
-        {isLoading ? (
-          <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)] border-t border-[var(--glass-border-subtle)]">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="flex items-center gap-3 px-3.5 py-2.5 sm:px-[18px]">
-                <Skeleton className="size-8 shrink-0 rounded-[var(--radius-md)]" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <Skeleton className="h-3.5 w-40 max-w-full rounded-[var(--radius-sm)]" />
-                  <Skeleton className="h-3 w-64 max-w-full rounded-[var(--radius-sm)]" />
-                </div>
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-4 py-3 shadow-[var(--glass-shadow-sm)]"
+            >
+              <Skeleton className="size-9 shrink-0 rounded-[var(--radius-md)]" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-40 max-w-full rounded-[var(--radius-sm)]" />
+                <Skeleton className="h-3 w-64 max-w-full rounded-[var(--radius-sm)]" />
               </div>
-            ))}
-          </div>
-        ) : grouped.length === 0 ? (
-          <div className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
-            <FileText className="size-10 text-[var(--glass-border)]" />
-            <div className="font-bold text-[var(--text-secondary)]">Nenhum modelo encontrado</div>
-            <div className="text-[13px] text-[var(--text-muted)]">Tente outra busca ou crie um novo modelo interno.</div>
-            <ButtonGlass onClick={() => { setEditing(null); setFormOpen(true); }} className="mt-2 gap-1.5">
-              <Plus className="size-4" /> Novo modelo
-            </ButtonGlass>
-          </div>
-        ) : (
-          grouped.map(([cat, items]) => (
-            <div key={cat}>
-              <div className="flex items-center gap-2.5 px-[18px] pb-2 pt-4">
-                <span className="flex size-[26px] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]">
-                  <Layers className="size-[15px]" />
+            </div>
+          ))}
+        </div>
+      ) : grouped.length === 0 ? (
+        <HubPanel className="flex flex-col items-center gap-2.5 px-5 py-14 text-center">
+          <FileText className="size-10 text-[var(--glass-border)]" />
+          <div className="font-bold text-[var(--text-secondary)]">Nenhum modelo encontrado</div>
+          <div className="text-[13px] text-[var(--text-muted)]">Tente outra busca ou crie um novo modelo interno.</div>
+          <ButtonGlass onClick={() => { setEditing(null); setFormOpen(true); }} className="mt-2 gap-1.5">
+            <Plus className="size-4" /> Novo modelo
+          </ButtonGlass>
+        </HubPanel>
+      ) : (
+        <div className="flex flex-col gap-5">
+          {grouped.map(([cat, items]) => (
+            <div key={cat} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2.5 px-1">
+                <span className={cn("flex size-[26px] shrink-0 items-center justify-center rounded-[var(--radius-sm)]", categoryBadgeClass(cat))}>
+                  <FileText className="size-[14px]" />
                 </span>
                 <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">{cat}</span>
                 <span className="rounded-[var(--radius-full)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-2 py-px text-[11px] font-bold text-[var(--text-muted)]">
                   {items.length}
                 </span>
-                <span className="h-px flex-1 bg-[var(--glass-border-subtle)]" />
+                <span className="flex-1" />
+                <button
+                  type="button"
+                  onClick={() => { setEditing(null); setFormOpen(true); }}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-[12px] font-semibold text-[var(--brand-primary)] transition-colors hover:bg-[var(--color-enterprise-bg)]"
+                >
+                  <Plus className="size-3.5" /> Novo
+                </button>
               </div>
-              <div className="flex flex-col divide-y divide-[var(--glass-border-subtle)] border-t border-[var(--glass-border-subtle)]">
+              <div className="flex flex-col gap-2">
                 {items.map((t) => (
-                  <InternalTemplateRow
+                  <InternalTemplateCard
                     key={t.id}
                     template={t}
+                    category={cat}
                     onEdit={() => { setEditing(t); setFormOpen(true); }}
                     onDelete={() => deleteMutation.mutate(t.id)}
                     deleting={deleteMutation.isPending}
@@ -286,9 +301,9 @@ export default function TemplatesSettingsPage({ embedded = false }: { embedded?:
                 ))}
               </div>
             </div>
-          ))
-        )}
-      </HubPanel>
+          ))}
+        </div>
+      )}
 
       <Dialog open={formOpen} onOpenChange={(v) => { if (!v) { setFormOpen(false); setEditing(null); } else setFormOpen(true); }}>
         <DialogContent
@@ -517,76 +532,88 @@ function highlightVars(content: string): React.ReactNode {
 }
 
 /**
- * Linha compacta (~52px) de um modelo interno. Um único container por
- * categoria separa as linhas por borda hairline (sem card/sombra por item).
- * Metadados de canal ficam à direita em repouso; as ações (Copiar, Editar,
- * Excluir) surgem no hover. Chips de variável {{...}} preservados.
+ * Paleta categórica derivada dos tokens semânticos existentes do DS
+ * (sem hex novos). Cada categoria recebe uma cor estável via hash do
+ * nome; "Sem categoria" fica neutra. O badge combina fundo suave +
+ * ícone na cor da categoria — usado no header do grupo e no item.
  */
-function InternalTemplateRow({
+const CATEGORY_BADGE_TONES = [
+  "bg-[var(--color-success-bg)] text-[var(--color-success)]",
+  "bg-[var(--color-warn-bg)] text-[var(--color-warn)]",
+  "bg-[var(--color-info-bg)] text-[var(--color-info)]",
+  "bg-[color-mix(in_srgb,var(--brand-secondary)_18%,transparent)] text-[var(--brand-secondary)]",
+  "bg-[var(--color-enterprise-bg)] text-[var(--brand-primary)]",
+];
+
+const CATEGORY_BADGE_NEUTRAL = "bg-[var(--glass-bg-overlay)] text-[var(--text-muted)]";
+
+function categoryBadgeClass(category: string): string {
+  if (category === "Sem categoria") return CATEGORY_BADGE_NEUTRAL;
+  let hash = 0;
+  for (let i = 0; i < category.length; i++) {
+    hash = (hash * 31 + category.charCodeAt(i)) >>> 0;
+  }
+  return CATEGORY_BADGE_TONES[hash % CATEGORY_BADGE_TONES.length];
+}
+
+/**
+ * Card individual de um modelo interno (variação "Lista compacta").
+ * Ícone em badge suave (cor da categoria) + título + preview com chips
+ * {{...}} inline (via `highlightVars`); à direita, canal + "Atualizado
+ * há X" e o botão "Copiar". Editar/Excluir surgem no hover.
+ */
+function InternalTemplateCard({
   template,
+  category,
   onEdit,
   onDelete,
   deleting,
 }: {
   template: TemplateRow;
+  category: string;
   onEdit: () => void;
   onDelete: () => void;
   deleting: boolean;
 }) {
-  const vars = React.useMemo(
-    () => [...new Set((template.content?.match(/\{\{(.*?)\}\}/g) ?? []))],
-    [template.content],
-  );
   const channel = template.channelType ? CHANNEL_LABELS[template.channelType] ?? template.channelType : null;
+  const updated = template.updatedAt
+    ? formatDistanceToNow(new Date(template.updatedAt), { addSuffix: true, locale: ptBR })
+    : null;
 
   return (
-    <div className="group flex min-h-[52px] min-w-0 items-center gap-3 px-3.5 py-2 transition-colors hover:bg-[var(--glass-bg-overlay)] sm:px-[18px]">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)]">
-        <FileText className="size-4" />
+    <div className="group flex min-w-0 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg-base)] px-3.5 py-3 shadow-[var(--glass-shadow-sm)] transition-all hover:border-[var(--input-border-focus)] hover:shadow-[var(--glass-shadow)] sm:px-4">
+      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]", categoryBadgeClass(category))}>
+        <FileText className="size-[17px]" />
       </span>
+
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-[13px] font-bold leading-tight text-[var(--text-primary)]">{template.name}</span>
-          {vars.length ? (
-            <span className="hidden shrink-0 items-center gap-1 sm:flex">
-              {vars.slice(0, 3).map((v) => (
-                <span
-                  key={v}
-                  className="rounded-[var(--radius-sm)] border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-overlay)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--text-secondary)]"
-                >
-                  {v}
-                </span>
-              ))}
-              {vars.length > 3 ? (
-                <span className="text-[10.5px] font-semibold text-[var(--text-muted)]">+{vars.length - 3}</span>
-              ) : null}
-            </span>
-          ) : null}
-        </div>
-        <div className="mt-0.5 truncate text-[12px] leading-tight text-[var(--text-muted)]">
+        <div className="truncate text-[14px] font-semibold leading-tight text-[var(--text-primary)]">{template.name}</div>
+        <div className="mt-0.5 truncate text-[12.5px] leading-tight text-[var(--text-secondary)]">
           {highlightVars(template.content ?? "")}
         </div>
       </div>
-      <div className="flex shrink-0 items-center">
-        <span className="truncate text-[11.5px] font-semibold text-[var(--text-muted)] group-hover:hidden">
-          {channel ?? "Todos os canais"}
-        </span>
-        <div className="hidden items-center gap-1.5 group-hover:flex">
-          <button
-            type="button"
-            aria-label="Copiar"
-            onClick={() => {
-              void navigator.clipboard.writeText(template.content ?? "");
-            }}
-            className="flex size-7 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--brand-primary)] transition-colors hover:border-[var(--input-border-focus)] hover:bg-[var(--color-enterprise-bg)]"
-          >
-            <Copy className="size-[15px]" />
-          </button>
+
+      <div className="hidden shrink-0 flex-col items-end gap-0.5 text-right sm:flex">
+        <span className="text-[11.5px] font-semibold text-[var(--text-muted)]">{channel ?? "Todos os canais"}</span>
+        {updated ? <span className="text-[11px] text-[var(--text-muted)]">Atualizado {updated}</span> : null}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard.writeText(template.content ?? "");
+          }}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 py-1.5 text-[12px] font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
+        >
+          <Copy className="size-3.5" /> Copiar
+        </button>
+        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             type="button"
             aria-label="Editar"
             onClick={onEdit}
-            className="flex size-7 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--input-border-focus)] hover:text-[var(--brand-primary)]"
+            className="flex size-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--glass-bg-overlay)] hover:text-[var(--brand-primary)]"
           >
             <Pencil className="size-[15px]" />
           </button>
@@ -595,7 +622,7 @@ function InternalTemplateRow({
             aria-label="Excluir"
             onClick={onDelete}
             disabled={deleting}
-            className="flex size-7 items-center justify-center rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--glass-bg-overlay)] text-[var(--text-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+            className="flex size-7 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-muted)] transition-colors hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)] disabled:opacity-50"
           >
             <Trash2 className="size-[15px]" />
           </button>
